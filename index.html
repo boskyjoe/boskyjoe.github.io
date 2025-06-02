@@ -6,7 +6,6 @@
     <title>Raffle Winner Announcement</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
     <style>
         /* Apply the Inter font globally and set a light background color */
         body {
@@ -189,9 +188,6 @@
         const statusMessageElement = document.getElementById('status-message');
         const generateButtons = document.querySelectorAll('.winner-button');
         const resetRaffleBtn = document.getElementById('reset-raffle-btn');
-
-        // Initialize Tone.js drum synth
-        const drumSynth = new Tone.MembraneSynth().toDestination();
 
         /**
          * Utility function to introduce a delay.
@@ -377,16 +373,7 @@
 
             disableButtons(); // Disable buttons during generation process
 
-            // Start drum roll loop
-            Tone.start(); // Ensure audio context is started
-            const drumRollLoop = new Tone.Loop(time => {
-                drumSynth.triggerAttackRelease("C2", "32n", time); // Play a short drum sound repeatedly
-            }, "16n").start(0); // Start immediately, repeat every 16th note
-
             await delay(1500); // Wait for 1.5 seconds
-
-            drumRollLoop.stop(); // Stop the loop
-            drumRollLoop.dispose(); // Clean up the loop
 
             // Create a Set to keep track of tickets picked for the current place (Primary, Secondary, Third)
             // to ensure all three are unique from each other within this specific draw.
