@@ -133,34 +133,36 @@
         }
 
         /**
-         * Fetches ticket numbers from a text file and parses them into an array of numbers.
-         * Expects numbers to be separated by newlines or commas.
+         * Fetches ticket numbers from a text file and parses them into an array of strings.
+         * Expects alphanumeric strings to be separated by newlines or commas.
          * @param {string} filePath - The path to the text file.
-         * @returns {Promise<Array<number>>} A promise that resolves with an array of numbers.
+         * @returns {Promise<Array<string>>} A promise that resolves with an array of alphanumeric strings.
          */
         async function fetchTicketNumbers(filePath) {
             try {
-                // Construct a full URL to ensure proper resolution, especially in environments
-                // where the base URL might be unusual (like blob: URLs in Canvas).
                 const fullUrl = new URL(filePath, window.location.href).href;
-                console.log(`Attempting to fetch from: ${fullUrl}`); // Log the URL being fetched
+                console.log(`Attempting to fetch from: ${fullUrl}`);
 
-                const response = await fetch(fullUrl); // Use the fullUrl
+                const response = await fetch(fullUrl);
                 if (!response.ok) {
                     throw new Error(`Failed to load ${filePath} (HTTP status: ${response.status}): ${response.statusText}`);
                 }
                 const text = await response.text();
-                // Split by newline or comma, filter out empty strings, and convert to numbers
-                return text.split(/[\n,]+/)
-                           .map(s => s.trim())
-                           .filter(s => s !== '')
-                           .map(Number);
+                console.log(`Raw content of ${filePath}:`, text);
+
+                // Split by newline or comma, filter out empty strings, and trim whitespace.
+                // No conversion to Number() needed for alphanumeric strings.
+                const tickets = text.split(/[\n,]+/)
+                                   .map(s => s.trim())
+                                   .filter(s => s !== '');
+
+                console.log(`Parsed tickets from ${filePath}:`, tickets);
+                return tickets;
             } catch (error) {
                 console.error(`Error fetching ${filePath}:`, error);
-                // Provide a specific message for the user that hints at the environment issue
-                statusMessageElement.textContent = `Error loading ticket data from '${filePath}'. This might be due to security restrictions in the current preview environment. Please ensure the file exists and is correctly formatted when deployed to GitHub Pages.`;
+                statusMessageElement.textContent = `Error loading ticket data from '${filePath}'. Please ensure the file exists in the same directory as your HTML, contains valid alphanumeric tickets (one per line or comma-separated), and is correctly formatted. It might also be a security restriction in this preview environment.`;
                 disableButtons();
-                throw error; // Re-throw to propagate the error
+                throw error;
             }
         }
 
@@ -169,10 +171,9 @@
          */
         async function initializeRaffleData() {
             statusMessageElement.textContent = "Loading ticket data...";
-            disableButtons(); // Disable buttons while loading
+            disableButtons();
 
             try {
-                // Fetch both files concurrently
                 const [winnersData, winners1Data] = await Promise.all([
                     fetchTicketNumbers('winners.txt'),
                     fetchTicketNumbers('winners1.txt')
@@ -181,15 +182,16 @@
                 raffleTicketsWinners = winnersData;
                 raffleTicketsWinners1 = winners1Data;
 
-                // Check if the loaded arrays have enough unique numbers for picking
-                if (raffleTicketsWinners.length === 0 || raffleTicketsWinners1.length < 2) {
-                    statusMessageElement.textContent = "Error: Not enough unique ticket numbers in the files. Please check 'winners.txt' and 'winners1.txt'.";
+                // Check if the loaded arrays have enough unique tickets for picking
+                // At least 1 for primary, and at least 2 for secondary/third from the second file.
+                if (raffleTicketsWinners.length < 1 || raffleTicketsWinners1.length < 2) {
+                    statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} tickets (needs at least 1). 'winners1.txt' has ${raffleTicketsWinners1.length} tickets (needs at least 2). Please populate your files with more unique alphanumeric tickets.`;
                     disableButtons();
                     return;
                 }
 
-                statusMessageElement.textContent = "Ticket data loaded successfully!";
-                enableButtons(); // Enable buttons once data is loaded
+                statusMessageElement.textContent = "Ticket data loaded successfully! Click a button to generate winners.";
+                enableButtons();
             } catch (error) {
                 // Error handled in fetchTicketNumbers, just ensure buttons are disabled
                 disableButtons();
@@ -209,30 +211,30 @@
 
         /**
          * Picks a single unique random element from a source array, ensuring it's not
-         * already present in a set of 'avoidNumbers'.
-         * @param {Array<number>} sourceArray - The array of numbers to pick from.
-         * @param {Set<number>} avoidNumbers - A Set containing numbers that have already been picked
+         * already present in a set of 'avoidTickets'.
+         * @param {Array<string>} sourceArray - The array of alphanumeric tickets to pick from.
+         * @param {Set<string>} avoidTickets - A Set containing tickets that have already been picked
          * for the current prize category (Primary, Secondary, Third for one place).
-         * @returns {number | string} A unique random number, or "N/A" if no unique number can be found
+         * @returns {string} A unique random alphanumeric ticket, or "N/A" if no unique ticket can be found
          * from the source array that isn't already picked.
          */
-        function pickSingleUniqueNumber(sourceArray, avoidNumbers) {
-            // Filter out numbers that are already in the 'avoidNumbers' set
-            const availableNumbers = sourceArray.filter(num => !avoidNumbers.has(num));
+        function pickSingleUniqueTicket(sourceArray, avoidTickets) {
+            // Filter out tickets that are already in the 'avoidTickets' set
+            const availableTickets = sourceArray.filter(ticket => !avoidTickets.has(ticket));
 
-            if (availableNumbers.length === 0) {
-                console.warn("Not enough unique numbers available in the source pool for this pick.");
-                return "N/A"; // Return "N/A" if no unique number can be found
+            if (availableTickets.length === 0) {
+                console.warn("Not enough unique tickets available in the source pool for this pick.");
+                return "N/A"; // Return "N/A" if no unique ticket can be found
             }
 
-            // Pick a random index from the available numbers
-            const randomIndex = getRandomNumber(0, availableNumbers.length - 1);
-            const pickedNumber = availableNumbers[randomIndex];
+            // Pick a random index from the available tickets
+            const randomIndex = getRandomNumber(0, availableTickets.length - 1);
+            const pickedTicket = availableTickets[randomIndex];
 
-            // Add the picked number to the 'avoidNumbers' set to ensure it's not picked again
-            avoidNumbers.add(pickedNumber);
+            // Add the picked ticket to the 'avoidTickets' set to ensure it's not picked again
+            avoidTickets.add(pickedTicket);
 
-            return pickedNumber;
+            return pickedTicket;
         }
 
         /**
@@ -242,18 +244,18 @@
          * This helps in targeting the correct HTML elements.
          */
         function updateWinnersDisplay(placePrefix) {
-            // Create a Set to keep track of numbers picked for the current place (Primary, Secondary, Third)
+            // Create a Set to keep track of tickets picked for the current place (Primary, Secondary, Third)
             // to ensure all three are unique from each other.
-            const pickedNumbersForThisPlace = new Set();
+            const pickedTicketsForThisPlace = new Set();
 
             // Primary Winner: Pick from raffleTicketsWinners
-            const primaryWinner = pickSingleUniqueNumber(raffleTicketsWinners, pickedNumbersForThisPlace);
+            const primaryWinner = pickSingleUniqueTicket(raffleTicketsWinners, pickedTicketsForThisPlace);
 
             // Secondary Winner: Pick from raffleTicketsWinners1, ensuring it's unique from primary and other secondary/third picks
-            const secondaryWinner = pickSingleUniqueNumber(raffleTicketsWinners1, pickedNumbersForThisPlace);
+            const secondaryWinner = pickSingleUniqueTicket(raffleTicketsWinners1, pickedTicketsForThisPlace);
 
             // Third Winner: Pick from raffleTicketsWinners1, ensuring it's unique from primary and secondary picks
-            const thirdWinner = pickSingleUniqueNumber(raffleTicketsWinners1, pickedNumbersForThisPlace);
+            const thirdWinner = pickSingleUniqueTicket(raffleTicketsWinners1, pickedTicketsForThisPlace);
 
             // Get references to the specific HTML elements where the winners will be displayed
             const primaryElement = document.getElementById(`${placePrefix}-primary`);
