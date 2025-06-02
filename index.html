@@ -23,6 +23,11 @@
             opacity: 0.6;
             cursor: not-allowed;
         }
+
+        /* Style for the reset button */
+        #reset-raffle-btn:hover {
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center py-10 px-4">
@@ -35,6 +40,7 @@
             Congratulations to all our lucky winners! Thank you for participating in our church raffle.
             Click the "Generate Winners" button for each place to reveal the winning ticket numbers.
             Winners are drawn from two ticket pools: Primary from 'winners.txt', Secondary and Third from 'winners1.txt'.
+            <strong class="text-red-600">Each ticket can only win once!</strong>
         </p>
 
         <div id="status-message" class="text-center text-lg font-semibold text-gray-600 mb-6">
@@ -109,14 +115,20 @@
                 Generate 3rd Place Winners
             </button>
         </div>
+
+        <button id="reset-raffle-btn" class="mt-10 px-8 py-3 bg-red-600 text-white font-semibold rounded-full shadow-lg hover:bg-red-700 transition duration-300 ease-in-out">
+            Reset Raffle
+        </button>
     </div>
 
     <script>
         let raffleTicketsWinners = []; // Will be populated from winners.txt
         let raffleTicketsWinners1 = []; // Will be populated from winners1.txt
+        let allTimePickedTickets = new Set(); // Global set to store all tickets ever picked
 
         const statusMessageElement = document.getElementById('status-message');
         const generateButtons = document.querySelectorAll('.winner-button');
+        const resetRaffleBtn = document.getElementById('reset-raffle-btn');
 
         /**
          * Disables all "Generate Winners" buttons.
@@ -130,6 +142,21 @@
          */
         function enableButtons() {
             generateButtons.forEach(button => button.disabled = false);
+        }
+
+        /**
+         * Resets the displayed winner numbers to "---".
+         */
+        function clearDisplayedWinners() {
+            document.getElementById('first-primary').textContent = '---';
+            document.getElementById('first-secondary').textContent = '---';
+            document.getElementById('first-third').textContent = '---';
+            document.getElementById('second-primary').textContent = '---';
+            document.getElementById('second-secondary').textContent = '---';
+            document.getElementById('second-third').textContent = '---';
+            document.getElementById('third-primary').textContent = '---';
+            document.getElementById('third-secondary').textContent = '---';
+            document.getElementById('third-third').textContent = '---';
         }
 
         /**
@@ -151,7 +178,6 @@
                 console.log(`Raw content of ${filePath}:`, text);
 
                 // Split by newline or comma, filter out empty strings, and trim whitespace.
-                // No conversion to Number() needed for alphanumeric strings.
                 const tickets = text.split(/[\n,]+/)
                                    .map(s => s.trim())
                                    .filter(s => s !== '');
@@ -172,6 +198,7 @@
         async function initializeRaffleData() {
             statusMessageElement.textContent = "Loading ticket data...";
             disableButtons();
+            clearDisplayedWinners(); // Clear any previous winners on load
 
             try {
                 const [winnersData, winners1Data] = await Promise.all([
@@ -211,19 +238,21 @@
 
         /**
          * Picks a single unique random element from a source array, ensuring it's not
-         * already present in a set of 'avoidTickets'.
+         * already present in a set of 'currentDrawAvoidTickets' (for uniqueness within this draw)
+         * AND 'allTimePickedTickets' (for overall uniqueness).
          * @param {Array<string>} sourceArray - The array of alphanumeric tickets to pick from.
-         * @param {Set<string>} avoidTickets - A Set containing tickets that have already been picked
-         * for the current prize category (Primary, Secondary, Third for one place).
-         * @returns {string} A unique random alphanumeric ticket, or "N/A" if no unique ticket can be found
-         * from the source array that isn't already picked.
+         * @param {Set<string>} currentDrawAvoidTickets - A Set containing tickets that have already been picked
+         * for the current prize category (Primary, Secondary, Third for one place) during this single button click.
+         * @returns {string} A unique random alphanumeric ticket, or "N/A" if no unique ticket can be found.
          */
-        function pickSingleUniqueTicket(sourceArray, avoidTickets) {
-            // Filter out tickets that are already in the 'avoidTickets' set
-            const availableTickets = sourceArray.filter(ticket => !avoidTickets.has(ticket));
+        function pickSingleUniqueTicket(sourceArray, currentDrawAvoidTickets) {
+            // Filter out tickets that are already in the global set OR the current draw's local set
+            const availableTickets = sourceArray.filter(ticket =>
+                !allTimePickedTickets.has(ticket) && !currentDrawAvoidTickets.has(ticket)
+            );
 
             if (availableTickets.length === 0) {
-                console.warn("Not enough unique tickets available in the source pool for this pick.");
+                console.warn("Not enough unique tickets available in the source pool for this pick, considering all previously picked tickets.");
                 return "N/A"; // Return "N/A" if no unique ticket can be found
             }
 
@@ -231,21 +260,24 @@
             const randomIndex = getRandomNumber(0, availableTickets.length - 1);
             const pickedTicket = availableTickets[randomIndex];
 
-            // Add the picked ticket to the 'avoidTickets' set to ensure it's not picked again
-            avoidTickets.add(pickedTicket);
+            // Add to the local set for this draw's uniqueness
+            currentDrawAvoidTickets.add(pickedTicket);
+            // Add to the global set for all-time uniqueness
+            allTimePickedTickets.add(pickedTicket);
 
             return pickedTicket;
         }
 
         /**
          * Updates the display elements for a specific place's winners (Primary, Secondary, Third).
-         * It now picks winners from the predefined 'raffleTicketsWinners' and 'raffleTicketsWinners1' arrays.
+         * It now picks winners from the predefined 'raffleTicketsWinners' and 'raffleTicketsWinners1' arrays,
+         * ensuring overall uniqueness.
          * @param {string} placePrefix - The prefix for the winner IDs (e.g., 'first', 'second', 'third').
          * This helps in targeting the correct HTML elements.
          */
         function updateWinnersDisplay(placePrefix) {
             // Create a Set to keep track of tickets picked for the current place (Primary, Secondary, Third)
-            // to ensure all three are unique from each other.
+            // to ensure all three are unique from each other within this specific draw.
             const pickedTicketsForThisPlace = new Set();
 
             // Primary Winner: Pick from raffleTicketsWinners
@@ -267,6 +299,13 @@
             if (primaryElement) primaryElement.textContent = primaryWinner;
             if (secondaryElement) secondaryElement.textContent = secondaryWinner;
             if (thirdElement) thirdElement.textContent = thirdWinner;
+
+            // Optional: Check if all possible tickets have been drawn and disable buttons if so
+            const totalAvailableTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
+            if (allTimePickedTickets.size >= totalAvailableTickets) {
+                statusMessageElement.textContent = "All unique tickets have been drawn! Reset raffle to start again.";
+                disableButtons();
+            }
         }
 
         // Get references to the "Generate Winners" buttons for each place
@@ -284,6 +323,16 @@
         }
         if (generateThirdBtn) {
             generateThirdBtn.addEventListener('click', () => updateWinnersDisplay('third'));
+        }
+
+        // Add event listener for the Reset Raffle button
+        if (resetRaffleBtn) {
+            resetRaffleBtn.addEventListener('click', () => {
+                allTimePickedTickets.clear(); // Clear all previously picked tickets
+                clearDisplayedWinners(); // Reset displayed text
+                initializeRaffleData(); // Re-initialize data and enable buttons
+                statusMessageElement.textContent = "Raffle reset. Ticket data reloaded. Click a button to generate winners.";
+            });
         }
 
         // Initialize data when the page loads
