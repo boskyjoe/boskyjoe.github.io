@@ -35,8 +35,8 @@
         <div class="mb-8">
             <div class="flex items-center justify-center md:justify-start mb-4">
                 <div class="w-20 h-20 md:w-24 md:h-24 mr-4 md:mr-6 flex-shrink-0">
-                    <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png" 
-                         alt="St. Sebastian's Church Logo" 
+                    <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png"
+                         alt="St. Sebastian's Church Logo"
                          class="w-full h-full object-contain rounded-full">
                 </div>
                 <h1 class="text-3xl md:text-4xl font-extrabold text-indigo-800 text-left">
@@ -46,6 +46,33 @@
             <div class="text-gray-600 text-sm md:text-base mb-8 text-left md:ml-28">
                 <p>No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</p>
                 <p>+91 7090424365 | stsebastianssmc@gmail.com</p>
+            </div>
+        </div>
+
+        <div class="bg-blue-100 p-6 rounded-lg shadow-md mb-8 text-left">
+            <h2 class="text-2xl font-bold text-blue-800 mb-4">Raffle Ticket Information</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-blue-700 font-semibold">
+                <p>Tickets Printed: <span class="font-bold">25000</span></p>
+                <p>Tickets Sold: <span class="font-bold">234234</span></p>
+                <p>Value of Ticket Sold: <span class="font-bold">Rs. 120340424</span></p>
+            </div>
+        </div>
+
+        <div class="bg-green-100 p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-2xl font-bold text-green-800 mb-4">Final Primary Winners</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
+                    <h3 class="text-xl font-semibold text-green-700">1st Place Primary</h3>
+                    <p id="final-first-primary" class="text-3xl font-bold text-green-900 mt-2">---</p>
+                </div>
+                <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
+                    <h3 class="text-xl font-semibold text-green-700">2nd Place Primary</h3>
+                    <p id="final-second-primary" class="text-3xl font-bold text-green-900 mt-2">---</p>
+                </div>
+                <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
+                    <h3 class="text-xl font-semibold text-green-700">3rd Place Primary</h3>
+                    <p id="final-third-primary" class="text-3xl font-bold text-green-900 mt-2">---</p>
+                </div>
             </div>
         </div>
 
@@ -169,6 +196,10 @@
             document.getElementById('third-primary').textContent = '---';
             document.getElementById('third-secondary').textContent = '---';
             document.getElementById('third-third').textContent = '---';
+            // Also clear the final winners section
+            document.getElementById('final-first-primary').textContent = '---';
+            document.getElementById('final-second-primary').textContent = '---';
+            document.getElementById('final-third-primary').textContent = '---';
         }
 
         /**
@@ -318,6 +349,16 @@
             if (primaryElement) primaryElement.textContent = primaryWinner;
             if (secondaryElement) secondaryElement.textContent = secondaryWinner;
             if (thirdElement) thirdElement.textContent = thirdWinner;
+
+            // Update the final winners section as well
+            if (placePrefix === 'first' && document.getElementById('final-first-primary')) {
+                document.getElementById('final-first-primary').textContent = primaryWinner;
+            } else if (placePrefix === 'second' && document.getElementById('final-second-primary')) {
+                document.getElementById('final-second-primary').textContent = primaryWinner;
+            } else if (placePrefix === 'third' && document.getElementById('final-third-primary')) {
+                document.getElementById('final-third-primary').textContent = primaryWinner;
+            }
+
 
             // Optional: Check if all possible tickets have been drawn and disable buttons if so
             // This check is now more complex as tickets are drawn from different pools.
