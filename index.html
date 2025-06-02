@@ -377,14 +377,16 @@
 
             disableButtons(); // Disable buttons during generation process
 
-            // Start drum roll
+            // Start drum roll loop
             Tone.start(); // Ensure audio context is started
-            drumSynth.triggerAttackRelease("C2", "2n"); // Play a drum sound (adjust note and duration as needed)
+            const drumRollLoop = new Tone.Loop(time => {
+                drumSynth.triggerAttackRelease("C2", "32n", time); // Play a short drum sound repeatedly
+            }, "16n").start(0); // Start immediately, repeat every 16th note
 
-            await delay(5500); // Wait for 1.5 seconds
+            await delay(1500); // Wait for 1.5 seconds
 
-            // Stop drum roll (optional, if you want it to fade out or stop abruptly)
-            // drumSynth.triggerRelease(); // If you want to release the sound explicitly
+            drumRollLoop.stop(); // Stop the loop
+            drumRollLoop.dispose(); // Clean up the loop
 
             // Create a Set to keep track of tickets picked for the current place (Primary, Secondary, Third)
             // to ensure all three are unique from each other within this specific draw.
