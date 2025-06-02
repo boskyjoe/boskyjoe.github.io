@@ -28,9 +28,20 @@
         #reset-raffle-btn:hover {
             transform: scale(1.05);
         }
+
+        /* Keyframes for a subtle pulsing animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Class to apply the pulsing animation */
+        .pulsing-text {
+            animation: pulse 1.5s infinite ease-in-out;
+        }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center py-10 px-4">
+<body class="min-h-screen flex flex-col items-center py-10 px-4">
     <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center">
         <div class="mb-8">
             <div class="flex items-center justify-center md:justify-start mb-4">
@@ -58,20 +69,20 @@
             </div>
         </div>
 
-        <div class="bg-green-100 p-6 rounded-lg shadow-md mb-8">
+        <div class="bg-green-100 p-6 rounded-lg shadow-md mb-8 lg:hidden">
             <h2 class="text-2xl font-bold text-green-800 mb-4">Final Primary Winners</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
                     <h3 class="text-xl font-semibold text-green-700">1st Place Primary</h3>
-                    <p id="final-first-primary" class="text-3xl font-bold text-green-900 mt-2">---</p>
+                    <p class="final-primary-winner-display" id="final-first-primary-mobile">---</p>
                 </div>
                 <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
                     <h3 class="text-xl font-semibold text-green-700">2nd Place Primary</h3>
-                    <p id="final-second-primary" class="text-3xl font-bold text-green-900 mt-2">---</p>
+                    <p class="final-primary-winner-display" id="final-second-primary-mobile">---</p>
                 </div>
                 <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
                     <h3 class="text-xl font-semibold text-green-700">3rd Place Primary</h3>
-                    <p id="final-third-primary" class="text-3xl font-bold text-green-900 mt-2">---</p>
+                    <p class="final-primary-winner-display" id="final-third-primary-mobile">---</p>
                 </div>
             </div>
         </div>
@@ -160,6 +171,24 @@
         </button>
     </div>
 
+    <div class="fixed top-1/2 right-4 -translate-y-1/2 w-72 bg-green-100 p-6 rounded-lg shadow-md z-50 hidden lg:block">
+        <h2 class="text-2xl font-bold text-green-800 mb-4">Final Primary Winners</h2>
+        <div class="grid grid-cols-1 gap-4">
+            <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
+                <h3 class="text-xl font-semibold text-green-700">1st Place Primary</h3>
+                <p class="final-primary-winner-display" id="final-first-primary-desktop">---</p>
+            </div>
+            <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
+                <h3 class="text-xl font-semibold text-green-700">2nd Place Primary</h3>
+                <p class="final-primary-winner-display" id="final-second-primary-desktop">---</p>
+            </div>
+            <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
+                <h3 class="text-xl font-semibold text-green-700">3rd Place Primary</h3>
+                <p class="final-primary-winner-display" id="final-third-primary-desktop">---</p>
+            </div>
+        </div>
+    </div>
+
     <script>
         let raffleTicketsWinners = []; // Will be populated from winners.txt
         let raffleTicketsWinners1 = []; // Will be populated from winners1.txt
@@ -168,6 +197,14 @@
         const statusMessageElement = document.getElementById('status-message');
         const generateButtons = document.querySelectorAll('.winner-button');
         const resetRaffleBtn = document.getElementById('reset-raffle-btn');
+
+        /**
+         * Utility function to introduce a delay.
+         * @param {number} ms - The delay in milliseconds.
+         */
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
 
         /**
          * Disables all "Generate Winners" buttons.
@@ -196,10 +233,12 @@
             document.getElementById('third-primary').textContent = '---';
             document.getElementById('third-secondary').textContent = '---';
             document.getElementById('third-third').textContent = '---';
-            // Also clear the final winners section
-            document.getElementById('final-first-primary').textContent = '---';
-            document.getElementById('final-second-primary').textContent = '---';
-            document.getElementById('final-third-primary').textContent = '---';
+
+            // Also clear the final winners sections (both mobile and desktop)
+            const finalWinnerDisplays = document.querySelectorAll('.final-primary-winner-display');
+            finalWinnerDisplays.forEach(element => {
+                element.textContent = '---';
+            });
         }
 
         /**
@@ -318,7 +357,33 @@
          * @param {string} placePrefix - The prefix for the winner IDs (e.g., 'first', 'second', 'third').
          * This helps in targeting the correct HTML elements.
          */
-        function updateWinnersDisplay(placePrefix) {
+        async function updateWinnersDisplay(placePrefix) {
+            // Get references to the specific HTML elements where the winners will be displayed
+            const primaryElement = document.getElementById(`${placePrefix}-primary`);
+            const secondaryElement = document.getElementById(`${placePrefix}-secondary`);
+            const thirdElement = document.getElementById(`${placePrefix}-third`);
+
+            // Get references to the final winner display elements (both mobile and desktop)
+            const finalPrimaryMobile = document.getElementById(`final-${placePrefix}-primary-mobile`);
+            const finalPrimaryDesktop = document.getElementById(`final-${placePrefix}-primary-desktop`);
+
+
+            // Set initial "Generating..." state with pulsing animation
+            const elementsToAnimate = [primaryElement, secondaryElement, thirdElement];
+            if (finalPrimaryMobile) elementsToAnimate.push(finalPrimaryMobile);
+            if (finalPrimaryDesktop) elementsToAnimate.push(finalPrimaryDesktop);
+
+            elementsToAnimate.forEach(el => {
+                if (el) {
+                    el.textContent = 'Generating...';
+                    el.classList.add('pulsing-text');
+                }
+            });
+
+            disableButtons(); // Disable buttons during generation process
+
+            await delay(1500); // Wait for 1.5 seconds
+
             // Create a Set to keep track of tickets picked for the current place (Primary, Secondary, Third)
             // to ensure all three are unique from each other within this specific draw.
             const pickedTicketsForThisPlace = new Set();
@@ -331,6 +396,7 @@
                 sourceArrayForPlace = raffleTicketsWinners1;
             } else {
                 console.error("Invalid place prefix provided:", placePrefix);
+                enableButtons(); // Re-enable buttons on error
                 return; // Exit if invalid prefix
             }
 
@@ -339,31 +405,54 @@
             const secondaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
             const thirdWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
 
-            // Get references to the specific HTML elements where the winners will be displayed
-            const primaryElement = document.getElementById(`${placePrefix}-primary`);
-            const secondaryElement = document.getElementById(`${placePrefix}-secondary`);
-            const thirdElement = document.getElementById(`${placePrefix}-third`);
-
-            // Update the text content of these elements.
-            // A check is added to ensure the element exists before trying to update it.
-            if (primaryElement) primaryElement.textContent = primaryWinner;
-            if (secondaryElement) secondaryElement.textContent = secondaryWinner;
-            if (thirdElement) thirdElement.textContent = thirdWinner;
-
-            // Update the final winners section as well
-            if (placePrefix === 'first' && document.getElementById('final-first-primary')) {
-                document.getElementById('final-first-primary').textContent = primaryWinner;
-            } else if (placePrefix === 'second' && document.getElementById('final-second-primary')) {
-                document.getElementById('final-second-primary').textContent = primaryWinner;
-            } else if (placePrefix === 'third' && document.getElementById('final-third-primary')) {
-                document.getElementById('final-third-primary').textContent = primaryWinner;
+            // Update the text content of these elements and remove animation class
+            if (primaryElement) {
+                primaryElement.textContent = primaryWinner;
+                primaryElement.classList.remove('pulsing-text');
+            }
+            if (secondaryElement) {
+                secondaryElement.textContent = secondaryWinner;
+                secondaryElement.classList.remove('pulsing-text');
+            }
+            if (thirdElement) {
+                thirdElement.textContent = thirdWinner;
+                thirdElement.classList.remove('pulsing-text');
             }
 
+            // Update the final winners sections (both mobile and desktop versions)
+            if (placePrefix === 'first') {
+                if (finalPrimaryMobile) {
+                    finalPrimaryMobile.textContent = primaryWinner;
+                    finalPrimaryMobile.classList.remove('pulsing-text');
+                }
+                if (finalPrimaryDesktop) {
+                    finalPrimaryDesktop.textContent = primaryWinner;
+                    finalPrimaryDesktop.classList.remove('pulsing-text');
+                }
+            } else if (placePrefix === 'second') {
+                if (finalPrimaryMobile) {
+                    finalPrimaryMobile.textContent = primaryWinner;
+                    finalPrimaryMobile.classList.remove('pulsing-text');
+                }
+                if (finalPrimaryDesktop) {
+                    finalPrimaryDesktop.textContent = primaryWinner;
+                    finalPrimaryDesktop.classList.remove('pulsing-text');
+                }
+            } else if (placePrefix === 'third') {
+                if (finalPrimaryMobile) {
+                    finalPrimaryMobile.textContent = primaryWinner;
+                    finalPrimaryMobile.classList.remove('pulsing-text');
+                }
+                if (finalPrimaryDesktop) {
+                    finalPrimaryDesktop.textContent = primaryWinner;
+                    finalPrimaryDesktop.classList.remove('pulsing-text');
+                }
+            }
+
+            // Re-enable buttons after generation
+            enableButtons();
 
             // Optional: Check if all possible tickets have been drawn and disable buttons if so
-            // This check is now more complex as tickets are drawn from different pools.
-            // For simplicity, we'll check if the global picked tickets count exceeds the total available tickets.
-            // A more precise check would involve tracking available tickets per pool.
             const totalTicketsInWinners = new Set(raffleTicketsWinners).size;
             const totalTicketsInWinners1 = new Set(raffleTicketsWinners1).size;
             const overallTotalUniqueTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
@@ -371,10 +460,6 @@
             if (allTimePickedTickets.size >= overallTotalUniqueTickets) {
                 statusMessageElement.textContent = "All unique tickets have been drawn from both pools! Reset raffle to start again.";
                 disableButtons();
-            } else if (placePrefix === 'first' && allTimePickedTickets.size >= totalTicketsInWinners && allTimePickedTickets.size - (totalTicketsInWinners1 - (new Set(raffleTicketsWinners1).size - allTimePickedTickets.size)) >= totalTicketsInWinners) {
-                // This condition is tricky. A simpler approach is to check if there are enough *remaining* tickets
-                // in the relevant pool for the next draw.
-                // For now, the general check above is sufficient.
             }
         }
 
