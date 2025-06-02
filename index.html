@@ -14,8 +14,14 @@
         }
 
         /* Custom styles for button hover effects (Tailwind handles most, but adding a subtle scale) */
-        .winner-button:hover {
-            transform: scale(1.05); /* Slightly enlarge button on hover */
+        .winner-button:hover:not(:disabled) {
+            transform: scale(1.05); /* Slightly enlarge button on hover, but not if disabled */
+        }
+
+        /* Style for disabled buttons */
+        .winner-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -28,7 +34,12 @@
         <p class="text-lg text-gray-700 mb-10">
             Congratulations to all our lucky winners! Thank you for participating in our church raffle.
             Click the "Generate Winners" button for each place to reveal the winning ticket numbers.
+            Winners are drawn from two ticket pools: Primary from 'winners.txt', Secondary and Third from 'winners1.txt'.
         </p>
+
+        <div id="status-message" class="text-center text-lg font-semibold text-gray-600 mb-6">
+            Loading ticket data...
+        </div>
 
         <div class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
@@ -48,7 +59,7 @@
                     <p id="first-third" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
                 </div>
             </div>
-            <button id="generate-first" class="winner-button px-8 py-3 bg-yellow-700 text-white font-semibold rounded-full shadow-lg hover:bg-yellow-800 transition duration-300 ease-in-out">
+            <button id="generate-first" class="winner-button px-8 py-3 bg-yellow-700 text-white font-semibold rounded-full shadow-lg hover:bg-yellow-800 transition duration-300 ease-in-out" disabled>
                 Generate 1st Place Winners
             </button>
         </div>
@@ -71,7 +82,7 @@
                     <p id="second-third" class="text-3xl font-bold text-gray-900 mt-2">---</p>
                 </div>
             </div>
-            <button id="generate-second" class="winner-button px-8 py-3 bg-gray-700 text-white font-semibold rounded-full shadow-lg hover:bg-gray-800 transition duration-300 ease-in-out">
+            <button id="generate-second" class="winner-button px-8 py-3 bg-gray-700 text-white font-semibold rounded-full shadow-lg hover:bg-gray-800 transition duration-300 ease-in-out" disabled>
                 Generate 2nd Place Winners
             </button>
         </div>
@@ -94,18 +105,102 @@
                     <p id="third-third" class="text-3xl font-bold text-amber-900 mt-2">---</p>
                 </div>
             </div>
-            <button id="generate-third" class="winner-button px-8 py-3 bg-amber-900 text-white font-semibold rounded-full shadow-lg hover:bg-amber-950 transition duration-300 ease-in-out">
+            <button id="generate-third" class="winner-button px-8 py-3 bg-amber-900 text-white font-semibold rounded-full shadow-lg hover:bg-amber-950 transition duration-300 ease-in-out" disabled>
                 Generate 3rd Place Winners
             </button>
         </div>
     </div>
 
     <script>
+        let raffleTicketsWinners = []; // Will be populated from winners.txt
+        let raffleTicketsWinners1 = []; // Will be populated from winners1.txt
+
+        const statusMessageElement = document.getElementById('status-message');
+        const generateButtons = document.querySelectorAll('.winner-button');
+
+        /**
+         * Disables all "Generate Winners" buttons.
+         */
+        function disableButtons() {
+            generateButtons.forEach(button => button.disabled = true);
+        }
+
+        /**
+         * Enables all "Generate Winners" buttons.
+         */
+        function enableButtons() {
+            generateButtons.forEach(button => button.disabled = false);
+        }
+
+        /**
+         * Fetches ticket numbers from a text file and parses them into an array of numbers.
+         * Expects numbers to be separated by newlines or commas.
+         * @param {string} filePath - The path to the text file.
+         * @returns {Promise<Array<number>>} A promise that resolves with an array of numbers.
+         */
+        async function fetchTicketNumbers(filePath) {
+            try {
+                // Construct a full URL to ensure proper resolution, especially in environments
+                // where the base URL might be unusual (like blob: URLs in Canvas).
+                const fullUrl = new URL(filePath, window.location.href).href;
+                console.log(`Attempting to fetch from: ${fullUrl}`); // Log the URL being fetched
+
+                const response = await fetch(fullUrl); // Use the fullUrl
+                if (!response.ok) {
+                    throw new Error(`Failed to load ${filePath} (HTTP status: ${response.status}): ${response.statusText}`);
+                }
+                const text = await response.text();
+                // Split by newline or comma, filter out empty strings, and convert to numbers
+                return text.split(/[\n,]+/)
+                           .map(s => s.trim())
+                           .filter(s => s !== '')
+                           .map(Number);
+            } catch (error) {
+                console.error(`Error fetching ${filePath}:`, error);
+                // Provide a specific message for the user that hints at the environment issue
+                statusMessageElement.textContent = `Error loading ticket data from '${filePath}'. This might be due to security restrictions in the current preview environment. Please ensure the file exists and is correctly formatted when deployed to GitHub Pages.`;
+                disableButtons();
+                throw error; // Re-throw to propagate the error
+            }
+        }
+
+        /**
+         * Initializes the application by fetching ticket data from external files.
+         */
+        async function initializeRaffleData() {
+            statusMessageElement.textContent = "Loading ticket data...";
+            disableButtons(); // Disable buttons while loading
+
+            try {
+                // Fetch both files concurrently
+                const [winnersData, winners1Data] = await Promise.all([
+                    fetchTicketNumbers('winners.txt'),
+                    fetchTicketNumbers('winners1.txt')
+                ]);
+
+                raffleTicketsWinners = winnersData;
+                raffleTicketsWinners1 = winners1Data;
+
+                // Check if the loaded arrays have enough unique numbers for picking
+                if (raffleTicketsWinners.length === 0 || raffleTicketsWinners1.length < 2) {
+                    statusMessageElement.textContent = "Error: Not enough unique ticket numbers in the files. Please check 'winners.txt' and 'winners1.txt'.";
+                    disableButtons();
+                    return;
+                }
+
+                statusMessageElement.textContent = "Ticket data loaded successfully!";
+                enableButtons(); // Enable buttons once data is loaded
+            } catch (error) {
+                // Error handled in fetchTicketNumbers, just ensure buttons are disabled
+                disableButtons();
+            }
+        }
+
         /**
          * Generates a random integer between min (inclusive) and max (inclusive).
-         * This function is a helper to create random ticket numbers.
-         * @param {number} min - The minimum value for the random number.
-         * @param {number} max - The maximum value for the random number.
+         * This function is a helper to pick a random index from an array.
+         * @param {number} min - The minimum value for the random number (usually 0 for array index).
+         * @param {number} max - The maximum value for the random number (usually array.length - 1).
          * @returns {number} A random integer within the specified range.
          */
         function getRandomNumber(min, max) {
@@ -113,32 +208,52 @@
         }
 
         /**
-         * Generates three unique random numbers for a specific winner category.
-         * It uses a Set to ensure that all three generated numbers are distinct.
-         * The numbers are generated within a range suitable for raffle tickets (1 to 999999).
-         * @returns {Array<number>} An array containing three unique random numbers.
+         * Picks a single unique random element from a source array, ensuring it's not
+         * already present in a set of 'avoidNumbers'.
+         * @param {Array<number>} sourceArray - The array of numbers to pick from.
+         * @param {Set<number>} avoidNumbers - A Set containing numbers that have already been picked
+         * for the current prize category (Primary, Secondary, Third for one place).
+         * @returns {number | string} A unique random number, or "N/A" if no unique number can be found
+         * from the source array that isn't already picked.
          */
-        function generateUniqueWinners() {
-            const winners = new Set(); // Use a Set to automatically handle uniqueness
-            const MIN_TICKET = 1;
-            const MAX_TICKET = 999999; // Assuming raffle tickets are 6-digit numbers or less
+        function pickSingleUniqueNumber(sourceArray, avoidNumbers) {
+            // Filter out numbers that are already in the 'avoidNumbers' set
+            const availableNumbers = sourceArray.filter(num => !avoidNumbers.has(num));
 
-            // Keep generating numbers until three unique ones are found
-            while (winners.size < 3) {
-                winners.add(getRandomNumber(MIN_TICKET, MAX_TICKET));
+            if (availableNumbers.length === 0) {
+                console.warn("Not enough unique numbers available in the source pool for this pick.");
+                return "N/A"; // Return "N/A" if no unique number can be found
             }
-            return Array.from(winners); // Convert the Set back to an Array for easy access
+
+            // Pick a random index from the available numbers
+            const randomIndex = getRandomNumber(0, availableNumbers.length - 1);
+            const pickedNumber = availableNumbers[randomIndex];
+
+            // Add the picked number to the 'avoidNumbers' set to ensure it's not picked again
+            avoidNumbers.add(pickedNumber);
+
+            return pickedNumber;
         }
 
         /**
          * Updates the display elements for a specific place's winners (Primary, Secondary, Third).
-         * It calls `generateUniqueWinners` to get the numbers and then updates the DOM.
+         * It now picks winners from the predefined 'raffleTicketsWinners' and 'raffleTicketsWinners1' arrays.
          * @param {string} placePrefix - The prefix for the winner IDs (e.g., 'first', 'second', 'third').
          * This helps in targeting the correct HTML elements.
          */
         function updateWinnersDisplay(placePrefix) {
-            // Generate the three unique winners for this category
-            const [primary, secondary, third] = generateUniqueWinners();
+            // Create a Set to keep track of numbers picked for the current place (Primary, Secondary, Third)
+            // to ensure all three are unique from each other.
+            const pickedNumbersForThisPlace = new Set();
+
+            // Primary Winner: Pick from raffleTicketsWinners
+            const primaryWinner = pickSingleUniqueNumber(raffleTicketsWinners, pickedNumbersForThisPlace);
+
+            // Secondary Winner: Pick from raffleTicketsWinners1, ensuring it's unique from primary and other secondary/third picks
+            const secondaryWinner = pickSingleUniqueNumber(raffleTicketsWinners1, pickedNumbersForThisPlace);
+
+            // Third Winner: Pick from raffleTicketsWinners1, ensuring it's unique from primary and secondary picks
+            const thirdWinner = pickSingleUniqueNumber(raffleTicketsWinners1, pickedNumbersForThisPlace);
 
             // Get references to the specific HTML elements where the winners will be displayed
             const primaryElement = document.getElementById(`${placePrefix}-primary`);
@@ -147,9 +262,9 @@
 
             // Update the text content of these elements.
             // A check is added to ensure the element exists before trying to update it.
-            if (primaryElement) primaryElement.textContent = primary;
-            if (secondaryElement) secondaryElement.textContent = secondary;
-            if (thirdElement) thirdElement.textContent = third;
+            if (primaryElement) primaryElement.textContent = primaryWinner;
+            if (secondaryElement) secondaryElement.textContent = secondaryWinner;
+            if (thirdElement) thirdElement.textContent = thirdWinner;
         }
 
         // Get references to the "Generate Winners" buttons for each place
@@ -168,6 +283,9 @@
         if (generateThirdBtn) {
             generateThirdBtn.addEventListener('click', () => updateWinnersDisplay('third'));
         }
+
+        // Initialize data when the page loads
+        document.addEventListener('DOMContentLoaded', initializeRaffleData);
     </script>
 </body>
 </html>
