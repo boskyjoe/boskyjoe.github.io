@@ -1,10 +1,304 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>My GitHub Pages</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Church Raffle Winners Announcement</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4CAF50; /* Green */
+            --secondary-color: #FFC107; /* Amber/Gold */
+            --tertiary-color: #03A9F4; /* Light Blue */
+            --background-light: #f8f9fa;
+            --background-dark: #e9ecef;
+            --text-color: #343a40;
+            --heading-color: #212529;
+            --card-background: #ffffff;
+            --border-color: #dee2e6;
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-light);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 2.5rem 1rem;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-family: 'Merriweather', serif;
+            font-size: 3.2rem;
+            margin-bottom: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        .header p {
+            font-size: 1.3rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            flex-grow: 1;
+        }
+
+        .winner-section {
+            background-color: var(--card-background);
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .winner-section h2 {
+            font-family: 'Merriweather', serif;
+            font-size: 2.5rem;
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            color: var(--heading-color);
+            position: relative;
+            padding-bottom: 15px;
+        }
+
+        .winner-section h2::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: 0;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background-color: var(--primary-color);
+            border-radius: 2px;
+        }
+
+        .winner-section.first-place h2::after { background-color: var(--secondary-color); }
+        .winner-section.second-place h2::after { background-color: var(--tertiary-color); }
+        .winner-section.third-place h2::after { background-color: var(--primary-color); }
+
+
+        .winner-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.8rem;
+            margin-top: 2rem;
+        }
+
+        .winner-card {
+            background-color: var(--background-light);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.8rem;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .winner-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .winner-card .icon {
+            font-size: 2.8rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .first-place .winner-card .icon { color: var(--secondary-color); }
+        .second-place .winner-card .icon { color: var(--tertiary-color); }
+
+        .winner-card h3 {
+            font-family: 'Merriweather', serif;
+            font-size: 1.6rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.8rem;
+            color: var(--heading-color);
+        }
+
+        .winner-card .winner-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            word-wrap: break-word; /* For long names */
+        }
+
+        .first-place .winner-card .winner-name { color: var(--secondary-color); }
+        .second-place .winner-card .winner-name { color: var(--tertiary-color); }
+
+
+        .footer {
+            background-color: var(--heading-color);
+            color: white;
+            text-align: center;
+            padding: 1.5rem 1rem;
+            margin-top: 3rem;
+            font-size: 0.9rem;
+        }
+
+        .footer p {
+            margin: 0;
+            opacity: 0.8;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            .header p {
+                font-size: 1rem;
+            }
+            .winner-section {
+                padding: 1.8rem;
+            }
+            .winner-section h2 {
+                font-size: 2rem;
+            }
+            .winner-grid {
+                grid-template-columns: 1fr;
+            }
+            .winner-card h3 {
+                font-size: 1.4rem;
+            }
+            .winner-card .winner-name {
+                font-size: 1.3rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 2rem 1rem;
+            }
+            .header h1 {
+                font-size: 2rem;
+            }
+            .winner-section {
+                padding: 1.2rem;
+            }
+            .winner-section h2 {
+                font-size: 1.7rem;
+            }
+            .winner-card {
+                padding: 1.5rem;
+            }
+            .winner-card .icon {
+                font-size: 2.2rem;
+            }
+        }
+
+    </style>
 </head>
 <body>
-    <h1>Hello from my GitHub Page!</h1>
-    <p>This is a test.</p>
+
+    <header class="header">
+        <div class="container">
+            <h1><i class="fas fa-trophy"></i> Raffle Winners Announced! <i class="fas fa-ticket-alt"></i></h1>
+            <p>Congratulations to all our lucky winners! Thank you for supporting our church raffle.</p>
+            <p><strong>Date of Announcement:</strong> <span id="announcement-date">June 7, 2025</span></p>
+        </div>
+    </header>
+
+    <main class="container">
+
+        <section class="winner-section first-place">
+            <h2><i class="fas fa-medal"></i> 1st Place Winners <i class="fas fa-medal"></i></h2>
+            <div class="winner-grid">
+                <div class="winner-card">
+                    <i class="fas fa-award icon"></i>
+                    <h3>Primary Winner</h3>
+                    <p class="winner-name">John Smith</p>
+                </div>
+                <div class="winner-card">
+                    <i class="fas fa-award icon"></i>
+                    <h3>Secondary Winner</h3>
+                    <p class="winner-name">Maria Garcia</p>
+                </div>
+                <div class="winner-card">
+                    <i class="fas fa-award icon"></i>
+                    <h3>Third Winner</h3>
+                    <p class="winner-name">David Lee</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="winner-section second-place">
+            <h2><i class="fas fa-ribbon"></i> 2nd Place Winners <i class="fas fa-ribbon"></i></h2>
+            <div class="winner-grid">
+                <div class="winner-card">
+                    <i class="fas fa-star icon"></i>
+                    <h3>Primary Winner</h3>
+                    <p class="winner-name">Sarah Johnson</p>
+                </div>
+                <div class="winner-card">
+                    <i class="fas fa-star icon"></i>
+                    <h3>Secondary Winner</h3>
+                    <p class="winner-name">Michael Chen</p>
+                </div>
+                <div class="winner-card">
+                    <i class="fas fa-star icon"></i>
+                    <h3>Third Winner</h3>
+                    <p class="winner-name">Emily Davis</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="winner-section third-place">
+            <h2><i class="fas fa-certificate"></i> 3rd Place Winners <i class="fas fa-certificate"></i></h2>
+            <div class="winner-grid">
+                <div class="winner-card">
+                    <i class="fas fa-trophy icon"></i>
+                    <h3>Primary Winner</h3>
+                    <p class="winner-name">Robert White</p>
+                </div>
+                <div class="winner-card">
+                    <i class="fas fa-trophy icon"></i>
+                    <h3>Secondary Winner</h3>
+                    <p class="winner-name">Jessica Brown</p>
+                </div>
+                <div class="winner-card">
+                    <i class="fas fa-trophy icon"></i>
+                    <h3>Third Winner</h3>
+                    <p class="winner-name">Daniel Martinez</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        <p>&copy; <span id="current-year"></span> [Your Church Name]. All Rights Reserved.</p>
+        <p>Thank you for your generosity and participation!</p>
+    </footer>
+
+    <script>
+        // Dynamically update the current year in the footer
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+
+        // You can also dynamically set the announcement date if needed
+        // For example, if you fetch it from an API or a specific source
+        // document.getElementById('announcement-date').textContent = "June 7, 2025";
+    </script>
+
 </body>
 </html>
