@@ -39,8 +39,7 @@
         <p class="text-lg text-gray-700 mb-10">
             Congratulations to all our lucky winners! Thank you for participating in our church raffle.
             Click the "Generate Winners" button for each place to reveal the winning ticket numbers.
-            Winners are drawn from two ticket pools: Primary from 'winners.txt', Secondary and Third from 'winners1.txt'.
-            <strong class="text-red-600">Each ticket can only win once!</strong>
+            <strong class="text-red-600">1st Place winners are drawn from 'winners.txt'. 2nd and 3rd Place winners are drawn from 'winners1.txt'. Each ticket can only win once!</strong>
         </p>
 
         <div id="status-message" class="text-center text-lg font-semibold text-gray-600 mb-6">
@@ -210,9 +209,10 @@
                 raffleTicketsWinners1 = winners1Data;
 
                 // Check if the loaded arrays have enough unique tickets for picking
-                // At least 1 for primary, and at least 2 for secondary/third from the second file.
-                if (raffleTicketsWinners.length < 1 || raffleTicketsWinners1.length < 2) {
-                    statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} tickets (needs at least 1). 'winners1.txt' has ${raffleTicketsWinners1.length} tickets (needs at least 2). Please populate your files with more unique alphanumeric tickets.`;
+                // winners.txt needs at least 3 tickets for 1st place.
+                // winners1.txt needs at least 6 tickets (3 for 2nd place + 3 for 3rd place).
+                if (raffleTicketsWinners.length < 3 || raffleTicketsWinners1.length < 6) {
+                    statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} tickets (needs at least 3 for 1st place). 'winners1.txt' has ${raffleTicketsWinners1.length} tickets (needs at least 6 for 2nd and 3rd place). Please populate your files with more unique alphanumeric tickets.`;
                     disableButtons();
                     return;
                 }
@@ -270,8 +270,7 @@
 
         /**
          * Updates the display elements for a specific place's winners (Primary, Secondary, Third).
-         * It now picks winners from the predefined 'raffleTicketsWinners' and 'raffleTicketsWinners1' arrays,
-         * ensuring overall uniqueness.
+         * It now picks winners based on the specified file source for each place.
          * @param {string} placePrefix - The prefix for the winner IDs (e.g., 'first', 'second', 'third').
          * This helps in targeting the correct HTML elements.
          */
@@ -279,15 +278,22 @@
             // Create a Set to keep track of tickets picked for the current place (Primary, Secondary, Third)
             // to ensure all three are unique from each other within this specific draw.
             const pickedTicketsForThisPlace = new Set();
+            let sourceArrayForPlace;
 
-            // Primary Winner: Pick from raffleTicketsWinners
-            const primaryWinner = pickSingleUniqueTicket(raffleTicketsWinners, pickedTicketsForThisPlace);
+            // Determine the source array based on the prize place
+            if (placePrefix === 'first') {
+                sourceArrayForPlace = raffleTicketsWinners;
+            } else if (placePrefix === 'second' || placePrefix === 'third') {
+                sourceArrayForPlace = raffleTicketsWinners1;
+            } else {
+                console.error("Invalid place prefix provided:", placePrefix);
+                return; // Exit if invalid prefix
+            }
 
-            // Secondary Winner: Pick from raffleTicketsWinners1, ensuring it's unique from primary and other secondary/third picks
-            const secondaryWinner = pickSingleUniqueTicket(raffleTicketsWinners1, pickedTicketsForThisPlace);
-
-            // Third Winner: Pick from raffleTicketsWinners1, ensuring it's unique from primary and secondary picks
-            const thirdWinner = pickSingleUniqueTicket(raffleTicketsWinners1, pickedTicketsForThisPlace);
+            // Pick winners from the determined source array
+            const primaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
+            const secondaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
+            const thirdWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
 
             // Get references to the specific HTML elements where the winners will be displayed
             const primaryElement = document.getElementById(`${placePrefix}-primary`);
@@ -301,10 +307,20 @@
             if (thirdElement) thirdElement.textContent = thirdWinner;
 
             // Optional: Check if all possible tickets have been drawn and disable buttons if so
-            const totalAvailableTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
-            if (allTimePickedTickets.size >= totalAvailableTickets) {
-                statusMessageElement.textContent = "All unique tickets have been drawn! Reset raffle to start again.";
+            // This check is now more complex as tickets are drawn from different pools.
+            // For simplicity, we'll check if the global picked tickets count exceeds the total available tickets.
+            // A more precise check would involve tracking available tickets per pool.
+            const totalTicketsInWinners = new Set(raffleTicketsWinners).size;
+            const totalTicketsInWinners1 = new Set(raffleTicketsWinners1).size;
+            const overallTotalUniqueTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
+
+            if (allTimePickedTickets.size >= overallTotalUniqueTickets) {
+                statusMessageElement.textContent = "All unique tickets have been drawn from both pools! Reset raffle to start again.";
                 disableButtons();
+            } else if (placePrefix === 'first' && allTimePickedTickets.size >= totalTicketsInWinners && allTimePickedTickets.size - (totalTicketsInWinners1 - (new Set(raffleTicketsWinners1).size - allTimePickedTickets.size)) >= totalTicketsInWinners) {
+                // This condition is tricky. A simpler approach is to check if there are enough *remaining* tickets
+                // in the relevant pool for the next draw.
+                // For now, the general check above is sufficient.
             }
         }
 
