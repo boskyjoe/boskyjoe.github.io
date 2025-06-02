@@ -6,6 +6,7 @@
     <title>Raffle Winner Announcement</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
     <style>
         /* Apply the Inter font globally and set a light background color */
         body {
@@ -51,7 +52,7 @@
                          class="w-full h-full object-contain rounded-full">
                 </div>
                 <h1 class="text-3xl md:text-4xl font-extrabold text-indigo-800 text-left">
-                    St. Sebastian's Church Raffle Winner Announcements
+                    St. Sebastian's Church Raffle Winner Announcement
                 </h1>
             </div>
             <div class="text-gray-600 text-sm md:text-base mb-8 text-left md:ml-28">
@@ -188,6 +189,9 @@
         const statusMessageElement = document.getElementById('status-message');
         const generateButtons = document.querySelectorAll('.winner-button');
         const resetRaffleBtn = document.getElementById('reset-raffle-btn');
+
+        // Initialize Tone.js drum synth
+        const drumSynth = new Tone.MembraneSynth().toDestination();
 
         /**
          * Utility function to introduce a delay.
@@ -373,7 +377,14 @@
 
             disableButtons(); // Disable buttons during generation process
 
+            // Start drum roll
+            Tone.start(); // Ensure audio context is started
+            drumSynth.triggerAttackRelease("C2", "2n"); // Play a drum sound (adjust note and duration as needed)
+
             await delay(1500); // Wait for 1.5 seconds
+
+            // Stop drum roll (optional, if you want it to fade out or stop abruptly)
+            // drumSynth.triggerRelease(); // If you want to release the sound explicitly
 
             // Create a Set to keep track of tickets picked for the current place (Primary, Secondary, Third)
             // to ensure all three are unique from each other within this specific draw.
