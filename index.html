@@ -6,6 +6,8 @@
     <title>Raffle Winner Announcement</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Confetti library for celebration effect -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <style>
         /* Apply the Inter font globally and set a light background color */
         body {
@@ -363,6 +365,17 @@
         }
 
         /**
+         * Triggers a confetti animation from the top center of the screen.
+         */
+        function triggerConfetti() {
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+        }
+
+        /**
          * Updates the display elements for a specific place's winners (Primary, Secondary, Third).
          * It now picks winners based on the specified file source for each place.
          * @param {string} placePrefix - The prefix for the winner IDs (e.g., 'first', 'second', 'third').
@@ -429,6 +442,9 @@
                 thirdElement.textContent = thirdWinner;
                 thirdElement.classList.remove('pulsing-text');
             }
+
+            // Trigger confetti after winners are displayed
+            triggerConfetti();
 
             // Update the final winners sections (both mobile and desktop versions)
             if (placePrefix === 'first') {
