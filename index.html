@@ -125,6 +125,12 @@
         .winner-highlight {
             animation: highlight-winner 1s ease-out;
         }
+
+        /* Inactive section styling - only visual, no pointer-events: none */
+        .inactive-section {
+            opacity: 0.5;
+            filter: grayscale(80%); /* Visually desaturate */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -185,7 +191,7 @@
             </button>
         </div>
 
-        <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10">
+        <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                 <span class="mr-3 text-4xl">🥈</span> 2nd Place Winners
             </h2>
@@ -208,7 +214,7 @@
             </button>
         </div>
 
-        <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg relative z-10">
+        <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg relative z-10 inactive-section">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                 <span class="mr-3 text-4xl">🥉</span> 3rd Place Winners
             </h2>
@@ -296,10 +302,12 @@
         }
 
         /**
-         * Activates a section's button. The section itself remains visually active.
+         * Activates a section (removes inactive-section class) and enables its button.
+         * @param {HTMLElement} sectionElement - The section element to activate.
          * @param {HTMLButtonElement} buttonElement - The button element to enable.
          */
-        function activateButton(buttonElement) {
+        function activateSection(sectionElement, buttonElement) {
+            sectionElement.classList.remove('inactive-section');
             buttonElement.disabled = false;
         }
 
@@ -352,7 +360,7 @@
                 console.error(`Error fetching ${filePath}:`, error);
                 statusMessageElement.textContent = `Error loading ticket data from '${filePath}'. Please ensure the file exists in the same directory as your HTML, contains valid alphanumeric tickets (one per line or comma-separated), and is correctly formatted. It might also be a security restriction in this preview environment.`;
                 disableAllGenerateButtons();
-                throw error;
+                return; // Re-throw to propagate error for initializeRaffleData
             }
         }
 
@@ -364,12 +372,10 @@
             disableAllGenerateButtons(); // Disable all buttons initially
             clearDisplayedWinners(); // Clear any previous winners on load
 
-            // Ensure all sections are initially visually active (no inactive-section class)
-            // Only control button disabled state.
-            firstPlaceSection.classList.remove('inactive-section'); // Ensure it's not grayed out
-            secondPlaceSection.classList.remove('inactive-section'); // Ensure it's not grayed out
-            thirdPlaceSection.classList.remove('inactive-section'); // Ensure it's not grayed out
-
+            // Set initial inactive state for 2nd and 3rd sections
+            firstPlaceSection.classList.remove('inactive-section');
+            secondPlaceSection.classList.add('inactive-section');
+            thirdPlaceSection.classList.add('inactive-section');
 
             try {
                 const [winnersData, winners1Data] = await Promise.all([
@@ -556,11 +562,11 @@
             if (placePrefix === 'first') {
                 generateFirstBtn.disabled = true;
                 // Activate the next section (2nd place)
-                activateButton(generateSecondBtn);
+                activateSection(secondPlaceSection, generateSecondBtn);
             } else if (placePrefix === 'second') {
                 generateSecondBtn.disabled = true;
                 // Activate the next section (3rd place)
-                activateButton(generateThirdBtn);
+                activateSection(thirdPlaceSection, generateThirdBtn);
             } else if (placePrefix === 'third') {
                 generateThirdBtn.disabled = true;
                 // All winners are drawn, no more buttons to activate
