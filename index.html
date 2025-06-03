@@ -524,6 +524,15 @@
                 finalPrimaryDesktop.textContent = primaryWinner;
             }
 
+            // Disable the button for the current section after its winners are generated
+            if (placePrefix === 'first') {
+                generateFirstBtn.disabled = true;
+            } else if (placePrefix === 'second') {
+                generateSecondBtn.disabled = true;
+            } else if (placePrefix === 'third') {
+                generateThirdBtn.disabled = true;
+            }
+
             statusMessageElement.textContent = "Winners revealed! Click another button or reset the raffle.";
 
             // Activate the next section in sequence
@@ -532,8 +541,8 @@
             } else if (placePrefix === 'second') {
                 activateSection(thirdPlaceSection, generateThirdBtn);
             } else if (placePrefix === 'third') {
-                // If all winners are drawn, disable all buttons
-                disableAllGenerateButtons();
+                // If all winners are drawn, disable all buttons (which is already done by disableAllGenerateButtons)
+                // and just update the status message. The current button (generateThirdBtn) is already disabled above.
                 statusMessageElement.textContent = "All unique tickets have been drawn! Reset raffle to start again.";
             }
 
