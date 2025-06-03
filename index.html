@@ -116,25 +116,6 @@
             <strong class="text-red-600">1st Place winners are drawn from 'winners.txt'. 2nd and 3rd Place winners are drawn from 'winners1.txt'. Each ticket can only win once!</strong>
         </p>
 
-        <!-- Final Primary Winners section - now integrated into main content -->
-        <div class="bg-green-100 p-6 rounded-lg shadow-md mb-8 relative z-10">
-            <h2 class="text-2xl font-bold text-green-800 mb-4">Final Primary Winners</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
-                    <h3 class="text-xl font-semibold text-green-700">1st Place Primary</h3>
-                    <p class="final-primary-winner-display" id="final-first-primary-desktop">---</p>
-                </div>
-                <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
-                    <h3 class="text-xl font-semibold text-green-700">2nd Place Primary</h3>
-                    <p class="final-primary-winner-display" id="final-second-primary-desktop">---</p>
-                </div>
-                <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
-                    <h3 class="text-xl font-semibold text-green-700">3rd Place Primary</h3>
-                    <p class="final-primary-winner-display" id="final-third-primary-desktop">---</p>
-                </div>
-            </div>
-        </div>
-
         <div id="status-message" class="text-center text-lg font-semibold text-gray-600 mb-6 relative z-10">
             Loading ticket data...
         </div>
@@ -213,7 +194,23 @@
         </button>
     </div>
 
-    <!-- Removed fixed sidebar for final primary winners, now integrated into main content -->
+    <div class="fixed top-1/2 right-4 -translate-y-1/2 w-72 bg-green-100 p-6 rounded-lg shadow-md z-50 hidden lg:block">
+        <h2 class="text-2xl font-bold text-green-800 mb-4">Final Primary Winners</h2>
+        <div class="grid grid-cols-1 gap-4">
+            <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
+                <h3 class="text-xl font-semibold text-green-700">1st Place Primary</h3>
+                <p class="final-primary-winner-display" id="final-first-primary-desktop">---</p>
+            </div>
+            <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
+                <h3 class="text-xl font-semibold text-green-700">2nd Place Primary</h3>
+                <p class="final-primary-winner-display" id="final-second-primary-desktop">---</p>
+            </div>
+            <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
+                <h3 class="text-xl font-semibold text-green-700">3rd Place Primary</h3>
+                <p class="final-primary-winner-display" id="final-third-primary-desktop">---</p>
+            </div>
+        </div>
+    </div>
 
     <script>
         let raffleTicketsWinners = []; // Will be populated from winners.txt
@@ -345,6 +342,22 @@
         }
 
         /**
+         * Generates a random alphanumeric string in the format "AAA12345678".
+         * @returns {string} A random alphanumeric string.
+         */
+        function generateRandomAlphanumeric() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            let result = '';
+            for (let i = 0; i < 3; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            for (let i = 0; i < 8; i++) {
+                result += Math.floor(Math.random() * 10);
+            }
+            return result;
+        }
+
+        /**
          * Picks a single unique random element from a source array, ensuring it's not
          * already present in a set of 'currentDrawAvoidTickets' (for uniqueness within this draw)
          * AND 'allTimePickedTickets' (for overall uniqueness).
@@ -403,8 +416,8 @@
             const animationInterval = setInterval(() => {
                 const elapsed = Date.now() - startTime;
                 if (elapsed < duration) {
-                    // Generate a random number that looks like a ticket number (e.g., 6 digits)
-                    element.textContent = Math.floor(Math.random() * 900000) + 100000;
+                    // Generate a random alphanumeric string for the animation
+                    element.textContent = generateRandomAlphanumeric();
                 } else {
                     clearInterval(animationInterval);
                     element.textContent = finalNumber;
