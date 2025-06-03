@@ -148,6 +148,16 @@
             filter: grayscale(0%);
             transition: opacity 0.5s ease-out, filter 0.5s ease-out, transform 0.5s ease-out, scale 0.5s ease-out; /* Smooth transition for activation */
         }
+
+        /* Keyframes for fade out animation */
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-10px); } /* Fade out and slight upward movement */
+        }
+
+        .fade-out-animation {
+            animation: fadeOut 0.5s ease-out forwards; /* Apply fadeOut animation */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -329,23 +339,44 @@
         }
 
         /**
-         * Resets the displayed winner numbers to "---".
+         * Resets the displayed winner numbers to "---" with a fade-out animation.
          */
-        function clearDisplayedWinners() {
-            document.getElementById('first-primary').textContent = '---';
-            document.getElementById('first-secondary').textContent = '---';
-            document.getElementById('first-third').textContent = '---';
-            document.getElementById('second-primary').textContent = '---';
-            document.getElementById('second-secondary').textContent = '---';
-            document.getElementById('second-third').textContent = '---';
-            document.getElementById('third-primary').textContent = '---';
-            document.getElementById('third-secondary').textContent = '---';
-            document.getElementById('third-third').textContent = '---';
+        async function clearDisplayedWinners() {
+            const winnerElements = [
+                document.getElementById('first-primary'),
+                document.getElementById('first-secondary'),
+                document.getElementById('first-third'),
+                document.getElementById('second-primary'),
+                document.getElementById('second-secondary'),
+                document.getElementById('second-third'),
+                document.getElementById('third-primary'),
+                document.getElementById('third-secondary'),
+                document.getElementById('third-third'),
+                document.getElementById('final-first-primary-desktop'),
+                document.getElementById('final-second-primary-desktop'),
+                document.getElementById('final-third-primary-desktop')
+            ];
 
-            // Also clear the final winners sections
-            document.getElementById('final-first-primary-desktop').textContent = '---';
-            document.getElementById('final-second-primary-desktop').textContent = '---';
-            document.getElementById('final-third-primary-desktop').textContent = '---';
+            // Apply fade-out animation to all elements that are not already '---'
+            const animations = [];
+            winnerElements.forEach(element => {
+                if (element.textContent !== '---') {
+                    element.classList.add('fade-out-animation');
+                    animations.push(new Promise(resolve => {
+                        element.addEventListener('animationend', () => {
+                            element.classList.remove('fade-out-animation');
+                            element.textContent = '---';
+                            resolve();
+                        }, { once: true });
+                    }));
+                } else {
+                    // If already '---', resolve immediately
+                    animations.push(Promise.resolve());
+                }
+            });
+
+            // Wait for all fade-out animations to complete
+            await Promise.all(animations);
         }
 
         /**
@@ -377,7 +408,7 @@
                 console.error(`Error fetching ${filePath}:`, error);
                 statusMessageElement.textContent = `Error loading ticket data from '${filePath}'. Please ensure the file exists in the same directory as your HTML, contains valid alphanumeric tickets (one per line or comma-separated), and is correctly formatted. It might also be a security restriction in this preview environment.`;
                 disableAllGenerateButtons();
-                return; // Re-throw to propagate error for initializeRaffleData
+                return Promise.reject(error); // Re-throw to propagate error for initializeRaffleData
             }
         }
 
@@ -387,7 +418,6 @@
         async function initializeRaffleData() {
             statusMessageElement.textContent = "Loading ticket data...";
             disableAllGenerateButtons(); // Disable all buttons initially
-            clearDisplayedWinners(); // Clear any previous winners on load
 
             // Set initial inactive state for 2nd and 3rd sections
             firstPlaceSection.classList.remove('inactive-section'); // Ensure 1st is active
@@ -612,9 +642,9 @@
 
         // Add event listener for the Reset Raffle button
         if (resetRaffleBtn) {
-            resetRaffleBtn.addEventListener('click', () => {
+            resetRaffleBtn.addEventListener('click', async () => { // Made async to await clearDisplayedWinners
                 allTimePickedTickets.clear(); // Clear all previously picked tickets
-                clearDisplayedWinners(); // Reset displayed text
+                await clearDisplayedWinners(); // Wait for numbers to fade out before resetting
                 initializeRaffleData(); // Re-initialize data and set initial active section
                 statusMessageElement.textContent = "Raffle reset. Ticket data reloaded. Click 'Generate 1st Place Winners' to begin.";
             });
