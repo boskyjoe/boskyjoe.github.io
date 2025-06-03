@@ -33,6 +33,12 @@
             z-index: -1; /* Ensure it stays behind content */
         }
 
+        /* Keyframes for dynamic background pattern movement */
+        @keyframes pattern-move {
+            0% { background-position: 0 0, 10px 10px; }
+            100% { background-position: 20px 20px, 30px 30px; } /* Shift by one pattern unit */
+        }
+
         /* Subtle diagonal stripes pattern for the main content box */
         .main-content-pattern {
             background-image: linear-gradient(45deg, #f0f4f8 25%, transparent 25%, transparent 75%, #f0f4f8 75%, #f0f4f8),
@@ -47,6 +53,7 @@
             height: 100%;
             z-index: -1;
             border-radius: inherit;
+            animation: pattern-move 60s linear infinite alternate; /* Slow, continuous movement */
         }
 
         /* Custom styles for button hover effects (Tailwind handles most, but adding a subtle scale) */
@@ -130,6 +137,16 @@
         .inactive-section {
             opacity: 0.5;
             filter: grayscale(80%); /* Visually desaturate */
+            transition: opacity 0.5s ease-out, filter 0.5s ease-out, transform 0.5s ease-out, scale 0.5s ease-out; /* Smooth transition for activation */
+            transform: scale(0.98); /* Slightly smaller when inactive */
+        }
+
+        /* Active section styling - for pre-reveal grand entrance */
+        .winner-section:not(.inactive-section) {
+            transform: scale(1);
+            opacity: 1;
+            filter: grayscale(0%);
+            transition: opacity 0.5s ease-out, filter 0.5s ease-out, transform 0.5s ease-out, scale 0.5s ease-out; /* Smooth transition for activation */
         }
     </style>
 </head>
@@ -373,7 +390,7 @@
             clearDisplayedWinners(); // Clear any previous winners on load
 
             // Set initial inactive state for 2nd and 3rd sections
-            firstPlaceSection.classList.remove('inactive-section');
+            firstPlaceSection.classList.remove('inactive-section'); // Ensure 1st is active
             secondPlaceSection.classList.add('inactive-section');
             thirdPlaceSection.classList.add('inactive-section');
 
