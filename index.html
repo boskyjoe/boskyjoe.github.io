@@ -91,10 +91,9 @@
             transform: rotate(2deg); /* Slight rotation */
         }
 
-        /* Inactive section styling */
+        /* Inactive section styling - only applies to visual elements, not pointer events */
         .inactive-section {
             opacity: 0.5;
-            pointer-events: none; /* Prevents clicks on children */
             filter: grayscale(80%); /* Visually desaturate */
         }
     </style>
@@ -268,18 +267,11 @@
         }
 
         /**
-         * Enables the specified section and its button, and disables others.
+         * Activates a section by removing the 'inactive-section' class and enabling its button.
          * @param {HTMLElement} sectionElement - The section element to activate.
          * @param {HTMLButtonElement} buttonElement - The button element to enable.
          */
         function activateSection(sectionElement, buttonElement) {
-            // Deactivate all sections first
-            [firstPlaceSection, secondPlaceSection, thirdPlaceSection].forEach(section => {
-                section.classList.add('inactive-section');
-            });
-            disableAllGenerateButtons();
-
-            // Activate the target section and its button
             sectionElement.classList.remove('inactive-section');
             buttonElement.disabled = false;
         }
@@ -342,8 +334,13 @@
          */
         async function initializeRaffleData() {
             statusMessageElement.textContent = "Loading ticket data...";
-            disableAllGenerateButtons();
+            disableAllGenerateButtons(); // Disable all buttons initially
             clearDisplayedWinners(); // Clear any previous winners on load
+
+            // Ensure all sections are initially inactive except the first one
+            firstPlaceSection.classList.remove('inactive-section');
+            secondPlaceSection.classList.add('inactive-section');
+            thirdPlaceSection.classList.add('inactive-section');
 
             try {
                 const [winnersData, winners1Data] = await Promise.all([
@@ -362,9 +359,7 @@
                 }
 
                 statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 1st Place Winners' to begin.";
-                // Initially activate only the first place section
-                activateSection(firstPlaceSection, generateFirstBtn);
-
+                generateFirstBtn.disabled = false; // Enable only the first button
             } catch (error) {
                 // Error handled in fetchTicketNumbers, just ensure buttons are disabled
                 disableAllGenerateButtons();
@@ -527,26 +522,19 @@
             // Disable the button for the current section after its winners are generated
             if (placePrefix === 'first') {
                 generateFirstBtn.disabled = true;
-            } else if (placePrefix === 'second') {
-                generateSecondBtn.disabled = true;
-            } else if (placePrefix === 'third') {
-                generateThirdBtn.disabled = true;
-            }
-
-            statusMessageElement.textContent = "Winners revealed! Click another button or reset the raffle.";
-
-            // Activate the next section in sequence
-            if (placePrefix === 'first') {
+                // Activate the next section (2nd place)
                 activateSection(secondPlaceSection, generateSecondBtn);
             } else if (placePrefix === 'second') {
+                generateSecondBtn.disabled = true;
+                // Activate the next section (3rd place)
                 activateSection(thirdPlaceSection, generateThirdBtn);
             } else if (placePrefix === 'third') {
-                // If all winners are drawn, disable all buttons (which is already done by disableAllGenerateButtons)
-                // and just update the status message. The current button (generateThirdBtn) is already disabled above.
+                generateThirdBtn.disabled = true;
+                // All winners are drawn, no more sections to activate
                 statusMessageElement.textContent = "All unique tickets have been drawn! Reset raffle to start again.";
             }
 
-            // Optional: Check if all possible tickets have been drawn and disable buttons if so
+            // Optional: Check if all possible tickets have been drawn and disable all buttons if so
             const totalTicketsInWinners = new Set(raffleTicketsWinners).size;
             const totalTicketsInWinners1 = new Set(raffleTicketsWinners1).size;
             const overallTotalUniqueTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
