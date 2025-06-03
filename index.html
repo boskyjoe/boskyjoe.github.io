@@ -30,48 +30,6 @@
             z-index: -1; /* Ensure it stays behind content */
         }
 
-        /* Base styles for winner sections - these will now have their gradients */
-        .winner-section {
-            position: relative; /* Needed for positioning the pseudo-element watermark */
-            overflow: hidden; /* Ensures pseudo-element stays within bounds */
-        }
-
-        /* Pseudo-element for watermarks within winner sections */
-        .winner-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: cover;
-            opacity: 0.15; /* Subtle opacity for section watermark image */
-            z-index: -1; /* Place behind content */
-            border-radius: inherit; /* Inherit border-radius from parent */
-        }
-
-        /* Specific watermarks for each winner section */
-        .first-place-section::before {
-            background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQNf9HBTuMVFGTTnE-bHv1itfdRaf_uWwYfVA&s');
-        }
-
-        .second-place-section::before {
-            background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLwlHnSaOvQtMyY9PHDUjVmDwxDqJ2N1oysw&s');
-        }
-
-        .third-place-section::before {
-            background-image: url('https://5.imimg.com/data5/SELLER/Default/2022/4/CE/TH/DP/9831470/2-bhk-villa.jpeg');
-        }
-
-        /* Adjust winner card background for readability over section watermarks */
-        .winner-card {
-            background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white background */
-            position: relative; /* Ensure content is positioned relative to this card */
-            z-index: 0; /* Ensure cards are above the section watermark */
-        }
-
         /* Custom styles for button hover effects (Tailwind handles most, but adding a subtle scale) */
         .winner-button:hover:not(:disabled) {
             transform: scale(1.05); /* Slightly enlarge button on hover, but not if disabled */
@@ -150,20 +108,20 @@
             Loading ticket data...
         </div>
 
-        <div class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 first-place-section">
+        <div class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                 <span class="inline-block bg-white text-yellow-600 rounded-full px-4 py-1 mr-3 text-2xl">🥇</span> 1st Place Winners
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div class="winner-card p-4 rounded-md shadow-md">
+                <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
                     <h3 class="text-xl font-semibold text-yellow-800">Primary Winner</h3>
                     <p id="first-primary" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
                 </div>
-                <div class="winner-card p-4 rounded-md shadow-md">
+                <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
                     <h3 class="text-xl font-semibold text-yellow-800">Secondary Winner</h3>
                     <p id="first-secondary" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
                 </div>
-                <div class="winner-card p-4 rounded-md shadow-md">
+                <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
                     <h3 class="text-xl font-semibold text-yellow-800">Third Winner</h3>
                     <p id="first-third" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
                 </div>
@@ -173,20 +131,20 @@
             </button>
         </div>
 
-        <div class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 second-place-section">
+        <div class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                 <span class="inline-block bg-white text-gray-600 rounded-full px-4 py-1 mr-3 text-2xl">🥈</span> 2nd Place Winners
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div class="winner-card p-4 rounded-md shadow-md">
+                <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
                     <h3 class="text-xl font-semibold text-gray-800">Primary Winner</h3>
                     <p id="second-primary" class="text-3xl font-bold text-gray-900 mt-2">---</p>
                 </div>
-                <div class="winner-card p-4 rounded-md shadow-md">
+                <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
                     <h3 class="text-xl font-semibold text-gray-800">Secondary Winner</h3>
                     <p id="second-secondary" class="text-3xl font-bold text-gray-900 mt-2">---</p>
                 </div>
-                <div class="winner-card p-4 rounded-md shadow-md">
+                <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
                     <h3 class="text-xl font-semibold text-gray-800">Third Winner</h3>
                     <p id="second-third" class="text-3xl font-bold text-gray-900 mt-2">---</p>
                 </div>
@@ -196,20 +154,20 @@
             </button>
         </div>
 
-        <div class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg third-place-section">
+        <div class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                 <span class="inline-block bg-white text-amber-800 rounded-full px-4 py-1 mr-3 text-2xl">🥉</span> 3rd Place Winners
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div class="winner-card p-4 rounded-md shadow-md">
+                <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
                     <h3 class="text-xl font-semibold text-amber-800">Primary Winner</h3>
                     <p id="third-primary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
                 </div>
-                <div class="winner-card p-4 rounded-md shadow-md">
+                <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
                     <h3 class="text-xl font-semibold text-amber-800">Secondary Winner</h3>
                     <p id="third-secondary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
                 </div>
-                <div class="winner-card p-4 rounded-md shadow-md">
+                <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
                     <h3 class="text-xl font-semibold text-amber-800">Third Winner</h3>
                     <p id="third-third" class="text-3xl font-bold text-amber-900 mt-2">---</p>
                 </div>
