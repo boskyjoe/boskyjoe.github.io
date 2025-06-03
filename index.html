@@ -11,6 +11,23 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f0f4f8; /* A soft, light blue-gray for the background */
+            position: relative; /* Needed for absolute positioning of the watermark */
+            min-height: 100vh; /* Ensure body takes full height for watermark to cover */
+        }
+
+        /* Watermark Overlay */
+        .watermark-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://placehold.co/1200x800/E0E7FF/000000?text=Homes+Watermark'); /* Placeholder for homes image */
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: cover;
+            opacity: 0.1; /* Adjust opacity for watermark effect */
+            z-index: -1; /* Ensure it stays behind content */
         }
 
         /* Custom styles for button hover effects (Tailwind handles most, but adding a subtle scale) */
@@ -42,7 +59,10 @@
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
-    <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center">
+    <!-- Watermark Overlay Div -->
+    <div class="watermark-overlay"></div>
+
+    <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center relative z-0">
         <div class="mb-8">
             <div class="flex items-center justify-center md:justify-start mb-4">
                 <div class="w-20 h-20 md:w-24 md:h-24 mr-4 md:mr-6 flex-shrink-0">
