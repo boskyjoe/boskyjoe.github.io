@@ -566,6 +566,9 @@
             await delay(500);
             await animateNumberReveal(thirdElement, thirdWinner);
 
+            // Add a delay here to allow confetti animation to complete before activating the next section
+            await delay(1000); // 1 second delay after the last number reveal and confetti trigger
+
             // Update the final primary winner display and apply highlight
             if (finalPrimaryDesktop) {
                 finalPrimaryDesktop.textContent = primaryWinner;
