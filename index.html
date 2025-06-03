@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Raffle Winner Announcement</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Google Fonts: Inter for general text, Caveat for post-it note -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
     <!-- Confetti library for celebration effect -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <style>
@@ -89,12 +90,40 @@
             background-color: #fffacd; /* Light yellow, like a post-it */
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.05); /* Soft shadow for lift */
             transform: rotate(2deg); /* Slight rotation */
+            position: relative; /* Needed for pseudo-element positioning */
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Smooth transitions */
         }
 
-        /* Inactive section styling - only applies to visual elements, not pointer events */
-        .inactive-section {
-            opacity: 0.5;
-            filter: grayscale(80%); /* Visually desaturate */
+        /* Post-it note hover effect */
+        .post-it-note:hover {
+            transform: rotate(0deg) translateY(-5px); /* Lift and straighten slightly on hover */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.08); /* More pronounced shadow */
+        }
+
+        /* Pseudo-element for the "pin" on the post-it */
+        .post-it-note::before {
+            content: '';
+            position: absolute;
+            top: -10px; /* Adjust position to be above the note */
+            left: 50%;
+            transform: translateX(-50%) rotate(-15deg); /* Center and rotate slightly */
+            width: 20px;
+            height: 20px;
+            background-color: #b0c4de; /* Light steel blue for the pin head */
+            border-radius: 50%; /* Circular pin head */
+            box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.2), 0 1px 1px rgba(0, 0, 0, 0.1); /* Inner shadow for depth */
+            z-index: 10; /* Ensure pin is above the note */
+        }
+
+        /* Animation for new winner highlight within the post-it */
+        @keyframes highlight-winner {
+            0% { background-color: transparent; }
+            50% { background-color: rgba(255, 255, 0, 0.3); } /* Brief yellow flash */
+            100% { background-color: transparent; }
+        }
+
+        .winner-highlight {
+            animation: highlight-winner 1s ease-out;
         }
     </style>
 </head>
@@ -156,7 +185,7 @@
             </button>
         </div>
 
-        <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
+        <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                 <span class="mr-3 text-4xl">🥈</span> 2nd Place Winners
             </h2>
@@ -179,7 +208,7 @@
             </button>
         </div>
 
-        <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg relative z-10 inactive-section">
+        <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg relative z-10">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                 <span class="mr-3 text-4xl">🥉</span> 3rd Place Winners
             </h2>
@@ -209,19 +238,19 @@
 
     <!-- Final Primary Winners section - now with post-it styling -->
     <div class="fixed top-1/2 right-4 -translate-y-1/2 w-72 p-6 rounded-lg shadow-md z-50 hidden lg:block post-it-note">
-        <h2 class="text-2xl font-bold text-green-800 mb-4">Final Primary Winners</h2>
+        <h2 class="text-2xl font-bold text-green-800 mb-4 font-caveat">Final Primary Winners</h2>
         <div class="grid grid-cols-1 gap-4">
             <div class="winner-card bg-white p-4 rounded-md shadow-sm">
-                <h3 class="text-xl font-semibold text-green-700">1st Place Primary</h3>
-                <p class="final-primary-winner-display" id="final-first-primary-desktop">---</p>
+                <h3 class="text-xl font-semibold text-green-700 font-caveat">1st Place Primary</h3>
+                <p class="final-primary-winner-display text-2xl font-bold text-green-900 mt-2 font-caveat" id="final-first-primary-desktop">---</p>
             </div>
             <div class="winner-card bg-white p-4 rounded-md shadow-sm">
-                <h3 class="text-xl font-semibold text-green-700">2nd Place Primary</h3>
-                <p class="final-primary-winner-display" id="final-second-primary-desktop">---</p>
+                <h3 class="text-xl font-semibold text-green-700 font-caveat">2nd Place Primary</h3>
+                <p class="final-primary-winner-display text-2xl font-bold text-green-900 mt-2 font-caveat" id="final-second-primary-desktop">---</p>
             </div>
             <div class="winner-card bg-white p-4 rounded-md shadow-sm">
-                <h3 class="text-xl font-semibold text-green-700">3rd Place Primary</h3>
-                <p class="final-primary-winner-display" id="final-third-primary-desktop">---</p>
+                <h3 class="text-xl font-semibold text-green-700 font-caveat">3rd Place Primary</h3>
+                <p class="final-primary-winner-display text-2xl font-bold text-green-900 mt-2 font-caveat" id="final-third-primary-desktop">---</p>
             </div>
         </div>
     </div>
@@ -267,12 +296,10 @@
         }
 
         /**
-         * Activates a section by removing the 'inactive-section' class and enabling its button.
-         * @param {HTMLElement} sectionElement - The section element to activate.
+         * Activates a section's button. The section itself remains visually active.
          * @param {HTMLButtonElement} buttonElement - The button element to enable.
          */
-        function activateSection(sectionElement, buttonElement) {
-            sectionElement.classList.remove('inactive-section');
+        function activateButton(buttonElement) {
             buttonElement.disabled = false;
         }
 
@@ -337,10 +364,12 @@
             disableAllGenerateButtons(); // Disable all buttons initially
             clearDisplayedWinners(); // Clear any previous winners on load
 
-            // Ensure all sections are initially inactive except the first one
-            firstPlaceSection.classList.remove('inactive-section');
-            secondPlaceSection.classList.add('inactive-section');
-            thirdPlaceSection.classList.add('inactive-section');
+            // Ensure all sections are initially visually active (no inactive-section class)
+            // Only control button disabled state.
+            firstPlaceSection.classList.remove('inactive-section'); // Ensure it's not grayed out
+            secondPlaceSection.classList.remove('inactive-section'); // Ensure it's not grayed out
+            thirdPlaceSection.classList.remove('inactive-section'); // Ensure it's not grayed out
+
 
             try {
                 const [winnersData, winners1Data] = await Promise.all([
@@ -514,23 +543,27 @@
             await delay(500);
             await animateNumberReveal(thirdElement, thirdWinner);
 
-            // Update the final primary winner display
+            // Update the final primary winner display and apply highlight
             if (finalPrimaryDesktop) {
                 finalPrimaryDesktop.textContent = primaryWinner;
+                finalPrimaryDesktop.classList.add('winner-highlight');
+                setTimeout(() => {
+                    finalPrimaryDesktop.classList.remove('winner-highlight');
+                }, 1000); // Remove highlight after 1 second
             }
 
             // Disable the button for the current section after its winners are generated
             if (placePrefix === 'first') {
                 generateFirstBtn.disabled = true;
                 // Activate the next section (2nd place)
-                activateSection(secondPlaceSection, generateSecondBtn);
+                activateButton(generateSecondBtn);
             } else if (placePrefix === 'second') {
                 generateSecondBtn.disabled = true;
                 // Activate the next section (3rd place)
-                activateSection(thirdPlaceSection, generateThirdBtn);
+                activateButton(generateThirdBtn);
             } else if (placePrefix === 'third') {
                 generateThirdBtn.disabled = true;
-                // All winners are drawn, no more sections to activate
+                // All winners are drawn, no more buttons to activate
                 statusMessageElement.textContent = "All unique tickets have been drawn! Reset raffle to start again.";
             }
 
