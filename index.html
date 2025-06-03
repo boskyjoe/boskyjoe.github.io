@@ -83,6 +83,14 @@
         .pulsing-text {
             animation: pulse 1.5s infinite ease-in-out;
         }
+
+        /* Post-it note styling for the Final Primary Winners section */
+        .post-it-note {
+            background-color: #fffacd; /* Light yellow, like a post-it */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.05); /* Soft shadow for lift */
+            transform: rotate(2deg); /* Slight rotation */
+            /* Add a pseudo-element for a pin if desired, but for simplicity, let's stick to shadow and rotation first */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -194,18 +202,19 @@
         </button>
     </div>
 
-    <div class="fixed top-1/2 right-4 -translate-y-1/2 w-72 bg-green-100 p-6 rounded-lg shadow-md z-50 hidden lg:block">
+    <!-- Final Primary Winners section - now with post-it styling -->
+    <div class="fixed top-1/2 right-4 -translate-y-1/2 w-72 p-6 rounded-lg shadow-md z-50 hidden lg:block post-it-note">
         <h2 class="text-2xl font-bold text-green-800 mb-4">Final Primary Winners</h2>
         <div class="grid grid-cols-1 gap-4">
-            <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
+            <div class="winner-card bg-white p-4 rounded-md shadow-sm"> <!-- Changed bg-green-50 to bg-white -->
                 <h3 class="text-xl font-semibold text-green-700">1st Place Primary</h3>
                 <p class="final-primary-winner-display" id="final-first-primary-desktop">---</p>
             </div>
-            <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
+            <div class="winner-card bg-white p-4 rounded-md shadow-sm"> <!-- Changed bg-green-50 to bg-white -->
                 <h3 class="text-xl font-semibold text-green-700">2nd Place Primary</h3>
                 <p class="final-primary-winner-display" id="final-second-primary-desktop">---</p>
             </div>
-            <div class="winner-card bg-green-50 p-4 rounded-md shadow-sm">
+            <div class="winner-card bg-white p-4 rounded-md shadow-sm"> <!-- Changed bg-green-50 to bg-white -->
                 <h3 class="text-xl font-semibold text-green-700">3rd Place Primary</h3>
                 <p class="final-primary-winner-display" id="final-third-primary-desktop">---</p>
             </div>
