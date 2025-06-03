@@ -89,7 +89,13 @@
             background-color: #fffacd; /* Light yellow, like a post-it */
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.05); /* Soft shadow for lift */
             transform: rotate(2deg); /* Slight rotation */
-            /* Add a pseudo-element for a pin if desired, but for simplicity, let's stick to shadow and rotation first */
+        }
+
+        /* Inactive section styling */
+        .inactive-section {
+            opacity: 0.5;
+            pointer-events: none; /* Prevents clicks on children */
+            filter: grayscale(80%); /* Visually desaturate */
         }
     </style>
 </head>
@@ -128,7 +134,7 @@
             Loading ticket data...
         </div>
 
-        <div class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10">
+        <div id="first-place-section" class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                 <span class="mr-3 text-4xl">🥇</span> 1st Place Winners
             </h2>
@@ -151,7 +157,7 @@
             </button>
         </div>
 
-        <div class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10">
+        <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                 <span class="mr-3 text-4xl">🥈</span> 2nd Place Winners
             </h2>
@@ -174,7 +180,7 @@
             </button>
         </div>
 
-        <div class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg relative z-10">
+        <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg relative z-10 inactive-section">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                 <span class="mr-3 text-4xl">🥉</span> 3rd Place Winners
             </h2>
@@ -206,15 +212,15 @@
     <div class="fixed top-1/2 right-4 -translate-y-1/2 w-72 p-6 rounded-lg shadow-md z-50 hidden lg:block post-it-note">
         <h2 class="text-2xl font-bold text-green-800 mb-4">Final Primary Winners</h2>
         <div class="grid grid-cols-1 gap-4">
-            <div class="winner-card bg-white p-4 rounded-md shadow-sm"> <!-- Changed bg-green-50 to bg-white -->
+            <div class="winner-card bg-white p-4 rounded-md shadow-sm">
                 <h3 class="text-xl font-semibold text-green-700">1st Place Primary</h3>
                 <p class="final-primary-winner-display" id="final-first-primary-desktop">---</p>
             </div>
-            <div class="winner-card bg-white p-4 rounded-md shadow-sm"> <!-- Changed bg-green-50 to bg-white -->
+            <div class="winner-card bg-white p-4 rounded-md shadow-sm">
                 <h3 class="text-xl font-semibold text-green-700">2nd Place Primary</h3>
                 <p class="final-primary-winner-display" id="final-second-primary-desktop">---</p>
             </div>
-            <div class="winner-card bg-white p-4 rounded-md shadow-sm"> <!-- Changed bg-green-50 to bg-white -->
+            <div class="winner-card bg-white p-4 rounded-md shadow-sm">
                 <h3 class="text-xl font-semibold text-green-700">3rd Place Primary</h3>
                 <p class="final-primary-winner-display" id="final-third-primary-desktop">---</p>
             </div>
@@ -236,6 +242,16 @@
         const generateButtons = document.querySelectorAll('.winner-button');
         const resetRaffleBtn = document.getElementById('reset-raffle-btn');
 
+        // Get references to the winner sections
+        const firstPlaceSection = document.getElementById('first-place-section');
+        const secondPlaceSection = document.getElementById('second-place-section');
+        const thirdPlaceSection = document.getElementById('third-place-section');
+
+        // Get references to the "Generate Winners" buttons for each place
+        const generateFirstBtn = document.getElementById('generate-first');
+        const generateSecondBtn = document.getElementById('generate-second');
+        const generateThirdBtn = document.getElementById('generate-third');
+
         /**
          * Utility function to introduce a delay.
          * @param {number} ms - The delay in milliseconds.
@@ -247,15 +263,25 @@
         /**
          * Disables all "Generate Winners" buttons.
          */
-        function disableButtons() {
+        function disableAllGenerateButtons() {
             generateButtons.forEach(button => button.disabled = true);
         }
 
         /**
-         * Enables all "Generate Winners" buttons.
+         * Enables the specified section and its button, and disables others.
+         * @param {HTMLElement} sectionElement - The section element to activate.
+         * @param {HTMLButtonElement} buttonElement - The button element to enable.
          */
-        function enableButtons() {
-            generateButtons.forEach(button => button.disabled = false);
+        function activateSection(sectionElement, buttonElement) {
+            // Deactivate all sections first
+            [firstPlaceSection, secondPlaceSection, thirdPlaceSection].forEach(section => {
+                section.classList.add('inactive-section');
+            });
+            disableAllGenerateButtons();
+
+            // Activate the target section and its button
+            sectionElement.classList.remove('inactive-section');
+            buttonElement.disabled = false;
         }
 
         /**
@@ -272,7 +298,7 @@
             document.getElementById('third-secondary').textContent = '---';
             document.getElementById('third-third').textContent = '---';
 
-            // Also clear the final winners sections (now only one set of IDs)
+            // Also clear the final winners sections
             document.getElementById('final-first-primary-desktop').textContent = '---';
             document.getElementById('final-second-primary-desktop').textContent = '---';
             document.getElementById('final-third-primary-desktop').textContent = '---';
@@ -306,7 +332,7 @@
             } catch (error) {
                 console.error(`Error fetching ${filePath}:`, error);
                 statusMessageElement.textContent = `Error loading ticket data from '${filePath}'. Please ensure the file exists in the same directory as your HTML, contains valid alphanumeric tickets (one per line or comma-separated), and is correctly formatted. It might also be a security restriction in this preview environment.`;
-                disableButtons();
+                disableAllGenerateButtons();
                 throw error;
             }
         }
@@ -316,7 +342,7 @@
          */
         async function initializeRaffleData() {
             statusMessageElement.textContent = "Loading ticket data...";
-            disableButtons();
+            disableAllGenerateButtons();
             clearDisplayedWinners(); // Clear any previous winners on load
 
             try {
@@ -329,19 +355,19 @@
                 raffleTicketsWinners1 = winners1Data;
 
                 // Check if the loaded arrays have enough unique tickets for picking
-                // winners.txt needs at least 3 tickets for 1st place.
-                // winners1.txt needs at least 6 tickets (3 for 2nd place + 3 for 3rd place).
                 if (raffleTicketsWinners.length < 3 || raffleTicketsWinners1.length < 6) {
                     statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} tickets (needs at least 3 for 1st place). 'winners1.txt' has ${raffleTicketsWinners1.length} tickets (needs at least 6 for 2nd and 3rd place). Please populate your files with more unique alphanumeric tickets.`;
-                    disableButtons();
+                    disableAllGenerateButtons();
                     return;
                 }
 
-                statusMessageElement.textContent = "Ticket data loaded successfully! Click a button to generate winners.";
-                enableButtons();
+                statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 1st Place Winners' to begin.";
+                // Initially activate only the first place section
+                activateSection(firstPlaceSection, generateFirstBtn);
+
             } catch (error) {
                 // Error handled in fetchTicketNumbers, just ensure buttons are disabled
-                disableButtons();
+                disableAllGenerateButtons();
             }
         }
 
@@ -455,10 +481,10 @@
             const secondaryElement = document.getElementById(`${placePrefix}-secondary`);
             const thirdElement = document.getElementById(`${placePrefix}-third`);
 
-            // Get references to the final winner display elements (now only desktop IDs used)
+            // Get references to the final winner display elements
             const finalPrimaryDesktop = document.getElementById(`final-${placePrefix}-primary-desktop`);
 
-            disableButtons(); // Disable buttons during generation process
+            disableAllGenerateButtons(); // Disable all buttons during generation process
             statusMessageElement.textContent = "Drawing winners..."; // Updated loading message
 
             // Create a Set to keep track of tickets picked for the current place (Primary, Secondary, Third)
@@ -473,7 +499,10 @@
                 sourceArrayForPlace = raffleTicketsWinners1;
             } else {
                 console.error("Invalid place prefix provided:", placePrefix);
-                enableButtons(); // Re-enable buttons on error
+                // Re-enable only the current section's button on error
+                if (placePrefix === 'first') generateFirstBtn.disabled = false;
+                if (placePrefix === 'second') generateSecondBtn.disabled = false;
+                if (placePrefix === 'third') generateThirdBtn.disabled = false;
                 statusMessageElement.textContent = "Error: Invalid prize category.";
                 return; // Exit if invalid prefix
             }
@@ -490,14 +519,23 @@
             await delay(500);
             await animateNumberReveal(thirdElement, thirdWinner);
 
-            // Update the final primary winner display (desktop version)
+            // Update the final primary winner display
             if (finalPrimaryDesktop) {
                 finalPrimaryDesktop.textContent = primaryWinner;
             }
 
-            // Re-enable buttons after all generations are complete
-            enableButtons();
             statusMessageElement.textContent = "Winners revealed! Click another button or reset the raffle.";
+
+            // Activate the next section in sequence
+            if (placePrefix === 'first') {
+                activateSection(secondPlaceSection, generateSecondBtn);
+            } else if (placePrefix === 'second') {
+                activateSection(thirdPlaceSection, generateThirdBtn);
+            } else if (placePrefix === 'third') {
+                // If all winners are drawn, disable all buttons
+                disableAllGenerateButtons();
+                statusMessageElement.textContent = "All unique tickets have been drawn! Reset raffle to start again.";
+            }
 
             // Optional: Check if all possible tickets have been drawn and disable buttons if so
             const totalTicketsInWinners = new Set(raffleTicketsWinners).size;
@@ -506,34 +544,23 @@
 
             if (allTimePickedTickets.size >= overallTotalUniqueTickets) {
                 statusMessageElement.textContent = "All unique tickets have been drawn from both pools! Reset raffle to start again.";
-                disableButtons();
+                disableAllGenerateButtons();
             }
         }
 
-        // Get references to the "Generate Winners" buttons for each place
-        const generateFirstBtn = document.getElementById('generate-first');
-        const generateSecondBtn = document.getElementById('generate-second');
-        const generateThirdBtn = document.getElementById('generate-third');
-
         // Add event listeners to each button.
         // When a button is clicked, it calls `updateWinnersDisplay` with the appropriate prefix.
-        if (generateFirstBtn) {
-            generateFirstBtn.addEventListener('click', () => updateWinnersDisplay('first'));
-        }
-        if (generateSecondBtn) {
-            generateSecondBtn.addEventListener('click', () => updateWinnersDisplay('second'));
-        }
-        if (generateThirdBtn) {
-            generateThirdBtn.addEventListener('click', () => updateWinnersDisplay('third'));
-        }
+        generateFirstBtn.addEventListener('click', () => updateWinnersDisplay('first'));
+        generateSecondBtn.addEventListener('click', () => updateWinnersDisplay('second'));
+        generateThirdBtn.addEventListener('click', () => updateWinnersDisplay('third'));
 
         // Add event listener for the Reset Raffle button
         if (resetRaffleBtn) {
             resetRaffleBtn.addEventListener('click', () => {
                 allTimePickedTickets.clear(); // Clear all previously picked tickets
                 clearDisplayedWinners(); // Reset displayed text
-                initializeRaffleData(); // Re-initialize data and enable buttons
-                statusMessageElement.textContent = "Raffle reset. Ticket data reloaded. Click a button to generate winners.";
+                initializeRaffleData(); // Re-initialize data and set initial active section
+                statusMessageElement.textContent = "Raffle reset. Ticket data reloaded. Click 'Generate 1st Place Winners' to begin.";
             });
         }
 
