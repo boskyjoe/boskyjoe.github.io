@@ -489,7 +489,6 @@
                 card.classList.add('bg-white', 'hidden'); // Revert to white and hide
             });
             // DO NOT HIDE the main final section here, it should remain visible
-            // finalPrimaryWinnersSection.classList.add('hidden'); // Removed this line
 
             // Wait for all fade-out animations to complete
             await Promise.all(animations);
@@ -751,17 +750,25 @@
                 return; // Exit if invalid prefix
             }
 
+            // Calculate overall unique tickets for logging within this function
+            const overallTotalUniqueTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
+
+
             // Pick winners from the determined source array
             const primaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
-            const secondaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
-            const thirdWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
-
-            // Animate and display each winner sequentially
             await animateNumberReveal(primaryElement, primaryWinner);
+            console.log(`DEBUG: After Primary Winner draw (${placePrefix}): allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
             await delay(500); // Small delay between each winner reveal
+
+            const secondaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
             await animateNumberReveal(secondaryElement, secondaryWinner);
+            console.log(`DEBUG: After Secondary Winner draw (${placePrefix}): allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
             await delay(500);
+
+            const thirdWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
             await animateNumberReveal(thirdElement, thirdWinner);
+            console.log(`DEBUG: After Third Winner draw (${placePrefix}): allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
+
 
             // Add a delay here to allow confetti animation to complete before activating the next section
             await delay(1000); // 1 second delay after the last number reveal and confetti trigger
@@ -818,11 +825,8 @@
 
             // This block checks if the *entire pool* of unique tickets has been exhausted.
             // It should only trigger if all tickets in both files are truly used up.
-            const totalTicketsInWinners = new Set(raffleTicketsWinners).size;
-            const totalTicketsInWinners1 = new Set(raffleTicketsWinners1).size;
-            const overallTotalUniqueTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
-
-            console.log(`DEBUG: (End of updateWinnersDisplay) allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
+            // overallTotalUniqueTickets is already calculated above.
+            console.log(`DEBUG: (Final check in updateWinnersDisplay) allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
 
             if (allTimePickedTickets.size >= overallTotalUniqueTickets) {
                  statusMessageElement.textContent = "All unique tickets have been drawn from both pools! Reset raffle to start again.";
