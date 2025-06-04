@@ -172,6 +172,18 @@
             /* max-height will be set by JS dynamically */
             opacity: 1;
         }
+
+        /* New CSS for pop and bounce animation */
+        @keyframes pop-and-bounce {
+            0% { transform: scale(0.5) translateY(50px) rotate(2deg); opacity: 0; }
+            50% { transform: scale(1.1) translateY(-10px) rotate(0deg); opacity: 1; }
+            70% { transform: scale(0.95) translateY(5px) rotate(1deg); }
+            100% { transform: scale(1) translateY(0) rotate(2deg); opacity: 1; }
+        }
+
+        .animate-pop-and-bounce {
+            animation: pop-and-bounce 1s ease-out forwards;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -314,7 +326,7 @@
     </div>
 
     <!-- Final Primary Winners section - now with post-it styling -->
-    <div class="fixed top-1/2 right-4 -translate-y-1/2 w-72 p-6 rounded-lg shadow-md z-50 hidden lg:block post-it-note">
+    <div id="final-primary-winners-section" class="fixed top-1/2 right-4 -translate-y-1/2 w-72 p-6 rounded-lg shadow-md z-50 hidden lg:block post-it-note">
         <h2 class="text-2xl font-bold text-green-800 mb-4 font-caveat">Final Primary Winners</h2>
         <div class="grid grid-cols-1 gap-4">
             <div class="winner-card bg-white p-4 rounded-md shadow-sm">
@@ -381,6 +393,9 @@
         const resetConfirmModal = document.getElementById('reset-confirm-modal');
         const confirmResetBtn = document.getElementById('confirm-reset-btn');
         const cancelResetBtn = document.getElementById('cancel-reset-btn');
+
+        // Reference for the final primary winners section
+        const finalPrimaryWinnersSection = document.getElementById('final-primary-winners-section');
 
         /**
          * Utility function to introduce a delay.
@@ -705,6 +720,11 @@
                 activateSection(firstPlaceSection, generateFirstBtn);
             } else if (placePrefix === 'first') {
                 statusMessageElement.textContent = "All unique tickets have been drawn! Reset raffle to start again.";
+                // Trigger the "Pop and Bounce" animation for the final primary winners section
+                finalPrimaryWinnersSection.classList.add('animate-pop-and-bounce');
+                finalPrimaryWinnersSection.addEventListener('animationend', () => {
+                    finalPrimaryWinnersSection.classList.remove('animate-pop-and-bounce');
+                }, { once: true });
             }
 
             // Optional: Check if all possible tickets have been drawn and disable all buttons if so
@@ -792,6 +812,9 @@
                 raffleContentContainer.style.opacity = '1'; // Keep it visible
                 raffleContentContainer.style.display = 'block'; // Ensure display is block
                 revealWinnersBtn.disabled = true; // Keep the reveal button disabled, as it's already hidden
+
+                // Remove the pop-and-bounce class on reset
+                finalPrimaryWinnersSection.classList.remove('animate-pop-and-bounce');
             });
         }
 
