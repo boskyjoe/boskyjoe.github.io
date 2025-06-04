@@ -331,6 +331,7 @@
     <div id="final-primary-winners-section" class="fixed top-1/2 right-4 -translate-y-1/2 w-72 p-6 rounded-lg shadow-md z-50 hidden lg:block post-it-note">
         <h2 class="text-2xl font-bold text-green-800 mb-4 font-caveat">Final Primary Winners</h2>
         <div class="grid grid-cols-1 gap-4">
+            <!-- Removed bg-white from here, will be added dynamically or inherit from post-it-note -->
             <div class="winner-card p-4 rounded-md shadow-sm">
                 <h3 class="text-xl font-semibold text-green-700 font-caveat">1st Place Primary</h3>
                 <p class="final-primary-winner-display text-2xl font-bold text-green-900 mt-2 font-caveat" id="final-first-primary-desktop">---</p>
@@ -464,7 +465,12 @@
             // After clearing text, also reset background colors of final primary winner cards
             const finalWinnerCards = document.querySelectorAll('#final-primary-winners-section .winner-card');
             finalWinnerCards.forEach(card => {
-                card.classList.remove('bg-yellow-100', 'bg-gray-100', 'bg-amber-100');
+                // Remove all gradient classes
+                card.classList.remove(
+                    'bg-gradient-to-br', 'from-yellow-400', 'to-yellow-600',
+                    'from-gray-400', 'to-gray-600',
+                    'from-amber-600', 'to-amber-800'
+                );
                 card.classList.add('bg-white'); // Revert to white
             });
 
@@ -731,13 +737,18 @@
                 // Apply background color based on placePrefix
                 if (finalPrimaryCard) {
                     // Remove existing background colors to ensure only one is active
-                    finalPrimaryCard.classList.remove('bg-white', 'bg-yellow-100', 'bg-gray-100', 'bg-amber-100');
+                    finalPrimaryCard.classList.remove(
+                        'bg-white', 'bg-yellow-100', 'bg-gray-100', 'bg-amber-100',
+                        'bg-gradient-to-br', 'from-yellow-400', 'to-yellow-600',
+                        'from-gray-400', 'to-gray-600',
+                        'from-amber-600', 'to-amber-800'
+                    );
                     if (placePrefix === 'first') {
-                        finalPrimaryCard.classList.add('bg-yellow-100');
+                        finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-yellow-400', 'to-yellow-600');
                     } else if (placePrefix === 'second') {
-                        finalPrimaryCard.classList.add('bg-gray-100');
+                        finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-gray-400', 'to-gray-600');
                     } else if (placePrefix === 'third') {
-                        finalPrimaryCard.classList.add('bg-amber-100');
+                        finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-amber-600', 'to-amber-800');
                     }
                 }
             }
