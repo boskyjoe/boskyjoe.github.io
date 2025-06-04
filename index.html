@@ -465,9 +465,10 @@
             statusMessageElement.textContent = "Loading ticket data...";
             disableAllGenerateButtons(); // Disable all buttons initially
 
-            // Initially hide the raffle content container
-            raffleContentContainer.classList.remove('revealed'); // Ensure it starts closed
-            // No need to set display:none here, max-height:0 and opacity:0 handle it.
+            // Initially hide the raffle content container using max-height and opacity
+            raffleContentContainer.style.maxHeight = '0px'; // Ensure it's collapsed
+            raffleContentContainer.style.opacity = '0'; // Ensure it's fully transparent
+            raffleContentContainer.style.overflow = 'hidden'; // Keep content hidden
             revealWinnersBtn.disabled = false; // Ensure reveal button is enabled on load
 
             // Set initial inactive state for 1st and 2nd sections, activate 3rd
@@ -697,21 +698,24 @@
                 triggerConfetti(); // Trigger confetti immediately
                 revealWinnersBtn.disabled = true; // Disable button after click
 
-                // Calculate the true height of the content to reveal
-                raffleContentContainer.style.maxHeight = '0px'; // Ensure it's collapsed before expanding
-                raffleContentContainer.style.opacity = '0'; // Ensure opacity is 0 before transition
-                raffleContentContainer.style.overflow = 'hidden'; // Hide overflow during transition
+                // Temporarily make content visible to measure scrollHeight
+                raffleContentContainer.style.visibility = 'hidden';
+                raffleContentContainer.style.maxHeight = 'none'; // Allow content to dictate height
+                raffleContentContainer.style.opacity = '0'; // Keep it hidden for now
+                raffleContentContainer.style.position = 'absolute'; // Take out of flow for measurement
 
-                // Temporarily set max-height to 'none' to get the scrollHeight
-                raffleContentContainer.style.maxHeight = 'none';
                 const contentHeight = raffleContentContainer.scrollHeight;
-                raffleContentContainer.style.maxHeight = '0px'; // Reset to 0 for transition
 
-                // A small delay to ensure the browser registers the 0px max-height before transitioning
+                // Reset styles for transition
+                raffleContentContainer.style.maxHeight = '0px'; // Collapse for animation start
+                raffleContentContainer.style.position = ''; // Restore position
+                raffleContentContainer.style.visibility = ''; // Make visible for transition
+
+                // Trigger the transition
                 setTimeout(() => {
-                    raffleContentContainer.style.maxHeight = `${contentHeight}px`; // Animate to actual height
-                    raffleContentContainer.classList.add('revealed'); // Add revealed class for opacity and max-height transition
-                }, 10);
+                    raffleContentContainer.style.maxHeight = `${contentHeight}px`;
+                    raffleContentContainer.style.opacity = '1';
+                }, 10); // Small delay to ensure browser registers initial state
 
 
                 // Scroll to the 3rd Place Winners section after a short delay
@@ -735,7 +739,6 @@
                 statusMessageElement.textContent = "Raffle reset. Ticket data reloaded. Click 'Generate 3rd Place Winners' to begin.";
 
                 // Hide raffle content and re-enable reveal button on reset
-                raffleContentContainer.classList.remove('revealed'); // Remove revealed class
                 raffleContentContainer.style.maxHeight = '0px'; // Collapse with curtain effect
                 raffleContentContainer.style.opacity = '0'; // Fade out
                 revealWinnersBtn.disabled = false;
