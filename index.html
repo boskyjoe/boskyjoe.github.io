@@ -186,6 +186,15 @@
             border: 3px solid; /* Ensure border is visible for animation */
             animation: golden-border-pulse 2s infinite alternate; /* Apply the pulse animation */
         }
+
+        /* Keyframes for individual card reveal */
+        @keyframes reveal-card {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .reveal-card-animation {
+            animation: reveal-card 0.5s ease-out forwards;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -327,22 +336,22 @@
         <!-- End Container for content revealed after click -->
     </div>
 
-    <!-- Final Primary Winners section - now with post-it styling -->
+    <!-- Final Primary Winners section - now hidden by default and revealed sequentially -->
     <div id="final-primary-winners-section" class="fixed top-1/2 right-4 -translate-y-1/2 w-72 p-6 rounded-lg shadow-md z-50 hidden lg:block post-it-note">
         <h2 class="text-2xl font-bold text-green-800 mb-4 font-caveat">Final Primary Winners</h2>
         <div class="grid grid-cols-1 gap-4">
-            <!-- Removed bg-white from here, will be added dynamically or inherit from post-it-note -->
-            <div class="winner-card p-4 rounded-md shadow-sm">
-                <h3 class="text-xl font-semibold text-green-700 font-caveat">1st Place Primary</h3>
-                <p class="final-primary-winner-display text-2xl font-bold text-green-900 mt-2 font-caveat" id="final-first-primary-desktop">---</p>
+            <!-- Individual winner cards, initially hidden -->
+            <div id="final-first-card" class="winner-card p-4 rounded-md shadow-sm hidden">
+                <h3 class="text-xl font-semibold text-white font-caveat">1st Place Primary</h3>
+                <p class="final-primary-winner-display text-2xl font-bold text-white mt-2 font-caveat" id="final-first-primary-desktop">---</p>
             </div>
-            <div class="winner-card p-4 rounded-md shadow-sm">
-                <h3 class="text-xl font-semibold text-green-700 font-caveat">2nd Place Primary</h3>
-                <p class="final-primary-winner-display text-2xl font-bold text-green-900 mt-2 font-caveat" id="final-second-primary-desktop">---</p>
+            <div id="final-second-card" class="winner-card p-4 rounded-md shadow-sm hidden">
+                <h3 class="text-xl font-semibold text-white font-caveat">2nd Place Primary</h3>
+                <p class="final-primary-winner-display text-2xl font-bold text-white mt-2 font-caveat" id="final-second-primary-desktop">---</p>
             </div>
-            <div class="winner-card p-4 rounded-md shadow-sm">
-                <h3 class="text-xl font-semibold text-green-700 font-caveat">3rd Place Primary</h3>
-                <p class="final-primary-winner-display text-2xl font-bold text-green-900 mt-2 font-caveat" id="final-third-primary-desktop">---</p>
+            <div id="final-third-card" class="winner-card p-4 rounded-md shadow-sm hidden">
+                <h3 class="text-xl font-semibold text-white font-caveat">3rd Place Primary</h3>
+                <p class="final-primary-winner-display text-2xl font-bold text-white mt-2 font-caveat" id="final-third-primary-desktop">---</p>
             </div>
         </div>
     </div>
@@ -397,8 +406,11 @@
         const confirmResetBtn = document.getElementById('confirm-reset-btn');
         const cancelResetBtn = document.getElementById('cancel-reset-btn');
 
-        // Reference for the final primary winners section
+        // Reference for the final primary winners section and its individual cards
         const finalPrimaryWinnersSection = document.getElementById('final-primary-winners-section');
+        const finalFirstCard = document.getElementById('final-first-card');
+        const finalSecondCard = document.getElementById('final-second-card');
+        const finalThirdCard = document.getElementById('final-third-card');
 
         /**
          * Utility function to introduce a delay.
@@ -462,17 +474,19 @@
                 }
             });
 
-            // After clearing text, also reset background colors of final primary winner cards
+            // After clearing text, also reset background colors and hide final primary winner cards
             const finalWinnerCards = document.querySelectorAll('#final-primary-winners-section .winner-card');
             finalWinnerCards.forEach(card => {
-                // Remove all gradient classes
+                // Remove all gradient classes and animation class
                 card.classList.remove(
                     'bg-gradient-to-br', 'from-yellow-400', 'to-yellow-600',
                     'from-gray-400', 'to-gray-600',
-                    'from-amber-600', 'to-amber-800'
+                    'from-amber-600', 'to-amber-800',
+                    'reveal-card-animation'
                 );
-                card.classList.add('bg-white'); // Revert to white
+                card.classList.add('bg-white', 'hidden'); // Revert to white and hide
             });
+            finalPrimaryWinnersSection.classList.add('hidden'); // Hide the main final section
 
             // Wait for all fade-out animations to complete
             await Promise.all(animations);
@@ -532,6 +546,12 @@
             // Disable and style reset button initially
             resetRaffleBtn.disabled = true;
             resetRaffleBtn.classList.add('bg-gray-300');
+
+            // Hide the final primary winners section and its cards initially
+            finalPrimaryWinnersSection.classList.add('hidden');
+            finalFirstCard.classList.add('hidden');
+            finalSecondCard.classList.add('hidden');
+            finalThirdCard.classList.add('hidden');
 
 
             try {
@@ -734,7 +754,7 @@
                     finalPrimaryDesktop.classList.remove('winner-highlight');
                 }, 1000); // Remove highlight after 1 second
 
-                // Apply background color based on placePrefix
+                // Apply background color based on placePrefix and reveal the card
                 if (finalPrimaryCard) {
                     // Remove existing background colors to ensure only one is active
                     finalPrimaryCard.classList.remove(
@@ -745,10 +765,17 @@
                     );
                     if (placePrefix === 'first') {
                         finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-yellow-400', 'to-yellow-600');
+                        finalFirstCard.classList.remove('hidden');
+                        finalFirstCard.classList.add('reveal-card-animation');
                     } else if (placePrefix === 'second') {
                         finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-gray-400', 'to-gray-600');
+                        finalSecondCard.classList.remove('hidden');
+                        finalSecondCard.classList.add('reveal-card-animation');
                     } else if (placePrefix === 'third') {
                         finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-amber-600', 'to-amber-800');
+                        finalPrimaryWinnersSection.classList.remove('hidden'); // Show the main final section
+                        finalThirdCard.classList.remove('hidden');
+                        finalThirdCard.classList.add('reveal-card-animation');
                     }
                 }
             }
