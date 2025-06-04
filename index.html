@@ -700,6 +700,12 @@
 
                 raffleContentContainer.classList.add('revealed'); // Apply revealed class for curtain effect
 
+                // Scroll to the 3rd Place Winners section after a short delay
+                // to allow the curtain effect to start
+                setTimeout(() => {
+                    thirdPlaceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 500); // Adjust delay as needed for desired scroll timing
+
                 // Re-enable the 3rd place button after reveal
                 generateThirdBtn.disabled = false;
                 statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 3rd Place Winners' to begin.";
