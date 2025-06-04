@@ -336,20 +336,20 @@
         <!-- End Container for content revealed after click -->
     </div>
 
-    <!-- Final Primary Winners section - now visible on load for larger screens -->
-    <div id="final-primary-winners-section" class="fixed top-1/2 right-4 -translate-y-1/2 w-72 p-6 rounded-lg shadow-md z-50 hidden lg:block post-it-note">
+    <!-- Final Primary Winners section - now hidden by default and revealed sequentially -->
+    <div id="final-primary-winners-section" class="fixed top-1/2 right-4 -translate-y-1/2 w-72 p-6 rounded-lg shadow-md z-50 hidden post-it-note">
         <h2 class="text-2xl font-bold text-green-800 mb-4 font-caveat">Final Primary Winners</h2>
         <div class="grid grid-cols-1 gap-4">
-            <!-- Individual winner cards, now visible by default -->
-            <div id="final-first-card" class="winner-card p-4 rounded-md shadow-sm">
+            <!-- Individual winner cards, initially hidden -->
+            <div id="final-first-card" class="winner-card p-4 rounded-md shadow-sm hidden">
                 <h3 class="text-xl font-semibold text-white font-caveat">1st Place Primary</h3>
                 <p class="final-primary-winner-display text-2xl font-bold text-white mt-2 font-caveat" id="final-first-primary-desktop">---</p>
             </div>
-            <div id="final-second-card" class="winner-card p-4 rounded-md shadow-sm">
+            <div id="final-second-card" class="winner-card p-4 rounded-md shadow-sm hidden">
                 <h3 class="text-xl font-semibold text-white font-caveat">2nd Place Primary</h3>
                 <p class="final-primary-winner-display text-2xl font-bold text-white mt-2 font-caveat" id="final-second-primary-desktop">---</p>
             </div>
-            <div id="final-third-card" class="winner-card p-4 rounded-md shadow-sm">
+            <div id="final-third-card" class="winner-card p-4 rounded-md shadow-sm hidden">
                 <h3 class="text-xl font-semibold text-white font-caveat">3rd Place Primary</h3>
                 <p class="final-primary-winner-display text-2xl font-bold text-white mt-2 font-caveat" id="final-third-primary-desktop">---</p>
             </div>
@@ -474,19 +474,19 @@
                 }
             });
 
-            // After clearing text, also reset background colors of final primary winner cards
+            // After clearing text, also reset background colors and hide final primary winner cards
             const finalWinnerCards = document.querySelectorAll('#final-primary-winners-section .winner-card');
             finalWinnerCards.forEach(card => {
-                // Remove all gradient classes
+                // Remove all gradient classes and animation class
                 card.classList.remove(
                     'bg-gradient-to-br', 'from-yellow-400', 'to-yellow-600',
                     'from-gray-400', 'to-gray-600',
-                    'from-amber-600', 'to-amber-800'
+                    'from-amber-600', 'to-amber-800',
+                    'reveal-card-animation'
                 );
-                card.classList.add('bg-white'); // Revert to white
+                card.classList.add('bg-white', 'hidden'); // Revert to white and hide
             });
-            // The main final section remains visible as per the reverted behavior
-            // finalPrimaryWinnersSection.classList.add('hidden'); // REMOVED: This line was part of the old behavior
+            finalPrimaryWinnersSection.classList.add('hidden'); // Hide the main final section
 
             // Wait for all fade-out animations to complete
             await Promise.all(animations);
@@ -546,12 +546,11 @@
             resetRaffleBtn.disabled = true;
             resetRaffleBtn.classList.add('bg-gray-300');
 
-            // The final primary winners section is now visible by default on large screens.
-            // No need to explicitly hide its cards here, as they are part of the initial HTML structure.
-            // finalPrimaryWinnersSection.classList.add('hidden'); // REMOVED: This line was part of the old behavior
-            // finalFirstCard.classList.add('hidden'); // REMOVED
-            // finalSecondCard.classList.add('hidden'); // REMOVED
-            // finalThirdCard.classList.add('hidden'); // REMOVED
+            // Hide the final primary winners section and its cards initially
+            finalPrimaryWinnersSection.classList.add('hidden');
+            finalFirstCard.classList.add('hidden');
+            finalSecondCard.classList.add('hidden');
+            finalThirdCard.classList.add('hidden');
 
 
             try {
@@ -756,7 +755,7 @@
                     finalPrimaryDesktop.classList.remove('winner-highlight');
                 }, 1000); // Remove highlight after 1 second
 
-                // Apply background color based on placePrefix
+                // Apply background color based on placePrefix and reveal the card
                 if (finalPrimaryCard) {
                     // Remove existing background colors to ensure only one is active
                     finalPrimaryCard.classList.remove(
