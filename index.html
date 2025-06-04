@@ -698,8 +698,8 @@
                 triggerConfetti(); // Trigger confetti immediately
                 revealWinnersBtn.disabled = true; // Disable button after click
 
-                // 1. Scroll to the 3rd Place Winners section first
-                thirdPlaceSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // 1. Scroll to the 2nd Place Winners section first (this should bring 3rd into view)
+                secondPlaceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
                 // 2. Start reveal animation after a short delay to allow scroll to begin
                 setTimeout(() => {
