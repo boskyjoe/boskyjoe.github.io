@@ -331,15 +331,15 @@
     <div id="final-primary-winners-section" class="fixed top-1/2 right-4 -translate-y-1/2 w-72 p-6 rounded-lg shadow-md z-50 hidden lg:block post-it-note">
         <h2 class="text-2xl font-bold text-green-800 mb-4 font-caveat">Final Primary Winners</h2>
         <div class="grid grid-cols-1 gap-4">
-            <div class="winner-card bg-white p-4 rounded-md shadow-sm">
+            <div class="winner-card p-4 rounded-md shadow-sm">
                 <h3 class="text-xl font-semibold text-green-700 font-caveat">1st Place Primary</h3>
                 <p class="final-primary-winner-display text-2xl font-bold text-green-900 mt-2 font-caveat" id="final-first-primary-desktop">---</p>
             </div>
-            <div class="winner-card bg-white p-4 rounded-md shadow-sm">
+            <div class="winner-card p-4 rounded-md shadow-sm">
                 <h3 class="text-xl font-semibold text-green-700 font-caveat">2nd Place Primary</h3>
                 <p class="final-primary-winner-display text-2xl font-bold text-green-900 mt-2 font-caveat" id="final-second-primary-desktop">---</p>
             </div>
-            <div class="winner-card bg-white p-4 rounded-md shadow-sm">
+            <div class="winner-card p-4 rounded-md shadow-sm">
                 <h3 class="text-xl font-semibold text-green-700 font-caveat">3rd Place Primary</h3>
                 <p class="final-primary-winner-display text-2xl font-bold text-green-900 mt-2 font-caveat" id="final-third-primary-desktop">---</p>
             </div>
@@ -459,6 +459,13 @@
                     // If already '---', resolve immediately
                     animations.push(Promise.resolve());
                 }
+            });
+
+            // After clearing text, also reset background colors of final primary winner cards
+            const finalWinnerCards = document.querySelectorAll('#final-primary-winners-section .winner-card');
+            finalWinnerCards.forEach(card => {
+                card.classList.remove('bg-yellow-100', 'bg-gray-100', 'bg-amber-100');
+                card.classList.add('bg-white'); // Revert to white
             });
 
             // Wait for all fade-out animations to complete
@@ -659,6 +666,9 @@
 
             // Get references to the final winner display elements
             const finalPrimaryDesktop = document.getElementById(`final-${placePrefix}-primary-desktop`);
+            // Get the parent winner-card element for styling
+            const finalPrimaryCard = finalPrimaryDesktop ? finalPrimaryDesktop.closest('.winner-card') : null;
+
 
             // Disable the button that was just clicked
             let currentButton;
@@ -717,6 +727,19 @@
                 setTimeout(() => {
                     finalPrimaryDesktop.classList.remove('winner-highlight');
                 }, 1000); // Remove highlight after 1 second
+
+                // Apply background color based on placePrefix
+                if (finalPrimaryCard) {
+                    // Remove existing background colors to ensure only one is active
+                    finalPrimaryCard.classList.remove('bg-white', 'bg-yellow-100', 'bg-gray-100', 'bg-amber-100');
+                    if (placePrefix === 'first') {
+                        finalPrimaryCard.classList.add('bg-yellow-100');
+                    } else if (placePrefix === 'second') {
+                        finalPrimaryCard.classList.add('bg-gray-100');
+                    } else if (placePrefix === 'third') {
+                        finalPrimaryCard.classList.add('bg-amber-100');
+                    }
+                }
             }
 
             // Disable the button for the current section after its winners are generated
