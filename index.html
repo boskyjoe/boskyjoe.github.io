@@ -161,7 +161,7 @@
             animation: fadeOut 0.5s ease-out forwards; /* Apply fadeOut animation */
         }
 
-        /* Styles for the reveal container (curtain effect) */
+        /* Styles for the main reveal container (curtain effect) */
         #raffle-content-container {
             max-height: 0;
             overflow: hidden;
@@ -171,6 +171,14 @@
         #raffle-content-container.revealed {
             /* max-height will be set by JS dynamically */
             opacity: 1;
+        }
+
+        /* Styles for the 1st place section's own reveal effect */
+        #first-place-section.hidden-for-reveal {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height 1.0s ease-in-out, opacity 1.0s ease-in-out; /* Slower transition for dramatic effect */
         }
     </style>
 </head>
@@ -283,7 +291,7 @@
             </div>
 
             <!-- First Place Section (now displayed third) -->
-            <div id="first-place-section" class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
+            <div id="first-place-section" class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden-for-reveal">
                 <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                     <span class="mr-3 text-4xl">🥇</span> 1st Place Winners
                 </h2>
@@ -488,16 +496,20 @@
             statusMessageElement.textContent = "Loading ticket data...";
             disableAllGenerateButtons(); // Disable all buttons initially
 
-            // Initially hide the raffle content container using max-height and opacity
-            raffleContentContainer.style.maxHeight = '0px'; // Ensure it's collapsed
-            raffleContentContainer.style.opacity = '0'; // Ensure it's fully transparent
-            raffleContentContainer.style.overflow = 'hidden'; // Keep content hidden
+            // Initially hide the main raffle content container
+            raffleContentContainer.style.maxHeight = '0px';
+            raffleContentContainer.style.opacity = '0';
+            raffleContentContainer.style.overflow = 'hidden';
             revealWinnersBtn.disabled = false; // Ensure reveal button is enabled on load
 
             // Set initial inactive state for 1st and 2nd sections, activate 3rd
             firstPlaceSection.classList.add('inactive-section');
             secondPlaceSection.classList.add('inactive-section');
             thirdPlaceSection.classList.remove('inactive-section'); // Ensure 3rd is active
+
+            // Hide the first place section specifically for its own reveal effect
+            firstPlaceSection.classList.add('hidden-for-reveal');
+
 
             try {
                 const [winnersData, winners1Data] = await Promise.all([
@@ -690,8 +702,8 @@
                 activateSection(secondPlaceSection, generateSecondBtn);
             } else if (placePrefix === 'second') {
                 generateSecondBtn.disabled = true;
-                // Activate the next section (1st place)
-                activateSection(firstPlaceSection, generateFirstBtn);
+                // Activate the next section (1st place) with its own reveal effect
+                revealFirstPlaceSection();
             } else if (placePrefix === 'first') {
                 generateFirstBtn.disabled = true;
                 // All winners are drawn, no more buttons to activate
@@ -708,6 +720,43 @@
                 disableAllGenerateButtons();
             }
         }
+
+        /**
+         * Reveals the first place section with a curtain effect.
+         */
+        function revealFirstPlaceSection() {
+            firstPlaceSection.classList.remove('inactive-section'); // Make it active visually
+            firstPlaceSection.classList.remove('hidden-for-reveal'); // Remove initial hidden state
+
+            // Temporarily make content visible (but hidden by opacity) to get scrollHeight
+            firstPlaceSection.style.display = 'block'; // Ensure it's in flow
+            firstPlaceSection.style.visibility = 'hidden'; // Keep visually hidden
+            firstPlaceSection.style.maxHeight = 'none'; // Allow content to determine height
+            firstPlaceSection.style.opacity = '0'; // Keep it hidden for now
+
+            const contentHeight = firstPlaceSection.scrollHeight;
+
+            // Reset styles for transition
+            firstPlaceSection.style.maxHeight = '0px'; // Collapse for animation start
+            firstPlaceSection.style.visibility = ''; // Make visible for transition
+            firstPlaceSection.style.opacity = '0'; // Ensure opacity is 0 before transition
+
+            // Force reflow to ensure CSS properties are applied before transition starts
+            void firstPlaceSection.offsetWidth; // eslint-disable-line no-unused-expressions
+
+            // Trigger the transition
+            firstPlaceSection.style.maxHeight = `${contentHeight}px`;
+            firstPlaceSection.style.opacity = '1';
+
+            // After the transition completes, remove max-height to allow natural flow
+            firstPlaceSection.addEventListener('transitionend', function handler() {
+                firstPlaceSection.style.maxHeight = 'none'; // Allow content to adjust naturally
+                firstPlaceSection.removeEventListener('transitionend', handler);
+                generateFirstBtn.disabled = false; // Enable the 1st place button after its section is revealed
+                statusMessageElement.textContent = "1st Place section revealed! Click 'Generate 1st Place Winners' to draw.";
+            }, { once: true });
+        }
+
 
         // Add event listeners to each button.
         // When a button is clicked, it calls `updateWinnersDisplay` with the appropriate prefix.
@@ -772,6 +821,7 @@
                 // Re-enable the 3rd place button and set other sections to inactive
                 activateSection(thirdPlaceSection, generateThirdBtn);
                 firstPlaceSection.classList.add('inactive-section');
+                firstPlaceSection.classList.add('hidden-for-reveal'); // Re-hide 1st place for its reveal effect
                 secondPlaceSection.classList.add('inactive-section');
                 generateFirstBtn.disabled = true; // Ensure 1st place button is disabled
                 generateSecondBtn.disabled = true; // Ensure 2nd place button is disabled
