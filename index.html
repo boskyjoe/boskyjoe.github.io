@@ -172,6 +172,15 @@
             /* max-height will be set by JS dynamically */
             opacity: 1;
         }
+
+        /* New CSS for 1st place buildup glow */
+        @keyframes first-place-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 215, 0, 0.4); } /* Gold glow */
+            50% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.9), 0 0 60px rgba(255, 215, 0, 0.7); }
+        }
+        .first-place-buildup {
+            animation: first-place-glow 1.5s infinite alternate; /* Apply the glow animation */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -499,9 +508,6 @@
             secondPlaceSection.classList.add('inactive-section');
             thirdPlaceSection.classList.remove('inactive-section'); // Ensure 3rd is active
 
-            // Ensure the first place section is not hidden by the specific reveal class
-            firstPlaceSection.classList.remove('hidden-for-reveal');
-
 
             try {
                 const [winnersData, winners1Data] = await Promise.all([
@@ -602,27 +608,33 @@
          * Animates a number reveal effect on a given element.
          * @param {HTMLElement} element - The HTML element to animate.
          * @param {string} finalNumber - The final number to display.
+         * @param {boolean} isPreAnimation - If true, it's a shuffling pre-animation, no confetti.
          */
-        async function animateNumberReveal(element, finalNumber) {
-            const duration = 1000; // 1 second for animation
+        async function animateNumberReveal(element, finalNumber, isPreAnimation = false) {
+            const duration = isPreAnimation ? 1500 : 1000; // Longer duration for pre-animation shuffle
             const startTime = Date.now();
-            const interval = 50; // Update every 50ms
+            const interval = isPreAnimation ? 30 : 50; // Faster update for shuffle
 
-            element.classList.add('pulsing-text'); // Start pulsing animation
+            if (!isPreAnimation) {
+                element.classList.add('pulsing-text'); // Start pulsing animation only for final reveal
+            }
 
-            const animationInterval = setInterval(() => {
-                const elapsed = Date.now() - startTime;
-                if (elapsed < duration) {
-                    // Generate a random alphanumeric string for the animation
-                    element.textContent = generateRandomAlphanumeric();
-                } else {
-                    clearInterval(animationInterval);
-                    element.textContent = finalNumber;
-                    element.classList.remove('pulsing-text'); // Stop pulsing animation
-                    // Trigger confetti after each number is revealed
-                    triggerConfetti();
-                }
-            }, interval);
+            return new Promise(resolve => {
+                const animationInterval = setInterval(() => {
+                    const elapsed = Date.now() - startTime;
+                    if (elapsed < duration) {
+                        element.textContent = generateRandomAlphanumeric();
+                    } else {
+                        clearInterval(animationInterval);
+                        if (!isPreAnimation) {
+                            element.textContent = finalNumber;
+                            element.classList.remove('pulsing-text'); // Stop pulsing animation
+                            triggerConfetti(); // Trigger confetti only for final reveal
+                        }
+                        resolve();
+                    }
+                }, interval);
+            });
         }
 
         /**
@@ -694,8 +706,8 @@
                 activateSection(secondPlaceSection, generateSecondBtn);
             } else if (placePrefix === 'second') {
                 generateSecondBtn.disabled = true;
-                // Directly activate the next section (1st place)
-                activateSection(firstPlaceSection, generateFirstBtn);
+                // Countdown and buildup for 1st place
+                await startFirstPlaceBuildup();
             } else if (placePrefix === 'first') {
                 generateFirstBtn.disabled = true;
                 // All winners are drawn, no more buttons to activate
@@ -712,6 +724,34 @@
                 disableAllGenerateButtons();
             }
         }
+
+        /**
+         * Starts the countdown and visual buildup for the 1st Place section.
+         */
+        async function startFirstPlaceBuildup() {
+            firstPlaceSection.classList.remove('inactive-section'); // Make it active visually
+            firstPlaceSection.classList.add('first-place-buildup'); // Add the glow effect
+            generateFirstBtn.disabled = true; // Keep button disabled during buildup
+
+            let countdown = 5;
+            statusMessageElement.textContent = `1st Place Reveal in ${countdown}...`;
+
+            const countdownInterval = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                    statusMessageElement.textContent = `1st Place Reveal in ${countdown}...`;
+                } else {
+                    clearInterval(countdownInterval);
+                    statusMessageElement.textContent = "The moment of truth!";
+                    firstPlaceSection.classList.remove('first-place-buildup'); // Remove glow
+                    generateFirstBtn.disabled = false; // Enable the 1st place button
+                }
+            }, 1000); // Update every 1 second
+
+            // Also start the shuffling pre-animation for the primary winner during the countdown
+            await animateNumberReveal(document.getElementById('first-primary'), '---', true); // Run as pre-animation
+        }
+
 
         // Add event listeners to each button.
         // When a button is clicked, it calls `updateWinnersDisplay` with the appropriate prefix.
@@ -776,7 +816,7 @@
                 // Re-enable the 3rd place button and set other sections to inactive
                 activateSection(thirdPlaceSection, generateThirdBtn);
                 firstPlaceSection.classList.add('inactive-section');
-                // Removed: firstPlaceSection.classList.add('hidden-for-reveal'); // Re-hide 1st place for its reveal effect
+                firstPlaceSection.classList.remove('first-place-buildup'); // Ensure glow is removed on reset
                 secondPlaceSection.classList.add('inactive-section');
                 generateFirstBtn.disabled = true; // Ensure 1st place button is disabled
                 generateSecondBtn.disabled = true; // Ensure 2nd place button is disabled
