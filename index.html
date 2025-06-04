@@ -652,7 +652,19 @@
             // Get references to the final winner display elements
             const finalPrimaryDesktop = document.getElementById(`final-${placePrefix}-primary-desktop`);
 
-            disableAllGenerateButtons(); // Disable all buttons during generation process
+            // Disable the button that was just clicked
+            let currentButton;
+            if (placePrefix === 'third') {
+                currentButton = generateThirdBtn;
+            } else if (placePrefix === 'second') {
+                currentButton = generateSecondBtn;
+            } else if (placePrefix === 'first') {
+                currentButton = generateFirstBtn;
+            }
+            if (currentButton) {
+                currentButton.disabled = true;
+            }
+
             statusMessageElement.textContent = "Drawing winners..."; // Updated loading message
 
             // Create a Set to keep track of tickets picked for the current place (Primary, Secondary, Third)
@@ -701,16 +713,13 @@
 
             // Disable the button for the current section after its winners are generated
             if (placePrefix === 'third') {
-                generateThirdBtn.disabled = true;
-                // Activate the next section (2nd place)
+                // generateThirdBtn.disabled = true; // Already handled above
                 activateSection(secondPlaceSection, generateSecondBtn);
             } else if (placePrefix === 'second') {
-                generateSecondBtn.disabled = true;
-                // Countdown and buildup for 1st place
-                await startFirstPlaceBuildup();
+                // generateSecondBtn.disabled = true; // Already handled above
+                await startFirstPlaceBuildup(); // This function will enable generateFirstBtn
             } else if (placePrefix === 'first') {
-                generateFirstBtn.disabled = true;
-                // All winners are drawn, no more buttons to activate
+                // generateFirstBtn.disabled = true; // Already handled above
                 statusMessageElement.textContent = "All unique tickets have been drawn! Reset raffle to start again.";
             }
 
@@ -734,14 +743,17 @@
             generateFirstBtn.disabled = true; // Keep button disabled during buildup
 
             let countdown = 5;
+            generateFirstBtn.textContent = `Revealing Soon... (${countdown})`; // Update button text
             statusMessageElement.textContent = `1st Place Reveal in ${countdown}...`;
 
             const countdownInterval = setInterval(() => {
                 countdown--;
                 if (countdown > 0) {
+                    generateFirstBtn.textContent = `Revealing Soon... (${countdown})`; // Update button text
                     statusMessageElement.textContent = `1st Place Reveal in ${countdown}...`;
                 } else {
                     clearInterval(countdownInterval);
+                    generateFirstBtn.textContent = "Generate 1st Place Winners"; // Revert button text
                     statusMessageElement.textContent = "The moment of truth!";
                     firstPlaceSection.classList.remove('first-place-buildup'); // Remove glow
                     generateFirstBtn.disabled = false; // Enable the 1st place button
@@ -819,6 +831,7 @@
                 firstPlaceSection.classList.remove('first-place-buildup'); // Ensure glow is removed on reset
                 secondPlaceSection.classList.add('inactive-section');
                 generateFirstBtn.disabled = true; // Ensure 1st place button is disabled
+                generateFirstBtn.textContent = "Generate 1st Place Winners"; // Reset button text
                 generateSecondBtn.disabled = true; // Ensure 2nd place button is disabled
 
                 statusMessageElement.textContent = "Raffle reset. Click 'Generate 3rd Place Winners' to begin drawing again.";
