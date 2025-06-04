@@ -655,6 +655,25 @@
 
         // Initialize data when the page loads
         document.addEventListener('DOMContentLoaded', initializeRaffleData);
+
+        // --- Disable Save and View Source ---
+        document.addEventListener('contextmenu', event => event.preventDefault()); // Disable right-click
+
+        document.addEventListener('keydown', event => {
+            // Disable Ctrl+U (View Source)
+            if ((event.ctrlKey || event.metaKey) && event.key === 'u') {
+                event.preventDefault();
+            }
+            // Disable Ctrl+S (Save Page)
+            if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+                event.preventDefault();
+            }
+            // Disable F12 (Developer Tools - often not fully preventable, but good to try)
+            if (event.key === 'F12') {
+                event.preventDefault();
+            }
+        });
+        // --- End Disable Save and View Source ---
     </script>
 </body>
 </html>
