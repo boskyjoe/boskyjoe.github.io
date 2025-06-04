@@ -774,8 +774,8 @@
                     raffleContentContainer.removeEventListener('transitionend', handler);
                 }, { once: true });
 
-                // Re-enable the 3rd place button after reveal
-                generateThirdBtn.disabled = false;
+                // Activate the 3rd place section and enable its button after reveal
+                activateSection(thirdPlaceSection, generateThirdBtn);
                 statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 3rd Place Winners' to begin.";
             });
         }
@@ -817,7 +817,7 @@
 
         // Event listener for "Cancel" button in the modal
         if (cancelResetBtn) {
-            cancelCancelBtn.addEventListener('click', () => {
+            cancelResetBtn.addEventListener('click', () => {
                 resetConfirmModal.classList.add('hidden'); // Hide the modal
             });
         }
