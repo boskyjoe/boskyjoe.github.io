@@ -158,66 +158,6 @@
         .fade-out-animation {
             animation: fadeOut 0.5s ease-out forwards; /* Apply fadeOut animation */
         }
-
-        /* --- 3D Flip Styles --- */
-        #flip-container {
-            transform-style: preserve-3d;
-            position: relative;
-            width: 100%;
-            /* min-height will be set by JS dynamically to match content */
-            transition: height 0.5s ease-in-out; /* Smooth height transition */
-            margin-bottom: 2.5rem; /* Equivalent to mb-10 for spacing below the flip container */
-        }
-
-        #sponsor-front-page,
-        #raffle-back-page {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden; /* Hide the back of the element when facing away */
-            transition: transform 1.0s ease-in-out; /* Smooth flip animation */
-            overflow: hidden; /* Important for rounded corners and shadows */
-            border-radius: 0.75rem; /* Match parent rounded-xl */
-            top: 0;
-            left: 0;
-        }
-
-        /* Initial state of the back page (flipped away) */
-        #raffle-back-page {
-            transform: rotateY(180deg);
-        }
-
-        /* Class to apply when the container is flipped */
-        #flip-container.flipped #sponsor-front-page {
-            transform: rotateY(-180deg);
-        }
-
-        #flip-container.flipped #raffle-back-page {
-            transform: rotateY(0deg);
-        }
-
-        /* Ensure content inside pages takes full width */
-        #sponsor-front-page > div,
-        #raffle-back-page > div {
-            width: 100%;
-            height: 100%; /* Ensure inner content fills the page */
-            display: flex;
-            flex-direction: column;
-            /* justify-content: center; /* Removed as it interferes with top alignment of content */
-            align-items: center;
-        }
-
-        /* Adjust padding for the content within the flip pages */
-        #sponsor-front-page .p-6, #sponsor-front-page .p-10,
-        #raffle-back-page .p-6, #raffle-back-page .p-10 {
-            padding: 1.5rem; /* Default p-6 */
-        }
-        @media (min-width: 768px) {
-            #sponsor-front-page .md\:p-10,
-            #raffle-back-page .md\:p-10 {
-                padding: 2.5rem; /* Default md:p-10 */
-            }
-        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -245,127 +185,111 @@
             </div>
         </div>
 
-        <!-- NEW: Flippable Container -->
-        <div id="flip-container" class="relative w-full h-auto" style="perspective: 1000px;">
-            <!-- Front Page: Sponsor Section -->
-            <div id="sponsor-front-page" class="absolute w-full h-full backface-hidden transition-transform duration-1000" style="transform-origin: left center;">
-                <!-- Sponsor Section Content -->
-                <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl relative z-10 flex flex-col justify-between h-full">
-                    <div>
-                        <h2 class="text-3xl font-extrabold text-indigo-800 mb-6">Our Esteemed Sponsor</h2>
-                        <div class="flex flex-col md:flex-row items-center justify-center md:justify-around gap-8">
-                            <div class="flex flex-col items-center">
-                                <img src="https://placehold.co/150x150/A0A0A0/FFFFFF?text=Emjay+Logo" alt="Emjay Engineering Company Logo" class="w-32 h-32 rounded-full shadow-lg mb-4 object-cover">
-                                <h3 class="text-xl font-semibold text-gray-800">Emjay Engineering Company</h3>
-                            </div>
-                            <div class="flex flex-col items-center">
-                                <img src="https://placehold.co/150x150/808080/FFFFFF?text=Proprietor+Photo" alt="Proprietor Photo" class="w-32 h-32 rounded-full shadow-lg mb-4 object-cover">
-                                <h3 class="text-xl font-semibold text-gray-800">Proprietor</h3>
-                            </div>
-                        </div>
-                        <p class="text-lg text-gray-700 mt-6">
-                            We extend our heartfelt gratitude to <strong class="text-indigo-700">Emjay Engineering Company</strong> for sponsoring this raffle.
-                            The lucky winners of the apartments will find their new homes in the beautiful <strong class="text-green-700">Sierra Greens at Sarjapur Road</strong>.
-                        </p>
-                    </div>
-                    <!-- Flip trigger (corner) -->
-                    <div id="flip-corner" class="absolute bottom-2 right-2 cursor-pointer text-4xl text-gray-500 hover:text-gray-800 transition-colors duration-200">
-                        &#x21B3; <!-- Unicode for curved arrow right down -->
-                    </div>
-                </div>
-            </div>
+        <p class="text-lg text-gray-700 mb-10 relative z-10">
+            Congratulations to all our lucky winners! Thank you for participating in our church raffle.
+            Click the "Generate Winners" button for each place to reveal the winning ticket numbers.
+            <strong class="text-red-600">1st Place winners are drawn from 'winners.txt'. 2nd and 3rd Place winners are drawn from 'winners1.txt'. Each ticket can only win once!</strong>
+        </p>
 
-            <!-- Back Page: Raffle Sections -->
-            <div id="raffle-back-page" class="absolute w-full h-full backface-hidden transition-transform duration-1000" style="transform-origin: left center; transform: rotateY(180deg);">
-                <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl relative z-10 flex flex-col h-full justify-between">
-                    <p class="text-lg text-gray-700 mb-10 relative z-10">
-                        Congratulations to all our lucky winners! Thank you for participating in our church raffle.
-                        Click the "Generate Winners" button for each place to reveal the winning ticket numbers.
-                        <strong class="text-red-600">1st Place winners are drawn from 'winners.txt'. 2nd and 3rd Place winners are drawn from 'winners1.txt'. Each ticket can only win once!</strong>
-                    </p>
-
-                    <div id="status-message" class="text-center text-lg font-semibold text-gray-600 mb-6 relative z-10">
-                        Loading ticket data...
-                    </div>
-
-                    <!-- Third Place Section -->
-                    <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
-                        <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
-                            <span class="mr-3 text-4xl">🥉</span> 3rd Place Winners
-                        </h2>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                            <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
-                                <h3 class="text-xl font-semibold text-amber-800">Primary Winner</h3>
-                                <p id="third-primary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
-                            </div>
-                            <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
-                                <h3 class="text-xl font-semibold text-amber-800">Secondary Winner</h3>
-                                <p id="third-secondary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
-                            </div>
-                            <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
-                                <h3 class="text-xl font-semibold text-amber-800">Third Winner</h3>
-                                <p id="third-third" class="text-3xl font-bold text-amber-900 mt-2">---</p>
-                            </div>
-                        </div>
-                        <button id="generate-third" class="winner-button px-8 py-3 bg-amber-900 text-white font-semibold rounded-full shadow-lg hover:bg-amber-950 transition duration-300 ease-in-out" disabled>
-                            Generate 3rd Place Winners
-                        </button>
-                    </div>
-
-                    <!-- Second Place Section -->
-                    <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
-                        <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
-                            <span class="mr-3 text-4xl">🥈</span> 2nd Place Winners
-                        </h2>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                            <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
-                                <h3 class="text-xl font-semibold text-gray-800">Primary Winner</h3>
-                                <p id="second-primary" class="text-3xl font-bold text-gray-900 mt-2">---</p>
-                            </div>
-                            <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
-                                <h3 class="text-xl font-semibold text-gray-800">Secondary Winner</h3>
-                                <p id="second-secondary" class="text-3xl font-bold text-gray-900 mt-2">---</p>
-                            </div>
-                            <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
-                                <h3 class="text-xl font-semibold text-gray-800">Third Winner</h3>
-                                <p id="second-third" class="text-3xl font-bold text-gray-900 mt-2">---</p>
-                            </div>
-                        </div>
-                        <button id="generate-second" class="winner-button px-8 py-3 bg-gray-700 text-white font-semibold rounded-full shadow-lg hover:bg-gray-800 transition duration-300 ease-in-out" disabled>
-                            Generate 2nd Place Winners
-                        </button>
-                    </div>
-
-                    <!-- First Place Section -->
-                    <div id="first-place-section" class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
-                        <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
-                            <span class="mr-3 text-4xl">🥇</span> 1st Place Winners
-                        </h2>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                            <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
-                                <h3 class="text-xl font-semibold text-yellow-800">Primary Winner</h3>
-                                <p id="first-primary" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
-                            </div>
-                            <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
-                                <h3 class="text-xl font-semibold text-yellow-800">Secondary Winner</h3>
-                                <p id="first-secondary" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
-                            </div>
-                            <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
-                                <h3 class="text-xl font-semibold text-yellow-800">Third Winner</h3>
-                                <p id="first-third" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
-                            </div>
-                        </div>
-                        <button id="generate-first" class="winner-button px-8 py-3 bg-yellow-700 text-white font-semibold rounded-full shadow-lg hover:bg-yellow-800 transition duration-300 ease-in-out" disabled>
-                            Generate 1st Place Winners
-                        </button>
-                    </div>
-                    <button id="reset-raffle-btn" class="mt-10 px-8 py-3 bg-red-600 text-white font-semibold rounded-full shadow-lg hover:bg-red-700 transition duration-300 ease-in-out">
-                        Reset Raffle
-                    </button>
-                </div>
-            </div>
+        <div id="status-message" class="text-center text-lg font-semibold text-gray-600 mb-6 relative z-10">
+            Loading ticket data...
         </div>
-        <!-- End Flippable Container -->
+
+        <!-- Third Place Section (now displayed first) -->
+        <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
+            <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
+                <span class="mr-3 text-4xl">🥉</span> 3rd Place Winners
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-amber-800">Primary Winner</h3>
+                    <p id="third-primary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
+                </div>
+                <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-amber-800">Secondary Winner</h3>
+                    <p id="third-secondary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
+                </div>
+                <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-amber-800">Third Winner</h3>
+                    <p id="third-third" class="text-3xl font-bold text-amber-900 mt-2">---</p>
+                </div>
+            </div>
+            <button id="generate-third" class="winner-button px-8 py-3 bg-amber-900 text-white font-semibold rounded-full shadow-lg hover:bg-amber-950 transition duration-300 ease-in-out" disabled>
+                Generate 3rd Place Winners
+            </button>
+        </div>
+
+        <!-- Second Place Section (now displayed second) -->
+        <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
+            <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
+                <span class="mr-3 text-4xl">🥈</span> 2nd Place Winners
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-gray-800">Primary Winner</h3>
+                    <p id="second-primary" class="text-3xl font-bold text-gray-900 mt-2">---</p>
+                </div>
+                <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-gray-800">Secondary Winner</h3>
+                    <p id="second-secondary" class="text-3xl font-bold text-gray-900 mt-2">---</p>
+                </div>
+                <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-gray-800">Third Winner</h3>
+                    <p id="second-third" class="text-3xl font-bold text-gray-900 mt-2">---</p>
+                </div>
+            </div>
+            <button id="generate-second" class="winner-button px-8 py-3 bg-gray-700 text-white font-semibold rounded-full shadow-lg hover:bg-gray-800 transition duration-300 ease-in-out" disabled>
+                Generate 2nd Place Winners
+            </button>
+        </div>
+
+        <!-- First Place Section (now displayed third) -->
+        <div id="first-place-section" class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
+            <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
+                <span class="mr-3 text-4xl">🥇</span> 1st Place Winners
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-yellow-800">Primary Winner</h3>
+                    <p id="first-primary" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
+                </div>
+                <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-yellow-800">Secondary Winner</h3>
+                    <p id="first-secondary" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
+                </div>
+                <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-yellow-800">Third Winner</h3>
+                    <p id="first-third" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
+                </div>
+            </div>
+            <button id="generate-first" class="winner-button px-8 py-3 bg-yellow-700 text-white font-semibold rounded-full shadow-lg hover:bg-yellow-800 transition duration-300 ease-in-out" disabled>
+                Generate 1st Place Winners
+            </button>
+        </div>
+
+        <!-- Sponsor Section -->
+        <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl mt-10 relative z-10">
+            <h2 class="text-3xl font-extrabold text-indigo-800 mb-6">Our Esteemed Sponsor</h2>
+            <div class="flex flex-col md:flex-row items-center justify-center md:justify-around gap-8">
+                <div class="flex flex-col items-center">
+                    <img src="https://placehold.co/150x150/A0A0A0/FFFFFF?text=Emjay+Logo" alt="Emjay Engineering Company Logo" class="w-32 h-32 rounded-full shadow-lg mb-4 object-cover">
+                    <h3 class="text-xl font-semibold text-gray-800">Emjay Engineering Company</h3>
+                </div>
+                <div class="flex flex-col items-center">
+                    <img src="https://placehold.co/150x150/808080/FFFFFF?text=Proprietor+Photo" alt="Proprietor Photo" class="w-32 h-32 rounded-full shadow-lg mb-4 object-cover">
+                    <h3 class="text-xl font-semibold text-gray-800">Proprietor</h3>
+                </div>
+            </div>
+            <p class="text-lg text-gray-700 mt-6">
+                We extend our heartfelt gratitude to <strong class="text-indigo-700">Emjay Engineering Company</strong> for sponsoring this raffle.
+                The lucky winners of the apartments will find their new homes in the beautiful <strong class="text-green-700">Sierra Greens at Sarjapur Road</strong>.
+            </p>
+        </div>
+        <!-- End Sponsor Section -->
+
+        <button id="reset-raffle-btn" class="mt-10 px-8 py-3 bg-red-600 text-white font-semibold rounded-full shadow-lg hover:bg-red-700 transition duration-300 ease-in-out">
+            Reset Raffle
+        </button>
     </div>
 
     <!-- Final Primary Winners section - now with post-it styling -->
@@ -411,13 +335,6 @@
         const generateFirstBtn = document.getElementById('generate-first');
         const generateSecondBtn = document.getElementById('generate-second');
         const generateThirdBtn = document.getElementById('generate-third');
-
-        // References for the flip functionality
-        const flipContainer = document.getElementById('flip-container');
-        const sponsorFrontPage = document.getElementById('sponsor-front-page');
-        const raffleBackPage = document.getElementById('raffle-back-page');
-        const flipCorner = document.getElementById('flip-corner');
-        let isFlipped = false;
 
         /**
          * Utility function to introduce a delay.
@@ -547,10 +464,7 @@
                 }
 
                 statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 3rd Place Winners' to begin.";
-                // Only enable the 3rd place button if the page is flipped to the raffle sections
-                if (isFlipped) {
-                    generateThirdBtn.disabled = false;
-                }
+                generateThirdBtn.disabled = false; // Enable only the third button
             } catch (error) {
                 // Error handled in fetchTicketNumbers, just ensure buttons are disabled
                 disableAllGenerateButtons();
@@ -756,73 +670,11 @@
                 await clearDisplayedWinners(); // Wait for numbers to fade out before resetting
                 initializeRaffleData(); // Re-initialize data and set initial active section
                 statusMessageElement.textContent = "Raffle reset. Ticket data reloaded. Click 'Generate 3rd Place Winners' to begin.";
-
-                // Flip back to the sponsor page on reset
-                flipContainer.classList.remove('flipped');
-                isFlipped = false;
-                flipCorner.style.display = 'block'; // Show the flip corner again
-                setFlipContainerHeight(); // Recalculate height after flip
             });
         }
-
-        // --- Flip Logic ---
-        if (flipCorner) {
-            flipCorner.addEventListener('click', () => {
-                flipContainer.classList.add('flipped');
-                isFlipped = true;
-                flipCorner.style.display = 'none'; // Hide the flip corner after flip
-                // Re-enable the first button in the new sequence (3rd place) if data is loaded
-                if (raffleTicketsWinners.length > 0 || raffleTicketsWinners1.length > 0) {
-                     generateThirdBtn.disabled = false;
-                     statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 3rd Place Winners' to begin.";
-                }
-                setFlipContainerHeight(); // Recalculate height after flip
-            });
-        }
-
-        // Function to set the height of the flip container based on the tallest content
-        function setFlipContainerHeight() {
-            const sponsorContentInner = sponsorFrontPage.querySelector('div');
-            const raffleContentInner = raffleBackPage.querySelector('div');
-
-            // Temporarily make both visible to get accurate heights
-            sponsorFrontPage.style.position = 'relative';
-            raffleBackPage.style.position = 'relative';
-            sponsorFrontPage.style.visibility = 'hidden';
-            raffleBackPage.style.visibility = 'hidden';
-            sponsorFrontPage.style.transform = 'none';
-            raffleBackPage.style.transform = 'none';
-
-            const sponsorHeight = sponsorContentInner.offsetHeight;
-            const raffleHeight = raffleContentInner.offsetHeight;
-
-            // Reset visibility and transforms
-            sponsorFrontPage.style.position = 'absolute';
-            raffleBackPage.style.position = 'absolute';
-            sponsorFrontPage.style.visibility = '';
-            raffleBackPage.style.visibility = '';
-            if (isFlipped) {
-                sponsorFrontPage.style.transform = 'rotateY(-180deg)';
-                raffleBackPage.style.transform = 'rotateY(0deg)';
-            } else {
-                sponsorFrontPage.style.transform = 'rotateY(0deg)';
-                raffleBackPage.style.transform = 'rotateY(180deg)';
-            }
-
-            const maxHeight = Math.max(sponsorHeight, raffleHeight);
-            flipContainer.style.height = `${maxHeight}px`;
-        }
-
 
         // Initialize data when the page loads
-        document.addEventListener('DOMContentLoaded', () => {
-            initializeRaffleData();
-            // Set initial height after content is loaded and before any flip
-            // A small delay ensures all content is rendered for accurate height calculation
-            setTimeout(setFlipContainerHeight, 100);
-        });
-        window.addEventListener('resize', setFlipContainerHeight);
-
+        document.addEventListener('DOMContentLoaded', initializeRaffleData);
 
         // --- Disable Save and View Source ---
         document.addEventListener('contextmenu', event => event.preventDefault()); // Disable right-click
