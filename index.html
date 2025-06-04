@@ -317,11 +317,11 @@
                     </div>
                     <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
                         <h3 class="text-xl font-semibold text-yellow-800">Secondary Winner</h3>
-                        <p id="first-secondary" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
+                        <p id="first-secondary" class="text-3xl font-bold text-yellow-800 mt-2">---</p>
                     </div>
                     <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
                         <h3 class="text-xl font-semibold text-yellow-800">Third Winner</h3>
-                        <p id="first-third" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
+                        <p id="first-third" class="text-3xl font-bold text-yellow-800 mt-2">---</p>
                     </div>
                 </div>
                 <button id="generate-first" class="winner-button px-8 py-3 bg-yellow-700 text-white font-semibold rounded-full shadow-lg hover:bg-yellow-800 transition duration-300 ease-in-out" disabled>
@@ -493,10 +493,9 @@
         }
 
         /**
-         * Fetches ticket numbers from a text file and parses them into an array of strings.
-         * Expects alphanumeric strings to be separated by newlines or commas.
+         * Fetches ticket numbers from a text file, parses them, and returns unique ones.
          * @param {string} filePath - The path to the text file.
-         * @returns {Promise<Array<string>>} A promise that resolves with an array of alphanumeric strings.
+         * @returns {Promise<Array<string>>} A promise that resolves with an array of unique alphanumeric strings.
          */
         async function fetchTicketNumbers(filePath) {
             try {
@@ -510,12 +509,12 @@
                 const text = await response.text();
                 console.log(`Raw content of ${filePath}:`, text);
 
-                // Split by newline or comma, filter out empty strings, and trim whitespace.
-                const tickets = text.split(/[\n,]+/)
+                // Split by newline or comma, filter out empty strings, trim, and get unique values
+                const tickets = Array.from(new Set(text.split(/[\n,]+/)
                                    .map(s => s.trim())
-                                   .filter(s => s !== '');
+                                   .filter(s => s !== '')));
 
-                console.log(`Parsed tickets from ${filePath}:`, tickets);
+                console.log(`Parsed UNIQUE tickets from ${filePath}:`, tickets);
                 return tickets;
             } catch (error) {
                 console.error(`Error fetching ${filePath}:`, error);
@@ -560,12 +559,14 @@
                     fetchTicketNumbers('winners1.txt')
                 ]);
 
-                raffleTicketsWinners = winnersData;
-                raffleTicketsWinners1 = winners1Data;
+                raffleTicketsWinners = winnersData; // These are already unique now
+                raffleTicketsWinners1 = winners1Data; // These are already unique now
 
-                // Check if the loaded arrays have enough unique tickets for picking
+                // Now, check if the loaded arrays have enough UNIQUE tickets for picking
+                // raffleTicketsWinners needs 3 for 1st place (Primary, Secondary, Third)
+                // raffleTicketsWinners1 needs 6 for 2nd and 3rd place (3 each)
                 if (raffleTicketsWinners.length < 3 || raffleTicketsWinners1.length < 6) {
-                    statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} tickets (needs at least 3 for 1st place). 'winners1.txt' has ${raffleTicketsWinners1.length} tickets (needs at least 6 for 2nd and 3rd place). Please populate your files with more unique alphanumeric tickets.`;
+                    statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} unique tickets (needs at least 3 for 1st place). 'winners1.txt' has ${raffleTicketsWinners1.length} unique tickets (needs at least 6 for 2nd and 3rd place). Please populate your files with more unique alphanumeric tickets.`;
                     disableAllGenerateButtons();
                     return;
                 }
