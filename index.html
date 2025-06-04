@@ -166,6 +166,7 @@
             width: 100%;
             /* min-height will be set by JS dynamically to match content */
             transition: height 0.5s ease-in-out; /* Smooth height transition */
+            margin-bottom: 2.5rem; /* Equivalent to mb-10 for spacing below the flip container */
         }
 
         #sponsor-front-page,
@@ -202,7 +203,7 @@
             height: 100%; /* Ensure inner content fills the page */
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            /* justify-content: center; /* Removed as it interferes with top alignment of content */
             align-items: center;
         }
 
@@ -244,22 +245,12 @@
             </div>
         </div>
 
-        <p class="text-lg text-gray-700 mb-10 relative z-10">
-            Congratulations to all our lucky winners! Thank you for participating in our church raffle.
-            Click the "Generate Winners" button for each place to reveal the winning ticket numbers.
-            <strong class="text-red-600">1st Place winners are drawn from 'winners.txt'. 2nd and 3rd Place winners are drawn from 'winners1.txt'. Each ticket can only win once!</strong>
-        </p>
-
-        <div id="status-message" class="text-center text-lg font-semibold text-gray-600 mb-6 relative z-10">
-            Loading ticket data...
-        </div>
-
         <!-- NEW: Flippable Container -->
         <div id="flip-container" class="relative w-full h-auto" style="perspective: 1000px;">
             <!-- Front Page: Sponsor Section -->
             <div id="sponsor-front-page" class="absolute w-full h-full backface-hidden transition-transform duration-1000" style="transform-origin: left center;">
                 <!-- Sponsor Section Content -->
-                <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl mb-8 relative z-10 flex flex-col justify-between h-full">
+                <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl relative z-10 flex flex-col justify-between h-full">
                     <div>
                         <h2 class="text-3xl font-extrabold text-indigo-800 mb-6">Our Esteemed Sponsor</h2>
                         <div class="flex flex-col md:flex-row items-center justify-center md:justify-around gap-8">
@@ -286,7 +277,17 @@
 
             <!-- Back Page: Raffle Sections -->
             <div id="raffle-back-page" class="absolute w-full h-full backface-hidden transition-transform duration-1000" style="transform-origin: left center; transform: rotateY(180deg);">
-                <div class="flex flex-col h-full justify-between"> <!-- Added flex column to make content fill height -->
+                <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl relative z-10 flex flex-col h-full justify-between">
+                    <p class="text-lg text-gray-700 mb-10 relative z-10">
+                        Congratulations to all our lucky winners! Thank you for participating in our church raffle.
+                        Click the "Generate Winners" button for each place to reveal the winning ticket numbers.
+                        <strong class="text-red-600">1st Place winners are drawn from 'winners.txt'. 2nd and 3rd Place winners are drawn from 'winners1.txt'. Each ticket can only win once!</strong>
+                    </p>
+
+                    <div id="status-message" class="text-center text-lg font-semibold text-gray-600 mb-6 relative z-10">
+                        Loading ticket data...
+                    </div>
+
                     <!-- Third Place Section -->
                     <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
                         <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
@@ -358,14 +359,13 @@
                             Generate 1st Place Winners
                         </button>
                     </div>
+                    <button id="reset-raffle-btn" class="mt-10 px-8 py-3 bg-red-600 text-white font-semibold rounded-full shadow-lg hover:bg-red-700 transition duration-300 ease-in-out">
+                        Reset Raffle
+                    </button>
                 </div>
             </div>
         </div>
         <!-- End Flippable Container -->
-
-        <button id="reset-raffle-btn" class="mt-10 px-8 py-3 bg-red-600 text-white font-semibold rounded-full shadow-lg hover:bg-red-700 transition duration-300 ease-in-out">
-            Reset Raffle
-        </button>
     </div>
 
     <!-- Final Primary Winners section - now with post-it styling -->
@@ -782,18 +782,34 @@
 
         // Function to set the height of the flip container based on the tallest content
         function setFlipContainerHeight() {
-            // Get the height of the sponsor section content (front page)
-            const sponsorContentHeight = sponsorFrontPage.querySelector('div').offsetHeight;
+            const sponsorContentInner = sponsorFrontPage.querySelector('div');
+            const raffleContentInner = raffleBackPage.querySelector('div');
 
-            // Get the combined height of all raffle sections (back page)
-            // Add a buffer for margins between sections
-            const raffleContentHeight = thirdPlaceSection.offsetHeight +
-                                        secondPlaceSection.offsetHeight +
-                                        firstPlaceSection.offsetHeight + (2 * 32); // 2 * mb-8 (32px)
+            // Temporarily make both visible to get accurate heights
+            sponsorFrontPage.style.position = 'relative';
+            raffleBackPage.style.position = 'relative';
+            sponsorFrontPage.style.visibility = 'hidden';
+            raffleBackPage.style.visibility = 'hidden';
+            sponsorFrontPage.style.transform = 'none';
+            raffleBackPage.style.transform = 'none';
 
-            // Set the flip container height to the maximum of the two pages
-            // Add some extra buffer for overall padding/shadows
-            const maxHeight = Math.max(sponsorContentHeight, raffleContentHeight) + 60;
+            const sponsorHeight = sponsorContentInner.offsetHeight;
+            const raffleHeight = raffleContentInner.offsetHeight;
+
+            // Reset visibility and transforms
+            sponsorFrontPage.style.position = 'absolute';
+            raffleBackPage.style.position = 'absolute';
+            sponsorFrontPage.style.visibility = '';
+            raffleBackPage.style.visibility = '';
+            if (isFlipped) {
+                sponsorFrontPage.style.transform = 'rotateY(-180deg)';
+                raffleBackPage.style.transform = 'rotateY(0deg)';
+            } else {
+                sponsorFrontPage.style.transform = 'rotateY(0deg)';
+                raffleBackPage.style.transform = 'rotateY(180deg)';
+            }
+
+            const maxHeight = Math.max(sponsorHeight, raffleHeight);
             flipContainer.style.height = `${maxHeight}px`;
         }
 
