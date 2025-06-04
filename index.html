@@ -318,7 +318,7 @@
                 </button>
             </div>
 
-            <button id="reset-raffle-btn" class="mt-10 px-8 py-3 bg-red-600 text-white font-semibold rounded-full shadow-lg hover:bg-red-700 transition duration-300 ease-in-out">
+            <button id="reset-raffle-btn" class="mt-10 px-8 py-3 bg-red-600 text-white font-semibold rounded-full shadow-lg hover:bg-red-700 transition duration-300 ease-in-out" disabled>
                 Reset Raffle
             </button>
         </div>
@@ -513,6 +513,9 @@
             firstPlaceSection.classList.add('inactive-section');
             secondPlaceSection.classList.add('inactive-section');
             thirdPlaceSection.classList.remove('inactive-section'); // Ensure 3rd is active
+
+            // Disable reset button initially
+            resetRaffleBtn.disabled = true;
 
 
             try {
@@ -722,6 +725,8 @@
                 statusMessageElement.textContent = "All unique tickets have been drawn! Reset raffle to start again.";
                 // Add the golden border pulse animation to the final primary winners section
                 finalPrimaryWinnersSection.classList.add('golden-border-pulse-animation');
+                // Enable the reset button once all winners are displayed
+                resetRaffleBtn.disabled = false;
             }
 
             // Optional: Check if all possible tickets have been drawn and disable all buttons if so
@@ -810,8 +815,9 @@
                 raffleContentContainer.style.display = 'block'; // Ensure display is block
                 revealWinnersBtn.disabled = true; // Keep the reveal button disabled, as it's already hidden
 
-                // Remove the golden border pulse class on reset
+                // Remove the golden border pulse class and disable reset button on reset
                 finalPrimaryWinnersSection.classList.remove('golden-border-pulse-animation');
+                resetRaffleBtn.disabled = true;
             });
         }
 
