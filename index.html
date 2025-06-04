@@ -74,6 +74,8 @@
             opacity: 0.6;
             cursor: not-allowed;
             box-shadow: none; /* No shadow when disabled */
+            /* Ensure background color is set for disabled state */
+            background-color: #d1d5db !important; /* Tailwind's bg-gray-300 */
         }
 
         /* Style for the reset button */
@@ -318,7 +320,7 @@
                 </button>
             </div>
 
-            <button id="reset-raffle-btn" class="mt-10 px-8 py-3 bg-red-600 text-white font-semibold rounded-full shadow-lg hover:bg-red-700 transition duration-300 ease-in-out" disabled>
+            <button id="reset-raffle-btn" class="winner-button mt-10 px-8 py-3 text-white font-semibold rounded-full shadow-lg" disabled>
                 Reset Raffle
             </button>
         </div>
@@ -514,8 +516,9 @@
             secondPlaceSection.classList.add('inactive-section');
             thirdPlaceSection.classList.remove('inactive-section'); // Ensure 3rd is active
 
-            // Disable reset button initially
+            // Disable and style reset button initially
             resetRaffleBtn.disabled = true;
+            resetRaffleBtn.classList.add('bg-gray-300');
 
 
             try {
@@ -725,8 +728,10 @@
                 statusMessageElement.textContent = "All unique tickets have been drawn! Reset raffle to start again.";
                 // Add the golden border pulse animation to the final primary winners section
                 finalPrimaryWinnersSection.classList.add('golden-border-pulse-animation');
-                // Enable the reset button once all winners are displayed
+                // Enable the reset button once all winners are displayed and change its color
                 resetRaffleBtn.disabled = false;
+                resetRaffleBtn.classList.remove('bg-gray-300');
+                resetRaffleBtn.classList.add('bg-red-600', 'hover:bg-red-700');
             }
 
             // Optional: Check if all possible tickets have been drawn and disable all buttons if so
@@ -818,6 +823,8 @@
                 // Remove the golden border pulse class and disable reset button on reset
                 finalPrimaryWinnersSection.classList.remove('golden-border-pulse-animation');
                 resetRaffleBtn.disabled = true;
+                resetRaffleBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                resetRaffleBtn.classList.add('bg-gray-300');
             });
         }
 
