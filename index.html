@@ -704,23 +704,25 @@
                 // 2. Start reveal animation after a short delay to allow scroll to begin
                 setTimeout(() => {
                     // Temporarily make content visible (but hidden by opacity) to get scrollHeight
-                    raffleContentContainer.style.visibility = 'hidden';
+                    // Set display to block to ensure it's in normal flow for accurate scrollHeight
+                    raffleContentContainer.style.display = 'block';
+                    raffleContentContainer.style.visibility = 'hidden'; // Keep visually hidden
                     raffleContentContainer.style.maxHeight = 'none'; // Allow content to determine height
                     raffleContentContainer.style.opacity = '0'; // Keep it hidden for now
-                    raffleContentContainer.style.position = 'absolute'; // Take out of flow for measurement
 
                     const contentHeight = raffleContentContainer.scrollHeight;
 
                     // Reset styles for transition
                     raffleContentContainer.style.maxHeight = '0px'; // Collapse for animation start
-                    raffleContentContainer.style.position = ''; // Restore position
                     raffleContentContainer.style.visibility = ''; // Make visible for transition
+                    raffleContentContainer.style.opacity = '0'; // Ensure opacity is 0 before transition
+
+                    // Force reflow to ensure CSS properties are applied before transition starts
+                    void raffleContentContainer.offsetWidth; // eslint-disable-line no-unused-expressions
 
                     // Trigger the transition
-                    setTimeout(() => {
-                        raffleContentContainer.style.maxHeight = `${contentHeight}px`;
-                        raffleContentContainer.style.opacity = '1';
-                    }, 10); // Small delay to ensure browser registers initial state
+                    raffleContentContainer.style.maxHeight = `${contentHeight}px`;
+                    raffleContentContainer.style.opacity = '1';
 
                     // After the transition completes, remove max-height to allow natural flow
                     raffleContentContainer.addEventListener('transitionend', function handler() {
@@ -746,6 +748,7 @@
                 // Hide raffle content and re-enable reveal button on reset
                 raffleContentContainer.style.maxHeight = '0px'; // Collapse with curtain effect
                 raffleContentContainer.style.opacity = '0'; // Fade out
+                raffleContentContainer.style.display = 'block'; // Ensure display is block for next reveal
                 revealWinnersBtn.disabled = false;
             });
         }
