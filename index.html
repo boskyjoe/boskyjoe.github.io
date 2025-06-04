@@ -159,10 +159,17 @@
             animation: fadeOut 0.5s ease-out forwards; /* Apply fadeOut animation */
         }
 
-        /* Styles for the reveal container */
+        /* Styles for the reveal container (curtain effect) */
         #raffle-content-container {
-            opacity: 0;
-            transition: opacity 1.5s ease-in-out; /* Smooth fade-in over 1.5 seconds */
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 1.5s ease-in-out; /* Smooth curtain opening transition */
+            opacity: 0; /* Start hidden */
+            transition: max-height 1.5s ease-in-out, opacity 1.5s ease-in-out; /* Combine transitions */
+        }
+        #raffle-content-container.revealed {
+            max-height: 2000px; /* A large enough value to accommodate content */
+            opacity: 1;
         }
     </style>
 </head>
@@ -209,13 +216,13 @@
                 The lucky winners of the apartments will find their new homes in the beautiful <strong class="text-green-700">Sierra Greens at Sarjapur Road</strong>.
             </p>
             <button id="reveal-winners-btn" class="mt-8 px-8 py-4 bg-purple-600 text-white font-bold text-xl rounded-full shadow-lg hover:bg-purple-700 transition duration-300 ease-in-out">
-                Reveal Raffle Winners!
+                Start Raffle Draw
             </button>
         </div>
         <!-- End Sponsor Section -->
 
         <!-- Container for content revealed after click -->
-        <div id="raffle-content-container" style="display: none;">
+        <div id="raffle-content-container">
             <p class="text-lg text-gray-700 mb-10 relative z-10">
                 Congratulations to all our lucky winners! Thank you for participating in our church raffle.
                 Click the "Generate Winners" button for each place to reveal the winning ticket numbers.
@@ -460,8 +467,8 @@
             disableAllGenerateButtons(); // Disable all buttons initially
 
             // Initially hide the raffle content container
-            raffleContentContainer.style.opacity = '0';
-            raffleContentContainer.style.display = 'none';
+            raffleContentContainer.classList.remove('revealed'); // Ensure it starts closed
+            // No need to set display:none here, max-height:0 and opacity:0 handle it.
             revealWinnersBtn.disabled = false; // Ensure reveal button is enabled on load
 
             // Set initial inactive state for 1st and 2nd sections, activate 3rd
@@ -691,10 +698,7 @@
                 triggerConfetti(); // Trigger confetti immediately
                 revealWinnersBtn.disabled = true; // Disable button after click
 
-                raffleContentContainer.style.display = 'block'; // Make it visible
-                setTimeout(() => {
-                    raffleContentContainer.style.opacity = '1'; // Start fade-in
-                }, 10); // Small delay to allow display:block to apply before transition
+                raffleContentContainer.classList.add('revealed'); // Apply revealed class for curtain effect
 
                 // Re-enable the 3rd place button after reveal
                 generateThirdBtn.disabled = false;
@@ -711,8 +715,7 @@
                 statusMessageElement.textContent = "Raffle reset. Ticket data reloaded. Click 'Generate 3rd Place Winners' to begin.";
 
                 // Hide raffle content and re-enable reveal button on reset
-                raffleContentContainer.style.opacity = '0';
-                raffleContentContainer.style.display = 'none';
+                raffleContentContainer.classList.remove('revealed'); // Hide with curtain effect
                 revealWinnersBtn.disabled = false;
             });
         }
