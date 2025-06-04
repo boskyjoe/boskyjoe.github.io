@@ -503,24 +503,24 @@
         async function fetchTicketNumbers(filePath) {
             try {
                 const fullUrl = new URL(filePath, window.location.href).href;
-                console.log(`Attempting to fetch from: ${fullUrl}`);
+                console.log(`DEBUG: Attempting to fetch from: ${fullUrl}`);
 
                 const response = await fetch(fullUrl);
                 if (!response.ok) {
                     throw new Error(`Failed to load ${filePath} (HTTP status: ${response.status}): ${response.statusText}`);
                 }
                 const text = await response.text();
-                console.log(`Raw content of ${filePath}:`, text);
+                console.log(`DEBUG: Raw content of ${filePath}:\n${text}`);
 
                 // Split by newline or comma, filter out empty strings, trim, and get unique values
                 const tickets = Array.from(new Set(text.split(/[\n,]+/)
                                    .map(s => s.trim())
                                    .filter(s => s !== '')));
 
-                console.log(`Parsed UNIQUE tickets from ${filePath}:`, tickets);
+                console.log(`DEBUG: Parsed UNIQUE tickets from ${filePath}:`, tickets);
                 return tickets;
             } catch (error) {
-                console.error(`Error fetching ${filePath}:`, error);
+                console.error(`ERROR: Failed to fetch or parse ${filePath}:`, error);
                 statusMessageElement.textContent = `Error loading ticket data from '${filePath}'. Please ensure the file exists in the same directory as your HTML, contains valid alphanumeric tickets (one per line or comma-separated), and is correctly formatted. It might also be a security restriction in this preview environment.`;
                 disableAllGenerateButtons();
                 return Promise.reject(error); // Re-throw to propagate error for initializeRaffleData
@@ -536,7 +536,7 @@
 
             // The global allTimePickedTickets is already cleared at the top of the script when the page loads.
             // If this is being called after a reset, it also means allTimePickedTickets has been cleared.
-            console.log("Inside initializeRaffleData: allTimePickedTickets size:", allTimePickedTickets.size);
+            console.log("DEBUG: Inside initializeRaffleData: allTimePickedTickets size (start):", allTimePickedTickets.size);
 
 
             // Initially hide the main raffle content container
@@ -570,12 +570,12 @@
                 raffleTicketsWinners = winnersData; // These are already unique now
                 raffleTicketsWinners1 = winners1Data; // These are already unique now
 
-                console.log("Fetched winners.txt length:", raffleTicketsWinners.length); // Debugging
-                console.log("Fetched winners1.txt length:", raffleTicketsWinners1.length); // Debugging
+                console.log("DEBUG: Fetched winners.txt unique length:", raffleTicketsWinners.length);
+                console.log("DEBUG: Fetched winners1.txt unique length:", raffleTicketsWinners1.length);
 
                 // Calculate overall unique tickets after fetching both files
                 const overallTotalUniqueTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
-                console.log("Overall Total Unique Tickets available:", overallTotalUniqueTickets); // Debugging
+                console.log("DEBUG: Overall Total Unique Tickets available (combined unique from files):", overallTotalUniqueTickets);
 
                 // Now, check if the loaded arrays have enough UNIQUE tickets for picking
                 // raffleTicketsWinners needs 3 for 1st place (Primary, Secondary, Third)
@@ -592,7 +592,7 @@
             } catch (error) {
                 // Error handled in fetchTicketNumbers, which already sets status message and disables buttons.
                 // No need to re-handle here, but ensure the status message is clear.
-                console.error("Initialization failed:", error);
+                console.error("ERROR: Initialization failed in initializeRaffleData:", error);
                 statusMessageElement.textContent = `Failed to initialize raffle data. Please check console for details. Ensure 'winners.txt' and 'winners1.txt' are correctly placed and formatted.`;
                 disableAllGenerateButtons();
             }
@@ -641,7 +641,7 @@
             );
 
             if (availableTickets.length === 0) {
-                console.warn("Not enough unique tickets available in the source pool for this pick, considering all previously picked tickets.");
+                console.warn("WARNING: Not enough unique tickets available in the source pool for this pick, considering all previously picked tickets and current draw's tickets.");
                 return "N/A"; // Return "N/A" if no unique ticket can be found
             }
 
@@ -742,7 +742,7 @@
             } else if (placePrefix === 'second' || placePrefix === 'third') {
                 sourceArrayForPlace = raffleTicketsWinners1;
             } else {
-                console.error("Invalid place prefix provided:", placePrefix);
+                console.error("ERROR: Invalid place prefix provided:", placePrefix);
                 // Re-enable only the current section's button on error
                 if (placePrefix === 'first') generateFirstBtn.disabled = false;
                 if (placePrefix === 'second') generateSecondBtn.disabled = false;
@@ -806,7 +806,8 @@
             } else if (placePrefix === 'second') {
                 activateSection(firstPlaceSection, generateFirstBtn);
             } else if (placePrefix === 'first') {
-                statusMessageElement.textContent = "All unique tickets have been drawn! Reset raffle to start again.";
+                // This message clarifies that all *prizes* for this raffle have been awarded
+                statusMessageElement.textContent = "All prize winners for this raffle have been drawn! Click 'Reset Raffle' to start a new draw.";
                 // Add the golden border pulse animation to the final primary winners section
                 finalPrimaryWinnersSection.classList.add('golden-border-pulse-animation');
                 // Enable the reset button once all winners are displayed and change its color
@@ -815,15 +816,14 @@
                 resetRaffleBtn.classList.add('bg-red-600', 'hover:bg-red-700');
             }
 
-            // Optional: Check if all possible tickets have been drawn and disable all buttons if so
+            // This block checks if the *entire pool* of unique tickets has been exhausted.
+            // It should only trigger if all tickets in both files are truly used up.
             const totalTicketsInWinners = new Set(raffleTicketsWinners).size;
             const totalTicketsInWinners1 = new Set(raffleTicketsWinners1).size;
             const overallTotalUniqueTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
 
-            // This check should use the *total available* tickets, not just `allTimePickedTickets.size`
-            // if we are trying to indicate actual exhaustion.
-            // If all 9 distinct tickets (3 from winners.txt, 6 from winners1.txt) have been picked,
-            // then the message is appropriate.
+            console.log(`DEBUG: (End of updateWinnersDisplay) allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
+
             if (allTimePickedTickets.size >= overallTotalUniqueTickets) {
                  statusMessageElement.textContent = "All unique tickets have been drawn from both pools! Reset raffle to start again.";
                  disableAllGenerateButtons();
@@ -887,7 +887,7 @@
             confirmResetBtn.addEventListener('click', async () => {
                 resetConfirmModal.classList.add('hidden'); // Hide the modal
                 allTimePickedTickets.clear(); // Clear all previously picked tickets
-                console.log("allTimePickedTickets cleared on reset. Size:", allTimePickedTickets.size); // Debugging reset
+                console.log("DEBUG: allTimePickedTickets cleared on reset. Size:", allTimePickedTickets.size); // Debugging reset
 
                 // Re-fetch ticket data to ensure the latest numbers are available
                 try {
@@ -900,7 +900,7 @@
 
                     // Recalculate overallTotalUniqueTickets after re-fetching
                     const overallTotalUniqueTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
-                    console.log("Overall Total Unique Tickets available after reset refetch:", overallTotalUniqueTickets);
+                    console.log("DEBUG: Overall Total Unique Tickets available after reset refetch:", overallTotalUniqueTickets);
 
                     if (raffleTicketsWinners.length < 3 || raffleTicketsWinners1.length < 6) {
                         statusMessageElement.textContent = `Error: Not enough unique ticket numbers available after reset. 'winners.txt' has ${raffleTicketsWinners.length} (needs 3). 'winners1.txt' has ${raffleTicketsWinners1.length} (needs 6).`;
@@ -909,7 +909,7 @@
                     }
 
                 } catch (error) {
-                    console.error("Error re-fetching ticket data on reset:", error);
+                    console.error("ERROR: Error re-fetching ticket data on reset:", error);
                     statusMessageElement.textContent = `Error re-loading ticket data on reset. Please check files.`;
                     disableAllGenerateButtons();
                     return;
@@ -917,13 +917,10 @@
 
                 await clearDisplayedWinners(); // Wait for numbers to fade out before resetting UI
 
-                // Reset only the winner generation state, not the overall UI visibility
-                // Re-enable the 3rd place button and set other sections to inactive
-                activateSection(thirdPlaceSection, generateThirdBtn);
+                // Reset prize sections to inactive and enable the first one
                 firstPlaceSection.classList.add('inactive-section');
                 secondPlaceSection.classList.add('inactive-section');
-                generateFirstBtn.disabled = true; // Ensure 1st place button is disabled
-                generateSecondBtn.disabled = true; // Ensure 2nd place button is disabled
+                activateSection(thirdPlaceSection, generateThirdBtn); // Activate 3rd place button
 
                 statusMessageElement.textContent = "Raffle reset. Click 'Generate 3rd Place Winners' to begin drawing again.";
 
