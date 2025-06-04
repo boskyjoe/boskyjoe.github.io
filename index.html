@@ -172,14 +172,6 @@
             /* max-height will be set by JS dynamically */
             opacity: 1;
         }
-
-        /* Styles for the 1st place section's own reveal effect */
-        #first-place-section.hidden-for-reveal {
-            max-height: 0;
-            overflow: hidden;
-            opacity: 0;
-            transition: max-height 1.0s ease-in-out, opacity 1.0s ease-in-out; /* Slower transition for dramatic effect */
-        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -291,7 +283,7 @@
             </div>
 
             <!-- First Place Section (now displayed third) -->
-            <div id="first-place-section" class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden-for-reveal">
+            <div id="first-place-section" class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
                 <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                     <span class="mr-3 text-4xl">🥇</span> 1st Place Winners
                 </h2>
@@ -507,8 +499,8 @@
             secondPlaceSection.classList.add('inactive-section');
             thirdPlaceSection.classList.remove('inactive-section'); // Ensure 3rd is active
 
-            // Hide the first place section specifically for its own reveal effect
-            firstPlaceSection.classList.add('hidden-for-reveal');
+            // Ensure the first place section is not hidden by the specific reveal class
+            firstPlaceSection.classList.remove('hidden-for-reveal');
 
 
             try {
@@ -702,8 +694,8 @@
                 activateSection(secondPlaceSection, generateSecondBtn);
             } else if (placePrefix === 'second') {
                 generateSecondBtn.disabled = true;
-                // Activate the next section (1st place) with its own reveal effect
-                revealFirstPlaceSection();
+                // Directly activate the next section (1st place)
+                activateSection(firstPlaceSection, generateFirstBtn);
             } else if (placePrefix === 'first') {
                 generateFirstBtn.disabled = true;
                 // All winners are drawn, no more buttons to activate
@@ -720,43 +712,6 @@
                 disableAllGenerateButtons();
             }
         }
-
-        /**
-         * Reveals the first place section with a curtain effect.
-         */
-        function revealFirstPlaceSection() {
-            firstPlaceSection.classList.remove('inactive-section'); // Make it active visually
-            firstPlaceSection.classList.remove('hidden-for-reveal'); // Remove initial hidden state
-
-            // Temporarily make content visible (but hidden by opacity) to get scrollHeight
-            firstPlaceSection.style.display = 'block'; // Ensure it's in flow
-            firstPlaceSection.style.visibility = 'hidden'; // Keep visually hidden
-            firstPlaceSection.style.maxHeight = 'none'; // Allow content to determine height
-            firstPlaceSection.style.opacity = '0'; // Keep it hidden for now
-
-            const contentHeight = firstPlaceSection.scrollHeight;
-
-            // Reset styles for transition
-            firstPlaceSection.style.maxHeight = '0px'; // Collapse for animation start
-            firstPlaceSection.style.visibility = ''; // Make visible for transition
-            firstPlaceSection.style.opacity = '0'; // Ensure opacity is 0 before transition
-
-            // Force reflow to ensure CSS properties are applied before transition starts
-            void firstPlaceSection.offsetWidth; // eslint-disable-line no-unused-expressions
-
-            // Trigger the transition
-            firstPlaceSection.style.maxHeight = `${contentHeight}px`;
-            firstPlaceSection.style.opacity = '1';
-
-            // After the transition completes, remove max-height to allow natural flow
-            firstPlaceSection.addEventListener('transitionend', function handler() {
-                firstPlaceSection.style.maxHeight = 'none'; // Allow content to adjust naturally
-                firstPlaceSection.removeEventListener('transitionend', handler);
-                generateFirstBtn.disabled = false; // Enable the 1st place button after its section is revealed
-                statusMessageElement.textContent = "1st Place section revealed! Click 'Generate 1st Place Winners' to draw.";
-            }, { once: true });
-        }
-
 
         // Add event listeners to each button.
         // When a button is clicked, it calls `updateWinnersDisplay` with the appropriate prefix.
@@ -821,7 +776,7 @@
                 // Re-enable the 3rd place button and set other sections to inactive
                 activateSection(thirdPlaceSection, generateThirdBtn);
                 firstPlaceSection.classList.add('inactive-section');
-                firstPlaceSection.classList.add('hidden-for-reveal'); // Re-hide 1st place for its reveal effect
+                // Removed: firstPlaceSection.classList.add('hidden-for-reveal'); // Re-hide 1st place for its reveal effect
                 secondPlaceSection.classList.add('inactive-section');
                 generateFirstBtn.disabled = true; // Ensure 1st place button is disabled
                 generateSecondBtn.disabled = true; // Ensure 2nd place button is disabled
