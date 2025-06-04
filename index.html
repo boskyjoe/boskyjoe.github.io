@@ -146,7 +146,9 @@
             transform: scale(1);
             opacity: 1;
             filter: grayscale(0%);
-            transition: opacity 0.5s ease-out, filter 0.5s ease-out, transform 0.5s ease-out, scale 0.5s ease-out; /* Smooth transition for activation */
+            border: 3px solid #6366f1; /* A prominent border */
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.6); /* Subtle glow */
+            transition: opacity 0.5s ease-out, filter 0.5s ease-out, transform 0.5s ease-out, scale 0.5s ease-out, border 0.3s ease-in-out, box-shadow 0.3s ease-in-out; /* Smooth transition for activation */
         }
 
         /* Keyframes for fade out animation */
@@ -336,6 +338,22 @@
         <p>Powered by <a href="#" class="text-blue-400 hover:underline">DataWings Solution</a></p>
     </footer>
 
+    <!-- Confirmation Modal for Reset Raffle -->
+    <div id="reset-confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-8 rounded-lg shadow-xl text-center max-w-sm mx-auto">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Confirm Reset</h3>
+            <p class="text-gray-700 mb-6">Are you sure you want to reset the raffle? This will clear all drawn winners.</p>
+            <div class="flex justify-center space-x-4">
+                <button id="confirm-reset-btn" class="px-6 py-2 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700 transition duration-300">
+                    Confirm
+                </button>
+                <button id="cancel-reset-btn" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-md hover:bg-gray-400 transition duration-300">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let raffleTicketsWinners = []; // Will be populated from winners.txt
         let raffleTicketsWinners1 = []; // Will be populated from winners1.txt
@@ -358,6 +376,11 @@
         // References for the reveal functionality
         const revealWinnersBtn = document.getElementById('reveal-winners-btn');
         const raffleContentContainer = document.getElementById('raffle-content-container');
+
+        // References for the reset confirmation modal
+        const resetConfirmModal = document.getElementById('reset-confirm-modal');
+        const confirmResetBtn = document.getElementById('confirm-reset-btn');
+        const cancelResetBtn = document.getElementById('cancel-reset-btn');
 
         /**
          * Utility function to introduce a delay.
@@ -733,7 +756,15 @@
 
         // Add event listener for the Reset Raffle button
         if (resetRaffleBtn) {
-            resetRaffleBtn.addEventListener('click', async () => {
+            resetRaffleBtn.addEventListener('click', () => {
+                resetConfirmModal.classList.remove('hidden'); // Show the confirmation modal
+            });
+        }
+
+        // Event listener for "Confirm" button in the modal
+        if (confirmResetBtn) {
+            confirmResetBtn.addEventListener('click', async () => {
+                resetConfirmModal.classList.add('hidden'); // Hide the modal
                 allTimePickedTickets.clear(); // Clear all previously picked tickets
                 await clearDisplayedWinners(); // Wait for numbers to fade out before resetting
 
@@ -752,6 +783,13 @@
                 raffleContentContainer.style.opacity = '1'; // Keep it visible
                 raffleContentContainer.style.display = 'block'; // Ensure display is block
                 revealWinnersBtn.disabled = true; // Keep the reveal button disabled, as it's already hidden
+            });
+        }
+
+        // Event listener for "Cancel" button in the modal
+        if (cancelResetBtn) {
+            cancelResetBtn.addEventListener('click', () => {
+                resetConfirmModal.classList.add('hidden'); // Hide the modal
             });
         }
 
