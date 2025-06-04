@@ -699,7 +699,9 @@
                 revealWinnersBtn.disabled = true; // Disable button after click
 
                 // 1. Scroll to the 2nd Place Winners section first (this should bring 3rd into view)
-                secondPlaceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Using window.scrollTo for potentially more reliable positioning
+                const offsetTop = secondPlaceSection.offsetTop;
+                window.scrollTo({ top: offsetTop, behavior: 'smooth' });
 
                 // 2. Start reveal animation after a short delay to allow scroll to begin
                 setTimeout(() => {
@@ -733,7 +735,7 @@
                     // Re-enable the 3rd place button after reveal
                     generateThirdBtn.disabled = false;
                     statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 3rd Place Winners' to begin.";
-                }, 300); // Delay the reveal by 300ms after scroll starts
+                }, 700); // Increased delay to 700ms after scroll starts
             });
         }
 
