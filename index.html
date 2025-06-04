@@ -476,7 +476,7 @@
                 }
             });
 
-            // After clearing text, also reset background colors and hide final primary winner cards
+            // After clearing text, also reset background colors and hide individual final primary winner cards
             const finalWinnerCards = document.querySelectorAll('#final-primary-winners-section .winner-card');
             finalWinnerCards.forEach(card => {
                 // Remove all gradient classes and animation class
@@ -488,7 +488,8 @@
                 );
                 card.classList.add('bg-white', 'hidden'); // Revert to white and hide
             });
-            finalPrimaryWinnersSection.classList.add('hidden'); // Hide the main final section
+            // DO NOT HIDE the main final section here, it should remain visible
+            // finalPrimaryWinnersSection.classList.add('hidden'); // Removed this line
 
             // Wait for all fade-out animations to complete
             await Promise.all(animations);
@@ -888,20 +889,56 @@
                 allTimePickedTickets.clear(); // Clear all previously picked tickets
                 console.log("allTimePickedTickets cleared on reset. Size:", allTimePickedTickets.size); // Debugging reset
 
-                // Re-initialize raffle data to re-fetch potentially updated files
-                await initializeRaffleData();
+                // Re-fetch ticket data to ensure the latest numbers are available
+                try {
+                    const [winnersData, winners1Data] = await Promise.all([
+                        fetchTicketNumbers('winners.txt'),
+                        fetchTicketNumbers('winners1.txt')
+                    ]);
+                    raffleTicketsWinners = winnersData;
+                    raffleTicketsWinners1 = winners1Data;
+
+                    // Recalculate overallTotalUniqueTickets after re-fetching
+                    const overallTotalUniqueTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
+                    console.log("Overall Total Unique Tickets available after reset refetch:", overallTotalUniqueTickets);
+
+                    if (raffleTicketsWinners.length < 3 || raffleTicketsWinners1.length < 6) {
+                        statusMessageElement.textContent = `Error: Not enough unique ticket numbers available after reset. 'winners.txt' has ${raffleTicketsWinners.length} (needs 3). 'winners1.txt' has ${raffleTicketsWinners1.length} (needs 6).`;
+                        disableAllGenerateButtons();
+                        return;
+                    }
+
+                } catch (error) {
+                    console.error("Error re-fetching ticket data on reset:", error);
+                    statusMessageElement.textContent = `Error re-loading ticket data on reset. Please check files.`;
+                    disableAllGenerateButtons();
+                    return;
+                }
 
                 await clearDisplayedWinners(); // Wait for numbers to fade out before resetting UI
 
-                // The initializeRaffleData will handle activating the first button and setting the status message.
-                // We just need to ensure the raffle content container remains revealed
+                // Reset only the winner generation state, not the overall UI visibility
+                // Re-enable the 3rd place button and set other sections to inactive
+                activateSection(thirdPlaceSection, generateThirdBtn);
+                firstPlaceSection.classList.add('inactive-section');
+                secondPlaceSection.classList.add('inactive-section');
+                generateFirstBtn.disabled = true; // Ensure 1st place button is disabled
+                generateSecondBtn.disabled = true; // Ensure 2nd place button is disabled
+
+                statusMessageElement.textContent = "Raffle reset. Click 'Generate 3rd Place Winners' to begin drawing again.";
+
+                // Ensure the raffle content container remains revealed and its content is adjusted
                 raffleContentContainer.style.maxHeight = 'none'; // Keep it expanded
                 raffleContentContainer.style.opacity = '1'; // Keep it visible
                 raffleContentContainer.style.display = 'block'; // Ensure display is block
                 revealWinnersBtn.disabled = true; // Keep the reveal button disabled, as it's already hidden
+                revealWinnersBtn.style.display = 'none'; // Keep hidden after first reveal
 
                 // Remove the golden border pulse class and disable reset button on reset
                 finalPrimaryWinnersSection.classList.remove('golden-border-pulse-animation');
+                // Ensure the main final primary winners section is shown after reset, as its content is cleared
+                finalPrimaryWinnersSection.classList.remove('hidden');
+
                 resetRaffleBtn.disabled = true;
                 resetRaffleBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
                 resetRaffleBtn.classList.add('bg-gray-300');
