@@ -698,41 +698,35 @@
                 triggerConfetti(); // Trigger confetti immediately
                 revealWinnersBtn.disabled = true; // Disable button after click
 
-                // 1. Scroll to the 3rd Place Winners section first, block: 'center' to center it
-                thirdPlaceSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Temporarily make content visible (but hidden by opacity) to get scrollHeight
+                raffleContentContainer.style.display = 'block'; // Ensure it's in flow
+                raffleContentContainer.style.visibility = 'hidden'; // Keep visually hidden
+                raffleContentContainer.style.maxHeight = 'none'; // Allow content to determine height
+                raffleContentContainer.style.opacity = '0'; // Keep it hidden for now
 
-                // 2. Start reveal animation after a short delay to allow scroll to begin
-                setTimeout(() => {
-                    // Temporarily make content visible (but hidden by opacity) to get scrollHeight
-                    raffleContentContainer.style.display = 'block'; // Ensure it's in flow
-                    raffleContentContainer.style.visibility = 'hidden'; // Keep visually hidden
-                    raffleContentContainer.style.maxHeight = 'none'; // Allow content to determine height
-                    raffleContentContainer.style.opacity = '0'; // Keep it hidden for now
+                const contentHeight = raffleContentContainer.scrollHeight;
 
-                    const contentHeight = raffleContentContainer.scrollHeight;
+                // Reset styles for transition
+                raffleContentContainer.style.maxHeight = '0px'; // Collapse for animation start
+                raffleContentContainer.style.visibility = ''; // Make visible for transition
+                raffleContentContainer.style.opacity = '0'; // Ensure opacity is 0 before transition
 
-                    // Reset styles for transition
-                    raffleContentContainer.style.maxHeight = '0px'; // Collapse for animation start
-                    raffleContentContainer.style.visibility = ''; // Make visible for transition
-                    raffleContentContainer.style.opacity = '0'; // Ensure opacity is 0 before transition
+                // Force reflow to ensure CSS properties are applied before transition starts
+                void raffleContentContainer.offsetWidth; // eslint-disable-line no-unused-expressions
 
-                    // Force reflow to ensure CSS properties are applied before transition starts
-                    void raffleContentContainer.offsetWidth; // eslint-disable-line no-unused-expressions
+                // Trigger the transition
+                raffleContentContainer.style.maxHeight = `${contentHeight}px`;
+                raffleContentContainer.style.opacity = '1';
 
-                    // Trigger the transition
-                    raffleContentContainer.style.maxHeight = `${contentHeight}px`;
-                    raffleContentContainer.style.opacity = '1';
+                // After the transition completes, remove max-height to allow natural flow
+                raffleContentContainer.addEventListener('transitionend', function handler() {
+                    raffleContentContainer.style.maxHeight = 'none'; // Allow content to adjust naturally
+                    raffleContentContainer.removeEventListener('transitionend', handler);
+                }, { once: true });
 
-                    // After the transition completes, remove max-height to allow natural flow
-                    raffleContentContainer.addEventListener('transitionend', function handler() {
-                        raffleContentContainer.style.maxHeight = 'none'; // Allow content to adjust naturally
-                        raffleContentContainer.removeEventListener('transitionend', handler);
-                    }, { once: true });
-
-                    // Re-enable the 3rd place button after reveal
-                    generateThirdBtn.disabled = false;
-                    statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 3rd Place Winners' to begin.";
-                }, 1000); // Increased delay to 1000ms after scroll starts
+                // Re-enable the 3rd place button after reveal
+                generateThirdBtn.disabled = false;
+                statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 3rd Place Winners' to begin.";
             });
         }
 
