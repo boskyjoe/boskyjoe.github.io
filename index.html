@@ -195,29 +195,31 @@
             Loading ticket data...
         </div>
 
-        <div id="first-place-section" class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
+        <!-- Third Place Section (now displayed first) -->
+        <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg relative z-10 inactive-section">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
-                <span class="mr-3 text-4xl">🥇</span> 1st Place Winners
+                <span class="mr-3 text-4xl">🥉</span> 3rd Place Winners
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
-                    <h3 class="text-xl font-semibold text-yellow-800">Primary Winner</h3>
-                    <p id="first-primary" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
+                <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-amber-800">Primary Winner</h3>
+                    <p id="third-primary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
                 </div>
-                <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
-                    <h3 class="text-xl font-semibold text-yellow-800">Secondary Winner</h3>
-                    <p id="first-secondary" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
+                <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-amber-800">Secondary Winner</h3>
+                    <p id="third-secondary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
                 </div>
-                <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
-                    <h3 class="text-xl font-semibold text-yellow-800">Third Winner</h3>
-                    <p id="first-third" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
+                <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-amber-800">Third Winner</h3>
+                    <p id="third-third" class="text-3xl font-bold text-amber-900 mt-2">---</p>
                 </div>
             </div>
-            <button id="generate-first" class="winner-button px-8 py-3 bg-yellow-700 text-white font-semibold rounded-full shadow-lg hover:bg-yellow-800 transition duration-300 ease-in-out" disabled>
-                Generate 1st Place Winners
+            <button id="generate-third" class="winner-button px-8 py-3 bg-amber-900 text-white font-semibold rounded-full shadow-lg hover:bg-amber-950 transition duration-300 ease-in-out" disabled>
+                Generate 3rd Place Winners
             </button>
         </div>
 
+        <!-- Second Place Section (now displayed second) -->
         <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                 <span class="mr-3 text-4xl">🥈</span> 2nd Place Winners
@@ -241,26 +243,27 @@
             </button>
         </div>
 
-        <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg relative z-10 inactive-section">
+        <!-- First Place Section (now displayed third) -->
+        <div id="first-place-section" class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
-                <span class="mr-3 text-4xl">🥉</span> 3rd Place Winners
+                <span class="mr-3 text-4xl">🥇</span> 1st Place Winners
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
-                    <h3 class="text-xl font-semibold text-amber-800">Primary Winner</h3>
-                    <p id="third-primary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
+                <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-yellow-800">Primary Winner</h3>
+                    <p id="first-primary" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
                 </div>
-                <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
-                    <h3 class="text-xl font-semibold text-amber-800">Secondary Winner</h3>
-                    <p id="third-secondary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
+                <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-yellow-800">Secondary Winner</h3>
+                    <p id="first-secondary" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
                 </div>
-                <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
-                    <h3 class="text-xl font-semibold text-amber-800">Third Winner</h3>
-                    <p id="third-third" class="text-3xl font-bold text-amber-900 mt-2">---</p>
+                <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-yellow-800">Third Winner</h3>
+                    <p id="first-third" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
                 </div>
             </div>
-            <button id="generate-third" class="winner-button px-8 py-3 bg-amber-900 text-white font-semibold rounded-full shadow-lg hover:bg-amber-950 transition duration-300 ease-in-out" disabled>
-                Generate 3rd Place Winners
+            <button id="generate-first" class="winner-button px-8 py-3 bg-yellow-700 text-white font-semibold rounded-full shadow-lg hover:bg-yellow-800 transition duration-300 ease-in-out" disabled>
+                Generate 1st Place Winners
             </button>
         </div>
 
