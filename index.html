@@ -531,6 +531,9 @@
             statusMessageElement.textContent = "Loading ticket data...";
             disableAllGenerateButtons(); // Disable all buttons initially
 
+            // Reset the global set of picked tickets on load
+            allTimePickedTickets.clear();
+
             // Initially hide the main raffle content container
             raffleContentContainer.style.maxHeight = '0px';
             raffleContentContainer.style.opacity = '0';
