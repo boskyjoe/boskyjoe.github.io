@@ -379,9 +379,12 @@
     </div>
 
     <script>
+        // Clear allTimePickedTickets immediately when the script loads to ensure a fresh start
+        let allTimePickedTickets = new Set();
+        console.log("Global allTimePickedTickets initialized/cleared. Size:", allTimePickedTickets.size);
+
         let raffleTicketsWinners = []; // Will be populated from winners.txt
         let raffleTicketsWinners1 = []; // Will be populated from winners1.txt
-        let allTimePickedTickets = new Set(); // Global set to store all tickets ever picked
 
         const statusMessageElement = document.getElementById('status-message');
         const generateButtons = document.querySelectorAll('.winner-button');
@@ -531,8 +534,9 @@
             statusMessageElement.textContent = "Loading ticket data...";
             disableAllGenerateButtons(); // Disable all buttons initially
 
-            // Reset the global set of picked tickets on load
-            allTimePickedTickets.clear();
+            // The global allTimePickedTickets is already cleared at the top of the script.
+            console.log("Inside initializeRaffleData: allTimePickedTickets size:", allTimePickedTickets.size);
+
 
             // Initially hide the main raffle content container
             raffleContentContainer.style.maxHeight = '0px';
@@ -565,6 +569,9 @@
                 raffleTicketsWinners = winnersData; // These are already unique now
                 raffleTicketsWinners1 = winners1Data; // These are already unique now
 
+                console.log("Fetched winners.txt length:", raffleTicketsWinners.length); // Debugging
+                console.log("Fetched winners1.txt length:", raffleTicketsWinners1.length); // Debugging
+
                 // Now, check if the loaded arrays have enough UNIQUE tickets for picking
                 // raffleTicketsWinners needs 3 for 1st place (Primary, Secondary, Third)
                 // raffleTicketsWinners1 needs 6 for 2nd and 3rd place (3 each)
@@ -574,10 +581,14 @@
                     return;
                 }
 
-                // Status message will be updated when reveal button is clicked
-                // generateThirdBtn.disabled will be set when reveal button is clicked
+                // If we reach here, it means files were fetched successfully and have enough tickets.
+                statusMessageElement.textContent = "Ticket data loaded successfully. Click 'Start Raffle Draw' to begin."; // Initial message before reveal
+
             } catch (error) {
-                // Error handled in fetchTicketNumbers, just ensure buttons are disabled
+                // Error handled in fetchTicketNumbers, which already sets status message and disables buttons.
+                // No need to re-handle here, but ensure the status message is clear.
+                console.error("Initialization failed:", error);
+                statusMessageElement.textContent = `Failed to initialize raffle data. Please check console for details. Ensure 'winners.txt' and 'winners1.txt' are correctly placed and formatted.`;
                 disableAllGenerateButtons();
             }
         }
@@ -769,17 +780,17 @@
                     );
                     if (placePrefix === 'first') {
                         finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-yellow-400', 'to-yellow-600');
-                        // finalFirstCard.classList.remove('hidden'); // REMOVED
-                        // finalFirstCard.classList.add('reveal-card-animation'); // REMOVED
+                        finalFirstCard.classList.remove('hidden');
+                        finalFirstCard.classList.add('reveal-card-animation');
                     } else if (placePrefix === 'second') {
                         finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-gray-400', 'to-gray-600');
-                        // finalSecondCard.classList.remove('hidden'); // REMOVED
-                        // finalSecondCard.classList.add('reveal-card-animation'); // REMOVED
+                        finalSecondCard.classList.remove('hidden');
+                        finalSecondCard.classList.add('reveal-card-animation');
                     } else if (placePrefix === 'third') {
                         finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-amber-600', 'to-amber-800');
-                        // finalPrimaryWinnersSection.classList.remove('hidden'); // REMOVED
-                        // finalThirdCard.classList.remove('hidden'); // REMOVED
-                        // finalThirdCard.classList.add('reveal-card-animation'); // REMOVED
+                        finalPrimaryWinnersSection.classList.remove('hidden'); // Show the main final section
+                        finalThirdCard.classList.remove('hidden');
+                        finalThirdCard.classList.add('reveal-card-animation');
                     }
                 }
             }
@@ -895,7 +906,7 @@
 
         // Event listener for "Cancel" button in the modal
         if (cancelResetBtn) {
-            cancelCancelBtn.addEventListener('click', () => {
+            cancelResetBtn.addEventListener('click', () => { // Fixed typo here
                 resetConfirmModal.classList.add('hidden'); // Hide the modal
             });
         }
