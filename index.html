@@ -703,19 +703,24 @@
 
                 // 2. Start reveal animation after a short delay to allow scroll to begin
                 setTimeout(() => {
-                    // Temporarily set max-height to 'none' to get the full scrollHeight
+                    // Temporarily make content visible (but hidden by opacity) to get scrollHeight
+                    raffleContentContainer.style.visibility = 'hidden';
                     raffleContentContainer.style.maxHeight = 'none'; // Allow content to determine height
-                    const contentHeight = raffleContentContainer.scrollHeight; // Get the computed height
+                    raffleContentContainer.style.opacity = '0'; // Keep it hidden for now
+                    raffleContentContainer.style.position = 'absolute'; // Take out of flow for measurement
 
-                    // Reset max-height to 0 for the transition to start from
-                    raffleContentContainer.style.maxHeight = '0px';
+                    const contentHeight = raffleContentContainer.scrollHeight;
 
-                    // A small delay to ensure the browser registers the '0px' max-height
-                    // before applying the final height for the transition.
+                    // Reset styles for transition
+                    raffleContentContainer.style.maxHeight = '0px'; // Collapse for animation start
+                    raffleContentContainer.style.position = ''; // Restore position
+                    raffleContentContainer.style.visibility = ''; // Make visible for transition
+
+                    // Trigger the transition
                     setTimeout(() => {
                         raffleContentContainer.style.maxHeight = `${contentHeight}px`;
                         raffleContentContainer.style.opacity = '1';
-                    }, 10); // Very short delay
+                    }, 10); // Small delay to ensure browser registers initial state
 
                     // After the transition completes, remove max-height to allow natural flow
                     raffleContentContainer.addEventListener('transitionend', function handler() {
