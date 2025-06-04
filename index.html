@@ -698,16 +698,13 @@
                 triggerConfetti(); // Trigger confetti immediately
                 revealWinnersBtn.disabled = true; // Disable button after click
 
-                // 1. Scroll to the 2nd Place Winners section first (this should bring 3rd into view)
-                // Using window.scrollTo for potentially more reliable positioning
-                const offsetTop = secondPlaceSection.offsetTop;
-                window.scrollTo({ top: offsetTop, behavior: 'smooth' });
+                // 1. Scroll to the 3rd Place Winners section first, block: 'center' to center it
+                thirdPlaceSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
                 // 2. Start reveal animation after a short delay to allow scroll to begin
                 setTimeout(() => {
                     // Temporarily make content visible (but hidden by opacity) to get scrollHeight
-                    // Set display to block to ensure it's in normal flow for accurate scrollHeight
-                    raffleContentContainer.style.display = 'block';
+                    raffleContentContainer.style.display = 'block'; // Ensure it's in flow
                     raffleContentContainer.style.visibility = 'hidden'; // Keep visually hidden
                     raffleContentContainer.style.maxHeight = 'none'; // Allow content to determine height
                     raffleContentContainer.style.opacity = '0'; // Keep it hidden for now
@@ -735,7 +732,7 @@
                     // Re-enable the 3rd place button after reveal
                     generateThirdBtn.disabled = false;
                     statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 3rd Place Winners' to begin.";
-                }, 700); // Increased delay to 700ms after scroll starts
+                }, 1000); // Increased delay to 1000ms after scroll starts
             });
         }
 
