@@ -531,33 +531,36 @@
 
         /**
          * Initializes the application by fetching ticket data from external files.
+         * Sets up initial UI state for the raffle.
          */
         async function initializeRaffleData() {
             statusMessageElement.textContent = "Loading ticket data...";
             disableAllGenerateButtons(); // Disable all buttons initially
 
-            // The global allTimePickedTickets is already cleared at the top of the script when the page loads.
-            // If this is being called after a reset, it also means allTimePickedTickets has been cleared.
+            allTimePickedTickets.clear(); // Ensure this is clear on any re-initialization
             console.log("DEBUG: Inside initializeRaffleData: allTimePickedTickets size (start):", allTimePickedTickets.size);
 
 
-            // Initially hide the main raffle content container
+            // Set initial state for the main raffle content container and reveal button
             raffleContentContainer.style.maxHeight = '0px';
             raffleContentContainer.style.opacity = '0';
             raffleContentContainer.style.overflow = 'hidden';
             revealWinnersBtn.disabled = false; // Ensure reveal button is enabled on load
+            revealWinnersBtn.style.display = 'block'; // Ensure it's visible
 
-            // Set initial inactive state for 1st and 2nd sections, activate 3rd
+            // Set initial inactive state for all winner sections
             firstPlaceSection.classList.add('inactive-section');
             secondPlaceSection.classList.add('inactive-section');
-            thirdPlaceSection.classList.remove('inactive-section'); // Ensure 3rd is active
+            thirdPlaceSection.classList.add('inactive-section'); // All inactive initially
 
             // Disable and style reset button initially
             resetRaffleBtn.disabled = true;
             resetRaffleBtn.classList.add('bg-gray-300');
+            resetRaffleBtn.classList.remove('bg-red-600', 'hover:bg-red-700'); // Ensure reset button is grey
 
             // Hide the final primary winners section and its cards initially
             finalPrimaryWinnersSection.classList.add('hidden');
+            finalPrimaryWinnersSection.classList.remove('golden-border-pulse-animation'); // Remove any lingering animations
             finalFirstCard.classList.add('hidden');
             finalSecondCard.classList.add('hidden');
             finalThirdCard.classList.add('hidden');
@@ -593,7 +596,6 @@
 
             } catch (error) {
                 // Error handled in fetchTicketNumbers, which already sets status message and disables buttons.
-                // No need to re-handle here, but ensure the status message is clear.
                 console.error("ERROR: Initialization failed in initializeRaffleData:", error);
                 statusMessageElement.textContent = `Failed to initialize raffle data. Please check console for details. Ensure 'winners.txt' and 'winners1.txt' are correctly placed and formatted.`;
                 disableAllGenerateButtons();
@@ -902,73 +904,13 @@
         if (confirmResetBtn) {
             confirmResetBtn.addEventListener('click', async () => {
                 resetConfirmModal.classList.add('hidden'); // Hide the modal
-                allTimePickedTickets.clear(); // Clear all previously picked tickets
-                console.log("DEBUG: allTimePickedTickets cleared on reset. Size:", allTimePickedTickets.size); // Debugging reset
+                
+                // Clear any displayed winners with animation
+                await clearDisplayedWinners(); 
+                
+                // Re-initialize raffle data and UI state
+                await initializeRaffleData();
 
-                // Re-fetch ticket data to ensure the latest numbers are available
-                let success = false;
-                try {
-                    const [winnersData, winners1Data] = await Promise.all([
-                        fetchTicketNumbers('winners.txt'),
-                        fetchTicketNumbers('winners1.txt')
-                    ]);
-                    raffleTicketsWinners = winnersData;
-                    raffleTicketsWinners1 = winners1Data;
-
-                    // Recalculate overallTotalUniqueTickets after re-fetching
-                    overallTotalUniqueTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
-                    console.log("DEBUG: Overall Total Unique Tickets available after reset refetch:", overallTotalUniqueTickets);
-
-                    if (raffleTicketsWinners.length < 3 || raffleTicketsWinners1.length < 6) {
-                        statusMessageElement.textContent = `Error: Not enough unique ticket numbers available after reset. 'winners.txt' has ${raffleTicketsWinners.length} (needs 3). 'winners1.txt' has ${raffleTicketsWinners1.length} (needs 6).`;
-                        disableAllGenerateButtons();
-                        // IMPORTANT: Do NOT set success = true if there's an error and not enough tickets
-                    } else {
-                         success = true; // Mark as successful if data fetched and enough tickets
-                    }
-
-                } catch (error) {
-                    console.error("ERROR: Error re-fetching ticket data on reset:", error);
-                    statusMessageElement.textContent = `Error re-loading ticket data on reset. Please check files.`;
-                    disableAllGenerateButtons();
-                    // success remains false
-                }
-
-                // ONLY proceed with UI reset if data fetching was successful
-                if (success) {
-                    await clearDisplayedWinners(); // Wait for numbers to fade out before resetting UI
-
-                    // Reset prize sections to inactive and enable the first one
-                    firstPlaceSection.classList.add('inactive-section');
-                    secondPlaceSection.classList.add('inactive-section');
-                    activateSection(thirdPlaceSection, generateThirdBtn); // Activate 3rd place button
-
-                    // Explicitly set the status message for a successful reset
-                    statusMessageElement.textContent = "Raffle reset. Click 'Generate 3rd Place Winners' to begin drawing again.";
-
-                    // Ensure the raffle content container remains revealed and its content is adjusted
-                    raffleContentContainer.style.maxHeight = 'none'; // Keep it expanded
-                    raffleContentContainer.style.opacity = '1'; // Keep it visible
-                    raffleContentContainer.style.display = 'block'; // Ensure display is block
-                    revealWinnersBtn.disabled = true; // Keep the reveal button disabled, as it's already hidden
-                    revealWinnersBtn.style.display = 'none'; // Keep hidden after first reveal
-
-                    // Remove the golden border pulse class and disable reset button on reset
-                    finalPrimaryWinnersSection.classList.remove('golden-border-pulse-animation');
-                    // Ensure the main final primary winners section is shown after reset, as its content is cleared
-                    finalPrimaryWinnersSection.classList.remove('hidden');
-
-                    resetRaffleBtn.disabled = true;
-                    resetRaffleBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
-                    resetRaffleBtn.classList.add('bg-gray-300');
-                } else {
-                    // If data fetching failed, ensure reset button remains enabled for user to try again
-                    resetRaffleBtn.disabled = false;
-                    resetRaffleBtn.classList.remove('bg-gray-300');
-                    resetRaffleBtn.classList.add('bg-red-600', 'hover:bg-red-700');
-                }
-
-                // Add debug logs to confirm state after reset
                 console.log("DEBUG: Status message after reset attempt:", statusMessageElement.textContent);
                 console.log("DEBUG: thirdPlaceSection classes after reset:", thirdPlaceSection.classList.contains('inactive-section') ? 'inactive' : 'active');
                 console.log("DEBUG: secondPlaceSection classes after reset:", secondPlaceSection.classList.contains('inactive-section') ? 'inactive' : 'active');
@@ -981,7 +923,7 @@
 
         // Event listener for "Cancel" button in the modal
         if (cancelResetBtn) {
-            cancelResetBtn.addEventListener('click', () => {
+            cancelCancelBtn.addEventListener('click', () => {
                 resetConfirmModal.classList.add('hidden'); // Hide the modal
             });
         }
