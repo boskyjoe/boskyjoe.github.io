@@ -385,6 +385,9 @@
         let raffleTicketsWinners = []; // Will be populated from winners.txt
         let raffleTicketsWinners1 = []; // Will be populated from winners1.txt
 
+        // Global variable to store the overall total unique tickets
+        let overallTotalUniqueTickets = 0;
+
         const statusMessageElement = document.getElementById('status-message');
         const generateButtons = document.querySelectorAll('.winner-button');
         const resetRaffleBtn = document.getElementById('reset-raffle-btn');
@@ -573,7 +576,7 @@
                 console.log("DEBUG: Fetched winners1.txt unique length:", raffleTicketsWinners1.length);
 
                 // Calculate overall unique tickets after fetching both files
-                const overallTotalUniqueTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
+                overallTotalUniqueTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
                 console.log("DEBUG: Overall Total Unique Tickets available (combined unique from files):", overallTotalUniqueTickets);
 
                 // Now, check if the loaded arrays have enough UNIQUE tickets for picking
@@ -641,6 +644,12 @@
 
             if (availableTickets.length === 0) {
                 console.warn("WARNING: Not enough unique tickets available in the source pool for this pick, considering all previously picked tickets and current draw's tickets.");
+                // Set the status message here if no ticket could be found
+                statusMessageElement.textContent = "All unique tickets have been drawn from *all available pools*! Please reset the raffle or add more tickets.";
+                disableAllGenerateButtons(); // Disable further drawing
+                resetRaffleBtn.disabled = false; // Always allow reset if this happens
+                resetRaffleBtn.classList.remove('bg-gray-300');
+                resetRaffleBtn.classList.add('bg-red-600', 'hover:bg-red-700');
                 return "N/A"; // Return "N/A" if no unique ticket can be found
             }
 
@@ -750,24 +759,35 @@
                 return; // Exit if invalid prefix
             }
 
-            // Calculate overall unique tickets for logging within this function
-            const overallTotalUniqueTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
-
-
             // Pick winners from the determined source array
             const primaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
             await animateNumberReveal(primaryElement, primaryWinner);
             console.log(`DEBUG: After Primary Winner draw (${placePrefix}): allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
+
+            // If a winner is N/A, it means the pool was exhausted, so stop further drawing for this prize
+            if (primaryWinner === "N/A") {
+                console.warn("Primary winner could not be drawn (N/A). Stopping draw for this prize category.");
+                return;
+            }
+
             await delay(500); // Small delay between each winner reveal
 
             const secondaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
             await animateNumberReveal(secondaryElement, secondaryWinner);
             console.log(`DEBUG: After Secondary Winner draw (${placePrefix}): allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
+            if (secondaryWinner === "N/A") {
+                console.warn("Secondary winner could not be drawn (N/A). Stopping draw for this prize category.");
+                return;
+            }
             await delay(500);
 
             const thirdWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
             await animateNumberReveal(thirdElement, thirdWinner);
             console.log(`DEBUG: After Third Winner draw (${placePrefix}): allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
+            if (thirdWinner === "N/A") {
+                console.warn("Third winner could not be drawn (N/A). Stopping draw for this prize category.");
+                return;
+            }
 
 
             // Add a delay here to allow confetti animation to complete before activating the next section
@@ -807,11 +827,13 @@
                 }
             }
 
-            // Disable the button for the current section after its winners are generated
+            // This block handles what happens AFTER a set of winners is drawn (e.g., enables next button or sets final prize message)
             if (placePrefix === 'third') {
                 activateSection(secondPlaceSection, generateSecondBtn);
+                statusMessageElement.textContent = "Click 'Generate 2nd Place Winners'."; // Specific instruction
             } else if (placePrefix === 'second') {
                 activateSection(firstPlaceSection, generateFirstBtn);
+                statusMessageElement.textContent = "Click 'Generate 1st Place Winners'."; // Specific instruction
             } else if (placePrefix === 'first') {
                 // This message clarifies that all *prizes* for this raffle have been awarded
                 statusMessageElement.textContent = "All prize winners for this raffle have been drawn! Click 'Reset Raffle' to start a new draw.";
@@ -821,16 +843,6 @@
                 resetRaffleBtn.disabled = false;
                 resetRaffleBtn.classList.remove('bg-gray-300');
                 resetRaffleBtn.classList.add('bg-red-600', 'hover:bg-red-700');
-            }
-
-            // This block checks if the *entire pool* of unique tickets has been exhausted.
-            // It should only trigger if all tickets in both files are truly used up.
-            // overallTotalUniqueTickets is already calculated above.
-            console.log(`DEBUG: (Final check in updateWinnersDisplay) allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
-
-            if (allTimePickedTickets.size >= overallTotalUniqueTickets) {
-                 statusMessageElement.textContent = "All unique tickets have been drawn from both pools! Reset raffle to start again.";
-                 disableAllGenerateButtons();
             }
         }
 
@@ -903,7 +915,7 @@
                     raffleTicketsWinners1 = winners1Data;
 
                     // Recalculate overallTotalUniqueTickets after re-fetching
-                    const overallTotalUniqueTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
+                    overallTotalUniqueTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
                     console.log("DEBUG: Overall Total Unique Tickets available after reset refetch:", overallTotalUniqueTickets);
 
                     if (raffleTicketsWinners.length < 3 || raffleTicketsWinners1.length < 6) {
