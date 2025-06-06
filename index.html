@@ -232,15 +232,15 @@
                 <div class="flex flex-col md:flex-row justify-around items-center gap-8 w-full">
                     <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
                         <h3 class="text-2xl font-bold text-yellow-600 mb-2">1st Place</h3>
-                        <p id="merged-first-winner" class="text-4xl font-extrabold text-yellow-800">---</p>
+                        <p id="merged-first-winner" class="text-4xl font-extrabold text-yellow-800 whitespace-nowrap">---</p>
                     </div>
                     <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
                         <h3 class="text-2xl font-bold text-gray-600 mb-2">2nd Place</h3>
-                        <p id="merged-second-winner" class="text-4xl font-extrabold text-gray-800">---</p>
+                        <p id="merged-second-winner" class="text-4xl font-extrabold text-gray-800 whitespace-nowrap">---</p>
                         </div>
                     <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
                         <h3 class="text-2xl font-bold text-amber-600 mb-2">3rd Place</h3>
-                        <p id="merged-third-winner" class="text-4xl font-extrabold text-amber-800">---</p>
+                        <p id="merged-third-winner" class="text-4xl font-extrabold text-amber-800 whitespace-nowrap">---</p>
                     </div>
                 </div>
             </div>
@@ -750,18 +750,14 @@
                 mergedSecondWinnerEl.textContent = finalSecondWinner;
                 mergedThirdWinnerEl.textContent = finalThirdWinner;
 
-                // Make the merged section visible (but still start hidden by opacity)
-                mergedWinnersSection.classList.remove('hidden');
-
                 // Scroll just enough to bring the merged section into view
                 // We add a small offset (e.g., -20 pixels) to show a bit more above it
                 const scrollOffset = mergedWinnersSection.offsetTop - 20;
                 window.scrollTo({ top: Math.max(0, scrollOffset), behavior: 'smooth' });
 
-                // Add a small delay after scrolling to allow the scroll animation to begin
+                // Add a small delay after scrolling to allow the scroll animation to begin and apply animation
                 await delay(500); // Adjust this delay as needed
-
-                // Apply fade-in animation after scrolling
+                mergedWinnersSection.classList.remove('hidden'); // Make it visible
                 mergedWinnersSection.classList.add('fade-in-section');
 
                 // Enable the reset button once all winners are displayed and change its color
