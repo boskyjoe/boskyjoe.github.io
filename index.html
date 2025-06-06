@@ -165,7 +165,18 @@
         }
         .reveal-card-animation {
             animation: reveal-card 0.5s ease-out forwards;
-        </style>
+        }
+
+        /* New styles for merged winners section */
+        @keyframes merge-fade-in {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .merged-winners-section-animation {
+            animation: merge-fade-in 1s ease-out forwards;
+        }
+    </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
     <!-- Watermark Overlay Div for the entire page -->
@@ -275,15 +286,31 @@
                 </button>
             </div>
 
+            <!-- Merged Winners Section - This will be revealed at the end -->
+            <div id="merged-winners-section" class="bg-gradient-to-br from-indigo-600 to-purple-800 p-8 rounded-xl shadow-2xl mt-12 hidden">
+                <h2 class="text-4xl font-extrabold text-white mb-6">All Winners!</h2>
+                <div class="flex flex-col md:flex-row justify-around items-center gap-8">
+                    <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
+                        <h3 class="text-2xl font-bold text-yellow-600 mb-2">1st Place</h3>
+                        <p id="merged-first-winner" class="text-4xl font-extrabold text-yellow-800">---</p>
+                    </div>
+                    <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
+                        <h3 class="text-2xl font-bold text-gray-600 mb-2">2nd Place</h3>
+                        <p id="merged-second-winner" class="text-4xl font-extrabold text-gray-800">---</p>
+                    </div>
+                    <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
+                        <h3 class="text-2xl font-bold text-amber-600 mb-2">3rd Place</h3>
+                        <p id="merged-third-winner" class="text-4xl font-extrabold text-amber-800">---</p>
+                    </div>
+                </div>
+            </div>
+
             <button id="reset-raffle-btn" class="winner-button mt-10 px-8 py-3 text-white font-semibold rounded-full shadow-lg" disabled>
                 Reset Raffle
             </button>
         </div>
         <!-- End Container for content revealed after click -->
     </div>
-
-    <!-- Final Primary Winners section - removed -->
-    <!-- This section was removed as per user request -->
 
     <!-- Footer Section -->
     <footer class="w-full bg-gray-800 text-gray-300 text-center py-4 mt-10 text-sm relative z-10">
@@ -315,6 +342,11 @@
         let raffleTicketsWinners = []; // Will be populated from winners.txt
         let raffleTicketsWinners1 = []; // Will be populated from winners1.txt
 
+        // Global variables to store the final winning numbers for each place
+        let finalFirstWinner = '---';
+        let finalSecondWinner = '---';
+        let finalThirdWinner = '---';
+
         // Global variable to store the overall total unique tickets
         let overallTotalUniqueTickets = 0;
 
@@ -341,11 +373,12 @@
         const confirmResetBtn = document.getElementById('confirm-reset-btn');
         const cancelResetBtn = document.getElementById('cancel-reset-btn');
 
-        // Removed references for the final primary winners section and its individual cards
-        // const finalPrimaryWinnersSection = document.getElementById('final-primary-winners-section');
-        // const finalFirstCard = document.getElementById('final-first-card');
-        // const finalSecondCard = document.getElementById('final-second-card');
-        // const finalThirdCard = document.getElementById('final-third-card');
+        // References for the new merged winners section
+        const mergedWinnersSection = document.getElementById('merged-winners-section');
+        const mergedFirstWinnerEl = document.getElementById('merged-first-winner');
+        const mergedSecondWinnerEl = document.getElementById('merged-second-winner');
+        const mergedThirdWinnerEl = document.getElementById('merged-third-winner');
+
 
         /**
          * Utility function to introduce a delay.
@@ -379,17 +412,16 @@
             const winnerElements = [
                 document.getElementById('first-primary'),
                 document.getElementById('second-primary'),
-                document.getElementById('third-primary')
-                // Removed references to final primary desktop elements
-                // document.getElementById('final-first-primary-desktop'),
-                // document.getElementById('final-second-primary-desktop'),
-                // document.getElementById('final-third-primary-desktop')
+                document.getElementById('third-primary'),
+                mergedFirstWinnerEl, // Add merged elements to clear
+                mergedSecondWinnerEl,
+                mergedThirdWinnerEl
             ];
 
             // Apply fade-out animation to all elements that are not already '---'
             const animations = [];
             winnerElements.forEach(element => {
-                if (element.textContent !== '---') {
+                if (element && element.textContent !== '---') { // Check if element exists
                     element.classList.add('fade-out-animation');
                     animations.push(new Promise(resolve => {
                         element.addEventListener('animationend', () => {
@@ -399,25 +431,17 @@
                         }, { once: true });
                     }));
                 } else {
-                    // If already '---', resolve immediately
+                    // If already '---' or element doesn't exist, resolve immediately
                     animations.push(Promise.resolve());
                 }
             });
 
-            // Removed logic related to final winner cards as the section is removed
-            // const finalWinnerCards = document.querySelectorAll('#final-primary-winners-section .winner-card');
-            // finalWinnerCards.forEach(card => {
-            //     card.classList.remove(
-            //         'bg-gradient-to-br', 'from-yellow-400', 'to-yellow-600',
-            //         'from-gray-400', 'to-gray-600',
-            //         'from-amber-600', 'to-amber-800',
-            //         'reveal-card-animation'
-            //     );
-            //     card.classList.add('bg-white', 'hidden');
-            // });
-
             // Wait for all fade-out animations to complete
             await Promise.all(animations);
+
+            // Hide the merged section after clearing
+            mergedWinnersSection.classList.add('hidden');
+            mergedWinnersSection.classList.remove('merged-winners-section-animation');
         }
 
         /**
@@ -463,6 +487,10 @@
             allTimePickedTickets.clear(); // Ensure this is clear on any re-initialization
             console.log("DEBUG: Inside initializeRaffleData: allTimePickedTickets size (start):", allTimePickedTickets.size);
 
+            // Reset stored winners
+            finalFirstWinner = '---';
+            finalSecondWinner = '---';
+            finalThirdWinner = '---';
 
             // Set initial state for the main raffle content container and reveal button
             raffleContentContainer.classList.add('hidden');
@@ -483,12 +511,9 @@
             resetRaffleBtn.classList.add('bg-gray-300');
             resetRaffleBtn.classList.remove('bg-red-600', 'hover:bg-red-700'); // Ensure reset button is grey
 
-            // Removed logic related to final primary winners section
-            // finalPrimaryWinnersSection.classList.add('hidden');
-            // finalPrimaryWinnersSection.classList.remove('golden-border-pulse-animation');
-            // finalFirstCard.classList.add('hidden');
-            // finalSecondCard.classList.add('hidden');
-            // finalThirdCard.classList.add('hidden');
+            // Ensure merged winners section is hidden initially
+            mergedWinnersSection.classList.add('hidden');
+            mergedWinnersSection.classList.remove('merged-winners-section-animation');
 
 
             try {
@@ -639,11 +664,6 @@
             // Get references to the specific HTML element where the winner will be displayed
             const primaryElement = document.getElementById(`${placePrefix}-primary`);
 
-            // Removed references to the final winner display elements and their parent cards
-            // const finalPrimaryDesktop = document.getElementById(`final-${placePrefix}-primary-desktop`);
-            // const finalPrimaryCard = finalPrimaryDesktop ? finalPrimaryDesktop.closest('.winner-card') : null;
-
-
             // Disable the button that was just clicked
             let currentButton;
             if (placePrefix === 'third') {
@@ -689,41 +709,17 @@
                 return;
             }
 
+            // Store the winner
+            if (placePrefix === 'first') {
+                finalFirstWinner = primaryWinner;
+            } else if (placePrefix === 'second') {
+                finalSecondWinner = primaryWinner;
+            } else if (placePrefix === 'third') {
+                finalThirdWinner = primaryWinner;
+            }
+
             // Add a delay here to allow confetti animation to complete before activating the next section
             await delay(1000); // 1 second delay after the number reveal and confetti trigger
-
-            // Removed logic related to final primary winner display and highlight
-            // if (finalPrimaryDesktop) {
-            //     finalPrimaryDesktop.textContent = primaryWinner;
-            //     finalPrimaryDesktop.classList.add('winner-highlight');
-            //     setTimeout(() => {
-            //         finalPrimaryDesktop.classList.remove('winner-highlight');
-            //     }, 1000);
-
-            //     if (finalPrimaryCard) {
-            //         finalPrimaryCard.classList.remove(
-            //             'bg-white', 'bg-yellow-100', 'bg-gray-100', 'bg-amber-100',
-            //             'bg-gradient-to-br', 'from-yellow-400', 'to-yellow-600',
-            //             'from-gray-400', 'to-gray-600',
-            //             'from-amber-600', 'to-amber-800'
-            //         );
-            //         if (placePrefix === 'first') {
-            //             finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-yellow-400', 'to-yellow-600');
-            //             finalFirstCard.classList.remove('hidden');
-            //             finalFirstCard.classList.add('reveal-card-animation');
-            //         } else if (placePrefix === 'second') {
-            //             finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-gray-400', 'to-gray-600');
-            //             finalSecondCard.classList.remove('hidden');
-            //             finalSecondCard.classList.add('reveal-card-animation');
-            //         } else if (placePrefix === 'third') {
-            //             finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-amber-600', 'to-amber-800');
-            //             // Only show the final primary winners section when the first winner (3rd place) is drawn
-            //             // finalPrimaryWinnersSection.classList.remove('hidden'); // This line is not needed if the whole section is removed
-            //             finalThirdCard.classList.remove('hidden');
-            //             finalThirdCard.classList.add('reveal-card-animation');
-            //         }
-            //     }
-            // }
 
             // This block handles what happens AFTER a set of winners is drawn (e.g., enables next button or sets final prize message)
             if (placePrefix === 'third') {
@@ -739,8 +735,19 @@
             } else if (placePrefix === 'first') {
                 // This message clarifies that all *prizes* for this raffle have been awarded
                 statusMessageElement.textContent = "All prize winners for this raffle have been drawn! Click 'Reset Raffle' to start a new draw.";
-                // Removed golden border pulse animation as the section is removed
-                // finalPrimaryWinnersSection.classList.add('golden-border-pulse-animation');
+
+                // Hide individual winner sections
+                firstPlaceSection.classList.add('hidden');
+                secondPlaceSection.classList.add('hidden');
+                thirdPlaceSection.classList.add('hidden');
+
+                // Reveal and populate the merged winners section
+                mergedWinnersSection.classList.remove('hidden');
+                mergedWinnersSection.classList.add('merged-winners-section-animation'); // Apply animation
+                mergedFirstWinnerEl.textContent = finalFirstWinner;
+                mergedSecondWinnerEl.textContent = finalSecondWinner;
+                mergedThirdWinnerEl.textContent = finalThirdWinner;
+
                 // Enable the reset button once all winners are displayed and change its color
                 resetRaffleBtn.disabled = false;
                 resetRaffleBtn.classList.remove('bg-gray-300');
