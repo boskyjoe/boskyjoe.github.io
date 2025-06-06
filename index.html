@@ -94,9 +94,6 @@
             animation: pulse 1.5s infinite ease-in-out;
         }
 
-        /* Post-it note styling for the Final Primary Winners section */
-        /* Removed .post-it-note related styles as the section is removed */
-
         /* Animation for new winner highlight within the post-it */
         @keyframes highlight-winner {
             0% { background-color: transparent; }
@@ -126,15 +123,16 @@
             transition: opacity 0.5s ease-out, filter 0.5s ease-out, transform 0.5s ease-out, scale 0.5s ease-out, border 0.3s ease-in-out, box-shadow 0.3s ease-in-out; /* Smooth transition for activation */
         }
 
-        /* Keyframes for fade out animation */
+        /* Keyframes for fade out animation (applied to individual sections when merged section appears) */
         @keyframes fadeOut {
             from { opacity: 1; transform: translateY(0); }
-            to { opacity: 0; transform: translateY(-10px); } /* Fade out and slight upward movement */
+            to { opacity: 0.3; transform: translateY(0); filter: grayscale(100%); } /* Fade out and grayscale more */
+        }
+        /* New class for fade-out and keeping inactive */
+        .sections-fade-inactive {
+            animation: fadeOut 0.5s ease-out forwards;
         }
 
-        .fade-out-animation {
-            animation: fadeOut 0.5s ease-out forwards; /* Apply fadeOut animation */
-        }
 
         /* Styles for the main reveal container (curtain effect) */
         #raffle-content-container {
@@ -168,13 +166,20 @@
         }
 
         /* New styles for merged winners section */
-        @keyframes merge-fade-in {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
+        /* Animation for merged section sliding in from right */
+        @keyframes slideInFromRight {
+            from {
+                transform: translateX(100%); /* Start completely off to the right */
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0); /* End at its natural position */
+                opacity: 1;
+            }
         }
 
-        .merged-winners-section-animation {
-            animation: merge-fade-in 1s ease-out forwards;
+        .merged-winners-slide-in {
+            animation: slideInFromRight 1s ease-out forwards; /* Apply slide-in animation */
         }
     </style>
 </head>
@@ -182,6 +187,7 @@
     <!-- Watermark Overlay Div for the entire page -->
     <div class="watermark-overlay"></div>
 
+    <!-- Main Content Container - Added relative class for absolute positioning of merged section -->
     <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center relative z-0">
         <!-- Subtle pattern for the main content box -->
         <div class="main-content-pattern"></div>
@@ -287,9 +293,10 @@
             </div>
 
             <!-- Merged Winners Section - This will be revealed at the end -->
-            <div id="merged-winners-section" class="bg-gradient-to-br from-indigo-600 to-purple-800 p-8 rounded-xl shadow-2xl mt-12 hidden">
+            <!-- Position absolute and z-index added for overlay effect -->
+            <div id="merged-winners-section" class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-600 to-purple-800 p-8 rounded-xl shadow-2xl hidden flex flex-col justify-center items-center z-20">
                 <h2 class="text-4xl font-extrabold text-white mb-6">All Winners!</h2>
-                <div class="flex flex-col md:flex-row justify-around items-center gap-8">
+                <div class="flex flex-col md:flex-row justify-around items-center gap-8 w-full">
                     <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
                         <h3 class="text-2xl font-bold text-yellow-600 mb-2">1st Place</h3>
                         <p id="merged-first-winner" class="text-4xl font-extrabold text-yellow-800">---</p>
@@ -367,6 +374,8 @@
         // References for the reveal functionality
         const revealWinnersBtn = document.getElementById('reveal-winners-btn');
         const raffleContentContainer = document.getElementById('raffle-content-container');
+        const mainContentParent = document.querySelector('.bg-white.relative.z-0'); // Reference to the main content div
+
 
         // References for the reset confirmation modal
         const resetConfirmModal = document.getElementById('reset-confirm-modal');
@@ -441,7 +450,10 @@
 
             // Hide the merged section after clearing
             mergedWinnersSection.classList.add('hidden');
-            mergedWinnersSection.classList.remove('merged-winners-section-animation');
+            // Remove any inline styles set for animation to reset its state
+            mergedWinnersSection.style.transition = '';
+            mergedWinnersSection.style.transform = '';
+            mergedWinnersSection.style.opacity = '';
         }
 
         /**
@@ -511,9 +523,11 @@
             resetRaffleBtn.classList.add('bg-gray-300');
             resetRaffleBtn.classList.remove('bg-red-600', 'hover:bg-red-700'); // Ensure reset button is grey
 
-            // Ensure merged winners section is hidden initially
+            // Ensure merged winners section is hidden initially and reset its inline styles
             mergedWinnersSection.classList.add('hidden');
-            mergedWinnersSection.classList.remove('merged-winners-section-animation');
+            mergedWinnersSection.style.transition = '';
+            mergedWinnersSection.style.transform = '';
+            mergedWinnersSection.style.opacity = '';
 
 
             try {
@@ -736,17 +750,44 @@
                 // This message clarifies that all *prizes* for this raffle have been awarded
                 statusMessageElement.textContent = "All prize winners for this raffle have been drawn! Click 'Reset Raffle' to start a new draw.";
 
-                // Hide individual winner sections
-                firstPlaceSection.classList.add('hidden');
-                secondPlaceSection.classList.add('hidden');
-                thirdPlaceSection.classList.add('hidden');
+                // Make individual winner sections inactive and apply fade-out effect
+                firstPlaceSection.classList.add('inactive-section', 'sections-fade-inactive');
+                secondPlaceSection.classList.add('inactive-section', 'sections-fade-inactive');
+                thirdPlaceSection.classList.add('inactive-section', 'sections-fade-inactive');
 
-                // Reveal and populate the merged winners section
-                mergedWinnersSection.classList.remove('hidden');
-                mergedWinnersSection.classList.add('merged-winners-section-animation'); // Apply animation
+                // Disable all generate buttons permanently once all winners are drawn
+                generateFirstBtn.disabled = true;
+                generateSecondBtn.disabled = true;
+                generateThirdBtn.disabled = true;
+
+                // Populate and reveal the merged winners section
                 mergedFirstWinnerEl.textContent = finalFirstWinner;
                 mergedSecondWinnerEl.textContent = finalSecondWinner;
                 mergedThirdWinnerEl.textContent = finalThirdWinner;
+
+                // Position the merged section for the slide-in animation
+                // Calculate its top relative to the main container, aligning it where content sections begin
+                const contentStartTop = raffleContentContainer.offsetTop; // Top of raffle-content-container relative to its parent (mainContentParent)
+                const mainContentRect = mainContentParent.getBoundingClientRect(); // Get dimensions of the main parent div
+
+                mergedWinnersSection.style.top = `${contentStartTop}px`;
+                // Start off-screen right of the parent container
+                mergedWinnersSection.style.left = `${mainContentRect.width}px`;
+                mergedWinnersSection.style.width = `${mainContentRect.width}px`; // Match parent width
+                mergedWinnersSection.style.height = `${raffleContentContainer.offsetHeight - (resetRaffleBtn.offsetHeight + 20)}px`; // Adjust height to cover visible content area above reset button
+                mergedWinnersSection.style.opacity = '0'; // Start invisible
+                mergedWinnersSection.style.zIndex = '20'; // Ensure it's on top
+
+                mergedWinnersSection.classList.remove('hidden'); // Make it display block
+                
+                // Force reflow
+                void mergedWinnersSection.offsetWidth;
+
+                // Animate to final position (slide left by its own width)
+                mergedWinnersSection.style.transition = 'transform 1s ease-out, opacity 1s ease-out';
+                mergedWinnersSection.style.transform = 'translateX(-100%)';
+                mergedWinnersSection.style.opacity = '1';
+
 
                 // Enable the reset button once all winners are displayed and change its color
                 resetRaffleBtn.disabled = false;
