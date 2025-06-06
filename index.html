@@ -233,7 +233,7 @@
         <!-- End Sponsor Section -->
 
         <!-- Container for content revealed after click -->
-        <div id="raffle-content-container" class="hidden">
+        <div id="raffle-content-container" class="hidden relative"> <!-- Added relative here -->
             <p class="text-base text-gray-700 mb-10 relative z-10"> <!-- Changed text-lg to text-base -->
                 Congratulations to all our lucky winners! Thank you for participating in our church raffle.
                 Click the "Generate Winners" button for each place to reveal the winning ticket numbers.
@@ -293,27 +293,28 @@
                         Generate 1st Place Winner
                     </button>
                 </div>
+            </div> <!-- End winner-sections-wrapper -->
 
-                <!-- Merged Winners Section - This will be revealed at the end -->
-                <!-- Position absolute and z-index added for overlay effect. Now it's a child of winner-sections-wrapper -->
-                <div id="merged-winners-section" class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-600 to-purple-800 p-8 rounded-xl shadow-2xl hidden flex flex-col justify-center items-center z-20">
-                    <h2 class="text-4xl font-extrabold text-white mb-6">All Winners!</h2>
-                    <div class="flex flex-col md:flex-row justify-around items-center gap-8 w-full">
-                        <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
-                            <h3 class="text-2xl font-bold text-yellow-600 mb-2">1st Place</h3>
-                            <p id="merged-first-winner" class="text-4xl font-extrabold text-yellow-800">---</p>
+            <!-- Merged Winners Section - This will be revealed at the end -->
+            <!-- Position absolute relative to raffle-content-container and z-index for overlay effect -->
+            <div id="merged-winners-section" class="absolute bg-gradient-to-br from-indigo-600 to-purple-800 p-8 rounded-xl shadow-2xl hidden flex flex-col justify-center items-center z-20">
+                <h2 class="text-4xl font-extrabold text-white mb-6">All Winners!</h2>
+                <div class="flex flex-col md:flex-row justify-around items-center gap-8 w-full">
+                    <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
+                        <h3 class="text-2xl font-bold text-yellow-600 mb-2">1st Place</h3>
+                        <p id="merged-first-winner" class="text-4xl font-extrabold text-yellow-800">---</p>
+                    </div>
+                    <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
+                        <h3 class="text-2xl font-bold text-gray-600 mb-2">2nd Place</h3>
+                        <p id="merged-second-winner" class="text-4xl font-extrabold text-gray-800">---</p>
                         </div>
-                        <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
-                            <h3 class="text-2xl font-bold text-gray-600 mb-2">2nd Place</h3>
-                            <p id="merged-second-winner" class="text-4xl font-extrabold text-gray-800">---</p>
-                        </div>
-                        <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
-                            <h3 class="text-2xl font-bold text-amber-600 mb-2">3rd Place</h3>
-                            <p id="merged-third-winner" class="text-4xl font-extrabold text-amber-800">---</p>
-                        </div>
+                    <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
+                        <h3 class="text-2xl font-bold text-amber-600 mb-2">3rd Place</h3>
+                        <p id="merged-third-winner" class="text-4xl font-extrabold text-amber-800">---</p>
                     </div>
                 </div>
-            </div> <!-- End winner-sections-wrapper -->
+            </div>
+
             <button id="reset-raffle-btn" class="winner-button mt-10 px-8 py-3 text-white font-semibold rounded-full shadow-lg" disabled>
                 Reset Raffle
             </button>
@@ -376,10 +377,8 @@
         // References for the reveal functionality
         const revealWinnersBtn = document.getElementById('reveal-winners-btn');
         const raffleContentContainer = document.getElementById('raffle-content-container');
-        // Removed mainContentParent as it's no longer directly used for merged section positioning calculations
-        // const mainContentParent = document.querySelector('.bg-white.relative.z-0');
 
-        // New reference for the winner sections wrapper
+        // New reference for the winner sections wrapper (still exists, but merged section is outside it)
         const winnerSectionsWrapper = document.getElementById('winner-sections-wrapper');
 
         // References for the reset confirmation modal
@@ -515,6 +514,7 @@
 
             // Set initial state for the main raffle content container and reveal button
             raffleContentContainer.classList.add('hidden');
+            // raffleContentContainer already has 'relative' in HTML
             raffleContentContainer.style.maxHeight = '0px';
             raffleContentContainer.style.opacity = '0';
             raffleContentContainer.style.overflow = 'hidden';
@@ -775,11 +775,19 @@
                 mergedThirdWinnerEl.textContent = finalThirdWinner;
 
                 // Position the merged section for the slide-in animation
-                // Set position relative to its new parent (winner-sections-wrapper)
-                mergedWinnersSection.style.top = '0';
-                mergedWinnersSection.style.left = '100%'; // Start off-screen right
-                mergedWinnersSection.style.width = '100%'; // Will take 100% of its parent's width
-                mergedWinnersSection.style.height = '100%'; // Will take 100% of its parent's height
+                // Get the position and dimensions of the third place section
+                const thirdPlaceRect = thirdPlaceSection.getBoundingClientRect();
+                const raffleContentRect = raffleContentContainer.getBoundingClientRect();
+
+                // Calculate top and left relative to raffleContentContainer
+                const relativeTop = thirdPlaceRect.top - raffleContentRect.top;
+                const relativeLeft = thirdPlaceRect.left - raffleContentRect.left;
+
+                mergedWinnersSection.style.top = `${relativeTop}px`;
+                // Start from right of 3rd place section's position within its parent
+                mergedWinnersSection.style.left = `${relativeLeft + thirdPlaceRect.width}px`;
+                mergedWinnersSection.style.width = `${thirdPlaceRect.width}px`;
+                mergedWinnersSection.style.height = `${thirdPlaceRect.height}px`;
                 mergedWinnersSection.style.opacity = '0'; // Start invisible
                 mergedWinnersSection.style.zIndex = '20'; // Ensure it's on top
 
@@ -790,7 +798,7 @@
 
                 // Animate to final position (slide left by its own width)
                 mergedWinnersSection.style.transition = 'transform 1s ease-out, opacity 1s ease-out';
-                mergedWinnersSection.style.transform = 'translateX(-100%)'; // Slides into view
+                mergedWinnersSection.style.transform = 'translateX(-100%)'; // Slides into view on top of 3rd place
                 mergedWinnersSection.style.opacity = '1';
 
 
