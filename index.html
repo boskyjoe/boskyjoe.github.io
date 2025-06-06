@@ -259,72 +259,48 @@
             <!-- Third Place Section (now displayed first) -->
             <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
                 <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
-                    <span class="mr-3 text-4xl">🥉</span> 3rd Place Winners
+                    <span class="mr-3 text-4xl">🥉</span> 3rd Place Winner
                 </h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="grid grid-cols-1 gap-6 mb-6">
                     <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
                         <h3 class="text-xl font-semibold text-amber-800">Primary Winner</h3>
                         <p id="third-primary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
                     </div>
-                    <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
-                        <h3 class="text-xl font-semibold text-amber-800">Secondary Winner</h3>
-                        <p id="third-secondary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
-                    </div>
-                    <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
-                        <h3 class="text-xl font-semibold text-amber-800">Third Winner</h3>
-                        <p id="third-third" class="text-3xl font-bold text-amber-900 mt-2">---</p>
-                    </div>
                 </div>
                 <button id="generate-third" class="winner-button px-8 py-3 bg-amber-900 text-white font-semibold rounded-full shadow-lg hover:bg-amber-950 transition duration-300 ease-in-out" disabled>
-                    Generate 3rd Place Winners
+                    Generate 3rd Place Winner
                 </button>
             </div>
 
             <!-- Second Place Section (now displayed second) -->
             <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
                 <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
-                    <span class="mr-3 text-4xl">🥈</span> 2nd Place Winners
+                    <span class="mr-3 text-4xl">🥈</span> 2nd Place Winner
                 </h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="grid grid-cols-1 gap-6 mb-6">
                     <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
                         <h3 class="text-xl font-semibold text-gray-800">Primary Winner</h3>
                         <p id="second-primary" class="text-3xl font-bold text-gray-900 mt-2">---</p>
                     </div>
-                    <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
-                        <h3 class="text-xl font-semibold text-gray-800">Secondary Winner</h3>
-                        <p id="second-secondary" class="text-3xl font-bold text-gray-900 mt-2">---</p>
-                    </div>
-                    <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
-                        <h3 class="text-xl font-semibold text-gray-800">Third Winner</h3>
-                        <p id="second-third" class="text-3xl font-bold text-gray-900 mt-2">---</p>
-                    </div>
                 </div>
                 <button id="generate-second" class="winner-button px-8 py-3 bg-gray-700 text-white font-semibold rounded-full shadow-lg hover:bg-gray-800 transition duration-300 ease-in-out" disabled>
-                    Generate 2nd Place Winners
+                    Generate 2nd Place Winner
                 </button>
             </div>
 
             <!-- First Place Section (now displayed third) -->
             <div id="first-place-section" class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
                 <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
-                    <span class="mr-3 text-4xl">🥇</span> 1st Place Winners
+                    <span class="mr-3 text-4xl">🥇</span> 1st Place Winner
                 </h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="grid grid-cols-1 gap-6 mb-6">
                     <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
                         <h3 class="text-xl font-semibold text-yellow-800">Primary Winner</h3>
                         <p id="first-primary" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
                     </div>
-                    <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
-                        <h3 class="text-xl font-semibold text-yellow-800">Secondary Winner</h3>
-                        <p id="first-secondary" class="text-3xl font-bold text-yellow-800 mt-2">---</p>
-                    </div>
-                    <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
-                        <h3 class="text-xl font-semibold text-yellow-800">Third Winner</h3>
-                        <p id="first-third" class="text-3xl font-bold text-yellow-800 mt-2">---</p>
-                    </div>
                 </div>
                 <button id="generate-first" class="winner-button px-8 py-3 bg-yellow-700 text-white font-semibold rounded-full shadow-lg hover:bg-yellow-800 transition duration-300 ease-in-out" disabled>
-                    Generate 1st Place Winners
+                    Generate 1st Place Winner
                 </button>
             </div>
 
@@ -448,14 +424,8 @@
         async function clearDisplayedWinners() {
             const winnerElements = [
                 document.getElementById('first-primary'),
-                document.getElementById('first-secondary'),
-                document.getElementById('first-third'),
                 document.getElementById('second-primary'),
-                document.getElementById('second-secondary'),
-                document.getElementById('second-third'),
                 document.getElementById('third-primary'),
-                document.getElementById('third-secondary'),
-                document.getElementById('third-third'),
                 document.getElementById('final-first-primary-desktop'),
                 document.getElementById('final-second-primary-desktop'),
                 document.getElementById('final-third-primary-desktop')
@@ -578,15 +548,11 @@
                 console.log("DEBUG: Fetched winners.txt unique length:", raffleTicketsWinners.length);
                 console.log("DEBUG: Fetched winners1.txt unique length:", raffleTicketsWinners1.length);
 
-                // Calculate overall unique tickets after fetching both files
-                overallTotalUniqueTickets = new Set([...raffleTicketsWinners, ...raffleTicketsWinners1]).size;
-                console.log("DEBUG: Overall Total Unique Tickets available (combined unique from files):", overallTotalUniqueTickets);
-
                 // Now, check if the loaded arrays have enough UNIQUE tickets for picking
-                // raffleTicketsWinners needs 3 for 1st place (Primary, Secondary, Third)
-                // raffleTicketsWinners1 needs 6 for 2nd and 3rd place (3 each)
-                if (raffleTicketsWinners.length < 3 || raffleTicketsWinners1.length < 6) {
-                    statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} unique tickets (needs at least 3 for 1st place). 'winners1.txt' has ${raffleTicketsWinners1.length} unique tickets (needs at least 6 for 2nd and 3rd place). Please populate your files with more unique alphanumeric tickets.`;
+                // raffleTicketsWinners needs 1 for 1st place
+                // raffleTicketsWinners1 needs 2 for 2nd and 3rd place (1 each)
+                if (raffleTicketsWinners.length < 1 || raffleTicketsWinners1.length < 2) {
+                    statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} unique tickets (needs at least 1 for 1st place). 'winners1.txt' has ${raffleTicketsWinners1.length} unique tickets (needs at least 2 for 2nd and 3rd place). Please populate your files with more unique alphanumeric tickets.`;
                     disableAllGenerateButtons();
                     return;
                 }
@@ -709,7 +675,7 @@
         }
 
         /**
-         * Updates the display elements for a specific place's winners (Primary, Secondary, Third).
+         * Updates the display elements for a specific place's winners (Primary only now).
          * It now picks winners based on the specified file source for each place.
          * @param {string} placePrefix - The prefix for the winner IDs (e.g., 'first', 'second', 'third').
          * This helps in targeting the correct HTML elements.
@@ -717,8 +683,6 @@
         async function updateWinnersDisplay(placePrefix) {
             // Get references to the specific HTML elements where the winners will be displayed
             const primaryElement = document.getElementById(`${placePrefix}-primary`);
-            const secondaryElement = document.getElementById(`${placePrefix}-secondary`);
-            const thirdElement = document.getElementById(`${placePrefix}-third`);
 
             // Get references to the final winner display elements
             const finalPrimaryDesktop = document.getElementById(`final-${placePrefix}-primary-desktop`);
@@ -739,10 +703,9 @@
                 currentButton.disabled = true;
             }
 
-            statusMessageElement.textContent = "Drawing winners..."; // Updated loading message
+            statusMessageElement.textContent = "Drawing winner..."; // Updated loading message for single winner
 
-            // Create a Set to keep track of tickets picked for the current place (Primary, Secondary, Third)
-            // to ensure all three are unique from each other within this specific draw.
+            // Create a Set to keep track of tickets picked for the current place (Primary only now)
             const pickedTicketsForThisPlace = new Set();
             let sourceArrayForPlace;
 
@@ -761,7 +724,7 @@
                 return; // Exit if invalid prefix
             }
 
-            // Pick winners from the determined source array
+            // Pick the primary winner from the determined source array
             const primaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
             await animateNumberReveal(primaryElement, primaryWinner);
             console.log(`DEBUG: After Primary Winner draw (${placePrefix}): allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
@@ -772,28 +735,8 @@
                 return;
             }
 
-            await delay(500); // Small delay between each winner reveal
-
-            const secondaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
-            await animateNumberReveal(secondaryElement, secondaryWinner);
-            console.log(`DEBUG: After Secondary Winner draw (${placePrefix}): allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
-            if (secondaryWinner === "N/A") {
-                console.warn("Secondary winner could not be drawn (N/A). Stopping draw for this prize category.");
-                return;
-            }
-            await delay(500);
-
-            const thirdWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
-            await animateNumberReveal(thirdElement, thirdWinner);
-            console.log(`DEBUG: After Third Winner draw (${placePrefix}): allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
-            if (thirdWinner === "N/A") {
-                console.warn("Third winner could not be drawn (N/A). Stopping draw for this prize category.");
-                return;
-            }
-
-
             // Add a delay here to allow confetti animation to complete before activating the next section
-            await delay(1000); // 1 second delay after the last number reveal and confetti trigger
+            await delay(1000); // 1 second delay after the number reveal and confetti trigger
 
             // Update the final primary winner display and apply highlight
             if (finalPrimaryDesktop) {
@@ -832,10 +775,10 @@
             // This block handles what happens AFTER a set of winners is drawn (e.g., enables next button or sets final prize message)
             if (placePrefix === 'third') {
                 activateSection(secondPlaceSection, generateSecondBtn);
-                statusMessageElement.textContent = "Click 'Generate 2nd Place Winners'."; // Specific instruction
+                statusMessageElement.textContent = "Click 'Generate 2nd Place Winner'."; // Specific instruction
             } else if (placePrefix === 'second') {
                 activateSection(firstPlaceSection, generateFirstBtn);
-                statusMessageElement.textContent = "Click 'Generate 1st Place Winners'."; // Specific instruction
+                statusMessageElement.textContent = "Click 'Generate 1st Place Winner'."; // Specific instruction
             } else if (placePrefix === 'first') {
                 // This message clarifies that all *prizes* for this raffle have been awarded
                 statusMessageElement.textContent = "All prize winners for this raffle have been drawn! Click 'Reset Raffle' to start a new draw.";
@@ -889,7 +832,7 @@
 
                 // Activate the 3rd place section and enable its button after reveal
                 activateSection(thirdPlaceSection, generateThirdBtn);
-                statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 3rd Place Winners' to begin.";
+                statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 3rd Place Winner' to begin.";
             });
         }
 
