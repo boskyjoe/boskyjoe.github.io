@@ -123,10 +123,6 @@
             transition: opacity 0.5s ease-out, filter 0.5s ease-out, transform 0.5s ease-out, scale 0.5s ease-out, border 0.3s ease-in-out, box-shadow 0.3s ease-in-out; /* Smooth transition for activation */
         }
 
-        /* Keyframes for fade out animation (applied to individual sections when merged section appears) */
-        /* Removed sections-fade-inactive as sections will no longer become inactive */
-
-
         /* Styles for the main reveal container (curtain effect) */
         #raffle-content-container {
             max-height: 0;
@@ -285,7 +281,7 @@
 
                 <!-- First Place Section (now displayed third) -->
                 <div id="first-place-section" class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
-                    <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
+                    <h2 class="text-3xl font-bold text-white mb-6 flex-items-center justify-center">
                         <span class="mr-3 text-4xl">🥇</span> 1st Place Winner
                     </h2>
                     <div class="grid grid-cols-1 gap-6 mb-6">
@@ -440,6 +436,11 @@
             // Hide the merged section after clearing
             mergedWinnersSection.classList.add('hidden');
             mergedWinnersSection.classList.remove('fade-in-section'); // Remove the animation class
+
+            // Ensure individual winner sections are active and visible again
+            firstPlaceSection.classList.remove('inactive-section');
+            secondPlaceSection.classList.remove('inactive-section');
+            thirdPlaceSection.classList.remove('inactive-section');
         }
 
         /**
@@ -733,6 +734,19 @@
             } else if (placePrefix === 'first') {
                 // This message clarifies that all *prizes* for this raffle have been awarded
                 statusMessageElement.textContent = "All prize winners for this raffle have been drawn! Click 'Reset Raffle' to start a new draw.";
+
+                // Scroll to the top of the page
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                // Make individual winner sections inactive
+                firstPlaceSection.classList.add('inactive-section');
+                secondPlaceSection.classList.add('inactive-section');
+                thirdPlaceSection.classList.add('inactive-section');
+
+                // Disable all generate buttons permanently once all winners are drawn
+                generateFirstBtn.disabled = true;
+                generateSecondBtn.disabled = true;
+                generateThirdBtn.disabled = true;
 
                 // Populate and reveal the merged winners section
                 mergedFirstWinnerEl.textContent = finalFirstWinner;
