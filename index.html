@@ -156,7 +156,7 @@
 
         /* New styles for merged winners section (fade-in) */
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-20px); } /* Slight lift from top */
+            from { opacity: 0; transform: translateY(20px); } /* Slight lift from top */
             to { opacity: 1; transform: translateY(0); }
         }
         .fade-in-section {
@@ -352,7 +352,7 @@
 
         // Get references to the "Generate Winners" buttons for each place
         const generateFirstBtn = document.getElementById('generate-first');
-        const generateSecondBtn = document.getElementById('generate-second');
+        const generateSecondBtn = document = document.getElementById('generate-second');
         const generateThirdBtn = document.getElementById('generate-third');
 
         // References for the reveal functionality
@@ -735,9 +735,6 @@
                 // This message clarifies that all *prizes* for this raffle have been awarded
                 statusMessageElement.textContent = "All prize winners for this raffle have been drawn! Click 'Reset Raffle' to start a new draw.";
 
-                // Scroll to the top of the page
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-
                 // Make individual winner sections inactive
                 firstPlaceSection.classList.add('inactive-section');
                 secondPlaceSection.classList.add('inactive-section');
@@ -753,8 +750,18 @@
                 mergedSecondWinnerEl.textContent = finalSecondWinner;
                 mergedThirdWinnerEl.textContent = finalThirdWinner;
 
-                // Make the merged section visible and apply fade-in animation
+                // Make the merged section visible (but still start hidden by opacity)
                 mergedWinnersSection.classList.remove('hidden');
+
+                // Scroll just enough to bring the merged section into view
+                // We add a small offset (e.g., -20 pixels) to show a bit more above it
+                const scrollOffset = mergedWinnersSection.offsetTop - 20;
+                window.scrollTo({ top: Math.max(0, scrollOffset), behavior: 'smooth' });
+
+                // Add a small delay after scrolling to allow the scroll animation to begin
+                await delay(500); // Adjust this delay as needed
+
+                // Apply fade-in animation after scrolling
                 mergedWinnersSection.classList.add('fade-in-section');
 
                 // Enable the reset button once all winners are displayed and change its color
