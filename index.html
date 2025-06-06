@@ -244,74 +244,76 @@
                 Loading ticket data...
             </div>
 
-            <!-- Third Place Section (now displayed first) -->
-            <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
-                <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
-                    <span class="mr-3 text-4xl">🥉</span> 3rd Place Winner
-                </h2>
-                <div class="grid grid-cols-1 gap-6 mb-6">
-                    <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
-                        <h3 class="text-xl font-semibold text-amber-800">Winning Number</h3>
-                        <p id="third-primary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
+            <!-- New wrapper for winner sections -->
+            <div id="winner-sections-wrapper" class="relative">
+                <!-- Third Place Section (now displayed first) -->
+                <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
+                    <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
+                        <span class="mr-3 text-4xl">🥉</span> 3rd Place Winner
+                    </h2>
+                    <div class="grid grid-cols-1 gap-6 mb-6">
+                        <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
+                            <h3 class="text-xl font-semibold text-amber-800">Winning Number</h3>
+                            <p id="third-primary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
+                        </div>
+                    </div>
+                    <button id="generate-third" class="winner-button px-8 py-3 bg-amber-900 text-white font-semibold rounded-full shadow-lg hover:bg-amber-950 transition duration-300 ease-in-out" disabled>
+                        Generate 3rd Place Winner
+                    </button>
+                </div>
+
+                <!-- Second Place Section (now displayed second) -->
+                <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
+                    <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
+                        <span class="mr-3 text-4xl">🥈</span> 2nd Place Winner
+                    </h2>
+                    <div class="grid grid-cols-1 gap-6 mb-6">
+                        <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
+                            <h3 class="text-xl font-semibold text-gray-800">Winning Number</h3>
+                            <p id="second-primary" class="text-3xl font-bold text-gray-900 mt-2">---</p>
+                        </div>
+                    </div>
+                    <button id="generate-second" class="winner-button px-8 py-3 bg-gray-700 text-white font-semibold rounded-full shadow-lg hover:bg-gray-800 transition duration-300 ease-in-out" disabled>
+                        Generate 2nd Place Winner
+                    </button>
+                </div>
+
+                <!-- First Place Section (now displayed third) -->
+                <div id="first-place-section" class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
+                    <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
+                        <span class="mr-3 text-4xl">🥇</span> 1st Place Winner
+                    </h2>
+                    <div class="grid grid-cols-1 gap-6 mb-6">
+                        <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
+                            <h3 class="text-xl font-semibold text-yellow-800">Winning Number</h3>
+                            <p id="first-primary" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
+                        </div>
+                    </div>
+                    <button id="generate-first" class="winner-button px-8 py-3 bg-yellow-700 text-white font-semibold rounded-full shadow-lg hover:bg-yellow-800 transition duration-300 ease-in-out" disabled>
+                        Generate 1st Place Winner
+                    </button>
+                </div>
+
+                <!-- Merged Winners Section - This will be revealed at the end -->
+                <!-- Position absolute and z-index added for overlay effect. Now it's a child of winner-sections-wrapper -->
+                <div id="merged-winners-section" class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-600 to-purple-800 p-8 rounded-xl shadow-2xl hidden flex flex-col justify-center items-center z-20">
+                    <h2 class="text-4xl font-extrabold text-white mb-6">All Winners!</h2>
+                    <div class="flex flex-col md:flex-row justify-around items-center gap-8 w-full">
+                        <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
+                            <h3 class="text-2xl font-bold text-yellow-600 mb-2">1st Place</h3>
+                            <p id="merged-first-winner" class="text-4xl font-extrabold text-yellow-800">---</p>
+                        </div>
+                        <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
+                            <h3 class="text-2xl font-bold text-gray-600 mb-2">2nd Place</h3>
+                            <p id="merged-second-winner" class="text-4xl font-extrabold text-gray-800">---</p>
+                        </div>
+                        <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
+                            <h3 class="text-2xl font-bold text-amber-600 mb-2">3rd Place</h3>
+                            <p id="merged-third-winner" class="text-4xl font-extrabold text-amber-800">---</p>
+                        </div>
                     </div>
                 </div>
-                <button id="generate-third" class="winner-button px-8 py-3 bg-amber-900 text-white font-semibold rounded-full shadow-lg hover:bg-amber-950 transition duration-300 ease-in-out" disabled>
-                    Generate 3rd Place Winner
-                </button>
-            </div>
-
-            <!-- Second Place Section (now displayed second) -->
-            <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
-                <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
-                    <span class="mr-3 text-4xl">🥈</span> 2nd Place Winner
-                </h2>
-                <div class="grid grid-cols-1 gap-6 mb-6">
-                    <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
-                        <h3 class="text-xl font-semibold text-gray-800">Winning Number</h3>
-                        <p id="second-primary" class="text-3xl font-bold text-gray-900 mt-2">---</p>
-                    </div>
-                </div>
-                <button id="generate-second" class="winner-button px-8 py-3 bg-gray-700 text-white font-semibold rounded-full shadow-lg hover:bg-gray-800 transition duration-300 ease-in-out" disabled>
-                    Generate 2nd Place Winner
-                </button>
-            </div>
-
-            <!-- First Place Section (now displayed third) -->
-            <div id="first-place-section" class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
-                <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
-                    <span class="mr-3 text-4xl">🥇</span> 1st Place Winner
-                </h2>
-                <div class="grid grid-cols-1 gap-6 mb-6">
-                    <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
-                        <h3 class="text-xl font-semibold text-yellow-800">Winning Number</h3>
-                        <p id="first-primary" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
-                    </div>
-                </div>
-                <button id="generate-first" class="winner-button px-8 py-3 bg-yellow-700 text-white font-semibold rounded-full shadow-lg hover:bg-yellow-800 transition duration-300 ease-in-out" disabled>
-                    Generate 1st Place Winner
-                </button>
-            </div>
-
-            <!-- Merged Winners Section - This will be revealed at the end -->
-            <!-- Position absolute and z-index added for overlay effect -->
-            <div id="merged-winners-section" class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-600 to-purple-800 p-8 rounded-xl shadow-2xl hidden flex flex-col justify-center items-center z-20">
-                <h2 class="text-4xl font-extrabold text-white mb-6">All Winners!</h2>
-                <div class="flex flex-col md:flex-row justify-around items-center gap-8 w-full">
-                    <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
-                        <h3 class="text-2xl font-bold text-yellow-600 mb-2">1st Place</h3>
-                        <p id="merged-first-winner" class="text-4xl font-extrabold text-yellow-800">---</p>
-                    </div>
-                    <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
-                        <h3 class="text-2xl font-bold text-gray-600 mb-2">2nd Place</h3>
-                        <p id="merged-second-winner" class="text-4xl font-extrabold text-gray-800">---</p>
-                    </div>
-                    <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1">
-                        <h3 class="text-2xl font-bold text-amber-600 mb-2">3rd Place</h3>
-                        <p id="merged-third-winner" class="text-4xl font-extrabold text-amber-800">---</p>
-                    </div>
-                </div>
-            </div>
-
+            </div> <!-- End winner-sections-wrapper -->
             <button id="reset-raffle-btn" class="winner-button mt-10 px-8 py-3 text-white font-semibold rounded-full shadow-lg" disabled>
                 Reset Raffle
             </button>
@@ -374,8 +376,11 @@
         // References for the reveal functionality
         const revealWinnersBtn = document.getElementById('reveal-winners-btn');
         const raffleContentContainer = document.getElementById('raffle-content-container');
-        const mainContentParent = document.querySelector('.bg-white.relative.z-0'); // Reference to the main content div
+        // Removed mainContentParent as it's no longer directly used for merged section positioning calculations
+        // const mainContentParent = document.querySelector('.bg-white.relative.z-0');
 
+        // New reference for the winner sections wrapper
+        const winnerSectionsWrapper = document.getElementById('winner-sections-wrapper');
 
         // References for the reset confirmation modal
         const resetConfirmModal = document.getElementById('reset-confirm-modal');
@@ -454,6 +459,10 @@
             mergedWinnersSection.style.transition = '';
             mergedWinnersSection.style.transform = '';
             mergedWinnersSection.style.opacity = '';
+            // Reset individual winner sections
+            firstPlaceSection.classList.remove('sections-fade-inactive');
+            secondPlaceSection.classList.remove('sections-fade-inactive');
+            thirdPlaceSection.classList.remove('sections-fade-inactive');
         }
 
         /**
@@ -766,15 +775,11 @@
                 mergedThirdWinnerEl.textContent = finalThirdWinner;
 
                 // Position the merged section for the slide-in animation
-                // Calculate its top relative to the main container, aligning it where content sections begin
-                const contentStartTop = raffleContentContainer.offsetTop; // Top of raffle-content-container relative to its parent (mainContentParent)
-                const mainContentRect = mainContentParent.getBoundingClientRect(); // Get dimensions of the main parent div
-
-                mergedWinnersSection.style.top = `${contentStartTop}px`;
-                // Start off-screen right of the parent container
-                mergedWinnersSection.style.left = `${mainContentRect.width}px`;
-                mergedWinnersSection.style.width = `${mainContentRect.width}px`; // Match parent width
-                mergedWinnersSection.style.height = `${raffleContentContainer.offsetHeight - (resetRaffleBtn.offsetHeight + 20)}px`; // Adjust height to cover visible content area above reset button
+                // Set position relative to its new parent (winner-sections-wrapper)
+                mergedWinnersSection.style.top = '0';
+                mergedWinnersSection.style.left = '100%'; // Start off-screen right
+                mergedWinnersSection.style.width = '100%'; // Will take 100% of its parent's width
+                mergedWinnersSection.style.height = '100%'; // Will take 100% of its parent's height
                 mergedWinnersSection.style.opacity = '0'; // Start invisible
                 mergedWinnersSection.style.zIndex = '20'; // Ensure it's on top
 
@@ -785,7 +790,7 @@
 
                 // Animate to final position (slide left by its own width)
                 mergedWinnersSection.style.transition = 'transform 1s ease-out, opacity 1s ease-out';
-                mergedWinnersSection.style.transform = 'translateX(-100%)';
+                mergedWinnersSection.style.transform = 'translateX(-100%)'; // Slides into view
                 mergedWinnersSection.style.opacity = '1';
 
 
