@@ -95,34 +95,7 @@
         }
 
         /* Post-it note styling for the Final Primary Winners section */
-        .post-it-note {
-            background-color: #fffacd; /* Light yellow, like a post-it */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.05); /* Soft shadow for lift */
-            transform: rotate(2deg); /* Slight rotation */
-            position: relative; /* Needed for pseudo-element positioning */
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Smooth transitions */
-        }
-
-        /* Post-it note hover effect */
-        .post-it-note:hover {
-            transform: rotate(0deg) translateY(-5px); /* Lift and straighten slightly on hover */
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.08); /* More pronounced shadow */
-        }
-
-        /* Pseudo-element for the "pin" on the post-it */
-        .post-it-note::before {
-            content: '';
-            position: absolute;
-            top: -10px; /* Adjust position to be above the note */
-            left: 50%;
-            transform: translateX(-50%) rotate(-15deg); /* Center and rotate slightly */
-            width: 20px;
-            height: 20px;
-            background-color: #b0c4de; /* Light steel blue for the pin head */
-            border-radius: 50%; /* Circular pin head */
-            box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.2), 0 1px 1px rgba(0, 0, 0, 0.1); /* Inner shadow for depth */
-            z-index: 10; /* Ensure pin is above the note */
-        }
+        /* Removed .post-it-note related styles as the section is removed */
 
         /* Animation for new winner highlight within the post-it */
         @keyframes highlight-winner {
@@ -170,10 +143,8 @@
             opacity: 0; /* Start hidden */
             transition: max-height 1.5s ease-in-out, opacity 1.5s ease-in-out; /* Combine transitions */
         }
-        #raffle-content-container.revealed {
-            /* max-height will be set by JS dynamically */
-            opacity: 1;
-        }
+        /* No .revealed class needed, JS will control removal of hidden and styling */
+
 
         /* Keyframes for Golden Border Pulse animation */
         @keyframes golden-border-pulse {
@@ -245,7 +216,7 @@
         <!-- End Sponsor Section -->
 
         <!-- Container for content revealed after click -->
-        <div id="raffle-content-container">
+        <div id="raffle-content-container" class="hidden">
             <p class="text-base text-gray-700 mb-10 relative z-10"> <!-- Changed text-lg to text-base -->
                 Congratulations to all our lucky winners! Thank you for participating in our church raffle.
                 Click the "Generate Winners" button for each place to reveal the winning ticket numbers.
@@ -257,13 +228,13 @@
             </div>
 
             <!-- Third Place Section (now displayed first) -->
-            <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
+            <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
                 <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                     <span class="mr-3 text-4xl">🥉</span> 3rd Place Winner
                 </h2>
                 <div class="grid grid-cols-1 gap-6 mb-6">
                     <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
-                        <h3 class="text-xl font-semibold text-amber-800">Primary Winner</h3>
+                        <h3 class="text-xl font-semibold text-amber-800">Winning Number</h3>
                         <p id="third-primary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
                     </div>
                 </div>
@@ -273,13 +244,13 @@
             </div>
 
             <!-- Second Place Section (now displayed second) -->
-            <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
+            <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
                 <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                     <span class="mr-3 text-4xl">🥈</span> 2nd Place Winner
                 </h2>
                 <div class="grid grid-cols-1 gap-6 mb-6">
                     <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
-                        <h3 class="text-xl font-semibold text-gray-800">Primary Winner</h3>
+                        <h3 class="text-xl font-semibold text-gray-800">Winning Number</h3>
                         <p id="second-primary" class="text-3xl font-bold text-gray-900 mt-2">---</p>
                     </div>
                 </div>
@@ -289,13 +260,13 @@
             </div>
 
             <!-- First Place Section (now displayed third) -->
-            <div id="first-place-section" class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
+            <div id="first-place-section" class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
                 <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                     <span class="mr-3 text-4xl">🥇</span> 1st Place Winner
                 </h2>
                 <div class="grid grid-cols-1 gap-6 mb-6">
                     <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
-                        <h3 class="text-xl font-semibold text-yellow-800">Primary Winner</h3>
+                        <h3 class="text-xl font-semibold text-yellow-800">Winning Number</h3>
                         <p id="first-primary" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
                     </div>
                 </div>
@@ -311,25 +282,8 @@
         <!-- End Container for content revealed after click -->
     </div>
 
-    <!-- Final Primary Winners section - now hidden by default and revealed sequentially -->
-    <div id="final-primary-winners-section" class="fixed top-1/2 right-4 -translate-y-1/2 w-72 p-6 rounded-lg shadow-md z-50 hidden post-it-note">
-        <h2 class="text-2xl font-bold text-green-800 mb-4 font-caveat">Final Primary Winners</h2>
-        <div class="grid grid-cols-1 gap-4">
-            <!-- Individual winner cards, initially hidden -->
-            <div id="final-first-card" class="winner-card p-4 rounded-md shadow-sm hidden">
-                <h3 class="text-xl font-semibold text-white font-caveat">1st Place Primary</h3>
-                <p class="final-primary-winner-display text-2xl font-bold text-white mt-2 font-caveat" id="final-first-primary-desktop">---</p>
-            </div>
-            <div id="final-second-card" class="winner-card p-4 rounded-md shadow-sm hidden">
-                <h3 class="text-xl font-semibold text-white font-caveat">2nd Place Primary</h3>
-                <p class="final-primary-winner-display text-2xl font-bold text-white mt-2 font-caveat" id="final-second-primary-desktop">---</p>
-            </div>
-            <div id="final-third-card" class="winner-card p-4 rounded-md shadow-sm hidden">
-                <h3 class="text-xl font-semibold text-white font-caveat">3rd Place Primary</h3>
-                <p class="final-primary-winner-display text-2xl font-bold text-white mt-2 font-caveat" id="final-third-primary-desktop">---</p>
-            </div>
-        </div>
-    </div>
+    <!-- Final Primary Winners section - removed -->
+    <!-- This section was removed as per user request -->
 
     <!-- Footer Section -->
     <footer class="w-full bg-gray-800 text-gray-300 text-center py-4 mt-10 text-sm relative z-10">
@@ -387,11 +341,11 @@
         const confirmResetBtn = document.getElementById('confirm-reset-btn');
         const cancelResetBtn = document.getElementById('cancel-reset-btn');
 
-        // Reference for the final primary winners section and its individual cards
-        const finalPrimaryWinnersSection = document.getElementById('final-primary-winners-section');
-        const finalFirstCard = document.getElementById('final-first-card');
-        const finalSecondCard = document.getElementById('final-second-card');
-        const finalThirdCard = document.getElementById('final-third-card');
+        // Removed references for the final primary winners section and its individual cards
+        // const finalPrimaryWinnersSection = document.getElementById('final-primary-winners-section');
+        // const finalFirstCard = document.getElementById('final-first-card');
+        // const finalSecondCard = document.getElementById('final-second-card');
+        // const finalThirdCard = document.getElementById('final-third-card');
 
         /**
          * Utility function to introduce a delay.
@@ -425,10 +379,11 @@
             const winnerElements = [
                 document.getElementById('first-primary'),
                 document.getElementById('second-primary'),
-                document.getElementById('third-primary'),
-                document.getElementById('final-first-primary-desktop'),
-                document.getElementById('final-second-primary-desktop'),
-                document.getElementById('final-third-primary-desktop')
+                document.getElementById('third-primary')
+                // Removed references to final primary desktop elements
+                // document.getElementById('final-first-primary-desktop'),
+                // document.getElementById('final-second-primary-desktop'),
+                // document.getElementById('final-third-primary-desktop')
             ];
 
             // Apply fade-out animation to all elements that are not already '---'
@@ -449,19 +404,17 @@
                 }
             });
 
-            // After clearing text, also reset background colors and hide individual final primary winner cards
-            const finalWinnerCards = document.querySelectorAll('#final-primary-winners-section .winner-card');
-            finalWinnerCards.forEach(card => {
-                // Remove all gradient classes and animation class
-                card.classList.remove(
-                    'bg-gradient-to-br', 'from-yellow-400', 'to-yellow-600',
-                    'from-gray-400', 'to-gray-600',
-                    'from-amber-600', 'to-amber-800',
-                    'reveal-card-animation'
-                );
-                card.classList.add('bg-white', 'hidden'); // Revert to white and hide
-            });
-            // DO NOT HIDE the main final section here, it should remain visible
+            // Removed logic related to final winner cards as the section is removed
+            // const finalWinnerCards = document.querySelectorAll('#final-primary-winners-section .winner-card');
+            // finalWinnerCards.forEach(card => {
+            //     card.classList.remove(
+            //         'bg-gradient-to-br', 'from-yellow-400', 'to-yellow-600',
+            //         'from-gray-400', 'to-gray-600',
+            //         'from-amber-600', 'to-amber-800',
+            //         'reveal-card-animation'
+            //     );
+            //     card.classList.add('bg-white', 'hidden');
+            // });
 
             // Wait for all fade-out animations to complete
             await Promise.all(animations);
@@ -512,28 +465,30 @@
 
 
             // Set initial state for the main raffle content container and reveal button
+            raffleContentContainer.classList.add('hidden');
             raffleContentContainer.style.maxHeight = '0px';
             raffleContentContainer.style.opacity = '0';
             raffleContentContainer.style.overflow = 'hidden';
+
             revealWinnersBtn.disabled = false; // Ensure reveal button is enabled on load
             revealWinnersBtn.style.display = 'block'; // Ensure it's visible
 
-            // Set initial inactive state for all winner sections
-            firstPlaceSection.classList.add('inactive-section');
-            secondPlaceSection.classList.add('inactive-section');
-            thirdPlaceSection.classList.add('inactive-section'); // All inactive initially
+            // Set initial inactive and hidden state for all winner sections
+            firstPlaceSection.classList.add('inactive-section', 'hidden');
+            secondPlaceSection.classList.add('inactive-section', 'hidden');
+            thirdPlaceSection.classList.add('inactive-section', 'hidden'); // All inactive and hidden initially
 
             // Disable and style reset button initially
             resetRaffleBtn.disabled = true;
             resetRaffleBtn.classList.add('bg-gray-300');
             resetRaffleBtn.classList.remove('bg-red-600', 'hover:bg-red-700'); // Ensure reset button is grey
 
-            // Hide the final primary winners section and its cards initially
-            finalPrimaryWinnersSection.classList.add('hidden');
-            finalPrimaryWinnersSection.classList.remove('golden-border-pulse-animation'); // Remove any lingering animations
-            finalFirstCard.classList.add('hidden');
-            finalSecondCard.classList.add('hidden');
-            finalThirdCard.classList.add('hidden');
+            // Removed logic related to final primary winners section
+            // finalPrimaryWinnersSection.classList.add('hidden');
+            // finalPrimaryWinnersSection.classList.remove('golden-border-pulse-animation');
+            // finalFirstCard.classList.add('hidden');
+            // finalSecondCard.classList.add('hidden');
+            // finalThirdCard.classList.add('hidden');
 
 
             try {
@@ -601,7 +556,7 @@
          * AND 'allTimePickedTickets' (for overall uniqueness).
          * @param {Array<string>} sourceArray - The array of alphanumeric tickets to pick from.
          * @param {Set<string>} currentDrawAvoidTickets - A Set containing tickets that have already been picked
-         * for the current prize category (Primary, Secondary, Third for one place) during this single button click.
+         * for the current prize category (Primary only) during this single button click.
          * @returns {string} A unique random alphanumeric ticket, or "N/A" if no unique ticket can be found.
          */
         function pickSingleUniqueTicket(sourceArray, currentDrawAvoidTickets) {
@@ -675,19 +630,18 @@
         }
 
         /**
-         * Updates the display elements for a specific place's winners (Primary only now).
-         * It now picks winners based on the specified file source for each place.
-         * @param {string} placePrefix - The prefix for the winner IDs (e.g., 'first', 'second', 'third').
-         * This helps in targeting the correct HTML elements.
+         * Updates the display elements for a specific place's winner (Primary only).
+         * It now picks a winner based on the specified file source for each place.
+         * @param {string} placePrefix - The prefix for the winner ID (e.g., 'first', 'second', 'third').
+         * This helps in targeting the correct HTML element.
          */
         async function updateWinnersDisplay(placePrefix) {
-            // Get references to the specific HTML elements where the winners will be displayed
+            // Get references to the specific HTML element where the winner will be displayed
             const primaryElement = document.getElementById(`${placePrefix}-primary`);
 
-            // Get references to the final winner display elements
-            const finalPrimaryDesktop = document.getElementById(`final-${placePrefix}-primary-desktop`);
-            // Get the parent winner-card element for styling
-            const finalPrimaryCard = finalPrimaryDesktop ? finalPrimaryDesktop.closest('.winner-card') : null;
+            // Removed references to the final winner display elements and their parent cards
+            // const finalPrimaryDesktop = document.getElementById(`final-${placePrefix}-primary-desktop`);
+            // const finalPrimaryCard = finalPrimaryDesktop ? finalPrimaryDesktop.closest('.winner-card') : null;
 
 
             // Disable the button that was just clicked
@@ -727,63 +681,66 @@
             // Pick the primary winner from the determined source array
             const primaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
             await animateNumberReveal(primaryElement, primaryWinner);
-            console.log(`DEBUG: After Primary Winner draw (${placePrefix}): allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
+            console.log(`DEBUG: After Winning Number draw (${placePrefix}): allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
 
-            // If a winner is N/A, it means the pool was exhausted, so stop further drawing for this prize
+            // If a winner is "N/A", it means the pool was exhausted, so stop further drawing for this prize
             if (primaryWinner === "N/A") {
-                console.warn("Primary winner could not be drawn (N/A). Stopping draw for this prize category.");
+                console.warn("Winning Number could not be drawn (N/A). Stopping draw for this prize category.");
                 return;
             }
 
             // Add a delay here to allow confetti animation to complete before activating the next section
             await delay(1000); // 1 second delay after the number reveal and confetti trigger
 
-            // Update the final primary winner display and apply highlight
-            if (finalPrimaryDesktop) {
-                finalPrimaryDesktop.textContent = primaryWinner;
-                finalPrimaryDesktop.classList.add('winner-highlight');
-                setTimeout(() => {
-                    finalPrimaryDesktop.classList.remove('winner-highlight');
-                }, 1000); // Remove highlight after 1 second
+            // Removed logic related to final primary winner display and highlight
+            // if (finalPrimaryDesktop) {
+            //     finalPrimaryDesktop.textContent = primaryWinner;
+            //     finalPrimaryDesktop.classList.add('winner-highlight');
+            //     setTimeout(() => {
+            //         finalPrimaryDesktop.classList.remove('winner-highlight');
+            //     }, 1000);
 
-                // Apply background color based on placePrefix and reveal the card
-                if (finalPrimaryCard) {
-                    // Remove existing background colors to ensure only one is active
-                    finalPrimaryCard.classList.remove(
-                        'bg-white', 'bg-yellow-100', 'bg-gray-100', 'bg-amber-100',
-                        'bg-gradient-to-br', 'from-yellow-400', 'to-yellow-600',
-                        'from-gray-400', 'to-gray-600',
-                        'from-amber-600', 'to-amber-800'
-                    );
-                    if (placePrefix === 'first') {
-                        finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-yellow-400', 'to-yellow-600');
-                        finalFirstCard.classList.remove('hidden');
-                        finalFirstCard.classList.add('reveal-card-animation');
-                    } else if (placePrefix === 'second') {
-                        finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-gray-400', 'to-gray-600');
-                        finalSecondCard.classList.remove('hidden');
-                        finalSecondCard.classList.add('reveal-card-animation');
-                    } else if (placePrefix === 'third') {
-                        finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-amber-600', 'to-amber-800');
-                        finalPrimaryWinnersSection.classList.remove('hidden'); // Show the main final section
-                        finalThirdCard.classList.remove('hidden');
-                        finalThirdCard.classList.add('reveal-card-animation');
-                    }
-                }
-            }
+            //     if (finalPrimaryCard) {
+            //         finalPrimaryCard.classList.remove(
+            //             'bg-white', 'bg-yellow-100', 'bg-gray-100', 'bg-amber-100',
+            //             'bg-gradient-to-br', 'from-yellow-400', 'to-yellow-600',
+            //             'from-gray-400', 'to-gray-600',
+            //             'from-amber-600', 'to-amber-800'
+            //         );
+            //         if (placePrefix === 'first') {
+            //             finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-yellow-400', 'to-yellow-600');
+            //             finalFirstCard.classList.remove('hidden');
+            //             finalFirstCard.classList.add('reveal-card-animation');
+            //         } else if (placePrefix === 'second') {
+            //             finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-gray-400', 'to-gray-600');
+            //             finalSecondCard.classList.remove('hidden');
+            //             finalSecondCard.classList.add('reveal-card-animation');
+            //         } else if (placePrefix === 'third') {
+            //             finalPrimaryCard.classList.add('bg-gradient-to-br', 'from-amber-600', 'to-amber-800');
+            //             // Only show the final primary winners section when the first winner (3rd place) is drawn
+            //             // finalPrimaryWinnersSection.classList.remove('hidden'); // This line is not needed if the whole section is removed
+            //             finalThirdCard.classList.remove('hidden');
+            //             finalThirdCard.classList.add('reveal-card-animation');
+            //         }
+            //     }
+            // }
 
             // This block handles what happens AFTER a set of winners is drawn (e.g., enables next button or sets final prize message)
             if (placePrefix === 'third') {
+                // Reveal and activate the second place section
+                secondPlaceSection.classList.remove('hidden'); // Make it visible
                 activateSection(secondPlaceSection, generateSecondBtn);
                 statusMessageElement.textContent = "Click 'Generate 2nd Place Winner'."; // Specific instruction
             } else if (placePrefix === 'second') {
+                // Reveal and activate the first place section
+                firstPlaceSection.classList.remove('hidden'); // Make it visible
                 activateSection(firstPlaceSection, generateFirstBtn);
                 statusMessageElement.textContent = "Click 'Generate 1st Place Winner'."; // Specific instruction
             } else if (placePrefix === 'first') {
                 // This message clarifies that all *prizes* for this raffle have been awarded
                 statusMessageElement.textContent = "All prize winners for this raffle have been drawn! Click 'Reset Raffle' to start a new draw.";
-                // Add the golden border pulse animation to the final primary winners section
-                finalPrimaryWinnersSection.classList.add('golden-border-pulse-animation');
+                // Removed golden border pulse animation as the section is removed
+                // finalPrimaryWinnersSection.classList.add('golden-border-pulse-animation');
                 // Enable the reset button once all winners are displayed and change its color
                 resetRaffleBtn.disabled = false;
                 resetRaffleBtn.classList.remove('bg-gray-300');
@@ -805,9 +762,9 @@
                 revealWinnersBtn.style.display = 'none'; // Hide the button
 
                 // Temporarily make content visible (but hidden by opacity) to get scrollHeight
-                raffleContentContainer.style.display = 'block'; // Ensure it's in flow
-                raffleContentContainer.style.visibility = 'hidden'; // Keep visually hidden
-                raffleContentContainer.style.maxHeight = 'none'; // Allow content to determine height
+                raffleContentContainer.classList.remove('hidden'); // Remove hidden to allow measurement
+                raffleContentContainer.style.visibility = 'hidden'; // Keep visually hidden for now
+                raffleContentContainer.style.maxHeight = 'none'; // Allow content to determine height for scrollHeight calculation
                 raffleContentContainer.style.opacity = '0'; // Keep it hidden for now
 
                 const contentHeight = raffleContentContainer.scrollHeight;
@@ -831,6 +788,7 @@
                 }, { once: true });
 
                 // Activate the 3rd place section and enable its button after reveal
+                thirdPlaceSection.classList.remove('hidden'); // Make 3rd place visible
                 activateSection(thirdPlaceSection, generateThirdBtn);
                 statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 3rd Place Winner' to begin.";
             });
