@@ -617,12 +617,15 @@
 
         /**
          * Triggers a confetti animation from the top center of the screen.
+         * @param {number} [particleCount=150] - Number of confetti particles.
+         * @param {number} [spread=90] - How wide the confetti spreads.
+         * @param {Object} [origin={ y: 0.6 }] - Origin point of the confetti.
          */
-        function triggerConfetti() {
+        function triggerConfetti(particleCount = 150, spread = 90, origin = { y: 0.6 }) {
             confetti({
-                particleCount: 150, /* Increased particle count */
-                spread: 90, /* Wider spread */
-                origin: { y: 0.6 },
+                particleCount: particleCount,
+                spread: spread,
+                origin: origin,
                 colors: ['#FFD700', '#C0C0C0', '#CD7F32', '#FFFFFF', '#FF69B4'] /* Gold, Silver, Bronze, White, Pink */
             });
         }
@@ -758,10 +761,16 @@
                 const scrollOffset = mergedWinnersSection.offsetTop - 20;
                 window.scrollTo({ top: Math.max(0, scrollOffset), behavior: 'smooth' });
 
-                // Add a small delay after scrolling to allow the scroll animation to begin and apply animation
-                await delay(500); // Adjust this delay as needed
+                // Add a slightly longer delay after scrolling to ensure the scroll animation has finished before the reveal animation starts
+                await delay(1200);
+
+                // Make the merged section visible and apply the fade-in animation
                 mergedWinnersSection.classList.remove('hidden'); // Make it visible
-                mergedWinnersSection.classList.add('fade-in-section');
+                mergedWinnersSection.classList.add('fade-in-section'); // Apply fade-in animation
+
+                // Add a final, more pronounced confetti burst for the big reveal
+                triggerConfetti(250, 120); // More particles, wider spread
+
 
                 // Enable the reset button once all winners are displayed and change its color
                 resetRaffleBtn.disabled = false;
