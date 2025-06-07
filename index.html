@@ -616,18 +616,23 @@
         }
 
         /**
-         * Triggers a confetti animation from the top center of the screen.
+         * Triggers a confetti animation with customizable parameters.
          * @param {number} [particleCount=150] - Number of confetti particles.
          * @param {number} [spread=90] - How wide the confetti spreads.
-         * @param {Object} [origin={ y: 0.6 }] - Origin point of the confetti.
+         * @param {Object} [origin={ x: 0.5, y: 0.6 }] - Origin point of the confetti ({x, y} from 0 to 1).
+         * @param {number} [angle] - Angle of the confetti in degrees. If not provided, it spreads upward.
          */
-        function triggerConfetti(particleCount = 150, spread = 90, origin = { y: 0.6 }) {
-            confetti({
+        function triggerConfetti(particleCount = 150, spread = 90, origin = { x: 0.5, y: 0.6 }, angle = undefined) {
+            const config = {
                 particleCount: particleCount,
                 spread: spread,
                 origin: origin,
                 colors: ['#FFD700', '#C0C0C0', '#CD7F32', '#FFFFFF', '#FF69B4'] /* Gold, Silver, Bronze, White, Pink */
-            });
+            };
+            if (angle !== undefined) {
+                config.angle = angle;
+            }
+            confetti(config);
         }
 
         /**
@@ -769,7 +774,11 @@
                 mergedWinnersSection.classList.add('fade-in-section'); // Apply fade-in animation
 
                 // Add a final, more pronounced confetti burst for the big reveal
-                triggerConfetti(250, 120); // More particles, wider spread
+                triggerConfetti(250, 120, { x: 0.5, y: 0.6 }); // General central burst
+
+                // Add inward-shooting fireworks effect from the sides
+                triggerConfetti(100, 60, { x: 0.1, y: 0.9 }, 45); // From bottom-left, shooting up-right
+                triggerConfetti(100, 60, { x: 0.9, y: 0.9 }, 135); // From bottom-right, shooting up-left
 
 
                 // Enable the reset button once all winners are displayed and change its color
