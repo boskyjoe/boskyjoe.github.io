@@ -218,7 +218,7 @@
             <p class="text-base text-gray-700 mb-10 relative z-10"> <!-- Changed text-lg to text-base -->
                 Congratulations to all our lucky winners! Thank you for participating in our church raffle.
                 Click the "Generate Winners" button for each place to reveal the winning ticket numbers.
-                <strong class="text-red-600">2nd Place winners are drawn from 'winners.txt'. 1st and 3rd Place winners are drawn from 'winners1.txt'. Each ticket can only win once!</strong>
+                <strong class="text-red-600">All winners are drawn from 'Data/RaffleTickets.txt'. Each ticket can only win once!</strong>
             </p>
 
             <div id="status-message" class="text-center text-base font-semibold text-gray-600 mb-6 relative z-10"> <!-- Changed text-lg to text-base -->
@@ -333,15 +333,15 @@
         let allTimePickedTickets = new Set();
         console.log("Global allTimePickedTickets initialized/cleared. Size (top of script):", allTimePickedTickets.size);
 
-        let raffleTicketsWinners = []; // Will be populated from winners.txt
-        let raffleTicketsWinners1 = []; // Will be populated from winners1.txt
+        // All tickets will now be populated from RaffleTickets.txt
+        let raffleTickets = []; 
 
         // Global variables to store the final winning numbers for each place
         let finalFirstWinner = '---';
         let finalSecondWinner = '---';
         let finalThirdWinner = '---';
 
-        // Global variable to store the overall total unique tickets
+        // Global variable to store the overall total unique tickets (though not directly used for picking logic, good for info)
         let overallTotalUniqueTickets = 0;
 
         const statusMessageElement = document.getElementById('status-message');
@@ -519,22 +519,15 @@
 
 
             try {
-                const [winnersData, winners1Data] = await Promise.all([
-                    fetchTicketNumbers('winners.txt'),
-                    fetchTicketNumbers('winners1.txt')
-                ]);
+                // Fetch all tickets from the single RaffleTickets.txt file
+                const ticketsData = await fetchTicketNumbers('Data/RaffleTickets.txt');
+                raffleTickets = ticketsData;
 
-                raffleTicketsWinners = winnersData; // These are already unique now
-                raffleTicketsWinners1 = winners1Data; // These are already unique now
+                console.log("DEBUG: Fetched RaffleTickets.txt unique length:", raffleTickets.length);
 
-                console.log("DEBUG: Fetched winners.txt unique length:", raffleTicketsWinners.length);
-                console.log("DEBUG: Fetched winners1.txt unique length:", raffleTicketsWinners1.length);
-
-                // Now, check if the loaded arrays have enough UNIQUE tickets for picking
-                // `winners.txt` needs 1 for 2nd place
-                // `winners1.txt` needs 2 for 1st and 3rd place
-                if (raffleTicketsWinners.length < 1 || raffleTicketsWinners1.length < 2) {
-                    statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} unique tickets (needs at least 1 for 2nd place). 'winners1.txt' has ${raffleTicketsWinners1.length} unique tickets (needs at least 2 for 1st and 3rd place). Please populate your files with more unique alphanumeric tickets.`;
+                // Now, check if the loaded array has enough UNIQUE tickets for picking all 3 places
+                if (raffleTickets.length < 3) { // Need at least 3 unique tickets for 1st, 2nd, 3rd place
+                    statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'Data/RaffleTickets.txt' has ${raffleTickets.length} unique tickets (needs at least 3 for all places). Please populate your file with more unique alphanumeric tickets.`;
                     disableAllGenerateButtons();
                     return;
                 }
@@ -545,13 +538,13 @@
             } catch (error) {
                 // Error handled in fetchTicketNumbers, which already sets status message and disables buttons.
                 console.error("ERROR: Initialization failed in initializeRaffleData:", error);
-                statusMessageElement.textContent = `Failed to initialize raffle data. Please check console for details. Ensure 'winners.txt' and 'winners1.txt' are correctly placed and formatted.`;
+                statusMessageElement.textContent = `Failed to initialize raffle data. Please check console for details. Ensure 'Data/RaffleTickets.txt' is correctly placed and formatted.`;
                 disableAllGenerateButtons();
             }
         }
 
         /**
-         * Generates a random integer between min (inclusive) and max (inclusive).
+         * Generates a random integer between min (inclusive) and max (inclusive.
          * This function is a helper to pick a random index from an array.
          * @param {number} min - The minimum value for the random number (usually 0 for array index).
          * @param {number} max - The maximum value for the random number (usually array.length - 1).
@@ -691,23 +684,10 @@
 
             // Create a Set to keep track of tickets picked for the current place (Primary only now)
             const pickedTicketsForThisPlace = new Set();
-            let sourceArrayForPlace;
-
-            // Determine the source array based on the prize place
-            if (placePrefix === 'second') { // 2nd place from winners.txt
-                sourceArrayForPlace = raffleTicketsWinners;
-            } else if (placePrefix === 'first' || placePrefix === 'third') { // 1st & 3rd place from winners1.txt
-                sourceArrayForPlace = raffleTicketsWinners1;
-            } else {
-                console.error("ERROR: Invalid place prefix provided:", placePrefix);
-                // Re-enable only the current section's button on error
-                if (placePrefix === 'first') generateFirstBtn.disabled = false;
-                if (placePrefix === 'second') generateSecondBtn.disabled = false;
-                if (placePrefix === 'third') generateThirdBtn.disabled = false;
-                statusMessageElement.textContent = "Error: Invalid prize category.";
-                return; // Exit if invalid prefix
-            }
-
+            
+            // All tickets are now drawn from the single raffleTickets array
+            const sourceArrayForPlace = raffleTickets;
+            
             // Pick the primary winner from the determined source array
             const primaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
             await animateNumberReveal(primaryElement, primaryWinner);
