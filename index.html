@@ -154,21 +154,27 @@
             animation: reveal-card 0.5s ease-out forwards;
         }
 
-        /* New styles for merged winners section (fade-in) */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); } /* Slight lift from top */
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .fade-in-section {
-            animation: fadeIn 1s ease-out forwards;
+        /* Keyframes for the 3D post-it reveal animation */
+        @keyframes reveal-postit {
+            0% { opacity: 0; transform: perspective(800px) rotateY(-90deg) translateY(20px); } /* Start flipped away and slightly down */
+            100% { opacity: 1; transform: perspective(800px) rotateY(-8deg) translateY(0); } /* End slightly flipped and in place */
         }
 
-        /* Explicit CSS rule to ensure fixed positioning for the merged winners section */
+        /* Explicit CSS rule for the merged winners section (the post-it) */
         #merged-winners-section {
             position: fixed;
             top: 5rem; /* Equivalent to Tailwind's top-20 (20 * 0.25rem = 5rem) */
             right: 1rem; /* Equivalent to Tailwind's right-4 (4 * 0.25rem = 1rem) */
             z-index: 50; /* Equivalent to Tailwind's z-50 */
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2), 0 3px 6px rgba(0,0,0,0.15); /* More subtle shadows for page flip */
+            transform-origin: right center; /* Pivot point for the 3D flip */
+            /* The 'transform' property will be managed by the reveal-postit animation */
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out, box-shadow 0.8s ease-out; /* Smooth transitions */
+        }
+
+        /* Class to apply the 3D reveal animation */
+        .reveal-postit-animation {
+            animation: reveal-postit 1.2s ease-out forwards; /* Apply this animation */
         }
     </style>
 </head>
@@ -449,7 +455,10 @@
 
             // Hide the merged section after clearing
             mergedWinnersSection.classList.add('hidden');
-            mergedWinnersSection.classList.remove('fade-in-section'); // Remove the animation class
+            mergedWinnersSection.classList.remove('reveal-postit-animation'); // Remove the animation class
+            // Reset transform property to default for next animation
+            mergedWinnersSection.style.transform = '';
+
 
             // Ensure individual winner sections are active and visible again
             firstPlaceSection.classList.remove('inactive-section');
@@ -526,7 +535,8 @@
 
             // Ensure merged winners section is hidden initially and remove animation class
             mergedWinnersSection.classList.add('hidden');
-            mergedWinnersSection.classList.remove('fade-in-section');
+            mergedWinnersSection.classList.remove('reveal-postit-animation');
+            mergedWinnersSection.style.transform = ''; // Reset transform on load
 
 
             try {
@@ -772,9 +782,9 @@
                 mergedSecondWinnerEl.textContent = finalSecondWinner;
                 mergedThirdWinnerEl.textContent = finalThirdWinner;
 
-                // Make the merged section visible and apply the fade-in animation
                 mergedWinnersSection.classList.remove('hidden'); // Make it visible
-                mergedWinnersSection.classList.add('fade-in-section'); // Apply fade-in animation
+                mergedWinnersSection.classList.add('reveal-postit-animation'); // Apply the 3D reveal animation
+
 
                 // Add a final, more pronounced confetti burst for the big reveal
                 triggerConfetti(250, 120, { x: 0.5, y: 0.6 }); // General central burst
