@@ -226,21 +226,24 @@
             </div>
 
             <!-- Merged Winners Section - This will be revealed at the end, now a pinned post-it -->
-            <div id="merged-winners-section" class="fixed top-20 right-4 z-50 bg-yellow-100 p-4 rounded-lg shadow-xl hidden flex flex-col w-40 md:w-64">
+            <div id="merged-winners-section" class="fixed top-20 right-4 z-50 bg-yellow-100 p-4 rounded-lg shadow-xl hidden flex flex-col w-40 md:w-64 relative">
+                <!-- Red Pin for the Post-it -->
+                <div class="absolute -top-2 -left-2 w-4 h-4 bg-red-500 rounded-full shadow-md"></div>
+
                 <h2 class="text-xl font-bold text-gray-800 text-center mb-2">Winner Circle</h2>
                 <div class="flex flex-col space-y-1"> <!-- Ensures stacking -->
                     <!-- 1st Place -->
-                    <div class="bg-white p-2 rounded-md shadow-sm text-center">
+                    <div class="bg-yellow-100 p-2 rounded-md shadow-sm text-center">
                         <h3 class="text-lg font-bold text-yellow-600">1st Place</h3>
                         <p id="merged-first-winner" class="text-xl font-extrabold text-yellow-800 whitespace-nowrap">---</p>
                     </div>
                     <!-- 2nd Place -->
-                    <div class="bg-white p-2 rounded-md shadow-sm text-center">
+                    <div class="bg-gray-100 p-2 rounded-md shadow-sm text-center">
                         <h3 class="text-base font-bold text-gray-600">2nd Place</h3>
                         <p id="merged-second-winner" class="text-lg font-extrabold text-gray-800 whitespace-nowrap">---</p>
                     </div>
                     <!-- 3rd Place -->
-                    <div class="bg-white p-2 rounded-md shadow-sm text-center">
+                    <div class="bg-amber-100 p-2 rounded-md shadow-sm text-center">
                         <h3 class="text-base font-bold text-amber-600">3rd Place</h3>
                         <p id="merged-third-winner" class="text-lg font-extrabold text-amber-800 whitespace-nowrap">---</p>
                     </div>
@@ -759,9 +762,6 @@
                 mergedFirstWinnerEl.textContent = finalFirstWinner;
                 mergedSecondWinnerEl.textContent = finalSecondWinner;
                 mergedThirdWinnerEl.textContent = finalThirdWinner;
-
-                // No scrolling needed as the element is fixed
-                // window.scrollTo({ top: Math.max(0, scrollOffset), behavior: 'smooth' }); // REMOVED
 
                 // Make the merged section visible and apply the fade-in animation
                 mergedWinnersSection.classList.remove('hidden'); // Make it visible
