@@ -205,6 +205,16 @@
             opacity: 0;
             animation: final-number-fade-in 0.6s ease-out forwards;
         }
+
+        /* Keyframes for progress bar animation */
+        @keyframes progress-fill {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        .progress-bar-animated {
+            animation: progress-fill 2s linear forwards; /* 2 seconds duration */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -264,7 +274,15 @@
                 <strong class="text-red-600">2nd Place winners are drawn from 'winners.txt'. 1st and 3rd Place winners are drawn from 'winners1.txt'. Each ticket can only win once!</strong>
             </p>
 
-            <div id="status-message" class="text-center text-base font-semibold text-gray-600 mb-6 relative z-10"> <!-- Changed text-lg to text-base -->
+            <!-- Loading Progress Bar -->
+            <div id="loading-progress" class="hidden flex flex-col items-center justify-center mb-6">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 overflow-hidden">
+                    <div class="bg-blue-600 h-2.5 rounded-full" style="width: 0%" id="progress-bar-fill"></div>
+                </div>
+                <p id="loading-text" class="text-sm text-gray-500 mt-2">Loading ticket numbers...</p>
+            </div>
+
+            <div id="status-message" class="text-center text-base font-semibold text-gray-600 mb-6 relative z-10">
                 Loading ticket data...
             </div>
 
@@ -422,6 +440,11 @@
         const mergedSecondWinnerEl = document.getElementById('merged-second-winner');
         const mergedThirdWinnerEl = document.getElementById('merged-third-winner');
 
+        // New references for progress bar elements
+        const loadingProgressElement = document.getElementById('loading-progress');
+        const progressBarFillElement = document.getElementById('progress-bar-fill');
+        const loadingTextElement = document.getElementById('loading-text');
+
 
         /**
          * Utility function to introduce a delay.
@@ -564,6 +587,15 @@
             mergedWinnersSection.classList.remove('reveal-postit-animation');
             mergedWinnersSection.style.transform = ''; // Reset transform on load
 
+            // Show loading progress bar
+            loadingProgressElement.classList.remove('hidden');
+            progressBarFillElement.style.width = '0%'; // Reset width
+            progressBarFillElement.classList.remove('progress-bar-animated'); // Remove to re-trigger animation
+            // Force reflow to ensure the width is reset before animation
+            void progressBarFillElement.offsetWidth; // eslint-disable-line no-unused-expressions
+            progressBarFillElement.classList.add('progress-bar-animated'); // Add to start animation
+            loadingTextElement.textContent = "Loading ticket numbers...";
+
 
             try {
                 const [winnersData, winners1Data] = await Promise.all([
@@ -577,23 +609,30 @@
                 console.log("DEBUG: Fetched winners.txt unique length:", raffleTicketsWinners.length);
                 console.log("DEBUG: Fetched winners1.txt unique length:", raffleTicketsWinners1.length);
 
+                // Wait for the progress bar animation to complete (2 seconds)
+                await delay(2000); // 2 seconds
+
+                // Hide loading progress bar
+                loadingProgressElement.classList.add('hidden');
+                progressBarFillElement.classList.remove('progress-bar-animated'); // Clean up animation class
+
+
                 // Now, check if the loaded arrays have enough UNIQUE tickets for picking
-                // `winners.txt` needs 1 for 2nd place
-                // `winners1.txt` needs 2 for 1st and 3rd place
                 if (raffleTicketsWinners.length < 1 || raffleTicketsWinners1.length < 2) {
                     statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} unique tickets (needs at least 1 for 2nd place). 'winners1.txt' has ${raffleTicketsWinners1.length} unique tickets (needs at least 2 for 1st and 3rd place). Please populate your files with more unique alphanumeric tickets.`;
                     disableAllGenerateButtons();
                     return;
                 }
 
-                // If we reach here, it means files were fetched successfully and have enough tickets.
-                statusMessageElement.textContent = "Ticket data loaded successfully. Click 'Start Raffle Draw' to begin."; // Initial message before reveal
+                statusMessageElement.textContent = "Ticket data loaded successfully. Click 'Start Raffle Draw' to begin.";
 
             } catch (error) {
-                // Error handled in fetchTicketNumbers, which already sets status message and disables buttons.
                 console.error("ERROR: Initialization failed in initializeRaffleData:", error);
                 statusMessageElement.textContent = `Failed to initialize raffle data. Please check console for details. Ensure 'winners.txt' and 'winners1.txt' are correctly placed and formatted.`;
                 disableAllGenerateButtons();
+                // Ensure progress bar is hidden even on error
+                loadingProgressElement.classList.add('hidden');
+                progressBarFillElement.classList.remove('progress-bar-animated');
             }
         }
 
