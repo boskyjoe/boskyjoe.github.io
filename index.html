@@ -759,16 +759,28 @@
 
             // This block handles what happens AFTER a set of winners is drawn (e.g., enables next button or sets final prize message)
             if (placePrefix === 'third') {
+                // Reveal the merged winners section after the first draw (3rd place)
+                mergedWinnersSection.classList.remove('hidden'); // Make it visible
+                mergedWinnersSection.classList.add('reveal-postit-animation'); // Apply the 3D reveal animation
+                // Update the 3rd place winner in the merged section with animation
+                await animateNumberReveal(mergedThirdWinnerEl, finalThirdWinner);
+
                 // Reveal and activate the second place section
                 secondPlaceSection.classList.remove('hidden'); // Make it visible
                 activateSection(secondPlaceSection, generateSecondBtn);
                 statusMessageElement.textContent = "Click 'Generate 2nd Place Winner'."; // Specific instruction
             } else if (placePrefix === 'second') {
+                // Update the 2nd place winner in the merged section with animation
+                await animateNumberReveal(mergedSecondWinnerEl, finalSecondWinner);
+
                 // Reveal and activate the first place section
                 firstPlaceSection.classList.remove('hidden'); // Make it visible
                 activateSection(firstPlaceSection, generateFirstBtn);
                 statusMessageElement.textContent = "Click 'Generate 1st Place Winner'."; // Specific instruction
             } else if (placePrefix === 'first') {
+                // Update the 1st place winner in the merged section with animation
+                await animateNumberReveal(mergedFirstWinnerEl, finalFirstWinner);
+
                 // This message clarifies that all *prizes* for this raffle have been awarded
                 statusMessageElement.textContent = "All prize winners for this raffle have been drawn! Click 'Reset Raffle' to start a new draw.";
 
@@ -781,15 +793,6 @@
                 generateFirstBtn.disabled = true;
                 generateSecondBtn.disabled = true;
                 generateThirdBtn.disabled = true;
-
-                // Populate and reveal the merged winners section (now fixed "post-it")
-                mergedFirstWinnerEl.textContent = finalFirstWinner;
-                mergedSecondWinnerEl.textContent = finalSecondWinner;
-                mergedThirdWinnerEl.textContent = finalThirdWinner;
-
-                mergedWinnersSection.classList.remove('hidden'); // Make it visible
-                mergedWinnersSection.classList.add('reveal-postit-animation'); // Apply the 3D reveal animation
-
 
                 // Add a final, more pronounced confetti burst for the big reveal
                 triggerConfetti(250, 120, { x: 0.5, y: 0.6 }); // General central burst
