@@ -213,7 +213,7 @@
         }
 
         .progress-bar-animated {
-            animation: progress-fill 2s linear forwards; /* 2 seconds duration */
+            animation: progress-fill 5s linear forwards; /* Changed from 2s to 5s duration */
         }
     </style>
 </head>
@@ -609,8 +609,8 @@
                 console.log("DEBUG: Fetched winners.txt unique length:", raffleTicketsWinners.length);
                 console.log("DEBUG: Fetched winners1.txt unique length:", raffleTicketsWinners1.length);
 
-                // Wait for the progress bar animation to complete (2 seconds)
-                await delay(2000); // 2 seconds
+                // Wait for the progress bar animation to complete (5 seconds)
+                await delay(5000); // Changed from 2 seconds to 5 seconds
 
                 // Hide loading progress bar
                 loadingProgressElement.classList.add('hidden');
