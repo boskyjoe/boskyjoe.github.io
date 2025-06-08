@@ -379,16 +379,13 @@
         let allTimePickedTickets = new Set();
         console.log("Global allTimePickedTickets initialized/cleared. Size (top of script):", allTimePickedTickets.size);
 
-        let raffleTicketsWinners = []; // Will be populated from winners.txt
-        let raffleTicketsWinners1 = []; // Will be populated from winners1.txt
+        // This array will now hold all raffle tickets from 'Data/RaffleTickets.txt'
+        let allRaffleTickets = []; // Changed to hold all tickets from the single source
 
         // Global variables to store the final winning numbers for each place
         let finalFirstWinner = '---';
         let finalSecondWinner = '---';
         let finalThirdWinner = '---';
-
-        // Global variable to store the overall total unique tickets
-        let overallTotalUniqueTickets = 0;
 
         const statusMessageElement = document.getElementById('status-message');
         const generateButtons = document.querySelectorAll('.winner-button');
@@ -408,7 +405,7 @@
         const revealWinnersBtn = document.getElementById('reveal-winners-btn');
         const raffleContentContainer = document.getElementById('raffle-content-container');
 
-        // Reference for the winner sections wrapper
+        // Reference for the winner sections wrapper (unused in this specific logic but good to keep if UI implies it)
         const winnerSectionsWrapper = document.getElementById('winner-sections-wrapper');
 
         // References for the reset confirmation modal
@@ -566,9 +563,8 @@
 
 
             try {
-                const [ticketsData] = await Promise.all([
-                    fetchTicketNumbers('Data/RaffleTickets.txt')
-                ]);
+                // Fetch all tickets from 'Data/RaffleTickets.txt'
+                const ticketsData = await fetchTicketNumbers('Data/RaffleTickets.txt');
 
                 // Populate allRaffleTickets from the single source
                 allRaffleTickets = ticketsData;
