@@ -405,9 +405,6 @@
         let finalSecondWinner = '---';
         let finalThirdWinner = '---';
 
-        // Global variable to store the overall total unique tickets (now just the length of allRaffleTickets)
-        let overallTotalUniqueTickets = 0;
-
         const statusMessageElement = document.getElementById('status-message');
         const generateButtons = document.querySelectorAll('.winner-button');
         const resetRaffleBtn = document.getElementById('reset-raffle-btn');
@@ -419,16 +416,17 @@
 
         // Get references to the "Generate Winners" buttons for each place
         const generateFirstBtn = document.getElementById('generate-first');
-        const generateSecondBtn = document.getElementById('generate-second'); // Corrected typo here
+        const generateSecondBtn = document.getElementById('generate-second');
         const generateThirdBtn = document.getElementById('generate-third');
 
         // References for the reveal functionality
         const revealWinnersBtn = document.getElementById('reveal-winners-btn');
-        const raffleContentContainer = document.getElementById('raffle-content-container'); // This is the main content wrapper
+        const raffleContentMain = document.getElementById('raffle-content-main'); // Corrected ID reference
+        const raffleContentContainer = document.getElementById('raffle-content-container'); // Retaining this for the slide-down effect
 
         // References for the reset confirmation modal
         const resetConfirmModal = document.getElementById('reset-confirm-modal');
-        const confirmResetBtn = document.getElementById('confirm-reset-btn'); // Corrected typo here
+        const confirmResetBtn = document.getElementById('confirm-reset-btn');
         const cancelResetBtn = document.getElementById('cancel-reset-btn');
 
         // References for the new merged winners section
@@ -549,10 +547,10 @@
          */
         async function initializeRaffleData() {
             // Hide the main raffle content container initially
-            raffleContentContainer.classList.add('hidden');
+            raffleContentMain.classList.add('hidden'); // Use raffleContentMain to hide the content div
 
             statusMessageElement.textContent = ""; // Clear initial status message
-            statusMessageElement.classList.add('hidden'); // Ensure status message is hidden
+            statusMessageElement.classList.add('hidden'); // Ensure status message is hidden initially for the content section
             disableAllGenerateButtons(); // Disable all buttons initially
 
             allTimePickedTickets.clear(); // Ensure this is clear on any re-initialization
@@ -590,6 +588,7 @@
             progressBarFillElement.classList.add('progress-bar-animated');
             loadingTextElement.textContent = "Loading ticket numbers...";
 
+
             try {
                 // Fetch all tickets from 'Data/RaffleTickets.txt'
                 const [ticketsData] = await Promise.all([
@@ -617,7 +616,7 @@
                 }
 
                 // Show the main raffle content container after successful loading
-                raffleContentContainer.classList.remove('hidden');
+                raffleContentMain.classList.remove('hidden');
                 statusMessageElement.classList.remove('hidden');
                 statusMessageElement.textContent = "Ticket data loaded successfully. Click 'Start Raffle Draw' to begin.";
 
@@ -799,11 +798,8 @@
 
             statusMessageElement.textContent = "Drawing winner...";
 
-            // Create a Set to keep track of tickets picked for the current place (Primary only now)
-            // This ensures that for this specific draw, if primary and secondary were drawn from the same pool,
-            // they wouldn't accidentally be the same. Given we only pick one now, this just prevents
-            // picking a ticket that was already picked for *any* prize.
-            const pickedTicketsForThisPlace = new Set(); // This is now functionally redundant if pickSingleUniqueTicket handles global uniqueness
+            // Create a Set to keep track of tickets picked for the current draw locally
+            const pickedTicketsForThisPlace = new Set();
 
             // All tickets are now from 'allRaffleTickets'
             const sourceArrayForPlace = allRaffleTickets;
