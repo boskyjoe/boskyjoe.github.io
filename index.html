@@ -683,7 +683,8 @@
         }
 
         /**
-         * Animates a number reveal effect on a given element.
+         * Animates a number reveal effect on a given element with random numbers scrolling.
+         * This is used for the primary winner sections.
          * @param {HTMLElement} element - The HTML element to animate.
          * @param {string} finalNumber - The final number to display.
          */
@@ -692,32 +693,41 @@
             const startTime = Date.now();
             const interval = 50; // Update every 50ms
 
-            // Remove previous reveal animation class if any
-            element.classList.remove('final-number-reveal');
+            element.classList.remove('final-number-reveal'); // Ensure no lingering fade-in class
             element.classList.add('pulsing-text'); // Start pulsing animation for random numbers
 
             return new Promise(resolve => {
                 const animationInterval = setInterval(() => {
                     const elapsed = Date.now() - startTime;
                     if (elapsed < duration) {
-                        // Generate a random alphanumeric string for the animation
                         element.textContent = generateRandomAlphanumeric();
                     } else {
                         clearInterval(animationInterval);
                         element.classList.remove('pulsing-text'); // Stop pulsing animation
-
-                        // Set the final number and apply the fade-in animation
-                        element.textContent = finalNumber;
-                        element.classList.add('final-number-reveal'); // Apply fade-in animation
-
-                        // Listen for the animation end to resolve the promise
-                        element.addEventListener('animationend', function handler() {
-                            element.removeEventListener('animationend', handler);
-                            triggerConfetti(); // Trigger confetti after the final number is revealed and animated
-                            resolve();
-                        }, { once: true });
+                        element.textContent = finalNumber; // Set the final number
+                        triggerConfetti(); // Trigger confetti after the primary number is revealed
+                        resolve();
                     }
                 }, interval);
+            });
+        }
+
+        /**
+         * Animates a number to simply fade in without random number generation.
+         * This is used for updating the merged Winner Circle section.
+         * @param {HTMLElement} element - The HTML element to animate.
+         * @param {string} finalNumber - The final number to display.
+         */
+        async function fadeInNumber(element, finalNumber) {
+            element.textContent = finalNumber; // Set the content immediately
+            element.classList.remove('pulsing-text'); // Ensure pulsing is removed if it somehow got applied
+            element.classList.add('final-number-reveal'); // Apply the fade-in animation
+
+            return new Promise(resolve => {
+                element.addEventListener('animationend', function handler() {
+                    element.removeEventListener('animationend', handler);
+                    resolve();
+                }, { once: true });
             });
         }
 
@@ -730,6 +740,8 @@
         async function updateWinnersDisplay(placePrefix) {
             // Get references to the specific HTML element where the winner will be displayed
             const primaryElement = document.getElementById(`${placePrefix}-primary`);
+            // Get reference to the corresponding merged winner element
+            const mergedElement = document.getElementById(`merged-${placePrefix}-winner`);
 
             // Disable the button that was just clicked
             let currentButton;
@@ -767,7 +779,7 @@
 
             // Pick the primary winner from the determined source array
             const primaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
-            await animateNumberReveal(primaryElement, primaryWinner);
+            await animateNumberReveal(primaryElement, primaryWinner); // Use animateNumberReveal for primary sections
             console.log(`DEBUG: After Winning Number draw (${placePrefix}): allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
 
             // If a winner is "N/A", it means the pool was exhausted, so stop further drawing for this prize
@@ -793,24 +805,24 @@
                 // Reveal the merged winners section after the first draw (3rd place)
                 mergedWinnersSection.classList.remove('hidden'); // Make it visible
                 mergedWinnersSection.classList.add('reveal-postit-animation'); // Apply the 3D reveal animation
-                // Update the 3rd place winner in the merged section with animation
-                await animateNumberReveal(mergedThirdWinnerEl, finalThirdWinner);
+                // Update the 3rd place winner in the merged section with fade-in animation
+                await fadeInNumber(mergedThirdWinnerEl, finalThirdWinner);
 
                 // Reveal and activate the second place section
                 secondPlaceSection.classList.remove('hidden'); // Make it visible
                 activateSection(secondPlaceSection, generateSecondBtn);
                 statusMessageElement.textContent = "Click 'Generate 2nd Place Winner'."; // Specific instruction
             } else if (placePrefix === 'second') {
-                // Update the 2nd place winner in the merged section with animation
-                await animateNumberReveal(mergedSecondWinnerEl, finalSecondWinner);
+                // Update the 2nd place winner in the merged section with fade-in animation
+                await fadeInNumber(mergedSecondWinnerEl, finalSecondWinner);
 
                 // Reveal and activate the first place section
                 firstPlaceSection.classList.remove('hidden'); // Make it visible
                 activateSection(firstPlaceSection, generateFirstBtn);
                 statusMessageElement.textContent = "Click 'Generate 1st Place Winner'."; // Specific instruction
             } else if (placePrefix === 'first') {
-                // Update the 1st place winner in the merged section with animation
-                await animateNumberReveal(mergedFirstWinnerEl, finalFirstWinner);
+                // Update the 1st place winner in the merged section with fade-in animation
+                await fadeInNumber(mergedFirstWinnerEl, finalFirstWinner);
 
                 // This message clarifies that all *prizes* for this raffle have been awarded
                 statusMessageElement.textContent = "All prize winners for this raffle have been drawn! Click 'Reset Raffle' to start a new draw.";
