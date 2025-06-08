@@ -181,6 +181,30 @@
         #merged-winners-section h2 {
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3); /* Subtle text shadow for pop effect */
         }
+
+        /* New Keyframes for fade-out animation when resetting */
+        @keyframes fade-out-text {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        /* Class for fade-out animation */
+        .fade-out-animation {
+            animation: fade-out-text 0.3s ease-out forwards;
+        }
+
+        /* New Keyframes for the final number fading in */
+        @keyframes final-number-fade-in {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Class to apply the final number fade-in animation */
+        .final-number-reveal {
+            /* This ensures the element starts transparent before the animation */
+            opacity: 0;
+            animation: final-number-fade-in 0.6s ease-out forwards;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -446,29 +470,26 @@
                         element.addEventListener('animationend', () => {
                             element.classList.remove('fade-out-animation');
                             element.textContent = '---';
+                            element.style.opacity = '0'; // Ensure opacity is 0 after clearing for next fade-in
+                            element.classList.remove('final-number-reveal'); // Remove this too
                             resolve();
                         }, { once: true });
                     }));
-                } else {
-                    // If already '---' or element doesn't exist, resolve immediately
+                } else if (element) { // If already '---', just ensure its opacity is 0 and no animation classes
+                    element.textContent = '---';
+                    element.style.opacity = '0';
+                    element.classList.remove('final-number-reveal');
+                    element.classList.remove('pulsing-text'); // Just in case
                     animations.push(Promise.resolve());
                 }
             });
 
-            // Wait for all fade-out animations to complete
             await Promise.all(animations);
 
             // Hide the merged section after clearing
             mergedWinnersSection.classList.add('hidden');
             mergedWinnersSection.classList.remove('reveal-postit-animation'); // Remove the animation class
-            // Reset transform property to default for next animation
-            mergedWinnersSection.style.transform = '';
-
-
-            // Ensure individual winner sections are active and visible again
-            firstPlaceSection.classList.remove('inactive-section');
-            secondPlaceSection.classList.remove('inactive-section');
-            thirdPlaceSection.classList.remove('inactive-section');
+            mergedWinnersSection.style.transform = ''; // Reset transform on load
         }
 
         /**
@@ -671,7 +692,9 @@
             const startTime = Date.now();
             const interval = 50; // Update every 50ms
 
-            element.classList.add('pulsing-text'); // Start pulsing animation
+            // Remove previous reveal animation class if any
+            element.classList.remove('final-number-reveal');
+            element.classList.add('pulsing-text'); // Start pulsing animation for random numbers
 
             return new Promise(resolve => {
                 const animationInterval = setInterval(() => {
@@ -681,10 +704,18 @@
                         element.textContent = generateRandomAlphanumeric();
                     } else {
                         clearInterval(animationInterval);
-                        element.textContent = finalNumber;
                         element.classList.remove('pulsing-text'); // Stop pulsing animation
-                        triggerConfetti(); // Trigger confetti after each number is revealed
-                        resolve();
+
+                        // Set the final number and apply the fade-in animation
+                        element.textContent = finalNumber;
+                        element.classList.add('final-number-reveal'); // Apply fade-in animation
+
+                        // Listen for the animation end to resolve the promise
+                        element.addEventListener('animationend', function handler() {
+                            element.removeEventListener('animationend', handler);
+                            triggerConfetti(); // Trigger confetti after the final number is revealed and animated
+                            resolve();
+                        }, { once: true });
                     }
                 }, interval);
             });
