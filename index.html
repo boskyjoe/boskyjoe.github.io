@@ -243,47 +243,47 @@
             </div>
         </div>
 
-        <!-- Sponsor Section -->
-        <div id="sponsor-section" class="bg-gradient-to-br from-blue-200 to-blue-400 p-4 md:p-6 rounded-xl shadow-2xl mt-6 mb-6 relative z-10"> <!-- Reduced padding and margins -->
-            <h2 class="text-2xl font-extrabold text-indigo-800 mb-4">Our Esteemed Sponsor</h2> <!-- Reduced text size and margin -->
-            <div class="flex flex-col md:flex-row items-center justify-center md:justify-around gap-6"> <!-- Reduced gap -->
+        <!-- Sponsor Section (Always visible) -->
+        <div id="sponsor-section" class="bg-gradient-to-br from-blue-200 to-blue-400 p-4 md:p-6 rounded-xl shadow-2xl mt-6 mb-6 relative z-10">
+            <h2 class="text-2xl font-extrabold text-indigo-800 mb-4">Our Esteemed Sponsor</h2>
+            <div class="flex flex-col md:flex-row items-center justify-center md:justify-around gap-6">
                 <div class="flex flex-col items-center">
-                    <img src="https://placehold.co/120x120/A0A0A0/FFFFFF?text=Emjay+Logo" alt="Emjay Engineering Company Logo" class="w-28 h-28 rounded-full shadow-lg mb-3 object-cover"> <!-- Reduced w/h and margin -->
-                    <h3 class="text-lg font-semibold text-gray-800">Emjay Engineering Company</h3> <!-- Reduced text size -->
+                    <img src="https://placehold.co/120x120/A0A0A0/FFFFFF?text=Emjay+Logo" alt="Emjay Engineering Company Logo" class="w-28 h-28 rounded-full shadow-lg mb-3 object-cover">
+                    <h3 class="text-lg font-semibold text-gray-800">Emjay Engineering Company</h3>
                 </div>
                 <div class="flex flex-col items-center">
-                    <img src="https://placehold.co/120x120/808080/FFFFFF?text=Proprietor+Photo" alt="Proprietor Photo" class="w-28 h-28 rounded-full shadow-lg mb-3 object-cover"> <!-- Reduced w/h and margin -->
-                    <h3 class="text-lg font-semibold text-gray-800">Proprietor</h3> <!-- Reduced text size -->
+                    <img src="https://placehold.co/120x120/808080/FFFFFF?text=Proprietor+Photo" alt="Proprietor Photo" class="w-28 h-28 rounded-full shadow-lg mb-3 object-cover">
+                    <h3 class="text-lg font-semibold text-gray-800">Proprietor</h3>
                 </div>
             </div>
-            <p class="text-base text-gray-700 mt-4"> <!-- Reduced text size and margin -->
+            <p class="text-base text-gray-700 mt-4">
                 We extend our heartfelt gratitude to <strong class="text-indigo-700">Emjay Engineering Company</strong> for sponsoring this raffle.
                 The lucky winners of the apartments will find their new homes in the beautiful <strong class="text-green-700">Sierra Greens at Sarjapur Road</strong>.
             </p>
-            <button id="reveal-winners-btn" class="mt-6 px-6 py-3 bg-purple-600 text-white font-bold text-lg rounded-full shadow-lg hover:bg-purple-700 transition duration-300 ease-in-out"> <!-- Reduced padding and text size -->
+            <button id="reveal-winners-btn" class="mt-6 px-6 py-3 bg-purple-600 text-white font-bold text-lg rounded-full shadow-lg hover:bg-purple-700 transition duration-300 ease-in-out">
                 Start Raffle Draw
             </button>
         </div>
         <!-- End Sponsor Section -->
 
-        <!-- Container for content revealed after click -->
-        <div id="raffle-content-container" class="hidden">
-            <p class="text-base text-gray-700 mb-10 relative z-10"> <!-- Changed text-lg to text-base -->
+        <!-- Loading Progress Bar - Initially hidden, shown during data load -->
+        <div id="loading-progress" class="hidden flex flex-col items-center justify-center mb-6">
+            <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 overflow-hidden">
+                <div class="bg-blue-600 h-2.5 rounded-full" style="width: 0%" id="progress-bar-fill"></div>
+            </div>
+            <p id="loading-text" class="text-sm text-gray-500 mt-2">Loading ticket numbers...</p>
+        </div>
+
+        <!-- Container for raffle content (hidden until revealed after loading) -->
+        <div id="raffle-content-main" class="hidden">
+            <p class="text-base text-gray-700 mb-10 relative z-10">
                 Congratulations to all our lucky winners! Thank you for participating in our church raffle.
                 Click the "Generate Winners" button for each place to reveal the winning ticket numbers.
                 <strong class="text-red-600">2nd Place winners are drawn from 'winners.txt'. 1st and 3rd Place winners are drawn from 'winners1.txt'. Each ticket can only win once!</strong>
             </p>
 
-            <!-- Loading Progress Bar -->
-            <div id="loading-progress" class="hidden flex flex-col items-center justify-center mb-6">
-                <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 overflow-hidden">
-                    <div class="bg-blue-600 h-2.5 rounded-full" style="width: 0%" id="progress-bar-fill"></div>
-                </div>
-                <p id="loading-text" class="text-sm text-gray-500 mt-2">Loading ticket numbers...</p>
-            </div>
-
             <div id="status-message" class="text-center text-base font-semibold text-gray-600 mb-6 relative z-10">
-                Loading ticket data...
+                Ticket data loaded successfully. Click 'Start Raffle Draw' to begin.
             </div>
 
             <!-- New wrapper for winner sections -->
@@ -341,7 +341,7 @@
                 Reset Raffle
             </button>
         </div>
-        <!-- End Container for content revealed after click -->
+        <!-- End Container for raffle content -->
     </div>
 
     <!-- Merged Winners Section - This will be revealed at the end, now a pinned post-it -->
@@ -426,8 +426,8 @@
         const revealWinnersBtn = document.getElementById('reveal-winners-btn');
         const raffleContentContainer = document.getElementById('raffle-content-container');
 
-        // Reference for the winner sections wrapper
-        const winnerSectionsWrapper = document.getElementById('winner-sections-wrapper');
+        // Reference for the wrapper that contains the main raffle content (text and winner sections)
+        const raffleContentMain = document.getElementById('raffle-content-main');
 
         // References for the reset confirmation modal
         const resetConfirmModal = document.getElementById('reset-confirm-modal');
@@ -552,7 +552,11 @@
          * Sets up initial UI state for the raffle.
          */
         async function initializeRaffleData() {
-            statusMessageElement.textContent = "Loading ticket data...";
+            // Hide the main raffle content container first
+            raffleContentMain.classList.add('hidden');
+
+            statusMessageElement.textContent = ""; // Clear initial status message
+            statusMessageElement.classList.add('hidden'); // Ensure status message is hidden
             disableAllGenerateButtons(); // Disable all buttons initially
 
             allTimePickedTickets.clear(); // Ensure this is clear on any re-initialization
@@ -610,24 +614,30 @@
                 console.log("DEBUG: Fetched winners1.txt unique length:", raffleTicketsWinners1.length);
 
                 // Wait for the progress bar animation to complete (5 seconds)
-                await delay(5000); // Changed from 2 seconds to 5 seconds
+                await delay(5000);
 
                 // Hide loading progress bar
                 loadingProgressElement.classList.add('hidden');
                 progressBarFillElement.classList.remove('progress-bar-animated'); // Clean up animation class
 
+                // Show the main raffle content container
+                raffleContentMain.classList.remove('hidden');
+
 
                 // Now, check if the loaded arrays have enough UNIQUE tickets for picking
                 if (raffleTicketsWinners.length < 1 || raffleTicketsWinners1.length < 2) {
+                    statusMessageElement.classList.remove('hidden'); // Show status message on error
                     statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} unique tickets (needs at least 1 for 2nd place). 'winners1.txt' has ${raffleTicketsWinners1.length} unique tickets (needs at least 2 for 1st and 3rd place). Please populate your files with more unique alphanumeric tickets.`;
                     disableAllGenerateButtons();
                     return;
                 }
 
+                statusMessageElement.classList.remove('hidden'); // Show status message on success
                 statusMessageElement.textContent = "Ticket data loaded successfully. Click 'Start Raffle Draw' to begin.";
 
             } catch (error) {
                 console.error("ERROR: Initialization failed in initializeRaffleData:", error);
+                statusMessageElement.classList.remove('hidden'); // Ensure status message is visible on error
                 statusMessageElement.textContent = `Failed to initialize raffle data. Please check console for details. Ensure 'winners.txt' and 'winners1.txt' are correctly placed and formatted.`;
                 disableAllGenerateButtons();
                 // Ensure progress bar is hidden even on error
@@ -911,31 +921,9 @@
                 revealWinnersBtn.disabled = true; // Disable button after click
                 revealWinnersBtn.style.display = 'none'; // Hide the button
 
-                // Temporarily make content visible (but hidden by opacity) to get scrollHeight
-                raffleContentContainer.classList.remove('hidden'); // Remove hidden to allow measurement
-                raffleContentContainer.style.visibility = 'hidden'; // Keep visually hidden for now
-                raffleContentContainer.style.maxHeight = 'none'; // Allow content to determine height for scrollHeight calculation
-                raffleContentContainer.style.opacity = '0'; // Keep it hidden for now
-
-                const contentHeight = raffleContentContainer.scrollHeight;
-
-                // Reset styles for transition
-                raffleContentContainer.style.maxHeight = '0px'; // Collapse for animation start
-                raffleContentContainer.style.visibility = ''; // Make visible for transition
-                raffleContentContainer.style.opacity = '0'; // Ensure opacity is 0 before transition
-
-                // Force reflow to ensure CSS properties are applied before transition starts
-                void raffleContentContainer.offsetWidth; // eslint-disable-line no-unused-expressions
-
-                // Trigger the transition
-                raffleContentContainer.style.maxHeight = `${contentHeight}px`;
-                raffleContentContainer.style.opacity = '1';
-
-                // After the transition completes, remove max-height to allow natural flow
-                raffleContentContainer.addEventListener('transitionend', function handler() {
-                    raffleContentContainer.style.maxHeight = 'none'; // Allow content to adjust naturally
-                    raffleContentContainer.removeEventListener('transitionend', handler);
-                }, { once: true });
+                // Trigger the main content container to reveal with transition
+                // This is now done after the initial loading process
+                // No longer needed here as initializeRaffleData handles it after delay
 
                 // Activate the 3rd place section and enable its button after reveal
                 thirdPlaceSection.classList.remove('hidden'); // Make 3rd place visible
