@@ -176,6 +176,11 @@
         .reveal-postit-animation {
             animation: reveal-postit 1.2s ease-out forwards; /* Apply this animation */
         }
+
+        /* Custom text shadow for the Winner Circle title */
+        #merged-winners-section h2 {
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3); /* Subtle text shadow for pop effect */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -303,20 +308,20 @@
         <!-- Red Pin for the Post-it -->
         <div class="absolute -top-2 -left-2 w-4 h-4 bg-red-500 rounded-full shadow-md"></div>
 
-        <h2 class="text-xl font-bold text-gray-800 text-center mb-2">Winner Circle</h2>
+        <h2 class="text-2xl font-bold text-gray-800 text-center mb-2">Winner Circle</h2>
         <div class="flex flex-col space-y-1"> <!-- Ensures stacking -->
-            <!-- 1st Place - Background matches 1st place section -->
-            <div class="bg-yellow-100 p-2 rounded-md shadow-sm text-center">
+            <!-- 1st Place - Background matches 1st place section, added border -->
+            <div class="bg-yellow-100 border-yellow-500 border-2 p-2 rounded-md shadow-sm text-center">
                 <h3 class="text-lg font-bold text-yellow-600">1st Place</h3>
                 <p id="merged-first-winner" class="text-xl font-extrabold text-yellow-800 whitespace-nowrap">---</p>
             </div>
-            <!-- 2nd Place - Background matches 2nd place section -->
-            <div class="bg-gray-100 p-2 rounded-md shadow-sm text-center">
+            <!-- 2nd Place - Background matches 2nd place section, added border -->
+            <div class="bg-gray-100 border-gray-500 border-2 p-2 rounded-md shadow-sm text-center">
                 <h3 class="text-base font-bold text-gray-600">2nd Place</h3>
                 <p id="merged-second-winner" class="text-lg font-extrabold text-gray-800 whitespace-nowrap">---</p>
             </div>
-            <!-- 3rd Place - Background matches 3rd place section -->
-            <div class="bg-amber-100 p-2 rounded-md shadow-sm text-center">
+            <!-- 3rd Place - Background matches 3rd place section, added border -->
+            <div class="bg-amber-100 border-amber-500 border-2 p-2 rounded-md shadow-sm text-center">
                 <h3 class="text-base font-bold text-amber-600">3rd Place</h3>
                 <p id="merged-third-winner" class="text-lg font-extrabold text-amber-800 whitespace-nowrap">---</p>
             </div>
