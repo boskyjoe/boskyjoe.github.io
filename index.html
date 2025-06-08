@@ -303,17 +303,17 @@
                 </div>
 
                 <!-- First Place Section (now displayed third) -->
-                <div id="first-place-section" class="winner-section bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
+                <div id="first-place-section" class="winner-section bg-gradient-to-br from-purple-700 to-purple-900 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
                     <h2 class="text-3xl font-bold text-white mb-6 flex-items-center justify-center">
                         <span class="mr-3 text-4xl">🥇</span> 1st Place Winner
                     </h2>
                     <div class="grid grid-cols-1 gap-6 mb-6">
-                        <div class="winner-card bg-yellow-100 p-4 rounded-md shadow-md">
-                            <h3 class="text-xl font-semibold text-yellow-800">Winning Number</h3>
-                            <p id="first-primary" class="text-3xl font-bold text-yellow-900 mt-2">---</p>
+                        <div class="winner-card bg-purple-100 p-4 rounded-md shadow-md">
+                            <h3 class="text-xl font-semibold text-purple-800">Winning Number</h3>
+                            <p id="first-primary" class="text-3xl font-bold text-purple-900 mt-2">---</p>
                         </div>
                     </div>
-                    <button id="generate-first" class="winner-button px-8 py-3 bg-yellow-700 text-white font-semibold rounded-full shadow-lg hover:bg-yellow-800 transition duration-300 ease-in-out" disabled>
+                    <button id="generate-first" class="winner-button px-8 py-3 bg-purple-700 text-white font-semibold rounded-full shadow-lg hover:bg-purple-800 transition duration-300 ease-in-out" disabled>
                         Generate 1st Place Winner
                     </button>
                 </div>
@@ -335,9 +335,9 @@
         <h2 class="text-2xl font-bold text-gray-800 text-center mb-2">Winner Circle</h2>
         <div class="flex flex-col space-y-1"> <!-- Ensures stacking -->
             <!-- 1st Place - Background matches 1st place section, added border -->
-            <div class="bg-yellow-100 border-yellow-500 border-2 p-2 rounded-md shadow-sm text-center">
-                <h3 class="text-lg font-bold text-yellow-600">1st Place</h3>
-                <p id="merged-first-winner" class="text-xl font-extrabold text-yellow-800 whitespace-nowrap">---</p>
+            <div class="bg-purple-100 border-purple-500 border-2 p-2 rounded-md shadow-sm text-center">
+                <h3 class="text-lg font-bold text-purple-600">1st Place</h3>
+                <p id="merged-first-winner" class="text-xl font-extrabold text-purple-800 whitespace-nowrap">---</p>
             </div>
             <!-- 2nd Place - Background matches 2nd place section, added border -->
             <div class="bg-gray-100 border-gray-500 border-2 p-2 rounded-md shadow-sm text-center">
@@ -719,8 +719,15 @@
          * @param {string} finalNumber - The final number to display.
          */
         async function fadeInNumber(element, finalNumber) {
-            element.textContent = finalNumber; // Set the content immediately
-            element.classList.remove('pulsing-text'); // Ensure pulsing is removed if it somehow got applied
+            // First, ensure the element is ready for animation (e.g., opacity is 0 or it's '---')
+            element.textContent = '---'; // Clear previous content or set initial placeholder
+            element.style.opacity = '0'; // Ensure it's hidden before setting the new number
+            element.classList.remove('pulsing-text', 'final-number-reveal'); // Clear any previous animation classes
+
+            // Force reflow to ensure the browser registers the opacity: 0 state before applying the new animation
+            void element.offsetWidth; // eslint-disable-line no-unused-expressions
+
+            element.textContent = finalNumber; // Set the content to the final number
             element.classList.add('final-number-reveal'); // Apply the fade-in animation
 
             return new Promise(resolve => {
