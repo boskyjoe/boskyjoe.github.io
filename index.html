@@ -424,10 +424,9 @@
 
         // References for the reveal functionality
         const revealWinnersBtn = document.getElementById('reveal-winners-btn');
-        const raffleContentContainer = document.getElementById('raffle-content-container');
 
         // Reference for the wrapper that contains the main raffle content (text and winner sections)
-        const raffleContentMain = document.getElementById('raffle-content-main');
+        const raffleContentMain = document.getElementById('raffle-content-main'); // Corrected ID reference
 
         // References for the reset confirmation modal
         const resetConfirmModal = document.getElementById('reset-confirm-modal');
@@ -568,10 +567,11 @@
             finalThirdWinner = '---';
 
             // Set initial state for the main raffle content container and reveal button
-            raffleContentContainer.classList.add('hidden');
-            raffleContentContainer.style.maxHeight = '0px';
-            raffleContentContainer.style.opacity = '0';
-            raffleContentContainer.style.overflow = 'hidden';
+            // The original raffleContentContainer is now raffleContentMain
+            // raffleContentContainer.classList.add('hidden'); // This line is no longer needed/relevant
+            // raffleContentContainer.style.maxHeight = '0px'; // These are now handled by raffleContentMain
+            // raffleContentContainer.style.opacity = '0';
+            // raffleContentContainer.style.overflow = 'hidden';
 
             revealWinnersBtn.disabled = false; // Ensure reveal button is enabled on load
             revealWinnersBtn.style.display = 'block'; // Ensure it's visible
@@ -920,10 +920,6 @@
                 triggerConfetti(); // Trigger confetti immediately
                 revealWinnersBtn.disabled = true; // Disable button after click
                 revealWinnersBtn.style.display = 'none'; // Hide the button
-
-                // Trigger the main content container to reveal with transition
-                // This is now done after the initial loading process
-                // No longer needed here as initializeRaffleData handles it after delay
 
                 // Activate the 3rd place section and enable its button after reveal
                 thirdPlaceSection.classList.remove('hidden'); // Make 3rd place visible
