@@ -162,6 +162,14 @@
         .fade-in-section {
             animation: fadeIn 1s ease-out forwards;
         }
+
+        /* Explicit CSS rule to ensure fixed positioning for the merged winners section */
+        #merged-winners-section {
+            position: fixed;
+            top: 5rem; /* Equivalent to Tailwind's top-20 (20 * 0.25rem = 5rem) */
+            right: 1rem; /* Equivalent to Tailwind's right-4 (4 * 0.25rem = 1rem) */
+            z-index: 50; /* Equivalent to Tailwind's z-50 */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
