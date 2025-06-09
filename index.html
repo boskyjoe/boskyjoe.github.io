@@ -161,15 +161,16 @@
         }
 
         /* Explicit CSS rule for the merged winners section (the post-it) */
-        /* #merged-winners-section { /* Removed fixed positioning and related styles */
-        /* position: fixed;
-            top: 5rem;
-            right: 1rem;
-            z-index: 50;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2), 0 3px 6px rgba(0,0,0,0.15);
-            transform-origin: right center;
-            transition: opacity 0.8s ease-out, transform 0.8s ease-out, box-shadow 0.8s ease-out;
-        } */
+        #merged-winners-section {
+            position: fixed;
+            top: 5rem; /* Equivalent to Tailwind's top-20 (20 * 0.25rem = 5rem) */
+            right: 1rem; /* Equivalent to Tailwind's right-4 (4 * 0.25rem = 1rem) */
+            z-index: 50; /* Equivalent to Tailwind's z-50 */
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2), 0 3px 6px rgba(0,0,0,0.15); /* More subtle shadows for page flip */
+            transform-origin: right center; /* Pivot point for the 3D flip */
+            /* The 'transform' property will be managed by the reveal-postit animation */
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out, box-shadow 0.8s ease-out; /* Smooth transitions */
+        }
 
         /* Class to apply the 3D reveal animation */
         .reveal-postit-animation {
@@ -204,32 +205,16 @@
             opacity: 0;
             animation: final-number-fade-in 0.6s ease-out forwards;
         }
+        /* REMOVED: NEW: Styles for merged winners section (fade-in, now part of normal flow) */
+        /* REMOVED: @keyframes fadeInScaleUp { ... } */
+        /* REMOVED: .fade-in-scale-up-section { ... } */
 
-        /* NEW: Styles for merged winners section (fade-in, now part of normal flow) */
-        @keyframes fadeInScaleUp {
-            0% { opacity: 0; transform: scale(0.9); }
-            100% { opacity: 1; transform: scale(1); }
-        }
-        .fade-in-scale-up-section {
-            animation: fadeInScaleUp 1.2s ease-out forwards; /* Smooth fade-in and subtle scale */
-            transition: border 0.3s ease-in-out, box-shadow 0.3s ease-in-out; /* Keep transitions for interactive elements */
-        }
+        /* REMOVED: NEW: Highlight animation for individual numbers in merged section */
+        /* REMOVED: @keyframes number-highlight { ... } */
+        /* REMOVED: .number-highlight-animation { ... } */
 
-        /* NEW: Highlight animation for individual numbers in merged section */
-        @keyframes number-highlight {
-            0% { background-color: transparent; }
-            50% { background-color: rgba(255, 255, 0, 0.5); } /* Bright yellow flash */
-            100% { background-color: transparent; }
-        }
-        .number-highlight-animation {
-            animation: number-highlight 0.8s ease-out;
-        }
-
-        /* NEW: Golden border pulse for 1st place in merged section */
-        .golden-winner-pulse {
-            animation: golden-border-pulse 2s infinite alternate; /* Reusing existing golden-border-pulse */
-            border: 3px solid; /* Ensure border is visible for animation */
-        }
+        /* REMOVED: NEW: Golden border pulse for 1st place in merged section */
+        /* REMOVED: .golden-winner-pulse { ... } */
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -293,28 +278,6 @@
                 Loading ticket data...
             </div>
 
-            <!-- Merged Winners Section - This will be revealed at the end, now a podium display -->
-            <div id="merged-winners-section" class="bg-gradient-to-br from-indigo-600 to-purple-800 p-8 rounded-xl shadow-2xl mb-8 hidden flex flex-col justify-center items-center">
-                <h2 class="text-4xl font-extrabold text-white mb-6">Winner Circle</h2>
-                <div class="flex flex-col md:flex-row justify-center items-end gap-4 w-full">
-                    <!-- 2nd Place (left side of podium) -->
-                    <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1 md:w-1/3 min-h-[128px] md:min-h-[144px] flex flex-col justify-center items-center relative">
-                        <h3 class="text-2xl font-bold text-gray-600 mb-2">2nd Place</h3>
-                        <p id="merged-second-winner" class="text-3xl font-extrabold text-gray-800 whitespace-nowrap">---</p>
-                    </div>
-                    <!-- 1st Place (center, highest) -->
-                    <div id="merged-first-place-card" class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1 md:w-1/3 min-h-[144px] md:min-h-[160px] flex flex-col justify-center items-center relative">
-                        <h3 class="text-2xl font-bold text-yellow-600 mb-2">1st Place</h3>
-                        <p id="merged-first-winner" class="text-3xl font-extrabold text-yellow-800 whitespace-nowrap">---</p>
-                    </div>
-                    <!-- 3rd Place (right side of podium) -->
-                    <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1 md:w-1/3 min-h-[128px] md:min-h-[128px] flex flex-col justify-center items-center relative">
-                        <h3 class="text-2xl font-bold text-amber-600 mb-2">3rd Place</h3>
-                        <p id="merged-third-winner" class="text-3xl font-extrabold text-amber-800 whitespace-nowrap">---</p>
-                    </div>
-                </div>
-            </div>
-
             <!-- New wrapper for winner sections -->
             <div id="winner-sections-wrapper">
                 <!-- Third Place Section (now displayed first) -->
@@ -373,6 +336,32 @@
         <!-- End Container for content revealed after click -->
     </div>
 
+    <!-- Merged Winners Section - This will be revealed at the end, now a pinned post-it -->
+    <!-- Moved outside the main content container to ensure fixed positioning works correctly -->
+    <div id="merged-winners-section" class="fixed top-20 right-4 z-50 bg-yellow-100 p-4 rounded-lg shadow-xl hidden flex flex-col w-40 md:w-64 relative">
+        <!-- Red Pin for the Post-it -->
+        <div class="absolute -top-2 -left-2 w-4 h-4 bg-red-500 rounded-full shadow-md"></div>
+
+        <h2 class="text-2xl font-bold text-gray-800 text-center mb-2">Winner Circle</h2>
+        <div class="flex flex-col space-y-1"> <!-- Ensures stacking -->
+            <!-- 1st Place - Background matches 1st place section, added border -->
+            <div class="bg-purple-100 border-purple-500 border-2 p-2 rounded-md shadow-sm text-center">
+                <h3 class="text-lg font-bold text-purple-600">1st Place</h3>
+                <p id="merged-first-winner" class="text-xl font-extrabold text-purple-800 whitespace-nowrap">---</p>
+            </div>
+            <!-- 2nd Place - Background matches 2nd place section, added border -->
+            <div class="bg-gray-100 border-gray-500 border-2 p-2 rounded-md shadow-sm text-center">
+                <h3 class="text-base font-bold text-gray-600">2nd Place</h3>
+                <p id="merged-second-winner" class="text-lg font-extrabold text-gray-800 whitespace-nowrap">---</p>
+            </div>
+            <!-- 3rd Place - Background matches 3rd place section, added border -->
+            <div class="bg-amber-100 border-amber-500 border-2 p-2 rounded-md shadow-sm text-center">
+                <h3 class="text-base font-bold text-amber-600">3rd Place</h3>
+                <p id="merged-third-winner" class="text-lg font-extrabold text-amber-800 whitespace-nowrap">---</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer Section -->
     <footer class="w-full bg-gray-800 text-gray-300 text-center py-4 mt-10 text-sm relative z-10">
         <p>&copy; 2023 St. Sebastian's Church. All rights reserved.</p>
@@ -422,6 +411,7 @@
 
         // Get references to the "Generate Winners" buttons for each place
         const generateFirstBtn = document.getElementById('generate-first');
+        // Corrected: Removed redundant document assignment
         const generateSecondBtn = document.getElementById('generate-second');
         const generateThirdBtn = document.getElementById('generate-third');
 
@@ -434,6 +424,7 @@
 
         // References for the reset confirmation modal
         const resetConfirmModal = document.getElementById('reset-confirm-modal');
+        // Corrected: Removed redundant document assignment
         const confirmResetBtn = document.getElementById('confirm-reset-btn');
         const cancelResetBtn = document.getElementById('cancel-reset-btn');
 
@@ -442,7 +433,8 @@
         const mergedFirstWinnerEl = document.getElementById('merged-first-winner');
         const mergedSecondWinnerEl = document.getElementById('merged-second-winner');
         const mergedThirdWinnerEl = document.getElementById('merged-third-winner');
-        const mergedFirstPlaceCard = document.getElementById('merged-first-place-card'); // Reference to the 1st place card
+        // REMOVED: Reference to the 1st place card as it's no longer used for specific pulsing
+        // const mergedFirstPlaceCard = document.getElementById('merged-first-place-card');
 
 
         /**
@@ -510,10 +502,9 @@
 
             // Hide the merged section after clearing
             mergedWinnersSection.classList.add('hidden');
-            mergedWinnersSection.classList.remove('fade-in-scale-up-section'); // Remove the animation class
-            mergedWinnersSection.classList.remove('golden-winner-pulse'); // Remove pulse from 1st place card
-            mergedFirstPlaceCard.classList.remove('golden-winner-pulse'); // Remove pulse from 1st place card
-            mergedWinnersSection.style.transform = ''; // Reset transform on load (if any was applied by old fixed)
+            // Reverted: Use original reveal-postit-animation class name
+            mergedWinnersSection.classList.remove('reveal-postit-animation');
+            mergedWinnersSection.style.transform = ''; // Reset transform on load
         }
 
         /**
@@ -585,8 +576,9 @@
 
             // Ensure merged winners section is hidden initially and remove animation class
             mergedWinnersSection.classList.add('hidden');
-            mergedWinnersSection.classList.remove('fade-in-scale-up-section'); // Ensure this is not present
-            mergedFirstPlaceCard.classList.remove('golden-winner-pulse'); // Remove pulse from 1st place card
+            // Reverted: Use original reveal-postit-animation class name
+            mergedWinnersSection.classList.remove('reveal-postit-animation');
+            mergedWinnersSection.style.transform = ''; // Reset transform on load
 
 
             try {
@@ -742,13 +734,14 @@
          * This is used for updating the merged Winner Circle section.
          * @param {HTMLElement} element - The HTML element to animate.
          * @param {string} finalNumber - The final number to display.
-         * @param {boolean} [applyHighlight=false] - Whether to apply a brief highlight animation.
+         * @param {boolean} [applyHighlight=false] - (REMOVED) Whether to apply a brief highlight animation.
          */
-        async function fadeInNumber(element, finalNumber, applyHighlight = false) {
+        async function fadeInNumber(element, finalNumber) { // Removed applyHighlight parameter
             // First, ensure the element is ready for animation (e.g., opacity is 0 or it's '---')
             element.textContent = '---'; // Clear previous content or set initial placeholder
             element.style.opacity = '0'; // Ensure it's hidden before setting the new number
-            element.classList.remove('pulsing-text', 'final-number-reveal', 'number-highlight-animation'); // Clear any previous animation classes
+            // REMOVED: number-highlight-animation class from removal
+            element.classList.remove('pulsing-text', 'final-number-reveal'); // Clear any previous animation classes
 
             // Force reflow to ensure the browser registers the opacity: 0 state before applying the new animation
             void element.offsetWidth; // eslint-disable-line no-unused-expressions
@@ -756,14 +749,15 @@
             element.textContent = finalNumber; // Set the content to the final number
             element.classList.add('final-number-reveal'); // Apply the fade-in animation
 
-            if (applyHighlight) {
-                element.classList.add('number-highlight-animation');
-            }
+            // REMOVED: if (applyHighlight) logic
+            // if (applyHighlight) {
+            //     element.classList.add('number-highlight-animation');
+            // }
 
             return new Promise(resolve => {
                 const handler = () => {
                     element.removeEventListener('animationend', handler);
-                    element.classList.remove('number-highlight-animation'); // Remove highlight after animation
+                    // REMOVED: element.classList.remove('number-highlight-animation'); // Remove highlight after animation
                     resolve();
                 };
                 element.addEventListener('animationend', handler, { once: true });
@@ -839,21 +833,29 @@
             // Add a delay here to allow confetti animation to complete before activating the next section
             await delay(1000); // 1 second delay after the number reveal and confetti trigger
 
-            // Update merged section immediately after each draw
+            // This block handles what happens AFTER a set of winners is drawn (e.g., enables next button or sets final prize message)
             if (placePrefix === 'third') {
-                await fadeInNumber(mergedThirdWinnerEl, finalThirdWinner, true); // Apply highlight on update
+                // Reverted: Reveal the merged winners section after the first draw (3rd place) using original animation
+                mergedWinnersSection.classList.remove('hidden'); // Make it visible
+                mergedWinnersSection.classList.add('reveal-postit-animation'); // Apply the 3D reveal animation
+                // Update the 3rd place winner in the merged section with fade-in animation
+                await fadeInNumber(mergedThirdWinnerEl, finalThirdWinner); // Removed true for highlight
+
                 // Reveal and activate the second place section
                 secondPlaceSection.classList.remove('hidden'); // Make it visible
                 activateSection(secondPlaceSection, generateSecondBtn);
                 statusMessageElement.textContent = "Click 'Generate 2nd Place Winner'."; // Specific instruction
             } else if (placePrefix === 'second') {
-                await fadeInNumber(mergedSecondWinnerEl, finalSecondWinner, true); // Apply highlight on update
+                // Update the 2nd place winner in the merged section with fade-in animation
+                await fadeInNumber(mergedSecondWinnerEl, finalSecondWinner); // Removed true for highlight
+
                 // Reveal and activate the first place section
                 firstPlaceSection.classList.remove('hidden'); // Make it visible
                 activateSection(firstPlaceSection, generateFirstBtn);
                 statusMessageElement.textContent = "Click 'Generate 1st Place Winner'."; // Specific instruction
             } else if (placePrefix === 'first') {
-                await fadeInNumber(mergedFirstWinnerEl, finalFirstWinner, true); // Apply highlight on update
+                // Update the 1st place winner in the merged section with fade-in animation
+                await fadeInNumber(mergedFirstWinnerEl, finalFirstWinner); // Removed true for highlight
 
                 // This message clarifies that all *prizes* for this raffle have been awarded
                 statusMessageElement.textContent = "All prize winners for this raffle have been drawn! Click 'Reset Raffle' to start a new draw.";
@@ -875,20 +877,20 @@
                 triggerConfetti(100, 60, { x: 0.1, y: 0.9 }, 45); // From bottom-left, shooting up-right
                 triggerConfetti(100, 60, { x: 0.9, y: 0.9 }, 135); // From bottom-right, shooting up-left
 
-                // Now reveal the merged winners section and scroll to it
-                mergedWinnersSection.classList.remove('hidden');
-                mergedWinnersSection.classList.add('fade-in-scale-up-section'); // Apply fade-in and scale up animation
+                // REMOVED: New merged winners section reveal logic and scroll
+                // mergedWinnersSection.classList.remove('hidden');
+                // mergedWinnersSection.classList.add('fade-in-scale-up-section'); // Apply fade-in and scale up animation
 
-                // Apply golden pulse to 1st place card in merged section
-                mergedFirstPlaceCard.classList.add('golden-winner-pulse');
+                // REMOVED: Apply golden pulse to 1st place card in merged section
+                // mergedFirstPlaceCard.classList.add('golden-winner-pulse');
 
-                // Smooth scroll to the merged winners section
-                await delay(500); // Small delay before scrolling to allow UI to settle
-                window.scrollTo({
-                    top: mergedWinnersSection.offsetTop - (window.innerHeight / 4), // Adjust to center it a bit more
-                    behavior: 'smooth'
-                });
-                await delay(1000); // Wait for scroll to complete
+                // REMOVED: Smooth scroll to the merged winners section
+                // await delay(500); // Small delay before scrolling to allow UI to settle
+                // window.scrollTo({
+                //     top: mergedWinnersSection.offsetTop - (window.innerHeight / 4), // Adjust to center it a bit more
+                //     behavior: 'smooth'
+                // });
+                // await delay(1000); // Wait for scroll to complete
 
 
                 // Enable the reset button once all winners are displayed and change its color
