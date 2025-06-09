@@ -161,16 +161,15 @@
         }
 
         /* Explicit CSS rule for the merged winners section (the post-it) */
-        #merged-winners-section {
-            position: fixed;
-            top: 5rem; /* Equivalent to Tailwind's top-20 (20 * 0.25rem = 5rem) */
-            right: 1rem; /* Equivalent to Tailwind's right-4 (4 * 0.25rem = 1rem) */
-            z-index: 50; /* Equivalent to Tailwind's z-50 */
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2), 0 3px 6px rgba(0,0,0,0.15); /* More subtle shadows for page flip */
-            transform-origin: right center; /* Pivot point for the 3D flip */
-            /* The 'transform' property will be managed by the reveal-postit animation */
-            transition: opacity 0.8s ease-out, transform 0.8s ease-out, box-shadow 0.8s ease-out; /* Smooth transitions */
-        }
+        /* #merged-winners-section { /* Removed fixed positioning and related styles */
+        /* position: fixed;
+            top: 5rem;
+            right: 1rem;
+            z-index: 50;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2), 0 3px 6px rgba(0,0,0,0.15);
+            transform-origin: right center;
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out, box-shadow 0.8s ease-out;
+        } */
 
         /* Class to apply the 3D reveal animation */
         .reveal-postit-animation {
@@ -205,6 +204,32 @@
             opacity: 0;
             animation: final-number-fade-in 0.6s ease-out forwards;
         }
+
+        /* NEW: Styles for merged winners section (fade-in, now part of normal flow) */
+        @keyframes fadeInScaleUp {
+            0% { opacity: 0; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .fade-in-scale-up-section {
+            animation: fadeInScaleUp 1.2s ease-out forwards; /* Smooth fade-in and subtle scale */
+            transition: border 0.3s ease-in-out, box-shadow 0.3s ease-in-out; /* Keep transitions for interactive elements */
+        }
+
+        /* NEW: Highlight animation for individual numbers in merged section */
+        @keyframes number-highlight {
+            0% { background-color: transparent; }
+            50% { background-color: rgba(255, 255, 0, 0.5); } /* Bright yellow flash */
+            100% { background-color: transparent; }
+        }
+        .number-highlight-animation {
+            animation: number-highlight 0.8s ease-out;
+        }
+
+        /* NEW: Golden border pulse for 1st place in merged section */
+        .golden-winner-pulse {
+            animation: golden-border-pulse 2s infinite alternate; /* Reusing existing golden-border-pulse */
+            border: 3px solid; /* Ensure border is visible for animation */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -216,41 +241,41 @@
         <!-- Subtle pattern for the main content box -->
         <div class="main-content-pattern"></div>
 
-        <div class="mb-4 relative z-10"> <!-- Reduced mb-8 to mb-4 -->
-            <div class="flex items-center justify-center md:justify-start mb-2"> <!-- Reduced mb-4 to mb-2 -->
-                <div class="w-16 h-16 md:w-20 md:h-20 mr-3 md:mr-4 flex-shrink-0"> <!-- Reduced w/h and margin -->
+        <div class="mb-4 relative z-10">
+            <div class="flex items-center justify-center md:justify-start mb-2">
+                <div class="w-16 h-16 md:w-20 md:h-20 mr-3 md:mr-4 flex-shrink-0">
                     <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png"
                          alt="St. Sebastian's Church Logo"
                          class="w-full h-full object-contain rounded-full">
                 </div>
-                <h1 class="text-2xl md:text-3xl font-extrabold text-indigo-800 text-left"> <!-- Reduced text size -->
+                <h1 class="text-2xl md:text-3xl font-extrabold text-indigo-800 text-left">
                     St. Sebastian's Church Raffle Winner Announcement
                 </h1>
             </div>
-            <div class="text-gray-600 text-xs md:text-sm mb-4 text-left md:ml-20"> <!-- Reduced text size and ml -->
+            <div class="text-gray-600 text-xs md:text-sm mb-4 text-left md:ml-20">
                 <p>No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</p>
                 <p>+91 7090424365 | stsebastianssmc@gmail.com</p>
             </div>
         </div>
 
         <!-- Sponsor Section -->
-        <div id="sponsor-section" class="bg-gradient-to-br from-blue-200 to-blue-400 p-4 md:p-6 rounded-xl shadow-2xl mt-6 mb-6 relative z-10"> <!-- Reduced padding and margins -->
-            <h2 class="text-2xl font-extrabold text-indigo-800 mb-4">Our Esteemed Sponsor</h2> <!-- Reduced text size and margin -->
-            <div class="flex flex-col md:flex-row items-center justify-center md:justify-around gap-6"> <!-- Reduced gap -->
+        <div id="sponsor-section" class="bg-gradient-to-br from-blue-200 to-blue-400 p-4 md:p-6 rounded-xl shadow-2xl mt-6 mb-6 relative z-10">
+            <h2 class="text-2xl font-extrabold text-indigo-800 mb-4">Our Esteemed Sponsor</h2>
+            <div class="flex flex-col md:flex-row items-center justify-center md:justify-around gap-6">
                 <div class="flex flex-col items-center">
-                    <img src="https://placehold.co/120x120/A0A0A0/FFFFFF?text=Emjay+Logo" alt="Emjay Engineering Company Logo" class="w-28 h-28 rounded-full shadow-lg mb-3 object-cover"> <!-- Reduced w/h and margin -->
-                    <h3 class="text-lg font-semibold text-gray-800">Emjay Engineering Company</h3> <!-- Reduced text size -->
+                    <img src="https://placehold.co/120x120/A0A0A0/FFFFFF?text=Emjay+Logo" alt="Emjay Engineering Company Logo" class="w-28 h-28 rounded-full shadow-lg mb-3 object-cover">
+                    <h3 class="text-lg font-semibold text-gray-800">Emjay Engineering Company</h3>
                 </div>
                 <div class="flex flex-col items-center">
-                    <img src="https://placehold.co/120x120/808080/FFFFFF?text=Proprietor+Photo" alt="Proprietor Photo" class="w-28 h-28 rounded-full shadow-lg mb-3 object-cover"> <!-- Reduced w/h and margin -->
-                    <h3 class="text-lg font-semibold text-gray-800">Proprietor</h3> <!-- Reduced text size -->
+                    <img src="https://placehold.co/120x120/808080/FFFFFF?text=Proprietor+Photo" alt="Proprietor Photo" class="w-28 h-28 rounded-full shadow-lg mb-3 object-cover">
+                    <h3 class="text-lg font-semibold text-gray-800">Proprietor</h3>
                 </div>
             </div>
-            <p class="text-base text-gray-700 mt-4"> <!-- Reduced text size and margin -->
+            <p class="text-base text-gray-700 mt-4">
                 We extend our heartfelt gratitude to <strong class="text-indigo-700">Emjay Engineering Company</strong> for sponsoring this raffle.
                 The lucky winners of the apartments will find their new homes in the beautiful <strong class="text-green-700">Sierra Greens at Sarjapur Road</strong>.
             </p>
-            <button id="reveal-winners-btn" class="mt-6 px-6 py-3 bg-purple-600 text-white font-bold text-lg rounded-full shadow-lg hover:bg-purple-700 transition duration-300 ease-in-out"> <!-- Reduced padding and text size -->
+            <button id="reveal-winners-btn" class="mt-6 px-6 py-3 bg-purple-600 text-white font-bold text-lg rounded-full shadow-lg hover:bg-purple-700 transition duration-300 ease-in-out">
                 Start Raffle Draw
             </button>
         </div>
@@ -258,14 +283,36 @@
 
         <!-- Container for content revealed after click -->
         <div id="raffle-content-container" class="hidden">
-            <p class="text-base text-gray-700 mb-10 relative z-10"> <!-- Changed text-lg to text-base -->
+            <p class="text-base text-gray-700 mb-10 relative z-10">
                 Congratulations to all our lucky winners! Thank you for participating in our church raffle.
                 Click the "Generate Winners" button for each place to reveal the winning ticket numbers.
                 <strong class="text-red-600">2nd Place winners are drawn from 'winners.txt'. 1st and 3rd Place winners are drawn from 'winners1.txt'. Each ticket can only win once!</strong>
             </p>
 
-            <div id="status-message" class="text-center text-base font-semibold text-gray-600 mb-6 relative z-10"> <!-- Changed text-lg to text-base -->
+            <div id="status-message" class="text-center text-base font-semibold text-gray-600 mb-6 relative z-10">
                 Loading ticket data...
+            </div>
+
+            <!-- Merged Winners Section - This will be revealed at the end, now a podium display -->
+            <div id="merged-winners-section" class="bg-gradient-to-br from-indigo-600 to-purple-800 p-8 rounded-xl shadow-2xl mb-8 hidden flex flex-col justify-center items-center">
+                <h2 class="text-4xl font-extrabold text-white mb-6">Winner Circle</h2>
+                <div class="flex flex-col md:flex-row justify-center items-end gap-4 w-full">
+                    <!-- 2nd Place (left side of podium) -->
+                    <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1 md:w-1/3 min-h-[128px] md:min-h-[144px] flex flex-col justify-center items-center relative">
+                        <h3 class="text-2xl font-bold text-gray-600 mb-2">2nd Place</h3>
+                        <p id="merged-second-winner" class="text-3xl font-extrabold text-gray-800 whitespace-nowrap">---</p>
+                    </div>
+                    <!-- 1st Place (center, highest) -->
+                    <div id="merged-first-place-card" class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1 md:w-1/3 min-h-[144px] md:min-h-[160px] flex flex-col justify-center items-center relative">
+                        <h3 class="text-2xl font-bold text-yellow-600 mb-2">1st Place</h3>
+                        <p id="merged-first-winner" class="text-3xl font-extrabold text-yellow-800 whitespace-nowrap">---</p>
+                    </div>
+                    <!-- 3rd Place (right side of podium) -->
+                    <div class="winner-summary-card bg-white p-6 rounded-lg shadow-xl text-center flex-1 md:w-1/3 min-h-[128px] md:min-h-[128px] flex flex-col justify-center items-center relative">
+                        <h3 class="text-2xl font-bold text-amber-600 mb-2">3rd Place</h3>
+                        <p id="merged-third-winner" class="text-3xl font-extrabold text-amber-800 whitespace-nowrap">---</p>
+                    </div>
+                </div>
             </div>
 
             <!-- New wrapper for winner sections -->
@@ -324,32 +371,6 @@
             </button>
         </div>
         <!-- End Container for content revealed after click -->
-    </div>
-
-    <!-- Merged Winners Section - This will be revealed at the end, now a pinned post-it -->
-    <!-- Moved outside the main content container to ensure fixed positioning works correctly -->
-    <div id="merged-winners-section" class="fixed top-20 right-4 z-50 bg-yellow-100 p-4 rounded-lg shadow-xl hidden flex flex-col w-40 md:w-64 relative">
-        <!-- Red Pin for the Post-it -->
-        <div class="absolute -top-2 -left-2 w-4 h-4 bg-red-500 rounded-full shadow-md"></div>
-
-        <h2 class="text-2xl font-bold text-gray-800 text-center mb-2">Winner Circle</h2>
-        <div class="flex flex-col space-y-1"> <!-- Ensures stacking -->
-            <!-- 1st Place - Background matches 1st place section, added border -->
-            <div class="bg-purple-100 border-purple-500 border-2 p-2 rounded-md shadow-sm text-center">
-                <h3 class="text-lg font-bold text-purple-600">1st Place</h3>
-                <p id="merged-first-winner" class="text-xl font-extrabold text-purple-800 whitespace-nowrap">---</p>
-            </div>
-            <!-- 2nd Place - Background matches 2nd place section, added border -->
-            <div class="bg-gray-100 border-gray-500 border-2 p-2 rounded-md shadow-sm text-center">
-                <h3 class="text-base font-bold text-gray-600">2nd Place</h3>
-                <p id="merged-second-winner" class="text-lg font-extrabold text-gray-800 whitespace-nowrap">---</p>
-            </div>
-            <!-- 3rd Place - Background matches 3rd place section, added border -->
-            <div class="bg-amber-100 border-amber-500 border-2 p-2 rounded-md shadow-sm text-center">
-                <h3 class="text-base font-bold text-amber-600">3rd Place</h3>
-                <p id="merged-third-winner" class="text-lg font-extrabold text-amber-800 whitespace-nowrap">---</p>
-            </div>
-        </div>
     </div>
 
     <!-- Footer Section -->
@@ -421,6 +442,7 @@
         const mergedFirstWinnerEl = document.getElementById('merged-first-winner');
         const mergedSecondWinnerEl = document.getElementById('merged-second-winner');
         const mergedThirdWinnerEl = document.getElementById('merged-third-winner');
+        const mergedFirstPlaceCard = document.getElementById('merged-first-place-card'); // Reference to the 1st place card
 
 
         /**
@@ -488,8 +510,10 @@
 
             // Hide the merged section after clearing
             mergedWinnersSection.classList.add('hidden');
-            mergedWinnersSection.classList.remove('reveal-postit-animation'); // Remove the animation class
-            mergedWinnersSection.style.transform = ''; // Reset transform on load
+            mergedWinnersSection.classList.remove('fade-in-scale-up-section'); // Remove the animation class
+            mergedWinnersSection.classList.remove('golden-winner-pulse'); // Remove pulse from 1st place card
+            mergedFirstPlaceCard.classList.remove('golden-winner-pulse'); // Remove pulse from 1st place card
+            mergedWinnersSection.style.transform = ''; // Reset transform on load (if any was applied by old fixed)
         }
 
         /**
@@ -561,8 +585,8 @@
 
             // Ensure merged winners section is hidden initially and remove animation class
             mergedWinnersSection.classList.add('hidden');
-            mergedWinnersSection.classList.remove('reveal-postit-animation');
-            mergedWinnersSection.style.transform = ''; // Reset transform on load
+            mergedWinnersSection.classList.remove('fade-in-scale-up-section'); // Ensure this is not present
+            mergedFirstPlaceCard.classList.remove('golden-winner-pulse'); // Remove pulse from 1st place card
 
 
             try {
@@ -583,6 +607,7 @@
                 if (raffleTicketsWinners.length < 1 || raffleTicketsWinners1.length < 2) {
                     statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} unique tickets (needs at least 1 for 2nd place). 'winners1.txt' has ${raffleTicketsWinners1.length} unique tickets (needs at least 2 for 1st and 3rd place). Please populate your files with more unique alphanumeric tickets.`;
                     disableAllGenerateButtons();
+                    revealWinnersBtn.disabled = true; // Disable reveal button if not enough tickets
                     return;
                 }
 
@@ -717,12 +742,13 @@
          * This is used for updating the merged Winner Circle section.
          * @param {HTMLElement} element - The HTML element to animate.
          * @param {string} finalNumber - The final number to display.
+         * @param {boolean} [applyHighlight=false] - Whether to apply a brief highlight animation.
          */
-        async function fadeInNumber(element, finalNumber) {
+        async function fadeInNumber(element, finalNumber, applyHighlight = false) {
             // First, ensure the element is ready for animation (e.g., opacity is 0 or it's '---')
             element.textContent = '---'; // Clear previous content or set initial placeholder
             element.style.opacity = '0'; // Ensure it's hidden before setting the new number
-            element.classList.remove('pulsing-text', 'final-number-reveal'); // Clear any previous animation classes
+            element.classList.remove('pulsing-text', 'final-number-reveal', 'number-highlight-animation'); // Clear any previous animation classes
 
             // Force reflow to ensure the browser registers the opacity: 0 state before applying the new animation
             void element.offsetWidth; // eslint-disable-line no-unused-expressions
@@ -730,11 +756,17 @@
             element.textContent = finalNumber; // Set the content to the final number
             element.classList.add('final-number-reveal'); // Apply the fade-in animation
 
+            if (applyHighlight) {
+                element.classList.add('number-highlight-animation');
+            }
+
             return new Promise(resolve => {
-                element.addEventListener('animationend', function handler() {
+                const handler = () => {
                     element.removeEventListener('animationend', handler);
+                    element.classList.remove('number-highlight-animation'); // Remove highlight after animation
                     resolve();
-                }, { once: true });
+                };
+                element.addEventListener('animationend', handler, { once: true });
             });
         }
 
@@ -807,29 +839,21 @@
             // Add a delay here to allow confetti animation to complete before activating the next section
             await delay(1000); // 1 second delay after the number reveal and confetti trigger
 
-            // This block handles what happens AFTER a set of winners is drawn (e.g., enables next button or sets final prize message)
+            // Update merged section immediately after each draw
             if (placePrefix === 'third') {
-                // Reveal the merged winners section after the first draw (3rd place)
-                mergedWinnersSection.classList.remove('hidden'); // Make it visible
-                mergedWinnersSection.classList.add('reveal-postit-animation'); // Apply the 3D reveal animation
-                // Update the 3rd place winner in the merged section with fade-in animation
-                await fadeInNumber(mergedThirdWinnerEl, finalThirdWinner);
-
+                await fadeInNumber(mergedThirdWinnerEl, finalThirdWinner, true); // Apply highlight on update
                 // Reveal and activate the second place section
                 secondPlaceSection.classList.remove('hidden'); // Make it visible
                 activateSection(secondPlaceSection, generateSecondBtn);
                 statusMessageElement.textContent = "Click 'Generate 2nd Place Winner'."; // Specific instruction
             } else if (placePrefix === 'second') {
-                // Update the 2nd place winner in the merged section with fade-in animation
-                await fadeInNumber(mergedSecondWinnerEl, finalSecondWinner);
-
+                await fadeInNumber(mergedSecondWinnerEl, finalSecondWinner, true); // Apply highlight on update
                 // Reveal and activate the first place section
                 firstPlaceSection.classList.remove('hidden'); // Make it visible
                 activateSection(firstPlaceSection, generateFirstBtn);
                 statusMessageElement.textContent = "Click 'Generate 1st Place Winner'."; // Specific instruction
             } else if (placePrefix === 'first') {
-                // Update the 1st place winner in the merged section with fade-in animation
-                await fadeInNumber(mergedFirstWinnerEl, finalFirstWinner);
+                await fadeInNumber(mergedFirstWinnerEl, finalFirstWinner, true); // Apply highlight on update
 
                 // This message clarifies that all *prizes* for this raffle have been awarded
                 statusMessageElement.textContent = "All prize winners for this raffle have been drawn! Click 'Reset Raffle' to start a new draw.";
@@ -850,6 +874,21 @@
                 // Add inward-shooting fireworks effect from the sides
                 triggerConfetti(100, 60, { x: 0.1, y: 0.9 }, 45); // From bottom-left, shooting up-right
                 triggerConfetti(100, 60, { x: 0.9, y: 0.9 }, 135); // From bottom-right, shooting up-left
+
+                // Now reveal the merged winners section and scroll to it
+                mergedWinnersSection.classList.remove('hidden');
+                mergedWinnersSection.classList.add('fade-in-scale-up-section'); // Apply fade-in and scale up animation
+
+                // Apply golden pulse to 1st place card in merged section
+                mergedFirstPlaceCard.classList.add('golden-winner-pulse');
+
+                // Smooth scroll to the merged winners section
+                await delay(500); // Small delay before scrolling to allow UI to settle
+                window.scrollTo({
+                    top: mergedWinnersSection.offsetTop - (window.innerHeight / 4), // Adjust to center it a bit more
+                    behavior: 'smooth'
+                });
+                await delay(1000); // Wait for scroll to complete
 
 
                 // Enable the reset button once all winners are displayed and change its color
