@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raffle Ticket Picker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            max-width: 400px;
+            width: 90%;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            background-color: #28a745;
+            color: white;
+            border-radius: 5px;
+        }
+        #animation-box {
+            font-size: 24px;
+            font-weight: bold;
+            color: red;
+            margin: 20px 0;
+        }
+        #results {
+            font-size: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎟️ Raffle Ticket Picker 🎟️</h1>
+        <button onclick="startRaffle()">Pick Winners</button>
+        <div id="animation-box"></div>
+        <div id="results"></div>
+    </div>
+    
+    <script>
+        async function fetchTickets() {
+            const text = `12345
+            67890
+            11121
+            13579
+            24680
+            98765`;
+            return text.trim().split("\n").map(num => num.trim());
+        }
+
+        async function startRaffle() {
+            const tickets = await fetchTickets();
+            if (tickets.length < 3) {
+                alert("Not enough tickets in the file!");
+                return;
+            }
+
+            let winners = [];
+            while (winners.length < 3) {
+                let winner = tickets[Math.floor(Math.random() * tickets.length)];
+                if (!winners.includes(winner)) winners.push(winner);
+            }
+
+            animateSelection(winners, tickets);
+        }
+
+        function animateSelection(winners, tickets) {
+            const animationBox = document.getElementById("animation-box");
+            let counter = 0;
+            let interval = setInterval(() => {
+                animationBox.innerText = tickets[Math.floor(Math.random() * tickets.length)];
+                counter++;
+                if (counter > 10) {
+                    clearInterval(interval);
+                    displayResults(winners);
+                }
+            }, 200);
+        }
+
+        function displayResults(winners) {
+            document.getElementById("results").innerHTML = `
+                🥇 First Place: ${winners[0]}<br>
+                🥈 Second Place: ${winners[1]}<br>
+                🥉 Third Place: ${winners[2]}
+            `;
+        }
+    </script>
+</body>
+</html>
