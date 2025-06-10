@@ -610,12 +610,12 @@
         }
 
         /**
-         * Generates a random alphanumeric string with the format "SSCF 12345678".
+         * Generates a random alphanumeric string with the format "SSCF 123456".
          * @returns {string} A random alphanumeric string.
          */
         function generateRandomAlphanumeric() {
             let result = 'SSCF '; // Fixed prefix "SSCF "
-            for (let i = 0; i < 8; i++) { // 8 numbers
+            for (let i = 0; i < 6; i++) { // 6 numbers
                 result += Math.floor(Math.random() * 10);
             }
             return result;
@@ -713,7 +713,8 @@
                     // This creates the deceleration effect.
                     const currentInterpolatedDelay = initialFastDelay + (Math.pow(progress, 2) * (finalSlowDelay - initialFastDelay));
 
-                    setTimeout(updateNumber, currentInterpolatedDelay);
+                    // Use Math.max to ensure delay doesn't go below initialFastDelay if progress is very small
+                    setTimeout(updateNumber, Math.max(initialFastDelay, currentInterpolatedDelay));
                 }
 
                 updateNumber(); // Start the animation
