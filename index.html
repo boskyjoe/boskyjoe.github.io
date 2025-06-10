@@ -401,7 +401,6 @@
 
         // Get references to the "Generate Winners" buttons for each place
         const generateFirstBtn = document.getElementById('generate-first');
-        // Corrected: Removed redundant document assignment
         const generateSecondBtn = document.getElementById('generate-second');
         const generateThirdBtn = document.getElementById('generate-third');
 
@@ -414,7 +413,6 @@
 
         // References for the reset confirmation modal
         const resetConfirmModal = document.getElementById('reset-confirm-modal');
-        // Corrected: Removed redundant document assignment
         const confirmResetBtn = document.getElementById('confirm-reset-btn');
         const cancelResetBtn = document.getElementById('cancel-reset-btn');
 
@@ -686,9 +684,9 @@
          * This is used for the primary winner sections.
          * @param {HTMLElement} element - The HTML element to animate.
          * @param {string} finalNumber - The final number to display.
+         * @param {number} duration - The duration of the spinning animation in milliseconds.
          */
-        async function animateNumberReveal(element, finalNumber) {
-            const duration = 1000; // 1 second for animation
+        async function animateNumberReveal(element, finalNumber, duration) {
             const startTime = Date.now();
             const interval = 50; // Update every 50ms
 
@@ -751,12 +749,16 @@
 
             // Disable the button that was just clicked
             let currentButton;
+            let animationDuration; // Define animation duration here
             if (placePrefix === 'third') {
                 currentButton = generateThirdBtn;
+                animationDuration = 1000; // 1 second for 3rd place
             } else if (placePrefix === 'second') {
                 currentButton = generateSecondBtn;
+                animationDuration = 1500; // 1.5 seconds for 2nd place
             } else if (placePrefix === 'first') {
                 currentButton = generateFirstBtn;
+                animationDuration = 2000; // 2 seconds for 1st place
             }
             if (currentButton) {
                 currentButton.disabled = true;
@@ -785,7 +787,7 @@
 
             // Pick the primary winner from the determined source array
             const primaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
-            await animateNumberReveal(primaryElement, primaryWinner); // Use animateNumberReveal for primary sections
+            await animateNumberReveal(primaryElement, primaryWinner, animationDuration); // Pass duration
             console.log(`DEBUG: After Winning Number draw (${placePrefix}): allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
 
             // If a winner is "N/A", it means the pool was exhausted, so stop further drawing for this prize
