@@ -612,16 +612,11 @@
         }
 
         /**
-         * Generates a random alphanumeric string in the format "AAAA 12345678".
+         * Generates a random alphanumeric string with the format "SSCF 12345678".
          * @returns {string} A random alphanumeric string.
          */
         function generateRandomAlphanumeric() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-            let result = '';
-            for (let i = 0; i < 4; i++) { // 4 alphabets
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            result += ' '; // Add a space
+            let result = 'SSCF '; // Fixed prefix "SSCF "
             for (let i = 0; i < 8; i++) { // 8 numbers
                 result += Math.floor(Math.random() * 10);
             }
