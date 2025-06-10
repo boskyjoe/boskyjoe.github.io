@@ -680,32 +680,43 @@
         }
 
         /**
-         * Animates a number reveal effect on a given element with random numbers scrolling.
-         * This is used for the primary winner sections.
+         * Animates a number reveal effect on a given element with random numbers scrolling,
+         * simulating a gradual slowdown.
          * @param {HTMLElement} element - The HTML element to animate.
          * @param {string} finalNumber - The final number to display.
-         * @param {number} duration - The duration of the spinning animation in milliseconds.
+         * @param {number} totalDuration - The total duration of the spinning animation in milliseconds.
          */
-        async function animateNumberReveal(element, finalNumber, duration) {
+        async function animateNumberReveal(element, finalNumber, totalDuration) {
             const startTime = Date.now();
-            const interval = 50; // Update every 50ms
+            const initialFastDelay = 20; // Very fast updates at the start
+            const finalSlowDelay = 300; // Very slow updates towards the end
 
             element.classList.remove('final-number-reveal'); // Ensure no lingering fade-in class
             element.classList.add('pulsing-text'); // Start pulsing animation for random numbers
 
             return new Promise(resolve => {
-                const animationInterval = setInterval(() => {
+                function updateNumber() {
                     const elapsed = Date.now() - startTime;
-                    if (elapsed < duration) {
-                        element.textContent = generateRandomAlphanumeric();
-                    } else {
-                        clearInterval(animationInterval);
+                    const progress = elapsed / totalDuration; // Normalized progress from 0 to 1
+
+                    if (progress >= 1) { // Animation finished
                         element.classList.remove('pulsing-text'); // Stop pulsing animation
                         element.textContent = finalNumber; // Set the final number
                         triggerConfetti(); // Trigger confetti after the primary number is revealed
-                        resolve();
+                        resolve(); // Resolve the promise
+                        return; // End recursion
                     }
-                }, interval);
+
+                    element.textContent = generateRandomAlphanumeric();
+
+                    // Calculate next delay: starts fast, gets slower as progress increases (quadratic ease-in for delay)
+                    // This creates the deceleration effect.
+                    const currentInterpolatedDelay = initialFastDelay + (Math.pow(progress, 2) * (finalSlowDelay - initialFastDelay));
+
+                    setTimeout(updateNumber, currentInterpolatedDelay);
+                }
+
+                updateNumber(); // Start the animation
             });
         }
 
