@@ -55,13 +55,14 @@
     
     <script>
         async function fetchTickets() {
-            const text = `12345
-            67890
-            11121
-            13579
-            24680
-            98765`;
-            return text.trim().split("\n").map(num => num.trim());
+            try {
+                const response = await fetch('Winners.txt');
+                const text = await response.text();
+                return text.trim().split("\n").map(num => num.trim());
+            } catch (error) {
+                alert("Error loading ticket numbers. Ensure Winners.txt is accessible.");
+                return [];
+            }
         }
 
         async function startRaffle() {
