@@ -3,132 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Animated Raffle Picker</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #222;
-            color: white;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        .container {
-            max-width: 400px;
-            width: 90%;
-            padding: 20px;
-            background: #333;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(255, 255, 255, 0.3);
-        }
-        button {
-            padding: 12px 24px;
-            font-size: 18px;
-            cursor: pointer;
-            border: none;
-            background-color: #ffcc00;
-            color: #222;
-            font-weight: bold;
-            border-radius: 5px;
-            transition: 0.3s;
-        }
-        button:hover {
-            background-color: #ff9900;
-        }
-        .winner-section {
-            margin: 20px 0;
-            font-size: 24px;
-            font-weight: bold;
-            padding: 10px;
-            border-radius: 10px;
-            background: #444;
-            box-shadow: 0 2px 5px rgba(255, 255, 255, 0.2);
-            transition: all 1s ease-in-out;
-            opacity: 0;
-        }
-        .final-circle {
-            display: none;
-            width: 80%;
-            padding: 30px;
-            background: radial-gradient(circle, rgba(255,215,0,1) 30%, rgba(255,140,0,1) 90%);
-            border-radius: 50%;
-            font-size: 26px;
-            font-weight: bold;
-            margin-top: 20px;
-            text-align: center;
-            box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
-            opacity: 0;
-            transition: opacity 1.5s ease-in-out;
-        }
-    </style>
+    <title>St. Sebastian's Church Raffle Winners</title>
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="script.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>🎉 Animated Raffle Picker 🎉</h1>
-        <button onclick="startRaffle()">Pick Winners</button>
-        <div id="winner1" class="winner-section">🥇 First Place: ???</div>
-        <div id="winner2" class="winner-section">🥈 Second Place: ???</div>
-        <div id="winner3" class="winner-section">🥉 Third Place: ???</div>
-        <div id="finalCircle" class="final-circle">🎊 WINNERS: ??? 🎊</div>
-    </div>
+    <header>
+        <img src="church-logo.png" alt="Church Logo">
+        <h1>St. Sebastian's Church Raffle Winner Announcement</h1>
+        <p>Address | Contact Info</p>
+    </header>
     
-    <script>
-        async function fetchTickets() {
-            try {
-                const response = await fetch('Winners.txt');
-                const text = await response.text();
-                return text.trim().split("\n").map(num => num.trim());
-            } catch (error) {
-                alert("Error loading ticket numbers.");
-                return [];
-            }
-        }
+    <section id="sponsor">
+        <h2>Esteemed Sponsor</h2>
+        <img src="sponsor-logo.png" alt="Sponsor Logo">
+        <img src="proprietor-photo.jpg" alt="Proprietor">
+        <p>Winners will receive homes in Sierra Greens at Sarjapur Road.</p>
+        <button id="startRaffle">Start Raffle Draw</button>
+    </section>
 
-        async function startRaffle() {
-            const tickets = await fetchTickets();
-            if (tickets.length < 3) {
-                alert("Not enough tickets!");
-                return;
-            }
+    <section id="raffleArea" class="hidden">
+        <p id="statusMessage">Click a button to start drawing winners.</p>
+        
+        <div class="prize-section bronze">
+            <h3>3rd Place Winner</h3>
+            <div class="spinner" id="thirdSpinner">000000</div>
+            <button id="thirdBtn">Generate 3rd Place Winner</button>
+        </div>
+        
+        <div class="prize-section silver">
+            <h3>2nd Place Winner</h3>
+            <div class="spinner" id="secondSpinner">000000</div>
+            <button id="secondBtn" disabled>Generate 2nd Place Winner</button>
+        </div>
 
-            let winners = [];
-            while (winners.length < 3) {
-                let winner = tickets[Math.floor(Math.random() * tickets.length)];
-                if (!winners.includes(winner)) winners.push(winner);
-            }
-
-            animateWinners(winners);
-        }
-
-        function animateWinners(winners) {
-            const elements = [document.getElementById("winner1"), document.getElementById("winner2"), document.getElementById("winner3")];
-            let index = 0;
-
-            function revealNextWinner() {
-                if (index < winners.length) {
-                    elements[index].innerText = `🥇 ${index === 0 ? "First" : index === 1 ? "Second" : "Third"} Place: ${winners[index]}`;
-                    elements[index].style.opacity = 1;
-                    elements[index].style.transform = "scale(1.1)";
-                    setTimeout(revealNextWinner, 1000);
-                    index++;
-                } else {
-                    setTimeout(() => revealFinalCircle(winners), 1500);
-                }
-            }
-
-            revealNextWinner();
-        }
-
-        function revealFinalCircle(winners) {
-            const finalCircle = document.getElementById("finalCircle");
-            finalCircle.innerText = `🎊 WINNERS: ${winners.join(", ")} 🎊`;
-            finalCircle.style.display = "block";
-            setTimeout(() => { finalCircle.style.opacity = 1; }, 500);
-        }
-    </script>
+        <div class="prize-section gold">
+            <h3>1st Place Winner</h3>
+            <div class="spinner" id="firstSpinner">000000</div>
+            <button id="firstBtn" disabled>Generate 1st Place Winner</button>
+        </div>
+    </section>
 </body>
 </html>
