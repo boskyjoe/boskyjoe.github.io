@@ -1,131 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>St. Sebastian's Church Raffle Winners</title>
-    <style>
-        body {
-            background: #f9f9f9 url('homes-background.png') no-repeat center/cover;
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
-        header {
-            padding: 20px;
-            background: linear-gradient(135deg, #ffcc00, #ff6600);
-            color: white;
-            border-radius: 10px;
-        }
-        .prize-section {
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px auto;
-        }
-        .bronze { background: linear-gradient(135deg, #cd7f32, #964b00); }
-        .silver { background: linear-gradient(135deg, #c0c0c0, #808080); }
-        .gold { background: linear-gradient(135deg, #ffd700, #8b5a2b); }
-        button {
-            padding: 10px 20px;
-            font-size: 18px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        button:hover { transform: scale(1.05); }
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .spinner {
-            font-size: 36px;
-            font-family: 'Brush Script MT', cursive;
-            padding: 20px;
-            border: 2px solid black;
-            display: inline-block;
-        }
-        .hidden { display: none; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Raffle Winner Announcement</title>
+  <link href="https://cdn.tailwindcss.com" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <link rel="stylesheet" href="raffle.css">
 </head>
-<body>
-    <header>
-        <img src="church-logo.png" alt="Church Logo">
-        <h1>St. Sebastian's Church Raffle Winner Announcement</h1>
-        <p>Address | Contact Info</p>
+<body class="min-h-screen flex flex-col items-center py-10 px-4 font-[Inter] bg-slate-100 relative">
+  <div class="absolute inset-0 bg-cover bg-center opacity-20 -z-10" style="background-image: url('https://www.villasinbangalore.co.in/wp-content/uploads/2016/04/Shriram-Chirping-Grove-Copy.jpg');"></div>
+
+  <main class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center relative z-10">
+    <header class="mb-6">
+      <div class="flex items-center gap-4 mb-2">
+        <img class="w-16 h-16 md:w-20 md:h-20 rounded-full object-contain" src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75" alt="St. Sebastian Logo">
+        <h1 class="text-2xl md:text-3xl font-extrabold text-indigo-800 text-left">St. Sebastian's Church Raffle Winner Announcement</h1>
+      </div>
+      <div class="text-left text-gray-600 text-xs md:text-sm ml-20">
+        <p>No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</p>
+        <p>+91 7090424365 | stsebastianssmc@gmail.com</p>
+      </div>
     </header>
 
-    <section id="sponsor">
-        <h2>Esteemed Sponsor</h2>
-        <img src="sponsor-logo.png" alt="Sponsor Logo">
-        <img src="proprietor-photo.jpg" alt="Proprietor">
-        <p>Winners will receive homes in Sierra Greens at Sarjapur Road.</p>
-        <button id="startRaffle">Start Raffle Draw</button>
+    <section class="bg-gradient-to-br from-blue-200 to-blue-400 p-6 rounded-xl shadow-lg mb-6">
+      <h2 class="text-2xl font-bold text-indigo-800 mb-4">Our Esteemed Sponsor</h2>
+      <div class="flex flex-col md:flex-row justify-around items-center gap-6">
+        <div class="text-center">
+          <img class="w-28 h-28 rounded-full shadow-lg object-cover mb-3" src="https://placehold.co/120x120/A0A0A0/FFFFFF?text=Emjay+Logo" alt="Emjay Logo">
+          <h3 class="text-lg font-semibold text-gray-800">Emjay Engineering Company</h3>
+        </div>
+        <div class="text-center">
+          <img class="w-28 h-28 rounded-full shadow-lg object-cover mb-3" src="https://placehold.co/120x120/808080/FFFFFF?text=Proprietor+Photo" alt="Proprietor">
+          <h3 class="text-lg font-semibold text-gray-800">Proprietor</h3>
+        </div>
+      </div>
+      <p class="mt-4 text-gray-700">
+        We extend our heartfelt gratitude to <strong class="text-indigo-700">Emjay Engineering Company</strong> for sponsoring this raffle.
+        Winners will receive apartments in the beautiful <strong class="text-green-700">Sierra Greens at Sarjapur Road</strong>.
+      </p>
+      <button id="startRaffle" class="mt-6 px-6 py-3 bg-purple-600 text-white text-lg font-bold rounded-full hover:bg-purple-700 transition">Start Raffle Draw</button>
     </section>
 
-    <section id="raffleArea" class="hidden">
-        <p id="statusMessage">Click a button to start drawing winners.</p>
+    <section id="raffleContent" class="hidden transition-all duration-1000">
+      <p class="mb-6 text-gray-700">
+        Congratulations to all our lucky winners! Click below to reveal winning numbers. Tickets are unique and drawn from:<br>
+        <strong class="text-red-600">All prizes are drawn from 'Winners.txt'</strong>
+      </p>
 
-        <div class="prize-section bronze">
-            <h3>3rd Place Winner</h3>
-            <div class="spinner" id="thirdSpinner">000000</div>
-            <button id="thirdBtn">Generate 3rd Place Winner</button>
-        </div>
+      <div class="grid gap-6" id="winnerSections"></div>
 
-        <div class="prize-section silver">
-            <h3>2nd Place Winner</h3>
-            <div class="spinner" id="secondSpinner">000000</div>
-            <button id="secondBtn" disabled>Generate 2nd Place Winner</button>
-        </div>
-
-        <div class="prize-section gold">
-            <h3>1st Place Winner</h3>
-            <div class="spinner" id="firstSpinner">000000</div>
-            <button id="firstBtn" disabled>Generate 1st Place Winner</button>
-        </div>
+      <button id="resetBtn" class="mt-6 px-6 py-2 bg-gray-300 text-gray-800 rounded-full hover:bg-red-600 hover:text-white transition" disabled>Reset Raffle</button>
     </section>
+  </main>
 
-    <script>
-        async function fetchWinners() {
-            try {
-                const response = await fetch('Winners.txt');
-                const data = await response.text();
-                return data.trim().split("\n"); // Assume each line contains a winning number
-            } catch (error) {
-                console.error("Error fetching winners:", error);
-                return [];
-            }
-        }
+  <div id="winnerSummary" class="fixed top-20 right-4 z-50 bg-yellow-100 p-4 rounded-lg shadow-xl hidden w-64">
+    <div class="absolute -top-2 -left-2 w-4 h-4 bg-red-500 rounded-full"></div>
+    <h2 class="text-2xl font-bold text-center mb-2">Winner Circle</h2>
+    <div class="space-y-2">
+      <div class="bg-purple-100 border-2 border-purple-500 p-2 rounded text-center">
+        <h3 class="font-bold text-purple-600">1st Place</h3>
+        <p id="summaryFirst" class="font-extrabold text-purple-800">---</p>
+      </div>
+      <div class="bg-gray-100 border-2 border-gray-500 p-2 rounded text-center">
+        <h3 class="font-bold text-gray-600">2nd Place</h3>
+        <p id="summarySecond" class="font-extrabold text-gray-800">---</p>
+      </div>
+      <div class="bg-amber-100 border-2 border-amber-500 p-2 rounded text-center">
+        <h3 class="font-bold text-amber-600">3rd Place</h3>
+        <p id="summaryThird" class="font-extrabold text-amber-800">---</p>
+      </div>
+    </div>
+  </div>
 
-        document.getElementById('startRaffle').addEventListener('click', async function () {
-            document.getElementById('raffleArea').classList.remove('hidden');
-            document.getElementById('statusMessage').textContent = "Loading winners...";
-            window.winningNumbers = await fetchWinners(); // Load numbers globally
-        });
+  <footer class="w-full bg-gray-800 text-gray-300 text-center py-4 mt-10 text-sm z-10">
+    <p>&copy; 2023 St. Sebastian's Church. All rights reserved.</p>
+    <p>Powered by <a href="#" class="text-blue-400 hover:underline">DataWings Solution</a></p>
+  </footer>
 
-        function generateWinner(spinnerId, nextButtonId, index) {
-            let spinner = document.getElementById(spinnerId);
-            let btn = nextButtonId ? document.getElementById(nextButtonId) : null;
-
-            let interval = setInterval(() => {
-                spinner.textContent = Math.floor(Math.random() * 999999).toString().padStart(6, '0');
-            }, 50);
-
-            setTimeout(() => {
-                clearInterval(interval);
-                spinner.textContent = window.winningNumbers[index] || "000000"; // Pick from loaded winners
-                if (btn) btn.disabled = false;
-            }, 3000);
-        }
-
-        document.getElementById('thirdBtn').addEventListener('click', () => {
-            generateWinner('thirdSpinner', 'secondBtn', 0);
-        });
-
-        document.getElementById('secondBtn').addEventListener('click', () => {
-            generateWinner('secondSpinner', 'firstBtn', 1);
-        });
-
-        document.getElementById('firstBtn').addEventListener('click', () => {
-            generateWinner('firstSpinner', null, 2);
-        });
-    </script>
+  <script src="raffle.js"></script>
 </body>
 </html>
