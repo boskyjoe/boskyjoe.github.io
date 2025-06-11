@@ -83,12 +83,24 @@
     </section>
 
     <script>
-        document.getElementById('startRaffle').addEventListener('click', function () {
+        async function fetchWinners() {
+            try {
+                const response = await fetch('Winners.txt');
+                const data = await response.text();
+                return data.trim().split("\n"); // Assume each line contains a winning number
+            } catch (error) {
+                console.error("Error fetching winners:", error);
+                return [];
+            }
+        }
+
+        document.getElementById('startRaffle').addEventListener('click', async function () {
             document.getElementById('raffleArea').classList.remove('hidden');
-            document.getElementById('statusMessage').textContent = "Drawing winners...";
+            document.getElementById('statusMessage').textContent = "Loading winners...";
+            window.winningNumbers = await fetchWinners(); // Load numbers globally
         });
 
-        function generateWinner(spinnerId, nextButtonId) {
+        function generateWinner(spinnerId, nextButtonId, index) {
             let spinner = document.getElementById(spinnerId);
             let btn = nextButtonId ? document.getElementById(nextButtonId) : null;
 
@@ -98,21 +110,21 @@
 
             setTimeout(() => {
                 clearInterval(interval);
-                spinner.textContent = Math.floor(Math.random() * 999999).toString().padStart(6, '0');
+                spinner.textContent = window.winningNumbers[index] || "000000"; // Pick from loaded winners
                 if (btn) btn.disabled = false;
             }, 3000);
         }
 
         document.getElementById('thirdBtn').addEventListener('click', () => {
-            generateWinner('thirdSpinner', 'secondBtn');
+            generateWinner('thirdSpinner', 'secondBtn', 0);
         });
 
         document.getElementById('secondBtn').addEventListener('click', () => {
-            generateWinner('secondSpinner', 'firstBtn');
+            generateWinner('secondSpinner', 'firstBtn', 1);
         });
 
         document.getElementById('firstBtn').addEventListener('click', () => {
-            generateWinner('firstSpinner', null);
+            generateWinner('firstSpinner', null, 2);
         });
     </script>
 </body>
