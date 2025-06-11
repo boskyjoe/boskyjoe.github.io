@@ -4,8 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>St. Sebastian's Church Raffle Winners</title>
-    <link rel="stylesheet" href="styles.css">
-    <script defer src="script.js"></script>
+    <style>
+        body {
+            background: #f9f9f9 url('homes-background.png') no-repeat center/cover;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        header {
+            padding: 20px;
+            background: linear-gradient(135deg, #ffcc00, #ff6600);
+            color: white;
+            border-radius: 10px;
+        }
+        .prize-section {
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px auto;
+        }
+        .bronze { background: linear-gradient(135deg, #cd7f32, #964b00); }
+        .silver { background: linear-gradient(135deg, #c0c0c0, #808080); }
+        .gold { background: linear-gradient(135deg, #ffd700, #8b5a2b); }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover { transform: scale(1.05); }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .spinner {
+            font-size: 36px;
+            font-family: 'Brush Script MT', cursive;
+            padding: 20px;
+            border: 2px solid black;
+            display: inline-block;
+        }
+        .hidden { display: none; }
+    </style>
 </head>
 <body>
     <header>
@@ -13,7 +51,7 @@
         <h1>St. Sebastian's Church Raffle Winner Announcement</h1>
         <p>Address | Contact Info</p>
     </header>
-    
+
     <section id="sponsor">
         <h2>Esteemed Sponsor</h2>
         <img src="sponsor-logo.png" alt="Sponsor Logo">
@@ -24,13 +62,13 @@
 
     <section id="raffleArea" class="hidden">
         <p id="statusMessage">Click a button to start drawing winners.</p>
-        
+
         <div class="prize-section bronze">
             <h3>3rd Place Winner</h3>
             <div class="spinner" id="thirdSpinner">000000</div>
             <button id="thirdBtn">Generate 3rd Place Winner</button>
         </div>
-        
+
         <div class="prize-section silver">
             <h3>2nd Place Winner</h3>
             <div class="spinner" id="secondSpinner">000000</div>
@@ -43,5 +81,39 @@
             <button id="firstBtn" disabled>Generate 1st Place Winner</button>
         </div>
     </section>
+
+    <script>
+        document.getElementById('startRaffle').addEventListener('click', function () {
+            document.getElementById('raffleArea').classList.remove('hidden');
+            document.getElementById('statusMessage').textContent = "Drawing winners...";
+        });
+
+        function generateWinner(spinnerId, nextButtonId) {
+            let spinner = document.getElementById(spinnerId);
+            let btn = nextButtonId ? document.getElementById(nextButtonId) : null;
+
+            let interval = setInterval(() => {
+                spinner.textContent = Math.floor(Math.random() * 999999).toString().padStart(6, '0');
+            }, 50);
+
+            setTimeout(() => {
+                clearInterval(interval);
+                spinner.textContent = Math.floor(Math.random() * 999999).toString().padStart(6, '0');
+                if (btn) btn.disabled = false;
+            }, 3000);
+        }
+
+        document.getElementById('thirdBtn').addEventListener('click', () => {
+            generateWinner('thirdSpinner', 'secondBtn');
+        });
+
+        document.getElementById('secondBtn').addEventListener('click', () => {
+            generateWinner('secondSpinner', 'firstBtn');
+        });
+
+        document.getElementById('firstBtn').addEventListener('click', () => {
+            generateWinner('firstSpinner', null);
+        });
+    </script>
 </body>
 </html>
