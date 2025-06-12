@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Raffle Draw from Winners.txt</title>
+  <title>Raffle Draw from Winners.txt (Auto Load)</title>
   <style>
     body {
       margin: 0;
@@ -75,55 +75,53 @@
       font-weight: bold;
       color: #4caf50;
     }
-
-    input[type="file"] {
-      margin: 10px;
-    }
   </style>
 </head>
 <body>
 
   <h1>Raffle Draw from Winners.txt</h1>
-  <input type="file" id="fileInput" accept=".txt" />
   <div class="controls">
     <label>Draw Count: <input type="number" id="drawCount" value="1" min="1" /></label><br />
     <button onclick="startDraw()">Start Draw</button>
   </div>
   <div class="machine" id="machine"></div>
-  <div class="winner" id="winnerOutput"></div>
+  <div class="winner" id="winnerOutput">Loading Winners.txt...</div>
 
   <script>
-    const fileInput = document.getElementById('fileInput');
     const machine = document.getElementById('machine');
     const winnerOutput = document.getElementById('winnerOutput');
 
     let ticketNumbers = [];
     let balls = [];
 
-    fileInput.addEventListener('change', handleFileUpload);
+    // Automatically load Winners.txt on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      fetch('Winners.txt')
+        .then(response => {
+          if (!response.ok) throw new Error("Failed to load Winners.txt");
+          return response.text();
+        })
+        .then(text => {
+          ticketNumbers = text
+            .split(/\r?\n/)
+            .map(line => line.trim())
+            .filter(line => /^\d+$/.test(line))
+            .map(Number);
 
-    function handleFileUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+          if (ticketNumbers.length === 0) {
+            winnerOutput.textContent = "No valid numbers found in Winners.txt";
+            return;
+          }
 
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const content = e.target.result;
-        ticketNumbers = content
-          .split(/\r?\n/)
-          .map(line => line.trim())
-          .filter(line => /^\d+$/.test(line))
-          .map(Number);
-        if (ticketNumbers.length === 0) {
-          alert("No valid numbers found in file.");
-          return;
-        }
-        createBalls(ticketNumbers);
-        startAnimation();
-        winnerOutput.textContent = `Loaded ${ticketNumbers.length} ticket(s)`;
-      };
-      reader.readAsText(file);
-    }
+          createBalls(ticketNumbers);
+          startAnimation();
+          winnerOutput.textContent = `Loaded ${ticketNumbers.length} ticket(s)`;
+        })
+        .catch(err => {
+          console.error(err);
+          winnerOutput.textContent = "Error loading Winners.txt";
+        });
+    });
 
     function createBalls(numbers) {
       machine.innerHTML = '';
@@ -169,13 +167,13 @@
 
     function startDraw() {
       if (ticketNumbers.length === 0) {
-        alert("Please upload Winners.txt first.");
+        alert("No tickets loaded from Winners.txt.");
         return;
       }
 
       const drawCount = parseInt(document.getElementById('drawCount').value);
       if (drawCount > ticketNumbers.length) {
-        alert("Draw count cannot exceed number of loaded tickets.");
+        alert("Draw count exceeds number of loaded tickets.");
         return;
       }
 
