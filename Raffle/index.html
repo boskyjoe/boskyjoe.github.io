@@ -55,6 +55,59 @@
             align-items: center;
         }
 
+        .church-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .church-header-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .church-logo {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+        }
+
+        .church-info {
+            text-align: center;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .church-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            line-height: 1.2;
+        }
+
+        .church-address {
+            font-size: 1rem;
+            color: #5a6c7d;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .church-contact {
+            font-size: 1rem;
+            color: #667eea;
+            font-weight: 500;
+        }
+
         .header {
             text-align: center;
             margin-bottom: 40px;
@@ -323,6 +376,19 @@
                 height: 100px;
                 font-size: 1.5rem;
             }
+
+            .church-header-content {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .church-title {
+                font-size: 1.8rem;
+            }
+
+            .church-info {
+                min-width: auto;
+            }
         }
     </style>
 </head>
@@ -330,6 +396,23 @@
     <div class="stars" id="stars"></div>
     
     <div class="container">
+        <div class="church-header">
+            <div class="church-header-content">
+                <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png" 
+                     alt="St. Sebastian's Church Logo" 
+                     class="church-logo">
+                <div class="church-info">
+                    <h1 class="church-title">St. Sebastian's Church Raffle Winner Announcement</h1>
+                    <div class="church-address">
+                        No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038
+                    </div>
+                    <div class="church-contact">
+                        +91 7090424365 | stsebastianssmc@gmail.com
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="header">
             <h1 class="title">VENUS LOTTERY</h1>
             <p class="subtitle">Premium Drawing Machine</p>
