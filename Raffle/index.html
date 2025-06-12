@@ -3,45 +3,62 @@
 <head>
   <meta charset="UTF-8" />
   <title>Raffle Draw Machine</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet" />
 
-  <!-- Material Web Components ImportMap -->
-  <script type="importmap">
-  {
-    "imports": {
-      "@material/web/": "https://esm.run/@material/web@2.3.0/"
-    }
-  }
-  </script>
-  <script type="module">
-    import '@material/web/button/filled-button.js';
-    import '@material/web/button/outlined-button.js';
-  </script>
+  <!-- Material Web Components -->
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@material/web@latest/button/filled-button.js"></script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@material/web@latest/button/outlined-button.js"></script>
 
   <style>
-    body { font-family: 'Roboto', sans-serif; background: radial-gradient(circle, #0f2027, #203a43, #2c5364); }
-    .ball { @apply w-16 h-16 rounded-full bg-yellow-400 text-black font-bold flex items-center justify-center shadow-md text-lg; }
-    .ball.drawn { @apply bg-green-500 scale-110; }
-    .ball-container { position: relative; width: 300px; height: 300px; }
-    .ball-item { position: absolute; transition: all 0.5s ease-in-out;}
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: radial-gradient(circle, #0f2027, #203a43, #2c5364);
+      color: white;
+    }
+    .ball {
+      width: 64px;
+      height: 64px;
+      border-radius: 9999px;
+      background-color: #facc15; /* Tailwind amber-400 */
+      color: black;
+      font-weight: 700;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 6px rgb(0 0 0 / 0.3);
+      font-size: 1.25rem;
+      transition: transform 0.3s ease;
+      position: absolute;
+    }
+    .ball.drawn {
+      background-color: #22c55e; /* Tailwind green-500 */
+      transform: scale(1.3);
+      transition: transform 0.5s ease;
+    }
+    #ballContainer {
+      position: relative;
+      width: 320px;
+      height: 320px;
+      margin-bottom: 1rem;
+    }
   </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen p-6 space-y-6">
 
-  <h1 class="text-3xl font-bold text-white">🎉 Raffle Draw</h1>
+  <h1 class="text-4xl font-bold">🎉 Raffle Draw</h1>
 
-  <div id="ballContainer" class="ball-container"></div>
+  <div id="ballContainer"></div>
 
-  <div class="text-lg text-center space-y-2 text-white">
-    <p><strong>3rd Place:</strong> <span id="place3">–</span></p>
-    <p><strong>2nd Place:</strong> <span id="place2">–</span></p>
-    <p><strong>1st Place:</strong> <span id="place1">–</span></p>
+  <div class="text-xl text-center space-y-2">
+    <p>3rd Place: <span id="place3">–</span></p>
+    <p>2nd Place: <span id="place2">–</span></p>
+    <p>1st Place: <span id="place1">–</span></p>
   </div>
 
   <div class="flex gap-4">
@@ -49,62 +66,90 @@
     <mwc-outlined-button id="resetBtn" label="Reset"></mwc-outlined-button>
   </div>
 
-  <div id="status" class="text-sm text-gray-300 mt-2"></div>
+  <div id="status" class="mt-2 text-gray-300"></div>
 
   <script>
     const drawBtn = document.getElementById('drawBtn');
     const resetBtn = document.getElementById('resetBtn');
     const statusEl = document.getElementById('status');
-    const placeEls = [document.getElementById('place3'), document.getElementById('place2'), document.getElementById('place1')];
-    const container = document.getElementById('ballContainer');
+    const placeEls = [
+      document.getElementById('place3'),
+      document.getElementById('place2'),
+      document.getElementById('place1'),
+    ];
+    const ballContainer = document.getElementById('ballContainer');
 
-    let tickets = [], drawn = [];
+    let tickets = [];
 
-    // Fetch ticket list
+    // Load tickets from Winners.txt on page load
     window.addEventListener('DOMContentLoaded', () => {
       fetch('Winners.txt')
-        .then(res => res.ok ? res.text() : Promise.reject('Fetch failed'))
-        .then(txt => {
-          tickets = txt.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+        .then(res => {
+          if (!res.ok) throw new Error('Could not load Winners.txt');
+          return res.text();
+        })
+        .then(text => {
+          tickets = text.split(/\r?\n/).map(line => line.trim()).filter(line => line);
           statusEl.textContent = `Loaded ${tickets.length} entries`;
         })
-        .catch(() => statusEl.textContent = 'Failed to load Winners.txt');
+        .catch(err => {
+          console.error(err);
+          statusEl.textContent = 'Failed to load Winners.txt';
+        });
     });
 
-    function startDraw() {
-      if (tickets.length < 3) return alert('Need at least 3 entries');
-      drawBtn.disabled = resetBtn.disabled = true;
-      placeEls.forEach(el => el.textContent = '–');
-      container.innerHTML = '';
+    function clearDraw() {
+      ballContainer.innerHTML = '';
+      placeEls.forEach(el => (el.textContent = '–'));
+      statusEl.textContent = `Loaded ${tickets.length} entries`;
+    }
 
-      drawn = [];
-      const pool = [...tickets];
-      for (let i = 0; i < 3; i++) {
-        const idx = Math.floor(Math.random() * pool.length);
-        drawn.push(pool.splice(idx,1)[0]);
+    function drawBalls() {
+      if (tickets.length < 3) {
+        alert('Not enough entries in Winners.txt to draw 3 winners.');
+        return;
       }
 
+      drawBtn.disabled = true;
+      resetBtn.disabled = true;
+      placeEls.forEach(el => (el.textContent = '–'));
+      ballContainer.innerHTML = '';
+
+      // Pick 3 unique random tickets
+      const pool = [...tickets];
+      const drawn = [];
+      for (let i = 0; i < 3; i++) {
+        const idx = Math.floor(Math.random() * pool.length);
+        drawn.push(pool.splice(idx, 1)[0]);
+      }
+
+      // Show balls randomly positioned in container
       drawn.forEach((num, i) => {
-        const div = document.createElement('div');
-        div.className = 'ball ball-item';
-        div.textContent = num;
-        const angle = Math.random()*2*Math.PI;
-        const r = 120;
-        div.style.left = `${r*Math.cos(angle)+120}px`;
-        div.style.top = `${r*Math.sin(angle)+120}px`;
-        container.appendChild(div);
-        setTimeout(() => div.classList.add('drawn'), 500);
-        setTimeout(() => { placeEls[i].textContent = num; if (i===2) drawBtn.disabled = resetBtn.disabled = false; }, 1000*(i+1));
+        const ball = document.createElement('div');
+        ball.className = 'ball';
+        ball.textContent = num;
+        // Random position inside container circle radius ~120px
+        const angle = Math.random() * 2 * Math.PI;
+        const radius = 120;
+        ball.style.left = `${radius * Math.cos(angle) + 130}px`;
+        ball.style.top = `${radius * Math.sin(angle) + 130}px`;
+        ballContainer.appendChild(ball);
+
+        // Animate scale and reveal place text sequentially
+        setTimeout(() => {
+          ball.classList.add('drawn');
+          placeEls[i].textContent = num;
+          if (i === 2) {
+            drawBtn.disabled = false;
+            resetBtn.disabled = false;
+            statusEl.textContent = 'Draw complete!';
+          }
+        }, 1000 * (i + 1));
       });
     }
 
-    function resetDraw() {
-      container.innerHTML = '';
-      placeEls.forEach(el => el.textContent = '–');
-    }
-
-    drawBtn.addEventListener('click', startDraw);
-    resetBtn.addEventListener('click', resetDraw);
+    drawBtn.addEventListener('click', drawBalls);
+    resetBtn.addEventListener('click', clearDraw);
   </script>
 </body>
 </html>
