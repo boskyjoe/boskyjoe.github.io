@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Raffle Draw from Winners.txt (Auto Load)</title>
+  <title>Raffle Draw</title>
   <style>
     body {
       margin: 0;
@@ -79,7 +79,7 @@
 </head>
 <body>
 
-  <h1>Raffle Draw from Winners.txt</h1>
+  <h1>Raffle Draw</h1>
   <div class="controls">
     <label>Draw Count: <input type="number" id="drawCount" value="1" min="1" /></label><br />
     <button onclick="startDraw()">Start Draw</button>
@@ -94,7 +94,6 @@
     let ticketNumbers = [];
     let balls = [];
 
-    // Automatically load Winners.txt on page load
     window.addEventListener('DOMContentLoaded', () => {
       fetch('Winners.txt')
         .then(response => {
