@@ -336,15 +336,7 @@
         </div>
 
         <div class="machine-container">
-            <div class="file-upload">
-                <div class="file-input-wrapper">
-                    <span class="material-icons">upload_file</span>
-                    Upload Winners.txt
-                    <input type="file" class="file-input" id="fileInput" accept=".txt">
-                </div>
-            </div>
-
-            <div class="status" id="status">Upload your Winners.txt file to begin</div>
+            <div class="status" id="status">Loading Winners.txt file...</div>
 
             <div class="drawing-area">
                 <div class="lottery-ball" id="ball1">?</div>
@@ -381,33 +373,35 @@
             }
         }
 
-        // File upload handler
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file && file.type === 'text/plain') {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const content = e.target.result;
-                    winnersData = content.split('\n')
-                        .map(line => line.trim())
-                        .filter(line => line.length > 0);
-                    
-                    if (winnersData.length >= 3) {
-                        document.getElementById('status').textContent = 
-                            `Loaded ${winnersData.length} potential winners. Ready to draw!`;
-                        document.getElementById('drawBtn').disabled = false;
-                        resetBalls();
-                    } else {
-                        document.getElementById('status').textContent = 
-                            'Need at least 3 numbers in the file to draw winners.';
-                        document.getElementById('drawBtn').disabled = true;
-                    }
-                };
-                reader.readAsText(file);
-            } else {
-                alert('Please upload a valid .txt file');
+        // Load Winners.txt file automatically
+        async function loadWinnersFile() {
+            try {
+                const response = await fetch('Winners.txt');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const content = await response.text();
+                winnersData = content.split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0);
+                
+                if (winnersData.length >= 3) {
+                    document.getElementById('status').textContent = 
+                        `Loaded ${winnersData.length} potential winners. Ready to draw!`;
+                    document.getElementById('drawBtn').disabled = false;
+                    resetBalls();
+                } else {
+                    document.getElementById('status').textContent = 
+                        'Need at least 3 numbers in Winners.txt to draw winners.';
+                    document.getElementById('drawBtn').disabled = true;
+                }
+            } catch (error) {
+                console.error('Error loading Winners.txt:', error);
+                document.getElementById('status').textContent = 
+                    'Error: Could not load Winners.txt file. Make sure it exists in the same directory.';
+                document.getElementById('drawBtn').disabled = true;
             }
-        });
+        }
 
         // Reset balls to initial state
         function resetBalls() {
@@ -538,6 +532,7 @@
 
         // Initialize the app
         createStars();
+        loadWinnersFile(); // Automatically load the Winners.txt file
     </script>
 </body>
 </html>
