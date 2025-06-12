@@ -2,211 +2,157 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Raffle Draw</title>
+  <title>Raffle Draw Machine</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts + Material Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+
+  <!-- Material Web Components -->
+  <script type="module" src="https://esm.run/@material/web/all.js"></script>
+
   <style>
     body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: radial-gradient(circle at center, #0f2027, #203a43, #2c5364);
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      padding: 20px;
-    }
-
-    h1 {
-      text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
-    }
-
-    .machine {
-      width: 300px;
-      height: 300px;
-      border-radius: 50%;
-      border: 10px solid #fff;
-      position: relative;
-      overflow: hidden;
-      margin: 20px;
-      background: #333;
-      box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+      font-family: 'Roboto', sans-serif;
+      background: radial-gradient(circle, #0f2027, #203a43, #2c5364);
+      color: white;
     }
 
     .ball {
+      @apply w-16 h-16 rounded-full bg-yellow-400 text-black font-bold flex items-center justify-center shadow-md text-lg;
+    }
+
+    .ball.drawn {
+      @apply bg-green-500 scale-125;
+    }
+
+    .ball-container {
+      position: relative;
+      width: 300px;
+      height: 300px;
+    }
+
+    .ball-anim {
       position: absolute;
-      min-width: 40px;
-      height: 40px;
-      padding: 0 10px;
-      background: #ffeb3b;
-      border-radius: 50%;
-      color: #000;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 5px rgba(0,0,0,0.5);
-      transition: transform 0.5s ease-out;
-      white-space: nowrap;
-    }
-
-    .controls {
-      text-align: center;
-    }
-
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      background: #00bcd4;
-      border: none;
-      border-radius: 5px;
-      color: #fff;
-      cursor: pointer;
-      margin: 10px 5px;
-      transition: background 0.3s;
-    }
-
-    button:hover {
-      background: #0097a7;
-    }
-
-    .winner {
-      font-size: 1.5rem;
-      margin-top: 10px;
-      font-weight: bold;
-      color: #4caf50;
+      transition: all 0.3s ease-in-out;
     }
   </style>
 </head>
-<body>
+<body class="flex flex-col items-center justify-center min-h-screen p-4 space-y-6">
+  <h1 class="text-3xl font-bold text-white">🎉 Raffle Draw</h1>
 
-  <h1>Raffle Draw</h1>
-  <div class="controls">
-    <label>Draw Count: <input type="number" id="drawCount" value="1" min="1" /></label><br />
-    <button onclick="startDraw()">Start Draw</button>
+  <div id="ballContainer" class="ball-container"></div>
+
+  <div class="text-lg text-center space-y-2">
+    <p><strong>3rd Place:</strong> <span id="place3">–</span></p>
+    <p><strong>2nd Place:</strong> <span id="place2">–</span></p>
+    <p><strong>1st Place:</strong> <span id="place1">–</span></p>
   </div>
-  <div class="machine" id="machine"></div>
-  <div class="winner" id="winnerOutput">Loading Winners.txt...</div>
+
+  <div class="flex gap-4 mt-4">
+    <mwc-button raised label="Draw" icon="play_arrow" id="drawBtn"></mwc-button>
+    <mwc-button outlined label="Reset" icon="refresh" id="resetBtn"></mwc-button>
+  </div>
+
+  <div id="status" class="text-sm text-gray-300 mt-4"></div>
 
   <script>
-    const machine = document.getElementById('machine');
-    const winnerOutput = document.getElementById('winnerOutput');
+    const drawBtn = document.getElementById('drawBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const statusEl = document.getElementById('status');
+    const place1 = document.getElementById('place1');
+    const place2 = document.getElementById('place2');
+    const place3 = document.getElementById('place3');
+    const ballContainer = document.getElementById('ballContainer');
 
-    let ticketNumbers = [];
-    let balls = [];
+    let tickets = [];
+    let drawn = [];
 
-    window.addEventListener('DOMContentLoaded', () => {
+    // Utility to create animated ball elements
+    function showBalls(numbers) {
+      ballContainer.innerHTML = '';
+      numbers.forEach((num, i) => {
+        const div = document.createElement('div');
+        div.className = 'ball ball-anim';
+        div.textContent = num;
+        const angle = Math.random() * Math.PI * 2;
+        const radius = 120;
+        div.style.left = `${radius * Math.cos(angle) + 120}px`;
+        div.style.top = `${radius * Math.sin(angle) + 120}px`;
+        ballContainer.appendChild(div);
+      });
+    }
+
+    function fetchWinners() {
       fetch('Winners.txt')
-        .then(response => {
-          if (!response.ok) throw new Error("Failed to load Winners.txt");
-          return response.text();
-        })
+        .then(res => res.ok ? res.text() : Promise.reject('Fetch failed'))
         .then(text => {
-          ticketNumbers = text
+          tickets = text
             .split(/\r?\n/)
             .map(line => line.trim())
-            .filter(line => line.length > 0); // Accept any non-empty line
-
-          if (ticketNumbers.length === 0) {
-            winnerOutput.textContent = "No valid entries found in Winners.txt";
-            return;
-          }
-
-          createBalls(ticketNumbers);
-          startAnimation();
-          winnerOutput.textContent = `Loaded ${ticketNumbers.length} ticket(s)`;
+            .filter(line => line.length > 0);
+          statusEl.textContent = `Loaded ${tickets.length} entries from Winners.txt`;
         })
         .catch(err => {
           console.error(err);
-          winnerOutput.textContent = "Error loading Winners.txt";
+          statusEl.textContent = 'Failed to load Winners.txt';
         });
-    });
-
-    function createBalls(numbers) {
-      machine.innerHTML = '';
-      balls = [];
-
-      numbers.forEach(number => {
-        const ball = document.createElement('div');
-        ball.className = 'ball';
-        ball.textContent = number;
-        const angle = Math.random() * Math.PI * 2;
-        const radius = 110 + Math.random() * 40;
-        const x = Math.cos(angle) * radius + 130;
-        const y = Math.sin(angle) * radius + 130;
-
-        ball.style.left = `${x}px`;
-        ball.style.top = `${y}px`;
-        machine.appendChild(ball);
-        balls.push({ el: ball, angle: angle, radius: radius });
-      });
     }
 
-    function animateBalls() {
-      balls.forEach(b => {
-        b.angle += 0.05 + Math.random() * 0.02;
-        const x = Math.cos(b.angle) * b.radius + 130;
-        const y = Math.sin(b.angle) * b.radius + 130;
-        b.el.style.left = `${x}px`;
-        b.el.style.top = `${y}px`;
-      });
+    function drawUnique(count) {
+      if (tickets.length < count) return [];
+
+      const temp = [...tickets];
+      const result = [];
+
+      for (let i = 0; i < count; i++) {
+        const idx = Math.floor(Math.random() * temp.length);
+        result.push(temp.splice(idx, 1)[0]);
+      }
+      return result;
     }
 
-    let animationId = null;
-    function startAnimation() {
-      animationId = requestAnimationFrame(() => {
-        animateBalls();
-        startAnimation();
-      });
-    }
-
-    function stopAnimation() {
-      cancelAnimationFrame(animationId);
-    }
-
-    function startDraw() {
-      if (ticketNumbers.length === 0) {
-        alert("No tickets loaded from Winners.txt.");
+    function drawSequence() {
+      if (tickets.length < 3) {
+        alert('Not enough entries to draw 3 winners.');
         return;
       }
 
-      const drawCount = parseInt(document.getElementById('drawCount').value);
-      if (drawCount > ticketNumbers.length) {
-        alert("Draw count exceeds number of loaded tickets.");
-        return;
-      }
+      drawBtn.disabled = true;
+      resetBtn.disabled = true;
+      place1.textContent = place2.textContent = place3.textContent = '–';
 
-      startAnimation();
-      winnerOutput.textContent = 'Drawing...';
+      drawn = drawUnique(3);
+      showBalls(drawn);
+
+      // Sequential reveal
+      setTimeout(() => {
+        place3.textContent = drawn[0];
+      }, 1000);
 
       setTimeout(() => {
-        stopAnimation();
+        place2.textContent = drawn[1];
+      }, 2000);
 
-        const pool = [...ticketNumbers];
-        const winners = [];
-
-        for (let i = 0; i < drawCount; i++) {
-          const idx = Math.floor(Math.random() * pool.length);
-          winners.push(pool.splice(idx, 1)[0]);
-        }
-
-        highlightWinners(winners);
-        winnerOutput.textContent = `Winner${winners.length > 1 ? 's' : ''}: ${winners.join(', ')}`;
-      }, 4000);
+      setTimeout(() => {
+        place1.textContent = drawn[2];
+        drawBtn.disabled = false;
+        resetBtn.disabled = false;
+      }, 3000);
     }
 
-    function highlightWinners(winners) {
-      const elements = Array.from(machine.children);
-      elements.forEach(el => {
-        if (winners.includes(el.textContent)) {
-          el.style.background = '#4caf50';
-          el.style.transform = 'scale(1.4)';
-        } else {
-          el.style.opacity = '0.3';
-        }
-      });
-    }
+    drawBtn.addEventListener('click', drawSequence);
+
+    resetBtn.addEventListener('click', () => {
+      place1.textContent = place2.textContent = place3.textContent = '–';
+      ballContainer.innerHTML = '';
+    });
+
+    window.addEventListener('DOMContentLoaded', fetchWinners);
   </script>
 </body>
 </html>
