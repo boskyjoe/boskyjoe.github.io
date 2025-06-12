@@ -36,8 +36,9 @@
 
     .ball {
       position: absolute;
-      width: 40px;
+      min-width: 40px;
       height: 40px;
+      padding: 0 10px;
       background: #ffeb3b;
       border-radius: 50%;
       color: #000;
@@ -47,6 +48,7 @@
       justify-content: center;
       box-shadow: 0 0 5px rgba(0,0,0,0.5);
       transition: transform 0.5s ease-out;
+      white-space: nowrap;
     }
 
     .controls {
@@ -104,11 +106,10 @@
           ticketNumbers = text
             .split(/\r?\n/)
             .map(line => line.trim())
-            .filter(line => /^\d+$/.test(line))
-            .map(Number);
+            .filter(line => line.length > 0); // Accept any non-empty line
 
           if (ticketNumbers.length === 0) {
-            winnerOutput.textContent = "No valid numbers found in Winners.txt";
+            winnerOutput.textContent = "No valid entries found in Winners.txt";
             return;
           }
 
@@ -198,7 +199,7 @@
     function highlightWinners(winners) {
       const elements = Array.from(machine.children);
       elements.forEach(el => {
-        if (winners.includes(parseInt(el.textContent))) {
+        if (winners.includes(el.textContent)) {
           el.style.background = '#4caf50';
           el.style.transform = 'scale(1.4)';
         } else {
