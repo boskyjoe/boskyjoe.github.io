@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Venus Lottery Drawing Machine</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>St. Sebastian's Church Raffle Winner Announcement</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         * {
@@ -14,234 +14,169 @@
         }
 
         body {
-            font-family: 'Space Grotesk', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             min-height: 100vh;
-            overflow-x: hidden;
-            position: relative;
-        }
-
-        .stars {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .star {
-            position: absolute;
-            background: white;
-            border-radius: 50%;
-            animation: twinkle 2s infinite;
-        }
-
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.3; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.2); }
+            color: #2c3e50;
+            line-height: 1.6;
         }
 
         .container {
-            position: relative;
-            z-index: 1;
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 0 20px;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
         }
 
-        .church-header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        .header {
+            background: white;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+            border-radius: 0 0 20px 20px;
+            padding: 30px 40px;
+            margin-bottom: 40px;
         }
 
-        .church-header-content {
+        .header-content {
             display: flex;
             align-items: center;
-            justify-content: center;
             gap: 30px;
-            flex-wrap: wrap;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
         .church-logo {
             width: 80px;
             height: 80px;
             object-fit: contain;
-            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+            flex-shrink: 0;
         }
 
         .church-info {
-            text-align: center;
             flex: 1;
-            min-width: 300px;
         }
 
         .church-title {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Playfair Display', serif;
             font-size: 2.2rem;
             font-weight: 700;
-            color: #2c3e50;
-            margin-bottom: 15px;
-            line-height: 1.2;
+            color: #1a365d;
+            margin-bottom: 12px;
+            line-height: 1.3;
         }
 
         .church-address {
             font-size: 1rem;
-            color: #5a6c7d;
-            line-height: 1.6;
-            margin-bottom: 10px;
+            color: #4a5568;
+            margin-bottom: 8px;
+            font-weight: 400;
         }
 
         .church-contact {
             font-size: 1rem;
-            color: #667eea;
+            color: #2b6cb0;
             font-weight: 500;
         }
 
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
+        .main-content {
+            max-width: 900px;
+            margin: 0 auto;
         }
 
-        .title {
-            font-family: 'Orbitron', monospace;
-            font-size: 3.5rem;
-            font-weight: 900;
-            color: #fff;
-            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
-            margin-bottom: 10px;
-            animation: glow 2s ease-in-out infinite alternate;
-        }
-
-        @keyframes glow {
-            from { text-shadow: 0 0 20px rgba(255, 255, 255, 0.5); }
-            to { text-shadow: 0 0 30px rgba(255, 255, 255, 0.8), 0 0 40px rgba(102, 126, 234, 0.5); }
-        }
-
-        .subtitle {
-            font-size: 1.2rem;
-            color: rgba(255, 255, 255, 0.8);
-            font-weight: 300;
-        }
-
-        .machine-container {
-            background: linear-gradient(145deg, #ffffff, #f0f0f0);
-            border-radius: 30px;
+        .drawing-section {
+            background: white;
+            border-radius: 16px;
             padding: 40px;
-            box-shadow: 
-                0 25px 50px rgba(0, 0, 0, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.6);
-            margin-bottom: 40px;
-            position: relative;
-            overflow: hidden;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            margin-bottom: 30px;
         }
 
-        .machine-container::before {
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #1a365d;
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .section-title::after {
             content: '';
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            transform: rotate(45deg);
-            animation: shine 3s linear infinite;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #3182ce, #2b6cb0);
+            border-radius: 2px;
         }
 
-        @keyframes shine {
-            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
-        }
-
-        .file-upload {
-            margin-bottom: 30px;
+        .status-card {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
             text-align: center;
-            position: relative;
-            z-index: 2;
+            margin-bottom: 30px;
+            color: #4a5568;
+            font-weight: 500;
         }
 
-        .file-input-wrapper {
-            position: relative;
-            display: inline-block;
-            cursor: pointer;
-            background: linear-gradient(145deg, #667eea, #764ba2);
-            padding: 15px 30px;
-            border-radius: 15px;
-            color: white;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        .status-card.success {
+            background: #f0fff4;
+            border-color: #68d391;
+            color: #22543d;
         }
 
-        .file-input-wrapper:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        .file-input {
-            position: absolute;
-            opacity: 0;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
+        .status-card.error {
+            background: #fff5f5;
+            border-color: #fc8181;
+            color: #742a2a;
         }
 
         .drawing-area {
-            text-align: center;
-            position: relative;
-            z-index: 2;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 40px 0;
+            flex-wrap: wrap;
         }
 
-        .lottery-ball {
-            width: 120px;
-            height: 120px;
+        .winner-ball {
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
-            background: linear-gradient(145deg, #ffd700, #ffed4e);
-            display: inline-flex;
+            background: linear-gradient(145deg, #ffffff, #f1f5f9);
+            display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Orbitron', monospace;
-            font-size: 2rem;
+            font-size: 1.8rem;
             font-weight: 700;
-            color: #333;
-            margin: 10px;
+            color: #1a365d;
+            border: 3px solid #e2e8f0;
             box-shadow: 
-                0 15px 30px rgba(0, 0, 0, 0.2),
-                inset 0 -5px 10px rgba(0, 0, 0, 0.1),
-                inset 0 5px 10px rgba(255, 255, 255, 0.6);
+                0 10px 25px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
             position: relative;
-            overflow: hidden;
-            animation: float 3s ease-in-out infinite;
+            transition: all 0.3s ease;
         }
 
-        .lottery-ball::before {
-            content: '';
-            position: absolute;
-            top: 20%;
-            left: 20%;
-            width: 30%;
-            height: 30%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.8), transparent);
-            border-radius: 50%;
+        .winner-ball.active {
+            background: linear-gradient(145deg, #3182ce, #2c5282);
+            color: white;
+            border-color: #2c5282;
+            animation: pulse 1.5s ease-in-out infinite;
         }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-10px) rotate(180deg); }
+        .winner-ball.spinning {
+            animation: spin 0.8s linear infinite;
         }
 
-        .lottery-ball.spinning {
-            animation: spin 2s linear infinite, bounce 0.5s ease-in-out infinite alternate;
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         @keyframes spin {
@@ -249,136 +184,147 @@
             100% { transform: rotate(360deg); }
         }
 
-        @keyframes bounce {
-            0% { transform: translateY(0px); }
-            100% { transform: translateY(-20px); }
-        }
-
-        .draw-btn {
-            background: linear-gradient(145deg, #ff6b6b, #ee5a52);
+        .draw-button {
+            background: linear-gradient(135deg, #3182ce, #2c5282);
             color: white;
             border: none;
-            padding: 20px 40px;
-            font-size: 1.3rem;
-            font-weight: 700;
-            border-radius: 15px;
+            padding: 16px 32px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
             cursor: pointer;
-            margin: 30px 0;
             transition: all 0.3s ease;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-            font-family: 'Space Grotesk', sans-serif;
-            position: relative;
-            z-index: 2;
+            box-shadow: 0 4px 15px rgba(49, 130, 206, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 auto;
+            font-family: 'Inter', sans-serif;
         }
 
-        .draw-btn:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        .draw-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(49, 130, 206, 0.5);
         }
 
-        .draw-btn:disabled {
+        .draw-button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
+            transform: none;
         }
 
-        .results {
-            margin-top: 40px;
-            position: relative;
-            z-index: 2;
+        .results-section {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+            animation: slideUp 0.6s ease forwards;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .winner-card {
-            background: linear-gradient(145deg, #ffffff, #f8f9fa);
-            border-radius: 20px;
-            padding: 25px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
             margin: 15px 0;
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
-            transform: translateY(20px);
-            opacity: 0;
-            animation: slideUp 0.6s ease forwards;
-            border-left: 6px solid;
+            background: #f8fafc;
+            border-radius: 12px;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
         }
 
-        .winner-card.first { border-left-color: #ffd700; }
-        .winner-card.second { border-left-color: #c0c0c0; }
-        .winner-card.third { border-left-color: #cd7f32; }
-
-        @keyframes slideUp {
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
+        .winner-card:hover {
+            background: #f1f5f9;
+            transform: translateX(5px);
         }
 
-        .place {
-            font-family: 'Orbitron', monospace;
-            font-size: 1.5rem;
+        .winner-card.first { border-left-color: #d69e2e; }
+        .winner-card.second { border-left-color: #718096; }
+        .winner-card.third { border-left-color: #c05621; }
+
+        .winner-position {
+            font-size: 2rem;
             font-weight: 700;
-            margin-bottom: 10px;
+            min-width: 60px;
+            text-align: center;
         }
 
-        .place.first { color: #ffd700; }
-        .place.second { color: #c0c0c0; }
-        .place.third { color: #cd7f32; }
+        .winner-position.first { color: #d69e2e; }
+        .winner-position.second { color: #718096; }
+        .winner-position.third { color: #c05621; }
+
+        .winner-details {
+            flex: 1;
+        }
+
+        .winner-place {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
 
         .winner-number {
-            font-size: 2.5rem;
-            font-weight: 900;
-            color: #333;
-            font-family: 'Orbitron', monospace;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #1a365d;
+            font-family: 'Inter', sans-serif;
         }
 
-        .status {
+        .congratulations {
             text-align: center;
-            margin: 20px 0;
-            font-size: 1.1rem;
-            color: #666;
-            position: relative;
-            z-index: 2;
+            margin-top: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #edf2f7, #e2e8f0);
+            border-radius: 12px;
+            border: 1px solid #cbd5e0;
         }
 
-        .confetti {
-            position: fixed;
-            width: 10px;
-            height: 10px;
-            background: #ffd700;
-            animation: confetti-fall 3s linear infinite;
-            z-index: 100;
+        .congratulations h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem;
+            color: #2d3748;
+            margin-bottom: 8px;
         }
 
-        @keyframes confetti-fall {
-            0% {
-                transform: translateY(-100vh) rotate(0deg);
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(100vh) rotate(360deg);
-                opacity: 0;
-            }
+        .congratulations p {
+            color: #4a5568;
+            font-size: 1rem;
         }
 
-        .material-icons {
-            vertical-align: middle;
-            margin-right: 8px;
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #718096;
+            font-size: 0.9rem;
         }
 
         @media (max-width: 768px) {
-            .title {
-                font-size: 2.5rem;
-            }
-            
-            .machine-container {
+            .header {
                 padding: 20px;
-            }
-            
-            .lottery-ball {
-                width: 100px;
-                height: 100px;
-                font-size: 1.5rem;
+                margin-bottom: 20px;
             }
 
-            .church-header-content {
+            .header-content {
                 flex-direction: column;
+                text-align: center;
                 gap: 20px;
             }
 
@@ -386,18 +332,52 @@
                 font-size: 1.8rem;
             }
 
-            .church-info {
+            .drawing-section, .results-section {
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+
+            .drawing-area {
+                gap: 15px;
+            }
+
+            .winner-ball {
+                width: 80px;
+                height: 80px;
+                font-size: 1.4rem;
+            }
+
+            .winner-card {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+
+            .winner-position {
                 min-width: auto;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .drawing-area {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .church-title {
+                font-size: 1.5rem;
+            }
+
+            .section-title {
+                font-size: 1.5rem;
             }
         }
     </style>
 </head>
 <body>
-    <div class="stars" id="stars"></div>
-    
     <div class="container">
-        <div class="church-header">
-            <div class="church-header-content">
+        <div class="header">
+            <div class="header-content">
                 <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png" 
                      alt="St. Sebastian's Church Logo" 
                      class="church-logo">
@@ -413,45 +393,43 @@
             </div>
         </div>
 
+        <div class="main-content">
+            <div class="drawing-section">
+                <h2 class="section-title">Lucky Draw</h2>
+                
+                <div class="status-card" id="status">Loading Winners.txt file...</div>
 
+                <div class="drawing-area">
+                    <div class="winner-ball" id="ball1">?</div>
+                    <div class="winner-ball" id="ball2">?</div>
+                    <div class="winner-ball" id="ball3">?</div>
+                </div>
 
-        <div class="machine-container">
-            <div class="status" id="status">Loading Winners.txt file...</div>
-
-            <div class="drawing-area">
-                <div class="lottery-ball" id="ball1">?</div>
-                <div class="lottery-ball" id="ball2">?</div>
-                <div class="lottery-ball" id="ball3">?</div>
+                <button class="draw-button" id="drawBtn" disabled>
+                    <span class="material-icons">casino</span>
+                    Draw Winners
+                </button>
             </div>
 
-            <button class="draw-btn" id="drawBtn" disabled>
-                <span class="material-icons">casino</span>
-                DRAW WINNERS
-            </button>
+            <div class="results-section" id="resultsSection">
+                <h2 class="section-title">Winners Announcement</h2>
+                <div id="results"></div>
+                <div class="congratulations">
+                    <h3>🎉 Congratulations to all Winners!</h3>
+                    <p>Please contact the church office with your winning ticket for prize collection.</p>
+                </div>
+            </div>
         </div>
 
-        <div class="results" id="results"></div>
+        <div class="footer">
+            <p>&copy; 2025 St. Sebastian's Church. All rights reserved.</p>
+        </div>
     </div>
 
     <script>
         let winnersData = [];
         let drawnWinners = [];
         let isDrawing = false;
-
-        // Create animated stars background
-        function createStars() {
-            const starsContainer = document.getElementById('stars');
-            for (let i = 0; i < 100; i++) {
-                const star = document.createElement('div');
-                star.className = 'star';
-                star.style.left = Math.random() * 100 + '%';
-                star.style.top = Math.random() * 100 + '%';
-                star.style.width = Math.random() * 3 + 1 + 'px';
-                star.style.height = star.style.width;
-                star.style.animationDelay = Math.random() * 2 + 's';
-                starsContainer.appendChild(star);
-            }
-        }
 
         // Load Winners.txt file automatically
         async function loadWinnersFile() {
@@ -466,19 +444,22 @@
                     .filter(line => line.length > 0);
                 
                 if (winnersData.length >= 3) {
-                    document.getElementById('status').textContent = 
-                        `Loaded ${winnersData.length} potential winners. Ready to draw!`;
+                    const statusCard = document.getElementById('status');
+                    statusCard.textContent = `${winnersData.length} participants loaded. Ready to draw winners!`;
+                    statusCard.className = 'status-card success';
                     document.getElementById('drawBtn').disabled = false;
                     resetBalls();
                 } else {
-                    document.getElementById('status').textContent = 
-                        'Need at least 3 numbers in Winners.txt to draw winners.';
+                    const statusCard = document.getElementById('status');
+                    statusCard.textContent = 'Need at least 3 numbers in Winners.txt to draw winners.';
+                    statusCard.className = 'status-card error';
                     document.getElementById('drawBtn').disabled = true;
                 }
             } catch (error) {
                 console.error('Error loading Winners.txt:', error);
-                document.getElementById('status').textContent = 
-                    'Error: Could not load Winners.txt file. Make sure it exists in the same directory.';
+                const statusCard = document.getElementById('status');
+                statusCard.textContent = 'Error: Could not load Winners.txt file. Make sure it exists in the same directory.';
+                statusCard.className = 'status-card error';
                 document.getElementById('drawBtn').disabled = true;
             }
         }
@@ -489,29 +470,10 @@
             balls.forEach(ballId => {
                 const ball = document.getElementById(ballId);
                 ball.textContent = '?';
-                ball.classList.remove('spinning');
+                ball.classList.remove('spinning', 'active');
             });
+            document.getElementById('resultsSection').classList.remove('show');
             document.getElementById('results').innerHTML = '';
-        }
-
-        // Create confetti effect
-        function createConfetti() {
-            const colors = ['#ffd700', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57'];
-            
-            for (let i = 0; i < 50; i++) {
-                setTimeout(() => {
-                    const confetti = document.createElement('div');
-                    confetti.className = 'confetti';
-                    confetti.style.left = Math.random() * 100 + '%';
-                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-                    confetti.style.animationDelay = Math.random() * 3 + 's';
-                    document.body.appendChild(confetti);
-                    
-                    setTimeout(() => {
-                        confetti.remove();
-                    }, 3000);
-                }, i * 100);
-            }
         }
 
         // Animate ball drawing
@@ -527,13 +489,14 @@
                         ball.textContent = winnersData[randomIndex];
                         spinCount++;
                         
-                        if (spinCount > 20) {
+                        if (spinCount > 15) {
                             clearInterval(spinInterval);
                             ball.textContent = finalNumber;
                             ball.classList.remove('spinning');
+                            ball.classList.add('active');
                             resolve();
                         }
-                    }, 100);
+                    }, 150);
                 }, delay);
             });
         }
@@ -545,15 +508,18 @@
                 const winnerCard = document.createElement('div');
                 winnerCard.className = `winner-card ${place}`;
                 
-                const placeNames = {
-                    'first': '🥇 1ST PLACE',
-                    'second': '🥈 2ND PLACE', 
-                    'third': '🥉 3RD PLACE'
+                const positions = {
+                    'first': { emoji: '🥇', text: '1st Place' },
+                    'second': { emoji: '🥈', text: '2nd Place' }, 
+                    'third': { emoji: '🥉', text: '3rd Place' }
                 };
                 
                 winnerCard.innerHTML = `
-                    <div class="place ${place}">${placeNames[place]}</div>
-                    <div class="winner-number">${number}</div>
+                    <div class="winner-position ${place}">${positions[place].emoji}</div>
+                    <div class="winner-details">
+                        <div class="winner-place">${positions[place].text}</div>
+                        <div class="winner-number">${number}</div>
+                    </div>
                 `;
                 
                 resultsDiv.appendChild(winnerCard);
@@ -566,7 +532,9 @@
             
             isDrawing = true;
             document.getElementById('drawBtn').disabled = true;
-            document.getElementById('status').textContent = 'Drawing winners...';
+            const statusCard = document.getElementById('status');
+            statusCard.textContent = 'Drawing winners...';
+            statusCard.className = 'status-card';
             
             // Clear previous results
             resetBalls();
@@ -588,31 +556,30 @@
                 animateBallDraw('ball1', drawnWinners[0], 1000)    // 1st place
             ]);
             
-            // Display results with animation delays
-            displayWinner('third', drawnWinners[2], 200);
-            displayWinner('second', drawnWinners[1], 800);
-            displayWinner('first', drawnWinners[0], 1400);
-            
-            // Create confetti effect
+            // Show results section
             setTimeout(() => {
-                createConfetti();
+                document.getElementById('resultsSection').classList.add('show');
             }, 1500);
             
-            document.getElementById('status').textContent = 
-                'Winners drawn! Click "DRAW WINNERS" to draw again.';
+            // Display results with animation delays
+            displayWinner('third', drawnWinners[2], 1700);
+            displayWinner('second', drawnWinners[1], 1900);
+            displayWinner('first', drawnWinners[0], 2100);
+            
+            statusCard.textContent = 'Winners have been drawn! Click "Draw Winners" to draw again.';
+            statusCard.className = 'status-card success';
             
             setTimeout(() => {
                 document.getElementById('drawBtn').disabled = false;
                 isDrawing = false;
-            }, 2000);
+            }, 2500);
         }
 
         // Event listeners
         document.getElementById('drawBtn').addEventListener('click', drawWinners);
 
         // Initialize the app
-        createStars();
-        loadWinnersFile(); // Automatically load the Winners.txt file
+        loadWinnersFile();
     </script>
 </body>
 </html>
