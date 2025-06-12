@@ -1,163 +1,214 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raffle Winner Announcement</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Raffle Draw from Winners.txt</title>
   <style>
     body {
-      font-family: 'Inter', sans-serif;
-      background-color: #f1f5f9;
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: radial-gradient(circle at center, #0f2027, #203a43, #2c5364);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      padding: 20px;
     }
-    .hidden { display: none; }
-    .winner-card {
-      background-color: #fff;
-      padding: 1rem;
-      border-radius: 0.5rem;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+
+    h1 {
+      text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
     }
-    .fade-in {
-      animation: fadeIn 1s ease-in-out forwards;
+
+    .machine {
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      border: 10px solid #fff;
+      position: relative;
+      overflow: hidden;
+      margin: 20px;
+      background: #333;
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+
+    .ball {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background: #ffeb3b;
+      border-radius: 50%;
+      color: #000;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 5px rgba(0,0,0,0.5);
+      transition: transform 0.5s ease-out;
+    }
+
+    .controls {
+      text-align: center;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #00bcd4;
+      border: none;
+      border-radius: 5px;
+      color: #fff;
+      cursor: pointer;
+      margin: 10px 5px;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #0097a7;
+    }
+
+    .winner {
+      font-size: 1.5rem;
+      margin-top: 10px;
+      font-weight: bold;
+      color: #4caf50;
+    }
+
+    input[type="file"] {
+      margin: 10px;
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center py-10 px-4 bg-slate-100 relative">
-  <div class="absolute inset-0 bg-cover bg-center opacity-20 -z-10" style="background-image: url('https://www.villasinbangalore.co.in/wp-content/uploads/2016/04/Shriram-Chirping-Grove-Copy.jpg');"></div>
-  <main class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center relative z-10">
-    <header class="mb-6">
-      <div class="flex items-center gap-4 mb-2">
-        <img class="w-16 h-16 md:w-20 md:h-20 rounded-full object-contain" src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75" alt="St. Sebastian Logo">
-        <h1 class="text-2xl md:text-3xl font-extrabold text-indigo-800 text-left">St. Sebastian's Church Raffle Winner Announcement</h1>
-      </div>
-      <div class="text-left text-gray-600 text-xs md:text-sm ml-20">
-        <p>No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</p>
-        <p>+91 7090424365 | stsebastianssmc@gmail.com</p>
-      </div>
-    </header>
-    <section class="bg-gradient-to-br from-blue-200 to-blue-400 p-6 rounded-xl shadow-lg mb-6">
-      <h2 class="text-2xl font-bold text-indigo-800 mb-4">Our Esteemed Sponsor</h2>
-      <div class="flex flex-col md:flex-row justify-around items-center gap-6">
-        <div class="text-center">
-          <img class="w-28 h-28 rounded-full shadow-lg object-cover mb-3" src="https://placehold.co/120x120/A0A0A0/FFFFFF?text=Emjay+Logo" alt="Emjay Logo">
-          <h3 class="text-lg font-semibold text-gray-800">Emjay Engineering Company</h3>
-        </div>
-        <div class="text-center">
-          <img class="w-28 h-28 rounded-full shadow-lg object-cover mb-3" src="https://placehold.co/120x120/808080/FFFFFF?text=Proprietor+Photo" alt="Proprietor">
-          <h3 class="text-lg font-semibold text-gray-800">Proprietor</h3>
-        </div>
-      </div>
-      <p class="mt-4 text-gray-700">
-        We extend our heartfelt gratitude to <strong class="text-indigo-700">Emjay Engineering Company</strong> for sponsoring this raffle.
-        Winners will receive apartments in the beautiful <strong class="text-green-700">Sierra Greens at Sarjapur Road</strong>.
-      </p>
-      <button id="startRaffle" class="mt-6 px-6 py-3 bg-purple-600 text-white text-lg font-bold rounded-full hover:bg-purple-700 transition">Start Raffle Draw</button>
-    </section>
-    <section id="raffleContent" class="hidden transition-all duration-1000">
-      <p class="mb-6 text-gray-700">
-        Congratulations to all our lucky winners! Click below to reveal winning numbers. All prizes are drawn from <strong class="text-red-600">'Winners.txt'</strong>
-      </p>
-      <div class="grid gap-6" id="winnerSections"></div>
-      <button id="resetBtn" class="mt-6 px-6 py-2 bg-gray-300 text-gray-800 rounded-full hover:bg-red-600 hover:text-white transition" disabled>Reset Raffle</button>
-    </section>
-  </main>
-  <div id="winnerSummary" class="fixed top-20 right-4 z-50 bg-yellow-100 p-4 rounded-lg shadow-xl hidden w-64">
-    <div class="absolute -top-2 -left-2 w-4 h-4 bg-red-500 rounded-full"></div>
-    <h2 class="text-2xl font-bold text-center mb-2">Winner Circle</h2>
-    <div class="space-y-2">
-      <div class="bg-purple-100 border-2 border-purple-500 p-2 rounded text-center">
-        <h3 class="font-bold text-purple-600">1st Place</h3>
-        <p id="summaryFirst" class="font-extrabold text-purple-800">---</p>
-      </div>
-      <div class="bg-gray-100 border-2 border-gray-500 p-2 rounded text-center">
-        <h3 class="font-bold text-gray-600">2nd Place</h3>
-        <p id="summarySecond" class="font-extrabold text-gray-800">---</p>
-      </div>
-      <div class="bg-amber-100 border-2 border-amber-500 p-2 rounded text-center">
-        <h3 class="font-bold text-amber-600">3rd Place</h3>
-        <p id="summaryThird" class="font-extrabold text-amber-800">---</p>
-      </div>
-    </div>
+<body>
+
+  <h1>Raffle Draw from Winners.txt</h1>
+  <input type="file" id="fileInput" accept=".txt" />
+  <div class="controls">
+    <label>Draw Count: <input type="number" id="drawCount" value="1" min="1" /></label><br />
+    <button onclick="startDraw()">Start Draw</button>
   </div>
-  <footer class="w-full bg-gray-800 text-gray-300 text-center py-4 mt-10 text-sm z-10">
-    <p>&copy; 2023 St. Sebastian's Church. All rights reserved.</p>
-    <p>Powered by <a href="#" class="text-blue-400 hover:underline">DataWings Solution</a></p>
-  </footer>
+  <div class="machine" id="machine"></div>
+  <div class="winner" id="winnerOutput"></div>
+
   <script>
-    const startBtn = document.getElementById('startRaffle');
-    const raffleContent = document.getElementById('raffleContent');
-    const winnerSections = document.getElementById('winnerSections');
-    const resetBtn = document.getElementById('resetBtn');
-    const winnerSummary = document.getElementById('winnerSummary');
+    const fileInput = document.getElementById('fileInput');
+    const machine = document.getElementById('machine');
+    const winnerOutput = document.getElementById('winnerOutput');
 
-    let allTickets = [];
-    let drawnTickets = [];
+    let ticketNumbers = [];
+    let balls = [];
 
-    async function fetchTickets() {
-      try {
-        const res = await fetch('Winners.txt');
-        const text = await res.text();
-        allTickets = Array.from(new Set(text.split(/[\n,]+/).map(t => t.trim()).filter(t => t)));
-      } catch (e) {
-        alert('Failed to load tickets.');
-      }
+    fileInput.addEventListener('change', handleFileUpload);
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const content = e.target.result;
+        ticketNumbers = content
+          .split(/\r?\n/)
+          .map(line => line.trim())
+          .filter(line => /^\d+$/.test(line))
+          .map(Number);
+        if (ticketNumbers.length === 0) {
+          alert("No valid numbers found in file.");
+          return;
+        }
+        createBalls(ticketNumbers);
+        startAnimation();
+        winnerOutput.textContent = `Loaded ${ticketNumbers.length} ticket(s)`;
+      };
+      reader.readAsText(file);
     }
 
-    function drawUniqueTicket() {
-      const available = allTickets.filter(t => !drawnTickets.includes(t));
-      if (available.length === 0) return 'N/A';
-      const pick = available[Math.floor(Math.random() * available.length)];
-      drawnTickets.push(pick);
-      return pick;
+    function createBalls(numbers) {
+      machine.innerHTML = '';
+      balls = [];
+
+      numbers.forEach(number => {
+        const ball = document.createElement('div');
+        ball.className = 'ball';
+        ball.textContent = number;
+        const angle = Math.random() * Math.PI * 2;
+        const radius = 110 + Math.random() * 40;
+        const x = Math.cos(angle) * radius + 130;
+        const y = Math.sin(angle) * radius + 130;
+
+        ball.style.left = `${x}px`;
+        ball.style.top = `${y}px`;
+        machine.appendChild(ball);
+        balls.push({ el: ball, angle: angle, radius: radius });
+      });
     }
 
-    function revealWinner(place, elementId) {
-      const winner = drawUniqueTicket();
-      document.getElementById(elementId).textContent = winner;
-      confetti();
+    function animateBalls() {
+      balls.forEach(b => {
+        b.angle += 0.05 + Math.random() * 0.02;
+        const x = Math.cos(b.angle) * b.radius + 130;
+        const y = Math.sin(b.angle) * b.radius + 130;
+        b.el.style.left = `${x}px`;
+        b.el.style.top = `${y}px`;
+      });
     }
 
-    startBtn.addEventListener('click', async () => {
-      await fetchTickets();
-      if (allTickets.length < 3) {
-        alert('Not enough tickets!');
+    let animationId = null;
+    function startAnimation() {
+      animationId = requestAnimationFrame(() => {
+        animateBalls();
+        startAnimation();
+      });
+    }
+
+    function stopAnimation() {
+      cancelAnimationFrame(animationId);
+    }
+
+    function startDraw() {
+      if (ticketNumbers.length === 0) {
+        alert("Please upload Winners.txt first.");
         return;
       }
-      raffleContent.classList.remove('hidden');
-      winnerSections.innerHTML = `
-        <div class="winner-card fade-in">
-          <h2 class="text-xl font-bold text-amber-700 mb-2">3rd Place Winner</h2>
-          <button class="bg-amber-700 text-white px-4 py-2 rounded" onclick="revealWinner('3rd', 'summaryThird')">Reveal</button>
-        </div>
-        <div class="winner-card fade-in">
-          <h2 class="text-xl font-bold text-gray-700 mb-2">2nd Place Winner</h2>
-          <button class="bg-gray-700 text-white px-4 py-2 rounded" onclick="revealWinner('2nd', 'summarySecond')">Reveal</button>
-        </div>
-        <div class="winner-card fade-in">
-          <h2 class="text-xl font-bold text-purple-700 mb-2">1st Place Winner</h2>
-          <button class="bg-purple-700 text-white px-4 py-2 rounded" onclick="revealWinner('1st', 'summaryFirst')">Reveal</button>
-        </div>
-      `;
-      winnerSummary.classList.remove('hidden');
-      resetBtn.disabled = false;
-    });
 
-    resetBtn.addEventListener('click', () => {
-      drawnTickets = [];
-      raffleContent.classList.add('hidden');
-      winnerSummary.classList.add('hidden');
-      document.getElementById('summaryFirst').textContent = '---';
-      document.getElementById('summarySecond').textContent = '---';
-      document.getElementById('summaryThird').textContent = '---';
-      winnerSections.innerHTML = '';
-      resetBtn.disabled = true;
-    });
+      const drawCount = parseInt(document.getElementById('drawCount').value);
+      if (drawCount > ticketNumbers.length) {
+        alert("Draw count cannot exceed number of loaded tickets.");
+        return;
+      }
+
+      startAnimation();
+      winnerOutput.textContent = 'Drawing...';
+
+      setTimeout(() => {
+        stopAnimation();
+
+        const pool = [...ticketNumbers];
+        const winners = [];
+
+        for (let i = 0; i < drawCount; i++) {
+          const idx = Math.floor(Math.random() * pool.length);
+          winners.push(pool.splice(idx, 1)[0]);
+        }
+
+        highlightWinners(winners);
+        winnerOutput.textContent = `Winner${winners.length > 1 ? 's' : ''}: ${winners.join(', ')}`;
+      }, 4000);
+    }
+
+    function highlightWinners(winners) {
+      const elements = Array.from(machine.children);
+      elements.forEach(el => {
+        if (winners.includes(parseInt(el.textContent))) {
+          el.style.background = '#4caf50';
+          el.style.transform = 'scale(1.4)';
+        } else {
+          el.style.opacity = '0.3';
+        }
+      });
+    }
   </script>
 </body>
 </html>
