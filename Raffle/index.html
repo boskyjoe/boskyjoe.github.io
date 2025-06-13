@@ -105,7 +105,7 @@
     border-radius: 2px;
   }
 
-  /* No message area now, remove #status and #message-spacer */
+  /* Remove message area for "Start Draw" and "All winners" messages */
 
   /* Balls container styling */
   .balls-container {
@@ -278,13 +278,14 @@
     <!-- Raffle Draw Section -->
     <section class="section-box raffle-box">
       <h2 style="text-align: center;">Raffle Draw</h2>
-      <div id="status" class="status-card success">Start the Draw</div>
-      <!-- Removed message area for simplicity -->
+      <!-- Removed status message -->
+      <!-- Balls -->
       <div class="balls-container">
         <div class="ball" id="ball1" style="background: linear-gradient(135deg, #f7971e, #ffd200);"><div class="inner-text">🎲</div></div>
         <div class="ball" id="ball2" style="background: linear-gradient(135deg, #6a11cb, #2575fc);"><div class="inner-text">🎲</div></div>
         <div class="ball" id="ball3" style="background: linear-gradient(135deg, #43cea2, #185a9d);"><div class="inner-text">🎲</div></div>
       </div>
+      <!-- Generate button -->
       <div style="text-align:center;">
         <button id="drawBtn" class="draw-btn">Generate 3rd Place Winner</button>
       </div>
@@ -315,11 +316,11 @@
 
   let isDrawing=false;
 
-  // Map for dynamic button label and message
+  // Map for button label updates
   const stepMessages = {
-    0: { text: '3rd Place', label: 'Generate 3rd Place Winner' },
-    1: { text: '2nd Place', label: 'Generate 2nd Place Winner' },
-    2: { text: '1st Place', label: 'Generate 1st Place Winner' }
+    0: { label: 'Generate 3rd Place Winner', text: '3rd Place' },
+    1: { label: 'Generate 2nd Place Winner', text: '2nd Place' },
+    2: { label: 'Generate 1st Place Winner', text: '1st Place' }
   };
 
   function updateButtonLabel() {
@@ -400,7 +401,7 @@
     const ball = document.getElementById(ballId);
     await spinBall(ball, winnerNumber);
 
-    // Add winner to list
+    // Add winner to the list
     const listDiv = document.getElementById('winnersList');
     const div = document.createElement('div');
     div.className='winner-card '+place;
@@ -420,16 +421,18 @@
       document.getElementById('congrats').style.display='block';
     }
 
-    // Advance step and update button label
+    // Prepare next step
     currentStep++;
     updateButtonLabel();
 
-    // Update status message (not visible now, but just for internal logic)
+    // No message below header needed, but optional status update
+    /* optional:
     if (currentStep <=2) {
-      document.getElementById('status').textContent=`${positions[place].text} drawn!`; // optional, can be hidden
+      document.getElementById('status').textContent=`${positions[place].text} drawn!`;
     } else {
-      document.getElementById('status').textContent='All winners drawn. Click "Start New Draw".';
+      document.getElementById('status').textContent='All winners drawn.';
     }
+    */
 
     document.getElementById('drawBtn').disabled=false;
     isDrawing=false;
@@ -443,7 +446,7 @@
     }
   });
 
-  // Initialize on load
+  // Initialize
   loadWinners();
   updateButtonLabel();
 </script>
