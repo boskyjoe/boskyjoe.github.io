@@ -20,13 +20,19 @@
     background: #f0f2f5;
     color: #333;
     line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
   }
 
-  /* Container for overall layout */
+  /* Container for main content */
   .container {
+    flex: 1;
     max-width: 1400px;
     margin: auto;
     padding: 20px;
+    display: flex;
+    flex-direction: column;
   }
 
   /* Header styling */
@@ -67,6 +73,7 @@
     display: grid;
     grid-template-columns: 1fr 350px;
     gap: 20px;
+    flex: 1;
   }
 
   /* Style for boxes with depth and shadows */
@@ -80,7 +87,7 @@
       0 8px 20px rgba(0,0,0,0.10);
     transition: box-shadow 0.3s ease, border-color 0.3s ease;
   }
-  /* Hover lift effect for depth */
+  /* Hover lift for depth */
   .section-box:hover {
     box-shadow:
       inset -5px -5px 14px rgba(255,255,255,1),
@@ -88,7 +95,7 @@
       0 12px 24px rgba(0,0,0,0.15);
   }
 
-  /* Styles for "Raffle Draw" section */
+  /* "Raffle Draw" section style */
   .raffle-box h2 {
     text-align: center;
     font-family: 'Playfair Display', serif;
@@ -104,8 +111,6 @@
     background: linear-gradient(90deg, #48bb78, #38a169);
     border-radius: 2px;
   }
-
-  /* Remove message area for "Start Draw" and "All winners" messages */
 
   /* Balls container styling */
   .balls-container {
@@ -159,17 +164,16 @@
     100% { transform: rotate(360deg); }
   }
 
-  /* Button with dynamic label, no icon needed */
+  /* Button styles */
   #drawBtn {
     margin-top: 30px;
     margin-bottom: 30px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    padding: 15px 25px;
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: #fff;
-    padding: 15px 25px;
     border: none;
     border-radius: 12px;
     font-size: 1.2rem;
@@ -251,13 +255,17 @@
     font-weight: bold;
     margin-top:4px;
   }
-  /* Congrats message */
-  #congrats {
-    background:#c8f7c5;
-    border-radius:10px;
-    padding:15px;
-    margin-top:20px;
+
+  /* Footer styling */
+  footer {
+    background: #fff;
+    padding: 15px 20px;
     text-align: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    color: #555;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+    margin-top: 20px;
   }
 </style>
 </head>
@@ -300,6 +308,11 @@
     </section>
   </main>
 </div>
+<!-- Footer -->
+<footer>
+  © 2023 St. Sebastian's Church. All rights reserved.<br>
+  Powered by DataWings Solution
+</footer>
 <script>
   // JavaScript logic
   const positions = {
@@ -316,7 +329,6 @@
 
   let isDrawing=false;
 
-  // Map for button label updates
   const stepMessages = {
     0: { label: 'Generate 3rd Place Winner', text: '3rd Place' },
     1: { label: 'Generate 2nd Place Winner', text: '2nd Place' },
@@ -349,7 +361,6 @@
     document.querySelectorAll('.ball').forEach(b=>{b.innerHTML='<div class="inner-text">🎲</div>'; b.className='ball';});
     document.getElementById('winnersList').innerHTML='';
     document.getElementById('congrats').style.display='none';
-    // Animate winners section out
     document.getElementById('winnersSection').style.opacity=0;
     document.getElementById('winnersSection').style.transform='translateY(20px)';
     document.getElementById('winnersSection').classList.remove('show');
@@ -421,11 +432,11 @@
       document.getElementById('congrats').style.display='block';
     }
 
-    // Prepare next step
+    // Advance step and update button label
     currentStep++;
     updateButtonLabel();
 
-    // No message below header needed, but optional status update
+    // No message area, only button label
     /* optional:
     if (currentStep <=2) {
       document.getElementById('status').textContent=`${positions[place].text} drawn!`;
