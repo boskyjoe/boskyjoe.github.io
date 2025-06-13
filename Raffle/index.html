@@ -29,7 +29,7 @@
     padding: 20px;
   }
 
-  /* Header */
+  /* Header styles (unchanged) */
   header {
     display: flex;
     align-items: center;
@@ -62,26 +62,29 @@
     gap: 4px;
   }
 
-  /* Main layout: two columns */
+  /* Main layout: two columns, with spacing */
   main {
     display: grid;
     grid-template-columns: 1fr 350px;
     gap: 20px;
   }
 
-  /* Raffle section with stylish card */
+  /* Raffle section with more spacious styling */
   .raffle-section {
     background: #fff;
     border-radius: 12px;
-    padding: 30px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    padding: 40px 30px; /* more padding for spaciousness */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    /* Add some margin for breathing room */
+    margin-bottom: 20px;
   }
 
+  /* Title with space below and decorative line */
   .raffle-header {
     text-align: center;
     font-family: 'Playfair Display', serif;
     font-size: 2rem;
-    margin-bottom: 20px;
+    margin-bottom: 30px; /* increased space below title */
     position: relative;
   }
   .raffle-header::after {
@@ -94,39 +97,38 @@
     border-radius: 2px;
   }
 
-  /* Balls container */
+  /* Spacing between balls */
   .balls-container {
     display: flex;
     justify-content: center;
-    gap: 30px;
+    gap: 40px; /* more space between balls */
     flex-wrap: wrap;
-    margin-bottom: 20px;
+    margin-bottom: 30px; /* space below balls */
   }
 
-  /* Style for 3D balls with gradients and shadows */
+  /* Style for 3D-looking balls, larger for visibility */
   .ball {
-    width: 150px;
-    height: 150px;
+    width: 180px;
+    height: 180px;
     border-radius: 50%;
-    background: #4facfe; /* default color, overridden inline for different colors */
-    box-shadow: inset -4px -4px 8px rgba(255,255,255,0.6),
-                inset 4px 4px 8px rgba(0,0,0,0.2),
-                0 8px 16px rgba(0,0,0,0.2);
+    box-shadow: inset -4px -4px 10px rgba(255,255,255,0.6),
+                inset 4px 4px 10px rgba(0,0,0,0.2),
+                0 12px 20px rgba(0,0,0,0.2);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2.5rem;
+    font-size: 3rem;
     font-weight: bold;
     color: #fff;
     text-align: center;
-    padding: 10px;
+    padding: 20px;
     font-family: 'Inter', sans-serif;
     overflow: hidden;
     position: relative;
     transition: all 0.3s ease;
   }
 
-  /* Spinning animation overlay text inside ball */
+  /* Inner text inside spinning balls */
   .ball .inner-text {
     position: absolute;
     width: 100%;
@@ -134,18 +136,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2rem;
+    font-size: 2.5rem;
     font-weight: bold;
     line-height: 1.2;
+    word-wrap: break-word; /* wrap inside ball */
     padding: 10px;
     text-align: center;
-    word-wrap: break-word; /* allow wrapping inside */
-    max-width: 120px;
+    max-width: 150px;
   }
 
-  /* Spinning effect */
+  /* Spin animation */
   .ball.spinning {
-    animation: spin 0.6s linear infinite;
+    animation: spin 0.8s linear infinite;
   }
 
   @keyframes spin {
@@ -179,17 +181,16 @@
   .sidebar {
     background: #fff;
     border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    padding:20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     max-height: 80vh;
-    overflow-y: auto;
+    overflow-y:auto;
   }
   .sidebar h2 {
     text-align: center;
     margin-bottom: 15px;
     font-family: 'Playfair Display', serif;
     font-size: 1.8rem;
-    position: relative;
   }
   .sidebar h2::after {
     content: "";
@@ -209,12 +210,11 @@
     margin-bottom: 15px;
     background: #f7fafc;
     border-radius: 10px;
-    border-left: 8px solid transparent; /* color set inline per position */
+    border-left: 8px solid transparent; /* color set inline for position */
     box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    transition: all 0.2s ease;
   }
   .winner-card:hover {
-    background: #eef2f6;
+    background:#eef2f6;
     transform: translateX(2px);
   }
   .winner-position {
@@ -222,7 +222,7 @@
     margin-right: 15px;
   }
   .winner-details {
-    flex: 1;
+    flex:1;
   }
   .winner-place {
     font-weight: 600;
@@ -231,29 +231,15 @@
   .winner-number {
     font-size: 2rem;
     font-weight: bold;
-    margin-top: 4px;
+    margin-top:4px;
   }
-
   /* Congrats box */
   #congrats {
-    background: #e0f7fa;
-    border-radius: 12px;
-    padding: 20px;
-    margin-top: 20px;
+    background:#c8f7c5;
+    border-radius:10px;
+    padding:15px;
+    margin-top:20px;
     text-align: center;
-  }
-
-  /* Responsive adjustments */
-  @media(max-width: 768px){
-    main {
-      grid-template-columns: 1fr;
-    }
-    /* adjust ball size for smaller screens if needed */
-    .ball {
-      width: 120px;
-      height: 120px;
-      font-size: 2rem;
-    }
   }
 </style>
 </head>
@@ -268,35 +254,36 @@
       <div><span class="material-icons" style="font-size:16px;">contact_phone</span> +91 7090424365 | stsebastianssmc@gmail.com</div>
     </div>
   </header>
-
-  <!-- Main content: two columns -->
+  <!-- Main layout -->
   <main>
-    <!-- Raffle draw area -->
+    <!-- Raffle draw section -->
     <section class="raffle-section">
       <h2 style="text-align: center; margin-bottom: 20px;">Raffle Draw</h2>
       <div id="status" class="status-card success" style="text-align:center;">Start the Draw</div>
       <div class="balls-container">
-        <div class="ball" id="ball1" style="background: linear-gradient(135deg, #f7971e, #ffd200);"></div>
-        <div class="ball" id="ball2" style="background: linear-gradient(135deg, #6a11cb, #2575fc);"></div>
-        <div class="ball" id="ball3" style="background: linear-gradient(135deg, #43cea2, #185a9d);"></div>
+        <div class="ball" id="ball1" style="background: linear-gradient(135deg, #f7971e, #ffd200);">
+          <div class="inner-text">🎲</div>
+        </div>
+        <div class="ball" id="ball2" style="background: linear-gradient(135deg, #6a11cb, #2575fc);">
+          <div class="inner-text">🎲</div>
+        </div>
+        <div class="ball" id="ball3" style="background: linear-gradient(135deg, #43cea2, #185a9d);">
+          <div class="inner-text">🎲</div>
+        </div>
       </div>
       <button id="drawBtn" class="draw-btn"><span class="material-icons">casino</span> Draw Winners</button>
     </section>
-
     <!-- Winners sidebar -->
     <aside class="sidebar" id="results">
       <h2>🏆 Winners</h2>
       <div style="text-align:center; font-style:italic; color:#999; padding:20px;">Winners will appear here after the draw</div>
       <div id="winnersList"></div>
-      <div id="congrats" style="display:none; margin-top:20px; background:#c8f7c5; padding:15px; border-radius:10px;">
-        <h3>🎉 Congratulations!</h3>
-        <p>Contact the church office with your winning ticket.</p>
-      </div>
+      <div id="congrats" style="display:none; margin-top:20px;">🎉 Congratulations! Contact the church office.</div>
     </aside>
   </main>
 </div>
 <script>
-  // Global positions object
+  // Define global variables for positions
   const positions = {
     'first': { emoji: '🥇', text: '1st Place' },
     'second': { emoji: '🥈', text: '2nd Place' },
@@ -304,70 +291,44 @@
   };
   const positionsOrder = {0:'3rd',1:'2nd',2:'1st'};
 
-  const STEP_3RD = 0;
-  const STEP_2ND = 1;
-  const STEP_1ST = 2;
+  const STEP_3RD=0; const STEP_2ND=1; const STEP_1ST=2; 
+  let currentStep=STEP_3RD;
+  let availableNumbers=[];
+  let winnersData=["001","002","003","004","005","006","007","008","009","010","011","012","013","014","015","016","017","018","019","020","021","022","023","024","025"];
 
-  let winnersData = ["001","002","003","004","005","006","007","008","009","010","011","012","013","014","015","016","017","018","019","020","021","022","023","024","025"];
-  let availableNumbers = [];
-  let drawnWinners = [];
-  let currentStep = STEP_3RD;
-  let isDrawing = false;
+  let isDrawing=false;
 
-  // Load winners from file
   async function loadWinners() {
     try {
-      const res = await fetch('Winners.txt');
+      const res=await fetch('Winners.txt');
       if (!res.ok) throw new Error('Failed to load Winners.txt');
-      const text = await res.text();
-      const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-      if (lines.length >= 3) {
-        winnersData = lines;
-      }
-    } catch(e) {
-      // fallback; do nothing
-    }
-    startDraw();
+      const txt=await res.text();
+      const lines=txt.split('\n').map(l=>l.trim()).filter(l=>l);
+      if (lines.length>=3) winnersData=lines;
+    } catch(e){/* fallback to default */ }
+    initDraw();
   }
 
-  function startDraw() {
-    resetWinners();
-    updateButton();
-  }
-
-  function resetWinners() {
-    currentStep = STEP_3RD;
-    availableNumbers = [...winnersData];
-    drawnWinners = [];
-    // Reset balls
-    for (let i=1;i<=3;i++) {
-      const b = document.getElementById('ball'+i);
-      b.innerHTML = '';
-      b.style.background = '';
-      b.className='ball';
-    }
-    // Reset winners list
+  function initDraw() {
+    currentStep=STEP_3RD;
+    availableNumbers=[...winnersData];
+    document.querySelectorAll('.ball').forEach(b=>{b.innerHTML='<div class="inner-text">🎲</div>'; b.className='ball';});
     document.getElementById('winnersList').innerHTML='';
     document.getElementById('congrats').style.display='none';
     updateButton();
   }
 
   function updateButton() {
-    const btn = document.getElementById('drawBtn');
-    if (currentStep===STEP_3RD) {
-      btn.innerHTML='<span class="material-icons">casino</span> Draw Winners';
-    } else if (currentStep===STEP_2ND) {
-      btn.innerHTML='<span class="material-icons">casino</span> Draw Winners';
-    } else if (currentStep===STEP_1ST) {
+    const btn=document.getElementById('drawBtn');
+    if (currentStep===STEP_3RD || currentStep===STEP_2ND || currentStep===STEP_1ST) {
       btn.innerHTML='<span class="material-icons">casino</span> Draw Winners';
     } else {
       btn.innerHTML='<span class="material-icons">refresh</span> New Draw';
     }
   }
 
-  // Animate spin
-  function spinBall(ball, finalNumber) {
-    return new Promise((resolve) => {
+  async function spinBall(ball,winnerNumber) {
+    return new Promise((resolve)=>{
       ball.classList.add('spinning');
       let count=0;
       const interval=setInterval(()=>{
@@ -376,7 +337,7 @@
         count++;
         if (count>20) {
           clearInterval(interval);
-          ball.innerHTML='<div class="inner-text">'+finalNumber+'</div>';
+          ball.innerHTML='<div class="inner-text">'+winnerNumber+'</div>';
           ball.classList.remove('spinning');
           ball.classList.add('active');
           resolve();
@@ -385,28 +346,24 @@
     });
   }
 
-  // Draw next winner
-  async function drawWinner() {
+  async function drawNext() {
     if (isDrawing || availableNumbers.length===0) return;
     isDrawing=true;
     document.getElementById('drawBtn').disabled=true;
 
-    let ballId, place, statusText;
-    switch (currentStep) {
+    let ballId='',place='',statusText='';
+    switch(currentStep){
       case STEP_3RD: ballId='ball3'; place='third'; statusText='Drawing 3rd place...'; break;
       case STEP_2ND: ballId='ball2'; place='second'; statusText='Drawing 2nd place...'; break;
       case STEP_1ST: ballId='ball1'; place='first'; statusText='Drawing 1st place...'; break;
     }
 
-    // Pick random winner
     const randIdx=Math.floor(Math.random()*availableNumbers.length);
     const winnerNumber=availableNumbers[randIdx];
     availableNumbers.splice(randIdx,1);
-    drawnWinners.push(winnerNumber);
-
     // Animate spin
     const ball=document.getElementById(ballId);
-    await spinBall(ball, winnerNumber);
+    await spinBall(ball,winnerNumber);
 
     // Show in winners list
     const listDiv=document.getElementById('winnersList');
@@ -420,34 +377,27 @@
       </div>
     `;
     listDiv.prepend(div);
-
-    // Show congratulations if last
     if (currentStep===STEP_1ST) {
       document.getElementById('congrats').style.display='block';
     }
-
-    // Advance step
     currentStep++;
     updateButton();
-
-    // Update status
     const statusEl=document.getElementById('status');
     if (currentStep<=STEP_1ST) {
       statusEl.textContent=`${positions[place].text} drawn! Click again to draw ${positionsOrder[currentStep] || ''}.`;
     } else {
       statusEl.textContent='All winners drawn. Click "New Draw" to restart.';
     }
-
     document.getElementById('drawBtn').disabled=false;
     isDrawing=false;
   }
 
-  document.getElementById('drawBtn').addEventListener('click', () => {
+  document.getElementById('drawBtn').addEventListener('click', ()=> {
     if (currentStep<=STEP_1ST) {
-      drawWinner();
+      drawNext();
     } else {
       // restart
-      resetWinners();
+      initDraw();
     }
   });
 
