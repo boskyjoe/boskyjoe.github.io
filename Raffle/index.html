@@ -3,453 +3,300 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>St. Sebastian's Church Raffle Winner Announcement</title>
+<title>St. Sebastian's Church Raffle</title>
 <!-- Google Fonts & Icons -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700;800&display=swap" rel="stylesheet" />
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
 <style>
-  /* Your existing CSS styles here (unchanged) */
+  /* Reset & Base Styles */
   * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
   }
+
   body {
     font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    color: #1a202c;
+    background: #f0f2f5;
+    color: #333;
     line-height: 1.6;
-    position: relative;
   }
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: 
-      radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-      radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.15) 0%, transparent 50%),
-      radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.1) 0%, transparent 50%);
-    pointer-events: none;
-    z-index: -1;
-  }
+
+  /* Container */
   .container {
     max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 20px;
-    min-height: 100vh;
+    margin: auto;
+    padding: 20px;
   }
-  .header {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    border-radius: 24px;
-    padding: 40px 50px;
-    margin: 20px 0 40px 0;
-    position: relative;
-    overflow: hidden;
-  }
-  .header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
-  }
-  .header-content {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 40px;
+
+  /* Header */
+  header {
+    display: flex;
     align-items: center;
-    max-width: 1200px;
-    margin: 0 auto;
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
   }
-  .church-logo {
-    width: 100px;
-    height: 100px;
+  header img {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
     object-fit: contain;
-    border-radius: 20px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
   }
-  .church-info {
+  header .info {
+    margin-left: 20px;
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    margin-bottom: 8px;
+    color: #2d3748;
+  }
+  header .details {
+    font-size: 0.95rem;
+    color: #4a5568;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
   }
-  .church-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 2.8rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, #1a365d, #2d3748);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    line-height: 1.2;
-    margin-bottom: 16px;
-  }
-  .church-address {
-    font-size: 1.1rem;
-    color: #4a5568;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .church-contact {
-    font-size: 1.1rem;
-    color: #2b6cb0;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .main-content {
+
+  /* Main layout: two columns */
+  main {
     display: grid;
-    grid-template-columns: 1fr 400px;
-    gap: 40px;
-    max-width: 1200px;
-    margin: 0 auto;
+    grid-template-columns: 1fr 350px;
+    gap: 20px;
   }
-  .drawing-section {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 24px;
-    padding: 50px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    position: relative;
-    overflow: hidden;
+
+  /* Raffle section with stylish card */
+  .raffle-section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   }
-  .drawing-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #48bb78, #38a169);
-  }
-  .section-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 2.4rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, #1a365d, #2d3748);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+
+  .raffle-header {
     text-align: center;
-    margin-bottom: 40px;
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    margin-bottom: 20px;
     position: relative;
   }
-  .section-title::after {
-    content: '';
-    position: absolute;
-    bottom: -15px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80px;
+  .raffle-header::after {
+    content: "";
+    display: block;
     height: 4px;
+    width: 80px;
+    margin: 8px auto 0;
     background: linear-gradient(90deg, #48bb78, #38a169);
     border-radius: 2px;
   }
-  .status-card {
-    background: linear-gradient(135deg, #f7fafc, #edf2f7);
-    border: 2px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 24px;
-    text-align: center;
-    margin-bottom: 40px;
-    color: #2d3748;
-    font-weight: 600;
-    font-size: 1.1rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-  }
-  .status-card.success {
-    background: linear-gradient(135deg, #f0fff4, #e6fffa);
-    border-color: #48bb78;
-    color: #22543d;
-  }
-  .status-card.error {
-    background: linear-gradient(135deg, #fff5f5, #fed7d7);
-    border-color: #fc8181;
-    color: #742a2a;
-  }
-  .drawing-area {
+
+  /* Balls container */
+  .balls-container {
     display: flex;
     justify-content: center;
     gap: 30px;
-    margin: 50px 0;
     flex-wrap: wrap;
+    margin-bottom: 20px;
   }
-  .winner-ball {
-    width: 120px;
-    height: 120px;
+
+  /* Style for 3D balls with gradients and shadows */
+  .ball {
+    width: 150px;
+    height: 150px;
     border-radius: 50%;
-    background: linear-gradient(145deg, #ffffff, #f8fafc);
+    background: #4facfe; /* default color, overridden inline for different colors */
+    box-shadow: inset -4px -4px 8px rgba(255,255,255,0.6),
+                inset 4px 4px 8px rgba(0,0,0,0.2),
+                0 8px 16px rgba(0,0,0,0.2);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2.2rem;
-    font-weight: 800;
-    color: #2d3748;
-    border: 4px solid #e2e8f0;
-    box-shadow: 
-      0 15px 35px rgba(0, 0, 0, 0.1),
-      inset 0 2px 0 rgba(255, 255, 255, 0.9);
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #fff;
+    text-align: center;
+    padding: 10px;
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
     position: relative;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.3s ease;
   }
-  .winner-ball:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+
+  /* Spinning animation overlay text inside ball */
+  .ball .inner-text {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: bold;
+    line-height: 1.2;
+    padding: 10px;
+    text-align: center;
+    word-wrap: break-word; /* allow wrapping inside */
+    max-width: 120px;
   }
-  .winner-ball.active {
-    background: linear-gradient(145deg, #48bb78, #38a169);
-    color: white;
-    border-color: #38a169;
-    animation: pulse 2s ease-in-out infinite;
-    box-shadow: 
-      0 15px 35px rgba(72, 187, 120, 0.4),
-      inset 0 2px 0 rgba(255, 255, 255, 0.3);
-  }
-  .winner-ball.spinning {
+
+  /* Spinning effect */
+  .ball.spinning {
     animation: spin 0.6s linear infinite;
   }
-  .ball-label {
-    position: absolute;
-    bottom: -40px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #4a5568;
-    white-space: nowrap;
-  }
-  #ball1 .ball-label::after { content: '1st Place'; }
-  #ball2 .ball-label::after { content: '2nd Place'; }
-  #ball3 .ball-label::after { content: '3rd Place'; }
 
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.08); }
-  }
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
 
-  .draw-button {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    border: none;
-    padding: 20px 40px;
-    font-size: 1.2rem;
-    font-weight: 700;
-    border-radius: 16px;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-    display: flex;
+  /* Draw button styling */
+  .draw-btn {
+    display: inline-flex;
     align-items: center;
-    gap: 12px;
-    margin: 40px auto 0;
-    font-family: 'Inter', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    gap: 10px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    padding: 15px 25px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    margin: 0 auto;
+    display: block;
   }
-  .draw-button:hover:not(:disabled) {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
-  }
-  .draw-button:active:not(:disabled) {
-    transform: translateY(-1px);
-  }
-  .draw-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
+  .draw-btn:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    transform: translateY(-2px);
   }
 
-  /* Results Sidebar */
-  .results-sidebar {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 24px;
-    padding: 40px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    height: fit-content;
-    position: sticky;
-    top: 20px;
-    overflow: hidden;
+  /* Sidebar for winners */
+  .sidebar {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    max-height: 80vh;
+    overflow-y: auto;
   }
-  .results-sidebar::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #f093fb, #f5576c);
-  }
-  .results-title {
+  .sidebar h2 {
+    text-align: center;
+    margin-bottom: 15px;
     font-family: 'Playfair Display', serif;
     font-size: 1.8rem;
-    font-weight: 700;
-    color: #1a365d;
-    margin-bottom: 30px;
-    text-align: center;
+    position: relative;
   }
+  .sidebar h2::after {
+    content: "";
+    display: block;
+    height: 3px;
+    width: 60px;
+    margin: 8px auto 0;
+    background: linear-gradient(90deg, #f093fb, #f5576c);
+    border-radius: 2px;
+  }
+
+  /* Winner cards inside sidebar */
   .winner-card {
     display: flex;
     align-items: center;
-    gap: 20px;
-    padding: 20px;
-    margin: 20px 0;
-    background: linear-gradient(135deg, #f8fafc, #edf2f7);
-    border-radius: 16px;
-    border-left: 5px solid;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    padding: 15px;
+    margin-bottom: 15px;
+    background: #f7fafc;
+    border-radius: 10px;
+    border-left: 8px solid transparent; /* color set inline per position */
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
   }
   .winner-card:hover {
-    background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
-    transform: translateX(8px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    background: #eef2f6;
+    transform: translateX(2px);
   }
-  /* Color for each position */
-  .winner-card.first { border-left-color: #f6ad55; }
-  .winner-card.second { border-left-color: #9ca3af; }
-  .winner-card.third { border-left-color: #cd7c2f; }
   .winner-position {
-    font-size: 2.5rem;
-    font-weight: 800;
-    min-width: 80px;
-    text-align: center;
+    font-size: 2.4rem;
+    margin-right: 15px;
   }
-  .winner-position.first { color: #f6ad55; }
-  .winner-position.second { color: #9ca3af; }
-  .winner-position.third { color: #cd7c2f; }
   .winner-details {
     flex: 1;
   }
   .winner-place {
+    font-weight: 600;
     font-size: 1.2rem;
-    font-weight: 700;
-    color: #2d3748;
-    margin-bottom: 6px;
   }
   .winner-number {
     font-size: 2rem;
-    font-weight: 800;
-    color: #1a365d;
-    font-family: 'Inter', sans-serif;
+    font-weight: bold;
+    margin-top: 4px;
   }
-  .congratulations {
+
+  /* Congrats box */
+  #congrats {
+    background: #e0f7fa;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 20px;
     text-align: center;
-    margin-top: 40px;
-    padding: 30px;
-    background: linear-gradient(135deg, #f0fff4, #e6fffa);
-    border-radius: 20px;
-    border: 2px solid #48bb78;
-    box-shadow: 0 8px 25px rgba(72, 187, 120, 0.1);
   }
-  .congratulations h3 {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.6rem;
-    color: #22543d;
-    margin-bottom: 12px;
-    font-weight: 700;
-  }
-  .congratulations p {
-    color: #2f855a;
-    font-size: 1.1rem;
-    font-weight: 500;
-  }
-  /* Footer styles */
-  .footer {
-    text-align: center;
-    padding: 50px 20px;
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 1rem;
-    font-weight: 500;
+
+  /* Responsive adjustments */
+  @media(max-width: 768px){
+    main {
+      grid-template-columns: 1fr;
+    }
+    /* adjust ball size for smaller screens if needed */
+    .ball {
+      width: 120px;
+      height: 120px;
+      font-size: 2rem;
+    }
   }
 </style>
 </head>
 <body>
 <div class="container">
   <!-- Header -->
-  <header class="header">
-    <div class="header-content">
-      <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png" alt="St. Sebastian's Church Logo" class="church-logo" />
-      <div class="church-info">
-        <h1 class="church-title">St. Sebastian's Church Raffle Winner Announcement</h1>
-        <div class="church-address">
-          <span class="material-icons" style="font-size: 18px;">place</span>
-          No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038
-        </div>
-        <div class="church-contact">
-          <span class="material-icons" style="font-size: 18px;">contact_phone</span>
-          +91 7090424365 | stsebastianssmc@gmail.com
-        </div>
-      </div>
+  <header>
+    <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png" alt="St. Sebastian's Logo" />
+    <div class="info">
+      <h1>St. Sebastian's Church Raffle Winner Announcement</h1>
+      <div>No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</div>
+      <div><span class="material-icons" style="font-size:16px;">contact_phone</span> +91 7090424365 | stsebastianssmc@gmail.com</div>
     </div>
   </header>
-  <!-- Main Content -->
-  <main class="main-content">
-    <!-- Raffle Draw -->
-    <section class="drawing-section">
-      <h2 class="section-title">Raffle Draw</h2>
-      
-      <div class="status-card success" id="status">Start the Draw</div>
-      
-      <div class="drawing-area">
-        <div class="winner-ball" id="ball1">
-          ?
-          <div class="ball-label"></div>
-        </div>
-        <div class="winner-ball" id="ball2">
-          ?
-          <div class="ball-label"></div>
-        </div>
-        <div class="winner-ball" id="ball3">
-          ?
-          <div class="ball-label"></div>
-        </div>
+
+  <!-- Main content: two columns -->
+  <main>
+    <!-- Raffle draw area -->
+    <section class="raffle-section">
+      <h2 style="text-align: center; margin-bottom: 20px;">Raffle Draw</h2>
+      <div id="status" class="status-card success" style="text-align:center;">Start the Draw</div>
+      <div class="balls-container">
+        <div class="ball" id="ball1" style="background: linear-gradient(135deg, #f7971e, #ffd200);"></div>
+        <div class="ball" id="ball2" style="background: linear-gradient(135deg, #6a11cb, #2575fc);"></div>
+        <div class="ball" id="ball3" style="background: linear-gradient(135deg, #43cea2, #185a9d);"></div>
       </div>
-      
-      <button class="draw-button" id="drawBtn">
-        <span class="material-icons">casino</span> Draw Winners
-      </button>
+      <button id="drawBtn" class="draw-btn"><span class="material-icons">casino</span> Draw Winners</button>
     </section>
-    <!-- Winners Sidebar -->
-    <aside class="results-sidebar">
-      <h2 class="results-title">🏆 Winners</h2>
-      <div id="results">
-        <div style="text-align: center; color: #9ca3af; font-style: italic; padding: 40px 20px;">
-          Winners will appear here after the draw
-        </div>
-      </div>
-      <div class="congratulations" id="congratulations" style="display: none;">
-        <h3>🎉 Congratulations to all Winners!</h3>
-        <p>Please contact the church office with your winning ticket for prize collection.</p>
+
+    <!-- Winners sidebar -->
+    <aside class="sidebar" id="results">
+      <h2>🏆 Winners</h2>
+      <div style="text-align:center; font-style:italic; color:#999; padding:20px;">Winners will appear here after the draw</div>
+      <div id="winnersList"></div>
+      <div id="congrats" style="display:none; margin-top:20px; background:#c8f7c5; padding:15px; border-radius:10px;">
+        <h3>🎉 Congratulations!</h3>
+        <p>Contact the church office with your winning ticket.</p>
       </div>
     </aside>
   </main>
-  <!-- Footer -->
-  <div class="footer">
-    <p>© 2025 St. Sebastian's Church. All rights reserved.</p>
-  </div>
 </div>
-<!-- JavaScript -->
 <script>
-  // Declare positions object globally for all functions
+  // Global positions object
   const positions = {
     'first': { emoji: '🥇', text: '1st Place' },
     'second': { emoji: '🥈', text: '2nd Place' },
@@ -457,200 +304,155 @@
   };
   const positionsOrder = {0:'3rd',1:'2nd',2:'1st'};
 
-  // Define steps
   const STEP_3RD = 0;
   const STEP_2ND = 1;
   const STEP_1ST = 2;
-  const STEP_RESET = 3;
 
-  // Initial data
-  let winnersData = [
-    "001","002","003","004","005","006","007","008","009","010",
-    "011","012","013","014","015","016","017","018","019","020",
-    "021","022","023","024","025"
-  ];
-
+  let winnersData = ["001","002","003","004","005","006","007","008","009","010","011","012","013","014","015","016","017","018","019","020","021","022","023","024","025"];
   let availableNumbers = [];
   let drawnWinners = [];
   let currentStep = STEP_3RD;
   let isDrawing = false;
 
   // Load winners from file
-  async function loadWinnersFile() {
+  async function loadWinners() {
     try {
-      const response = await fetch('Winners.txt');
-      if (!response.ok) throw new Error('Failed to load Winners.txt');
-      const text = await response.text();
+      const res = await fetch('Winners.txt');
+      if (!res.ok) throw new Error('Failed to load Winners.txt');
+      const text = await res.text();
       const lines = text.split('\n').map(l => l.trim()).filter(l => l);
       if (lines.length >= 3) {
         winnersData = lines;
-        resetDraw();
-        updateButtonText();
-        document.getElementById('drawBtn').disabled = false;
-      } else {
-        document.getElementById('status').textContent = 'Need at least 3 numbers in Winners.txt to draw winners.';
-        document.getElementById('status').className = 'status-card error';
-        document.getElementById('drawBtn').disabled = true;
       }
-    } catch (e) {
-      console.error(e);
-      initializeDemo();
+    } catch(e) {
+      // fallback; do nothing
     }
+    startDraw();
   }
 
-  function initializeDemo() {
-    document.getElementById('status').textContent = 'Start the Draw';
-    document.getElementById('status').className = 'status-card success';
-    document.getElementById('drawBtn').disabled = false;
-    resetDraw();
+  function startDraw() {
+    resetWinners();
+    updateButton();
   }
 
-  function resetDraw() {
+  function resetWinners() {
     currentStep = STEP_3RD;
-    drawnWinners = [];
     availableNumbers = [...winnersData];
-
+    drawnWinners = [];
     // Reset balls
-    ['ball1','ball2','ball3'].forEach(id => {
-      const ball = document.getElementById(id);
-      ball.textContent='?';
-      ball.classList.remove('spinning','active');
-    });
-
-    // Reset results and hide congratulations
-    document.getElementById('results').innerHTML=`<div style="text-align: center; color: #9ca3af; font-style: italic; padding: 40px 20px;">Winners will appear here after the draw</div>`;
-    document.getElementById('congratulations').style.display='none';
-
-    updateButtonText();
-    document.getElementById('drawBtn').disabled=false;
+    for (let i=1;i<=3;i++) {
+      const b = document.getElementById('ball'+i);
+      b.innerHTML = '';
+      b.style.background = '';
+      b.className='ball';
+    }
+    // Reset winners list
+    document.getElementById('winnersList').innerHTML='';
+    document.getElementById('congrats').style.display='none';
+    updateButton();
   }
 
-  function updateButtonText() {
+  function updateButton() {
     const btn = document.getElementById('drawBtn');
-    const texts = {
-      0: '<span class="material-icons">casino</span> Draw 3rd Place Winner',
-      1: '<span class="material-icons">casino</span> Draw 2nd Place Winner',
-      2: '<span class="material-icons">casino</span> Draw 1st Place Winner',
-      3: '<span class="material-icons">refresh</span> Start New Draw'
-    };
-    if (currentStep === STEP_3RD) {
-      btn.innerHTML = texts[0];
-    } else if (currentStep === STEP_2ND) {
-      btn.innerHTML = texts[1];
-    } else if (currentStep === STEP_1ST) {
-      btn.innerHTML = texts[2];
+    if (currentStep===STEP_3RD) {
+      btn.innerHTML='<span class="material-icons">casino</span> Draw Winners';
+    } else if (currentStep===STEP_2ND) {
+      btn.innerHTML='<span class="material-icons">casino</span> Draw Winners';
+    } else if (currentStep===STEP_1ST) {
+      btn.innerHTML='<span class="material-icons">casino</span> Draw Winners';
     } else {
-      btn.innerHTML = texts[3];
+      btn.innerHTML='<span class="material-icons">refresh</span> New Draw';
     }
   }
 
-  function animateBallDraw(ballId, finalNumber) {
-    return new Promise(resolve => {
-      const ball = document.getElementById(ballId);
+  // Animate spin
+  function spinBall(ball, finalNumber) {
+    return new Promise((resolve) => {
       ball.classList.add('spinning');
-      let count = 0;
-      const interval = setInterval(() => {
-        const randIdx = Math.floor(Math.random() * availableNumbers.length);
-        ball.textContent=availableNumbers[randIdx];
+      let count=0;
+      const interval=setInterval(()=>{
+        const randIdx=Math.floor(Math.random()*availableNumbers.length);
+        ball.innerHTML='<div class="inner-text">'+availableNumbers[randIdx]+'</div>';
         count++;
-        if (count > 20) {
+        if (count>20) {
           clearInterval(interval);
-          ball.textContent=finalNumber;
+          ball.innerHTML='<div class="inner-text">'+finalNumber+'</div>';
           ball.classList.remove('spinning');
           ball.classList.add('active');
           resolve();
         }
-      }, 120);
+      },120);
     });
   }
 
-  function displayWinner(place, number) {
-    const resultsDiv = document.getElementById('results');
-    if (resultsDiv.innerHTML.includes('Winners will appear here')) {
-      resultsDiv.innerHTML='';
-    }
-    const winnerCard = document.createElement('div');
-    winnerCard.className=`winner-card ${place}`;
-    winnerCard.innerHTML=`
-      <div class="winner-position ${place}">${positions[place].emoji}</div>
-      <div class="winner-details">
-        <div class="winner-place">${positions[place].text}</div>
-        <div class="winner-number">${number}</div>
-      </div>
-    `;
-    winnerCard.style.opacity='0';
-    winnerCard.style.transform='translateY(20px)';
-    resultsDiv.insertBefore(winnerCard, resultsDiv.firstChild);
-    setTimeout(()=> {
-      winnerCard.style.transition='all 0.5s ease';
-      winnerCard.style.opacity='1';
-      winnerCard.style.transform='translateY(0)';
-    },100);
-
-    if (currentStep===STEP_1ST) {
-      setTimeout(()=> {
-        document.getElementById('congratulations').style.display='block';
-      },500);
-    }
-  }
-
-  async function drawSingleWinner() {
+  // Draw next winner
+  async function drawWinner() {
     if (isDrawing || availableNumbers.length===0) return;
     isDrawing=true;
     document.getElementById('drawBtn').disabled=true;
 
-    const statusEl = document.getElementById('status');
+    let ballId, place, statusText;
+    switch (currentStep) {
+      case STEP_3RD: ballId='ball3'; place='third'; statusText='Drawing 3rd place...'; break;
+      case STEP_2ND: ballId='ball2'; place='second'; statusText='Drawing 2nd place...'; break;
+      case STEP_1ST: ballId='ball1'; place='first'; statusText='Drawing 1st place...'; break;
+    }
 
     // Pick random winner
-    const randIdx = Math.floor(Math.random() * availableNumbers.length);
-    const winnerNumber = availableNumbers[randIdx];
-
-    // Remove from array
+    const randIdx=Math.floor(Math.random()*availableNumbers.length);
+    const winnerNumber=availableNumbers[randIdx];
     availableNumbers.splice(randIdx,1);
     drawnWinners.push(winnerNumber);
 
-    let ballId, place, statusText;
-    switch (currentStep) {
-      case STEP_3RD: ballId='ball3'; place='third'; statusText='Drawing 3rd place winner...'; break;
-      case STEP_2ND: ballId='ball2'; place='second'; statusText='Drawing 2nd place winner...'; break;
-      case STEP_1ST: ballId='ball1'; place='first'; statusText='Drawing 1st place winner...'; break;
+    // Animate spin
+    const ball=document.getElementById(ballId);
+    await spinBall(ball, winnerNumber);
+
+    // Show in winners list
+    const listDiv=document.getElementById('winnersList');
+    const div=document.createElement('div');
+    div.className='winner-card '+place;
+    div.innerHTML=`
+      <div class="winner-position">${positions[place].emoji}</div>
+      <div class="winner-details">
+        <div class="winner-place">${positions[place].text}</div>
+        <div class="winner-number">${winnerNumber}</div>
+      </div>
+    `;
+    listDiv.prepend(div);
+
+    // Show congratulations if last
+    if (currentStep===STEP_1ST) {
+      document.getElementById('congrats').style.display='block';
     }
+
+    // Advance step
+    currentStep++;
+    updateButton();
 
     // Update status
-    statusEl.textContent=statusText;
-    statusEl.className='status-card';
-
-    await animateBallDraw(ballId, winnerNumber);
-    displayWinner(place, winnerNumber);
-
-    // Next step
-    currentStep++;
-    updateButtonText();
-
-    if (currentStep <= STEP_1ST) {
-      const nextPlaceStr=positionsOrder[currentStep] || '';
-      statusEl.textContent=`${positions[place].text} drawn! Ready to draw ${nextPlaceStr} place.`;
+    const statusEl=document.getElementById('status');
+    if (currentStep<=STEP_1ST) {
+      statusEl.textContent=`${positions[place].text} drawn! Click again to draw ${positionsOrder[currentStep] || ''}.`;
     } else {
-      statusEl.textContent='All winners have been drawn! 🎉';
-      // Do NOT auto-reset; wait for user to click again
+      statusEl.textContent='All winners drawn. Click "New Draw" to restart.';
     }
+
     document.getElementById('drawBtn').disabled=false;
     isDrawing=false;
   }
 
-  // Event listener for draw button
-document.getElementById('drawBtn').addEventListener('click', () => {
-  if (currentStep===STEP_3RD || (currentStep > STEP_3RD && currentStep <= STEP_1ST)) {
-    drawSingleWinner();
-  } else {
-    // If all winners are drawn, restart the draw
-    resetDraw();
-    updateButtonText();
-  }
-});
+  document.getElementById('drawBtn').addEventListener('click', () => {
+    if (currentStep<=STEP_1ST) {
+      drawWinner();
+    } else {
+      // restart
+      resetWinners();
+    }
+  });
 
-// Load winners on page load
-loadWinnersFile();
+  loadWinners();
+
 </script>
 </body>
 </html>
