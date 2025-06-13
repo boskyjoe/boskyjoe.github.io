@@ -4,14 +4,11 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>St. Sebastian's Church Raffle Winner Announcement</title>
+<!-- Google Fonts & Icons -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700;800&display=swap" rel="stylesheet" />
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
 <style>
   /* Your existing CSS styles here (unchanged) */
-  /* For brevity, I will include only your CSS from the original code. */
-  /* Make sure to keep your original CSS or update as needed. */
-
-  /* ... (CSS from your initial code) ... */
   * {
     margin: 0;
     padding: 0;
@@ -279,6 +276,7 @@
     transform: none;
   }
 
+  /* Results Sidebar */
   .results-sidebar {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(20px);
@@ -325,11 +323,9 @@
     transform: translateX(8px);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
   }
-  /* Colors for winner positions */
   .winner-card.first { border-left-color: #f6ad55; }
   .winner-card.second { border-left-color: #9ca3af; }
   .winner-card.third { border-left-color: #cd7c2f; }
-
   .winner-position {
     font-size: 2.5rem;
     font-weight: 800;
@@ -339,7 +335,6 @@
   .winner-position.first { color: #f6ad55; }
   .winner-position.second { color: #9ca3af; }
   .winner-position.third { color: #cd7c2f; }
-
   .winner-details {
     flex: 1;
   }
@@ -355,7 +350,6 @@
     color: #1a365d;
     font-family: 'Inter', sans-serif;
   }
-
   .congratulations {
     text-align: center;
     margin-top: 40px;
@@ -377,7 +371,6 @@
     font-size: 1.1rem;
     font-weight: 500;
   }
-
   /* Footer styles */
   .footer {
     text-align: center;
@@ -386,15 +379,12 @@
     font-size: 1rem;
     font-weight: 500;
   }
-
-  /* Responsive styles omitted for brevity; keep your existing media queries */
-
-  /* ... (rest of your CSS) ... */
+  /* Responsive styles omitted for brevity, keep your existing media queries */
 </style>
 </head>
 <body>
 <div class="container">
-  <!-- Header Section -->
+  <!-- Header -->
   <header class="header">
     <div class="header-content">
       <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png" alt="St. Sebastian's Church Logo" class="church-logo" />
@@ -411,15 +401,14 @@
       </div>
     </div>
   </header>
-
   <!-- Main Content -->
   <main class="main-content">
-    <!-- Raffle Draw Section -->
+    <!-- Raffle Draw -->
     <section class="drawing-section">
       <h2 class="section-title">Raffle Draw</h2>
       
       <div class="status-card success" id="status">Start the Draw</div>
-
+      
       <div class="drawing-area">
         <div class="winner-ball" id="ball1">
           ?
@@ -434,16 +423,14 @@
           <div class="ball-label"></div>
         </div>
       </div>
-
+      
       <button class="draw-button" id="drawBtn">
         <span class="material-icons">casino</span> Draw Winners
       </button>
-      <!-- Reset Button for clarity -->
-      <button class="draw-button" id="resetBtn" style="margin-top: 10px; background-color: #f56565;">
+      <button class="draw-button" id="resetBtn" style="margin-top:10px; background-color:#f56565;">
         <span class="material-icons">refresh</span> Reset Draw
       </button>
     </section>
-
     <!-- Winners Sidebar -->
     <aside class="results-sidebar">
       <h2 class="results-title">🏆 Winners</h2>
@@ -458,129 +445,110 @@
       </div>
     </aside>
   </main>
-
   <!-- Footer -->
   <div class="footer">
     <p>© 2025 St. Sebastian's Church. All rights reserved.</p>
   </div>
 </div>
-
 <!-- JavaScript -->
 <script>
-  // Define constants for draw steps
+  // Define constants for steps
   const STEP_3RD = 0;
   const STEP_2ND = 1;
   const STEP_1ST = 2;
   const STEP_RESET = 3;
 
+  // Initial data
   let winnersData = [
-      "001", "002", "003", "004", "005", "006", "007", "008", "009", "010",
-      "011", "012", "013", "014", "015", "016", "017", "018", "019", "020",
-      "021", "022", "023", "024", "025"
+    "001","002","003","004","005","006","007","008","009","010",
+    "011","012","013","014","015","016","017","018","019","020",
+    "021","022","023","024","025"
   ];
 
-  let drawnWinners = [];
   let availableNumbers = [];
-  let currentStep = STEP_3RD; // start with 3rd place
+  let drawnWinners = [];
+  let currentStep = STEP_3RD;
   let isDrawing = false;
 
-  // Load Winners.txt file automatically
+  // Load Winners.txt
   async function loadWinnersFile() {
     try {
       const response = await fetch('Winners.txt');
-      if (!response.ok) {
-        throw new Error(\`HTTP error! status: \${response.status}\`);
-      }
-      const content = await response.text();
-      winnersData = content.split('\\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0);
-      
-      if (winnersData.length >= 3) {
+      if (!response.ok) throw new Error('Failed to load Winners.txt');
+      const text = await response.text();
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+      if (lines.length >= 3) {
+        winnersData = lines;
         resetDraw();
         updateButtonText();
         document.getElementById('drawBtn').disabled = false;
       } else {
-        const statusCard = document.getElementById('status');
-        statusCard.textContent = 'Need at least 3 numbers in Winners.txt to draw winners.';
-        statusCard.className = 'status-card error';
+        // Not enough data
+        document.getElementById('status').textContent = 'Need at least 3 numbers in Winners.txt to draw winners.';
+        document.getElementById('status').className = 'status-card error';
         document.getElementById('drawBtn').disabled = true;
       }
-    } catch (error) {
-      console.error('Error loading Winners.txt:', error);
+    } catch (e) {
+      console.error(e);
+      // fallback demo
       initializeDemo();
     }
   }
 
-  // Initialize demo data if file load fails
   function initializeDemo() {
-    const statusCard = document.getElementById('status');
-    statusCard.textContent = 'Start the Draw';
-    statusCard.className = 'status-card success';
+    document.getElementById('status').textContent = 'Start the Draw';
+    document.getElementById('status').className = 'status-card success';
     document.getElementById('drawBtn').disabled = false;
     resetDraw();
   }
 
-  // Reset the draw process
   function resetDraw() {
     currentStep = STEP_3RD;
     drawnWinners = [];
     availableNumbers = [...winnersData];
 
-    // Reset ball displays
-    ['ball1', 'ball2', 'ball3'].forEach(ballId => {
-      const ball = document.getElementById(ballId);
+    // Reset balls
+    ['ball1','ball2','ball3'].forEach(id => {
+      const ball = document.getElementById(id);
       ball.textContent = '?';
-      ball.classList.remove('spinning', 'active');
+      ball.classList.remove('spinning','active');
     });
 
-    // Reset winners display
-    document.getElementById('results').innerHTML = `
-      <div style="text-align: center; color: #9ca3af; font-style: italic; padding: 40px 20px;">
-        Winners will appear here after the draw
-      </div>
-    `;
-    // Hide congratulations message
+    // Reset results
+    document.getElementById('results').innerHTML = `<div style="text-align: center; color: #9ca3af; font-style: italic; padding: 40px 20px;">Winners will appear here after the draw</div>`;
     document.getElementById('congratulations').style.display = 'none';
 
-    // Reset button text & enable draw button
     updateButtonText();
     document.getElementById('drawBtn').disabled = false;
   }
 
-  // Update draw button text based on current step
   function updateButtonText() {
-    const button = document.getElementById('drawBtn');
-    const positions = {0: '3rd', 1: '2nd', 2: '1st'};
+    const btn = document.getElementById('drawBtn');
     const texts = {
       0: '<span class="material-icons">casino</span> Draw 3rd Place Winner',
       1: '<span class="material-icons">casino</span> Draw 2nd Place Winner',
       2: '<span class="material-icons">casino</span> Draw 1st Place Winner',
       3: '<span class="material-icons">refresh</span> Start New Draw'
     };
-    // For reset state
     if (currentStep === STEP_RESET) {
-      button.innerHTML = texts[3];
+      btn.innerHTML = texts[3];
     } else {
-      button.innerHTML = texts[currentStep];
+      btn.innerHTML = texts[currentStep];
     }
   }
 
-  // Animate spinning and settling of a ball
   function animateBallDraw(ballId, finalNumber) {
     return new Promise(resolve => {
       const ball = document.getElementById(ballId);
       ball.classList.add('spinning');
-
-      let spinCount = 0;
-      const spinInterval = setInterval(() => {
-        const randomIndex = Math.floor(Math.random() * availableNumbers.length);
-        ball.textContent = availableNumbers[randomIndex];
-        spinCount++;
-
-        if (spinCount > 20) { // number of spins
-          clearInterval(spinInterval);
-          ball.textContent = finalNumber; // settle on final number
+      let count = 0;
+      const interval = setInterval(() => {
+        const randIndex = Math.floor(Math.random() * availableNumbers.length);
+        ball.textContent = availableNumbers[randIndex];
+        count++;
+        if (count > 20) {
+          clearInterval(interval);
+          ball.textContent = finalNumber;
           ball.classList.remove('spinning');
           ball.classList.add('active');
           resolve();
@@ -589,23 +557,18 @@
     });
   }
 
-  // Display winner info
   function displayWinner(place, number) {
     const resultsDiv = document.getElementById('results');
-
     if (resultsDiv.innerHTML.includes('Winners will appear here')) {
       resultsDiv.innerHTML = '';
     }
-
-    const winnerCard = document.createElement('div');
-    winnerCard.className = `winner-card ${place}`;
-
     const positions = {
       'first': { emoji: '🥇', text: '1st Place' },
       'second': { emoji: '🥈', text: '2nd Place' },
       'third': { emoji: '🥉', text: '3rd Place' }
     };
-
+    const winnerCard = document.createElement('div');
+    winnerCard.className = `winner-card ${place}`;
     winnerCard.innerHTML = `
       <div class="winner-position ${place}">${positions[place].emoji}</div>
       <div class="winner-details">
@@ -613,104 +576,84 @@
         <div class="winner-number">${number}</div>
       </div>
     `;
-
-    winnerCard.style.opacity = '0';
-    winnerCard.style.transform = 'translateY(20px)';
+    winnerCard.style.opacity='0';
+    winnerCard.style.transform='translateY(20px)';
     resultsDiv.insertBefore(winnerCard, resultsDiv.firstChild);
     setTimeout(() => {
-      winnerCard.style.transition = 'all 0.5s ease';
-      winnerCard.style.opacity = '1';
-      winnerCard.style.transform = 'translateY(0)';
+      winnerCard.style.transition='all 0.5s ease';
+      winnerCard.style.opacity='1';
+      winnerCard.style.transform='translateY(0)';
     }, 100);
 
-    // Show congratulations after all winners are drawn
     if (currentStep === STEP_1ST) {
       setTimeout(() => {
-        document.getElementById('congratulations').style.display = 'block';
+        document.getElementById('congratulations').style.display='block';
       }, 500);
     }
   }
 
-  // Draw one winner based on current step
   async function drawSingleWinner() {
-    if (isDrawing || availableNumbers.length === 0) return;
-
+    if (isDrawing || availableNumbers.length===0) return;
     isDrawing = true;
-    document.getElementById('drawBtn').disabled = true;
+    document.getElementById('drawBtn').disabled=true;
 
-    const statusCard = document.getElementById('status');
+    const statusEl = document.getElementById('status');
 
     // Pick random winner
-    const randomIndex = Math.floor(Math.random() * availableNumbers.length);
-    const winnerNumber = availableNumbers[randomIndex];
+    const randIdx = Math.floor(Math.random() * availableNumbers.length);
+    const winnerNumber = availableNumbers[randIdx];
 
     // Remove from available
-    availableNumbers.splice(randomIndex, 1);
+    availableNumbers.splice(randIdx,1);
     drawnWinners.push(winnerNumber);
 
     let ballId, place, statusText;
-
-    switch (currentStep) {
+    switch(currentStep) {
       case STEP_3RD:
-        ballId = 'ball3';
-        place = 'third';
-        statusText = 'Drawing 3rd place winner...';
-        break;
+        ballId='ball3'; place='third'; statusText='Drawing 3rd place winner...'; break;
       case STEP_2ND:
-        ballId = 'ball2';
-        place = 'second';
-        statusText = 'Drawing 2nd place winner...';
-        break;
+        ballId='ball2'; place='second'; statusText='Drawing 2nd place winner...'; break;
       case STEP_1ST:
-        ballId = 'ball1';
-        place = 'first';
-        statusText = 'Drawing 1st place winner...';
-        break;
+        ballId='ball1'; place='first'; statusText='Drawing 1st place winner...'; break;
     }
-
     // Update status
-    statusCard.textContent = statusText;
-    statusCard.className = 'status-card';
+    statusEl.textContent=statusText;
+    statusEl.className='status-card';
 
-    // Animate ball
     await animateBallDraw(ballId, winnerNumber);
-
-    // Show winner in results
     displayWinner(place, winnerNumber);
 
-    // Advance step
+    // Next step
     currentStep++;
     updateButtonText();
 
-    // Update status message
     if (currentStep <= STEP_1ST) {
-      const nextPlaceStr = {0: '3rd', 1: '2nd', 2: '1st'}[currentStep] || '';
-      statusCard.textContent = `${positions[place].emoji} ${positions[place].text} drawn! Ready to draw ${nextPlaceStr} place.`;
+      const positions = {0:'3rd',1:'2nd',2:'1st'};
+      const nextPlaceStr = positions[currentStep] || '';
+      statusEl.textContent=`${positions[place]} Place drawn! Ready to draw ${nextPlaceStr} place.`;
     } else {
-      statusCard.textContent = 'All winners have been drawn! 🎉';
+      statusEl.textContent='All winners have been drawn! 🎉';
     }
 
-    // Re-enable button
-    document.getElementById('drawBtn').disabled = false;
-    isDrawing = false;
+    document.getElementById('drawBtn').disabled=false;
+    isDrawing=false;
   }
 
-  // Handle button clicks
+  // Button event handlers
 document.getElementById('drawBtn').addEventListener('click', () => {
-  if (currentStep === STEP_RESET) {
+  if (currentStep===STEP_RESET) {
     resetDraw();
     updateButtonText();
-    document.getElementById('drawBtn').disabled = false;
+    document.getElementById('drawBtn').disabled=false;
   } else {
     drawSingleWinner();
   }
 });
 
-// Reset button event
 document.getElementById('resetBtn').addEventListener('click', () => {
   resetDraw();
   updateButtonText();
-  document.getElementById('drawBtn').disabled = false;
+  document.getElementById('drawBtn').disabled=false;
 });
 
 // Load winners on page load
