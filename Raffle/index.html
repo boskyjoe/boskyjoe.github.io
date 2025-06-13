@@ -20,11 +20,6 @@
             --accent-color: #f7971e;
         }
 
-        /* Extend Tailwind's theme with custom colors */
-        @tailwind base;
-        @tailwind components;
-        @tailwind utilities;
-
         /* Custom Gradients for Balls */
         .ball-gradient-1 {
             background: linear-gradient(135deg, #f7971e, #ffd200); /* Gold/Orange */
@@ -55,7 +50,6 @@
 
         /* Specific styles for elements that need fine-tuning beyond utility classes */
         .ball {
-            /* These base styles are not easily replicated by simple Tailwind classes */
             width: 120px;
             height: 120px;
             border-radius: 50%;
@@ -148,6 +142,35 @@
             @apply opacity-100 translate-y-0; /* Tailwind classes for final state */
         }
 
+        /* Styling for the draw button visibility - REMOVED HOVER EFFECT */
+        .raffle-box .draw-btn {
+            opacity: 1; /* Always visible */
+            pointer-events: auto; /* Always clickable */
+            transition: opacity 0.3s ease-in-out; /* Keep transition for disabled state, etc. */
+        }
+
+        /* Responsive layout for main content sections */
+        .main-content-layout {
+            @apply flex flex-col lg:flex-row lg:justify-center lg:items-start lg:gap-8; /* Stack columns on small, side-by-side on large */
+            width: 100%; /* Ensure it takes full width of parent container */
+        }
+
+        .section-card {
+            @apply bg-white rounded-xl shadow-md p-8 border border-gray-200;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        .raffle-box {
+            @apply bg-green-50; /* Tailwind background */
+            flex-grow: 1; /* Allow it to grow */
+        }
+
+        .winners-box {
+            @apply bg-blue-50; /* Tailwind background */
+            flex-grow: 1; /* Allow it to grow */
+        }
+
+
     </style>
 </head>
 <body class="font-inter bg-gradient-to-r from-gray-100 to-white text-gray-800 flex flex-col items-center min-h-screen p-5 box-border">
@@ -162,10 +185,10 @@
             </div>
         </header>
 
-        <!-- Main Content -->
-        <main>
-            <!-- Raffle Draw -->
-            <section class="section-box raffle-box bg-green-50 border border-green-200">
+        <!-- Main Content Layout -->
+        <div class="main-content-layout">
+            <!-- Raffle Draw Section -->
+            <section class="section-card raffle-box">
                 <h2 class="font-playfair text-2xl text-emerald-800 text-center mb-6 relative after:content-[''] after:block after:w-15 after:h-0.5 after:bg-gradient-to-r after:from-primary-color after:to-primary-dark-color after:mx-auto after:mt-2 after:rounded">Raffle Draw</h2>
                 <div class="balls-container flex justify-center gap-8 mt-10 mb-10">
                     <div class="ball ball-gradient-3" id="ball3">
@@ -188,13 +211,13 @@
             </section>
 
             <!-- Winners display section -->
-            <section class="section-box winners-box bg-blue-50 border border-blue-200" id="winnersSection">
+            <section class="section-card winners-box" id="winnersSection">
                 <h2 class="font-playfair text-2xl text-emerald-800 text-center mb-6 relative after:content-[''] after:block after:w-15 after:h-0.5 after:bg-gradient-to-r after:from-primary-color after:to-primary-dark-color after:mx-auto after:mt-2 after:rounded">🏆 Winners</h2>
                 <div class="initial-message text-center italic text-gray-500 p-5" id="initialWinnersMessage">Winners will appear here after the first number is drawn</div>
                 <div id="winnersList" class="mt-5 flex flex-col gap-4"></div>
                 <div id="congrats" class="hidden mt-5 bg-green-100 text-green-800 p-4 rounded-md font-semibold text-center shadow-sm">🎉 Congratulations! Contact the church office.</div>
             </section>
-        </main>
+        </div>
     </div>
     <!-- Confetti burst container -->
     <div id="confettiContainer" aria-hidden="true"></div>
@@ -296,6 +319,13 @@
                 drawBtn.textContent = TEXT_LABELS.LOADING;
                 drawBtn.disabled = true;
 
+                // Reset winners section visibility by removing the 'show' class and ensuring initial state
+                winnersSection.classList.remove('show', 'opacity-100', 'translate-y-0');
+                winnersSection.classList.add('opacity-0', 'translate-y-5');
+                initialWinnersMessage.classList.remove('hidden'); // Show initial message using Tailwind
+                winnersList.innerHTML = ''; // Clear previous winners
+                congratsMessage.classList.add('hidden'); // Hide congrats message using Tailwind
+
                 // Load winners from file
                 WINNER_POOL_FROM_FILE = await fetchWinnersFromFile();
                 if (WINNER_POOL_FROM_FILE.length === 0) {
@@ -317,15 +347,6 @@
 
                 ball3.classList.remove('active', 'spinning');
                 ball3InnerText.textContent = EMOJIS.DICE;
-
-                winnersList.innerHTML = ''; // Clear previous winners
-                congratsMessage.classList.add('hidden'); // Hide congrats message using Tailwind
-
-                // Reset winners section visibility by removing the 'show' class and ensuring initial state
-                winnersSection.classList.remove('show', 'opacity-100', 'translate-y-0');
-                winnersSection.classList.add('opacity-0', 'translate-y-5');
-                initialWinnersMessage.classList.remove('hidden'); // Show initial message using Tailwind
-
 
                 clearConfetti(); // Clear any lingering confetti
                 isDrawing = false; // Reset drawing flag
