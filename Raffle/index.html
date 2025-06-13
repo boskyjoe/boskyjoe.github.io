@@ -69,19 +69,18 @@
     gap: 20px;
   }
 
-  /* Style for boxes with border and depth for separation */
+  /* Style for boxes with depth and shadows */
   .section-box {
     background: #fff;
     border-radius: 12px;
     padding: 30px;
-    /* Depth and shadow for a more 3D look */
     box-shadow:
       inset -4px -4px 12px rgba(255,255,255,0.9),
       inset 4px 4px 12px rgba(0,0,0,0.15),
       0 8px 20px rgba(0,0,0,0.10);
     transition: box-shadow 0.3s ease, border-color 0.3s ease;
   }
-  /* Slight hover lift effect for depth */
+  /* Hover lift effect for depth */
   .section-box:hover {
     box-shadow:
       inset -5px -5px 14px rgba(255,255,255,1),
@@ -89,7 +88,7 @@
       0 12px 24px rgba(0,0,0,0.15);
   }
 
-  /* Specific styles for "Raffle Draw" */
+  /* Styles for "Raffle Draw" section */
   .raffle-box h2 {
     text-align: center;
     font-family: 'Playfair Display', serif;
@@ -106,21 +105,7 @@
     border-radius: 2px;
   }
 
-  /* Status message styling */
-  #status {
-    margin-top: 20px;
-    margin-bottom: 30px;
-    padding: 15px;
-    font-size: 1.2rem;
-    font-weight: 600;
-    text-align: center;
-  }
-
-  /* Spacer for layout */
-  #message-spacer {
-    margin-top: 20px;
-    margin-bottom: 20px;
-  }
+  /* No message area now, remove #status and #message-spacer */
 
   /* Balls container styling */
   .balls-container {
@@ -130,7 +115,7 @@
     flex-wrap: wrap;
   }
 
-  /* Style for balls with enhanced 3D and glow effects */
+  /* Style for balls with 3D and glow effects */
   .ball {
     width: 180px;
     height: 180px;
@@ -150,7 +135,6 @@
     position: relative;
     transition: all 0.3s ease;
   }
-  /* Inner text for spin animation wraps */
   .ball .inner-text {
     position: absolute;
     width: 100%;
@@ -175,7 +159,7 @@
     100% { transform: rotate(360deg); }
   }
 
-  /* Dynamic draw button styling with no icon, label updates */
+  /* Button with dynamic label, no icon needed */
   #drawBtn {
     margin-top: 30px;
     margin-bottom: 30px;
@@ -199,7 +183,7 @@
     transform: translateY(-2px);
   }
 
-  /* Winners section with depth and shadow for separation */
+  /* Winners box styling with depth and shadow */
   .winners-box {
     background: #fff;
     border-radius: 12px;
@@ -295,7 +279,7 @@
     <section class="section-box raffle-box">
       <h2 style="text-align: center;">Raffle Draw</h2>
       <div id="status" class="status-card success">Start the Draw</div>
-      <div id="message-spacer"></div>
+      <!-- Removed message area for simplicity -->
       <div class="balls-container">
         <div class="ball" id="ball1" style="background: linear-gradient(135deg, #f7971e, #ffd200);"><div class="inner-text">🎲</div></div>
         <div class="ball" id="ball2" style="background: linear-gradient(135deg, #6a11cb, #2575fc);"><div class="inner-text">🎲</div></div>
@@ -316,7 +300,7 @@
   </main>
 </div>
 <script>
-  // JavaScript code
+  // JavaScript logic
   const positions = {
     'first': { emoji: '🥇', text: '1st Place' },
     'second': { emoji: '🥈', text: '2nd Place' },
@@ -436,15 +420,15 @@
       document.getElementById('congrats').style.display='block';
     }
 
-    // Update step and button label
+    // Advance step and update button label
     currentStep++;
     updateButtonLabel();
 
-    // Update status
+    // Update status message (not visible now, but just for internal logic)
     if (currentStep <=2) {
-      document.getElementById('status').textContent=`${positions[place].text} drawn! Click again to generate ${stepMessages[currentStep].text}.`;
+      document.getElementById('status').textContent=`${positions[place].text} drawn!`; // optional, can be hidden
     } else {
-      document.getElementById('status').textContent='All winners drawn. Click "Start New Draw" to restart.';
+      document.getElementById('status').textContent='All winners drawn. Click "Start New Draw".';
     }
 
     document.getElementById('drawBtn').disabled=false;
