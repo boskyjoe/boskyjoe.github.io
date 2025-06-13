@@ -151,18 +151,17 @@
 
         /* Responsive layout for main content sections */
         .main-content-layout {
-            @apply flex flex-col lg:flex-row lg:justify-center lg:items-start lg:gap-8; /* Stack columns on small, side-by-side on large */
-            width: 100%; /* Ensure it takes full width of parent container */
+            @apply flex flex-col lg:flex-row lg:justify-center lg:items-start lg:gap-8 w-full; /* Stack columns on small, side-by-side on large */
         }
 
         .section-card {
             @apply bg-white rounded-xl shadow-md p-8 border border-gray-200 w-full mb-6 lg:mb-0; /* Default to full width with bottom margin, no bottom margin on large */
-            flex-shrink: 0; /* Prevent shrinking */
         }
 
-        /* On large screens, set both cards to take half the width and grow */
+        /* On large screens, explicitly make both cards take equal width within the flex container */
         .main-content-layout > .section-card {
-            @apply lg:flex-1; /* flex-1 implies flex-grow: 1, flex-shrink: 1, basis: 0% */
+            @apply lg:w-1/2; /* Each card takes half width */
+            flex-shrink: 0; /* Prevent shrinking */
         }
 
         .raffle-box {
