@@ -307,7 +307,7 @@
 </head>
 <body>
 <div class="container">
-  <!-- Header -->
+  <!-- Header omitted for brevity -->
   <header>
     <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png" alt="St. Sebastian's Logo" />
     <div class="info">
@@ -329,6 +329,7 @@
       </div>
       <div style="text-align:center;">
         <button id="drawBtn" class="draw-btn">Generate 3rd Place Winner</button>
+        <button id="resetBtn" style="display:none; margin-left:10px;">Reset</button>
       </div>
     </section>
 
@@ -343,11 +344,8 @@
 </div>
 <!-- Confetti burst container -->
 <div id="confettiContainer"></div>
-<!-- Footer -->
-<footer>
-  © 2023 St. Sebastian's Church. All rights reserved.<br>
-  Powered by DataWings Solution
-</footer>
+<!-- Footer omitted for brevity -->
+<!-- JavaScript -->
 <script>
   /**
    * JavaScript code implementing the raffle drawing, confetti celebration,
@@ -360,147 +358,102 @@
     'second': { emoji: '🥈', text: '2nd Place' },
     'third': { emoji: '🥉', text: '3rd Place' }
   };
-  const positionsOrder = {0:'3rd',1:'2nd',2:'1st'};
 
-  // Drawing steps constants
-  const STEP_3RD = 0;
-  const STEP_2ND = 1;
-  const STEP_1ST = 2;
+  // Constants for steps
+  const STEP_3RD=0; const STEP_2ND=1; const STEP_1ST=2; 
+  let currentStep=STEP_3RD;
+  let availableNumbers=[];
+  let winnersData=["001","002","003","004","005","006","007","008","009","010","011","012","013","014","015","016","017","018","019","020","021","022","023","024","025"];
 
-  let currentStep = STEP_3RD;
-  let availableNumbers = [];
-  const winnersData = [
-    "001","002","003","004","005","006","007","008","009","010",
-    "011","012","013","014","015","016","017","018","019","020",
-    "021","022","023","024","025"
-  ];
+  let isDrawing=false;
 
-  let isDrawing = false; // Prevent multiple simultaneous draws
-
-  /**
-   * Map for updating the button label dynamically based on current step.
-   */
-  const stepMessages = {
-    0: { label: 'Generate 3rd Place Winner', text: '3rd Place' },
-    1: { label: 'Generate 2nd Place Winner', text: '2nd Place' },
-    2: { label: 'Generate 1st Place Winner', text: '1st Place' }
-  };
-
-  /**
-   * Updates the action button label according to the current step.
-   */
-  function updateButtonLabel() {
-    const btn = document.getElementById('drawBtn');
-    if (currentStep <= 2) {
-      btn.textContent = stepMessages[currentStep].label;
-    } else {
-      btn.textContent = 'Start New Draw';
-    }
-  }
-
-  /**
-   * Loads winners from external file (if available) and initializes the draw.
-   */
-  async function loadWinners() {
-    try {
-      const res = await fetch('Winners.txt');
-      if (!res.ok) throw new Error('Failed to load Winners.txt');
-      const txt = await res.text();
-      const lines = txt.split('\n').map(l => l.trim()).filter(l => l);
-      if (lines.length >= 3) winnersData = lines;
-    } catch (e) {
-      // Fallback to default data if fetch fails
-      console.warn(e);
-    }
-    initDraw();
-  }
-
-  /**
-   * Initializes a new draw session, resetting UI and data.
-   */
+  // Function to initialize/reset the raffle
   function initDraw() {
-    currentStep = STEP_3RD;
-    availableNumbers = [...winnersData];
-    document.querySelectorAll('.ball').forEach(b => {
-      b.innerHTML = '<div class="inner-text">🎲</div>';
-      b.className = 'ball';
+    currentStep=STEP_3RD;
+    availableNumbers=[...winnersData];
+    document.querySelectorAll('.ball').forEach(b=> {
+      b.innerHTML='<div class="inner-text">🎲</div>';
+      b.dataset.winnerNumber='';
     });
-    document.getElementById('winnersList').innerHTML = '';
-    document.getElementById('congrats').style.display = 'none';
+    document.getElementById('winnersList').innerHTML='';
+    document.getElementById('congrats').style.display='none';
+
     // Animate winners section out
     const winnersSection = document.getElementById('winnersSection');
-    winnersSection.style.opacity = 0;
-    winnersSection.style.transform = 'translateY(20px)';
+    winnersSection.style.opacity=0;
+    winnersSection.style.transform='translateY(20px)';
     winnersSection.classList.remove('show');
 
-    updateButtonLabel();
+    document.getElementById('drawBtn').disabled=false;
+    document.getElementById('drawBtn').style.display='inline-block';
+    document.getElementById('resetBtn').style.display='none';
   }
 
   /**
-   * Shows the winners section with animation.
+   * Show winners section with animation
    */
   function showWinnersSection() {
-    const section = document.getElementById('winnersSection');
-    section.style.opacity = 1;
-    section.style.transform = 'translateY(0)';
+    const section=document.getElementById('winnersSection');
+    section.style.opacity=1;
+    section.style.transform='translateY(0)';
     section.classList.add('show');
   }
 
   /**
-   * Spins a ball to randomly show numbers before stopping on the winner.
-   * @param {HTMLElement} ball - The ball element to animate.
-   * @param {string} winnerNumber - The winner's number to display at the end.
-   * @returns {Promise} - Resolves when spinning completes.
+   * Spin animation for the ball
    */
-  async function spinBall(ball, winnerNumber) {
-    return new Promise((resolve) => {
+  async function spinBall(ball,winnerNumber) {
+    return new Promise((resolve)=>{
       ball.classList.add('spinning');
-      let count = 0;
-      const interval = setInterval(() => {
-        const randIdx = Math.floor(Math.random() * availableNumbers.length);
-        ball.innerHTML = '<div class="inner-text">' + availableNumbers[randIdx] + '</div>';
+      let count=0;
+      const interval=setInterval(()=>{
+        const randIdx=Math.floor(Math.random()*availableNumbers.length);
+        ball.innerHTML='<div class="inner-text">'+availableNumbers[randIdx]+'</div>';
         count++;
-        if (count > 20) {
+        if (count>20) {
           clearInterval(interval);
-          ball.innerHTML = '<div class="inner-text">' + winnerNumber + '</div>';
+          ball.innerHTML='<div class="inner-text">'+winnerNumber+'</div>';
+          ball.dataset.winnerNumber=winnerNumber;
           ball.classList.remove('spinning');
           ball.classList.add('active');
           resolve();
         }
-      }, 120);
+      },120);
     });
   }
 
   /**
-   * Draws the next winner, updates UI, and triggers celebration effects.
+   * Draw next winner
    */
   async function drawNext() {
-    if (isDrawing || availableNumbers.length === 0) return;
-    isDrawing = true;
-    document.getElementById('drawBtn').disabled = true;
+    if (isDrawing || availableNumbers.length===0) return;
+    isDrawing=true;
+    document.getElementById('drawBtn').disabled=true;
 
-    // Determine which ball to animate based on current step
-    let ballId = '', place = '';
+    let ballId='',place='';
     switch (currentStep) {
-      case STEP_3RD: ballId = 'ball3'; place = 'third'; break;
-      case STEP_2ND: ballId = 'ball2'; place = 'second'; break;
-      case STEP_1ST: ballId = 'ball1'; place = 'first'; break;
+      case STEP_3RD: ballId='ball3'; place='third'; break;
+      case STEP_2ND: ballId='ball2'; place='second'; break;
+      case STEP_1ST: ballId='ball1'; place='first'; break;
     }
 
-    // Select a random winner
-    const randIdx = Math.floor(Math.random() * availableNumbers.length);
+    // Pick a random winner
+    const randIdx = Math.floor(Math.random()*availableNumbers.length);
     const winnerNumber = availableNumbers[randIdx];
-    availableNumbers.splice(randIdx, 1);
+    availableNumbers.splice(randIdx,1);
 
-    // Animate spinning ball
     const ball = document.getElementById(ballId);
-    await spinBall(ball, winnerNumber);
+    await spinBall(ball,winnerNumber);
 
-    // Add winner to the list
-    const listDiv = document.getElementById('winnersList');
-    const div = document.createElement('div');
-    div.className = 'winner-card ' + place;
-    div.innerHTML = `
+    // Show the winner number on the ball
+    ball.innerHTML=`<div class="inner-text">${winnerNumber}</div>`;
+    ball.dataset.winnerNumber=winnerNumber;
+
+    // Add to winners list
+    const listDiv=document.getElementById('winnersList');
+    const div=document.createElement('div');
+    div.className='winner-card '+place;
+    div.innerHTML= `
       <div class="winner-position">${positions[place].emoji}</div>
       <div class="winner-details">
         <div class="winner-place">${positions[place].text}</div>
@@ -509,94 +462,77 @@
     listDiv.prepend(div);
 
     // Show winners section after first winner
-    if (currentStep === STEP_3RD) {
+    if (currentStep===STEP_3RD) {
       showWinnersSection();
     }
-    if (currentStep === STEP_1ST) {
-      document.getElementById('congrats').style.display = 'block';
+    if (currentStep===STEP_1ST) {
+      document.getElementById('congrats').style.display='block';
     }
 
-    // Launch confetti burst from center outward
+    // Celebrate with confetti
     launchConfettiBurst();
 
-    // Launch additional celebration for the first winner
-    if (currentStep === STEP_3RD) {
-      launchBigCelebration();
+    // Advance step
+    currentStep++;
+    if (currentStep > STEP_1ST) {
+      // All winners drawn, disable generate button and show reset
+      document.getElementById('drawBtn').style.display='none';
+      document.getElementById('resetBtn').style.display='inline-block';
+    } else {
+      document.getElementById('drawBtn').disabled=false;
     }
 
-    // Move to next step and update button
-    currentStep++;
-    updateButtonLabel();
-
-    // Clear confetti after a delay
-    setTimeout(() => clearConfetti(), 3000);
-
-    document.getElementById('drawBtn').disabled = false;
-    isDrawing = false;
+    // Clear confetti after some time
+    setTimeout(() => {
+      clearConfetti();
+      isDrawing=false;
+    }, 2000);
   }
 
   /**
-   * Launches a confetti burst that flows outward from the center of the viewport.
+   * Launch confetti burst from center
    */
   function launchConfettiBurst() {
     const container = document.getElementById('confettiContainer');
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
-    for (let i = 0; i < 80; i++) {
-      createFlowingConfettiParticle(container, centerX, centerY);
+    for (let i=0; i<80; i++) {
+      createFlowingConfettiParticle(container, window.innerWidth/2, window.innerHeight/2, false);
     }
   }
 
   /**
-   * Creates a single confetti particle that flows outward in a random direction.
-   * @param {HTMLElement} container - The container element to append the particle.
-   * @param {number} startX - Starting X coordinate.
-   * @param {number} startY - Starting Y coordinate.
-   * @param {boolean} big - If true, creates a larger particle with more dramatic flow.
+   * Create a flowing confetti particle
    */
-  function createFlowingConfettiParticle(container, startX, startY, big = false) {
+  function createFlowingConfettiParticle(container, startX, startY, big=false) {
     const el = document.createElement('div');
-    el.style.position = 'absolute';
+    el.style.position='absolute';
+    const size=big ? Math.random()*12+8 : Math.random()*4+2;
+    el.style.width=`${size}px`;
+    el.style.height=`${size}px`;
+    el.style.borderRadius='50%';
+    el.style.backgroundColor=`hsl(${Math.random()*360},70%,60%)`;
+    el.style.left=`${startX}px`;
+    el.style.top=`${startY}px`;
 
-    // Random size
-    const size = big ? Math.random() * 12 + 8 : Math.random() * 4 + 2;
-    el.style.width = `${size}px`;
-    el.style.height = `${size}px`;
-    el.style.borderRadius = '50%';
-    el.style.backgroundColor = `hsl(${Math.random() * 360}, 70%, 60%)`;
+    const angle = Math.random()*Math.PI*2;
+    const speed= Math.random()*4+2;
+    const dx= Math.cos(angle)*speed;
+    const dy= Math.sin(angle)*speed;
+    let x = startX;
+    let y = startY;
+    const maxFrames=80;
+    let frame=0;
 
-    // Set initial position at the center
-    el.style.left = `${startX}px`;
-    el.style.top = `${startY}px`;
-
-    // Random direction and velocity
-    const angle = Math.random() * Math.PI * 2; // 0 to 2π radians
-    const speed = Math.random() * 4 + 2; // pixels per frame
-    const dx = Math.cos(angle) * speed;
-    const dy = Math.sin(angle) * speed;
-
-    let currentX = startX;
-    let currentY = startY;
-    const maxLifetime = 80; // Number of animation frames
-
-    /**
-     * Animates the particle outward and fades it out.
-     */
     function animate() {
-      let lifetime = 0;
-      function step() {
-        if (lifetime >= maxLifetime) {
-          if (container.contains(el)) container.removeChild(el);
-          return;
-        }
-        currentX += dx;
-        currentY += dy;
-        el.style.transform = `translate(${currentX - startX}px, ${currentY - startY}px) rotate(${Math.random() * 360}deg)`;
-        el.style.opacity = 1 - (lifetime / maxLifetime);
-        lifetime++;
-        requestAnimationFrame(step);
+      if (frame>=maxFrames) {
+        if (container.contains(el)) container.removeChild(el);
+        return;
       }
-      step();
+      x+=dx;
+      y+=dy;
+      el.style.transform=`translate(${x - startX}px, ${y - startY}px) rotate(${Math.random()*360}deg)`;
+      el.style.opacity=1 - (frame/maxFrames);
+      frame++;
+      requestAnimationFrame(animate);
     }
 
     container.appendChild(el);
@@ -604,33 +540,28 @@
   }
 
   /**
-   * Clears all confetti particles from the container.
+   * Clear all confetti particles
    */
   function clearConfetti() {
-    document.getElementById('confettiContainer').innerHTML = '';
+    document.getElementById('confettiContainer').innerHTML='';
   }
 
-  /**
-   * Launch a big celebration (fireworks-like burst)
-   */
-  function launchBigCelebration() {
-    for (let i = 0; i < 100; i++) {
-      createFlowingConfettiParticle(document.getElementById('confettiContainer'), window.innerWidth / 2, window.innerHeight / 2, true);
-    }
-  }
-
-  // Attach event listener for the draw button
-  document.getElementById('drawBtn').addEventListener('click', () => {
-    if (currentStep <= 2) {
+  // Button event handlers
+  document.getElementById('drawBtn').addEventListener('click', ()=> {
+    if (availableNumbers.length > 0 && !isDrawing) {
       drawNext();
-    } else {
-      initDraw();
     }
   });
+  document.getElementById('resetBtn').addEventListener('click', ()=> {
+    initDraw();
+    document.getElementById('drawBtn').style.display='inline-block';
+    document.getElementById('resetBtn').style.display='none';
+  });
 
-  // Initialize the raffle on page load
-  loadWinners();
-  updateButtonLabel();
+  // Initialize on page load
+  window.onload=()=> {
+    initDraw();
+  };
 </script>
 </body>
 </html>
