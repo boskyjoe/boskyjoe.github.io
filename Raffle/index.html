@@ -22,14 +22,14 @@
     line-height: 1.6;
   }
 
-  /* Container */
+  /* Container for page content */
   .container {
     max-width: 1400px;
     margin: auto;
     padding: 20px;
   }
 
-  /* Header styles */
+  /* Header styles (unchanged) */
   header {
     display: flex;
     align-items: center;
@@ -62,29 +62,33 @@
     gap: 4px;
   }
 
-  /* Main layout: two columns with spacing */
+  /* Main grid layout for sections */
   main {
     display: grid;
     grid-template-columns: 1fr 350px;
     gap: 20px;
   }
 
-  /* Raffle section styling */
-  .raffle-section {
+  /* Box style for sections to appear as independent boxes */
+  .section-box {
     background: #fff;
     border-radius: 12px;
-    padding: 50px 30px;
+    padding: 30px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-    margin-bottom: 20px;
+    transition: box-shadow 0.3s ease;
   }
-  /* Title styling */
-  .raffle-section h2 {
+  .section-box:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  }
+
+  /* Specific styles for the Raffle Draw section */
+  .raffle-box h2 {
     text-align: center;
     font-family: 'Playfair Display', serif;
     font-size: 2rem;
     margin-bottom: 30px;
   }
-  .raffle-section h2::after {
+  .raffle-box h2::after {
     content: "";
     display: block;
     height: 4px;
@@ -94,7 +98,7 @@
     border-radius: 2px;
   }
 
-  /* Status message style with spacing */
+  /* Status message styling */
   #status {
     margin-top: 20px;
     margin-bottom: 30px;
@@ -103,22 +107,19 @@
     font-weight: 600;
     text-align: center;
   }
-
-  /* Space between message and balls */
+  /* Spacing element between message and balls */
   #message-spacer {
     margin-top: 20px;
     margin-bottom: 20px;
   }
-
-  /* Balls container with spacing */
+  /* Balls container */
   .balls-container {
     display: flex;
     justify-content: center;
-    gap: 50px; /* space between balls */
+    gap: 50px;
     flex-wrap: wrap;
   }
-
-  /* 3D styled ball with glow and shadows for a professional look */
+  /* Style for the 3D look */
   .ball {
     width: 180px;
     height: 180px;
@@ -133,16 +134,11 @@
     justify-content: center;
     font-size: 3rem;
     font-weight: bold;
-    color: #fff;
-    text-align: center;
-    padding: 20px;
-    font-family: 'Inter', sans-serif;
-    overflow: hidden;
+    color: #222;
+    cursor: default;
     position: relative;
     transition: all 0.3s ease;
-    cursor: default;
   }
-  /* Inner text inside spinning balls */
   .ball .inner-text {
     position: absolute;
     width: 100%;
@@ -156,11 +152,8 @@
     word-wrap: break-word;
     padding: 10px;
     text-align: center;
-    max-width: 150px;
-    color:#222;
   }
-
-  /* Spin animation for spinning balls */
+  /* Spinning animation */
   .ball.spinning {
     animation: spin 0.8s linear infinite;
   }
@@ -169,7 +162,7 @@
     100% { transform: rotate(360deg); }
   }
 
-  /* Draw Button styling, with more padding/margin for professionalism */
+  /* Draw button styling with spacing */
   #drawBtn {
     margin-top: 30px;
     margin-bottom: 30px;
@@ -192,22 +185,29 @@
     transform: translateY(-2px);
   }
 
-  /* Sidebar for winners */
-  .sidebar {
+  /* Winners section box styling */
+  .winners-box {
     background: #fff;
     border-radius: 12px;
-    padding:20px;
+    padding: 20px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-    max-height: 80vh;
-    overflow-y:auto;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.5s ease;
   }
-  .sidebar h2 {
+  .winners-box.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Winners header styles */
+  .winners-box h2 {
     text-align: center;
     margin-bottom: 15px;
     font-family: 'Playfair Display', serif;
     font-size: 1.8rem;
   }
-  .sidebar h2::after {
+  .winners-box h2::after {
     content: "";
     display: block;
     height: 3px;
@@ -216,7 +216,8 @@
     background: linear-gradient(90deg, #f093fb, #f5576c);
     border-radius: 2px;
   }
-  /* Winner cards inside sidebar */
+
+  /* Winner cards inside the winners box */
   .winner-card {
     display: flex;
     align-items: center;
@@ -224,7 +225,7 @@
     margin-bottom: 15px;
     background: #f7fafc;
     border-radius: 10px;
-    border-left: 8px solid transparent; /* color set inline for position */
+    border-left: 8px solid transparent;
     box-shadow: 0 2px 6px rgba(0,0,0,0.05);
   }
   .winner-card:hover {
@@ -247,7 +248,7 @@
     font-weight: bold;
     margin-top:4px;
   }
-  /* Congratulations message box */
+  /* Congrats message */
   #congrats {
     background:#c8f7c5;
     border-radius:10px;
@@ -269,10 +270,10 @@
     </div>
   </header>
 
-  <!-- Main layout -->
+  <!-- Main grid layout for sections -->
   <main>
-    <!-- Raffle draw section -->
-    <section class="raffle-section">
+    <!-- Raffle Draw Box -->
+    <section class="section-box raffle-box">
       <h2 style="text-align: center;">Raffle Draw</h2>
       
       <!-- Status message -->
@@ -294,23 +295,23 @@
         </div>
       </div>
       
-      <!-- Draw button -->
+      <!-- Draw Button -->
       <div style="text-align:center;">
         <button id="drawBtn" class="draw-btn"><span class="material-icons">casino</span> Draw Winners</button>
       </div>
     </section>
 
-    <!-- Winners Sidebar -->
-    <aside class="sidebar" id="results">
-      <h2>🏆 Winners</h2>
-      <div style="text-align:center; font-style:italic; color:#999; padding:20px;">Winners will appear here after the draw</div>
+    <!-- Winners Box -->
+    <section class="section-box winners-box" id="winnersSection">
+      <h2 style="text-align: center;">🏆 Winners</h2>
+      <div style="text-align:center; font-style:italic; color:#999; padding:20px;">Winners will appear here after the first number is drawn</div>
       <div id="winnersList"></div>
       <div id="congrats" style="display:none; margin-top:20px;">🎉 Congratulations! Contact the church office.</div>
-    </aside>
+    </section>
   </main>
 </div>
 <script>
-  // JavaScript logic (unchanged, but included for completeness)
+  // JavaScript logic
   const positions = {
     'first': { emoji: '🥇', text: '1st Place' },
     'second': { emoji: '🥈', text: '2nd Place' },
@@ -342,7 +343,18 @@
     document.querySelectorAll('.ball').forEach(b=>{b.innerHTML='<div class="inner-text">🎲</div>'; b.className='ball';});
     document.getElementById('winnersList').innerHTML='';
     document.getElementById('congrats').style.display='none';
+    // Animate winners section out initially
+    document.getElementById('winnersSection').style.opacity=0;
+    document.getElementById('winnersSection').style.transform='translateY(20px)';
+    document.getElementById('winnersSection').classList.remove('show');
     updateButton();
+  }
+
+  function showWinnersSection() {
+    const section=document.getElementById('winnersSection');
+    section.style.opacity=1;
+    section.style.transform='translateY(0)';
+    section.classList.add('show');
   }
 
   function updateButton() {
@@ -404,11 +416,20 @@
       </div>
     `;
     listDiv.prepend(div);
+
+    // Show winners section only after first winner
+    if (currentStep===STEP_3RD) {
+      showWinnersSection();
+    }
     if (currentStep===STEP_1ST) {
       document.getElementById('congrats').style.display='block';
     }
+
+    // Advance step
     currentStep++;
     updateButton();
+
+    // Update status
     const statusEl=document.getElementById('status');
     if (currentStep<=STEP_1ST) {
       statusEl.textContent=`${positions[place].text} drawn! Click again to draw ${positionsOrder[currentStep] || ''}.`;
