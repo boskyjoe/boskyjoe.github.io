@@ -1,787 +1,548 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>St. Sebastian's Church Raffle</title>
-<!-- Google Fonts & Icons -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700;800&display=swap" rel="stylesheet" />
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
-<style>
-    /* CSS Variables for Consistency */
-    :root {
-        /* Colors */
-        --primary-color: #00796b; /* Teal */
-        --primary-dark-color: #004d40; /* Dark Teal */
-        --secondary-color: #e8f5e9; /* Light Green */
-        --accent-color: #f7971e; /* Orange */
-        --text-color: #333;
-        --light-gray: #eee;
-        --medium-gray: #666;
-        --dark-gray: #888;
-        --box-shadow-light: rgba(0, 0, 0, 0.1);
-        --box-shadow-medium: rgba(0, 0, 0, 0.2);
-        --box-shadow-dark: rgba(0, 0, 0, 0.3);
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>St. Sebastian's Church Raffle</title>
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom CSS for elements not easily styled by Tailwind or for keyframe animations */
 
-        /* Fonts */
-        --font-inter: 'Inter', sans-serif;
-        --font-playfair: 'Playfair Display', serif;
+        /* Define custom colors and fonts for Tailwind's JIT mode */
+        :root {
+            --primary-color: #00796b;
+            --primary-dark-color: #004d40;
+            --secondary-color: #e8f5e9;
+            --accent-color: #f7971e;
+        }
 
-        /* Spacing */
-        --spacing-xs: 5px;
-        --spacing-sm: 8px;
-        --spacing-md: 15px;
-        --spacing-lg: 20px;
-        --spacing-xl: 30px;
-        --spacing-xxl: 40px;
-        --spacing-xxxl: 50px; /* New spacing for larger elements */
+        /* Extend Tailwind's theme with custom colors */
+        @tailwind base;
+        @tailwind components;
+        @tailwind utilities;
 
-        /* Border Radius */
-        --border-radius-sm: 8px;
-        --border-radius-md: 10px;
-        --border-radius-lg: 12px;
-    }
+        /* Custom Gradients for Balls */
+        .ball-gradient-1 {
+            background: linear-gradient(135deg, #f7971e, #ffd200); /* Gold/Orange */
+        }
+        .ball-gradient-2 {
+            background: linear-gradient(135deg, #6a11cb, #2575fc); /* Purple/Blue */
+        }
+        .ball-gradient-3 {
+            background: linear-gradient(135deg, #43cea2, #185a9d); /* Green/Dark Blue */
+        }
 
-    /* General Styles & Body */
-    body {
-        font-family: var(--font-inter);
-        margin: 0;
-        padding: var(--spacing-lg);
-        background: linear-gradient(to right, #ece9e6, #ffffff);
-        color: var(--text-color);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        min-height: 100vh;
-        box-sizing: border-box;
-    }
+        /* Custom Keyframe Animations (not directly in Tailwind) */
+        @keyframes spin-effect {
+            0% { transform: rotateY(0deg) scale(1.05); }
+            100% { transform: rotateY(360deg) scale(1.05); }
+        }
 
-    .container {
-        background-color: #fff;
-        border-radius: var(--border-radius-lg);
-        box-shadow: 0 10px 30px var(--box-shadow-light);
-        width: 90%;
-        max-width: 900px;
-        padding: var(--spacing-xl);
-        box-sizing: border-box;
-        margin-bottom: var(--spacing-lg);
-        border: 1px solid var(--light-gray);
-        overflow: hidden; /* For rounded corners on sections */
-    }
+        @keyframes pop-in {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.15); opacity: 1; }
+            100% { transform: scale(1.0); opacity: 1; }
+        }
 
-    /* Header */
-    header {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-lg);
-        padding-bottom: var(--spacing-lg);
-        margin-bottom: var(--spacing-xl);
-        border-bottom: 1px solid var(--light-gray);
-    }
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-    header img {
-        width: 80px;
-        height: 80px;
-        object-fit: contain;
-        border-radius: 50%;
-        border: 2px solid var(--light-gray);
-        padding: var(--spacing-xs);
-        background-color: #fff;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    }
+        /* Specific styles for elements that need fine-tuning beyond utility classes */
+        .ball {
+            /* These base styles are not easily replicated by simple Tailwind classes */
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3em;
+            font-weight: 700;
+            color: #fff;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            border: 4px solid rgba(255, 255, 255, 0.5);
+            position: relative;
+            overflow: hidden; /* Ensures text stays within the circle */
+            transition: all 0.4s ease-out; /* Keep for pop-in effect */
+        }
 
-    header .info {
-        flex-grow: 1;
-    }
+        .ball .inner-text {
+            position: relative;
+            z-index: 1;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
 
-    header h1 {
-        font-family: var(--font-playfair);
-        font-size: 2em;
-        color: var(--primary-dark-color);
-        margin: 0 0 var(--spacing-sm) 0;
-        line-height: 1.2;
-    }
+        .ball-medal {
+            position: absolute;
+            top: -55px; /* Adjusted to place it clearly above the ball */
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2.5em; /* Size of the medal emoji */
+            z-index: 10;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
 
-    header .info div {
-        font-size: 0.9em;
-        color: var(--medium-gray);
-        margin-bottom: var(--spacing-xs);
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-xs);
-    }
+        .ball.spinning {
+            animation: spin-effect 0.2s infinite linear;
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 0 5px rgba(255, 255, 255, 0.6);
+        }
 
-    /* Section Boxes */
-    .section-box {
-        padding: var(--spacing-xl);
-        margin-bottom: var(--spacing-xl);
-        border-radius: var(--border-radius-md);
-        background-color: #f9f9f9;
-        border: 1px solid var(--light-gray);
-        transition: all 0.3s ease-in-out;
-        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
-    }
+        .ball.active {
+            animation: pop-in 0.5s ease-out forwards;
+            transform: scale(1.1);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3), 0 0 0 6px rgba(255, 255, 255, 0.8);
+        }
 
-    .section-box h2 {
-        font-family: var(--font-playfair);
-        font-size: 1.8em;
-        color: var(--primary-color);
-        margin-top: 0;
-        margin-bottom: 25px; /* Specific value for a good visual break */
-        text-align: center;
-        position: relative;
-    }
+        #confettiContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 9999;
+        }
 
-    .section-box h2::after {
-        content: '';
-        display: block;
-        width: 60px;
-        height: 3px;
-        background: linear-gradient(to right, var(--primary-color), var(--primary-dark-color));
-        margin: 10px auto 0;
-        border-radius: 2px;
-    }
+        .confetti-particle {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0; /* Starts hidden */
+            will-change: transform, opacity; /* Optimize animations */
+        }
 
-    /* Raffle Draw Section */
-    .raffle-box {
-        background-color: var(--secondary-color);
-        border-color: #c8e6c9; /* Specific shade of green */
-    }
+        /* Specific winner card styling (using Tailwind for colors, custom for border-left) */
+        .winner-card {
+            @apply flex items-center bg-white border border-gray-200 rounded-md p-4 shadow-sm;
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+        }
 
-    .balls-container {
-        display: flex;
-        justify-content: center;
-        gap: var(--spacing-xl); /* Increased gap for better spacing */
-        margin-top: var(--spacing-xxl);
-        margin-bottom: var(--spacing-xxl);
-    }
+        .winner-card:hover {
+            transform: translateY(-2px);
+            @apply shadow-md;
+        }
 
-    .ball {
-        /* Increased size */
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 3em; /* Adjusted font size for larger balls */
-        font-weight: 700;
-        color: #fff;
-        box-shadow: 0 8px 20px var(--box-shadow-medium);
-        border: 4px solid rgba(255, 255, 255, 0.5);
-        background: linear-gradient(135deg, #a770ef, #cf8bf3, #fcc2ff); /* Default gradient */
-        transition: all 0.4s ease-out;
-        position: relative;
-        overflow: hidden; /* Ensures text stays within the circle */
-    }
+        .winner-card.third { border-left: 5px solid #cd7f32; /* Bronze */ }
+        .winner-card.second { border-left: 5px solid silver; }
+        .winner-card.first { border-left: 5px solid gold; }
 
-    .ball .inner-text {
-        position: relative;
-        z-index: 1;
-        text-shadow: 2px 2px 4px var(--box-shadow-dark);
-    }
+        #congrats {
+            @apply mt-5 bg-green-100 text-green-800 p-4 rounded-md font-semibold text-center shadow-sm;
+            animation: fade-in 0.5s ease-out forwards;
+        }
 
-    /* Medal icon on top of each ball */
-    .ball .ball-medal {
-        position: absolute;
-        top: -55px; /* Adjusted to place it clearly above the ball */
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 2.5em; /* Size of the medal emoji */
-        z-index: 10;
-        text-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
+        /* Ensure .winners-box transition applies correctly */
+        .winners-box {
+            @apply opacity-0 translate-y-5; /* Tailwind classes for initial state */
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
 
+        .winners-box.show {
+            @apply opacity-100 translate-y-0; /* Tailwind classes for final state */
+        }
 
-    /* Specific Ball Gradients */
-    .ball-gradient-1 {
-        background: linear-gradient(135deg, #f7971e, #ffd200); /* Gold/Orange */
-    }
-    .ball-gradient-2 {
-        background: linear-gradient(135deg, #6a11cb, #2575fc); /* Purple/Blue */
-    }
-    .ball-gradient-3 {
-        background: linear-gradient(135deg, #43cea2, #185a9d); /* Green/Dark Blue */
-    }
-
-    .ball.spinning {
-        animation: spin-effect 0.2s infinite linear;
-        transform: scale(1.05);
-        box-shadow: 0 10px 25px var(--box-shadow-dark), 0 0 0 5px rgba(255, 255, 255, 0.6);
-    }
-
-    .ball.active {
-        animation: pop-in 0.5s ease-out forwards;
-        transform: scale(1.1);
-        box-shadow: 0 12px 30px var(--box-shadow-dark), 0 0 0 6px rgba(255, 255, 255, 0.8);
-    }
-
-    @keyframes spin-effect {
-        0% { transform: rotateY(0deg) scale(1.05); }
-        100% { transform: rotateY(360deg) scale(1.05); }
-    }
-
-    @keyframes pop-in {
-        0% { transform: scale(0.5); opacity: 0; }
-        80% { transform: scale(1.15); opacity: 1; }
-        100% { transform: scale(1.0); opacity: 1; }
-    }
-
-    /* Button Container for alignment */
-    .button-container {
-        text-align: center;
-        margin-top: var(--spacing-lg); /* Using variable for consistency */
-    }
-
-    .draw-btn {
-        background: linear-gradient(to right, var(--primary-color), var(--primary-dark-color));
-        color: white;
-        padding: 15px 30px; /* Use px for consistency with design, could be var(--spacing-md) var(--spacing-xl) */
-        border: none;
-        border-radius: var(--border-radius-sm);
-        font-size: 1.2em;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: 0 5px 15px rgba(0, 121, 107, 0.3);
-        letter-spacing: 0.5px;
-    }
-
-    .draw-btn:hover {
-        background: linear-gradient(to right, #00695c, #00332c); /* Slightly darker on hover */
-        transform: translateY(-3px);
-        box-shadow: 0 8px 20px rgba(0, 121, 107, 0.4);
-    }
-
-    .draw-btn:disabled {
-        background: #cccccc;
-        cursor: not-allowed;
-        box-shadow: none;
-        transform: none;
-    }
-
-    /* Winners Section */
-    .winners-box {
-        background-color: #e3f2fd; /* Light blue background */
-        border-color: #bbdefb;
-        opacity: 0;
-        transform: translateY(20px);
-    }
-
-    .winners-box.show {
-        opacity: 1;
-        transform: translateY(0);
-        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-    }
-
-    .winners-box .initial-message {
-        text-align: center;
-        font-style: italic;
-        color: var(--dark-gray);
-        padding: var(--spacing-lg);
-    }
-
-    #winnersList {
-        margin-top: var(--spacing-lg);
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-md);
-    }
-
-    .winner-card {
-        display: flex;
-        align-items: center;
-        background-color: #fff;
-        border: 1px solid var(--light-gray);
-        border-radius: var(--border-radius-sm);
-        padding: var(--spacing-md);
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-        transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
-    }
-
-    .winner-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    }
-
-    .winner-position {
-        font-size: 2em;
-        margin-right: var(--spacing-md);
-    }
-
-    .winner-details {
-        flex-grow: 1;
-    }
-
-    .winner-place {
-        font-weight: 600;
-        color: var(--primary-dark-color);
-        font-size: 1.1em;
-    }
-
-    .winner-number {
-        font-family: monospace;
-        font-size: 1.8em;
-        font-weight: 700;
-        color: var(--accent-color);
-        margin-top: var(--spacing-xs);
-        letter-spacing: 1px;
-    }
-
-    /* Specific winner card styling */
-    .winner-card.third { border-left: 5px solid #cd7f32; /* Bronze */ }
-    .winner-card.second { border-left: 5px solid silver; }
-    .winner-card.first { border-left: 5px solid gold; }
-
-    #congrats {
-        display: none;
-        margin-top: var(--spacing-lg);
-        background-color: #dcedc8; /* Light success green */
-        color: #33691e; /* Darker success green */
-        padding: var(--spacing-md);
-        border-radius: var(--border-radius-sm);
-        font-weight: 600;
-        text-align: center;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        animation: fade-in 0.5s ease-out forwards;
-    }
-
-    @keyframes fade-in {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Confetti Container */
-    #confettiContainer {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        overflow: hidden;
-        z-index: 9999;
-    }
-
-    .confetti-particle {
-        position: absolute;
-        border-radius: 50%;
-        opacity: 0; /* Starts hidden */
-        will-change: transform, opacity; /* Optimize animations */
-    }
-
-    /* Footer */
-    footer {
-        margin-top: auto; /* Pushes footer to the bottom */
-        padding: var(--spacing-md);
-        font-size: 0.85em;
-        color: var(--medium-gray);
-        text-align: center;
-        width: 100%;
-    }
-</style>
+    </style>
 </head>
-<body>
-<div class="container">
-    <!-- Header -->
-    <header>
-        <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png" alt="St. Sebastian's Logo" />
-        <div class="info">
-            <h1>St. Sebastian's Church Raffle Winner Announcement</h1>
-            <div>No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</div>
-            <div><span class="material-icons" aria-hidden="true">contact_phone</span> +91 7090424365 | stsebastianssmc@gmail.com</div>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <main>
-        <!-- Raffle Draw -->
-        <section class="section-box raffle-box">
-            <h2>Raffle Draw</h2>
-            <div class="balls-container">
-                <!-- Order changed for logical progression 3rd, 2nd, 1st -->
-                <div class="ball ball-gradient-3" id="ball3">
-                    <div class="ball-medal" aria-hidden="true">🥉</div>
-                    <div class="inner-text">🎲</div>
-                </div>
-                <div class="ball ball-gradient-2" id="ball2">
-                    <div class="ball-medal" aria-hidden="true">🥈</div>
-                    <div class="inner-text">🎲</div>
-                </div>
-                <div class="ball ball-gradient-1" id="ball1">
-                    <div class="ball-medal" aria-hidden="true">🥇</div>
-                    <div class="inner-text">🎲</div>
-                </div>
+<body class="font-inter bg-gradient-to-r from-gray-100 to-white text-gray-800 flex flex-col items-center min-h-screen p-5 box-border">
+    <div class="container bg-white rounded-xl shadow-xl w-11/12 max-w-4xl p-8 mb-5 border border-gray-200 overflow-hidden">
+        <!-- Header -->
+        <header class="flex items-center gap-5 pb-5 mb-8 border-b border-gray-200">
+            <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png" alt="St. Sebastian's Logo" class="w-20 h-20 object-contain rounded-full border-2 border-gray-100 p-1 bg-white shadow-md">
+            <div class="info flex-grow">
+                <h1 class="font-playfair text-3xl text-emerald-900 mb-2 leading-tight">St. Sebastian's Church Raffle Winner Announcement</h1>
+                <div class="text-sm text-gray-600 mb-1 flex items-center gap-1">No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</div>
+                <div class="text-sm text-gray-600 flex items-center gap-1"><span class="material-icons text-base" aria-hidden="true">contact_phone</span> +91 7090424365 | stsebastianssmc@gmail.com</div>
             </div>
-            <div class="button-container">
-                <button id="drawBtn" class="draw-btn"></button>
-            </div>
-        </section>
+        </header>
 
-        <!-- Winners display section -->
-        <section class="section-box winners-box" id="winnersSection">
-            <h2>🏆 Winners</h2>
-            <div class="initial-message" id="initialWinnersMessage">Winners will appear here after the first number is drawn</div>
-            <div id="winnersList"></div>
-            <div id="congrats">🎉 Congratulations! Contact the church office.</div>
-        </section>
-    </main>
-</div>
-<!-- Confetti burst container -->
-<div id="confettiContainer" aria-hidden="true"></div>
-<!-- Footer -->
-<footer>
-    © 2023 St. Sebastian's Church. All rights reserved.<br>
-    Powered by DataWings Solution
-</footer>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // --- Constants for better readability and consistency ---
-        const BALL_SPIN_DURATION_MS = 120;
-        const BALL_SPIN_COUNT = 20; // How many random numbers show during spin
-        const CONFETTI_LIFETIME_FRAMES = 80;
-        const SMALL_CONFETTI_COUNT = 80;
-        const BIG_CONFETTI_COUNT = 100;
-        const CONFETTI_BURST_CLEAR_DELAY_MS = 3000;
-        const WINNERS_FILE_PATH = 'Winners.txt'; // Path to your winners file
+        <!-- Main Content -->
+        <main>
+            <!-- Raffle Draw -->
+            <section class="section-box raffle-box bg-green-50 border border-green-200">
+                <h2 class="font-playfair text-2xl text-emerald-800 text-center mb-6 relative after:content-[''] after:block after:w-15 after:h-0.5 after:bg-gradient-to-r after:from-primary-color after:to-primary-dark-color after:mx-auto after:mt-2 after:rounded">Raffle Draw</h2>
+                <div class="balls-container flex justify-center gap-8 mt-10 mb-10">
+                    <div class="ball ball-gradient-3" id="ball3">
+                        <div class="ball-medal" aria-hidden="true">🥉</div>
+                        <div class="inner-text">🎲</div>
+                    </div>
+                    <div class="ball ball-gradient-2" id="ball2">
+                        <div class="ball-medal" aria-hidden="true">🥈</div>
+                        <div class="inner-text">🎲</div>
+                    </div>
+                    <div class="ball ball-gradient-1" id="ball1">
+                        <div class="ball-medal" aria-hidden="true">🥇</div>
+                        <div class="inner-text">🎲</div>
+                    </div>
+                </div>
+                <div class="button-container text-center mt-5">
+                    <button id="drawBtn" class="draw-btn bg-gradient-to-r from-primary-color to-primary-dark-color text-white py-4 px-8 rounded-lg text-lg font-semibold cursor-pointer transition-all duration-300 shadow-lg hover:from-emerald-700 hover:to-emerald-900 hover:-translate-y-1 hover:shadow-xl disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none disabled:transform-none">
+                    </button>
+                </div>
+            </section>
 
-        const EMOJIS = {
-            FIRST: '🥇',
-            SECOND: '🥈',
-            THIRD: '🥉',
-            DICE: '🎲'
-        };
+            <!-- Winners display section -->
+            <section class="section-box winners-box bg-blue-50 border border-blue-200" id="winnersSection">
+                <h2 class="font-playfair text-2xl text-emerald-800 text-center mb-6 relative after:content-[''] after:block after:w-15 after:h-0.5 after:bg-gradient-to-r after:from-primary-color after:to-primary-dark-color after:mx-auto after:mt-2 after:rounded">🏆 Winners</h2>
+                <div class="initial-message text-center italic text-gray-500 p-5" id="initialWinnersMessage">Winners will appear here after the first number is drawn</div>
+                <div id="winnersList" class="mt-5 flex flex-col gap-4"></div>
+                <div id="congrats" class="hidden mt-5 bg-green-100 text-green-800 p-4 rounded-md font-semibold text-center shadow-sm">🎉 Congratulations! Contact the church office.</div>
+            </section>
+        </main>
+    </div>
+    <!-- Confetti burst container -->
+    <div id="confettiContainer" aria-hidden="true"></div>
+    <!-- Footer -->
+    <footer class="mt-auto p-4 text-sm text-gray-600 text-center w-full">
+        © 2023 St. Sebastian's Church. All rights reserved.<br>
+        Powered by DataWings Solution
+    </footer>
 
-        const TEXT_LABELS = {
-            FIRST_PLACE: '1st Place',
-            SECOND_PLACE: '2nd Place',
-            THIRD_PLACE: '3rd Place',
-            LOADING: 'Loading Winners...',
-            ERROR_LOADING: 'Error Loading Winners'
-        };
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Constants for better readability and consistency ---
+            const BALL_SPIN_DURATION_MS = 120;
+            const BALL_SPIN_COUNT = 20; // How many random numbers show during spin
+            const CONFETTI_LIFETIME_FRAMES = 80;
+            const SMALL_CONFETTI_COUNT = 80;
+            const BIG_CONFETTI_COUNT = 100;
+            const CONFETTI_BURST_CLEAR_DELAY_MS = 3000;
+            const WINNERS_FILE_PATH = 'Winners.txt'; // Path to your winners file
 
-        const STEP_DETAILS = [
-            { label: 'Generate 3rd Place Winner', emoji: EMOJIS.THIRD, text: TEXT_LABELS.THIRD_PLACE, ball: 'ball3' },
-            { label: 'Generate 2nd Place Winner', emoji: EMOJIS.SECOND, text: TEXT_LABELS.SECOND_PLACE, ball: 'ball2' },
-            { label: 'Generate 1st Place Winner', emoji: EMOJIS.FIRST, text: TEXT_LABELS.FIRST_PLACE, ball: 'ball1' }
-        ];
+            const EMOJIS = {
+                FIRST: '🥇',
+                SECOND: '🥈',
+                THIRD: '🥉',
+                DICE: '🎲'
+            };
 
-        // --- DOM Element Caching (Efficiency) ---
-        const drawBtn = document.getElementById('drawBtn');
-        const ball1 = document.getElementById('ball1');
-        const ball2 = document.getElementById('ball2');
-        const ball3 = document.getElementById('ball3');
-        const winnersList = document.getElementById('winnersList');
-        const congratsMessage = document.getElementById('congrats');
-        const winnersSection = document.getElementById('winnersSection');
-        const confettiContainer = document.getElementById('confettiContainer');
-        const initialWinnersMessage = document.getElementById('initialWinnersMessage');
+            const TEXT_LABELS = {
+                FIRST_PLACE: '1st Place',
+                SECOND_PLACE: '2nd Place',
+                THIRD_PLACE: '3rd Place',
+                LOADING: 'Loading Winners...',
+                ERROR_LOADING: 'Error Loading Winners'
+            };
 
-        // Store references to the inner text elements of the balls for direct access
-        const ball1InnerText = ball1.querySelector('.inner-text');
-        const ball2InnerText = ball2.querySelector('.inner-text');
-        const ball3InnerText = ball3.querySelector('.inner-text');
+            const STEP_DETAILS = [
+                { label: 'Generate 3rd Place Winner', emoji: EMOJIS.THIRD, text: TEXT_LABELS.THIRD_PLACE, ballId: 'ball3' },
+                { label: 'Generate 2nd Place Winner', emoji: EMOJIS.SECOND, text: TEXT_LABELS.SECOND_PLACE, ballId: 'ball2' },
+                { label: 'Generate 1st Place Winner', emoji: EMOJIS.FIRST, text: TEXT_LABELS.FIRST_PLACE, ballId: 'ball1' }
+            ];
 
-        // Store references to the medal elements for direct access (new)
-        const ball1Medal = ball1.querySelector('.ball-medal');
-        const ball2Medal = ball2.querySelector('.ball-medal');
-        const ball3Medal = ball3.querySelector('.ball-medal');
+            // --- DOM Element Caching (Efficiency) ---
+            const drawBtn = document.getElementById('drawBtn');
+            const ball1 = document.getElementById('ball1');
+            const ball2 = document.getElementById('ball2');
+            const ball3 = document.getElementById('ball3');
+            const winnersList = document.getElementById('winnersList');
+            const congratsMessage = document.getElementById('congrats');
+            const winnersSection = document.getElementById('winnersSection');
+            const confettiContainer = document.getElementById('confettiContainer');
+            const initialWinnersMessage = document.getElementById('initialWinnersMessage');
 
-        // --- State Variables ---
-        let currentStep = 0; // 0 for 3rd, 1 for 2nd, 2 for 1st
-        let availableNumbers = [];
-        let isDrawing = false;
-        let WINNER_POOL_FROM_FILE = []; // This will hold numbers loaded from the file
+            // Store references to the inner text elements of the balls for direct access
+            const ball1InnerText = ball1.querySelector('.inner-text');
+            const ball2InnerText = ball2.querySelector('.inner-text');
+            const ball3InnerText = ball3.querySelector('.inner-text');
 
-        // --- Helper Functions ---
+            // --- State Variables ---
+            let currentStep = 0; // 0 for 3rd, 1 for 2nd, 2 for 1st
+            let availableNumbers = [];
+            let isDrawing = false;
+            let WINNER_POOL_FROM_FILE = []; // This will hold numbers loaded from the file
 
-        /**
-         * Fetches raffle numbers from a text file.
-         * Expects numbers to be newline or comma-separated.
-         * @returns {Promise<string[]>} A promise that resolves with an array of winner numbers.
-         */
-        async function fetchWinnersFromFile() {
-            try {
+            // --- Helper Functions ---
+
+            /**
+             * Fetches raffle numbers from a text file.
+             * Expects numbers to be newline or comma-separated.
+             * @returns {Promise<string[]>} A promise that resolves with an array of winner numbers.
+             */
+            async function fetchWinnersFromFile() {
+                try {
+                    drawBtn.textContent = TEXT_LABELS.LOADING;
+                    drawBtn.disabled = true; // Disable button while loading
+
+                    const response = await fetch(WINNERS_FILE_PATH);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const text = await response.text();
+                    // Split by newline or comma, then filter out empty strings and trim
+                    return text.split(/[\n,]/).map(num => num.trim()).filter(num => num.length > 0);
+                } catch (error) {
+                    console.error("Failed to load winners from file:", error);
+                    // In a real app, show a user-friendly error message, e.g., a modal
+                    drawBtn.textContent = TEXT_LABELS.ERROR_LOADING;
+                    // Optionally, disable button permanently or offer retry
+                    return []; // Return empty array to prevent draw
+                }
+            }
+
+            /**
+             * Initializes or resets the raffle draw state.
+             */
+            async function initDraw() {
+                currentStep = 0; // Reset to 3rd place
+                availableNumbers = []; // Clear current numbers
+
                 drawBtn.textContent = TEXT_LABELS.LOADING;
-                drawBtn.disabled = true; // Disable button while loading
+                drawBtn.disabled = true;
 
-                const response = await fetch(WINNERS_FILE_PATH);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                // Load winners from file
+                WINNER_POOL_FROM_FILE = await fetchWinnersFromFile();
+                if (WINNER_POOL_FROM_FILE.length === 0) {
+                    // If no winners loaded, keep button disabled and show error
+                    drawBtn.textContent = TEXT_LABELS.ERROR_LOADING;
+                    return;
                 }
-                const text = await response.text();
-                // Split by newline or comma, then filter out empty strings and trim
-                return text.split(/[\n,]/).map(num => num.trim()).filter(num => num.length > 0);
-            } catch (error) {
-                console.error("Failed to load winners from file:", error);
-                // In a real app, show a user-friendly error message, e.g., a modal
-                drawBtn.textContent = TEXT_LABELS.ERROR_LOADING;
-                // Optionally, disable button permanently or offer retry
-                return []; // Return empty array to prevent draw
-            }
-        }
 
-        /**
-         * Initializes or resets the raffle draw state.
-         */
-        async function initDraw() {
-            currentStep = 0; // Reset to 3rd place
-            availableNumbers = []; // Clear current numbers
+                availableNumbers = [...WINNER_POOL_FROM_FILE]; // Set available numbers from file
+                updateButtonLabel(); // Update button text after loading
+                drawBtn.disabled = false; // Re-enable button
 
-            drawBtn.textContent = TEXT_LABELS.LOADING;
-            drawBtn.disabled = true;
+                // Reset ball displays and classes using cached innerText elements
+                ball1.classList.remove('active', 'spinning');
+                ball1InnerText.textContent = EMOJIS.DICE;
 
-            // Load winners from file
-            WINNER_POOL_FROM_FILE = await fetchWinnersFromFile();
-            if (WINNER_POOL_FROM_FILE.length === 0) {
-                // If no winners loaded, keep button disabled and show error
-                drawBtn.textContent = TEXT_LABELS.ERROR_LOADING;
-                return;
+                ball2.classList.remove('active', 'spinning');
+                ball2InnerText.textContent = EMOJIS.DICE;
+
+                ball3.classList.remove('active', 'spinning');
+                ball3InnerText.textContent = EMOJIS.DICE;
+
+                winnersList.innerHTML = ''; // Clear previous winners
+                congratsMessage.classList.add('hidden'); // Hide congrats message using Tailwind
+
+                // Reset winners section visibility by removing the 'show' class and ensuring initial state
+                winnersSection.classList.remove('show', 'opacity-100', 'translate-y-0');
+                winnersSection.classList.add('opacity-0', 'translate-y-5');
+                initialWinnersMessage.classList.remove('hidden'); // Show initial message using Tailwind
+
+
+                clearConfetti(); // Clear any lingering confetti
+                isDrawing = false; // Reset drawing flag
             }
 
-            availableNumbers = [...WINNER_POOL_FROM_FILE]; // Set available numbers from file
-            updateButtonLabel(); // Update button text after loading
-            drawBtn.disabled = false; // Re-enable button
-
-            // Reset ball displays and classes using cached innerText elements
-            ball1.classList.remove('active', 'spinning');
-            ball1InnerText.textContent = EMOJIS.DICE;
-
-            ball2.classList.remove('active', 'spinning');
-            ball2InnerText.textContent = EMOJIS.DICE;
-
-            ball3.classList.remove('active', 'spinning');
-            ball3InnerText.textContent = EMOJIS.DICE;
-
-            winnersList.innerHTML = ''; // Clear previous winners
-            congratsMessage.style.display = 'none'; // Hide congrats message
-
-            // Reset winners section visibility by removing the 'show' class
-            winnersSection.classList.remove('show');
-            // Ensure initial state is applied by re-setting its default CSS properties.
-            // This is crucial because class removal might not immediately revert direct style overrides
-            // if they were set by JS previously. Relying purely on CSS for show/hide is better.
-            winnersSection.style.opacity = '0';
-            winnersSection.style.transform = 'translateY(20px)';
-            initialWinnersMessage.style.display = 'block'; // Show initial message
-
-
-            clearConfetti(); // Clear any lingering confetti
-            isDrawing = false; // Reset drawing flag
-        }
-
-        /**
-         * Shows the winners section with a fade-in animation.
-         */
-        function showWinnersSection() {
-            initialWinnersMessage.style.display = 'none'; // Hide initial message immediately
-            // Add the 'show' class which triggers the CSS transition
-            winnersSection.classList.add('show');
-        }
-
-        /**
-         * Simulates the spinning of a ball and resolves when the winner is displayed.
-         * @param {HTMLElement} ballElement The DOM element of the ball.
-         * @param {HTMLElement} innerTextElement The cached inner text element of the ball.
-         * @param {string} winnerNumber The final winning number to display.
-         * @returns {Promise<void>} A promise that resolves when the spin is complete.
-         */
-        async function spinBall(ballElement, innerTextElement, winnerNumber) {
-            return new Promise(resolve => {
-                ballElement.classList.add('spinning');
-                let count = 0;
-                const interval = setInterval(() => {
-                    if (availableNumbers.length > 0) { // Ensure there are numbers to show
-                        const randIdx = Math.floor(Math.random() * availableNumbers.length);
-                        innerTextElement.textContent = availableNumbers[randIdx];
-                    }
-                    count++;
-                    if (count >= BALL_SPIN_COUNT) {
-                        clearInterval(interval);
-                        innerTextElement.textContent = winnerNumber;
-                        ballElement.classList.remove('spinning');
-                        ballElement.classList.add('active');
-                        resolve();
-                    }
-                }, BALL_SPIN_DURATION_MS);
-            });
-        }
-
-        /**
-         * Handles the main raffle drawing logic for each step (3rd, 2nd, 1st).
-         */
-        async function drawNext() {
-            if (isDrawing || availableNumbers.length === 0) {
-                 if (availableNumbers.length === 0) {
-                    // Show a message if no more numbers are available
-                    initialWinnersMessage.textContent = "No more numbers available for draw. Please start a new draw.";
-                    initialWinnersMessage.style.display = 'block';
-                    drawBtn.textContent = 'Start New Draw'; // Change button text if all drawn
-                    drawBtn.disabled = false;
-                }
-                return;
+            /**
+             * Shows the winners section with a fade-in animation using Tailwind classes.
+             */
+            function showWinnersSection() {
+                initialWinnersMessage.classList.add('hidden'); // Hide initial message immediately
+                winnersSection.classList.remove('opacity-0', 'translate-y-5');
+                winnersSection.classList.add('show', 'opacity-100', 'translate-y-0'); // Add the 'show' class which triggers the CSS transition
             }
 
-            isDrawing = true;
-            drawBtn.disabled = true; // Disable button during draw
-
-            const stepDetail = STEP_DETAILS[currentStep];
-            if (!stepDetail) {
-                console.error("Invalid raffle step. Resetting draw.");
-                initDraw();
-                return;
+            /**
+             * Simulates the spinning of a ball and resolves when the winner is displayed.
+             * @param {HTMLElement} ballElement The DOM element of the ball.
+             * @param {HTMLElement} innerTextElement The cached inner text element of the ball.
+             * @param {string} winnerNumber The final winning number to display.
+             * @returns {Promise<void>} A promise that resolves when the spin is complete.
+             */
+            async function spinBall(ballElement, innerTextElement, winnerNumber) {
+                return new Promise(resolve => {
+                    ballElement.classList.add('spinning');
+                    let count = 0;
+                    const interval = setInterval(() => {
+                        if (availableNumbers.length > 0) { // Ensure there are numbers to show
+                            const randIdx = Math.floor(Math.random() * availableNumbers.length);
+                            innerTextElement.textContent = availableNumbers[randIdx];
+                        }
+                        count++;
+                        if (count >= BALL_SPIN_COUNT) {
+                            clearInterval(interval);
+                            innerTextElement.textContent = winnerNumber;
+                            ballElement.classList.remove('spinning');
+                            ballElement.classList.add('active');
+                            resolve();
+                        }
+                    }, BALL_SPIN_DURATION_MS);
+                });
             }
 
-            let targetBall;
-            let targetBallInnerText;
-            switch(stepDetail.ball){
-                case 'ball1': targetBall = ball1; targetBallInnerText = ball1InnerText; break;
-                case 'ball2': targetBall = ball2; targetBallInnerText = ball2InnerText; break;
-                case 'ball3': targetBall = ball3; targetBallInnerText = ball3InnerText; break;
-            }
-
-            // Select a random winner from available numbers
-            const randIdx = Math.floor(Math.random() * availableNumbers.length);
-            const winnerNumber = availableNumbers[randIdx];
-            availableNumbers.splice(randIdx, 1); // Remove drawn number
-
-            // Animate the ball
-            await spinBall(targetBall, targetBallInnerText, winnerNumber);
-
-            // Add winner to the list
-            const winnerCardDiv = document.createElement('div');
-            winnerCardDiv.className = `winner-card ${stepDetail.ball.replace('ball','')}`; // e.g., 'third' from 'ball3'
-            winnerCardDiv.innerHTML = `
-                <div class="winner-position">${stepDetail.emoji}</div>
-                <div class="winner-details">
-                    <div class="winner-place">${stepDetail.text}</div>
-                    <div class="winner-number">${winnerNumber}</div>
-                </div>
-            `;
-            // Prepend to show latest winner at the top
-            winnersList.prepend(winnerCardDiv);
-
-            // Show winners section after the first draw (step 0)
-            if (currentStep === 0) {
-                showWinnersSection();
-            }
-
-            // Show congratulations message after the last draw (step 2)
-            if (currentStep === 2) {
-                congratsMessage.style.display = 'block';
-            }
-
-            // Launch confetti!
-            launchConfettiBurst(SMALL_CONFETTI_COUNT);
-            if(currentStep === 0) { // Big celebration for the first draw
-                launchConfettiBurst(BIG_CONFETTI_COUNT, true);
-            }
-
-            currentStep++; // Move to the next step
-            updateButtonLabel(); // Update button text for next action
-
-            // Clear confetti after a delay
-            setTimeout(clearConfetti, CONFETTI_BURST_CLEAR_DELAY_MS);
-
-            isDrawing = false;
-            drawBtn.disabled = false; // Re-enable button
-        }
-
-        /**
-         * Creates and animates a single confetti particle.
-         * @param {HTMLElement} container The container for the confetti.
-         * @param {number} startX X coordinate for particle origin.
-         * @param {number} startY Y coordinate for particle origin.
-         * @param {boolean} isBig If true, creates a larger confetti particle.
-         */
-        function createConfettiParticle(container, startX, startY, isBig = false) {
-            const el = document.createElement('div');
-            el.className = 'confetti-particle';
-
-            const size = isBig ? Math.random() * 12 + 8 : Math.random() * 4 + 2;
-            el.style.width = `${size}px`;
-            el.style.height = `${size}px`;
-            el.style.backgroundColor = `hsl(${Math.random() * 360}, 70%, 60%)`;
-            el.style.left = `${startX}px`;
-            el.style.top = `${startY}px`;
-
-            const angle = Math.random() * Math.PI * 2;
-            let dx = Math.cos(angle) * (Math.random() * 4 + 2);
-            let dy = Math.sin(angle) * (Math.random() * 4 + 2);
-            let currentXOffset = 0; // Offset from initial startX
-            let currentYOffset = 0; // Offset from initial startY
-            let lifetime = 0;
-            const rotationSpeed = Math.random() * 20 - 10; // Random rotation speed
-
-            container.appendChild(el);
-
-            function animateConfetti() {
-                if (lifetime >= CONFETTI_LIFETIME_FRAMES) {
-                    if (container.contains(el)) {
-                        container.removeChild(el);
+            /**
+             * Handles the main raffle drawing logic for each step (3rd, 2nd, 1st).
+             */
+            async function drawNext() {
+                if (isDrawing || availableNumbers.length === 0) {
+                    if (availableNumbers.length === 0) {
+                        // Show a message if no more numbers are available
+                        initialWinnersMessage.textContent = "No more numbers available for draw. Please start a new draw.";
+                        initialWinnersMessage.classList.remove('hidden');
+                        drawBtn.textContent = 'Start New Draw'; // Change button text if all drawn
+                        drawBtn.disabled = false;
                     }
                     return;
                 }
 
-                // Apply drag/easing
-                dx *= 0.98;
-                dy *= 0.98;
+                isDrawing = true;
+                drawBtn.disabled = true; // Disable button during draw
 
-                currentXOffset += dx;
-                currentYOffset += dy;
+                const stepDetail = STEP_DETAILS[currentStep];
+                if (!stepDetail) {
+                    console.error("Invalid raffle step. Resetting draw.");
+                    initDraw();
+                    return;
+                }
 
-                el.style.transform = `translate(${currentXOffset}px, ${currentYOffset}px) rotate(${lifetime * rotationSpeed}deg)`;
-                el.style.opacity = 1 - (lifetime / CONFETTI_LIFETIME_FRAMES);
+                let targetBall;
+                let targetBallInnerText;
+                switch(stepDetail.ballId){
+                    case 'ball1': targetBall = ball1; targetBallInnerText = ball1InnerText; break;
+                    case 'ball2': targetBall = ball2; targetBallInnerText = ball2InnerText; break;
+                    case 'ball3': targetBall = ball3; targetBallInnerText = ball3InnerText; break;
+                }
 
-                lifetime++;
-                requestAnimationFrame(animateConfetti);
+                // Select a random winner from available numbers
+                const randIdx = Math.floor(Math.random() * availableNumbers.length);
+                const winnerNumber = availableNumbers[randIdx];
+                availableNumbers.splice(randIdx, 1); // Remove drawn number
+
+                // Animate the ball
+                await spinBall(targetBall, targetBallInnerText, winnerNumber);
+
+                // Add winner to the list
+                const winnerCardDiv = document.createElement('div');
+                winnerCardDiv.className = `winner-card ${stepDetail.ballId.replace('ball','')}`; // e.g., 'third' from 'ball3'
+                winnerCardDiv.innerHTML = `
+                    <div class="winner-position">${stepDetail.emoji}</div>
+                    <div class="winner-details">
+                        <div class="winner-place">${stepDetail.text}</div>
+                        <div class="winner-number">${winnerNumber}</div>
+                    </div>
+                `;
+                // Prepend to show latest winner at the top
+                winnersList.prepend(winnerCardDiv);
+
+                // Show winners section after the first draw (step 0)
+                if (currentStep === 0) {
+                    showWinnersSection();
+                }
+
+                // Show congratulations message after the last draw (step 2)
+                if (currentStep === 2) {
+                    congratsMessage.classList.remove('hidden'); // Show congrats message using Tailwind
+                }
+
+                // Launch confetti!
+                launchConfettiBurst(SMALL_CONFETTI_COUNT);
+                if(currentStep === 0) { // Big celebration for the first draw
+                    launchConfettiBurst(BIG_CONFETTI_COUNT, true);
+                }
+
+                currentStep++; // Move to the next step
+                updateButtonLabel(); // Update button text for next action
+
+                // Clear confetti after a delay
+                setTimeout(clearConfetti, CONFETTI_BURST_CLEAR_DELAY_MS);
+
+                isDrawing = false;
+                drawBtn.disabled = false; // Re-enable button
             }
-            animateConfetti(); // Start animation
-        }
 
-        /**
-         * Launches a burst of confetti particles from the center of the screen.
-         * @param {number} count The number of confetti particles to generate.
-         * @param {boolean} isBig If true, generates larger particles.
-         */
-        function launchConfettiBurst(count, isBig = false) {
-            const centerX = window.innerWidth / 2;
-            const centerY = window.innerHeight / 2;
-            for (let i = 0; i < count; i++) {
-                createConfettiParticle(confettiContainer, centerX, centerY, isBig);
+            /**
+             * Creates and animates a single confetti particle.
+             * @param {HTMLElement} container The container for the confetti.
+             * @param {number} startX X coordinate for particle origin.
+             * @param {number} startY Y coordinate for particle origin.
+             * @param {boolean} isBig If true, creates a larger confetti particle.
+             */
+            function createConfettiParticle(container, startX, startY, isBig = false) {
+                const el = document.createElement('div');
+                el.className = 'confetti-particle';
+
+                const size = isBig ? Math.random() * 12 + 8 : Math.random() * 4 + 2;
+                el.style.width = `${size}px`;
+                el.style.height = `${size}px`;
+                el.style.backgroundColor = `hsl(${Math.random() * 360}, 70%, 60%)`;
+                el.style.left = `${startX}px`;
+                el.style.top = `${startY}px`;
+
+                const angle = Math.random() * Math.PI * 2;
+                let dx = Math.cos(angle) * (Math.random() * 4 + 2);
+                let dy = Math.sin(angle) * (Math.random() * 4 + 2);
+                let currentXOffset = 0; // Offset from initial startX
+                let currentYOffset = 0; // Offset from initial startY
+                let lifetime = 0;
+                const rotationSpeed = Math.random() * 20 - 10; // Random rotation speed
+
+                container.appendChild(el);
+
+                function animateConfetti() {
+                    if (lifetime >= CONFETTI_LIFETIME_FRAMES) {
+                        if (container.contains(el)) {
+                            container.removeChild(el);
+                        }
+                        return;
+                    }
+
+                    // Apply drag/easing
+                    dx *= 0.98;
+                    dy *= 0.98;
+
+                    currentXOffset += dx;
+                    currentYOffset += dy;
+
+                    el.style.transform = `translate(${currentXOffset}px, ${currentYOffset}px) rotate(${lifetime * rotationSpeed}deg)`;
+                    el.style.opacity = 1 - (lifetime / CONFETTI_LIFETIME_FRAMES);
+
+                    lifetime++;
+                    requestAnimationFrame(animateConfetti);
+                }
+                animateConfetti(); // Start animation
             }
-        }
 
-        /**
-         * Clears all confetti particles from the container.
-         */
-        function clearConfetti() {
-            confettiContainer.innerHTML = '';
-        }
-
-        /**
-         * Updates the text content of the main draw button based on the current step.
-         */
-        function updateButtonLabel() {
-            if (currentStep < STEP_DETAILS.length) {
-                drawBtn.textContent = STEP_DETAILS[currentStep].label;
-            } else {
-                drawBtn.textContent = 'Start New Draw';
+            /**
+             * Launches a burst of confetti particles from the center of the screen.
+             * @param {number} count The number of confetti particles to generate.
+             * @param {boolean} isBig If true, generates larger particles.
+             */
+            function launchConfettiBurst(count, isBig = false) {
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                for (let i = 0; i < count; i++) {
+                    createConfettiParticle(confettiContainer, centerX, centerY, isBig);
+                }
             }
-        }
 
-        // --- Event Listeners ---
-        drawBtn.addEventListener('click', () => {
-            if (currentStep < STEP_DETAILS.length && !isDrawing) { // Only allow drawing if not already drawing and steps remain
-                drawNext();
-            } else if (currentStep === STEP_DETAILS.length) { // If all steps completed, allow new draw
-                initDraw();
+            /**
+             * Clears all confetti particles from the container.
+             */
+            function clearConfetti() {
+                confettiContainer.innerHTML = '';
             }
+
+            /**
+             * Updates the text content of the main draw button based on the current step.
+             */
+            function updateButtonLabel() {
+                if (currentStep < STEP_DETAILS.length) {
+                    drawBtn.textContent = STEP_DETAILS[currentStep].label;
+                } else {
+                    drawBtn.textContent = 'Start New Draw';
+                }
+            }
+
+            // --- Event Listeners ---
+            drawBtn.addEventListener('click', () => {
+                if (currentStep < STEP_DETAILS.length && !isDrawing) { // Only allow drawing if not already drawing and steps remain
+                    drawNext();
+                } else if (currentStep === STEP_DETAILS.length) { // If all steps completed, allow new draw
+                    initDraw();
+                }
+            });
+
+            // --- Initial Load ---
+            initDraw(); // Set up the initial state of the raffle and load winners
         });
-
-        // --- Initial Load ---
-        initDraw(); // Set up the initial state of the raffle and load winners
-    });
-</script>
+    </script>
 </body>
 </html>
