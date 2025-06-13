@@ -76,7 +76,7 @@
     flex: 1;
   }
 
-  /* Style for boxes */
+  /* Style for boxes with depth and shadows */
   .section-box {
     background: #fff;
     border-radius: 12px;
@@ -112,7 +112,7 @@
     border-radius: 2px;
   }
 
-  /* Balls container */
+  /* Balls container styling */
   .balls-container {
     display: flex;
     justify-content: center;
@@ -120,7 +120,7 @@
     flex-wrap: wrap;
   }
 
-  /* Balls styling */
+  /* Style for balls with 3D and glow effects */
   .ball {
     width: 180px;
     height: 180px;
@@ -221,7 +221,7 @@
     border-radius: 2px;
   }
 
-  /* Winner cards with depth */
+  /* Winner cards with depth/shadow */
   .winner-card {
     display: flex;
     align-items: center;
@@ -256,12 +256,12 @@
     margin-top:4px;
   }
 
-  /* Celebration confetti overlay */
+  /* Confetti overlay container styling */
   #confettiContainer {
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    pointer-events: none; /* allow clicks through */
+    pointer-events: none;
     overflow: visible;
     z-index: 1000;
   }
@@ -420,7 +420,7 @@
     const ball = document.getElementById(ballId);
     await spinBall(ball, winnerNumber);
 
-    // Add winner to list
+    // Add winner card
     const listDiv = document.getElementById('winnersList');
     const div = document.createElement('div');
     div.className='winner-card '+place;
@@ -443,36 +443,49 @@
     // Celebrate with confetti
     launchConfetti();
 
-    // Advance step and update label
+    // Special celebration for first winner
+    if (currentStep===STEP_3RD) {
+      launchSpecialCelebration();
+    }
+
+    // Next step
     currentStep++;
     updateButtonLabel();
 
-    // Optional: clear confetti after a delay
-    setTimeout(() => clearConfetti(), 2000);
+    // Clear confetti after a delay
+    setTimeout(() => clearConfetti(), 3000);
 
     document.getElementById('drawBtn').disabled=false;
     isDrawing=false;
   }
-  
+
   function launchConfetti() {
     const container = document.getElementById('confettiContainer');
-    for (let i=0; i<30; i++) {
+    for (let i=0; i<60; i++) {
       createConfettiParticle(container);
     }
   }
 
-  function createConfettiParticle(container) {
+  function launchSpecialCelebration() {
+    // Example: fireworks or big burst
+    for (let i=0; i<80; i++) {
+      createConfettiParticle(document.getElementById('confettiContainer'), true);
+    }
+  }
+
+  function createConfettiParticle(container, isBig=false) {
     const el = document.createElement('div');
     el.style.position='absolute';
-    el.style.width='8px';
-    el.style.height='8px';
+    const size = isBig ? Math.random()*10+8 : Math.random()*4+2;
+    el.style.width=`${size}px`;
+    el.style.height=`${size}px`;
     el.style.borderRadius='50%';
     el.style.backgroundColor=`hsl(${Math.random()*360}, 70%, 60%)`;
     el.style.top='0px';
     el.style.left=`${Math.random()*100}%`;
     el.style.opacity='1';
     el.style.transform=`translateY(0) rotate(${Math.random()*360}deg)`;
-    el.style.transition='transform 2s ease-out, opacity 2s ease-out';
+    el.style.transition='transform 2.5s ease-out, opacity 2.5s ease-out';
 
     // Animate falling
     setTimeout(() => {
@@ -480,17 +493,17 @@
       el.style.opacity='0';
     }, 50);
 
-    // Remove after falling
+    // Remove after animation
     setTimeout(() => {
-      container.removeChild(el);
-    }, 2100);
+      if (container.contains(el)) container.removeChild(el);
+    }, 2500);
 
     container.appendChild(el);
   }
 
   function clearConfetti() {
     const container = document.getElementById('confettiContainer');
-    container.innerHTML=''; // Remove lingering particles
+    container.innerHTML=''; // Remove all particles
   }
 
   document.getElementById('drawBtn').addEventListener('click', ()=> {
