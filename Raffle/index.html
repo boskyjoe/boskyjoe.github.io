@@ -156,13 +156,13 @@
         }
 
         .section-card {
-            @apply bg-white rounded-xl shadow-md p-8 border border-gray-200 w-full; /* Default to full width */
+            @apply bg-white rounded-xl shadow-md p-8 border border-gray-200 w-full mb-6 lg:mb-0; /* Default to full width with bottom margin, no bottom margin on large */
             flex-shrink: 0; /* Prevent shrinking */
         }
 
-        /* On large screens, set both cards to take half the width */
+        /* On large screens, set both cards to take half the width and grow */
         .main-content-layout > .section-card {
-            @apply lg:w-1/2;
+            @apply lg:flex-1; /* flex-1 implies flex-grow: 1, flex-shrink: 1, basis: 0% */
         }
 
         .raffle-box {
