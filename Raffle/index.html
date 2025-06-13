@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>St. Sebastian's Church Raffle Winner Announcement</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         * {
@@ -15,123 +15,185 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            color: #2c3e50;
+            color: #1a202c;
             line-height: 1.6;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 0 20px;
             min-height: 100vh;
         }
 
         .header {
-            background: white;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
-            border-radius: 0 0 20px 20px;
-            padding: 30px 40px;
-            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border-radius: 24px;
+            padding: 40px 50px;
+            margin: 20px 0 40px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
         }
 
         .header-content {
-            display: flex;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 40px;
             align-items: center;
-            gap: 30px;
             max-width: 1200px;
             margin: 0 auto;
         }
 
         .church-logo {
-            width: 80px;
-            height: 80px;
+            width: 100px;
+            height: 100px;
             object-fit: contain;
-            flex-shrink: 0;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
         }
 
         .church-info {
-            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
         .church-title {
             font-family: 'Playfair Display', serif;
-            font-size: 2.2rem;
-            font-weight: 700;
-            color: #1a365d;
-            margin-bottom: 12px;
-            line-height: 1.3;
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #1a365d, #2d3748);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+            margin-bottom: 16px;
         }
 
         .church-address {
-            font-size: 1rem;
+            font-size: 1.1rem;
             color: #4a5568;
-            margin-bottom: 8px;
-            font-weight: 400;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .church-contact {
-            font-size: 1rem;
+            font-size: 1.1rem;
             color: #2b6cb0;
-            font-weight: 500;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .main-content {
-            max-width: 900px;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 40px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
         .drawing-section {
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
-            border: 1px solid rgba(226, 232, 240, 0.8);
-            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            padding: 50px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drawing-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #48bb78, #38a169);
         }
 
         .section-title {
             font-family: 'Playfair Display', serif;
-            font-size: 1.8rem;
-            font-weight: 600;
-            color: #1a365d;
+            font-size: 2.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1a365d, #2d3748);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
             position: relative;
         }
 
         .section-title::after {
             content: '';
             position: absolute;
-            bottom: -10px;
+            bottom: -15px;
             left: 50%;
             transform: translateX(-50%);
-            width: 60px;
-            height: 3px;
-            background: linear-gradient(90deg, #3182ce, #2b6cb0);
+            width: 80px;
+            height: 4px;
+            background: linear-gradient(90deg, #48bb78, #38a169);
             border-radius: 2px;
         }
 
         .status-card {
-            background: #f7fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 20px;
+            background: linear-gradient(135deg, #f7fafc, #edf2f7);
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 24px;
             text-align: center;
-            margin-bottom: 30px;
-            color: #4a5568;
-            font-weight: 500;
+            margin-bottom: 40px;
+            color: #2d3748;
+            font-weight: 600;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         }
 
         .status-card.success {
-            background: #f0fff4;
-            border-color: #68d391;
+            background: linear-gradient(135deg, #f0fff4, #e6fffa);
+            border-color: #48bb78;
             color: #22543d;
         }
 
         .status-card.error {
-            background: #fff5f5;
+            background: linear-gradient(135deg, #fff5f5, #fed7d7);
             border-color: #fc8181;
             color: #742a2a;
         }
@@ -139,44 +201,67 @@
         .drawing-area {
             display: flex;
             justify-content: center;
-            gap: 20px;
-            margin: 40px 0;
+            gap: 30px;
+            margin: 50px 0;
             flex-wrap: wrap;
         }
 
         .winner-ball {
-            width: 100px;
-            height: 100px;
+            width: 120px;
+            height: 120px;
             border-radius: 50%;
-            background: linear-gradient(145deg, #ffffff, #f1f5f9);
+            background: linear-gradient(145deg, #ffffff, #f8fafc);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #1a365d;
-            border: 3px solid #e2e8f0;
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #2d3748;
+            border: 4px solid #e2e8f0;
             box-shadow: 
-                0 10px 25px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+                0 15px 35px rgba(0, 0, 0, 0.1),
+                inset 0 2px 0 rgba(255, 255, 255, 0.9);
             position: relative;
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .winner-ball:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
         }
 
         .winner-ball.active {
-            background: linear-gradient(145deg, #3182ce, #2c5282);
+            background: linear-gradient(145deg, #48bb78, #38a169);
             color: white;
-            border-color: #2c5282;
-            animation: pulse 1.5s ease-in-out infinite;
+            border-color: #38a169;
+            animation: pulse 2s ease-in-out infinite;
+            box-shadow: 
+                0 15px 35px rgba(72, 187, 120, 0.4),
+                inset 0 2px 0 rgba(255, 255, 255, 0.3);
         }
 
         .winner-ball.spinning {
-            animation: spin 0.8s linear infinite;
+            animation: spin 0.6s linear infinite;
         }
+
+        .ball-label {
+            position: absolute;
+            bottom: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #4a5568;
+            white-space: nowrap;
+        }
+
+        #ball1 .ball-label::after { content: '1st Place'; }
+        #ball2 .ball-label::after { content: '2nd Place'; }
+        #ball3 .ball-label::after { content: '3rd Place'; }
 
         @keyframes pulse {
             0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            50% { transform: scale(1.08); }
         }
 
         @keyframes spin {
@@ -185,26 +270,32 @@
         }
 
         .draw-button {
-            background: linear-gradient(135deg, #3182ce, #2c5282);
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
             border: none;
-            padding: 16px 32px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            border-radius: 12px;
+            padding: 20px 40px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            border-radius: 16px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(49, 130, 206, 0.4);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin: 0 auto;
+            gap: 12px;
+            margin: 40px auto 0;
             font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .draw-button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(49, 130, 206, 0.5);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
+        }
+
+        .draw-button:active:not(:disabled) {
+            transform: translateY(-1px);
         }
 
         .draw-button:disabled {
@@ -213,29 +304,36 @@
             transform: none;
         }
 
-        .results-section {
-            background: white;
-            border-radius: 16px;
+        .results-sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
             padding: 40px;
-            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
-            border: 1px solid rgba(226, 232, 240, 0.8);
-            display: none;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+            overflow: hidden;
         }
 
-        .results-section.show {
-            display: block;
-            animation: slideUp 0.6s ease forwards;
+        .results-sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #f093fb, #f5576c);
         }
 
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .results-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #1a365d;
+            margin-bottom: 30px;
+            text-align: center;
         }
 
         .winner-card {
@@ -243,114 +341,133 @@
             align-items: center;
             gap: 20px;
             padding: 20px;
-            margin: 15px 0;
-            background: #f8fafc;
-            border-radius: 12px;
-            border-left: 4px solid;
-            transition: all 0.3s ease;
+            margin: 20px 0;
+            background: linear-gradient(135deg, #f8fafc, #edf2f7);
+            border-radius: 16px;
+            border-left: 5px solid;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         }
 
         .winner-card:hover {
-            background: #f1f5f9;
-            transform: translateX(5px);
+            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+            transform: translateX(8px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
         }
 
-        .winner-card.first { border-left-color: #d69e2e; }
-        .winner-card.second { border-left-color: #718096; }
-        .winner-card.third { border-left-color: #c05621; }
+        .winner-card.first { border-left-color: #f6ad55; }
+        .winner-card.second { border-left-color: #9ca3af; }
+        .winner-card.third { border-left-color: #cd7c2f; }
 
         .winner-position {
-            font-size: 2rem;
-            font-weight: 700;
-            min-width: 60px;
+            font-size: 2.5rem;
+            font-weight: 800;
+            min-width: 80px;
             text-align: center;
         }
 
-        .winner-position.first { color: #d69e2e; }
-        .winner-position.second { color: #718096; }
-        .winner-position.third { color: #c05621; }
+        .winner-position.first { color: #f6ad55; }
+        .winner-position.second { color: #9ca3af; }
+        .winner-position.third { color: #cd7c2f; }
 
         .winner-details {
             flex: 1;
         }
 
         .winner-place {
-            font-size: 1.1rem;
-            font-weight: 600;
+            font-size: 1.2rem;
+            font-weight: 700;
             color: #2d3748;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
 
         .winner-number {
-            font-size: 1.8rem;
-            font-weight: 700;
+            font-size: 2rem;
+            font-weight: 800;
             color: #1a365d;
             font-family: 'Inter', sans-serif;
         }
 
         .congratulations {
             text-align: center;
-            margin-top: 30px;
-            padding: 20px;
-            background: linear-gradient(135deg, #edf2f7, #e2e8f0);
-            border-radius: 12px;
-            border: 1px solid #cbd5e0;
+            margin-top: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #f0fff4, #e6fffa);
+            border-radius: 20px;
+            border: 2px solid #48bb78;
+            box-shadow: 0 8px 25px rgba(72, 187, 120, 0.1);
         }
 
         .congratulations h3 {
             font-family: 'Playfair Display', serif;
-            font-size: 1.4rem;
-            color: #2d3748;
-            margin-bottom: 8px;
+            font-size: 1.6rem;
+            color: #22543d;
+            margin-bottom: 12px;
+            font-weight: 700;
         }
 
         .congratulations p {
-            color: #4a5568;
-            font-size: 1rem;
+            color: #2f855a;
+            font-size: 1.1rem;
+            font-weight: 500;
         }
 
         .footer {
             text-align: center;
-            padding: 40px 20px;
-            color: #718096;
-            font-size: 0.9rem;
+            padding: 50px 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+
+            .results-sidebar {
+                position: static;
+            }
         }
 
         @media (max-width: 768px) {
             .header {
-                padding: 20px;
-                margin-bottom: 20px;
+                padding: 30px;
+                margin-bottom: 30px;
             }
 
             .header-content {
-                flex-direction: column;
+                grid-template-columns: 1fr;
                 text-align: center;
-                gap: 20px;
+                gap: 30px;
             }
 
             .church-title {
-                font-size: 1.8rem;
+                font-size: 2.2rem;
             }
 
-            .drawing-section, .results-section {
-                padding: 20px;
+            .drawing-section, .results-sidebar {
+                padding: 30px;
                 margin-bottom: 20px;
             }
 
             .drawing-area {
-                gap: 15px;
+                gap: 20px;
             }
 
             .winner-ball {
-                width: 80px;
-                height: 80px;
-                font-size: 1.4rem;
+                width: 100px;
+                height: 100px;
+                font-size: 1.8rem;
             }
 
             .winner-card {
                 flex-direction: column;
                 text-align: center;
-                gap: 10px;
+                gap: 15px;
+                padding: 25px;
             }
 
             .winner-position {
@@ -365,11 +482,16 @@
             }
 
             .church-title {
-                font-size: 1.5rem;
+                font-size: 1.8rem;
             }
 
             .section-title {
-                font-size: 1.5rem;
+                font-size: 2rem;
+            }
+
+            .draw-button {
+                padding: 16px 32px;
+                font-size: 1rem;
             }
         }
     </style>
@@ -384,9 +506,11 @@
                 <div class="church-info">
                     <h1 class="church-title">St. Sebastian's Church Raffle Winner Announcement</h1>
                     <div class="church-address">
+                        <span class="material-icons" style="font-size: 18px;">place</span>
                         No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038
                     </div>
                     <div class="church-contact">
+                        <span class="material-icons" style="font-size: 18px;">contact_phone</span>
                         +91 7090424365 | stsebastianssmc@gmail.com
                     </div>
                 </div>
@@ -395,26 +519,39 @@
 
         <div class="main-content">
             <div class="drawing-section">
-                <h2 class="section-title">Lucky Draw</h2>
+                <h2 class="section-title">Raffle Draw</h2>
                 
-                <div class="status-card" id="status">Loading Winners.txt file...</div>
+                <div class="status-card success" id="status">Start the Draw</div>
 
                 <div class="drawing-area">
-                    <div class="winner-ball" id="ball1">?</div>
-                    <div class="winner-ball" id="ball2">?</div>
-                    <div class="winner-ball" id="ball3">?</div>
+                    <div class="winner-ball" id="ball1">
+                        ?
+                        <div class="ball-label"></div>
+                    </div>
+                    <div class="winner-ball" id="ball2">
+                        ?
+                        <div class="ball-label"></div>
+                    </div>
+                    <div class="winner-ball" id="ball3">
+                        ?
+                        <div class="ball-label"></div>
+                    </div>
                 </div>
 
-                <button class="draw-button" id="drawBtn" disabled>
+                <button class="draw-button" id="drawBtn">
                     <span class="material-icons">casino</span>
                     Draw Winners
                 </button>
             </div>
 
-            <div class="results-section" id="resultsSection">
-                <h2 class="section-title">Winners Announcement</h2>
-                <div id="results"></div>
-                <div class="congratulations">
+            <div class="results-sidebar">
+                <h2 class="results-title">🏆 Winners</h2>
+                <div id="results">
+                    <div style="text-align: center; color: #9ca3af; font-style: italic; padding: 40px 20px;">
+                        Winners will appear here after the draw
+                    </div>
+                </div>
+                <div class="congratulations" id="congratulations" style="display: none;">
                     <h3>🎉 Congratulations to all Winners!</h3>
                     <p>Please contact the church office with your winning ticket for prize collection.</p>
                 </div>
@@ -427,7 +564,12 @@
     </div>
 
     <script>
-        let winnersData = [];
+        // Demo data (in production, this would be loaded from Winners.txt)
+        let winnersData = [
+            "001", "002", "003", "004", "005", "006", "007", "008", "009", "010",
+            "011", "012", "013", "014", "015", "016", "017", "018", "019", "020",
+            "021", "022", "023", "024", "025"
+        ];
         let drawnWinners = [];
         let availableNumbers = [];
         let currentStep = 0; // 0: ready, 1: draw 3rd, 2: draw 2nd, 3: draw 1st
@@ -447,7 +589,7 @@
                 
                 if (winnersData.length >= 3) {
                     const statusCard = document.getElementById('status');
-                    statusCard.textContent = `${winnersData.length} participants loaded. Ready to draw winners!`;
+                    statusCard.textContent = 'Start the Draw';
                     statusCard.className = 'status-card success';
                     document.getElementById('drawBtn').disabled = false;
                     resetDraw();
@@ -459,11 +601,18 @@
                 }
             } catch (error) {
                 console.error('Error loading Winners.txt:', error);
-                const statusCard = document.getElementById('status');
-                statusCard.textContent = 'Error: Could not load Winners.txt file. Make sure it exists in the same directory.';
-                statusCard.className = 'status-card error';
-                document.getElementById('drawBtn').disabled = true;
+                // Fallback to demo mode
+                initializeDemo();
             }
+        }
+
+        // Initialize demo mode
+        function initializeDemo() {
+            const statusCard = document.getElementById('status');
+            statusCard.textContent = 'Start the Draw';
+            statusCard.className = 'status-card success';
+            document.getElementById('drawBtn').disabled = false;
+            resetDraw();
         }
 
         // Reset entire draw process
@@ -479,8 +628,12 @@
                 ball.classList.remove('spinning', 'active');
             });
             
-            document.getElementById('resultsSection').classList.remove('show');
-            document.getElementById('results').innerHTML = '';
+            document.getElementById('results').innerHTML = `
+                <div style="text-align: center; color: #9ca3af; font-style: italic; padding: 40px 20px;">
+                    Winners will appear here after the draw
+                </div>
+            `;
+            document.getElementById('congratulations').style.display = 'none';
             updateButtonText();
         }
 
@@ -508,14 +661,14 @@
                     ball.textContent = availableNumbers[randomIndex];
                     spinCount++;
                     
-                    if (spinCount > 15) {
+                    if (spinCount > 20) {
                         clearInterval(spinInterval);
                         ball.textContent = finalNumber;
                         ball.classList.remove('spinning');
                         ball.classList.add('active');
                         resolve();
                     }
-                }, 150);
+                }, 120);
             });
         }
 
@@ -523,9 +676,9 @@
         function displayWinner(place, number) {
             const resultsDiv = document.getElementById('results');
             
-            // Show results section if first winner
-            if (!document.getElementById('resultsSection').classList.contains('show')) {
-                document.getElementById('resultsSection').classList.add('show');
+            // Clear placeholder text if this is the first winner
+            if (resultsDiv.innerHTML.includes('Winners will appear here')) {
+                resultsDiv.innerHTML = '';
             }
             
             const winnerCard = document.createElement('div');
@@ -545,8 +698,24 @@
                 </div>
             `;
             
-            // Insert at the beginning for chronological order (3rd, 2nd, 1st)
+            // Add animation
+            winnerCard.style.opacity = '0';
+            winnerCard.style.transform = 'translateY(20px)';
             resultsDiv.insertBefore(winnerCard, resultsDiv.firstChild);
+            
+            // Animate in
+            setTimeout(() => {
+                winnerCard.style.transition = 'all 0.5s ease';
+                winnerCard.style.opacity = '1';
+                winnerCard.style.transform = 'translateY(0)';
+            }, 100);
+
+            // Show congratulations after all winners are drawn
+            if (currentStep === 3) {
+                setTimeout(() => {
+                    document.getElementById('congratulations').style.display = 'block';
+                }, 500);
+            }
         }
 
         // Draw single winner based on current step
@@ -594,7 +763,7 @@
             // Display winner
             setTimeout(() => {
                 displayWinner(place, winner);
-            }, 300);
+            }, 400);
             
             // Update for next step
             currentStep++;
@@ -612,7 +781,7 @@
                 updateButtonText();
                 document.getElementById('drawBtn').disabled = false;
                 isDrawing = false;
-            }, 800);
+            }, 1000);
         }
 
         // Main draw function
@@ -621,7 +790,7 @@
                 // Reset for new draw
                 resetDraw();
                 const statusCard = document.getElementById('status');
-                statusCard.textContent = `${winnersData.length} participants loaded. Ready to draw winners!`;
+                statusCard.textContent = 'Start the Draw';
                 statusCard.className = 'status-card success';
             } else {
                 // Draw next winner
