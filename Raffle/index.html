@@ -146,7 +146,7 @@
     transition: all 0.3s ease;
   }
 
-  /* Inner text for dice face dots */
+  /* Inner text for dice face dots or number */
   .ball .inner-text {
     position: absolute;
     width: 100%;
@@ -213,7 +213,7 @@
     transform: translateY(0);
   }
 
-  /* Winners header style */
+  /* Header for winners */
   .winners-box h2 {
     text-align: center;
     margin-bottom: 15px;
@@ -230,7 +230,7 @@
     border-radius: 2px;
   }
 
-  /* Winner card styles with shadows */
+  /* Winner card styles */
   .winner-card {
     display: flex;
     align-items: center;
@@ -249,31 +249,31 @@
     transform: translateX(2px);
   }
 
-  /* Icon for winner position */
+  /* Winner position icon */
   .winner-position {
     font-size: 2.4rem;
     margin-right: 15px;
   }
 
-  /* Winner info container */
+  /* Winner details */
   .winner-details {
     flex: 1;
   }
 
-  /* Style for winner place text */
+  /* Winner place text */
   .winner-place {
     font-weight: 600;
     font-size: 1.2rem;
   }
 
-  /* Style for winner number */
+  /* Winner number */
   .winner-number {
     font-size: 2rem;
     font-weight: bold;
     margin-top: 4px;
   }
 
-  /* Confetti overlay container style */
+  /* Confetti overlay container */
   #confettiContainer {
     position: fixed;
     top: 0;
@@ -285,7 +285,7 @@
     z-index: 1000;
   }
 
-  /* Footer style */
+  /* Footer */
   footer {
     background: #fff;
     padding: 15px 20px;
@@ -311,7 +311,7 @@
 
   <!-- Main Content -->
   <main>
-    <!-- Raffle draw area -->
+    <!-- Raffle draw section -->
     <section class="section-box raffle-box">
       <h2 style="text-align: center;">Raffle Draw</h2>
       <div class="balls-container">
@@ -390,7 +390,7 @@
   }
 
   /**
-   * Loads winners list from the external file.
+   * Loads winners list from external file.
    */
   async function loadWinners() {
     console.log('Attempting to load Winners.txt...');
@@ -462,7 +462,8 @@
         count++;
         if (count > 20) {
           clearInterval(interval);
-          ball.innerHTML = '<div class="inner-text">' + winnerNumber + '</div>';
+          // Show the actual winner number
+          ball.innerHTML = `<div class="inner-text">${winnerNumber}</div>`;
           ball.classList.remove('spinning');
           ball.classList.add('active');
           resolve();
@@ -492,12 +493,15 @@
     const winnerNumber = availableNumbers[randIdx];
     availableNumbers.splice(randIdx, 1);
 
-    // Animate spinning ball
+    // Animate spinning
     const ball = document.getElementById(ballId);
     await spinBall(ball, winnerNumber);
 
-    // Reset dice face to dots based on place
-    updateDiceFace(ball, currentStep + 1); // 3, 2, 1
+    // Determine face value based on place
+    const faceValue = 4 - (currentStep + 1); // 3rd:1, 2nd:2, 1st:3
+
+    // Update the dice face to show the number
+    updateDiceFace(ball, faceValue);
 
     // Add winner to list
     const listDiv = document.getElementById('winnersList');
@@ -511,7 +515,7 @@
       </div>`;
     listDiv.prepend(div);
 
-    // Show winners section
+    // Show winners section if first winner
     if (currentStep === STEP_3RD) {
       showWinnersSection();
     }
@@ -519,10 +523,10 @@
       document.getElementById('congrats').style.display = 'block';
     }
 
-    // Fire confetti with intensity based on place
+    // Launch confetti based on place
     launchConfettiBurst(currentStep + 1);
 
-    // Extra celebration for 1st place
+    // Launch big celebration for first place
     if (currentStep === STEP_3RD) {
       launchBigCelebration();
     }
@@ -539,17 +543,12 @@
   }
 
   /**
-   * Updates dice face with dots based on place (1, 2, 3)
-   * @param {HTMLElement} ball - The DOM element for the ball.
-   * @param {number} faceValue - Number of dots (1, 2, or 3).
+   * Updates the dice face display with the winner number (1, 2, or 3).
+   * @param {HTMLElement} ball - The ball DOM element.
+   * @param {number} faceValue - 1, 2, or 3.
    */
   function updateDiceFace(ball, faceValue) {
-    let dots = '';
-    for (let i=0; i<faceValue; i++) {
-      dots += '• ';
-    }
-    dots = dots.trim();
-    ball.innerHTML = `<div class="inner-text">${dots}</div>`;
+    ball.innerHTML = `<div class="inner-text">${faceValue}</div>`;
   }
 
   /**
@@ -558,15 +557,15 @@
    */
   function launchConfettiBurst(intensityLevel) {
     const container = document.getElementById('confettiContainer');
-    const count = 30 + (intensityLevel * 30); // more particles for higher place
+    const count = 30 + (intensityLevel * 30);
     for (let i=0; i<count; i++) {
       createFlowingConfettiParticle(container, window.innerWidth/2, window.innerHeight/2, intensityLevel===3);
     }
   }
 
   /**
-   * Creates a flowing confetti particle emanating from the center.
-   * @param {HTMLElement} container - the container for particles.
+   * Creates a confetti particle flowing outward.
+   * @param {HTMLElement} container - container element.
    * @param {number} startX - center X.
    * @param {number} startY - center Y.
    * @param {boolean} big - size/animation flag.
@@ -593,7 +592,6 @@
     let currentY = startY;
     const maxFrames = 80;
 
-    // Animate outward
     function animate() {
       let frameCount = 0;
       const step = () => {
@@ -623,7 +621,7 @@
   }
 
   /**
-   * Launches a big confetti burst for the first place celebration.
+   * Launches a large confetti burst for the first place celebration.
    */
   function launchBigCelebration() {
     for (let i=0; i<100; i++) {
@@ -631,7 +629,7 @@
     }
   }
 
-  // Event listener for draw button
+  // Button click handler
   document.getElementById('drawBtn').addEventListener('click', () => {
     if (currentStep <= 2) {
       drawNext();
@@ -640,7 +638,7 @@
     }
   });
 
-  // Initialize on load
+  // Load winners and setup
   loadWinners();
   updateButtonLabel();
 </script>
