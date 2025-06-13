@@ -73,9 +73,8 @@
   .raffle-section {
     background: #fff;
     border-radius: 12px;
-    padding: 40px 30px; /* more padding for spaciousness */
+    padding: 50px 30px; /* generous padding for spaciousness */
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    /* Add some margin for breathing room */
     margin-bottom: 20px;
   }
 
@@ -84,7 +83,7 @@
     text-align: center;
     font-family: 'Playfair Display', serif;
     font-size: 2rem;
-    margin-bottom: 30px; /* increased space below title */
+    margin-bottom: 30px; /* space below title */
     position: relative;
   }
   .raffle-header::after {
@@ -97,13 +96,21 @@
     border-radius: 2px;
   }
 
-  /* Spacing between balls */
+  /* Space between the message and balls */
+  #status {
+    margin-top: 20px;
+    margin-bottom: 40px; /* space below message */
+    padding: 15px;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  /* Spacing for the balls container */
   .balls-container {
     display: flex;
     justify-content: center;
     gap: 40px; /* more space between balls */
     flex-wrap: wrap;
-    margin-bottom: 30px; /* space below balls */
   }
 
   /* Style for 3D-looking balls, larger for visibility */
@@ -210,7 +217,7 @@
     margin-bottom: 15px;
     background: #f7fafc;
     border-radius: 10px;
-    border-left: 8px solid transparent; /* color set inline for position */
+    border-left: 8px solid transparent; /* color set inline per position */
     box-shadow: 0 2px 6px rgba(0,0,0,0.05);
   }
   .winner-card:hover {
@@ -233,14 +240,6 @@
     font-weight: bold;
     margin-top:4px;
   }
-  /* Congrats box */
-  #congrats {
-    background:#c8f7c5;
-    border-radius:10px;
-    padding:15px;
-    margin-top:20px;
-    text-align: center;
-  }
 </style>
 </head>
 <body>
@@ -254,12 +253,18 @@
       <div><span class="material-icons" style="font-size:16px;">contact_phone</span> +91 7090424365 | stsebastianssmc@gmail.com</div>
     </div>
   </header>
+
   <!-- Main layout -->
   <main>
     <!-- Raffle draw section -->
     <section class="raffle-section">
       <h2 style="text-align: center; margin-bottom: 20px;">Raffle Draw</h2>
       <div id="status" class="status-card success" style="text-align:center;">Start the Draw</div>
+      
+      <!-- Add space after the message -->
+      <div id="message-spacer" style="margin-top:20px; margin-bottom:20px;"></div>
+      
+      <!-- Balls container -->
       <div class="balls-container">
         <div class="ball" id="ball1" style="background: linear-gradient(135deg, #f7971e, #ffd200);">
           <div class="inner-text">🎲</div>
@@ -271,8 +276,11 @@
           <div class="inner-text">🎲</div>
         </div>
       </div>
-      <button id="drawBtn" class="draw-btn"><span class="material-icons">casino</span> Draw Winners</button>
+      <div style="text-align: center;">
+        <button id="drawBtn" class="draw-btn"><span class="material-icons">casino</span> Draw Winners</button>
+      </div>
     </section>
+
     <!-- Winners sidebar -->
     <aside class="sidebar" id="results">
       <h2>🏆 Winners</h2>
@@ -283,7 +291,7 @@
   </main>
 </div>
 <script>
-  // Define global variables for positions
+  // JavaScript remains same as previous, focusing on spacing
   const positions = {
     'first': { emoji: '🥇', text: '1st Place' },
     'second': { emoji: '🥈', text: '2nd Place' },
