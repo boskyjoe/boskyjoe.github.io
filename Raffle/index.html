@@ -184,7 +184,7 @@
     /* Medal icon on top of each ball */
     .ball .ball-medal {
         position: absolute;
-        top: -45px; /* Adjusted to place it clearly above the ball */
+        top: -55px; /* Adjusted to place it clearly above the ball */
         left: 50%;
         transform: translateX(-50%);
         font-size: 2.5em; /* Size of the medal emoji */
@@ -556,8 +556,11 @@
             winnersList.innerHTML = ''; // Clear previous winners
             congratsMessage.style.display = 'none'; // Hide congrats message
 
-            // Reset winners section visibility
+            // Reset winners section visibility by removing the 'show' class
             winnersSection.classList.remove('show');
+            // Ensure initial state is applied by re-setting its default CSS properties.
+            // This is crucial because class removal might not immediately revert direct style overrides
+            // if they were set by JS previously. Relying purely on CSS for show/hide is better.
             winnersSection.style.opacity = '0';
             winnersSection.style.transform = 'translateY(20px)';
             initialWinnersMessage.style.display = 'block'; // Show initial message
@@ -572,10 +575,8 @@
          */
         function showWinnersSection() {
             initialWinnersMessage.style.display = 'none'; // Hide initial message immediately
-            // Add a small timeout to ensure the browser registers the initial state before adding 'show' class
-            setTimeout(() => {
-                winnersSection.classList.add('show');
-            }, 100); // Increased delay to ensure CSS transition triggers
+            // Add the 'show' class which triggers the CSS transition
+            winnersSection.classList.add('show');
         }
 
         /**
