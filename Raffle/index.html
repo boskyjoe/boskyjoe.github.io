@@ -9,10 +9,6 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
 <style>
   /* Your existing CSS styles here (unchanged) */
-  /* For brevity, I will include only your CSS from the original code. */
-  /* Make sure to keep your original CSS or update as needed. */
-
-  /* ... (CSS from your initial code) ... */
   * {
     margin: 0;
     padding: 0;
@@ -327,7 +323,7 @@
     transform: translateX(8px);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
   }
-  /* Colors for winner positions */
+  /* Color for each position */
   .winner-card.first { border-left-color: #f6ad55; }
   .winner-card.second { border-left-color: #9ca3af; }
   .winner-card.third { border-left-color: #cd7c2f; }
@@ -430,9 +426,6 @@
       
       <button class="draw-button" id="drawBtn">
         <span class="material-icons">casino</span> Draw Winners
-      </button>
-      <button class="draw-button" id="resetBtn" style="margin-top:10px; background-color:#f56565;">
-        <span class="material-icons">refresh</span> Reset Draw
       </button>
     </section>
     <!-- Winners Sidebar -->
@@ -635,28 +628,30 @@
       statusEl.textContent=`${positions[place].text} drawn! Ready to draw ${nextPlaceStr} place.`;
     } else {
       statusEl.textContent='All winners have been drawn! 🎉';
+      // After all winners are drawn, auto reset after a short delay
+      setTimeout(() => {
+        resetDraw();
+        updateButtonText();
+      }, 3000);
     }
     document.getElementById('drawBtn').disabled=false;
     isDrawing=false;
   }
 
-  // Event listeners
+  // Event listener for the draw button
 document.getElementById('drawBtn').addEventListener('click', () => {
-  if (currentStep===STEP_RESET) {
+  if (currentStep===STEP_3RD) {
+    drawSingleWinner();
+  } else if (currentStep > STEP_3RD && currentStep <= STEP_1ST) {
+    drawSingleWinner();
+  } else {
+    // If all winners drawn, reset automatically
     resetDraw();
     updateButtonText();
-    document.getElementById('drawBtn').disabled=false;
-  } else {
-    drawSingleWinner();
   }
 });
-document.getElementById('resetBtn').addEventListener('click', () => {
-  resetDraw();
-  updateButtonText();
-  document.getElementById('drawBtn').disabled=false;
-});
 
-// Load winners on page load
+// Initialize on page load
 loadWinnersFile();
 </script>
 </body>
