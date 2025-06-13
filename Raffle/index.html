@@ -544,8 +544,10 @@
          */
         function showWinnersSection() {
             initialWinnersMessage.style.display = 'none'; // Hide initial message immediately
-            winnersSection.classList.add('show');
-            // The actual opacity/transform transition is handled by CSS class 'show'
+            // Add a small timeout to ensure the browser registers the initial state before adding 'show' class
+            setTimeout(() => {
+                winnersSection.classList.add('show');
+            }, 50); // A small delay (e.g., 50ms) to ensure CSS transition triggers
         }
 
         /**
