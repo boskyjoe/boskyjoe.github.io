@@ -80,7 +80,7 @@
     flex: 1;
   }
 
-  /* General style for sections with depth and shadows */
+  /* Style for sections with depth/shadow */
   .section-box {
     background-color: #fff;
     border-radius: 12px;
@@ -100,15 +100,13 @@
       0 12px 24px rgba(0, 0, 0, 0.15);
   }
 
-  /* Styles for "Raffle Draw" section header */
+  /* Header styles */
   .raffle-box h2 {
     text-align: center;
     font-family: 'Playfair Display', serif;
     font-size: 2rem;
     margin-bottom: 30px;
   }
-
-  /* Decorative underline for header */
   .raffle-box h2::after {
     content: "";
     display: block;
@@ -119,7 +117,7 @@
     border-radius: 2px;
   }
 
-  /* Container for the raffle balls */
+  /* Container for the balls */
   .balls-container {
     display: flex;
     justify-content: center;
@@ -127,7 +125,7 @@
     flex-wrap: wrap;
   }
 
-  /* Style for individual balls with 3D and glow effects */
+  /* Individual ball style */
   .ball {
     width: 180px;
     height: 180px;
@@ -148,7 +146,7 @@
     transition: all 0.3s ease;
   }
 
-  /* Inner text overlay for balls */
+  /* Inner text for dice face dots */
   .ball .inner-text {
     position: absolute;
     width: 100%;
@@ -163,17 +161,16 @@
     text-align: center;
   }
 
-  /* Animation for spinning balls */
+  /* Spinning animation for balls */
   .ball.spinning {
     animation: spin 0.8s linear infinite;
   }
-
   @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
   }
 
-  /* Style for the action button with dynamic text */
+  /* Style for the action button */
   #drawBtn {
     margin-top: 30px;
     margin-bottom: 30px;
@@ -193,13 +190,12 @@
     margin-right: auto;
     display: block;
   }
-
   #drawBtn:hover {
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
     transform: translateY(-2px);
   }
 
-  /* Winners section with depth/shadow and hidden by default */
+  /* Winners section styles */
   .winners-box {
     background: #fff;
     border-radius: 12px;
@@ -212,21 +208,18 @@
     transform: translateY(20px);
     transition: all 0.5s ease;
   }
-  /* Show the winners section when active */
   .winners-box.show {
     opacity: 1;
     transform: translateY(0);
   }
 
-  /* Style for winners header */
+  /* Winners header style */
   .winners-box h2 {
     text-align: center;
     margin-bottom: 15px;
     font-family: 'Playfair Display', serif;
     font-size: 1.8rem;
   }
-
-  /* Decorative underline for winners header */
   .winners-box h2::after {
     content: "";
     display: block;
@@ -237,7 +230,7 @@
     border-radius: 2px;
   }
 
-  /* Individual winner card with shadows and depth */
+  /* Winner card styles with shadows */
   .winner-card {
     display: flex;
     align-items: center;
@@ -251,19 +244,18 @@
       inset -2px -2px 6px rgba(255, 255, 255, 0.8),
       inset 2px 2px 6px rgba(0, 0, 0, 0.15);
   }
-  /* Hover effect for winner card */
   .winner-card:hover {
     background: #eef2f6;
     transform: translateX(2px);
   }
 
-  /* Winner position icon style */
+  /* Icon for winner position */
   .winner-position {
     font-size: 2.4rem;
     margin-right: 15px;
   }
 
-  /* Winner details container */
+  /* Winner info container */
   .winner-details {
     flex: 1;
   }
@@ -281,7 +273,7 @@
     margin-top: 4px;
   }
 
-  /* Confetti overlay container styles */
+  /* Confetti overlay container style */
   #confettiContainer {
     position: fixed;
     top: 0;
@@ -293,7 +285,7 @@
     z-index: 1000;
   }
 
-  /* Footer styles */
+  /* Footer style */
   footer {
     background: #fff;
     padding: 15px 20px;
@@ -317,9 +309,9 @@
     </div>
   </header>
 
-  <!-- Main content grid -->
+  <!-- Main Content -->
   <main>
-    <!-- Raffle draw section -->
+    <!-- Raffle draw area -->
     <section class="section-box raffle-box">
       <h2 style="text-align: center;">Raffle Draw</h2>
       <div class="balls-container">
@@ -332,7 +324,7 @@
       </div>
     </section>
 
-    <!-- Winners display section -->
+    <!-- Winners display -->
     <section class="section-box winners-box" id="winnersSection">
       <h2 style="text-align: center;">🏆 Winners</h2>
       <div style="text-align:center; font-style:italic; color:#999; padding:20px;">Winners will appear here after the first number is drawn</div>
@@ -341,7 +333,7 @@
     </section>
   </main>
 </div>
-<!-- Confetti burst container -->
+<!-- Confetti container for flow outward -->
 <div id="confettiContainer"></div>
 <!-- Footer -->
 <footer>
@@ -351,7 +343,7 @@
 <script>
   /**
    * JavaScript code implementing the raffle drawing, confetti celebration,
-   * and UI management following best practices and standards.
+   * dice face updates, and UI management following best practices and standards.
    */
 
   // Define positions with emojis and descriptive text
@@ -360,9 +352,8 @@
     'second': { emoji: '🥈', text: '2nd Place' },
     'third': { emoji: '🥉', text: '3rd Place' }
   };
-  const positionsOrder = {0:'3rd',1:'2nd',2:'1st'};
 
-  // Drawing steps constants
+  // Step constants
   const STEP_3RD = 0;
   const STEP_2ND = 1;
   const STEP_1ST = 2;
@@ -375,10 +366,10 @@
     "021","022","023","024","025"
   ];
 
-  let isDrawing = false; // Prevent multiple simultaneous draws
+  let isDrawing = false; // prevent multiple runs
 
   /**
-   * Map for updating the button label dynamically based on current step.
+   * Map for button labels and descriptive texts.
    */
   const stepMessages = {
     0: { label: 'Generate 3rd Place Winner', text: '3rd Place' },
@@ -387,7 +378,7 @@
   };
 
   /**
-   * Updates the action button label according to the current step.
+   * Updates the button text based on current step.
    */
   function updateButtonLabel() {
     const btn = document.getElementById('drawBtn');
@@ -399,24 +390,32 @@
   }
 
   /**
-   * Loads winners from external file (if available) and initializes the draw.
+   * Loads winners list from the external file.
    */
   async function loadWinners() {
+    console.log('Attempting to load Winners.txt...');
     try {
       const res = await fetch('Winners.txt');
-      if (!res.ok) throw new Error('Failed to load Winners.txt');
+      console.log('Fetch response status:', res.status);
+      if (!res.ok) throw new Error('Network response was not ok');
       const txt = await res.text();
+      console.log('Winners.txt content loaded:', txt);
       const lines = txt.split('\n').map(l => l.trim()).filter(l => l);
-      if (lines.length >= 3) winnersData = lines;
+      if (lines.length >= 3) {
+        winnersData.length = 0; // clear previous data
+        Array.prototype.push.apply(winnersData, lines);
+        console.log('Winners data loaded:', winnersData);
+      } else {
+        console.warn('Winners.txt has fewer than 3 lines.');
+      }
     } catch (e) {
-      // Fallback to default data if fetch fails
-      console.warn(e);
+      console.error('Error loading Winners.txt:', e);
     }
     initDraw();
   }
 
   /**
-   * Initializes a new draw session, resetting UI and data.
+   * Initializes or resets the game state.
    */
   function initDraw() {
     currentStep = STEP_3RD;
@@ -427,6 +426,7 @@
     });
     document.getElementById('winnersList').innerHTML = '';
     document.getElementById('congrats').style.display = 'none';
+
     // Animate winners section out
     const winnersSection = document.getElementById('winnersSection');
     winnersSection.style.opacity = 0;
@@ -447,10 +447,10 @@
   }
 
   /**
-   * Spins a ball to randomly show numbers before stopping on the winner.
-   * @param {HTMLElement} ball - The ball element to animate.
-   * @param {string} winnerNumber - The winner's number to display at the end.
-   * @returns {Promise} - Resolves when spinning completes.
+   * Spins a ball to show random numbers before stopping on the winner.
+   * @param {HTMLElement} ball - The DOM element for the ball.
+   * @param {string} winnerNumber - The final winner number.
+   * @returns {Promise} - Resolves when spin finishes.
    */
   async function spinBall(ball, winnerNumber) {
     return new Promise((resolve) => {
@@ -472,14 +472,14 @@
   }
 
   /**
-   * Draws the next winner, updates UI, and triggers celebration effects.
+   * Main function to draw next winner, update UI, and trigger celebration
    */
   async function drawNext() {
     if (isDrawing || availableNumbers.length === 0) return;
     isDrawing = true;
     document.getElementById('drawBtn').disabled = true;
 
-    // Determine which ball to animate based on current step
+    // Determine which ball to animate
     let ballId = '', place = '';
     switch (currentStep) {
       case STEP_3RD: ballId = 'ball3'; place = 'third'; break;
@@ -487,7 +487,7 @@
       case STEP_1ST: ballId = 'ball1'; place = 'first'; break;
     }
 
-    // Select a random winner
+    // Pick a random winner
     const randIdx = Math.floor(Math.random() * availableNumbers.length);
     const winnerNumber = availableNumbers[randIdx];
     availableNumbers.splice(randIdx, 1);
@@ -496,7 +496,10 @@
     const ball = document.getElementById(ballId);
     await spinBall(ball, winnerNumber);
 
-    // Add winner to the list
+    // Reset dice face to dots based on place
+    updateDiceFace(ball, currentStep + 1); // 3, 2, 1
+
+    // Add winner to list
     const listDiv = document.getElementById('winnersList');
     const div = document.createElement('div');
     div.className = 'winner-card ' + place;
@@ -508,7 +511,7 @@
       </div>`;
     listDiv.prepend(div);
 
-    // Show winners section after first winner
+    // Show winners section
     if (currentStep === STEP_3RD) {
       showWinnersSection();
     }
@@ -516,19 +519,19 @@
       document.getElementById('congrats').style.display = 'block';
     }
 
-    // Launch confetti burst from center outward
-    launchConfettiBurst();
+    // Fire confetti with intensity based on place
+    launchConfettiBurst(currentStep + 1);
 
-    // Launch additional celebration for the first winner
+    // Extra celebration for 1st place
     if (currentStep === STEP_3RD) {
       launchBigCelebration();
     }
 
-    // Move to next step and update button
+    // Prepare for next
     currentStep++;
     updateButtonLabel();
 
-    // Clear confetti after a delay
+    // Clear confetti after delay
     setTimeout(() => clearConfetti(), 3000);
 
     document.getElementById('drawBtn').disabled = false;
@@ -536,66 +539,75 @@
   }
 
   /**
-   * Launches a confetti burst that flows outward from the center of the viewport.
+   * Updates dice face with dots based on place (1, 2, 3)
+   * @param {HTMLElement} ball - The DOM element for the ball.
+   * @param {number} faceValue - Number of dots (1, 2, or 3).
    */
-  function launchConfettiBurst() {
+  function updateDiceFace(ball, faceValue) {
+    let dots = '';
+    for (let i=0; i<faceValue; i++) {
+      dots += '• ';
+    }
+    dots = dots.trim();
+    ball.innerHTML = `<div class="inner-text">${dots}</div>`;
+  }
+
+  /**
+   * Launches confetti outward with size and intensity based on place.
+   * @param {number} intensityLevel - 1, 2, or 3.
+   */
+  function launchConfettiBurst(intensityLevel) {
     const container = document.getElementById('confettiContainer');
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
-    for (let i = 0; i < 80; i++) {
-      createFlowingConfettiParticle(container, centerX, centerY);
+    const count = 30 + (intensityLevel * 30); // more particles for higher place
+    for (let i=0; i<count; i++) {
+      createFlowingConfettiParticle(container, window.innerWidth/2, window.innerHeight/2, intensityLevel===3);
     }
   }
 
   /**
-   * Creates a single confetti particle that flows outward in a random direction.
-   * @param {HTMLElement} container - The container element to append the particle.
-   * @param {number} startX - Starting X coordinate.
-   * @param {number} startY - Starting Y coordinate.
-   * @param {boolean} big - If true, creates a larger particle with more dramatic flow.
+   * Creates a flowing confetti particle emanating from the center.
+   * @param {HTMLElement} container - the container for particles.
+   * @param {number} startX - center X.
+   * @param {number} startY - center Y.
+   * @param {boolean} big - size/animation flag.
    */
-  function createFlowingConfettiParticle(container, startX, startY, big = false) {
+  function createFlowingConfettiParticle(container, startX, startY, big=false) {
     const el = document.createElement('div');
-    el.style.position = 'absolute';
+    el.style.position='absolute';
 
-    // Random size
-    const size = big ? Math.random() * 12 + 8 : Math.random() * 4 + 2;
-    el.style.width = `${size}px`;
-    el.style.height = `${size}px`;
-    el.style.borderRadius = '50%';
-    el.style.backgroundColor = `hsl(${Math.random() * 360}, 70%, 60%)`;
+    const size = big ? Math.random()*12+8 : Math.random()*4+2;
+    el.style.width=`${size}px`;
+    el.style.height=`${size}px`;
+    el.style.borderRadius='50%';
+    el.style.backgroundColor=`hsl(${Math.random()*360}, 70%, 60%)`;
 
-    // Set initial position at the center
-    el.style.left = `${startX}px`;
-    el.style.top = `${startY}px`;
+    el.style.left=`${startX}px`;
+    el.style.top=`${startY}px`;
 
-    // Random direction and velocity
-    const angle = Math.random() * Math.PI * 2; // 0 to 2π radians
-    const speed = Math.random() * 4 + 2; // pixels per frame
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 4 + 2;
     const dx = Math.cos(angle) * speed;
     const dy = Math.sin(angle) * speed;
 
     let currentX = startX;
     let currentY = startY;
-    const maxLifetime = 80; // Number of animation frames
+    const maxFrames = 80;
 
-    /**
-     * Animates the particle outward and fades it out.
-     */
+    // Animate outward
     function animate() {
-      let lifetime = 0;
-      function step() {
-        if (lifetime >= maxLifetime) {
+      let frameCount = 0;
+      const step = () => {
+        if (frameCount >= maxFrames) {
           if (container.contains(el)) container.removeChild(el);
           return;
         }
         currentX += dx;
         currentY += dy;
         el.style.transform = `translate(${currentX - startX}px, ${currentY - startY}px) rotate(${Math.random() * 360}deg)`;
-        el.style.opacity = 1 - (lifetime / maxLifetime);
-        lifetime++;
+        el.style.opacity = 1 - (frameCount / maxFrames);
+        frameCount++;
         requestAnimationFrame(step);
-      }
+      };
       step();
     }
 
@@ -604,22 +616,22 @@
   }
 
   /**
-   * Clears all confetti particles from the container.
+   * Clears all confetti particles.
    */
   function clearConfetti() {
-    document.getElementById('confettiContainer').innerHTML = '';
+    document.getElementById('confettiContainer').innerHTML='';
   }
 
   /**
-   * Launch a big celebration (fireworks-like burst)
+   * Launches a big confetti burst for the first place celebration.
    */
   function launchBigCelebration() {
-    for (let i = 0; i < 100; i++) {
-      createFlowingConfettiParticle(document.getElementById('confettiContainer'), window.innerWidth / 2, window.innerHeight / 2, true);
+    for (let i=0; i<100; i++) {
+      createFlowingConfettiParticle(document.getElementById('confettiContainer'), window.innerWidth/2, window.innerHeight/2, true);
     }
   }
 
-  // Attach event listener for the draw button
+  // Event listener for draw button
   document.getElementById('drawBtn').addEventListener('click', () => {
     if (currentStep <= 2) {
       drawNext();
@@ -628,7 +640,7 @@
     }
   });
 
-  // Initialize the raffle on page load
+  // Initialize on load
   loadWinners();
   updateButtonLabel();
 </script>
