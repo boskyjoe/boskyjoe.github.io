@@ -22,14 +22,14 @@
     line-height: 1.6;
   }
 
-  /* Container for page content */
+  /* Container for overall layout */
   .container {
     max-width: 1400px;
     margin: auto;
     padding: 20px;
   }
 
-  /* Header styles (unchanged) */
+  /* Header styling */
   header {
     display: flex;
     align-items: center;
@@ -62,32 +62,34 @@
     gap: 4px;
   }
 
-  /* Main grid layout for sections */
+  /* Main grid for sections */
   main {
     display: grid;
     grid-template-columns: 1fr 350px;
     gap: 20px;
   }
 
-  /* Style for boxes with border and 3D effect to look separated */
+  /* Style for boxes with border and depth */
   .section-box {
     background: #fff;
     border-radius: 12px;
     padding: 30px;
-    box-shadow: inset -3px -3px 8px rgba(255,255,255,0.8),
-                inset 3px 3px 8px rgba(0,0,0,0.15),
-                0 4px 12px rgba(0,0,0,0.1);
-    border: 1px solid #ccc;
+    /* Depth and shadow for a more 3D look */
+    box-shadow:
+      inset -4px -4px 12px rgba(255,255,255,0.9),
+      inset 4px 4px 12px rgba(0,0,0,0.15),
+      0 8px 20px rgba(0,0,0,0.10);
     transition: box-shadow 0.3s ease, border-color 0.3s ease;
   }
-  /* Slightly deeper shadow on hover for a "lift" effect */
+  /* Slight hover lift effect for depth */
   .section-box:hover {
-    box-shadow: inset -4px -4px 10px rgba(255,255,255,0.9),
-                inset 4px 4px 10px rgba(0,0,0,0.2),
-                0 8px 20px rgba(0,0,0,0.15);
+    box-shadow:
+      inset -5px -5px 14px rgba(255,255,255,1),
+      inset 5px 5px 14px rgba(0,0,0,0.2),
+      0 12px 24px rgba(0,0,0,0.15);
   }
 
-  /* Specific styles for Raffle Draw section */
+  /* Specific styles for "Raffle Draw" */
   .raffle-box h2 {
     text-align: center;
     font-family: 'Playfair Display', serif;
@@ -113,19 +115,22 @@
     font-weight: 600;
     text-align: center;
   }
-  /* Spacer for clean separation */
+
+  /* Spacer for layout */
   #message-spacer {
     margin-top: 20px;
     margin-bottom: 20px;
   }
-  /* Balls container */
+
+  /* Balls container styling */
   .balls-container {
     display: flex;
     justify-content: center;
     gap: 50px;
     flex-wrap: wrap;
   }
-  /* Style for the 3D look balls with glow */
+
+  /* Style for balls with enhanced 3D and glow effects */
   .ball {
     width: 180px;
     height: 180px;
@@ -145,7 +150,7 @@
     position: relative;
     transition: all 0.3s ease;
   }
-  /* Inner text for wrapped numbers during spin */
+  /* Inner text for spin animation wraps */
   .ball .inner-text {
     position: absolute;
     width: 100%;
@@ -160,7 +165,8 @@
     padding: 10px;
     text-align: center;
   }
-  /* Spin animation */
+
+  /* Spin animation for balls */
   .ball.spinning {
     animation: spin 0.8s linear infinite;
   }
@@ -169,7 +175,7 @@
     100% { transform: rotate(360deg); }
   }
 
-  /* Draw button style, no icon, dynamic text */
+  /* Dynamic draw button styling */
   #drawBtn {
     margin-top: 30px;
     margin-bottom: 30px;
@@ -192,14 +198,15 @@
     transform: translateY(-2px);
   }
 
-  /* Winners section with border & 3D effect for separation */
+  /* Winners card with enhanced depth/shadow for separation */
   .winners-box {
     background: #fff;
     border-radius: 12px;
     padding: 20px;
-    box-shadow: inset -3px -3px 8px rgba(255,255,255,0.8),
-                inset 3px 3px 8px rgba(0,0,0,0.15),
-                0 4px 12px rgba(0,0,0,0.1);
+    box-shadow:
+      inset -4px -4px 12px rgba(255,255,255,0.9),
+      inset 4px 4px 12px rgba(0,0,0,0.2),
+      0 8px 20px rgba(0,0,0,0.1);
     opacity: 0;
     transform: translateY(20px);
     transition: all 0.5s ease;
@@ -225,7 +232,7 @@
     border-radius: 2px;
   }
 
-  /* Winner cards inside the winners box */
+  /* Winner cards styling with depth/shadow */
   .winner-card {
     display: flex;
     align-items: center;
@@ -234,7 +241,10 @@
     background: #f7fafc;
     border-radius: 10px;
     border-left: 8px solid transparent;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    box-shadow:
+      0 2px 6px rgba(0,0,0,0.05),
+      inset -2px -2px 6px rgba(255,255,255,0.8),
+      inset 2px 2px 6px rgba(0,0,0,0.15);
   }
   .winner-card:hover {
     background:#eef2f6;
@@ -278,34 +288,23 @@
     </div>
   </header>
 
-  <!-- Main grid layout for sections -->
+  <!-- Main layout -->
   <main>
     <!-- Raffle Draw Box -->
     <section class="section-box raffle-box">
       <h2 style="text-align: center;">Raffle Draw</h2>
-      
       <!-- Status message -->
       <div id="status" class="status-card success">Start the Draw</div>
-      
-      <!-- Extra space for visual separation -->
       <div id="message-spacer"></div>
-      
       <!-- Balls -->
       <div class="balls-container">
-        <div class="ball" id="ball1" style="background: linear-gradient(135deg, #f7971e, #ffd200);">
-          <div class="inner-text">🎲</div>
-        </div>
-        <div class="ball" id="ball2" style="background: linear-gradient(135deg, #6a11cb, #2575fc);">
-          <div class="inner-text">🎲</div>
-        </div>
-        <div class="ball" id="ball3" style="background: linear-gradient(135deg, #43cea2, #185a9d);">
-          <div class="inner-text">🎲</div>
-        </div>
+        <div class="ball" id="ball1" style="background: linear-gradient(135deg, #f7971e, #ffd200);"><div class="inner-text">🎲</div></div>
+        <div class="ball" id="ball2" style="background: linear-gradient(135deg, #6a11cb, #2575fc);"><div class="inner-text">🎲</div></div>
+        <div class="ball" id="ball3" style="background: linear-gradient(135deg, #43cea2, #185a9d);"><div class="inner-text">🎲</div></div>
       </div>
-      
-      <!-- Draw Button -->
+      <!-- Generate button -->
       <div style="text-align:center;">
-        <button id="drawBtn" class="draw-btn">Draw Winners</button>
+        <button id="drawBtn" class="draw-btn">Generate 3rd Place Winner</button>
       </div>
     </section>
 
@@ -319,7 +318,7 @@
   </main>
 </div>
 <script>
-  // JavaScript code
+  // JavaScript logic
   const positions = {
     'first': { emoji: '🥇', text: '1st Place' },
     'second': { emoji: '🥈', text: '2nd Place' },
@@ -333,6 +332,19 @@
   let winnersData=["001","002","003","004","005","006","007","008","009","010","011","012","013","014","015","016","017","018","019","020","021","022","023","024","025"];
 
   let isDrawing=false;
+
+  function updateButtonLabel() {
+    const btn = document.getElementById('drawBtn');
+    if (currentStep === STEP_3RD) {
+      btn.textContent = 'Generate 3rd Place Winner';
+    } else if (currentStep === STEP_2ND) {
+      btn.textContent = 'Generate 2nd Place Winner';
+    } else if (currentStep === STEP_1ST) {
+      btn.textContent = 'Generate 1st Place Winner';
+    } else {
+      btn.textContent = 'Start New Draw';
+    }
+  }
 
   async function loadWinners() {
     try {
@@ -355,7 +367,7 @@
     document.getElementById('winnersSection').style.opacity=0;
     document.getElementById('winnersSection').style.transform='translateY(20px)';
     document.getElementById('winnersSection').classList.remove('show');
-    updateButton();
+    updateButtonLabel();
   }
 
   function showWinnersSection() {
@@ -363,15 +375,6 @@
     section.style.opacity=1;
     section.style.transform='translateY(0)';
     section.classList.add('show');
-  }
-
-  function updateButton() {
-    const btn=document.getElementById('drawBtn');
-    if (currentStep===STEP_3RD || currentStep===STEP_2ND || currentStep===STEP_1ST) {
-      btn.textContent='Draw Winners';
-    } else {
-      btn.textContent='Start New Draw';
-    }
   }
 
   async function spinBall(ball,winnerNumber) {
@@ -433,17 +436,18 @@
       document.getElementById('congrats').style.display='block';
     }
 
-    // Advance step
+    // Prepare next label
     currentStep++;
-    updateButton();
+    updateButtonLabel();
 
-    // Update status
+    // Update status message
     const statusEl=document.getElementById('status');
     if (currentStep<=STEP_1ST) {
-      statusEl.textContent=`${positions[place].text} drawn! Click again to draw ${positionsOrder[currentStep] || ''}.`;
+      statusEl.textContent=`${positions[{'first':'1st Place','second':'2nd Place','third':'3rd Place'}[Object.keys(positions)[currentStep-1]]]} drawn! Click again to generate ${['3rd','2nd','1st'][currentStep-1]} place.`;
     } else {
       statusEl.textContent='All winners drawn. Click "Start New Draw" to restart.';
     }
+
     document.getElementById('drawBtn').disabled=false;
     isDrawing=false;
   }
@@ -456,7 +460,9 @@
     }
   });
 
+  // Initialize
   loadWinners();
+  updateButtonLabel();
 </script>
 </body>
 </html>
