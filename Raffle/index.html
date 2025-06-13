@@ -533,10 +533,14 @@
       2: '<span class="material-icons">casino</span> Draw 1st Place Winner',
       3: '<span class="material-icons">refresh</span> Start New Draw'
     };
-    if (currentStep === STEP_RESET) {
-      btn.innerHTML = texts[3];
+    if (currentStep === STEP_3RD) {
+      btn.innerHTML = texts[0];
+    } else if (currentStep === STEP_2ND) {
+      btn.innerHTML = texts[1];
+    } else if (currentStep === STEP_1ST) {
+      btn.innerHTML = texts[2];
     } else {
-      btn.innerHTML = texts[currentStep];
+      btn.innerHTML = texts[3];
     }
   }
 
@@ -628,30 +632,24 @@
       statusEl.textContent=`${positions[place].text} drawn! Ready to draw ${nextPlaceStr} place.`;
     } else {
       statusEl.textContent='All winners have been drawn! 🎉';
-      // After all winners are drawn, auto reset after a short delay
-      setTimeout(() => {
-        resetDraw();
-        updateButtonText();
-      }, 3000);
+      // Do NOT auto-reset; wait for user to click again
     }
     document.getElementById('drawBtn').disabled=false;
     isDrawing=false;
   }
 
-  // Event listener for the draw button
+  // Event listener for draw button
 document.getElementById('drawBtn').addEventListener('click', () => {
-  if (currentStep===STEP_3RD) {
-    drawSingleWinner();
-  } else if (currentStep > STEP_3RD && currentStep <= STEP_1ST) {
+  if (currentStep===STEP_3RD || (currentStep > STEP_3RD && currentStep <= STEP_1ST)) {
     drawSingleWinner();
   } else {
-    // If all winners drawn, reset automatically
+    // If all winners are drawn, restart the draw
     resetDraw();
     updateButtonText();
   }
 });
 
-// Initialize on page load
+// Load winners on page load
 loadWinnersFile();
 </script>
 </body>
