@@ -69,7 +69,7 @@
     gap: 20px;
   }
 
-  /* Style for boxes with border and depth */
+  /* Style for boxes with border and depth for separation */
   .section-box {
     background: #fff;
     border-radius: 12px;
@@ -175,12 +175,13 @@
     100% { transform: rotate(360deg); }
   }
 
-  /* Dynamic draw button styling */
+  /* Dynamic draw button styling with no icon, label updates */
   #drawBtn {
     margin-top: 30px;
     margin-bottom: 30px;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 10px;
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: #fff;
@@ -198,7 +199,7 @@
     transform: translateY(-2px);
   }
 
-  /* Winners card with enhanced depth/shadow for separation */
+  /* Winners section with depth and shadow for separation */
   .winners-box {
     background: #fff;
     border-radius: 12px;
@@ -288,27 +289,24 @@
     </div>
   </header>
 
-  <!-- Main layout -->
+  <!-- Main grid -->
   <main>
-    <!-- Raffle Draw Box -->
+    <!-- Raffle Draw Section -->
     <section class="section-box raffle-box">
       <h2 style="text-align: center;">Raffle Draw</h2>
-      <!-- Status message -->
       <div id="status" class="status-card success">Start the Draw</div>
       <div id="message-spacer"></div>
-      <!-- Balls -->
       <div class="balls-container">
         <div class="ball" id="ball1" style="background: linear-gradient(135deg, #f7971e, #ffd200);"><div class="inner-text">🎲</div></div>
         <div class="ball" id="ball2" style="background: linear-gradient(135deg, #6a11cb, #2575fc);"><div class="inner-text">🎲</div></div>
         <div class="ball" id="ball3" style="background: linear-gradient(135deg, #43cea2, #185a9d);"><div class="inner-text">🎲</div></div>
       </div>
-      <!-- Generate button -->
       <div style="text-align:center;">
         <button id="drawBtn" class="draw-btn">Generate 3rd Place Winner</button>
       </div>
     </section>
 
-    <!-- Winners Box -->
+    <!-- Winners Section -->
     <section class="section-box winners-box" id="winnersSection">
       <h2 style="text-align: center;">🏆 Winners</h2>
       <div style="text-align:center; font-style:italic; color:#999; padding:20px;">Winners will appear here after the first number is drawn</div>
@@ -318,7 +316,7 @@
   </main>
 </div>
 <script>
-  // JavaScript logic
+  // JavaScript code
   const positions = {
     'first': { emoji: '🥇', text: '1st Place' },
     'second': { emoji: '🥈', text: '2nd Place' },
@@ -333,14 +331,17 @@
 
   let isDrawing=false;
 
+  // Map for dynamic button label and message
+  const stepMessages = {
+    0: { text: '3rd Place', label: 'Generate 3rd Place Winner' },
+    1: { text: '2nd Place', label: 'Generate 2nd Place Winner' },
+    2: { text: '1st Place', label: 'Generate 1st Place Winner' }
+  };
+
   function updateButtonLabel() {
     const btn = document.getElementById('drawBtn');
-    if (currentStep === STEP_3RD) {
-      btn.textContent = 'Generate 3rd Place Winner';
-    } else if (currentStep === STEP_2ND) {
-      btn.textContent = 'Generate 2nd Place Winner';
-    } else if (currentStep === STEP_1ST) {
-      btn.textContent = 'Generate 1st Place Winner';
+    if (currentStep <= 2) {
+      btn.textContent = stepMessages[currentStep].label;
     } else {
       btn.textContent = 'Start New Draw';
     }
@@ -353,7 +354,7 @@
       const txt=await res.text();
       const lines=txt.split('\n').map(l=>l.trim()).filter(l=>l);
       if (lines.length>=3) winnersData=lines;
-    } catch(e){/* fallback to default */ }
+    } catch(e){/* fallback */ }
     initDraw();
   }
 
@@ -363,7 +364,7 @@
     document.querySelectorAll('.ball').forEach(b=>{b.innerHTML='<div class="inner-text">🎲</div>'; b.className='ball';});
     document.getElementById('winnersList').innerHTML='';
     document.getElementById('congrats').style.display='none';
-    // Animate winners section out initially
+    // Animate winners section out
     document.getElementById('winnersSection').style.opacity=0;
     document.getElementById('winnersSection').style.transform='translateY(20px)';
     document.getElementById('winnersSection').classList.remove('show');
@@ -401,34 +402,33 @@
     isDrawing=true;
     document.getElementById('drawBtn').disabled=true;
 
-    let ballId='',place='',statusText='';
-    switch(currentStep){
-      case STEP_3RD: ballId='ball3'; place='third'; statusText='Drawing 3rd place...'; break;
-      case STEP_2ND: ballId='ball2'; place='second'; statusText='Drawing 2nd place...'; break;
-      case STEP_1ST: ballId='ball1'; place='first'; statusText='Drawing 1st place...'; break;
+    let ballId='',place='';
+    switch (currentStep) {
+      case STEP_3RD: ballId='ball3'; place='third'; break;
+      case STEP_2ND: ballId='ball2'; place='second'; break;
+      case STEP_1ST: ballId='ball1'; place='first'; break;
     }
 
-    const randIdx=Math.floor(Math.random()*availableNumbers.length);
-    const winnerNumber=availableNumbers[randIdx];
-    availableNumbers.splice(randIdx,1);
-    // Animate spin
-    const ball=document.getElementById(ballId);
-    await spinBall(ball,winnerNumber);
+    const randIdx = Math.floor(Math.random() * availableNumbers.length);
+    const winnerNumber = availableNumbers[randIdx];
+    availableNumbers.splice(randIdx, 1);
 
-    // Show in winners list
-    const listDiv=document.getElementById('winnersList');
-    const div=document.createElement('div');
+    const ball = document.getElementById(ballId);
+    await spinBall(ball, winnerNumber);
+
+    // Add winner to list
+    const listDiv = document.getElementById('winnersList');
+    const div = document.createElement('div');
     div.className='winner-card '+place;
-    div.innerHTML=`
+    div.innerHTML= `
       <div class="winner-position">${positions[place].emoji}</div>
       <div class="winner-details">
         <div class="winner-place">${positions[place].text}</div>
         <div class="winner-number">${winnerNumber}</div>
-      </div>
-    `;
+      </div>`;
     listDiv.prepend(div);
 
-    // Show winners section only after first winner
+    // Show winners section after first winner
     if (currentStep===STEP_3RD) {
       showWinnersSection();
     }
@@ -436,16 +436,15 @@
       document.getElementById('congrats').style.display='block';
     }
 
-    // Prepare next label
+    // Update step and button label
     currentStep++;
     updateButtonLabel();
 
-    // Update status message
-    const statusEl=document.getElementById('status');
-    if (currentStep<=STEP_1ST) {
-      statusEl.textContent=`${positions[{'first':'1st Place','second':'2nd Place','third':'3rd Place'}[Object.keys(positions)[currentStep-1]]]} drawn! Click again to generate ${['3rd','2nd','1st'][currentStep-1]} place.`;
+    // Update status
+    if (currentStep <=2) {
+      document.getElementById('status').textContent=`${positions[place].text} drawn! Click again to generate ${stepMessages[currentStep].text}.`;
     } else {
-      statusEl.textContent='All winners drawn. Click "Start New Draw" to restart.';
+      document.getElementById('status').textContent='All winners drawn. Click "Start New Draw" to restart.';
     }
 
     document.getElementById('drawBtn').disabled=false;
@@ -453,14 +452,14 @@
   }
 
   document.getElementById('drawBtn').addEventListener('click', ()=> {
-    if (currentStep<=STEP_1ST) {
+    if (currentStep<=2) {
       drawNext();
     } else {
       initDraw();
     }
   });
 
-  // Initialize
+  // Initialize on load
   loadWinners();
   updateButtonLabel();
 </script>
