@@ -256,17 +256,17 @@
     margin-top:4px;
   }
 
-  /* Celebration confetti overlay */
+  /* Celebrations confetti overlay */
   #confettiContainer {
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    pointer-events: none; /* allow clicks through */
+    pointer-events: none;
     overflow: visible;
     z-index: 1000;
   }
 
-  /* Footer styling */
+  /* Footer style */
   footer {
     background: #fff;
     padding: 15px 20px;
@@ -301,14 +301,14 @@
         <div class="ball" id="ball3" style="background: linear-gradient(135deg, #43cea2, #185a9d);"><div class="inner-text">🎲</div></div>
       </div>
       <div style="text-align:center;">
-        <button id="drawBtn" class="draw-btn">Generate 3rd Place Winner</button>
+        <button id="drawBtn" class="draw-btn">Generate Next Winner</button>
       </div>
     </section>
 
     <!-- Winners Section -->
     <section class="section-box winners-box" id="winnersSection">
       <h2 style="text-align: center;">🏆 Winners</h2>
-      <div style="text-align:center; font-style:italic; color:#999; padding:20px;">Winners will appear here after the first number is drawn</div>
+      <div style="text-align:center; font-style:italic; color:#999; padding:20px;">Winners will appear here after each draw</div>
       <div id="winnersList"></div>
       <div id="congrats" style="display:none; margin-top:20px;">🎉 Congratulations! Contact the church office.</div>
     </section>
@@ -322,14 +322,12 @@
   Powered by DataWings Solution
 </footer>
 <script>
-  // JavaScript logic
+  // Variables and data
   const positions = {
     'first': { emoji: '🥇', text: '1st Place' },
     'second': { emoji: '🥈', text: '2nd Place' },
     'third': { emoji: '🥉', text: '3rd Place' }
   };
-  const positionsOrder = {0:'3rd',1:'2nd',2:'1st'};
-
   const STEP_3RD=0; const STEP_2ND=1; const STEP_1ST=2; 
   let currentStep=STEP_3RD;
   let availableNumbers=[];
@@ -366,7 +364,7 @@
   function initDraw() {
     currentStep=STEP_3RD;
     availableNumbers=[...winnersData];
-    document.querySelectorAll('.ball').forEach(b=>{b.innerHTML='<div class="inner-text">🎲</div>'; b.className='ball';});
+    document.querySelectorAll('.ball').forEach(b=>{b.innerHTML='<div class="inner-text">🎲</div>'; b.className='ball'; b.dataset.winnerNumber='';});
     document.getElementById('winnersList').innerHTML='';
     document.getElementById('congrats').style.display='none';
     document.getElementById('winnersSection').style.opacity=0;
@@ -393,6 +391,7 @@
         if (count>20) {
           clearInterval(interval);
           ball.innerHTML='<div class="inner-text">'+winnerNumber+'</div>';
+          ball.dataset.winnerNumber=winnerNumber;
           ball.classList.remove('spinning');
           ball.classList.add('active');
           resolve();
@@ -420,7 +419,11 @@
     const ball = document.getElementById(ballId);
     await spinBall(ball, winnerNumber);
 
-    // Add winner to list
+    // Show winner number permanently on the ball
+    ball.innerHTML=`<div class="inner-text">${winnerNumber}</div>`;
+    ball.dataset.winnerNumber=winnerNumber;
+
+    // Add to winners list
     const listDiv = document.getElementById('winnersList');
     const div = document.createElement('div');
     div.className='winner-card '+place;
@@ -433,9 +436,7 @@
     listDiv.prepend(div);
 
     // Show winners section after first winner
-    if (currentStep===STEP_3RD) {
-      showWinnersSection();
-    }
+    if (currentStep===STEP_3RD) showWinnersSection();
     if (currentStep===STEP_1ST) {
       document.getElementById('congrats').style.display='block';
     }
@@ -443,24 +444,31 @@
     // Celebrate with confetti
     launchConfetti();
 
-    // Advance step and update label
+    // Prepare for next
     currentStep++;
-    updateButtonLabel();
+    if (currentStep > STEP_1ST) {
+      // All winners selected, reset for a new round after a short delay
+      setTimeout(() => {
+        initDraw();
+      }, 2000);
+    } else {
+      updateButtonLabel();
+    }
 
-    // Optional: clear confetti after a delay
-    setTimeout(() => clearConfetti(), 2000);
-
-    document.getElementById('drawBtn').disabled=false;
-    isDrawing=false;
+    setTimeout(()=> {
+      clearConfetti();
+      document.getElementById('drawBtn').disabled=false;
+      isDrawing=false;
+    }, 2000);
   }
-  
+
+  // Confetti functions
   function launchConfetti() {
     const container = document.getElementById('confettiContainer');
     for (let i=0; i<30; i++) {
       createConfettiParticle(container);
     }
   }
-
   function createConfettiParticle(container) {
     const el = document.createElement('div');
     el.style.position='absolute';
@@ -474,30 +482,23 @@
     el.style.transform=`translateY(0) rotate(${Math.random()*360}deg)`;
     el.style.transition='transform 2s ease-out, opacity 2s ease-out';
 
-    // Animate falling
     setTimeout(() => {
       el.style.transform=`translateY(100vh) rotate(${Math.random()*360}deg)`;
       el.style.opacity='0';
     }, 50);
-
-    // Remove after falling
     setTimeout(() => {
-      container.removeChild(el);
+      if (container.contains(el)) container.removeChild(el);
     }, 2100);
-
     container.appendChild(el);
   }
-
   function clearConfetti() {
-    const container = document.getElementById('confettiContainer');
-    container.innerHTML=''; // Remove lingering particles
+    document.getElementById('confettiContainer').innerHTML='';
   }
 
   document.getElementById('drawBtn').addEventListener('click', ()=> {
-    if (currentStep<=2) {
+    // Draw only if there are still winners remaining
+    if (availableNumbers.length > 0 && !isDrawing) {
       drawNext();
-    } else {
-      initDraw();
     }
   });
 
