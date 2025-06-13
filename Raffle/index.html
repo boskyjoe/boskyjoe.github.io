@@ -69,19 +69,25 @@
     gap: 20px;
   }
 
-  /* Box style for sections to appear as independent boxes */
+  /* Style for boxes with border and 3D effect to look separated */
   .section-box {
     background: #fff;
     border-radius: 12px;
     padding: 30px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-    transition: box-shadow 0.3s ease;
+    box-shadow: inset -3px -3px 8px rgba(255,255,255,0.8),
+                inset 3px 3px 8px rgba(0,0,0,0.15),
+                0 4px 12px rgba(0,0,0,0.1);
+    border: 1px solid #ccc;
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
   }
+  /* Slightly deeper shadow on hover for a "lift" effect */
   .section-box:hover {
-    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    box-shadow: inset -4px -4px 10px rgba(255,255,255,0.9),
+                inset 4px 4px 10px rgba(0,0,0,0.2),
+                0 8px 20px rgba(0,0,0,0.15);
   }
 
-  /* Specific styles for the Raffle Draw section */
+  /* Specific styles for Raffle Draw section */
   .raffle-box h2 {
     text-align: center;
     font-family: 'Playfair Display', serif;
@@ -107,7 +113,7 @@
     font-weight: 600;
     text-align: center;
   }
-  /* Spacing element between message and balls */
+  /* Spacer for clean separation */
   #message-spacer {
     margin-top: 20px;
     margin-bottom: 20px;
@@ -119,7 +125,7 @@
     gap: 50px;
     flex-wrap: wrap;
   }
-  /* Style for the 3D look */
+  /* Style for the 3D look balls with glow */
   .ball {
     width: 180px;
     height: 180px;
@@ -139,6 +145,7 @@
     position: relative;
     transition: all 0.3s ease;
   }
+  /* Inner text for wrapped numbers during spin */
   .ball .inner-text {
     position: absolute;
     width: 100%;
@@ -153,7 +160,7 @@
     padding: 10px;
     text-align: center;
   }
-  /* Spinning animation */
+  /* Spin animation */
   .ball.spinning {
     animation: spin 0.8s linear infinite;
   }
@@ -162,7 +169,7 @@
     100% { transform: rotate(360deg); }
   }
 
-  /* Draw button styling with spacing */
+  /* Draw button style, no icon, dynamic text */
   #drawBtn {
     margin-top: 30px;
     margin-bottom: 30px;
@@ -185,12 +192,14 @@
     transform: translateY(-2px);
   }
 
-  /* Winners section box styling */
+  /* Winners section with border & 3D effect for separation */
   .winners-box {
     background: #fff;
     border-radius: 12px;
     padding: 20px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    box-shadow: inset -3px -3px 8px rgba(255,255,255,0.8),
+                inset 3px 3px 8px rgba(0,0,0,0.15),
+                0 4px 12px rgba(0,0,0,0.1);
     opacity: 0;
     transform: translateY(20px);
     transition: all 0.5s ease;
@@ -199,7 +208,6 @@
     opacity: 1;
     transform: translateY(0);
   }
-
   /* Winners header styles */
   .winners-box h2 {
     text-align: center;
@@ -297,7 +305,7 @@
       
       <!-- Draw Button -->
       <div style="text-align:center;">
-        <button id="drawBtn" class="draw-btn"><span class="material-icons">casino</span> Draw Winners</button>
+        <button id="drawBtn" class="draw-btn">Draw Winners</button>
       </div>
     </section>
 
@@ -311,7 +319,7 @@
   </main>
 </div>
 <script>
-  // JavaScript logic
+  // JavaScript code
   const positions = {
     'first': { emoji: '🥇', text: '1st Place' },
     'second': { emoji: '🥈', text: '2nd Place' },
@@ -360,9 +368,9 @@
   function updateButton() {
     const btn=document.getElementById('drawBtn');
     if (currentStep===STEP_3RD || currentStep===STEP_2ND || currentStep===STEP_1ST) {
-      btn.innerHTML='<span class="material-icons">casino</span> Draw Winners';
+      btn.textContent='Draw Winners';
     } else {
-      btn.innerHTML='<span class="material-icons">refresh</span> New Draw';
+      btn.textContent='Start New Draw';
     }
   }
 
@@ -434,7 +442,7 @@
     if (currentStep<=STEP_1ST) {
       statusEl.textContent=`${positions[place].text} drawn! Click again to draw ${positionsOrder[currentStep] || ''}.`;
     } else {
-      statusEl.textContent='All winners drawn. Click "New Draw" to restart.';
+      statusEl.textContent='All winners drawn. Click "Start New Draw" to restart.';
     }
     document.getElementById('drawBtn').disabled=false;
     isDrawing=false;
