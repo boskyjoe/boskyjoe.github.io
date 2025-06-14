@@ -117,7 +117,6 @@
         .winner-card {
             @apply flex items-center bg-white border border-gray-200 rounded-md p-4 shadow-sm;
             transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
-            /* FIX: Add gap between emoji and text, and align items for sub-elements */
             gap: 1rem; /* Space between emoji and details */
         }
         .winner-card:hover {
@@ -125,12 +124,12 @@
             @apply shadow-md;
         }
 
-        /* FIX: Corrected target classes for border colors */
+        /* Corrected target classes for border colors */
         .winner-card.third { border-left: 5px solid #cd7f32; /* Bronze */ }
         .winner-card.second { border-left: 5px solid silver; }
         .winner-card.first { border-left: 5px solid gold; }
 
-        /* FIX: Styling for inner elements of winner-card */
+        /* Styling for inner elements of winner-card */
         .winner-card .winner-position {
             font-size: 2.5em; /* Size of the medal emoji */
             line-height: 1; /* Prevents extra space above/below emoji */
@@ -165,10 +164,12 @@
             @apply opacity-100 translate-y-0; /* Final visible state */
         }
 
-        /* Draw button always visible */
+        /* Draw button always visible and centered */
         .raffle-box .draw-btn {
             opacity: 1 !important; /* Ensure visibility */
             display: block !important; /* Ensure it takes up space and is block-level */
+            margin-left: auto !important; /* Center the block element */
+            margin-right: auto !important; /* Center the block element */
             pointer-events: auto;
             transition: opacity 0.3s ease-in-out;
         }
@@ -355,7 +356,7 @@
 
                 // Load winners from file
                 WINNER_POOL_FROM_FROM_FILE = await fetchWinnersFromFile();
-                // FIX: Ensure there are enough unique numbers for all prizes
+                // Ensure there are enough unique numbers for all prizes
                 if (WINNER_POOL_FROM_FROM_FILE.length < STEP_DETAILS.length) {
                     console.error("Not enough unique numbers in Winners.txt for all prize steps.");
                     drawBtn.textContent = "Not Enough Winners";
@@ -483,7 +484,7 @@
 
                 // Add winner to the list
                 const winnerCardDiv = document.createElement('div');
-                // FIX: Use the correct class for border styling (e.g., 'third', 'second', 'first')
+                // Use the correct class for border styling (e.g., 'third', 'second', 'first')
                 winnerCardDiv.className = `winner-card ${stepDetail.ballId.replace('ball', '')}`; 
                 winnerCardDiv.innerHTML = `
                     <div class="winner-position">${stepDetail.emoji}</div>
@@ -507,7 +508,7 @@
 
                 // Launch confetti!
                 launchConfettiBurst(SMALL_CONFETTI_COUNT);
-                // FIX: Moved big confetti to the 1st place draw for a bigger finale
+                // Moved big confetti to the 1st place draw for a bigger finale
                 if(currentStep === 2) { 
                     launchConfettiBurst(BIG_CONFETTI_COUNT, true);
                 }
