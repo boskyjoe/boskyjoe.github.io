@@ -118,7 +118,6 @@
             @apply flex items-center bg-white border border-gray-200 rounded-md p-4 shadow-sm;
             transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
             gap: 1rem; /* Space between emoji and details */
-            position: relative; /* Needed for absolute positioning of copy feedback */
         }
         .winner-card:hover {
             transform: translateY(-2px);
@@ -138,9 +137,6 @@
 
         .winner-card .winner-details {
             flex-grow: 1; /* Allows details to take up remaining space */
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
         }
 
         .winner-card .winner-place {
@@ -149,10 +145,7 @@
 
         .winner-card .winner-number {
             @apply text-xl font-bold text-emerald-700;
-            /* Removed flex properties related to copy icon */
         }
-
-        /* Removed Copy icon and feedback styling */
 
 
         /* Congrats message animation */
@@ -208,13 +201,12 @@
 
         /* Main content layout for side-by-side on large screens */
         .main-content-layout {
-            /* Changed lg:flex-row to md:flex-row to enable side-by-side on medium screens as well */
-            @apply flex flex-col md:flex-row md:justify-center md:items-start md:gap-8 w-full;
+            @apply flex flex-col lg:flex-row lg:justify-center lg:items-start lg:gap-8 w-full;
         }
 
         /* Styling for the section cards (Raffle Draw and Winners) */
         .section-card {
-            @apply bg-white rounded-xl shadow-md p-8 border border-gray-200 w-full mb-6 md:mb-0; /* Changed lg:mb-0 to md:mb-0 */
+            @apply bg-white rounded-xl shadow-md p-8 border border-gray-200 w-full mb-6 lg:mb-0;
             flex-shrink: 0; /* Prevents card from shrinking below its content */
             flex-grow: 1; /* Allows card to grow and fill available space */
             flex-basis: 0; /* Distributes space equally among flex-grow items */
@@ -550,7 +542,7 @@
                 updateButtonLabel(); // Update button text for next action
 
                 // Clear confetti after a delay
-                setTimeout(clearConfetti, CONFETTI_BURST_CLEAR_DELA Y_MS);
+                setTimeout(clearConfetti, CONFETTI_BURST_CLEAR_DELAY_MS);
 
                 isDrawing = false;
                 drawBtn.disabled = false; // Re-enable button
