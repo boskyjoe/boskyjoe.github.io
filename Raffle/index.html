@@ -154,16 +154,6 @@
             animation: fade-in 0.5s ease-out forwards;
         }
 
-        /* Winners box transition properties for fade-in effect */
-        .winners-box {
-            @apply opacity-0 translate-x-5; /* Changed from translate-y-5 to translate-x-5 for horizontal slide-in */
-            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-        }
-
-        .winners-box.show {
-            @apply opacity-100 translate-x-0; /* Changed from translate-y-0 to translate-x-0 */
-        }
-
         /* Draw button always visible and centered, now a "normal" button */
         .raffle-box .draw-btn {
             background-color: var(--primary-color) !important; /* Solid background color */
@@ -216,8 +206,46 @@
         .raffle-box {
             @apply bg-green-50;
         }
+        /* Winners box transition properties for fade-in effect */
         .winners-box {
-            @apply bg-blue-50;
+            @apply bg-blue-50; /* Keep the background color */
+            /* Default for small screens (static, full width) */
+            position: static;
+            width: 100%;
+            margin-top: 1.5rem; /* Space from raffle box on small screens */
+            opacity: 0; /* Start hidden for fade-in */
+            transform: none; /* No transform on small screens */
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out; /* Transition for opacity for small screens */
+        }
+
+        /* For large screens (lg breakpoint and up) */
+        @media (min-width: 1024px) {
+            .winners-box {
+                position: fixed; /* Make it fixed to the viewport */
+                top: 50%; /* Vertically center */
+                right: 0; /* Align to the right edge */
+                width: 300px; /* Fixed width on desktop, adjust as needed */
+                transform: translateY(-50%) translateX(100%); /* Start off-screen right and vertically centered */
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Add a prominent shadow for the floating effect */
+                border-radius: 16px; /* Match container border-radius */
+                padding: 2rem; /* Add padding consistent with .section-card */
+                z-index: 999; /* Ensure it's above other content */
+                /* Overwrite any conflicting Tailwind classes from section-card */
+                margin-bottom: 0 !important;
+                margin-top: 0 !important;
+            }
+        }
+
+        /* Class to show the winners box */
+        .winners-box.show {
+            opacity: 1;
+        }
+
+        /* For large screens, apply the slide-in transform when 'show' class is present */
+        @media (min-width: 1024px) {
+            .winners-box.show {
+                transform: translateY(-50%) translateX(0); /* Slide fully into view */
+            }
         }
 
         /* Responsive adjustments for header h2 after pseudo-element */
@@ -238,10 +266,10 @@
             </div>
         </header>
 
-        <!-- Main Content Layout - Flex container for side-by-side cards -->
+        <!-- Main Content Layout - Now primarily for Raffle Draw section -->
         <div class="main-content-layout">
             <!-- Raffle Draw Section -->
-            <section class="section-card raffle-box">
+            <section class="section-card raffle-box lg:w-2/3 mx-auto">
                 <h2 class="font-playfair text-2xl text-emerald-800 text-center mb-6 relative after:content-[''] after:block after:w-15 after:h-0.5 after:bg-gradient-to-r after:from-primary-color after:to-primary-dark-color after:mx-auto after:mt-2 after:rounded">Raffle Draw</h2>
                 <div class="balls-container flex justify-center gap-8 mt-10 mb-10">
                     <div class="ball ball-gradient-3" id="ball3">
@@ -262,16 +290,17 @@
                     </button>
                 </div>
             </section>
-
-            <!-- Winners display section -->
-            <section class="section-card winners-box" id="winnersSection">
-                <h2 class="font-playfair text-2xl text-emerald-800 text-center mb-6 relative after:content-[''] after:block after:w-15 after:h-0.5 after:bg-gradient-to-r after:from-primary-color after:to-primary-dark-color after:mx-auto after:mt-2 after:rounded">🏆 Winners</h2>
-                <div class="initial-message text-center italic text-gray-500 p-5" id="initialWinnersMessage">Winners will appear here after the first number is drawn</div>
-                <div id="winnersList" class="mt-5 flex flex-col gap-4"></div>
-                <div id="congrats" class="hidden mt-5 bg-green-100 text-green-800 p-4 rounded-md font-semibold text-center shadow-sm">🎉 Congratulations! Contact the church office.</div>
-            </section>
         </div>
     </div>
+
+    <!-- Winners display section - NOW OUTSIDE THE MAIN CONTAINER FOR FIXED POSITIONING -->
+    <section class="winners-box" id="winnersSection">
+        <h2 class="font-playfair text-2xl text-emerald-800 text-center mb-6 relative after:content-[''] after:block after:w-15 after:h-0.5 after:bg-gradient-to-r after:from-primary-color after:to-primary-dark-color after:mx-auto after:mt-2 after:rounded">🏆 Winners</h2>
+        <div class="initial-message text-center italic text-gray-500 p-5" id="initialWinnersMessage">Winners will appear here after the first number is drawn</div>
+        <div id="winnersList" class="mt-5 flex flex-col gap-4"></div>
+        <div id="congrats" class="hidden mt-5 bg-green-100 text-green-800 p-4 rounded-md font-semibold text-center shadow-sm">🎉 Congratulations! Contact the church office.</div>
+    </section>
+
     <!-- Confetti burst container -->
     <div id="confettiContainer" aria-hidden="true"></div>
     <!-- Footer -->
@@ -373,8 +402,7 @@
                 drawBtn.disabled = true; // Disable button while loading
 
                 // Reset winners section visibility by removing the 'show' class and ensuring initial state
-                winnersSection.classList.remove('show', 'opacity-100', 'translate-y-0');
-                winnersSection.classList.add('opacity-0', 'translate-y-5');
+                winnersSection.classList.remove('show'); // Simply remove 'show', CSS handles opacity/transform
                 initialWinnersMessage.classList.remove('hidden'); // Show initial message using Tailwind
                 winnersList.innerHTML = ''; // Clear previous winners
                 congratsMessage.classList.add('hidden'); // Hide congrats message using Tailwind
@@ -430,8 +458,7 @@
              */
             function showWinnersSection() {
                 initialWinnersMessage.classList.add('hidden'); // Hide initial message immediately
-                winnersSection.classList.remove('opacity-0', 'translate-x-5'); // Remove initial hidden state
-                winnersSection.classList.add('show', 'opacity-100', 'translate-x-0'); // Add the 'show' class which triggers the CSS transition
+                winnersSection.classList.add('show'); // Add the 'show' class which triggers the CSS transition
             }
 
             /**
