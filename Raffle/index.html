@@ -164,14 +164,39 @@
             @apply opacity-100 translate-y-0; /* Final visible state */
         }
 
-        /* Draw button always visible and centered */
+        /* Draw button always visible and centered, now a "normal" button */
         .raffle-box .draw-btn {
+            background-color: var(--primary-color) !important; /* Solid background color */
+            color: #fff !important; /* White text for contrast */
+            min-width: 250px; /* Ensure a minimum visible width */
+
             opacity: 1 !important; /* Ensure visibility */
             display: block !important; /* Ensure it takes up space and is block-level */
             margin-left: auto !important; /* Center the block element */
             margin-right: auto !important; /* Center the block element */
-            pointer-events: auto;
-            transition: opacity 0.3s ease-in-out;
+            padding: 1rem 2rem; /* Standard padding */
+            border-radius: 0.5rem; /* Standard rounded corners */
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 600; /* font-semibold */
+            cursor: pointer;
+            
+            /* Removed transition for normal button behavior */
+            /* Removed shadow and hover effects as per request */
+            box-shadow: none !important; /* No default shadow */
+            transform: none !important; /* No default transform */
+        }
+
+        /* Adjusted disabled state for a normal button */
+        .raffle-box .draw-btn:disabled {
+            background-color: #a0a0a0 !important; /* A neutral gray for disabled state */
+            cursor: not-allowed !important;
+            box-shadow: none !important;
+            transform: none !important;
+        }
+
+        /* Removed hover effects for normal button behavior */
+        .raffle-box .draw-btn:not(:disabled):hover {
+            background-color: var(--primary-dark-color) !important; /* Slightly darker on hover */
         }
 
         /* Main content layout for side-by-side on large screens */
@@ -233,7 +258,7 @@
                     </div>
                 </div>
                 <div class="button-container text-center mt-5">
-                    <button id="drawBtn" class="draw-btn bg-gradient-to-r from-primary-color to-primary-dark-color text-white py-4 px-8 rounded-lg text-lg font-semibold cursor-pointer transition-all duration-300 shadow-lg hover:from-emerald-700 hover:to-emerald-900 hover:-translate-y-1 hover:shadow-xl disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none disabled:transform-none">
+                    <button id="drawBtn" class="draw-btn bg-primary-color text-white py-4 px-8 rounded-lg text-lg font-semibold cursor-pointer disabled:bg-gray-400">
                     </button>
                 </div>
             </section>
