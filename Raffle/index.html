@@ -117,16 +117,37 @@
         .winner-card {
             @apply flex items-center bg-white border border-gray-200 rounded-md p-4 shadow-sm;
             transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+            /* FIX: Add gap between emoji and text, and align items for sub-elements */
+            gap: 1rem; /* Space between emoji and details */
         }
         .winner-card:hover {
             transform: translateY(-2px);
             @apply shadow-md;
         }
 
-        /* Specific border colors for winner cards */
+        /* FIX: Corrected target classes for border colors */
         .winner-card.third { border-left: 5px solid #cd7f32; /* Bronze */ }
         .winner-card.second { border-left: 5px solid silver; }
         .winner-card.first { border-left: 5px solid gold; }
+
+        /* FIX: Styling for inner elements of winner-card */
+        .winner-card .winner-position {
+            font-size: 2.5em; /* Size of the medal emoji */
+            line-height: 1; /* Prevents extra space above/below emoji */
+        }
+
+        .winner-card .winner-details {
+            flex-grow: 1; /* Allows details to take up remaining space */
+        }
+
+        .winner-card .winner-place {
+            @apply text-sm text-gray-500 font-medium;
+        }
+
+        .winner-card .winner-number {
+            @apply text-xl font-bold text-emerald-700;
+        }
+
 
         /* Congrats message animation */
         #congrats {
@@ -146,7 +167,8 @@
 
         /* Draw button always visible */
         .raffle-box .draw-btn {
-            opacity: 1;
+            opacity: 1 !important; /* Ensure visibility */
+            display: block !important; /* Ensure it takes up space and is block-level */
             pointer-events: auto;
             transition: opacity 0.3s ease-in-out;
         }
@@ -255,7 +277,8 @@
                 SECOND_PLACE: '2nd Place',
                 THIRD_PLACE: '3rd Place',
                 LOADING: 'Loading Winners...',
-                ERROR_LOADING: 'Error Loading Winners'
+                ERROR_LOADING: 'Error Loading Winners',
+                START_NEW_DRAW: 'Start New Draw' // Added for clarity
             };
 
             const STEP_DETAILS = [
@@ -284,7 +307,7 @@
             let currentStep = 0; // 0 for 3rd, 1 for 2nd, 2 for 1st
             let availableNumbers = [];
             let isDrawing = false;
-            let WINNER_POOL_FROM_FILE = []; // This will hold numbers loaded from the file
+            let WINNER_POOL_FROM_FROM_FILE = []; // This will hold numbers loaded from the file
 
             // --- Helper Functions ---
 
@@ -295,9 +318,7 @@
              */
             async function fetchWinnersFromFile() {
                 try {
-                    drawBtn.textContent = TEXT_LABELS.LOADING;
-                    drawBtn.disabled = true; // Disable button while loading
-
+                    // Button already says "Loading Winners..." and is disabled by initDraw
                     const response = await fetch(WINNERS_FILE_PATH);
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
@@ -309,6 +330,7 @@
                     console.error("Failed to load winners from file:", error);
                     // In a real app, show a user-friendly error message, e.g., a modal
                     drawBtn.textContent = TEXT_LABELS.ERROR_LOADING;
+                    drawBtn.disabled = true; // Keep button disabled if error
                     // Optionally, disable button permanently or offer retry
                     return []; // Return empty array to prevent draw
                 }
@@ -321,8 +343,8 @@
                 currentStep = 0; // Reset to 3rd place
                 availableNumbers = []; // Clear current numbers
 
-                drawBtn.textContent = TEXT_LABELS.LOADING;
-                drawBtn.disabled = true;
+                drawBtn.textContent = TEXT_LABELS.LOADING; // Ensure text is visible immediately
+                drawBtn.disabled = true; // Disable button while loading
 
                 // Reset winners section visibility by removing the 'show' class and ensuring initial state
                 winnersSection.classList.remove('show', 'opacity-100', 'translate-y-0');
@@ -332,14 +354,21 @@
                 congratsMessage.classList.add('hidden'); // Hide congrats message using Tailwind
 
                 // Load winners from file
-                WINNER_POOL_FROM_FILE = await fetchWinnersFromFile();
-                if (WINNER_POOL_FROM_FILE.length === 0) {
-                    // If no winners loaded, keep button disabled and show error
-                    drawBtn.textContent = TEXT_LABELS.ERROR_LOADING;
+                WINNER_POOL_FROM_FROM_FILE = await fetchWinnersFromFile();
+                // FIX: Ensure there are enough unique numbers for all prizes
+                if (WINNER_POOL_FROM_FROM_FILE.length < STEP_DETAILS.length) {
+                    console.error("Not enough unique numbers in Winners.txt for all prize steps.");
+                    drawBtn.textContent = "Not Enough Winners";
+                    drawBtn.disabled = true;
+                    initialWinnersMessage.textContent = "Please ensure 'Winners.txt' contains at least 3 unique numbers.";
+                    initialWinnersMessage.classList.remove('hidden');
                     return;
                 }
+                
+                // Shuffle the available numbers
+                // This ensures randomness from the pool for each draw
+                availableNumbers = shuffleArray([...WINNER_POOL_FROM_FROM_FILE]); 
 
-                availableNumbers = [...WINNER_POOL_FROM_FILE]; // Set available numbers from file
                 updateButtonLabel(); // Update button text after loading
                 drawBtn.disabled = false; // Re-enable button
 
@@ -355,6 +384,19 @@
 
                 clearConfetti(); // Clear any lingering confetti
                 isDrawing = false; // Reset drawing flag
+            }
+
+            /**
+             * Randomly shuffles an array.
+             * @param {Array} array The array to shuffle.
+             * @returns {Array} The shuffled array.
+             */
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
             }
 
             /**
@@ -398,14 +440,23 @@
              * Handles the main raffle drawing logic for each step (3rd, 2nd, 1st).
              */
             async function drawNext() {
-                if (isDrawing || availableNumbers.length === 0) {
-                    if (availableNumbers.length === 0) {
-                        // Show a message if no more numbers are available
-                        initialWinnersMessage.textContent = "No more numbers available for draw. Please start a new draw.";
-                        initialWinnersMessage.classList.remove('hidden');
-                        drawBtn.textContent = 'Start New Draw'; // Change button text if all drawn
-                        drawBtn.disabled = false;
-                    }
+                if (isDrawing) {
+                    return; // Prevent multiple clicks during a draw
+                }
+
+                if (currentStep >= STEP_DETAILS.length) {
+                    // This case should be handled by the click listener to start a new draw
+                    console.log("All winners drawn. Click 'Start New Draw' to begin again.");
+                    return;
+                }
+                
+                if (availableNumbers.length === 0) {
+                    // This scenario means something went wrong with the initial load or a number was missed.
+                    initialWinnersMessage.textContent = "Error: No numbers left to draw. Please start a new draw.";
+                    initialWinnersMessage.classList.remove('hidden');
+                    drawBtn.textContent = TEXT_LABELS.START_NEW_DRAW;
+                    drawBtn.disabled = false;
+                    isDrawing = false;
                     return;
                 }
 
@@ -413,12 +464,7 @@
                 drawBtn.disabled = true; // Disable button during draw
 
                 const stepDetail = STEP_DETAILS[currentStep];
-                if (!stepDetail) {
-                    console.error("Invalid raffle step. Resetting draw.");
-                    initDraw();
-                    return;
-                }
-
+                
                 let targetBall;
                 let targetBallInnerText;
                 switch(stepDetail.ballId){
@@ -437,7 +483,8 @@
 
                 // Add winner to the list
                 const winnerCardDiv = document.createElement('div');
-                winnerCardDiv.className = `winner-card ${stepDetail.ballId.replace('ball','')}`; // e.g., 'third' from 'ball3'
+                // FIX: Use the correct class for border styling (e.g., 'third', 'second', 'first')
+                winnerCardDiv.className = `winner-card ${stepDetail.ballId.replace('ball', '')}`; 
                 winnerCardDiv.innerHTML = `
                     <div class="winner-position">${stepDetail.emoji}</div>
                     <div class="winner-details">
@@ -460,7 +507,8 @@
 
                 // Launch confetti!
                 launchConfettiBurst(SMALL_CONFETTI_COUNT);
-                if(currentStep === 0) { // Big celebration for the first draw
+                // FIX: Moved big confetti to the 1st place draw for a bigger finale
+                if(currentStep === 2) { 
                     launchConfettiBurst(BIG_CONFETTI_COUNT, true);
                 }
 
@@ -553,15 +601,15 @@
                 if (currentStep < STEP_DETAILS.length) {
                     drawBtn.textContent = STEP_DETAILS[currentStep].label;
                 } else {
-                    drawBtn.textContent = 'Start New Draw';
+                    drawBtn.textContent = TEXT_LABELS.START_NEW_DRAW; // Use a constant for "Start New Draw"
                 }
             }
 
             // --- Event Listeners ---
             drawBtn.addEventListener('click', () => {
-                if (currentStep < STEP_DETAILS.length && !isDrawing) { // Only allow drawing if not already drawing and steps remain
+                if (currentStep < STEP_DETAILS.length) { // If there are still winners to draw
                     drawNext();
-                } else if (currentStep === STEP_DETAILS.length) { // If all steps completed, allow new draw
+                } else { // If all steps completed, allow new draw
                     initDraw();
                 }
             });
