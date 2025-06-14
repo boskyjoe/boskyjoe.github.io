@@ -222,7 +222,7 @@
         @media (min-width: 1024px) {
             .winners-box {
                 position: fixed; /* Make it fixed to the viewport */
-                top: 13.75rem; /* Aligned with top of the main content area (~220px) */
+                /* top will be calculated by JavaScript for precise alignment */
                 right: 0; /* Align to the right edge */
                 width: 300px; /* Fixed width on desktop, adjust as needed */
                 transform: translateX(100%); /* Start off-screen right */
@@ -233,11 +233,13 @@
                 /* Overwrite any conflicting Tailwind classes from section-card */
                 margin-bottom: 0 !important;
                 margin-top: 0 !important;
+                min-height: 450px; /* Consistent minimum height for card aesthetic */
             }
 
             .raffle-box {
                 box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Stronger shadow for 3D effect */
                 border-radius: 16px; /* Consistent rounded corners */
+                min-height: 450px; /* Consistent minimum height for card aesthetic */
             }
         }
 
@@ -443,6 +445,9 @@
 
                 clearConfetti(); // Clear any lingering confetti
                 isDrawing = false; // Reset drawing flag
+
+                // Update winners box position after everything is loaded and rendered
+                updateWinnersBoxPosition();
             }
 
             /**
@@ -581,6 +586,22 @@
             }
 
             /**
+             * Calculates the top position for the winners box to align it with the raffle box.
+             * Only applies the fixed position on larger screens (lg breakpoint).
+             */
+            function updateWinnersBoxPosition() {
+                const raffleBox = document.querySelector('.raffle-box');
+                if (raffleBox && window.innerWidth >= 1024) { // Only for large screens
+                    // Get the top position of the raffle box relative to the viewport
+                    const offsetTop = raffleBox.getBoundingClientRect().top + window.scrollY;
+                    winnersSection.style.top = `${offsetTop}px`;
+                } else {
+                    // Reset top for smaller screens to allow CSS static positioning to take over
+                    winnersSection.style.top = ''; 
+                }
+            }
+
+            /**
              * Creates and animates a single confetti particle.
              * @param {HTMLElement} container The container for the confetti.
              * @param {number} startX X coordinate for particle origin.
@@ -674,6 +695,7 @@
 
             // --- Initial Load ---
             initDraw(); // Set up the initial state of the raffle and load winners
+            window.addEventListener('resize', updateWinnersBoxPosition); // Update position on resize
         });
     </script>
 </body>
