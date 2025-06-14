@@ -156,12 +156,12 @@
 
         /* Winners box transition properties for fade-in effect */
         .winners-box {
-            @apply opacity-0 translate-y-5; /* Initial hidden state */
+            @apply opacity-0 translate-x-5; /* Changed from translate-y-5 to translate-x-5 for horizontal slide-in */
             transition: opacity 0.6s ease-out, transform 0.6s ease-out;
         }
 
         .winners-box.show {
-            @apply opacity-100 translate-y-0; /* Final visible state */
+            @apply opacity-100 translate-x-0; /* Changed from translate-y-0 to translate-x-0 */
         }
 
         /* Draw button always visible and centered, now a "normal" button */
@@ -430,8 +430,8 @@
              */
             function showWinnersSection() {
                 initialWinnersMessage.classList.add('hidden'); // Hide initial message immediately
-                winnersSection.classList.remove('opacity-0', 'translate-y-5');
-                winnersSection.classList.add('show', 'opacity-100', 'translate-y-0'); // Add the 'show' class which triggers the CSS transition
+                winnersSection.classList.remove('opacity-0', 'translate-x-5'); // Remove initial hidden state
+                winnersSection.classList.add('show', 'opacity-100', 'translate-x-0'); // Add the 'show' class which triggers the CSS transition
             }
 
             /**
