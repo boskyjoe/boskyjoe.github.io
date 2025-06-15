@@ -206,10 +206,21 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25), 0 8px 15px rgba(0, 0, 0, 0.1); 
         }
 
-        /* Specific backgrounds for each card - REMOVED these to let them inherit bg-white from .section-card */
+        /* Specific styles for Raffle Draw card's reveal animation */
         .raffle-box {
+            /* Transition for the reveal effect */
+            transition: max-height 1.5s ease-out, opacity 1s ease-out;
             /* Now inherits all card styling from .section-card */
         }
+
+        /* Initial hidden state for Raffle Draw card */
+        .raffle-box.initial-hidden {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            min-height: 0; /* Override min-height during hidden state */
+        }
+
         /* Winners box transition properties for fade-in effect */
         .winners-box {
             /* Now explicitly apply ALL card styling including shadow */
@@ -285,7 +296,7 @@
     <!-- Main Content Layout (contains Raffle Draw section) -->
     <div class="main-content-layout flex flex-col lg:flex-row lg:justify-center lg:items-start lg:gap-8 w-11/12 max-w-4xl">
         <!-- Raffle Draw Section -->
-        <section class="section-card raffle-box">
+        <section class="section-card raffle-box initial-hidden">
             <h2 class="font-playfair text-2xl text-emerald-800 text-center mb-6 relative after:content-[''] after:block after:w-15 after:h-0.5 after:bg-gradient-to-r after:from-primary-color after:to-primary-dark-color after:mx-auto after:mt-2 after:rounded">Raffle Draw</h2>
             <div class="balls-container flex justify-center gap-8 mt-10 mb-10">
                 <div class="ball ball-gradient-3" id="ball3">
@@ -367,6 +378,7 @@
             const winnersSection = document.getElementById('winnersSection');
             const confettiContainer = document.getElementById('confettiContainer');
             const initialWinnersMessage = document.getElementById('initialWinnersMessage');
+            const raffleBox = document.querySelector('.raffle-box'); // Get the raffle box for the reveal animation
 
             // Store references to the inner text elements of the balls for direct access
             const ball1InnerText = ball1.querySelector('.inner-text');
@@ -702,8 +714,34 @@
             });
 
             // --- Initial Load ---
-            initDraw(); // Set up the initial state of the raffle and load winners
-            window.addEventListener('resize', updateWinnersBoxPosition); // Update position on resize
+            // Listen for the 'load' event to ensure all resources are loaded, including images for accurate scrollHeight
+            window.addEventListener('load', () => {
+                // Initial call to hide the raffle box
+                // We add the class here to ensure the transition happens from a defined state
+                // rather than immediately applying the final state before the browser renders the initial 0px height.
+                raffleBox.classList.add('initial-hidden');
+
+                // Trigger the reveal animation after a short delay
+                setTimeout(() => {
+                    // Set max-height and opacity to their final values to trigger the CSS transition
+                    raffleBox.style.maxHeight = raffleBox.scrollHeight + 'px';
+                    raffleBox.style.opacity = '1';
+                    // Remove the initial-hidden class to let the transition apply
+                    raffleBox.classList.remove('initial-hidden');
+
+                    // After the transition completes, remove the explicit max-height
+                    // to allow the element to naturally adjust its height if content changes
+                    raffleBox.addEventListener('transitionend', function handler() {
+                        raffleBox.style.maxHeight = 'none';
+                        raffleBox.removeEventListener('transitionend', handler);
+                    });
+                }, 500); // 500ms delay before revealing
+
+                initDraw(); // Initialize raffle state and load winners
+            });
+
+            // Update winners box position on resize
+            window.addEventListener('resize', updateWinnersBoxPosition); 
         });
     </script>
 </body>
