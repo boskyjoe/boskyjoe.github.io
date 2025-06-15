@@ -113,18 +113,20 @@
             will-change: transform, opacity; /* Optimize animations */
         }
 
-        /* Winner card styling */
+        /* Winner card styling - individual winner entry */
         .winner-card {
-            @apply flex items-center rounded-md p-4 shadow-sm; /* Removed bg-white and border-gray-200 here */
+            @apply flex items-center rounded-md p-4; /* Removed shadow-sm from apply */
+            width: 100%; /* Make it span the full width of its container */
             transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, background-color 0.4s ease-out; /* Add background transition */
             gap: 1rem; /* Space between emoji and details */
             color: #fff; /* Default text color for dark backgrounds */
             border: 1px solid rgba(255,255,255,0.3); /* Subtle border for embossed look */
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            /* Stronger shadow for individual winner cards */
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3); 
         }
         .winner-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.25); /* Slightly stronger shadow on hover */
+            transform: translateY(-3px); /* More pronounced lift on hover */
+            box-shadow: 0 12px 24px rgba(0,0,0,0.4); /* Even stronger shadow on hover */
         }
 
         /* Remove old border-left styles */
@@ -280,8 +282,6 @@
                 right: 0; /* Align to the right edge */
                 width: 300px; /* Fixed width on desktop, adjust as needed */
                 transform: translateX(100%); /* Start off-screen right */
-                /* No need for custom box-shadow here, it's already applied above */
-                /* No need for border-radius/padding here, already applied above */
                 z-index: 999; /* Ensure it's above other content */
                 /* Overwrite any conflicting Tailwind classes from section-card */
                 margin-bottom: 0 !important;
@@ -289,7 +289,6 @@
             }
 
             .raffle-box {
-                /* No need for custom box-shadow here, it's inherited from .section-card */
                 border-radius: 16px; /* Consistent rounded corners */
             }
         }
