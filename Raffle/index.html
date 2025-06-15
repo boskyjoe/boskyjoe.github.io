@@ -196,19 +196,21 @@
 
         /* Styling for the section cards (Raffle Draw and Winners) */
         .section-card {
-            @apply bg-white rounded-xl shadow-md p-8 border border-gray-200 w-full mb-6 lg:mb-0;
+            /* Now explicitly using shadow-xl here as the base */
+            @apply bg-white rounded-xl shadow-xl p-8 border border-gray-200 w-full mb-6 lg:mb-0;
             flex-shrink: 0; /* Prevents card from shrinking below its content */
             flex-grow: 1; /* Allows card to grow and fill available space */
             flex-basis: 0; /* Distributes space equally among flex-grow items */
+            min-height: 450px; /* Consistent minimum height for card aesthetic */
         }
 
-        /* Specific backgrounds for each card */
+        /* Specific backgrounds for each card - REMOVED these to let them inherit bg-white from .section-card */
         .raffle-box {
-            @apply bg-green-50;
+            /* Now inherits bg-white, rounded-xl, shadow-xl from .section-card */
         }
         /* Winners box transition properties for fade-in effect */
         .winners-box {
-            @apply bg-blue-50; /* Keep the background color */
+            /* Now inherits bg-white, rounded-xl, shadow-xl from .section-card */
             /* Default for small screens (static, full width) */
             position: static;
             width: 100%;
@@ -226,20 +228,18 @@
                 right: 0; /* Align to the right edge */
                 width: 300px; /* Fixed width on desktop, adjust as needed */
                 transform: translateX(100%); /* Start off-screen right */
-                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Add a prominent shadow for the floating effect */
+                /* Removed custom box-shadow to let shadow-xl from .section-card apply */
                 border-radius: 16px; /* Match container border-radius */
                 padding: 2rem; /* Add padding consistent with .section-card */
                 z-index: 999; /* Ensure it's above other content */
                 /* Overwrite any conflicting Tailwind classes from section-card */
                 margin-bottom: 0 !important;
                 margin-top: 0 !important;
-                min-height: 450px; /* Consistent minimum height for card aesthetic */
             }
 
             .raffle-box {
-                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Stronger shadow for 3D effect */
+                /* Removed custom box-shadow to let shadow-xl from .section-card apply */
                 border-radius: 16px; /* Consistent rounded corners */
-                min-height: 450px; /* Consistent minimum height for card aesthetic */
             }
         }
 
