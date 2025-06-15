@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>St. Sebastian's Church Raffle</title>
     <!-- Google Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700;800&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -203,7 +203,7 @@
         /* Styling for the section cards (Raffle Draw and Winners) */
         .section-card {
             /* Applied common styles for background, rounded corners, padding, border */
-            @apply bg-white rounded-xl border border-gray-200 w-full mb-6 lg:mb-0; /* Removed p-8 from here */
+            @apply bg-white rounded-xl p-8 border border-gray-200 w-full mb-6 lg:mb-0;
             flex-shrink: 0; /* Prevents card from shrinking below its content */
             flex-grow: 1; /* Allows card to grow and fill available space */
             flex-basis: 0; /* Distributes space equally among flex-grow items */
@@ -257,6 +257,7 @@
             /* Now explicitly apply ALL card styling including shadow */
             background-color: white;
             border-radius: 1rem; /* 16px */
+            padding: 2rem; /* 32px */
             border: 1px solid #e2e8f0; /* gray-200 */
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25), 0 8px 15px rgba(0, 0, 0, 0.1); 
             min-height: 450px; /* Consistent minimum height for card aesthetic */
@@ -323,7 +324,7 @@
         <!-- Raffle Draw Section -->
         <section class="section-card raffle-box initial-hidden">
             <h2 class="raffle-card-title">Raffle Draw</h2>
-            <div class="balls-container flex justify-center gap-8 mt-10 mb-10 px-8">
+            <div class="balls-container flex justify-center gap-8 mt-10 mb-10">
                 <div class="ball ball-gradient-3" id="ball3">
                     <div class="ball-medal" aria-hidden="true">🥉</div>
                     <div class="inner-text">🎲</div>
@@ -337,7 +338,7 @@
                     <div class="inner-text">🎲</div>
                 </div>
             </div>
-            <div class="button-container text-center mt-5 px-8">
+            <div class="button-container text-center mt-5">
                 <button id="drawBtn" class="draw-btn bg-primary-color text-white py-4 px-8 rounded-lg text-lg font-semibold cursor-pointer disabled:bg-gray-400">
                 </button>
             </div>
@@ -347,9 +348,9 @@
     <!-- Winners display section - FIXED POSITION -->
     <section class="winners-box" id="winnersSection">
         <h2 class="raffle-card-title">🏆 Winners</h2>
-        <div class="initial-message text-center italic text-gray-500 p-5">Winners will appear here after the first number is drawn</div>
-        <div id="winnersList" class="mt-5 flex flex-col gap-4 px-8"></div> <!-- Added px-8 here -->
-        <div id="congrats" class="hidden mt-5 bg-green-100 text-green-800 p-4 rounded-md font-semibold text-center shadow-sm px-8">🎉 Congratulations! Contact the church office.</div>
+        <div class="initial-message text-center italic text-gray-500 p-5" id="initialWinnersMessage">Winners will appear here after the first number is drawn</div>
+        <div id="winnersList" class="mt-5 flex flex-col gap-4"></div>
+        <div id="congrats" class="hidden mt-5 bg-green-100 text-green-800 p-4 rounded-md font-semibold text-center shadow-sm">🎉 Congratulations! Contact the church office.</div>
     </section>
 
     <!-- Confetti burst container -->
