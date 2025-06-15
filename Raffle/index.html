@@ -280,7 +280,6 @@
                 /* top will be calculated by JavaScript for precise alignment */
                 right: 0; /* Align to the right edge */
                 width: 300px; /* Fixed width on desktop, adjust as needed */
-                transform: translateX(100%); /* Start off-screen right */
                 z-index: 999; /* Ensure it's above other content */
                 /* Overwrite any conflicting Tailwind classes from section-card */
                 margin-bottom: 0 !important;
@@ -369,7 +368,9 @@
             const SMALL_CONFETTI_COUNT = 80;
             const BIG_CONFETTI_COUNT = 100;
             const CONFETTI_BURST_CLEAR_DELAY_MS = 3000;
-            const WINNERS_FILE_PATH = 'Winners.txt'; // Path to your winners file
+            // Changed WINNERS_FILE_PATH to a placeholder for local testing.
+            // In a real environment, ensure this file is accessible at the root or appropriate path.
+            const WINNERS_FILE_PATH = 'Winners.txt'; 
 
             const EMOJIS = {
                 FIRST: '🥇',
@@ -384,7 +385,9 @@
                 THIRD_PLACE: '3rd Place',
                 LOADING: 'Loading Winners...',
                 ERROR_LOADING: 'Error Loading Winners',
-                START_NEW_DRAW: 'Start New Draw' // Added for clarity
+                START_NEW_DRAW: 'Start New Draw', // Added for clarity
+                NOT_ENOUGH_WINNERS: "Not Enough Winners",
+                PLEASE_ENSURE_WINNERS_FILE: "Please ensure 'Winners.txt' contains at least 3 unique numbers or is accessible."
             };
 
             const STEP_DETAILS = [
@@ -425,9 +428,9 @@
              */
             async function fetchWinnersFromFile() {
                 try {
-                    // Button already says "Loading Winners..." and is disabled by initDraw
                     const response = await fetch(WINNERS_FILE_PATH);
                     if (!response.ok) {
+                        // Throw an error if the response is not OK (e.g., 404 Not Found)
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     const text = await response.text();
@@ -435,10 +438,11 @@
                     return text.split(/[\n,]/).map(num => num.trim()).filter(num => num.length > 0);
                 } catch (error) {
                     console.error("Failed to load winners from file:", error);
-                    // In a real app, show a user-friendly error message, e.g., a modal
+                    // Update button text and re-enable it for user to retry
                     drawBtn.textContent = TEXT_LABELS.ERROR_LOADING;
-                    drawBtn.disabled = true; // Keep button disabled if error
-                    // Optionally, disable button permanently or offer retry
+                    drawBtn.disabled = false; 
+                    initialWinnersMessage.textContent = `Error loading winners: ${error.message}. Please ensure 'Winners.txt' is correctly placed and accessible.`;
+                    initialWinnersMessage.classList.remove('hidden');
                     return []; // Return empty array to prevent draw
                 }
             }
@@ -461,19 +465,20 @@
 
                 // Load winners from file
                 WINNER_POOL_FROM_FROM_FILE = await fetchWinnersFromFile();
-                // Ensure there are enough unique numbers for all prizes
+                
+                // Check if the pool is sufficiently populated
                 if (WINNER_POOL_FROM_FROM_FILE.length < STEP_DETAILS.length) {
                     console.error("Not enough unique numbers in Winners.txt for all prize steps.");
-                    drawBtn.textContent = "Not Enough Winners";
-                    drawBtn.disabled = true;
-                    initialWinnersMessage.textContent = "Please ensure 'Winners.txt' contains at least 3 unique numbers.";
+                    drawBtn.textContent = TEXT_LABELS.NOT_ENOUGH_WINNERS;
+                    drawBtn.disabled = false; // Re-enable so user can try again
+                    initialWinnersMessage.textContent = TEXT_LABELS.PLEASE_ENSURE_WINNERS_FILE;
                     initialWinnersMessage.classList.remove('hidden');
-                    return;
+                    return; // Exit initDraw if not enough numbers
                 }
                 
                 // Shuffle the available numbers
                 // This ensures randomness from the pool for each draw
-                availableNumbers = shuffleArray([...WINNER_POOL_FROM_FROM_FILE]); 
+                availableNumbers = shuffleArray([...new Set(WINNER_POOL_FROM_FROM_FILE)]); // Ensure unique numbers
 
                 updateButtonLabel(); // Update button text after loading
                 drawBtn.disabled = false; // Re-enable button
