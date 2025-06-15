@@ -368,8 +368,8 @@
             const SMALL_CONFETTI_COUNT = 80;
             const BIG_CONFETTI_COUNT = 100;
             const CONFETTI_BURST_CLEAR_DELAY_MS = 3000;
-            // Changed WINNERS_FILE_PATH to a placeholder for local testing.
-            // In a real environment, ensure this file is accessible at the root or appropriate path.
+            // IMPORTANT: Ensure 'Winners.txt' is placed at the root of your project or
+            // update this path to where your file is actually accessible.
             const WINNERS_FILE_PATH = 'Winners.txt'; 
 
             const EMOJIS = {
@@ -430,18 +430,25 @@
                 try {
                     const response = await fetch(WINNERS_FILE_PATH);
                     if (!response.ok) {
-                        // Throw an error if the response is not OK (e.g., 404 Not Found)
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        // Throw a more specific error based on HTTP status
+                        if (response.status === 404) {
+                            throw new Error(`File not found at ${WINNERS_FILE_PATH}. Please ensure the file exists and the path is correct.`);
+                        } else {
+                            throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}`);
+                        }
                     }
                     const text = await response.text();
                     // Split by newline or comma, then filter out empty strings and trim
-                    return text.split(/[\n,]/).map(num => num.trim()).filter(num => num.length > 0);
+                    const numbers = text.split(/[\n,]/).map(num => num.trim()).filter(num => num.length > 0);
+                    if (numbers.length === 0) {
+                        throw new Error("The 'Winners.txt' file is empty or contains no valid numbers.");
+                    }
+                    return numbers;
                 } catch (error) {
                     console.error("Failed to load winners from file:", error);
-                    // Update button text and re-enable it for user to retry
                     drawBtn.textContent = TEXT_LABELS.ERROR_LOADING;
-                    drawBtn.disabled = false; 
-                    initialWinnersMessage.textContent = `Error loading winners: ${error.message}. Please ensure 'Winners.txt' is correctly placed and accessible.`;
+                    drawBtn.disabled = false; // Re-enable button
+                    initialWinnersMessage.textContent = `Error: ${error.message}`;
                     initialWinnersMessage.classList.remove('hidden');
                     return []; // Return empty array to prevent draw
                 }
@@ -471,14 +478,24 @@
                     console.error("Not enough unique numbers in Winners.txt for all prize steps.");
                     drawBtn.textContent = TEXT_LABELS.NOT_ENOUGH_WINNERS;
                     drawBtn.disabled = false; // Re-enable so user can try again
-                    initialWinnersMessage.textContent = TEXT_LABELS.PLEASE_ENSURE_WINNERS_FILE;
+                    initialWinnersMessage.textContent = `${initialWinnersMessage.textContent}. ${TEXT_LABELS.PLEASE_ENSURE_WINNERS_FILE}`; // Append to existing error if any
                     initialWinnersMessage.classList.remove('hidden');
                     return; // Exit initDraw if not enough numbers
                 }
                 
                 // Shuffle the available numbers
-                // This ensures randomness from the pool for each draw
-                availableNumbers = shuffleArray([...new Set(WINNER_POOL_FROM_FROM_FILE)]); // Ensure unique numbers
+                // Using new Set to ensure uniqueness and then spreading to array
+                availableNumbers = shuffleArray([...new Set(WINNER_POOL_FROM_FROM_FILE)]);
+
+                // Final check after shuffling and ensuring uniqueness
+                if (availableNumbers.length < STEP_DETAILS.length) {
+                     console.error("Not enough *unique* numbers after processing Winners.txt for all prize steps.");
+                     drawBtn.textContent = TEXT_LABELS.NOT_ENOUGH_WINNERS;
+                     drawBtn.disabled = false; // Re-enable so user can try again
+                     initialWinnersMessage.textContent = `Warning: Not enough unique numbers for all prizes. ${TEXT_LABELS.PLEASE_ENSURE_WINNERS_FILE}`;
+                     initialWinnersMessage.classList.remove('hidden');
+                     return;
+                }
 
                 updateButtonLabel(); // Update button text after loading
                 drawBtn.disabled = false; // Re-enable button
@@ -745,6 +762,9 @@
 
             // --- Event Listeners ---
             drawBtn.addEventListener('click', () => {
+                if (isDrawing) { // Prevent multiple calls if a draw is already in progress
+                    return;
+                }
                 if (currentStep < STEP_DETAILS.length) { // If there are still winners to draw
                     drawNext();
                 } else { // If all steps completed, allow new draw
