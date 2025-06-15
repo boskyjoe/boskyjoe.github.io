@@ -212,7 +212,14 @@
         }
         /* Winners box transition properties for fade-in effect */
         .winners-box {
-            /* Now inherits all card styling from .section-card */
+            /* Now explicitly apply ALL card styling including shadow */
+            background-color: white;
+            border-radius: 1rem; /* 16px */
+            padding: 2rem; /* 32px */
+            border: 1px solid #e2e8f0; /* gray-200 */
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25), 0 8px 15px rgba(0, 0, 0, 0.1); 
+            min-height: 450px; /* Consistent minimum height for card aesthetic */
+
             /* Default for small screens (static, full width) */
             position: static;
             width: 100%;
@@ -230,9 +237,8 @@
                 right: 0; /* Align to the right edge */
                 width: 300px; /* Fixed width on desktop, adjust as needed */
                 transform: translateX(100%); /* Start off-screen right */
-                /* No need for custom box-shadow here, it's inherited from .section-card */
-                border-radius: 16px; /* Match container border-radius */
-                padding: 2rem; /* Add padding consistent with .section-card */
+                /* No need for custom box-shadow here, it's already applied above */
+                /* No need for border-radius/padding here, already applied above */
                 z-index: 999; /* Ensure it's above other content */
                 /* Overwrite any conflicting Tailwind classes from section-card */
                 margin-bottom: 0 !important;
