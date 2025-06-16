@@ -611,15 +611,22 @@
         }
 
         /**
-         * Generates a random alphanumeric string with the format "SSCF 123456".
+         * Generates a random alphanumeric string with the pattern "AAAA 123456"
+         * where AAAA are 4 random uppercase alphabets and 123456 are 6 random digits.
          * @returns {string} A random alphanumeric string.
          */
         function generateRandomAlphanumeric() {
-            let result = 'SSCF '; // Fixed prefix "SSCF "
-            for (let i = 0; i < 6; i++) { // 6 numbers
-                result += Math.floor(Math.random() * 10);
+            let prefix = '';
+            for (let i = 0; i < 4; i++) {
+                // Generate a random uppercase letter (ASCII A is 65, Z is 90)
+                prefix += String.fromCharCode(65 + Math.floor(Math.random() * 26));
             }
-            return result;
+
+            let digits = '';
+            for (let i = 0; i < 6; i++) {
+                digits += Math.floor(Math.random() * 10);
+            }
+            return `${prefix} ${digits}`;
         }
 
         /**
