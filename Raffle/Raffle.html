@@ -1,38 +1,22 @@
-# Raffle Number Winner Picker
-
-## Requirement Summary
-This document outlines the implementation of a highly responsive HTML5 code that features 3D animation and a stunning user interface. The code is designed to function as a Raffle Number Winner Picker, which selects three winners from an external file named `Winners.txt`. The winners are displayed in the order of 3rd, 2nd, and 1st place, ensuring that the same number cannot be picked more than once. The implementation includes error handling and exception management to enhance robustness.
-
-## Code Generated
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raffle Number Winner Picker</title>
+    <title>Raffle Winner Picker</title>
     <style>
         body {
             font-family: Arial, sans-serif;
+            text-align: center;
             background-color: #f0f0f0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
         }
         .container {
-            text-align: center;
-            background: white;
+            max-width: 800px;
+            margin: auto;
             padding: 20px;
+            background: white;
             border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            animation: pop 0.5s ease-in-out;
-        }
-        @keyframes pop {
-            0% { transform: scale(0.5); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
         button {
             padding: 10px 20px;
@@ -40,63 +24,98 @@ This document outlines the implementation of a highly responsive HTML5 code that
             cursor: pointer;
             border: none;
             border-radius: 5px;
-            background-color: #28a745;
+            background-color: #007bff;
             color: white;
             transition: background-color 0.3s;
         }
         button:hover {
-            background-color: #218838;
+            background-color: #0056b3;
         }
         .winner {
             font-size: 24px;
-            margin: 10px 0;
+            margin: 20px;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+        .winner.show {
+            opacity: 1;
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            button {
+                width: 100%;
+                padding: 15px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Raffle Number Winner Picker</h1>
-        <button id="pickWinners">Pick Winners</button>
-        <div id="results"></div>
-    </div>
 
-    <script>
-        document.getElementById('pickWinners').addEventListener('click', async function() {
-            try {
-                const response = await fetch('Winners.txt');
-                if (!response.ok) throw new Error('Network response was not ok');
-                
-                const text = await response.text();
-                const winnersArray = text.split('\n').filter(Boolean);
-                
-                if (winnersArray.length < 3) {
-                    throw new Error('Not enough winners in the file');
-                }
+<div class="container">
+    <h1>Raffle Winner Picker</h1>
+    <button id="pickThird">Pick 3rd Place</button>
+    <div id="thirdPlace" class="winner"></div>
+    <button id="pickSecond" disabled>Pick 2nd Place</button>
+    <div id="secondPlace" class="winner"></div>
+    <button id="pickFirst" disabled>Pick 1st Place</button>
+    <div id="firstPlace" class="winner"></div>
+</div>
 
-                const selectedWinners = [];
-                while (selectedWinners.length < 3) {
-                    const randomIndex = Math.floor(Math.random() * winnersArray.length);
-                    const winner = winnersArray[randomIndex];
-                    if (!selectedWinners.includes(winner)) {
-                        selectedWinners.push(winner);
-                    }
-                }
+<script>
+    let participants = [];
+    fetch('Winners.txt')
+        .then(response => response.text())
+        .then(data => {
+            participants = data.split('\n').map(line => line.trim()).filter(line => line !== '');
+            console.log(participants);
+        })
+        .catch(error => console.error('Error fetching the participants list:', error));
 
-                displayWinners(selectedWinners);
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('results').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
-            }
-        });
+    document.getElementById('pickThird').addEventListener('click', pickThirdPlace);
+    document.getElementById('pickSecond').addEventListener('click', pickSecondPlace);
+    document.getElementById('pickFirst').addEventListener('click', pickFirstPlace);
 
-        function displayWinners(winners) {
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = `
-                <div class="winner">3rd Place: ${winners[2]}</div>
-                <div class="winner">2nd Place: ${winners[1]}</div>
-                <div class="winner">1st Place: ${winners[0]}</div>
-            `;
+    function pickWinner(exclude = []) {
+        if (participants.length === 0) return null;
+        let winner;
+        do {
+            winner = participants[Math.floor(Math.random() * participants.length)];
+        } while (exclude.includes(winner));
+        participants = participants.filter(p => p !== winner);
+        return winner;
+    }
+
+    function pickThirdPlace() {
+        const winner = pickWinner();
+        if (winner) {
+            document.getElementById('thirdPlace').innerText = `3rd Place: ${winner}`;
+            document.getElementById('thirdPlace').classList.add('show');
+            document.getElementById('pickSecond').disabled = false;
         }
-    </script>
+    }
+
+    function pickSecondPlace() {
+        const thirdPlace = document.getElementById('thirdPlace').innerText.split(': ')[1];
+        const winner = pickWinner([thirdPlace]);
+        if (winner) {
+            document.getElementById('secondPlace').innerText = `2nd Place: ${winner}`;
+            document.getElementById('secondPlace').classList.add('show');
+            document.getElementById('pickFirst').disabled = false;
+        }
+    }
+
+    function pickFirstPlace() {
+        const thirdPlace = document.getElementById('thirdPlace').innerText.split(': ')[1];
+        const secondPlace = document.getElementById('secondPlace').innerText.split(': ')[1];
+        const winner = pickWinner([thirdPlace, secondPlace]);
+        if (winner) {
+            document.getElementById('firstPlace').innerText = `1st Place: ${winner}`;
+            document.getElementById('firstPlace').classList.add('show');
+        }
+    }
+</script>
+
 </body>
 </html>
