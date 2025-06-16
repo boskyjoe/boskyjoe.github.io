@@ -1,474 +1,420 @@
 <!DOCTYPE html>
-<html langpx;
-            box-shadow: 0 ="en">
+<html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content5px 15px rgba(0,0,0,0.1);
-            overflow: hidden;
-           ="width=device-width, initial-scale transition: transform 0.3s ease=1" />
-<title>St. Sebastian's Church;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>St. Sebastian's Church Raffle Winner Announcement</title>
+    <style>
+        :root {
+            --first-place: #ffd700;
+            --second-place: #c0c0c0;
+            --third-place: #cd7f32;
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+            --header-color: #2c3e50;
+            --footer-color: #343a40;
         }
 
-        .project-card:hover {
-            transform Raffle Winner Announcement</title>
-<style>
-  /* General Reset */
-: scale(1.05);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
         }
 
-        .project-card img {
-            width: 100%;
-            height  * {
-    box-sizing: border-box: 160px;
-            object-fit: cover;
-        }
-
-        .project-content {
-            padding: 15px;
-        }
-
-        .project;
-  }
-  body {
-    margin:0; 
-    font-family: "Segoe UI", T-content h3 {
-            font-size: 1.2rem;
-            marginahoma, Geneva, Verdana, sans-serif-bottom: 10px;
-        }
-
-       ;
-    background: #f9fafb;
-    color: #222;
-    display: flex;
-    flex-direction: column;
- .project-content p {
-            font-size: 0.95rem;
-               min-height: 100vh;
-  }
-
-  header color: #666;
-        }
-
-        /* Contact Section */
-        #contact {
-            background {
-    background: #004d40;
-   : white;
-            padding:  color: #fff;
-    padding: 20px 15px;
-    display: flex;
-    flex60px 20px;
-        }
-
-        #contact .container {
-           -wrap: wrap;
-    align-items: center;
-    justify-content: space-between max-width: 600px;
-           ;
-  }
-
-  header .logo-container {
-    display: flex;
-    align margin: auto;
-        }
-
-       -items: center;
-    gap: 15px;
- #contact h2 {
-            text    flex: 1 1 300px;
-  }
-
-  header-align: center;
-            font img {
-    height: 75px;
-    width: auto;
-    object-fit: contain-size: 2.4rem;
-            margin;
-  }
-
-  header .heading-text {
--bottom: 40px;
-        }
-
-        form {
-            display: flex    flex: 3 1 500px;
-  }
-
-  header;
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
             flex-direction: column;
         }
 
-        form label h1 {
-    font-size: 1.6rem;
-    {
-            margin-bottom:  line-height: 1.2;
-    margin-bottom8px;
-            font-weight: 600;
-            color: #444;
-: 6px;
-    font-weight: 700;
-         }
-
-        form input, }
-  header address {
-    font form textarea {
-            padding-style: normal;
-    font-weight: 12px;
-            margin-bottom: 500;
-    font-size: 0.95rem;
-: 20px;
-            border-radius    line-height: 1.3;
-    color: 8px;
-            border: 1px solid #ccc;
-            font-size: #cfd8dc;
-  }
-
-  main {
-    flex: 1rem;
-            resize: vertical;
-            transition: border: 1 0 auto;
-    padding: 30px -color 0.3s ease;
+        header {
+            background-color: var(--header-color);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
-       15px 70px;
-    max-width: 900px form input:focus, form textarea:focus {
-            border-color;
-    margin: 0 auto;
-    width: #007bff;
-            outline: none;
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1rem;
         }
 
-        form button {
-            padding:: 100%;
-    display: flex;
-    12px;
-            background: flex-direction: column;
-    gap: 30px;
-  }
+        .logo {
+            height: 80px;
+            margin-right: 15px;
+        }
 
-  /* Winner Cards #007bff;
-            color: white Container */
-  .winners-container;
-            font-size: 1.1rem {
-    display: flex;
-    flex;
+        .header-title {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header-subtitle {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .winners-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            width: 100%;
+            max-width: 800px;
+            margin-top: 2rem;
+        }
+
+        .winner-card {
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateY(20px);
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .winner-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .winner-card.third-place {
+            background-color: var(--third-place);
+            border: 3px solid #a66821;
+        }
+
+        .winner-card.second-place {
+            background-color: var(--second-place);
+            border: 3px solid #999;
+        }
+
+        .winner-card.first-place {
+            background-color: var(--first-place);
+            border: 3px solid #d4af37;
+        }
+
+        .winner-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .winner-number {
+            font-size: 3rem;
+            font-weight: bold;
+            animation: pulse 1.5s infinite;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .winner-spin {
+            animation: spin 0.1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .draw-button {
+            padding: 0.8rem 2rem;
+            font-size: 1.1rem;
+            background-color: #2c3e50;
+            color: white;
             border: none;
-           -direction: column;
-    gap: 30 border-radius: 8px;
-           px;
-  }
-
-  /* Individual Card */
- cursor: pointer;
-            transition  .winner-card {
-    background: background 0.3s ease;
-           : #fff;
-    border-radius: 18px font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
-;
-    padding: 25px 20px 35px;
-        form button:hover {
-            background: #0056b3;
+        .draw-button:hover {
+            background-color: #1a252f;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
         }
 
-        /* Footer */
-        footer    box-shadow: 0 6px 15px rgb {
-            background: #333;
+        .draw-button:active {
+            transform: translateY(1px);
+        }
+
+        .draw-button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .reset-button {
+            display: none;
+            padding: 0.8rem 2rem;
+            font-size: 1.1rem;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin-top: 1rem;
+        }
+
+        .reset-button:hover {
+            background-color: #c0392b;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        footer {
+            background-color: var(--footer-color);
             color: white;
             text-align: center;
-            padding: 20px 10px;
+            padding: 1rem;
+            margin-top: auto;
+            font-size: 0.9rem;
         }
 
-        /* Responsive Media Queries */
-        @media(max-width: (0 0 0 / 0.15);
-    text-align768px){
-            #about .container {
-                flex-direction: column;
-                text: center;
-    position: relative-align: center;
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: #3498db;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @media (max-width: 768px) {
+            .header-title {
+                font-size: 1.4rem;
             }
-            #about img {
-               ;
-    overflow: hidden;
-    min margin: 0 auto;
+            
+            .header-subtitle {
+                font-size: 0.9rem;
             }
-            header .container {
--height: 160px;
-    display: flex                flex-direction: column;
+            
+            .winner-card {
+                padding: 1.5rem;
+                height: 180px;
             }
-            nav ul {
-                justify;
-    flex-direction: column;
--content: center;
-                margin-top: 10px;
-               justify-content: center;
-    }
+            
+            .winner-title {
+                font-size: 1.3rem;
+            }
+            
+            .winner-number {
+                font-size: 2.5rem;
+            }
         }
     </style>
 </head>
 <body>
-
-    <!-- Header -->
     <header>
-        <div class="container">
-            <h1> user-select: none;
-  }
-  .winnerJohn Doe</h1>
-            <nav aria-label="Primary">
-                <ul>
-                    <li><a href="#hero">Home</a></li>
-                   -label {
-    font-size: 1.3rem <li><a href="#about">About Me</a></li>
-                    <;
-    font-weight: 700;
-    marginli><a href="#portfolio">Portfolio</a></li>
-                    <-bottom: 10px;
-    letter-spacingli><a href="#contact">Contact</a></li>
-                </ul>
-: 1.2px;
-    text-transform: uppercase;
-  }
-  .number-display {
-    font            </nav>
-        </div-weight: 800;
-    font-size: 4rem;
-    font-family: 'Segoe UI>
+        <div class="logo-container">
+            <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_174,h_150,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png" alt="St. Sebastian's Church Logo" class="logo">
+        </div>
+        <h1 class="header-title">St. Sebastian's Church Raffle Winner Announcement</h1>
+        <p class="header-subtitle">No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</p>
+        <p class="header-subtitle">+91 7090424365 | stsebastianssmc@gmail.com</p>
     </header>
 
-    <!-- Hero Black', 'Segoe UI', Tahoma, Geneva Section -->
-    <section class, Verdana, sans-serif;
-    color: #fff;
-    height: 80px;
-    line="hero" id="hero" role="banner-height: 1;
-    user-select: text">
-        <div class="hero-content">
-            <h2>Hello, I'm John;
-  }
-
-  /* Buttons */
-  button Doe</h2>
-            <p>A passionate {
-    margin-top: 18px;
-    cursor Web Developer crafting beautiful & responsive websites</p>
-            <a href="#portfolio" class="btn: pointer;
-    border: none;
-   " role="button">View My Work</ border-radius: 30px;
-    fonta>
+    <main>
+        <div class="winners-container">
+            <div class="winner-card third-place">
+                <h2 class="winner-title">3rd Place Winner</h2>
+                <div class="winner-number" id="third-place-number">-</div>
+            </div>
+            
+            <div class="winner-card second-place">
+                <h2 class="winner-title">2nd Place Winner</h2>
+                <div class="winner-number" id="second-place-number">-</div>
+            </div>
+            
+            <div class="winner-card first-place">
+                <h2 class="winner-title">1st Place Winner</h2>
+                <div class="winner-number" id="first-place-number">-</div>
+            </div>
         </div>
-    </section-weight: 700;
-    font-size: 1>
 
-    <!-- About me Section -->
-    <section id="about" aria-label.1rem;
-    padding: 10px 26px;
-="About me">
-        <div class="container">
-            <img    color: #fff;
-    transition: background 0.3s ease, transform src="https://randomuser.me/api 0.15s ease;
-    user-select: none/portraits/men/32.jpg" alt="John;
-    box-shadow: 0 4px 14px rgb Doe smiling" />
-            <(0 0 0 / 0.12);
-  }
-  button:activediv class="about-text">
-                {
-    transform: scale(0.95);
- <h2>About Me</h2>
-                 }
-  button:disabled {
-    cursor <p>
-                    I am a: not-allowed;
-    opacity: 0. web developer with over 4 years of experience specializing in building (and occasionally designing) exceptional digital experiences.
-                    I take pride5;
-    box-shadow: none;
-  }
+        <div class="button-container">
+            <button class="draw-button" id="draw-button">Draw 3rd Place Winner</button>
+            <button class="reset-button" id="reset-button">Reset Draw</button>
+        </div>
+    </main>
 
- in writing clean, efficient code and delivering high quality projects  /* Third place card - blue */
- on time.
-                    I enjoy turning complex problems  #third-place {
-    background into simple, beautiful interfaces: #1565c0;
-  }
-  #third-place .number-display {
-    color: #bb.
-                </p>
-               defb;
-    text-shadow:
-        <p>
-                    When I’m not coding, you’ll find me exploring1px 1px 3px rgb(0 0 0 / 0.3),
- new tech, reading books, or playing guitar.
-                </p>
-            </div>
-        </div       0 0 15px #90caf9;
-  }
- >
-    </section>
-
-    <!-- Portfolio #third-place button {
-    background Section -->
-    <section id="portfolio" aria-label="Portfolio: #1e88e5;
-  }
-  #third-place button">
-        <div class="container">
-            <h2>My Projects:hover:not(:disabled) {
-    background</h2>
-            <div class="projects-grid">
-               : #1976d2;
-  }
-
-  /* Second place <article class="project-card" tabindex="0">
-                    card - bronze */
-  #second-place <img src="https://via.placeholder.com/400x160?text=Project+1" alt {
-    background: #6d4c41;
-  }
-="Screenshot of Project 1" />
-                    <div class="project-content">
-                         #second-place .number-display <h3>Responsive Blog Website</h3>
-                        <p>A clean and modern blog template {
-    color: #efebe9;
-    text built with HTML, CSS, and JavaScript.</p>
-                    </div>
-                </article-shadow:
-       1px 1px 3px rgb>
-                <article class="project-card" tabindex="0">
-(0 0 0 / 0.3),
-       0 0 15px                    <img src="https://via.placeholder.com/400 #d7ccc8;
-  }
-  #second-place button {
-    background: #8d6e63;
-  }
-x160?text=Project+2" alt="Screenshot  #second-place button:hover:not of Project 2" />
-                   (:disabled) {
-    background: # <div class="project-content">
-                        <h3>Portfolio5d4037;
-  }
-
-  /* First place card Website</h3>
-                        - gold */
-  #first-place {
-    <p>A minimal and responsive portfolio site to showcase professional background: #ffb300;
-  }
-  #first projects and skills.</p>
-                   -place .number-display {
-    color </div>
-                </article>
-                <article class: #fff8e1;
-    text-shadow:
-      ="project-card" tabindex="0">
-                    <img src=" 1px 1px 3px rgb(0 0 0 / 0.35),
-https://via.placeholder.com/400       0 0 20px #ffecb3;
-  }
-  #first-place button {
-    background: #ffc107;
-    color: #4e342e;
-  }
-  #first-place button:hoverx160?text=Project+3" alt="Screenshot:not(:disabled) {
-    background of Project 3" />
-                   : #ffca28;
-  }
-
-  /* Each winner card is initially hidden except the third place */
-  #second-place <div class="project-content">
-, #first-place {
-    opacity:                         <h3>E-commerce Landing Page</h3>
-                       0;
-    max-height: 0;
-    overflow: hidden;
-    transition: opacity <p>A product landing page built with mobile-first responsiveness and engaging UI.</p>
-                    0.6s ease, max-height 0.6s ease </div>
-                </article>
-                <article class="project-card" tabindex="0">
-                    <img src="https://via.placeholder.com/400;
-  }
-  #second-place.visible, #first-place.visible {
-    opacityx160?text=Project+4" alt="Screenshot: 1;
-    max-height: 400px;
-  }
-
- of Project 4" />
-                     /* Reset button container */
- <div class="project-content">
-  #reset-container {
-    margin                        <h3>Java-top: 40px;
-    text-align: centerScript To-Do App</h3>
-                        <p>An interactive to-do application;
-    opacity: 0;
-    max-height with local storage support and: 0;
-    overflow: hidden;
-    smooth animations.</p>
-                    transition: opacity 0.6s ease </div>
-                </article>
-            </div>
-        </, max-height 0.6s ease;
-  }
-  #div>
-    </section>
-
-    <!-- Contactreset-container.visible {
-    opacity: 1;
-    max-height: 100px;
-  }
- Section -->
-    <section id="  #reset-button {
-    backgroundcontact" aria-label="Contact me: #424242;
-    color: #eee;
-  }
-  #reset-button:hover {
-    background">
-        <div class="container: #616161;
-  }
-
-  /* Spinning number animation */
-  @keyframes spin">
-            <h2>Contact Me</-numbers {
-    0% { transform: translateY(0); opacity: 1;}
-   h2>
-            <form action="#" method="POST" novalidate>
-                20% { opacity: 0.4;}
-    40% { <label for="name">Name</label opacity: 0.8;}
-    60% { opacity>
-                <input type=": 0.4;}
-    80% { opacity: 0.8text" id="name" name="name" placeholder;}
-    100% { transform: translateY(-50px); opacity: 1;}
-  }
-
-
- ="Your full name" required />
-
- /* Responsive */
-  @media (min                <label for="email-width: 600px) {
-    .winners-container {
-      flex-direction: row;
-">Email</label>
-                     justify-content: space-between;
-    }
-    .winner-card {
-      <input type="email" id="email flex-basis: 30%;
-      min-height: 220px;
-    }
-  }
-</style>
-</" name="email" placeholder="youhead>
-<body>
-<header>
-  <div class="logo-container" aria-label="@example.com" required />
-
-               Logo and Title">
-    <img src="https://static.wixstatic.com/media <label for="message">Message</label>
-                <textarea/df2113_f71b21a1906c4d2bace3f797 id="message" name="message" rowsf5a6a8bb~mv2.png/v1/crop/x_5,y="5" placeholder="Write your message_0,w_365,h_315/fill/w_174,h_150 here..." required></textarea>
-
-,al_c,q_85,usm_0.66_1.00_0.01,                <button type="enc_avif,quality_auto/LogoDesignsubmit">Send Message</button>
--II%20(1)_edited.png" alt="St.            </form>
-        </ Sebastian's Church Logo" />
-    <div class="heading-text">
-      <h1>St. Sebastian's Church Rafflediv>
-    </section>
-
-    <!-- Footer Winner Announcement</h1>
-      <address>No:184/C, New Byppan -->
     <footer>
-        <p>&ahalli Extn, Indiranagar, Bengaluru – 560038<br />
-      <a href="tel:+917090424365" style="colorcopy; 2024 John Doe. All rights:#cfd8dc; text-decoration:none reserved.</p>
+        <p>© 2025 St. Sebastian's Church. All rights reserved.</p>
+        <p>Powered by DataWings Solution</p>
     </footer>
 
-;">+91 7090424365</a> | <a href="mailto:stsebastianssmc@gmail</body>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const drawButton = document.getElementById('draw-button');
+            const resetButton = document.getElementById('reset-button');
+            const thirdPlaceNumber = document.getElementById('third-place-number');
+            const secondPlaceNumber = document.getElementById('second-place-number');
+            const firstPlaceNumber = document.getElementById('first-place-number');
+            
+            const winnerCards = document.querySelectorAll('.winner-card');
+            let winners = [];
+            let currentDrawStep = 0;
+            let allNumbers = [];
+
+            // Simulate fetching from external file (in a real scenario, you would fetch this)
+            function loadWinners() {
+                // In a real implementation, you would fetch this from Winners.txt
+                // For demo purposes, we'll generate 100 random numbers
+                allNumbers = [];
+                for (let i = 1; i <= 100; i++) {
+                    allNumbers.push(i.toString().padStart(3, '0'));
+                }
+                
+                // Shuffle the array
+                allNumbers = allNumbers.sort(() => Math.random() - 0.5);
+            }
+
+            function drawWinner(place) {
+                const element = place === 2 ? firstPlaceNumber : 
+                               place === 1 ? secondPlaceNumber : thirdPlaceNumber;
+                
+                // If we've drawn all winners, show the reset button
+                if (place === -1) {
+                    drawButton.style.display = 'none';
+                    resetButton.style.display = 'block';
+                    return;
+                }
+                
+                element.textContent = '';
+                element.classList.add('winner-spin');
+                
+                // Simulate spinning animation
+                const animationDuration = 3000; // 3 seconds
+                const startTime = Date.now();
+                
+                const animate = () => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = elapsed / animationDuration;
+                    
+                    if (progress < 1) {
+                        // Show a random number during animation
+                        const randomIndex = Math.floor(Math.random() * allNumbers.length);
+                        element.textContent = allNumbers[randomIndex];
+                        requestAnimationFrame(animate);
+                    } else {
+                        // Animation complete - select actual winner
+                        element.classList.remove('winner-spin');
+                        
+                        // Find a number not already selected
+                        let winner;
+                        do {
+                            const randomIndex = Math.floor(Math.random() * allNumbers.length);
+                            winner = allNumbers[randomIndex];
+                        } while (winners.includes(winner));
+                        
+                        winners.push(winner);
+                        element.textContent = winner;
+                        
+                        // Update the button for next draw
+                        currentDrawStep++;
+                        
+                        if (currentDrawStep === 1) {
+                            drawButton.textContent = 'Draw 2nd Place Winner';
+                            // Show the second place card
+                            winnerCards[1].classList.add('visible');
+                            drawButton.disabled = false;
+                        } else if (currentDrawStep === 2) {
+                            drawButton.textContent = 'Draw 1st Place Winner';
+                            // Show the first place card
+                            winnerCards[2].classList.add('visible');
+                            drawButton.disabled = false;
+                        } else {
+                            drawWinner(-1); // All winners drawn
+                        }
+                    }
+                };
+                
+                animate();
+            }
+
+            function resetDraw() {
+                winners = [];
+                currentDrawStep = 0;
+                
+                thirdPlaceNumber.textContent = '-';
+                secondPlaceNumber.textContent = '-';
+                firstPlaceNumber.textContent = '-';
+                
+                drawButton.textContent = 'Draw 3rd Place Winner';
+                drawButton.style.display = 'block';
+                drawButton.disabled = false;
+                resetButton.style.display = 'none';
+                
+                // Hide all winner cards except the first one
+                winnerCards.forEach((card, index) => {
+                    if (index > 0) {
+                        card.classList.remove('visible');
+                    }
+                });
+                
+                // Reload numbers for a new draw
+                loadWinners();
+            }
+
+            // Initialize
+            loadWinners();
+            
+            // Show the first card initially
+            winnerCards[0].classList.add('visible');
+            
+            drawButton.addEventListener('click', function() {
+                drawButton.disabled = true;
+                drawWinner(currentDrawStep);
+            });
+            
+            resetButton.addEventListener('click', resetDraw);
+        });
+    </script>
+</body>
 </html>
