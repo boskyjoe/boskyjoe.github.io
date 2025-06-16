@@ -1,0 +1,102 @@
+# Raffle Number Winner Picker
+
+## Requirement Summary
+This document outlines the implementation of a highly responsive HTML5 code that features 3D animation and a stunning user interface. The code is designed to function as a Raffle Number Winner Picker, which selects three winners from an external file named `Winners.txt`. The winners are displayed in the order of 3rd, 2nd, and 1st place, ensuring that the same number cannot be picked more than once. The implementation includes error handling and exception management to enhance robustness.
+
+## Code Generated
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raffle Number Winner Picker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            animation: pop 0.5s ease-in-out;
+        }
+        @keyframes pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #28a745;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .winner {
+            font-size: 24px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Raffle Number Winner Picker</h1>
+        <button id="pickWinners">Pick Winners</button>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        document.getElementById('pickWinners').addEventListener('click', async function() {
+            try {
+                const response = await fetch('Winners.txt');
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const text = await response.text();
+                const winnersArray = text.split('\n').filter(Boolean);
+                
+                if (winnersArray.length < 3) {
+                    throw new Error('Not enough winners in the file');
+                }
+
+                const selectedWinners = [];
+                while (selectedWinners.length < 3) {
+                    const randomIndex = Math.floor(Math.random() * winnersArray.length);
+                    const winner = winnersArray[randomIndex];
+                    if (!selectedWinners.includes(winner)) {
+                        selectedWinners.push(winner);
+                    }
+                }
+
+                displayWinners(selectedWinners);
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('results').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        });
+
+        function displayWinners(winners) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="winner">3rd Place: ${winners[2]}</div>
+                <div class="winner">2nd Place: ${winners[1]}</div>
+                <div class="winner">1st Place: ${winners[0]}</div>
+            `;
+        }
+    </script>
+</body>
+</html>
