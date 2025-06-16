@@ -206,6 +206,19 @@
             opacity: 0;
             animation: final-number-fade-in 0.6s ease-out forwards;
         }
+
+        /* Styling for the sponsor section collapse transition */
+        #sponsor-section {
+            transition: max-height 1.5s ease-in-out, opacity 1.5s ease-in-out, margin-top 1.5s ease-in-out, margin-bottom 1.5s ease-in-out, padding 1.5s ease-in-out;
+            overflow: hidden; /* Crucial for max-height transition */
+        }
+        /* When hidden, reset margins and padding to zero to fully collapse */
+        #sponsor-section.collapsed {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -401,6 +414,7 @@
         // References for the reveal functionality
         const revealWinnersBtn = document.getElementById('reveal-winners-btn');
         const raffleContentContainer = document.getElementById('raffle-content-container');
+        const sponsorSection = document.getElementById('sponsor-section'); // Get reference to the sponsor section
 
         // Reference for the winner sections wrapper
         const winnerSectionsWrapper = document.getElementById('winner-sections-wrapper');
@@ -539,6 +553,11 @@
             raffleContentContainer.style.maxHeight = '0px';
             raffleContentContainer.style.opacity = '0';
             raffleContentContainer.style.overflow = 'hidden';
+
+            // Ensure sponsor section is visible initially for collapsing
+            sponsorSection.classList.remove('hidden', 'collapsed'); // Ensure it's not hidden or collapsed
+            sponsorSection.style.maxHeight = ''; // Clear any inline max-height for proper measurement
+            sponsorSection.style.opacity = ''; // Clear any inline opacity
 
             revealWinnersBtn.disabled = false; // Ensure reveal button is enabled on load
             revealWinnersBtn.style.display = 'block'; // Ensure it's visible
@@ -905,6 +924,20 @@
                 triggerConfetti(); // Trigger confetti immediately
                 revealWinnersBtn.disabled = true; // Disable button after click
                 revealWinnersBtn.style.display = 'none'; // Hide the button
+
+                // Collapse the sponsor section
+                const sponsorHeight = sponsorSection.scrollHeight; // Get current height for transition
+                sponsorSection.style.maxHeight = `${sponsorHeight}px`; // Set explicit height
+                void sponsorSection.offsetWidth; // Force reflow
+                sponsorSection.style.maxHeight = '0px'; // Collapse height
+                sponsorSection.style.opacity = '0'; // Fade out
+                sponsorSection.classList.add('collapsed'); // Add class to remove margins/padding after transition
+
+                sponsorSection.addEventListener('transitionend', function handler() {
+                    sponsorSection.classList.add('hidden'); // Hide completely after transition
+                    sponsorSection.removeEventListener('transitionend', handler);
+                }, { once: true });
+
 
                 // Temporarily make content visible (but hidden by opacity) to get scrollHeight
                 raffleContentContainer.classList.remove('hidden'); // Remove hidden to allow measurement
