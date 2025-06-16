@@ -1,354 +1,396 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Raffle Winner Picker</title>
-  <style>
-    /* Reset and basic styles */
-    * {
-      box-sizing: border-box;
-    }
-    body, html {
-      margin: 0; padding: 0;
-      height: 100%;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      text-align: center;
-      padding: 20px;
-      user-select: none;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>St. Sebastian's Church Raffle Winner Announcement</title>
+<style>
+  /* Reset & base */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0; padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f0f4ff, #dbe9ff);
+    color: #1a202c;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  main {
+    flex-grow: 1;
+    padding: 1rem 1.5rem 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  /* Header */
+  header {
+    background: #1755a5;
+    color: white;
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    border-bottom: 4px solid #0f3f73;
+  }
+  header img.logo {
+    height: 90px;
+    width: auto;
+    flex-shrink: 0;
+  }
+  header .header-content {
+    text-align: center;
+    flex-grow: 1;
+    min-width: 250px;
+  }
+  header h1 {
+    font-weight: 700;
+    font-size: 1.8rem;
+    margin: 0 0 0.25rem;
+    line-height: 1.2;
+  }
+  header .address-contact {
+    font-weight: 500;
+    font-size: 0.9rem;
+    opacity: 0.85;
+    user-select: text;
+  }
 
-    h1 {
-      font-size: clamp(2rem, 5vw, 3rem);
-      margin-bottom: 10px;
-      letter-spacing: 2px;
-      text-shadow: 0 0 10px rgba(0,0,0,0.5);
-    }
-    p.description {
-      font-size: clamp(1rem, 2vw, 1.25rem);
-      margin-bottom: 40px;
-      color: #d1c4e9;
-    }
+  /* Cards container */
+  section.draw-cards {
+    margin-top: 2rem;
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 
-    .raffle-container {
-      width: 100%;
-      max-width: 450px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 20px;
-      padding: 30px 25px;
-      box-shadow:
-        0 8px 20px rgba(0,0,0,0.25);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-    }
+  /* Each winner card */
+  .winner-card {
+    background: white;
+    box-shadow: 0 10px 25px rgba(30,30,30,0.1);
+    border-radius: 15px;
+    flex: 1 1 280px;
+    max-width: 280px;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 1.5rem 2rem;
+    position: relative;
+    overflow: hidden;
+  }
 
-    .winner-block {
-      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
-      margin-bottom: 25px;
-      border-radius: 15px;
-      padding: 20px 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      box-shadow: 0 4px 15px rgba(255,105,180,0.5);
-      position: relative;
-      overflow: hidden;
-      cursor: pointer;
-      transition: transform 0.3s ease;
+  .winner-place {
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: #1755a5;
+    text-align: center;
+    user-select: none;
+  }
+
+  .number-display {
+    margin: 1.5rem 0 1.3rem;
+    font-size: 3.6rem;
+    font-weight: 800;
+    color: #0b2f64;
+    user-select: none;
+    text-align: center;
+    height: 4.5rem;
+    line-height: 4.5rem;
+    font-family: 'Courier New', Courier, monospace;
+    letter-spacing: 0.25rem;
+    border-radius: 7px;
+    background: linear-gradient(90deg, #e9f1fd, #d0e0fd);
+    box-shadow: inset 0 3px 7px rgba(0,0,0,0.05);
+  }
+
+  /* Spin animation for numbers */
+  .number-spin {
+    animation: spinNumbers 0.15s linear infinite;
+  }
+  @keyframes spinNumbers {
+    0% { color: #1764a5; }
+    50% { color: #0b2f64; }
+    100% { color: #1764a5; }
+  }
+
+  /* Button style */
+  button.draw-btn,
+  button.reset-btn {
+    padding: 0.5rem 1.25rem;
+    font-weight: 700;
+    font-size: 1rem;
+    color: white;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.3s ease;
+    box-shadow: 0 6px 12px rgba(23, 85, 165, 0.5);
+  }
+  button.draw-btn {
+    background-color: #2962ff;
+  }
+  button.draw-btn:hover:not(:disabled) {
+    background-color: #0039cb;
+  }
+  button.draw-btn:disabled {
+    background-color: #a4bffb;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  button.reset-btn {
+    background-color: #f44336;
+    width: 100%;
+    margin-top: 1.8rem;
+    box-shadow: 0 6px 12px rgba(244, 67, 54, 0.5);
+    font-size: 1.1rem;
+  }
+  button.reset-btn:hover {
+    background-color: #ba000d;
+  }
+
+  /* Responsive text adjustment */
+  @media (max-width: 480px) {
+    header h1 {
+      font-size: 1.3rem;
     }
-    .winner-block:hover:not(.disabled) {
-      transform: scale(1.05);
-      box-shadow: 0 8px 30px rgba(255,105,180,0.8);
-    }
-    .winner-block.disabled {
-      filter: brightness(0.6);
-      cursor: default;
-      pointer-events: none;
-      box-shadow: none;
+    header .address-contact {
+      font-size: 0.8rem;
     }
     .winner-place {
-      font-weight: 700;
-      font-size: clamp(1.25rem, 3vw, 1.8rem);
-      margin-bottom: 8px;
-      color: #6a1b9a;
-      letter-spacing: 0.1em;
-      text-shadow: 0 2px 6px rgba(255,255,255,0.7);
+      font-size: 1.1rem;
     }
-    .winner-number {
-      font-size: clamp(2.5rem, 6vw, 4rem);
-      font-weight: 900;
-      letter-spacing: 0.2em;
-      color: #4a148c;
-      min-height: 60px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      user-select: text;
-      position: relative;
+    .number-display {
+      font-size: 3rem;
+      height: 4rem;
+      line-height: 3.8rem;
     }
-    /* Animated number rolling effect */
-    .rolling {
-      animation: rollingAnimation 1.2s linear infinite;
-      background: linear-gradient(45deg, #7b1fa2 25%, #e91e63 50%, #7b1fa2 75%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      text-fill-color: transparent;
-      font-weight: 900;
-      font-variant-numeric: tabular-nums;
-    }
-
-    @keyframes rollingAnimation {
-      0% {
-        background-position: 0% 50%;
-      }
-      100% {
-        background-position: 200% 50%;
-      }
-    }
-
-    button.generate-btn {
-      margin-top: 15px;
-      background: #9575cd;
-      border: none;
-      padding: 12px 25px;
-      border-radius: 30px;
-      color: white;
-      font-weight: 600;
-      font-size: clamp(1rem, 2vw, 1.15rem);
-      letter-spacing: 0.05em;
-      cursor: pointer;
-      box-shadow: 0 5px 15px rgba(149, 117, 205, 0.6);
-      transition: background 0.3s ease, box-shadow 0.3s ease;
-      outline-offset: 4px;
-    }
-    button.generate-btn:hover:not(:disabled) {
-      background: #5e35b1;
-      box-shadow: 0 8px 20px rgba(94, 53, 177, 0.85);
-    }
-    button.generate-btn:disabled {
-      background: #b39ddb;
-      cursor: not-allowed;
-      box-shadow: none;
-    }
-
-    @media (max-width: 500px) {
-      .raffle-container {
-        padding: 25px 15px;
-      }
-      .winner-number {
-        font-size: clamp(2rem, 8vw, 3rem);
-      }
-    }
-  </style>
+  }
+</style>
 </head>
 <body>
-  <h1>🎉 Raffle Winner Picker 🎉</h1>
-  <p class="description">Click each button to draw the 3rd, 2nd and 1st winner in order.<br />
-  Numbers are loaded from <code>Winners.txt</code>.</p>
-  <div class="raffle-container" role="main" aria-label="Raffle winner picker">
-
-    <section class="winner-block" id="third-block" tabindex="0" aria-labelledby="third-label" aria-live="polite">
-      <div class="winner-place" id="third-label">3rd Place</div>
-      <div class="winner-number" id="third-number">---</div>
-      <button class="generate-btn" id="third-btn" aria-describedby="third-label">Pick 3rd Winner</button>
-    </section>
-
-    <section class="winner-block" id="second-block" tabindex="0" aria-labelledby="second-label" aria-live="polite">
-      <div class="winner-place" id="second-label">2nd Place</div>
-      <div class="winner-number" id="second-number">---</div>
-      <button class="generate-btn" id="second-btn" aria-describedby="second-label" disabled>Pick 2nd Winner</button>
-    </section>
-
-    <section class="winner-block" id="first-block" tabindex="0" aria-labelledby="first-label" aria-live="polite">
-      <div class="winner-place" id="first-label">1st Place</div>
-      <div class="winner-number" id="first-number">---</div>
-      <button class="generate-btn" id="first-btn" aria-describedby="first-label" disabled>Pick 1st Winner</button>
-    </section>
-
+<header>
+  <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_174,h_150,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png" alt="St. Sebastian's Church Logo" class="logo" />
+  <div class="header-content">
+    <h1>St. Sebastian's Church Raffle Winner Announcement</h1>
+    <div class="address-contact">
+      No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038<br />
+      +91 7090424365 | stsebastianssmc@gmail.com
+    </div>
   </div>
+</header>
+<main>
+  <section class="draw-cards">
+    <!-- 3rd Place -->
+    <article class="winner-card" id="card-third" aria-label="Third place winner card">
+      <div class="winner-place">3rd Place Winner</div>
+      <div class="number-display" id="number-third" aria-live="polite" aria-atomic="true" aria-relevant="additions">---</div>
+      <button class="draw-btn" id="btn-third" aria-describedby="desc-third">Draw 3rd Place</button>
+      <p id="desc-third" class="visually-hidden">Click to draw the third place winner</p>
+    </article>
+    <!-- 2nd Place (hidden initially) -->
+    <article class="winner-card" id="card-second" aria-label="Second place winner card" style="display:none;">
+      <div class="winner-place">2nd Place Winner</div>
+      <div class="number-display" id="number-second" aria-live="polite" aria-atomic="true" aria-relevant="additions">---</div>
+      <button class="draw-btn" id="btn-second" aria-describedby="desc-second">Draw 2nd Place</button>
+      <p id="desc-second" class="visually-hidden">Click to draw the second place winner</p>
+    </article>
+    <!-- 1st Place (hidden initially) -->
+    <article class="winner-card" id="card-first" aria-label="First place winner card" style="display:none;">
+      <div class="winner-place">1st Place Winner</div>
+      <div class="number-display" id="number-first" aria-live="polite" aria-atomic="true" aria-relevant="additions">---</div>
+      <button class="draw-btn" id="btn-first" aria-describedby="desc-first">Draw 1st Place</button>
+      <p id="desc-first" class="visually-hidden">Click to draw the first place winner</p>
+    </article>
+  </section>
+  <button class="reset-btn" id="btn-reset" aria-label="Reset the raffle draw" disabled>Reset Draw</button>
+</main>
 
-  <script>
-    /*
-      Raffle Winner Picker Script
-      Loads numbers from Winners.txt, initializes internal data,
-      enables picking winners for 3rd, 2nd, 1st in order.
-      Includes animated rolling effect while picking.
-    */
+<!-- Accessibility helper -->
+<style>
+  .visually-hidden { 
+    position: absolute !important;
+    width: 1px !important; 
+    height: 1px !important; 
+    padding: 0 !important; 
+    margin: -1px !important; 
+    overflow: hidden !important; 
+    clip: rect(0, 0, 0, 0) !important; 
+    white-space: nowrap !important; 
+    border: 0 !important;
+  }
+</style>
 
-    (function () {
-      // DOM Elements
-      const thirdBtn = document.getElementById('third-btn');
-      const secondBtn = document.getElementById('second-btn');
-      const firstBtn = document.getElementById('first-btn');
+<script>
+(() => {
+  "use strict";
 
-      const thirdNumber = document.getElementById('third-number');
-      const secondNumber = document.getElementById('second-number');
-      const firstNumber = document.getElementById('first-number');
+  // Elements references
+  const btnThird = document.getElementById("btn-third");
+  const btnSecond = document.getElementById("btn-second");
+  const btnFirst = document.getElementById("btn-first");
+  const btnReset = document.getElementById("btn-reset");
+  
+  const cardSecond = document.getElementById("card-second");
+  const cardFirst = document.getElementById("card-first");
+  
+  const numberThird = document.getElementById("number-third");
+  const numberSecond = document.getElementById("number-second");
+  const numberFirst = document.getElementById("number-first");
+  
+  // Winners.txt file URL (same origin or CORS enabled)
+  const winnersFile = "Winners.txt";
 
-      const thirdBlock = document.getElementById('third-block');
-      const secondBlock = document.getElementById('second-block');
-      const firstBlock = document.getElementById('first-block');
+  // State
+  let possibleWinners = []; // all possible winner numbers (string)
+  let winnersPicked = new Set();
 
-      let possibleWinners = [];
-      let pickedWinners = [];
+  // Spin animation config
+  const spinDurationMs = 4000; // how long does the spinning last
+  const spinIntervalMs = 50;    // interval between number changes during spin
 
-      /**
-       * Fetch the numbers from Winners.txt
-       * Expecting one number per line, trimmed.
-       * Returns array of strings.
-       */
-      async function fetchWinnersFile() {
-        try {
-          const response = await fetch('Winners.txt', {cache: "no-store"});
-          if (!response.ok) {
-            throw new Error('Failed to load Winners.txt');
-          }
-          const text = await response.text();
-          // Parse text lines
-          const lines = text.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
-          // Validate numbers: Only digits allowed (but can be alphanumeric depending on data)
-          return lines;
-        } catch (error) {
-          alert('Error loading Winners.txt file: ' + error.message + '\nMake sure the file exists and is accessible.');
-          return [];
+  /**
+   * Fetch possible winner numbers from Winners.txt.
+   * Assumes format: one number per line.
+   * Returns Promise<string[]> of trimmed non-empty lines.
+   */
+  async function loadPossibleWinners() {
+    try {
+      const resp = await fetch(winnersFile, {cache: "no-store"});
+      if (!resp.ok) throw new Error(`Failed to load winners list: ${resp.status}`);
+      const text = await resp.text();
+      // Parsing: split lines, trim, ignore empty lines
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+      if (lines.length < 3) throw new Error("Winners.txt must contain at least 3 entries.");
+      return lines;
+    } catch (err) {
+      alert("Error loading winners list:\n" + err.message + "\nPlease ensure Winners.txt is accessible.");
+      throw err;
+    }
+  }
+
+  /**
+   * Returns a random number from possibleWinners not already picked
+   */
+  function getRandomWinner() {
+    // Filter out already picked
+    const available = possibleWinners.filter(n => !winnersPicked.has(n));
+    if (available.length === 0) return null;
+    const idx = Math.floor(Math.random() * available.length);
+    return available[idx];
+  }
+
+  /**
+   * Animate spinning numbers on given display element, then resolve with selected winner
+   * @param {HTMLElement} displayEl 
+   * @returns {Promise<string>} winner number
+   */
+  function spinAndPick(displayEl) {
+    return new Promise((resolve) => {
+      let spinTimeElapsed = 0;
+      displayEl.classList.add("number-spin");
+
+      // Change number very fast from possibleWinners randomly
+      const intervalId = setInterval(() => {
+        const randomNum = possibleWinners[Math.floor(Math.random() * possibleWinners.length)];
+        displayEl.textContent = randomNum;
+      }, spinIntervalMs);
+
+      // Stop after spinDurationMs
+      setTimeout(() => {
+        clearInterval(intervalId);
+        displayEl.classList.remove("number-spin");
+
+        // Pick final number
+        let winner = null;
+        do {
+          winner = getRandomWinner();
+        } while (winner === null && possibleWinners.length > 0);
+
+        if (winner === null) {
+          // fallback if no available winner
+          winner = "---";
         }
-      }
+        displayEl.textContent = winner;
+        resolve(winner);
+      }, spinDurationMs);
+    });
+  }
 
-      /**
-       * Generate a random index based on current possible winners
-       */
-      function randomIndex(max) {
-        return Math.floor(Math.random() * max);
-      }
+  /**
+   * Reset the whole UI and state to fresh state
+   */
+  function resetDraw() {
+    winnersPicked.clear();
+    numberThird.textContent = "---";
+    numberSecond.textContent = "---";
+    numberFirst.textContent = "---";
 
-      /**
-       * Animate rolling numbers for a given element for a duration, then resolve with chosen winner
-       * @param {HTMLElement} element - element to show rolling animation
-       * @param {Array<string>} pool - array of possible winners to pick randomly from
-       * @param {number} duration - duration of rolling in ms
-       * @returns {Promise<string>} resolved with selected winner
-       */
-      function rollAnimation(element, pool, duration = 2000) {
-        return new Promise((resolve) => {
-          let animationInterval;
-          const intervalTime = 70; // Change display every 70ms (fast rolling)
+    // Show only 3rd place card + enable its button
+    cardSecond.style.display = "none";
+    cardFirst.style.display = "none";
 
-          // Helper: show random number with rolling class for effect
-          function showRandomNumber() {
-            const randNum = pool[randomIndex(pool.length)];
-            element.textContent = randNum;
-            element.classList.add('rolling');
-          }
+    btnThird.disabled = false;
+    btnSecond.disabled = true;
+    btnFirst.disabled = true;
+    btnReset.disabled = true;
+  }
 
-          showRandomNumber();
-          animationInterval = setInterval(showRandomNumber, intervalTime);
+  /**
+   * Initialize listeners and load winners list
+   */
+  async function init() {
+    possibleWinners = await loadPossibleWinners();
 
-          setTimeout(() => {
-            clearInterval(animationInterval);
-            // Pick final winner
-            const winnerIndex = randomIndex(pool.length);
-            const winner = pool[winnerIndex];
-            element.textContent = winner;
-            element.classList.remove('rolling');
-            resolve(winner);
-          }, duration);
-        });
-      }
+    // Initial UI state
+    resetDraw();
 
-      /**
-       * Disable a button and visually disable the containing block
-       * @param {HTMLElement} btn 
-       * @param {HTMLElement} block 
-       */
-      function disablePickButton(btn, block) {
-        btn.disabled = true;
-        block.classList.add('disabled');
-      }
-      /**
-       * Enable a button and visually enable the containing block
-       * @param {HTMLElement} btn 
-       * @param {HTMLElement} block 
-       */
-      function enablePickButton(btn, block) {
-        btn.disabled = false;
-        block.classList.remove('disabled');
-      }
+    // 3rd place draw button handler
+    btnThird.addEventListener("click", async () => {
+      btnThird.disabled = true;
+      const winner3 = await spinAndPick(numberThird);
+      winnersPicked.add(winner3);
+      // Show second place card, enable second draw button
+      cardSecond.style.display = "flex";
+      btnSecond.disabled = false;
+    });
 
-      /**
-       * Main logic to pick winners in order:
-       * 3rd place first, then 2nd, then 1st.
-       * Each pick removes winner from the pool to avoid duplication.
-       */
-      async function initRaffle() {
-        possibleWinners = await fetchWinnersFile();
+    // 2nd place draw button handler
+    btnSecond.addEventListener("click", async () => {
+      btnSecond.disabled = true;
+      const winner2 = await spinAndPick(numberSecond);
+      winnersPicked.add(winner2);
+      // Show first place card, enable first draw button
+      cardFirst.style.display = "flex";
+      btnFirst.disabled = false;
+    });
 
-        if (possibleWinners.length < 3) {
-          alert('Not enough entries in Winners.txt to pick 3 winners. Please add more.');
-          thirdBtn.disabled = true;
-          secondBtn.disabled = true;
-          firstBtn.disabled = true;
-          return;
-        }
+    // 1st place draw button handler
+    btnFirst.addEventListener("click", async () => {
+      btnFirst.disabled = true;
+      const winner1 = await spinAndPick(numberFirst);
+      winnersPicked.add(winner1);
+      // All done, enable reset button
+      btnReset.disabled = false;
+    });
 
-        // Reset UI
-        thirdNumber.textContent = '---';
-        secondNumber.textContent = '---';
-        firstNumber.textContent = '---';
+    // Reset button handler
+    btnReset.addEventListener("click", () => {
+      resetDraw();
+    });
+  }
 
-        pickedWinners = [];
-
-        enablePickButton(thirdBtn, thirdBlock);
-        disablePickButton(secondBtn, secondBlock);
-        disablePickButton(firstBtn, firstBlock);
-
-        // Button Handlers
-        thirdBtn.addEventListener('click', async () => {
-          disablePickButton(thirdBtn, thirdBlock);
-          // Animate rolling & pick
-          const winner = await rollAnimation(thirdNumber, possibleWinners);
-          pickedWinners.push(winner);
-          // Remove winner from pool
-          possibleWinners = possibleWinners.filter(n => n !== winner);
-          // Enable next pick
-          enablePickButton(secondBtn, secondBlock);
-          secondBtn.focus();
-        });
-
-        secondBtn.addEventListener('click', async () => {
-          disablePickButton(secondBtn, secondBlock);
-          const winner = await rollAnimation(secondNumber, possibleWinners);
-          pickedWinners.push(winner);
-          possibleWinners = possibleWinners.filter(n => n !== winner);
-          enablePickButton(firstBtn, firstBlock);
-          firstBtn.focus();
-        });
-
-        firstBtn.addEventListener('click', async () => {
-          disablePickButton(firstBtn, firstBlock);
-          const winner = await rollAnimation(firstNumber, possibleWinners);
-          pickedWinners.push(winner);
-          possibleWinners = possibleWinners.filter(n => n !== winner);
-
-          // All winners picked, show alert and final message
-          // Accessibility: Announce completion
-          alert(`🎉 Winners are:\n\n1st: ${pickedWinners[2]}\n2nd: ${pickedWinners[1]}\n3rd: ${pickedWinners[0]}\n\nThank you for participating!`);
-
-          // Optionally: Enable a reset or reload (not required by user)
-        });
-      }
-
-      window.addEventListener('load', () => {
-        initRaffle();
-      });
-
-    })();
-  </script>
+  // Kick off init on DOM ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
+</script>
 </body>
 </html>
