@@ -219,42 +219,6 @@
             padding-top: 0 !important;
             padding-bottom: 0 !important;
         }
-
-        /* DataWings Overlay Styling */
-        .datarings-overlay {
-            /* positioned absolutely over the spinning number */
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white background */
-            border-radius: inherit; /* Inherit border-radius from parent winner-card */
-            opacity: 0; /* Initially hidden */
-            pointer-events: none; /* Allows clicks to pass through */
-            z-index: 10; /* Above the number but below actual content */
-            transition: opacity 0.3s ease-in-out; /* Smooth fade in/out */
-        }
-
-        /* Text shadow for DataWings overlay text */
-        .datarings-overlay span {
-            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-
-        /* Keyframes for the DataWings text/image animation */
-        @keyframes datawings-pulse {
-            0% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.05); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.8; }
-        }
-
-        .datawings-animated {
-            animation: datawings-pulse 1.5s ease-in-out infinite; /* Apply the pulsing animation */
-        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -318,13 +282,10 @@
                     <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                         <span class="mr-3 text-4xl">🥉</span> 3rd Place Winner
                     </h2>
-                    <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md relative overflow-hidden">
-                        <h3 class="text-xl font-semibold text-amber-800">Winning Number</h3>
-                        <p id="third-primary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
-                        <!-- New overlay for DataWings animation -->
-                        <div id="third-datarings-overlay" class="datarings-overlay">
-                            <img src="https://placehold.co/40x40/6366f1/ffffff?text=DW" alt="DataWings Icon" class="h-10 w-10 mb-2 object-contain">
-                            <span class="text-sm md:text-base font-bold text-indigo-700 text-shadow-sm">Powered by DataWings</span>
+                    <div class="grid grid-cols-1 gap-6 mb-6">
+                        <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
+                            <h3 class="text-xl font-semibold text-amber-800">Winning Number</h3>
+                            <p id="third-primary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
                         </div>
                     </div>
                     <button id="generate-third" class="winner-button px-8 py-3 bg-amber-900 text-white font-semibold rounded-full shadow-lg hover:bg-amber-950 transition duration-300 ease-in-out" disabled>
@@ -337,13 +298,10 @@
                     <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                         <span class="mr-3 text-4xl">🥈</span> 2nd Place Winner
                     </h2>
-                    <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md relative overflow-hidden">
-                        <h3 class="text-xl font-semibold text-gray-800">Winning Number</h3>
-                        <p id="second-primary" class="text-3xl font-bold text-gray-900 mt-2">---</p>
-                        <!-- New overlay for DataWings animation -->
-                        <div id="second-datarings-overlay" class="datarings-overlay">
-                            <img src="https://placehold.co/40x40/6366f1/ffffff?text=DW" alt="DataWings Icon" class="h-10 w-10 mb-2 object-contain">
-                            <span class="text-sm md:text-base font-bold text-indigo-700 text-shadow-sm">Powered by DataWings</span>
+                    <div class="grid grid-cols-1 gap-6 mb-6">
+                        <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
+                            <h3 class="text-xl font-semibold text-gray-800">Winning Number</h3>
+                            <p id="second-primary" class="text-3xl font-bold text-gray-900 mt-2">---</p>
                         </div>
                     </div>
                     <button id="generate-second" class="winner-button px-8 py-3 bg-gray-700 text-white font-semibold rounded-full shadow-lg hover:bg-gray-800 transition duration-300 ease-in-out" disabled>
@@ -356,13 +314,10 @@
                     <h2 class="text-3xl font-bold text-white mb-6 flex-items-center justify-center">
                         <span class="mr-3 text-4xl">🥇</span> 1st Place Winner
                     </h2>
-                    <div class="winner-card bg-purple-100 p-4 rounded-md shadow-md relative overflow-hidden">
-                        <h3 class="text-xl font-semibold text-purple-800">Winning Number</h3>
-                        <p id="first-primary" class="text-3xl font-bold text-purple-900 mt-2">---</p>
-                        <!-- New overlay for DataWings animation -->
-                        <div id="first-datarings-overlay" class="datarings-overlay">
-                            <img src="https://placehold.co/40x40/6366f1/ffffff?text=DW" alt="DataWings Icon" class="h-10 w-10 mb-2 object-contain">
-                            <span class="text-sm md:text-base font-bold text-indigo-700 text-shadow-sm">Powered by DataWings</span>
+                    <div class="grid grid-cols-1 gap-6 mb-6">
+                        <div class="winner-card bg-purple-100 p-4 rounded-md shadow-md">
+                            <h3 class="text-xl font-semibold text-purple-800">Winning Number</h3>
+                            <p id="first-primary" class="text-3xl font-bold text-purple-900 mt-2">---</p>
                         </div>
                     </div>
                     <button id="generate-first" class="winner-button px-8 py-3 bg-purple-700 text-white font-semibold rounded-full shadow-lg hover:bg-purple-800 transition duration-300 ease-in-out" disabled>
@@ -622,11 +577,6 @@
             mergedWinnersSection.classList.remove('reveal-postit-animation');
             mergedWinnersSection.style.transform = ''; // Reset transform on load
 
-            // Clear any DataWings overlays
-            document.querySelectorAll('.datarings-overlay').forEach(overlay => {
-                overlay.classList.remove('datawings-animated');
-                overlay.style.opacity = '0';
-            });
 
             try {
                 const [winnersData, winners1Data] = await Promise.all([
@@ -765,15 +715,6 @@
             const startTime = performance.now(); // Use performance.now() for better precision
             let lastUpdateTime = startTime;
 
-            // Get the corresponding DataWings overlay element
-            const datawingsOverlay = document.getElementById(`${element.id.split('-')[0]}-datarings-overlay`);
-
-            // Show and animate DataWings overlay
-            if (datawingsOverlay) {
-                datawingsOverlay.classList.add('datawings-animated');
-                datawingsOverlay.style.opacity = '1';
-            }
-
             // Define the update intervals (how long each random number stays on screen)
             const initialUpdateInterval = 20; // Very short display time for random numbers initially (fast spin)
             const finalUpdateInterval = 300;  // Longer display time for random numbers towards the end (slow spin)
@@ -781,7 +722,6 @@
 
             element.classList.remove('final-number-reveal'); // Ensure no lingering fade-in class
             element.classList.add('pulsing-text'); // Start pulsing animation for random numbers
-            element.style.opacity = '0'; // Ensure it's hidden while spinning random numbers
 
             return new Promise(resolve => {
                 function frame(currentTime) {
@@ -791,15 +731,6 @@
                     if (progress >= 1) { // Animation finished
                         element.classList.remove('pulsing-text'); // Stop pulsing animation
                         element.textContent = finalNumber; // Set the final number
-                        element.classList.add('final-number-reveal'); // Apply fade-in to final number
-                        element.style.opacity = '1'; // Ensure it's fully visible after its animation
-
-                        // Hide DataWings overlay
-                        if (datawingsOverlay) {
-                            datawingsOverlay.classList.remove('datawings-animated');
-                            datawingsOverlay.style.opacity = '0';
-                        }
-
                         triggerConfetti(); // Trigger confetti after the primary number is revealed
                         resolve(); // Resolve the promise
                         return; // End recursion
