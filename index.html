@@ -689,22 +689,25 @@
 
         /**
          * Animates a number reveal effect on a given element with random numbers scrolling,
-         * simulating a gradual slowdown.
+         * simulating a gradual slowdown using requestAnimationFrame for smoothness.
          * @param {HTMLElement} element - The HTML element to animate.
          * @param {string} finalNumber - The final number to display.
          * @param {number} totalDuration - The total duration of the spinning animation in milliseconds.
          */
         async function animateNumberReveal(element, finalNumber, totalDuration) {
-            const startTime = Date.now();
-            const initialFastDelay = 20; // Very fast updates at the start
-            const finalSlowDelay = 300; // Very slow updates towards the end
+            const startTime = performance.now(); // Use performance.now() for better precision
+            let lastUpdateTime = startTime;
+
+            // Define the update intervals (how long each random number stays on screen)
+            const initialUpdateInterval = 20; // Very short display time for random numbers initially (fast spin)
+            const finalUpdateInterval = 300;  // Longer display time for random numbers towards the end (slow spin)
 
             element.classList.remove('final-number-reveal'); // Ensure no lingering fade-in class
             element.classList.add('pulsing-text'); // Start pulsing animation for random numbers
 
             return new Promise(resolve => {
-                function updateNumber() {
-                    const elapsed = Date.now() - startTime;
+                function frame(currentTime) {
+                    const elapsed = currentTime - startTime;
                     const progress = elapsed / totalDuration; // Normalized progress from 0 to 1
 
                     if (progress >= 1) { // Animation finished
@@ -715,17 +718,29 @@
                         return; // End recursion
                     }
 
-                    element.textContent = generateRandomAlphanumeric();
+                    // Calculate the current update interval based on progress
+                    // Using a cubic ease-in-out for a smoother acceleration/deceleration of the update speed
+                    // This makes the random numbers display faster initially, then smoothly slow down.
+                    let easedProgress;
+                    if (progress < 0.5) {
+                        easedProgress = 2 * progress * progress * progress; // Ease-in cubic
+                    } else {
+                        easedProgress = 1 - Math.pow(-2 * progress + 2, 3) / 2; // Ease-out cubic
+                    }
 
-                    // Calculate next delay: starts fast, gets slower as progress increases (quadratic ease-in for delay)
-                    // This creates the deceleration effect.
-                    const currentInterpolatedDelay = initialFastDelay + (Math.pow(progress, 2) * (finalSlowDelay - initialFastDelay));
+                    // Interpolate the update interval: starts fast (small interval), becomes slow (large interval)
+                    const currentUpdateInterval = initialUpdateInterval + (easedProgress * (finalUpdateInterval - initialUpdateInterval));
 
-                    // Use Math.max to ensure delay doesn't go below initialFastDelay if progress is very small
-                    setTimeout(updateNumber, Math.max(initialFastDelay, currentInterpolatedDelay));
+                    // Only update the text content if enough time has passed since the last update
+                    if (currentTime - lastUpdateTime > currentUpdateInterval) {
+                        element.textContent = generateRandomAlphanumeric();
+                        lastUpdateTime = currentTime;
+                    }
+
+                    requestAnimationFrame(frame); // Request the next frame
                 }
 
-                updateNumber(); // Start the animation
+                requestAnimationFrame(frame); // Start the animation loop
             });
         }
 
