@@ -1,448 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>St. Sebastian's Church Raffle Winner Announcement</title>
-<style>
-  /* Reset and base */
-  * {
-    box-sizing: border-box;
-  }
-  body {
-    margin: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #f5f7fa;
-    color: #222;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-  }
-  header {
-    background: #004a99;
-    color: white;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    padding: 24px 30px;
-    gap: 20px;
-  }
-  header img {
-    height: 110px;
-    width: auto;
-    flex-shrink: 0;
-  }
-  header .header-text {
-    flex: 1 1 400px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-  header h1 {
-    margin: 0 0 10px 0;
-    font-size: 2.2rem;
-    font-weight: 700;
-    line-height: 1.2;
-  }
-  header .address-contact {
-    font-size: 1.1rem;
-    line-height: 1.4;
-    font-weight: 400;
-  }
-
-  main {
-    flex-grow: 1;
-    padding: 30px 40px;
-    max-width: 1000px;
-    margin: 0 auto 50px auto;
-    display: flex;
-    flex-direction: column;
-    gap: 40px;
-  }
-  .cards-container {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 36px;
-    justify-content: center;
-  }
-  .winner-card {
-    width: 350px;
-    height: 230px;
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgb(0 0 0 / 0.15);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-around;
-    color: white;
-    padding: 25px 20px;
-    user-select: none;
-    position: relative;
-  }
-  .winner-card h2 {
-    margin: 0;
-    font-size: 1.8rem;
-    font-weight: 700;
-    text-shadow: 1.5px 1.5px 4px rgba(0,0,0,0.35);
-  }
-  .number-display {
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 5.2rem;
-    font-weight: 900;
-    letter-spacing: 0.22em;
-    text-shadow:
-      3px 3px 10px rgba(0,0,0,0.25),
-      0 0 15px rgba(255 255 255 / 0.4);
-    min-height: 1.2em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    user-select: text;
-    margin: 10px 0 15px 0;
-  }
-  .btn-draw {
-    background: rgba(255 255 255 / 0.9);
-    border: none;
-    border-radius: 10px;
-    padding: 14px 28px;
-    font-size: 1.3rem;
-    font-weight: 700;
-    cursor: pointer;
-    color: #333;
-    box-shadow: 0 5px 14px rgb(0 0 0 / 0.18);
-    transition: background-color 0.35s ease, color 0.35s ease;
-    user-select: none;
-    min-width: 140px;
-  }
-  .btn-draw:hover:not(:disabled) {
-    background: #004a99;
-    color: white;
-  }
-  .btn-draw:disabled {
-    cursor: not-allowed;
-    opacity: 0.45;
-  }
-
-  /* Colors for cards */
-  .third-place {
-    background: linear-gradient(135deg, #ff8c00, #ffb74d);
-  }
-  .second-place {
-    background: linear-gradient(135deg, #1976d2, #63a4ff);
-  }
-  .first-place {
-    background: linear-gradient(135deg, #388e3c, #81c784);
-  }
-
-  /* Hide cards initially except 3rd place */
-  .winner-card:not(.third-place) {
-    display: none;
-  }
-
-  /* Footer */
-  footer {
-    background: #222;
-    color: #bbb;
-    font-size: 1rem;
-    text-align: center;
-    padding: 18px 12px;
-    user-select: none;
-  }
-
-  /* Spinner animation for numbers */
-  @keyframes spinNumbers {
-    0% {opacity: 1;}
-    100% {opacity: 0;}
-  }
-
-  /* Responsive adjustments */
-  @media (max-width: 1140px) {
-    main {
-      padding: 25px 30px;
-    }
-    .cards-container {
-      flex-wrap: wrap;
-      gap: 30px;
-    }
-    .winner-card {
-      width: 90vw;
-      max-width: 400px;
-      height: auto;
-      padding: 28px 24px;
-    }
-    .number-display {
-      font-size: 4.8rem;
-      margin: 14px 0 20px 0;
-    }
-    header {
-      padding: 20px 20px;
-    }
-    header img {
-      height: 90px;
-    }
-    header h1 {
-      font-size: 1.8rem;
-    }
-    header .address-contact {
-      font-size: 1rem;
-    }
-  }
-  @media (max-width: 480px) {
-    header {
-      justify-content: center;
-      text-align: center;
-      padding: 18px 16px;
-    }
-    header img {
-      height: 75px;
-    }
-    header .header-text {
-      flex: none;
-      width: 100%;
-    }
-    header h1 {
-      font-size: 1.4rem;
-    }
-    header .address-contact {
-      font-size: 0.9rem;
-    }
-    .btn-draw {
-      width: 100%;
-      min-width: unset;
-      padding: 14px 0;
-      font-size: 1.1rem;
-    }
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>St. Sebastian's Church Raffle Winner Announcement</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            padding: 20px;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 0;
+        }
+        img {
+            width: 150px;
+            height: auto;
+        }
+        .card {
+            display: none;
+            margin: 20px auto;
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            font-size: 2em;
+            width: 200px;
+        }
+        .third { background-color: #ff9800; }
+        .second { background-color: #2196F3; }
+        .first { background-color: #4CAF50; }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            margin: 10px;
+            cursor: pointer;
+        }
+        footer {
+            margin-top: 20px;
+            font-size: 0.8em;
+        }
+    </style>
 </head>
 <body>
+
 <header>
-  <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_174,h_150,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png" alt="St. Sebastian's Church Logo" />
-  <div class="header-text">
+    <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_174,h_150,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png" alt="Logo">
     <h1>St. Sebastian's Church Raffle Winner Announcement</h1>
-    <div class="address-contact">
-      No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038<br />
-      +91 7090424365 | stsebastianssmc@gmail.com
-    </div>
-  </div>
+    <p>No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</p>
+    <p>+91 7090424365 | stsebastianssmc@gmail.com</p>
 </header>
 
-<main>
-  <div class="cards-container" aria-live="polite" aria-atomic="true">
-    <section class="winner-card third-place" aria-label="Third Place Winner">
-      <h2>3rd Place Winner</h2>
-      <div class="number-display" id="thirdNumber" aria-live="polite" aria-atomic="true" aria-relevant="text">&nbsp;</div>
-      <button class="btn-draw" id="btnDraw3rd" aria-describedby="descDraw3rd">Draw 3rd Place Winner</button>
-      <div id="descDraw3rd" class="sr-only">Click to draw the 3rd place winner number</div>
-    </section>
+<div class="card third" id="thirdPlace">3rd Place Winner: <span id="thirdWinner"></span></div>
+<div class="card second" id="secondPlace">2nd Place Winner: <span id="secondWinner"></span></div>
+<div class="card first" id="firstPlace">1st Place Winner: <span id="firstWinner"></span></div>
 
-    <section class="winner-card second-place" aria-label="Second Place Winner">
-      <h2>2nd Place Winner</h2>
-      <div class="number-display" id="secondNumber" aria-live="polite" aria-atomic="true" aria-relevant="text">&nbsp;</div>
-      <button class="btn-draw" id="btnDraw2nd" aria-describedby="descDraw2nd" disabled>Draw 2nd Place Winner</button>
-      <div id="descDraw2nd" class="sr-only">Click to draw the 2nd place winner number</div>
-    </section>
-
-    <section class="winner-card first-place" aria-label="First Place Winner">
-      <h2>1st Place Winner</h2>
-      <div class="number-display" id="firstNumber" aria-live="polite" aria-atomic="true" aria-relevant="text">&nbsp;</div>
-      <button class="btn-draw" id="btnDraw1st" aria-describedby="descDraw1st" disabled>Draw 1st Place Winner</button>
-      <div id="descDraw1st" class="sr-only">Click to draw the 1st place winner number</div>
-    </section>
-  </div>
-
-  <div style="text-align:center; margin-top: 40px;">
-    <button class="btn-draw" id="btnReset" style="display:none;" aria-label="Reset Draw">Reset Draw</button>
-  </div>
-</main>
+<button id="drawThird">Draw 3rd Place</button>
+<button id="drawSecond" style="display:none;">Draw 2nd Place</button>
+<button id="drawFirst" style="display:none;">Draw 1st Place</button>
+<button id="reset" style="display:none;">Draw Reset</button>
 
 <footer>
-  © 2025 St. Sebastian's Church. All rights reserved.<br />
-  Powered by DataWings Solution
+    © 2025 St. Sebastian's Church. All rights reserved. <br>
+    Powered by DataWings Solution
 </footer>
 
 <script>
-(() => {
-  "use strict";
-  // Elements references
-  const thirdCard = document.querySelector('.third-place');
-  const secondCard = document.querySelector('.second-place');
-  const firstCard = document.querySelector('.first-place');
+    let winners = [];
+    fetch('Winners.txt')
+        .then(response => response.text())
+        .then(data => {
+            winners = data.split('\n').filter(Boolean);
+        });
 
-  const thirdNumDisplay = document.getElementById('thirdNumber');
-  const secondNumDisplay = document.getElementById('secondNumber');
-  const firstNumDisplay = document.getElementById('firstNumber');
-
-  const btnDraw3rd = document.getElementById('btnDraw3rd');
-  const btnDraw2nd = document.getElementById('btnDraw2nd');
-  const btnDraw1st = document.getElementById('btnDraw1st');
-  const btnReset = document.getElementById('btnReset');
-
-  // Variables
-  let winnersList = [];
-  let drawnWinners = new Set();
-
-  // Fetch Winners.txt and parse numbers
-  async function loadWinners() {
-    try {
-      const response = await fetch('Winners.txt', {cache: "no-store"});
-      if (!response.ok) throw new Error('Failed to load Winners.txt');
-      const text = await response.text();
-      const numbers = text
-        .split(/\r?\n/)
-        .map(s => s.trim())
-        .filter(s => s.length > 0)
-        .filter((v, i, a) => a.indexOf(v) === i); // unique values
-      if (numbers.length === 0) throw new Error('Winners.txt is empty or invalid');
-      winnersList = numbers;
-    } catch (e) {
-      alert('Error loading winners list: ' + e.message);
-      winnersList = [];
+    function drawWinner(place) {
+        const card = document.getElementById(place);
+        const winnerSpan = document.getElementById(place + 'Winner');
+        let index = 0;
+        const interval = setInterval(() => {
+            winnerSpan.textContent = winners[Math.floor(Math.random() * winners.length)];
+            index++;
+            if (index === 10) {
+                clearInterval(interval);
+                winnerSpan.textContent = winners[Math.floor(Math.random() * winners.length)];
+                card.style.display = 'block';
+                document.getElementById('draw' + place.charAt(0).toUpperCase() + place.slice(1)).style.display = 'none';
+                if (place === 'thirdPlace') {
+                    document.getElementById('drawSecond').style.display = 'inline';
+                } else if (place === 'secondPlace') {
+                    document.getElementById('drawFirst').style.display = 'inline';
+                } else {
+                    document.getElementById('reset').style.display = 'inline';
+                }
+            }
+        }, 100);
     }
-  }
 
-  // Animate number spinning in the display for duration ms, then resolve with final number
-  function spinNumber(displayElem, duration = 3500, intervalMs = 50) {
-    return new Promise((resolve) => {
-      const totalSteps = Math.floor(duration / intervalMs);
-      let step = 0;
-      // Prepare a filtered list excluding already drawn winners
-      const available = winnersList.filter(n => !drawnWinners.has(n));
-      if (available.length === 0) {
-        resolve(null);
-        return;
-      }
-      const spinInterval = setInterval(() => {
-        const randomIndex = Math.floor(Math.random() * available.length);
-        displayElem.textContent = available[randomIndex];
-        step++;
-        if (step >= totalSteps) {
-          clearInterval(spinInterval);
-          // Final pick
-          const finalIndex = Math.floor(Math.random() * available.length);
-          const winner = available[finalIndex];
-          displayElem.textContent = winner;
-          resolve(winner);
-        }
-      }, intervalMs);
-    });
-  }
-
-  // Enable or disable buttons
-  function setDrawButtons({third, second, first}) {
-    btnDraw3rd.disabled = !third;
-    btnDraw2nd.disabled = !second;
-    btnDraw1st.disabled = !first;
-  }
-
-  // Reveal card
-  function revealCard(card) {
-    card.style.display = 'flex';
-  }
-
-  // Hide card
-  function hideCard(card) {
-    card.style.display = 'none';
-  }
-
-  // Reset all displays and states
-  function resetDraw() {
-    drawnWinners.clear();
-    thirdNumDisplay.textContent = '\u00A0';
-    secondNumDisplay.textContent = '\u00A0';
-    firstNumDisplay.textContent = '\u00A0';
-
-    // Show only third card, hide others
-    revealCard(thirdCard);
-    hideCard(secondCard);
-    hideCard(firstCard);
-
-    setDrawButtons({third: true, second: false, first: false});
-    btnReset.style.display = 'none';
-  }
-
-  // Initialization
-  async function init() {
-    await loadWinners();
-    if (winnersList.length === 0) {
-      btnDraw3rd.disabled = true;
-      btnDraw2nd.disabled = true;
-      btnDraw1st.disabled = true;
-      return;
-    }
-    resetDraw();
-  }
-
-  // Draw handlers
-  btnDraw3rd.addEventListener('click', async () => {
-    btnDraw3rd.disabled = true;
-    btnDraw2nd.disabled = true;
-    btnDraw1st.disabled = true;
-
-    const winner = await spinNumber(thirdNumDisplay, 3500, 50);
-    if (winner !== null) {
-      drawnWinners.add(winner);
-      // Reveal second card and enable its button
-      revealCard(secondCard);
-      setDrawButtons({third: false, second: true, first: false});
-      btnDraw2nd.focus();
-    }
-  });
-
-  btnDraw2nd.addEventListener('click', async () => {
-    btnDraw3rd.disabled = true;
-    btnDraw2nd.disabled = true;
-    btnDraw1st.disabled = true;
-
-    const winner = await spinNumber(secondNumDisplay, 3500, 50);
-    if (winner !== null) {
-      drawnWinners.add(winner);
-      // Reveal first card and enable its button
-      revealCard(firstCard);
-      setDrawButtons({third: false, second: false, first: true});
-      btnDraw1st.focus();
-    }
-  });
-
-  btnDraw1st.addEventListener('click', async () => {
-    btnDraw3rd.disabled = true;
-    btnDraw2nd.disabled = true;
-    btnDraw1st.disabled = true;
-
-    const winner = await spinNumber(firstNumDisplay, 3500, 50);
-    if (winner !== null) {
-      drawnWinners.add(winner);
-      // All winners drawn, show reset button
-      btnReset.style.display = 'inline-block';
-      btnReset.focus();
-    }
-  });
-
-  btnReset.addEventListener('click', () => {
-    resetDraw();
-    btnDraw3rd.focus();
-  });
-
-  // Accessibility: hide description only for screen readers
-  const srOnlyStyle = document.createElement('style');
-  srOnlyStyle.textContent = `
-    .sr-only {
-      position: absolute !important;
-      width: 1px !important;
-      height: 1px !important;
-      padding: 0 !important;
-      margin: -1px !important;
-      overflow: hidden !important;
-      clip: rect(0,0,0,0) !important;
-      white-space: nowrap !important;
-      border: 0 !important;
-    }
-  `;
-  document.head.appendChild(srOnlyStyle);
-
-  // Start
-  init();
-})();
+    document.getElementById('drawThird').onclick = () => drawWinner('thirdPlace');
+    document.getElementById('drawSecond').onclick = () => drawWinner('secondPlace');
+    document.getElementById('drawFirst').onclick = () => drawWinner('firstPlace');
+    document.getElementById('reset').onclick = () => {
+        document.querySelectorAll('.card').forEach(card => card.style.display = 'none');
+        document.getElementById('drawThird').style.display = 'inline';
+        document.getElementById('reset').style.display = 'none';
+    };
 </script>
+
 </body>
 </html>
