@@ -218,19 +218,22 @@
         <div class="main-content-pattern"></div>
 
         <div class="mb-4 relative z-10">
-            <div class="flex items-center justify-center md:justify-start mb-2">
+            <div class="flex flex-col items-center justify-center md:flex-row md:justify-start mb-2">
                 <div class="w-16 h-16 md:w-20 md:h-20 mr-3 md:mr-4 flex-shrink-0">
                     <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png"
                          alt="St. Sebastian's Church Logo"
                          class="w-full h-full object-contain rounded-full">
                 </div>
-                <h1 class="text-2xl md:text-3xl font-extrabold text-indigo-800 text-left">
-                    St. Sebastian's Church Raffle Winner Announcement
-                </h1>
-            </div>
-            <div class="text-gray-600 text-xs md:text-sm mb-4 text-left md:ml-20">
-                <p>No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</p>
-                <p>+91 7090424365 | stsebastianssmc@gmail.com</p>
+                <div class="flex flex-col items-center md:items-start text-center md:text-left">
+                    <h1 class="text-xl md:text-2xl font-extrabold text-indigo-800 whitespace-nowrap">
+                        St. Sebastian's Church Raffle Winner Announcement
+                    </h1>
+                    <!-- Moved contact info directly below the header for better grouping -->
+                    <div class="text-gray-600 text-xs md:text-sm">
+                        <p>No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</p>
+                        <p>+91 7090424365 | stsebastianssmc@gmail.com</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -781,16 +784,14 @@
 
             // Disable the button that was just clicked
             let currentButton;
-            let animationDuration; // Define animation duration here
+            let animationDuration = 10000; // Set a default of 10 seconds for all animations
+
             if (placePrefix === 'third') {
                 currentButton = generateThirdBtn;
-                animationDuration = 2000; // Increased to 2 seconds for 3rd place
             } else if (placePrefix === 'second') {
                 currentButton = generateSecondBtn;
-                animationDuration = 3000; // Increased to 3 seconds for 2nd place
             } else if (placePrefix === 'first') {
                 currentButton = generateFirstBtn;
-                animationDuration = 4000; // Increased to 4 seconds for 1st place
             }
             if (currentButton) {
                 currentButton.disabled = true;
