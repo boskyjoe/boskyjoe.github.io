@@ -613,13 +613,18 @@
         /**
          * Generates a random alphanumeric string with the pattern "AAAA 123456"
          * where AAAA are 4 random uppercase alphabets and 123456 are 6 random digits.
+         * @param {boolean} [useSSCFPrefix=false] - If true, the prefix will be "SSCF".
          * @returns {string} A random alphanumeric string.
          */
-        function generateRandomAlphanumeric() {
+        function generateRandomAlphanumeric(useSSCFPrefix = false) {
             let prefix = '';
-            for (let i = 0; i < 4; i++) {
-                // Generate a random uppercase letter (ASCII A is 65, Z is 90)
-                prefix += String.fromCharCode(65 + Math.floor(Math.random() * 26));
+            if (useSSCFPrefix) {
+                prefix = 'SSCF';
+            } else {
+                for (let i = 0; i < 4; i++) {
+                    // Generate a random uppercase letter (ASCII A is 65, Z is 90)
+                    prefix += String.fromCharCode(65 + Math.floor(Math.random() * 26));
+                }
             }
 
             let digits = '';
@@ -701,6 +706,7 @@
             // Define the update intervals (how long each random number stays on screen)
             const initialUpdateInterval = 20; // Very short display time for random numbers initially (fast spin)
             const finalUpdateInterval = 300;  // Longer display time for random numbers towards the end (slow spin)
+            const sscfPrefixStartProgress = 0.85; // Start showing SSCF for the last 15% of animation duration
 
             element.classList.remove('final-number-reveal'); // Ensure no lingering fade-in class
             element.classList.add('pulsing-text'); // Start pulsing animation for random numbers
@@ -733,7 +739,8 @@
 
                     // Only update the text content if enough time has passed since the last update
                     if (currentTime - lastUpdateTime > currentUpdateInterval) {
-                        element.textContent = generateRandomAlphanumeric();
+                        const useSSCF = progress >= sscfPrefixStartProgress;
+                        element.textContent = generateRandomAlphanumeric(useSSCF);
                         lastUpdateTime = currentTime;
                     }
 
@@ -787,13 +794,13 @@
             let animationDuration; // Define animation duration here
             if (placePrefix === 'third') {
                 currentButton = generateThirdBtn;
-                animationDuration = 1000; // 1 second for 3rd place
+                animationDuration = 2000; // Increased to 2 seconds for 3rd place
             } else if (placePrefix === 'second') {
                 currentButton = generateSecondBtn;
-                animationDuration = 1500; // 1.5 seconds for 2nd place
+                animationDuration = 3000; // Increased to 3 seconds for 2nd place
             } else if (placePrefix === 'first') {
                 currentButton = generateFirstBtn;
-                animationDuration = 2000; // 2 seconds for 1st place
+                animationDuration = 4000; // Increased to 4 seconds for 1st place
             }
             if (currentButton) {
                 currentButton.disabled = true;
