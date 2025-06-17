@@ -280,7 +280,7 @@
                 <h2 class="text-2xl font-bold text-blue-800 mb-4 flex items-center justify-center">
                     <span class="mr-3 text-3xl">ℹ️</span> User Details
                 </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-left">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                     <div>
                         <p class="text-blue-700 font-semibold">Date & Time:</p>
                         <p id="current-datetime" class="text-blue-900 text-lg">Loading...</p>
@@ -300,30 +300,6 @@
                     <div>
                         <p class="text-blue-700 font-semibold">Country:</p>
                         <p id="user-country" class="text-blue-900 text-lg">Loading...</p>
-                    </div>
-                    <div>
-                        <p class="text-blue-700 font-semibold">Browser Language:</p>
-                        <p id="browser-language" class="text-blue-900 text-lg">Loading...</p>
-                    </div>
-                    <div>
-                        <p class="text-blue-700 font-semibold">Online Status:</p>
-                        <p id="online-status" class="text-blue-900 text-lg">Loading...</p>
-                    </div>
-                    <div>
-                        <p class="text-blue-700 font-semibold">Screen Resolution:</p>
-                        <p id="screen-resolution" class="text-blue-900 text-lg">Loading...</p>
-                    </div>
-                    <div>
-                        <p class="text-blue-700 font-semibold">CPU Cores:</p>
-                        <p id="cpu-cores" class="text-blue-900 text-lg">Loading...</p>
-                    </div>
-                    <div>
-                        <p class="text-blue-700 font-semibold">Device Memory:</p>
-                        <p id="device-memory" class="text-blue-900 text-lg">Loading...</p>
-                    </div>
-                    <div class="md:col-span-2 lg:col-span-3">
-                        <p class="text-blue-700 font-semibold">User Agent:</p>
-                        <p id="user-agent-info" class="text-blue-900 text-sm break-words">Loading...</p>
                     </div>
                 </div>
             </div>
@@ -488,17 +464,17 @@
         const userInfoSection = document.getElementById('user-info-section');
         const currentDatetimeEl = document.getElementById('current-datetime');
         const userIpAddressEl = document.getElementById('user-ip-address');
-        const userAgentInfoEl = document.getElementById('user-agent-info');
-        const userCityEl = document.getElementById('user-city'); // New element for City
-        const userRegionEl = document.getElementById('user-region'); // New element for Region
-        const userCountryEl = document.getElementById('user-country'); // New element for Country
+        const userCityEl = document.getElementById('user-city'); // Element for City
+        const userRegionEl = document.getElementById('user-region'); // Element for Region
+        const userCountryEl = document.getElementById('user-country'); // Element for Country
 
-        // New elements for additional user information
-        const browserLanguageEl = document.getElementById('browser-language');
-        const onlineStatusEl = document.getElementById('online-status');
-        const screenResolutionEl = document.getElementById('screen-resolution');
-        const cpuCoresEl = document.getElementById('cpu-cores');
-        const deviceMemoryEl = document.getElementById('device-memory');
+        // Removed elements from this section based on the request:
+        // const userAgentInfoEl = document.getElementById('user-agent-info');
+        // const browserLanguageEl = document.getElementById('browser-language');
+        // const onlineStatusEl = document.getElementById('online-status');
+        // const screenResolutionEl = document.getElementById('screen-resolution');
+        // const cpuCoresEl = document.getElementById('cpu-cores');
+        // const deviceMemoryEl = document.getElementById('device-memory');
 
 
         /**
@@ -608,25 +584,6 @@
         async function updateUserInfo() {
             // Display current date and time
             currentDatetimeEl.textContent = new Date().toLocaleString();
-
-            // Display User Agent
-            userAgentInfoEl.textContent = navigator.userAgent;
-
-            // Display Browser Language(s)
-            browserLanguageEl.textContent = navigator.languages ? navigator.languages.join(', ') : (navigator.language || 'N/A');
-
-            // Display Online Status
-            onlineStatusEl.textContent = navigator.onLine ? 'Online' : 'Offline';
-
-            // Display Screen Resolution
-            screenResolutionEl.textContent = `${window.screen.width}x${window.screen.height} (Available: ${window.screen.availWidth}x${window.screen.availHeight})`;
-
-            // Display CPU Cores
-            cpuCoresEl.textContent = navigator.hardwareConcurrency || 'N/A';
-
-            // Display Device Memory
-            deviceMemoryEl.textContent = navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'N/A';
-
 
             // Initialize location placeholders
             userIpAddressEl.textContent = 'Fetching IP...';
