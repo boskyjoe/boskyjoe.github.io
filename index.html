@@ -276,30 +276,30 @@
             </div>
 
             <!-- New card for Date, Time, IP Address, and User Agent -->
-            <div id="user-info-section" class="bg-gradient-to-br from-blue-100 to-blue-200 p-6 rounded-lg shadow-lg mb-8 relative z-10 hidden">
-                <h2 class="text-2xl font-bold text-blue-800 mb-4 flex items-center justify-center">
-                    <span class="mr-3 text-3xl">ℹ️</span> User Details
+            <div id="user-info-section" class="bg-blue-50 p-3 rounded-md shadow-sm mb-8 relative z-10 hidden">
+                <h2 class="text-xl font-bold text-blue-800 mb-3 flex items-center justify-center">
+                    <span class="mr-2 text-2xl">ℹ️</span> User Details
                 </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-left text-sm">
                     <div>
                         <p class="text-blue-700 font-semibold">Date & Time:</p>
-                        <p id="current-datetime" class="text-blue-900 text-lg">Loading...</p>
+                        <p id="current-datetime" class="text-blue-900">Loading...</p>
                     </div>
                     <div>
                         <p class="text-blue-700 font-semibold">IP Address:</p>
-                        <p id="user-ip-address" class="text-blue-900 text-lg">Loading...</p>
+                        <p id="user-ip-address" class="text-blue-900">Loading...</p>
                     </div>
                     <div>
                         <p class="text-blue-700 font-semibold">City:</p>
-                        <p id="user-city" class="text-blue-900 text-lg">Loading...</p>
+                        <p id="user-city" class="text-blue-900">Loading...</p>
                     </div>
                     <div>
                         <p class="text-blue-700 font-semibold">Region:</p>
-                        <p id="user-region" class="text-blue-900 text-lg">Loading...</p>
+                        <p id="user-region" class="text-blue-900">Loading...</p>
                     </div>
                     <div>
                         <p class="text-blue-700 font-semibold">Country:</p>
-                        <p id="user-country" class="text-blue-900 text-lg">Loading...</p>
+                        <p id="user-country" class="text-blue-900">Loading...</p>
                     </div>
                 </div>
             </div>
@@ -468,14 +468,6 @@
         const userRegionEl = document.getElementById('user-region'); // Element for Region
         const userCountryEl = document.getElementById('user-country'); // Element for Country
 
-        // Removed elements from this section based on the request:
-        // const userAgentInfoEl = document.getElementById('user-agent-info');
-        // const browserLanguageEl = document.getElementById('browser-language');
-        // const onlineStatusEl = document.getElementById('online-status');
-        // const screenResolutionEl = document.getElementById('screen-resolution');
-        // const cpuCoresEl = document.getElementById('cpu-cores');
-        // const deviceMemoryEl = document.getElementById('device-memory');
-
 
         /**
          * Utility function to introduce a delay.
@@ -592,7 +584,7 @@
             userCountryEl.textContent = 'Fetching country...';
 
             try {
-                // Fetch IP Address
+                // Fetch IP Address and Geo-location
                 // Using ip-api.io for IP and geo-location which tends to work better in iframes.
                 const response = await fetch('https://ip-api.io/json/');
                 if (!response.ok) {
@@ -604,8 +596,8 @@
                 if (data.ip || data.query) { // ip-api.io returns 'ip' or 'query' for the IP
                     userIpAddressEl.textContent = data.ip || data.query || 'N/A';
                     userCityEl.textContent = data.city || 'N/A';
-                    userRegionEl.textContent = data.region_name || data.regionName || 'N/A'; // ip-api.io uses region_name
-                    userCountryEl.textContent = data.country_name || data.country || 'N/A'; // ip-api.io uses country_name
+                    userRegionEl.textContent = data.region_name || data.region || 'N/A';
+                    userCountryEl.textContent = data.country_name || data.country || 'N/A';
                 } else {
                     // Fallback for cases where the API might return an error structure
                     userIpAddressEl.textContent = 'N/A';
