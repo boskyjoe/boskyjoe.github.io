@@ -275,6 +275,28 @@
                 Loading ticket data...
             </div>
 
+            <!-- New card for Date, Time, IP Address, and User Agent -->
+            <div id="user-info-section" class="bg-gradient-to-br from-blue-100 to-blue-200 p-6 rounded-lg shadow-lg mb-8 relative z-10 hidden">
+                <h2 class="text-2xl font-bold text-blue-800 mb-4 flex items-center justify-center">
+                    <span class="mr-3 text-3xl">ℹ️</span> System Information
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                    <div>
+                        <p class="text-blue-700 font-semibold">Date & Time:</p>
+                        <p id="current-datetime" class="text-blue-900 text-lg">Loading...</p>
+                    </div>
+                    <div>
+                        <p class="text-blue-700 font-semibold">IP Address:</p>
+                        <p id="user-ip-address" class="text-blue-900 text-lg">Loading...</p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <p class="text-blue-700 font-semibold">User Agent:</p>
+                        <p id="user-agent-info" class="text-blue-900 text-sm break-words">Loading...</p>
+                    </div>
+                </div>
+            </div>
+            <!-- End new card for Date, Time, IP Address, and User Agent -->
+
             <!-- New wrapper for winner sections -->
             <div id="winner-sections-wrapper">
                 <!-- Third Place Section (now displayed first) -->
@@ -430,6 +452,12 @@
         const mergedSecondWinnerEl = document.getElementById('merged-second-winner');
         const mergedThirdWinnerEl = document.getElementById('merged-third-winner');
 
+        // References for the new User Info section
+        const userInfoSection = document.getElementById('user-info-section');
+        const currentDatetimeEl = document.getElementById('current-datetime');
+        const userIpAddressEl = document.getElementById('user-ip-address');
+        const userAgentInfoEl = document.getElementById('user-agent-info');
+
 
         /**
          * Utility function to introduce a delay.
@@ -533,6 +561,31 @@
         }
 
         /**
+         * Fetches and displays user's IP address and User Agent information.
+         */
+        async function updateUserInfo() {
+            // Display current date and time
+            currentDatetimeEl.textContent = new Date().toLocaleString();
+
+            // Display User Agent
+            userAgentInfoEl.textContent = navigator.userAgent;
+
+            // Fetch IP Address
+            userIpAddressEl.textContent = 'Fetching IP...';
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch IP address (HTTP status: ${response.status})`);
+                }
+                const data = await response.json();
+                userIpAddressEl.textContent = data.ip || 'N/A';
+            } catch (error) {
+                console.error('Error fetching IP address:', error);
+                userIpAddressEl.textContent = 'Failed to get IP';
+            }
+        }
+
+        /**
          * Initializes the application by fetching ticket data from external files.
          * Sets up initial UI state for the raffle.
          */
@@ -562,10 +615,11 @@
             revealWinnersBtn.disabled = false; // Ensure reveal button is enabled on load
             revealWinnersBtn.style.display = 'block'; // Ensure it's visible
 
-            // Set initial inactive and hidden state for all winner sections
+            // Set initial inactive and hidden state for all winner sections and user info section
             firstPlaceSection.classList.add('inactive-section', 'hidden');
             secondPlaceSection.classList.add('inactive-section', 'hidden');
             thirdPlaceSection.classList.add('inactive-section', 'hidden'); // All inactive and hidden initially
+            userInfoSection.classList.add('hidden'); // Initially hide user info section
 
             // Disable and style reset button initially
             resetRaffleBtn.disabled = true;
@@ -602,6 +656,7 @@
 
                 // If we reach here, it means files were fetched successfully and have enough tickets.
                 statusMessageElement.textContent = "Ticket data loaded successfully. Click 'Start Raffle Draw' to begin."; // Initial message before reveal
+                await updateUserInfo(); // Populate user info on load
 
             } catch (error) {
                 // Error handled in fetchTicketNumbers, which already sets status message and disables buttons.
@@ -964,6 +1019,9 @@
                     raffleContentContainer.style.maxHeight = 'none'; // Allow content to adjust naturally
                     raffleContentContainer.removeEventListener('transitionend', handler);
                 }, { once: true });
+
+                // Reveal the user info section
+                userInfoSection.classList.remove('hidden');
 
                 // Activate the 3rd place section and enable its button after reveal
                 thirdPlaceSection.classList.remove('hidden'); // Make 3rd place visible
