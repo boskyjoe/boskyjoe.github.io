@@ -280,28 +280,27 @@
                 <h2 class="text-xl font-bold text-blue-800 mb-3 flex items-center justify-center">
                     <span class="mr-2 text-2xl">ℹ️</span> User Details
                 </h2>
-                <!-- Adjusted for single-line display on larger screens, and more compact on smaller -->
-                <div class="flex flex-wrap justify-center gap-x-4 gap-y-2 text-blue-900 text-sm">
-                    <div class="flex items-center">
-                        <span class="text-blue-700 font-semibold mr-1">Date & Time:</span>
-                        <span id="current-datetime">Loading...</span>
-                    </div>
-                    <div class="flex items-center">
-                        <span class="text-blue-700 font-semibold mr-1">IP Address:</span>
-                        <span id="user-ip-address">Loading...</span>
-                    </div>
-                    <div class="flex items-center">
-                        <span class="text-blue-700 font-semibold mr-1">City:</span>
-                        <span id="user-city">Loading...</span>
-                    </div>
-                    <div class="flex items-center">
-                        <span class="text-blue-700 font-semibold mr-1">Region:</span>
-                        <span id="user-region">Loading...</span>
-                    </div>
-                    <div class="flex items-center">
-                        <span class="text-blue-700 font-semibold mr-1">Country:</span>
-                        <span id="user-country">Loading...</span>
-                    </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-blue-900 text-sm border-collapse table-auto">
+                        <thead>
+                            <tr class="bg-blue-100">
+                                <th class="p-2 font-semibold">Date & Time</th>
+                                <th class="p-2 font-semibold">IP Address</th>
+                                <th class="p-2 font-semibold">City</th>
+                                <th class="p-2 font-semibold">Region</th>
+                                <th class="p-2 font-semibold">Country</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td id="current-datetime" class="p-2 whitespace-nowrap">Loading...</td>
+                                <td id="user-ip-address" class="p-2 whitespace-nowrap">Loading...</td>
+                                <td id="user-city" class="p-2 whitespace-nowrap">Loading...</td>
+                                <td id="user-region" class="p-2 whitespace-nowrap">Loading...</td>
+                                <td id="user-country" class="p-2 whitespace-nowrap">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
             <!-- End new card for Date, Time, IP Address, and User Agent -->
