@@ -153,17 +153,63 @@
         }
         /* No .revealed class needed, JS will control removal of hidden and styling */
 
-
-        /* Keyframes for Golden Border Pulse animation */
-        @keyframes golden-border-pulse {
-            0% { border-color: #FFD700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); } /* Gold */
-            50% { border-color: #FFBF00; box-shadow: 0 0 20px rgba(255, 191, 0, 0.8); } /* Darker Gold */
-            100% { border-color: #FFD700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        /* Keyframes for Crumbling Disappear Effect */
+        @keyframes crumble-disappear {
+            0% {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+                filter: blur(0px);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(0.8) rotate(15deg);
+                filter: blur(2px);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.2) rotate(30deg); /* Smaller scale for crumble */
+                filter: blur(5px);
+            }
+        }
+        .crumble-disappear-animation {
+            animation: crumble-disappear 1s ease-in forwards; /* 1 second crumble */
         }
 
-        .golden-border-pulse-animation {
-            border: 3px solid; /* Ensure border is visible for animation */
-            animation: golden-border-pulse 2s infinite alternate; /* Apply the pulse animation */
+        /* Keyframes for Zoom-in from Center and Horizontal Expand */
+        @keyframes zoom-in-expand {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.1); /* Start very small, centered for initial pop */
+                width: 10%; /* Start very narrow */
+                top: 50%; /* Start vertically centered in viewport */
+                left: 50%; /* Start horizontally centered in viewport */
+                border-radius: 50%; /* Start as a circle */
+                box-shadow: none; /* No shadow initially */
+                border-color: transparent; /* No border initially */
+            }
+            80% { /* Mid-point for smooth transition to final state */
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1); /* Zoom to full scale */
+                width: var(--final-winner-width); /* Expand to target width */
+                top: var(--final-winner-top-position); /* Move to target top */
+                left: 50%; /* Maintain horizontal centering */
+                border-radius: 1rem; /* Finish with rounded corners */
+                box-shadow: 0 8px 16px rgba(0,0,0,0.2), 0 3px 6px rgba(0,0,0,0.15); /* Re-introduce shadow */
+                border-color: #FFD700; /* Start showing gold border */
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(-50%); /* Final horizontal centering */
+                width: var(--final-winner-width); /* Final width */
+                top: var(--final-winner-top-position); /* Final top position */
+                left: 50%; /* Final left position */
+                border-radius: 1rem;
+                box-shadow: 0 15px 30px rgba(0,0,0,0.5), 0 5px 10px rgba(0,0,0,0.3); /* Final enhanced shadow */
+                border-color: #FFD700; /* Final golden border */
+            }
+        }
+        .zoom-in-expand-animation {
+            animation: zoom-in-expand 2s ease-in-out forwards; /* Longer duration for full effect */
         }
 
         /* Keyframes for individual card reveal */
@@ -270,6 +316,15 @@
             /* Enhanced shadows and border */
             box-shadow: 0 15px 30px rgba(0,0,0,0.5), 0 5px 10px rgba(0,0,0,0.3) !important;
             border-color: #FFD700 !important; /* Golden border */
+            /* Add the golden border pulse directly here for the final state */
+            animation: golden-border-pulse 2s infinite alternate;
+        }
+
+        /* Keyframes for Golden Border Pulse animation */
+        @keyframes golden-border-pulse {
+            0% { border-color: #FFD700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); } /* Gold */
+            50% { border-color: #FFBF00; box-shadow: 0 0 20px rgba(255, 191, 0, 0.8); } /* Darker Gold */
+            100% { border-color: #FFD700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
         }
     </style>
 </head>
@@ -1078,38 +1133,88 @@
                 // New: 5-second delay after scrolling to top
                 await delay(5000);
 
-                // Get the main raffle container to determine target width
+                // Ensure it's not hidden before starting crumble (it should already be visible from reveal-postit-animation)
+                mergedWinnersSection.classList.remove('hidden');
+                // Start crumble animation
+                mergedWinnersSection.classList.add('crumble-disappear-animation');
+
+                // Wait for crumble animation to finish
+                await new Promise(resolve => {
+                    const handler = (event) => {
+                        if (event.animationName === 'crumble-disappear') {
+                            mergedWinnersSection.removeEventListener('animationend', handler);
+                            resolve();
+                        }
+                    };
+                    mergedWinnersSection.addEventListener('animationend', handler);
+                });
+
+                // --- After crumble finishes ---
+                mergedWinnersSection.classList.remove('crumble-disappear-animation');
+                // Clear all inline styles previously set by JS or the 'reveal-postit-animation'
+                mergedWinnersSection.style.cssText = ''; 
+                // Ensure it's visible, but with opacity 0, for the next animation's start
+                mergedWinnersSection.classList.remove('hidden'); 
+                mergedWinnersSection.classList.remove('reveal-postit-animation'); 
+                mergedWinnersSection.classList.remove('final-winner-centered'); 
+
+                // Explicitly set the 0% state for zoom-in-expand animation
+                mergedWinnersSection.style.position = 'fixed';
+                mergedWinnersSection.style.top = '50%';
+                mergedWinnersSection.style.left = '50%';
+                mergedWinnersSection.style.right = 'auto'; // Important: remove right constraint for horizontal centering
+                mergedWinnersSection.style.width = '10%'; 
+                mergedWinnersSection.style.transform = 'translate(-50%, -50%) scale(0.1)';
+                mergedWinnersSection.style.borderRadius = '50%';
+                mergedWinnersSection.style.boxShadow = 'none';
+                mergedWinnersSection.style.borderColor = 'transparent';
+                mergedWinnersSection.style.opacity = '0'; // Start completely transparent
+
+
+                // Force reflow here to ensure browser registers the style resets before starting new animation
+                void mergedWinnersSection.offsetWidth;
+                await delay(10); // Small additional delay for browser rendering cycle
+
+
+                // Set CSS custom properties *before* triggering the animation for the target state
                 const mainRaffleContainer = document.getElementById('main-raffle-container');
                 if (mainRaffleContainer) {
-                    const targetWidth = mainRaffleContainer.offsetWidth; // Get the actual rendered width
+                    const targetWidth = mainRaffleContainer.offsetWidth;
                     const viewportHeight = window.innerHeight;
+                    
+                    // Temporarily adjust position/visibility to get accurate height without affecting layout
+                    mergedWinnersSection.style.visibility = 'hidden'; 
+                    mergedWinnersSection.style.position = 'absolute'; 
+                    mergedWinnersSection.classList.remove('hidden'); 
+                    mergedWinnersSection.style.transform = 'none'; // Ensure no scaling affects height calculation
                     const mergedSectionHeight = mergedWinnersSection.offsetHeight;
+                    // Reset visibility and position to fixed for the animation
+                    mergedWinnersSection.style.visibility = '';
+                    mergedWinnersSection.style.position = 'fixed';
 
-                    // A good fixed offset to start from, ensuring it's below the church logo/title.
-                    // This creates an empty space at the top so the winner circle is centered in the
-                    // *remaining* vertical space.
-                    const desiredTopOffset = 100; // Example: 100px from the very top of the viewport
 
-                    // Calculate the top position to vertically center the merged section within the available space
+                    const desiredTopOffset = 100;
                     const topPositionForCentering = desiredTopOffset + (viewportHeight - desiredTopOffset - mergedSectionHeight) / 2;
-
-                    // Ensure it's not negative or too small, providing a minimum top offset
                     const finalTopPosition = Math.max(desiredTopOffset, topPositionForCentering);
 
-                    // Set CSS custom properties (variables) on the merged section itself
-                    // This makes the CSS transition aware of the target width and top position.
                     mergedWinnersSection.style.setProperty('--final-winner-width', `${targetWidth}px`);
                     mergedWinnersSection.style.setProperty('--final-winner-top-position', `${finalTopPosition}px`);
-
-                    // Remove the reveal-postit-animation if it's still active to prevent conflict with transform.
-                    // This is important because the 'forwards' property would keep its transform.
-                    mergedWinnersSection.classList.remove('reveal-postit-animation');
-
-                    // Trigger the final centering and expansion animation by adding the class
-                    mergedWinnersSection.classList.add('final-winner-centered');
-                } else {
-                    console.warn("Main raffle container not found for final animation width calculation.");
                 }
+
+                // Apply the animation class. The animation handles the opacity from 0 to 1
+                mergedWinnersSection.classList.add('zoom-in-expand-animation');
+
+                // Listen for the end of the zoom-in-expand animation
+                mergedWinnersSection.addEventListener('animationend', function handler(event) {
+                    if (event.animationName === 'zoom-in-expand') {
+                        mergedWinnersSection.removeEventListener('animationend', handler);
+                        mergedWinnersSection.classList.remove('zoom-in-expand-animation');
+                        // Now apply the final centered state with the pulsing border
+                        mergedWinnersSection.classList.add('final-winner-centered');
+                        // Ensure full opacity if animation didn't explicitly set it to 1 (it should via 'forwards')
+                        mergedWinnersSection.style.opacity = '1';
+                    }
+                }, { once: true });
             }
         }
 
@@ -1151,7 +1256,7 @@
                 // Reset styles for transition
                 raffleContentContainer.style.maxHeight = '0px'; // Collapse for animation start
                 raffleContentContainer.style.visibility = ''; // Make visible for transition
-                raffleContentContainer.style.opacity = '0'; // Ensure opacity is 0 before transition
+                raffleContentContainer.style.opacity = '1'; // Ensure opacity is 0 before transition
 
                 // Force reflow to ensure CSS properties are applied before transition starts
                 void raffleContentContainer.offsetWidth; // eslint-disable-line no-unused-expressions
