@@ -1133,8 +1133,6 @@
                 // New: 2-second delay after scrolling to top before winner circle move animation starts
                 await delay(2000);
 
-                // Ensure it's not hidden before starting crumble (it should already be visible from reveal-postit-animation)
-                mergedWinnersSection.classList.remove('hidden');
                 // Start crumble animation
                 mergedWinnersSection.classList.add('crumble-disappear-animation');
 
