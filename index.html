@@ -105,7 +105,21 @@
             animation: highlight-winner 1s ease-out;
         }
 
-        /* Inactive section styling - only visual, no pointer-events: none */
+        /* NEW: Base hidden state for sections that will animate in */
+        .section-hidden-initial {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+            max-height: 0; /* Important for height transition */
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            overflow: hidden;
+            pointer-events: none; /* Disable interactions when hidden */
+            transition: all 0.8s ease-out; /* Smooth transition for revealing */
+        }
+
+        /* Inactive section styling - visual state when revealed but not currently active */
         .inactive-section {
             opacity: 0.5;
             filter: grayscale(80%); /* Visually desaturate */
@@ -113,14 +127,21 @@
             transform: scale(0.98); /* Slightly smaller when inactive */
         }
 
-        /* Active section styling - for pre-reveal grand entrance */
+        /* Active section styling - for pre-reveal grand entrance (target state after reveal) */
         .winner-section:not(.inactive-section) {
-            transform: scale(1);
+            /* These are the target values after reveal animation from section-hidden-initial */
             opacity: 1;
-            filter: grayscale(0%);
+            transform: translateY(0) scale(1);
+            max-height: 500px; /* A value larger than the actual section height */
+            padding: 1.5rem; /* Reapply original p-6 */
+            margin-bottom: 2rem; /* Reapply original mb-8 */
+            pointer-events: auto; /* Re-enable interactions */
             border: 3px solid #6366f1; /* A prominent border */
             box-shadow: 0 0 20px rgba(99, 102, 241, 0.6); /* Subtle glow */
-            transition: opacity 0.5s ease-out, filter 0.5s ease-out, transform 0.5s ease-out, scale 0.5s ease-out, border 0.3s ease-in-out, box-shadow 0.3s ease-in-out; /* Smooth transition for activation */
+            /* Ensure all properties that change have a transition duration */
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out, filter 0.8s ease-out,
+                        max-height 0.8s ease-out, padding 0.8s ease-out, margin 0.8s ease-out,
+                        border 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
         }
 
         /* Styles for the main reveal container (curtain effect) */
@@ -276,7 +297,7 @@
             </div>
 
             <!-- New card for Date, Time, IP Address, and User Agent -->
-            <div id="user-info-section" class="bg-blue-50 p-3 rounded-md shadow-sm mb-8 relative z-10 hidden">
+            <div id="user-info-section" class="bg-blue-50 p-3 rounded-md shadow-sm mb-8 relative z-10">
                 <h2 class="text-xl font-bold text-blue-800 mb-3 flex items-center justify-center">
                     <span class="mr-2 text-2xl">ℹ️</span> User Details
                 </h2>
@@ -308,7 +329,7 @@
             <!-- New wrapper for winner sections -->
             <div id="winner-sections-wrapper">
                 <!-- Third Place Section (now displayed first) -->
-                <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
+                <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
                     <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                         <span class="mr-3 text-4xl">🥉</span> 3rd Place Winner
                     </h2>
@@ -324,7 +345,7 @@
                 </div>
 
                 <!-- Second Place Section (now displayed second) -->
-                <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
+                <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
                     <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                         <span class="mr-3 text-4xl">🥈</span> 2nd Place Winner
                     </h2>
@@ -340,7 +361,7 @@
                 </div>
 
                 <!-- First Place Section (now displayed third) -->
-                <div id="first-place-section" class="winner-section bg-gradient-to-br from-purple-700 to-purple-900 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
+                <div id="first-place-section" class="winner-section bg-gradient-to-br from-purple-700 to-purple-900 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
                     <h2 class="text-3xl font-bold text-white mb-6 flex-items-center justify-center">
                         <span class="mr-3 text-4xl">🥇</span> 1st Place Winner
                     </h2>
@@ -452,7 +473,7 @@
         // References for the reset confirmation modal
         const resetConfirmModal = document.getElementById('reset-confirm-modal');
         const confirmResetBtn = document.getElementById('confirm-reset-btn');
-        const cancelResetBtn = document.getElementById('cancel-cancel-btn');
+        const cancelResetBtn = document.getElementById('cancel-reset-btn');
 
         // References for the new merged winners section
         const mergedWinnersSection = document.getElementById('merged-winners-section');
@@ -646,11 +667,11 @@
             revealWinnersBtn.disabled = false; // Ensure reveal button is enabled on load
             revealWinnersBtn.style.display = 'block'; // Ensure it's visible
 
-            // Set initial inactive and hidden state for all winner sections and user info section
-            firstPlaceSection.classList.add('inactive-section', 'hidden');
-            secondPlaceSection.classList.add('inactive-section', 'hidden');
-            thirdPlaceSection.classList.add('inactive-section', 'hidden'); // All inactive and hidden initially
-            userInfoSection.classList.add('hidden'); // Initially hide user info section
+            // Apply initial hidden state for all winner sections and user info section for animations
+            firstPlaceSection.classList.add('inactive-section', 'section-hidden-initial');
+            secondPlaceSection.classList.add('inactive-section', 'section-hidden-initial');
+            thirdPlaceSection.classList.add('inactive-section', 'section-hidden-initial');
+            userInfoSection.classList.add('section-hidden-initial'); // Apply to user info section as well
 
             // Disable and style reset button initially
             resetRaffleBtn.disabled = true;
@@ -954,8 +975,8 @@
                 // Update the 3rd place winner in the merged section with fade-in animation
                 await fadeInNumber(mergedThirdWinnerEl, finalThirdWinner);
 
-                // Reveal and activate the second place section BEFORE scrolling
-                secondPlaceSection.classList.remove('hidden'); // Make it visible
+                // Reveal and activate the second place section (remove initial hidden state)
+                secondPlaceSection.classList.remove('section-hidden-initial');
                 activateSection(secondPlaceSection, generateSecondBtn);
 
                 // Scroll to the next section (Second Place)
@@ -967,8 +988,8 @@
                 // Update the 2nd place winner in the merged section with fade-in animation
                 await fadeInNumber(mergedSecondWinnerEl, finalSecondWinner);
 
-                // Reveal and activate the first place section BEFORE scrolling
-                firstPlaceSection.classList.remove('hidden'); // Make it visible
+                // Reveal and activate the first place section (remove initial hidden state)
+                firstPlaceSection.classList.remove('section-hidden-initial');
                 activateSection(firstPlaceSection, generateFirstBtn);
 
                 // Scroll to the next section (First Place)
@@ -1065,11 +1086,11 @@
                     raffleContentContainer.removeEventListener('transitionend', handler);
                 }, { once: true });
 
-                // Reveal the user info section
-                userInfoSection.classList.remove('hidden');
+                // Reveal the user info section (remove initial hidden state)
+                userInfoSection.classList.remove('section-hidden-initial');
 
-                // Activate the 3rd place section and enable its button after reveal
-                thirdPlaceSection.classList.remove('hidden'); // Make 3rd place visible
+                // Activate the 3rd place section and enable its button after reveal (remove initial hidden state)
+                thirdPlaceSection.classList.remove('section-hidden-initial');
                 activateSection(thirdPlaceSection, generateThirdBtn);
                 statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 3rd Place Winner' to begin.";
             });
