@@ -1075,8 +1075,8 @@
                 await delay(2000); // Delay before scrolling to top to allow user to see final state
                 window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                // New: 5-second delay after scrolling to top
-                await delay(5000);
+                // New: 2-second delay after scrolling to top before winner circle move animation starts
+                await delay(2000); // Changed from 5000ms to 2000ms
 
                 // Get the main raffle container to determine target width
                 const mainRaffleContainer = document.getElementById('main-raffle-container');
@@ -1104,6 +1104,12 @@
                     // Remove the reveal-postit-animation if it's still active to prevent conflict with transform.
                     // This is important because the 'forwards' property would keep its transform.
                     mergedWinnersSection.classList.remove('reveal-postit-animation');
+                    // Explicitly reset transform-origin and transform property to ensure a clean slate for the new transition
+                    mergedWinnersSection.style.transform = 'none'; // Ensure transform is reset
+                    mergedWinnersSection.style.transformOrigin = 'center center'; // Ensure origin is central for new transformation
+
+                    // Force reflow to ensure the browser registers the cleared transform state
+                    void mergedWinnersSection.offsetWidth; // eslint-disable-line no-unused-expressions
 
                     // Trigger the final centering and expansion animation by adding the class
                     mergedWinnersSection.classList.add('final-winner-centered');
