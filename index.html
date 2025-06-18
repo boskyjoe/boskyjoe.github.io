@@ -140,7 +140,7 @@
             box-shadow: 0 0 20px rgba(99, 102, 241, 0.6); /* Subtle glow */
             /* Ensure all properties that change have a transition duration */
             transition: opacity 0.8s ease-out, transform 0.8s ease-out, filter 0.8s ease-out,
-                        max-height 0.8s ease-out, padding 0.8s ease-out, margin 0.8s ease-out,
+                        max-height 0.8s ease-out, padding 0.8s ease-out, margin 0.8s ease-in-out,
                         border 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
         }
 
@@ -1130,8 +1130,8 @@
                 await delay(2000); // Delay before scrolling to top to allow user to see final state
                 window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                // New: 5-second delay after scrolling to top
-                await delay(5000);
+                // New: 2-second delay after scrolling to top before winner circle move animation starts
+                await delay(2000);
 
                 // Ensure it's not hidden before starting crumble (it should already be visible from reveal-postit-animation)
                 mergedWinnersSection.classList.remove('hidden');
@@ -1152,18 +1152,18 @@
                 // --- After crumble finishes ---
                 mergedWinnersSection.classList.remove('crumble-disappear-animation');
                 // Clear all inline styles previously set by JS or the 'reveal-postit-animation'
-                mergedWinnersSection.style.cssText = ''; 
+                mergedWinnersSection.style.cssText = '';
                 // Ensure it's visible, but with opacity 0, for the next animation's start
-                mergedWinnersSection.classList.remove('hidden'); 
-                mergedWinnersSection.classList.remove('reveal-postit-animation'); 
-                mergedWinnersSection.classList.remove('final-winner-centered'); 
+                mergedWinnersSection.classList.remove('hidden');
+                mergedWinnersSection.classList.remove('reveal-postit-animation');
+                mergedWinnersSection.classList.remove('final-winner-centered');
 
                 // Explicitly set the 0% state for zoom-in-expand animation
                 mergedWinnersSection.style.position = 'fixed';
                 mergedWinnersSection.style.top = '50%';
                 mergedWinnersSection.style.left = '50%';
                 mergedWinnersSection.style.right = 'auto'; // Important: remove right constraint for horizontal centering
-                mergedWinnersSection.style.width = '10%'; 
+                mergedWinnersSection.style.width = '10%';
                 mergedWinnersSection.style.transform = 'translate(-50%, -50%) scale(0.1)';
                 mergedWinnersSection.style.borderRadius = '50%';
                 mergedWinnersSection.style.boxShadow = 'none';
@@ -1181,11 +1181,11 @@
                 if (mainRaffleContainer) {
                     const targetWidth = mainRaffleContainer.offsetWidth;
                     const viewportHeight = window.innerHeight;
-                    
+
                     // Temporarily adjust position/visibility to get accurate height without affecting layout
-                    mergedWinnersSection.style.visibility = 'hidden'; 
-                    mergedWinnersSection.style.position = 'absolute'; 
-                    mergedWinnersSection.classList.remove('hidden'); 
+                    mergedWinnersSection.style.visibility = 'hidden';
+                    mergedWinnersSection.style.position = 'absolute';
+                    mergedWinnersSection.classList.remove('hidden');
                     mergedWinnersSection.style.transform = 'none'; // Ensure no scaling affects height calculation
                     const mergedSectionHeight = mergedWinnersSection.offsetHeight;
                     // Reset visibility and position to fixed for the animation
