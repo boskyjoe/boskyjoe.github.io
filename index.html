@@ -254,12 +254,21 @@
 
         /* New class for the final winner circle centered state */
         .final-winner-centered {
-            top: 4rem !important; /* Position it a bit below the top of the main container/viewport */
-            right: auto !important; /* Override right, so left can control horizontal position */
-            left: 50% !important; /* Center horizontally relative to its parent (viewport in this case) */
-            transform: translateX(-50%) !important; /* Adjust for true horizontal centering */
-            width: var(--final-winner-width) !important; /* Dynamic width set by JS */
-            box-shadow: 0 15px 30px rgba(0,0,0,0.5), 0 5px 10px rgba(0,0,0,0.3) !important; /* More pronounced shadow */
+            /* Position horizontally centered */
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+
+            /* Override right positioning */
+            right: auto !important;
+
+            /* Dynamic top position to be set by JS */
+            top: var(--final-winner-top-position) !important;
+
+            /* Dynamic width set by JS */
+            width: var(--final-winner-width) !important;
+
+            /* Enhanced shadows and border */
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5), 0 5px 10px rgba(0,0,0,0.3) !important;
             border-color: #FFD700 !important; /* Golden border */
         }
     </style>
@@ -586,6 +595,7 @@
             mergedWinnersSection.classList.remove('final-winner-centered');
             // Reset any inline styles that might have been set by the final animation
             mergedWinnersSection.style.removeProperty('--final-winner-width');
+            mergedWinnersSection.style.removeProperty('--final-winner-top-position'); // Clear top position
         }
 
         /**
@@ -715,6 +725,7 @@
             mergedWinnersSection.classList.remove('final-winner-centered');
             // Reset any inline styles that might have been set by the final animation
             mergedWinnersSection.style.removeProperty('--final-winner-width');
+            mergedWinnersSection.style.removeProperty('--final-winner-top-position'); // Clear top position
 
 
             try {
@@ -1071,10 +1082,24 @@
                 const mainRaffleContainer = document.getElementById('main-raffle-container');
                 if (mainRaffleContainer) {
                     const targetWidth = mainRaffleContainer.offsetWidth; // Get the actual rendered width
+                    const viewportHeight = window.innerHeight;
+                    const mergedSectionHeight = mergedWinnersSection.offsetHeight;
 
-                    // Set a CSS custom property (variable) on the merged section itself
-                    // This makes the CSS transition aware of the target width.
+                    // A good fixed offset to start from, ensuring it's below the church logo/title.
+                    // This creates an empty space at the top so the winner circle is centered in the
+                    // *remaining* vertical space.
+                    const desiredTopOffset = 100; // Example: 100px from the very top of the viewport
+
+                    // Calculate the top position to vertically center the merged section within the available space
+                    const topPositionForCentering = desiredTopOffset + (viewportHeight - desiredTopOffset - mergedSectionHeight) / 2;
+
+                    // Ensure it's not negative or too small, providing a minimum top offset
+                    const finalTopPosition = Math.max(desiredTopOffset, topPositionForCentering);
+
+                    // Set CSS custom properties (variables) on the merged section itself
+                    // This makes the CSS transition aware of the target width and top position.
                     mergedWinnersSection.style.setProperty('--final-winner-width', `${targetWidth}px`);
+                    mergedWinnersSection.style.setProperty('--final-winner-top-position', `${finalTopPosition}px`);
 
                     // Remove the reveal-postit-animation if it's still active to prevent conflict with transform.
                     // This is important because the 'forwards' property would keep its transform.
