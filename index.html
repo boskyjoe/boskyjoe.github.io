@@ -1150,53 +1150,71 @@
 
                 // Start crumble animation
                 mergedWinnersSection.classList.add('crumble-disappear-animation');
-                await delay(1000); // Wait for crumble animation to finish (1 second)
 
-                // Reset state for zoom-in animation
+                // Wait for crumble animation to finish
+                await new Promise(resolve => {
+                    const handler = (event) => {
+                        if (event.animationName === 'crumble-disappear') {
+                            mergedWinnersSection.removeEventListener('animationend', handler);
+                            resolve();
+                        }
+                    };
+                    mergedWinnersSection.addEventListener('animationend', handler);
+                });
+
+                // --- After crumble finishes ---
                 mergedWinnersSection.classList.remove('crumble-disappear-animation');
-                mergedWinnersSection.classList.add('hidden'); // Hide it completely
-                mergedWinnersSection.style.transform = ''; // Clear any transform left by crumble
-                mergedWinnersSection.style.opacity = ''; // Clear any opacity left by crumble
-                mergedWinnersSection.style.width = ''; // Clear width for fresh start
-                mergedWinnersSection.style.top = ''; // Clear top for fresh start
-                mergedWinnersSection.style.left = ''; // Clear left for fresh start
-                mergedWinnersSection.style.borderRadius = ''; // Clear border-radius
-                mergedWinnersSection.style.boxShadow = ''; // Clear box-shadow
-                mergedWinnersSection.style.borderColor = ''; // Clear border-color
+                // Temporarily make it transparent but not hidden, to allow style resets and new animation to apply
+                mergedWinnersSection.style.opacity = '0';
+                mergedWinnersSection.classList.remove('hidden'); // Ensure it's not display: none
+                mergedWinnersSection.style.transform = ''; // Clear any transforms applied by the crumble anim
+                mergedWinnersSection.style.width = '';
+                mergedWinnersSection.style.top = '';
+                mergedWinnersSection.style.left = '';
+                mergedWinnersSection.style.borderRadius = '';
+                mergedWinnersSection.style.boxShadow = '';
+                mergedWinnersSection.style.borderColor = '';
+                mergedWinnersSection.classList.remove('final-winner-centered'); // Remove final state class
 
+                // Force reflow here to ensure browser registers the style resets before starting new animation
+                void mergedWinnersSection.offsetWidth;
 
-                // Ensure the final state class is removed to avoid conflict with zoom-in-expand
-                mergedWinnersSection.classList.remove('final-winner-centered');
-                // Reset any inline styles that might have been set by the final animation
-                mergedWinnersSection.style.removeProperty('--final-winner-width');
-                mergedWinnersSection.style.removeProperty('--final-winner-top-position');
-
-
+                // --- Prepare and start zoom-in-expand animation ---
                 const mainRaffleContainer = document.getElementById('main-raffle-container');
                 if (mainRaffleContainer) {
                     const targetWidth = mainRaffleContainer.offsetWidth;
                     const viewportHeight = window.innerHeight;
-                    const mergedSectionHeight = mergedWinnersSection.offsetHeight; // Get current height for initial calculation
+                    // Get the actual height of the merged section when it's fully rendered (before scaling)
+                    // Temporarily make it visible (but transparent) to get accurate height
+                    mergedWinnersSection.style.visibility = 'hidden'; // Keep visually hidden
+                    mergedWinnersSection.style.position = 'absolute'; // Prevent it from affecting layout
+                    mergedWinnersSection.classList.remove('hidden'); // Temporarily remove display: none
+                    const mergedSectionHeight = mergedWinnersSection.offsetHeight;
+                    // Reset to original fixed position for animation
+                    mergedWinnersSection.style.visibility = '';
+                    mergedWinnersSection.style.position = 'fixed';
+
 
                     const desiredTopOffset = 100;
                     const topPositionForCentering = desiredTopOffset + (viewportHeight - desiredTopOffset - mergedSectionHeight) / 2;
                     const finalTopPosition = Math.max(desiredTopOffset, topPositionForCentering);
 
-                    // Set CSS custom properties for the final state of the zoom-in-expand animation
+                    // Set CSS custom properties *before* triggering the animation
                     mergedWinnersSection.style.setProperty('--final-winner-width', `${targetWidth}px`);
                     mergedWinnersSection.style.setProperty('--final-winner-top-position', `${finalTopPosition}px`);
 
-                    // Trigger the zoom-in and horizontal expansion animation
-                    mergedWinnersSection.classList.remove('hidden'); // Make it visible for animation
+                    // Apply the animation class. The animation handles the opacity from 0 to 1
                     mergedWinnersSection.classList.add('zoom-in-expand-animation');
 
-                    // After the animation finishes, add the final state class which includes the golden border pulse
+                    // Listen for the end of the zoom-in-expand animation
                     mergedWinnersSection.addEventListener('animationend', function handler(event) {
                         if (event.animationName === 'zoom-in-expand') {
                             mergedWinnersSection.removeEventListener('animationend', handler);
                             mergedWinnersSection.classList.remove('zoom-in-expand-animation');
-                            // Now apply the final centered state and the golden border pulse
+                            // Now apply the final centered state with the pulsing border
                             mergedWinnersSection.classList.add('final-winner-centered');
+                            // Ensure full opacity if animation didn't explicitly set it to 1 (it should via 'forwards')
+                            mergedWinnersSection.style.opacity = '1';
                         }
                     }, { once: true });
                 } else {
