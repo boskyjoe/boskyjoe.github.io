@@ -189,10 +189,21 @@
             z-index: 50; /* Equivalent to Tailwind's z-50 */
             box-shadow: 0 8px 16px rgba(0,0,0,0.2), 0 3px 6px rgba(0,0,0,0.15); /* More subtle shadows for page flip */
             transform-origin: right center; /* Pivot point for the 3D flip */
-            /* The 'transform' property will be managed by the reveal-postit animation */
-            transition: opacity 0.8s ease-out, transform 0.8s ease-out, box-shadow 0.8s ease-out; /* Smooth transitions */
+            /* Add transition for all properties for the final animation */
+            transition: all 1.5s ease-in-out;
+            /* Set initial width for consistency before final animation */
+            width: 15rem; /* Base for w-64 */
         }
-
+        @media (min-width: 768px) { /* md breakpoint */
+            #merged-winners-section {
+                width: 20rem; /* md:w-80 */
+            }
+        }
+        @media (min-width: 1024px) { /* lg breakpoint */
+            #merged-winners-section {
+                width: 24rem; /* lg:w-96 */
+            }
+        }
 
         /* Class to apply the 3D reveal animation */
         .reveal-postit-animation {
@@ -240,6 +251,17 @@
             padding-top: 0 !important;
             padding-bottom: 0 !important;
         }
+
+        /* New class for the final winner circle centered state */
+        .final-winner-centered {
+            top: 4rem !important; /* Position it a bit below the top of the main container/viewport */
+            right: auto !important; /* Override right, so left can control horizontal position */
+            left: 50% !important; /* Center horizontally relative to its parent (viewport in this case) */
+            transform: translateX(-50%) !important; /* Adjust for true horizontal centering */
+            width: var(--final-winner-width) !important; /* Dynamic width set by JS */
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5), 0 5px 10px rgba(0,0,0,0.3) !important; /* More pronounced shadow */
+            border-color: #FFD700 !important; /* Golden border */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -247,7 +269,7 @@
     <div class="watermark-overlay"></div>
 
     <!-- Main Content Container -->
-    <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center relative z-0">
+    <div id="main-raffle-container" class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center relative z-0">
         <!-- Subtle pattern for the main content box -->
         <div class="main-content-pattern"></div>
 
@@ -560,6 +582,10 @@
             mergedWinnersSection.classList.add('hidden');
             mergedWinnersSection.classList.remove('reveal-postit-animation'); // Remove the animation class
             mergedWinnersSection.style.transform = ''; // Reset transform on load
+            // Ensure the final state class is also removed on reset
+            mergedWinnersSection.classList.remove('final-winner-centered');
+            // Reset any inline styles that might have been set by the final animation
+            mergedWinnersSection.style.removeProperty('--final-winner-width');
         }
 
         /**
@@ -685,6 +711,10 @@
             mergedWinnersSection.classList.add('hidden');
             mergedWinnersSection.classList.remove('reveal-postit-animation');
             mergedWinnersSection.style.transform = ''; // Reset transform on load
+            // Ensure the final state class is also removed on init
+            mergedWinnersSection.classList.remove('final-winner-centered');
+            // Reset any inline styles that might have been set by the final animation
+            mergedWinnersSection.style.removeProperty('--final-winner-width');
 
 
             try {
@@ -1033,6 +1063,28 @@
                 // Scroll to the top of the page after the final draw
                 await delay(2000); // Delay before scrolling to top to allow user to see final state
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                // New: 5-second delay after scrolling to top
+                await delay(5000);
+
+                // Get the main raffle container to determine target width
+                const mainRaffleContainer = document.getElementById('main-raffle-container');
+                if (mainRaffleContainer) {
+                    const targetWidth = mainRaffleContainer.offsetWidth; // Get the actual rendered width
+
+                    // Set a CSS custom property (variable) on the merged section itself
+                    // This makes the CSS transition aware of the target width.
+                    mergedWinnersSection.style.setProperty('--final-winner-width', `${targetWidth}px`);
+
+                    // Remove the reveal-postit-animation if it's still active to prevent conflict with transform.
+                    // This is important because the 'forwards' property would keep its transform.
+                    mergedWinnersSection.classList.remove('reveal-postit-animation');
+
+                    // Trigger the final centering and expansion animation by adding the class
+                    mergedWinnersSection.classList.add('final-winner-centered');
+                } else {
+                    console.warn("Main raffle container not found for final animation width calculation.");
+                }
             }
         }
 
