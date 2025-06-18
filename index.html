@@ -452,7 +452,7 @@
         // References for the reset confirmation modal
         const resetConfirmModal = document.getElementById('reset-confirm-modal');
         const confirmResetBtn = document.getElementById('confirm-reset-btn');
-        const cancelResetBtn = document.getElementById('cancel-reset-btn');
+        const cancelResetBtn = document.getElementById('cancel-cancel-btn');
 
         // References for the new merged winners section
         const mergedWinnersSection = document.getElementById('merged-winners-section');
@@ -954,26 +954,27 @@
                 // Update the 3rd place winner in the merged section with fade-in animation
                 await fadeInNumber(mergedThirdWinnerEl, finalThirdWinner);
 
+                // Reveal and activate the second place section BEFORE scrolling
+                secondPlaceSection.classList.remove('hidden'); // Make it visible
+                activateSection(secondPlaceSection, generateSecondBtn);
+
                 // Scroll to the next section (Second Place)
                 await delay(500); // Small delay before scrolling
                 secondPlaceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-
-                // Reveal and activate the second place section
-                secondPlaceSection.classList.remove('hidden'); // Make it visible
-                activateSection(secondPlaceSection, generateSecondBtn);
                 statusMessageElement.textContent = "Click 'Generate 2nd Place Winner'."; // Specific instruction
             } else if (placePrefix === 'second') {
                 // Update the 2nd place winner in the merged section with fade-in animation
                 await fadeInNumber(mergedSecondWinnerEl, finalSecondWinner);
 
+                // Reveal and activate the first place section BEFORE scrolling
+                firstPlaceSection.classList.remove('hidden'); // Make it visible
+                activateSection(firstPlaceSection, generateFirstBtn);
+
                 // Scroll to the next section (First Place)
                 await delay(500); // Small delay before scrolling
                 firstPlaceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-                // Reveal and activate the first place section
-                firstPlaceSection.classList.remove('hidden'); // Make it visible
-                activateSection(firstPlaceSection, generateFirstBtn);
                 statusMessageElement.textContent = "Click 'Generate 1st Place Winner'."; // Specific instruction
             } else if (placePrefix === 'first') {
                 // Update the 1st place winner in the merged section with fade-in animation
