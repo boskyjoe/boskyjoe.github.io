@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raffle Winner Announcements</title>
+    <title>Raffle Winner Announcement</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter for general text, Caveat for post-it note -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
@@ -1164,22 +1164,30 @@
 
                 // --- After crumble finishes ---
                 mergedWinnersSection.classList.remove('crumble-disappear-animation');
-                // Temporarily make it transparent but not hidden, to allow style resets and new animation to apply
-                mergedWinnersSection.style.opacity = '0';
-                mergedWinnersSection.classList.remove('hidden'); // Ensure it's not display: none
-                mergedWinnersSection.style.transform = ''; // Clear any transforms applied by the crumble anim
-                mergedWinnersSection.style.width = '';
-                mergedWinnersSection.style.top = '';
-                mergedWinnersSection.style.left = '';
-                mergedWinnersSection.style.borderRadius = '';
-                mergedWinnersSection.style.boxShadow = '';
-                mergedWinnersSection.style.borderColor = '';
-                mergedWinnersSection.classList.remove('final-winner-centered'); // Remove final state class
+
+                // Explicitly clear all positioning/sizing/appearance related styles
+                // This is crucial to prevent lingering styles from interfering with the next animation's 0% state
+                mergedWinnersSection.style.cssText = ''; 
+                mergedWinnersSection.classList.remove('hidden'); // Ensure it's visible for animation
+                mergedWinnersSection.classList.remove('reveal-postit-animation'); // Ensure previous animations are gone
+                mergedWinnersSection.classList.remove('final-winner-centered'); // Ensure previous final state is gone
+
+                // Set initial state for zoom-in-expand 0%
+                mergedWinnersSection.style.position = 'fixed'; // It needs to stay fixed for the animation
+                mergedWinnersSection.style.top = '50%';
+                mergedWinnersSection.style.left = '50%';
+                mergedWinnersSection.style.right = 'auto'; // Important: remove right constraint
+                mergedWinnersSection.style.width = '10%'; // Corresponds to 0% width in animation
+                mergedWinnersSection.style.transform = 'translate(-50%, -50%) scale(0.1)'; // Corresponds to 0% transform in animation
+                mergedWinnersSection.style.borderRadius = '50%'; // Corresponds to 0% border-radius
+                mergedWinnersSection.style.boxShadow = 'none'; // Corresponds to 0% box-shadow
+                mergedWinnersSection.style.borderColor = 'transparent'; // Corresponds to 0% border-color
+                mergedWinnersSection.style.opacity = '0'; // Start completely transparent
 
                 // Force reflow here to ensure browser registers the style resets before starting new animation
                 void mergedWinnersSection.offsetWidth;
 
-                // --- Prepare and start zoom-in-expand animation ---
+                // Set CSS custom properties *before* triggering the animation for the target state
                 const mainRaffleContainer = document.getElementById('main-raffle-container');
                 if (mainRaffleContainer) {
                     const targetWidth = mainRaffleContainer.offsetWidth;
@@ -1187,7 +1195,7 @@
                     // Get the actual height of the merged section when it's fully rendered (before scaling)
                     // Temporarily make it visible (but transparent) to get accurate height
                     mergedWinnersSection.style.visibility = 'hidden'; // Keep visually hidden
-                    mergedWinnersSection.style.position = 'absolute'; // Prevent it from affecting layout
+                    mergedWinnersSection.style.position = 'absolute'; // Prevent it from affecting layout during measurement
                     mergedWinnersSection.classList.remove('hidden'); // Temporarily remove display: none
                     const mergedSectionHeight = mergedWinnersSection.offsetHeight;
                     // Reset to original fixed position for animation
@@ -1199,27 +1207,24 @@
                     const topPositionForCentering = desiredTopOffset + (viewportHeight - desiredTopOffset - mergedSectionHeight) / 2;
                     const finalTopPosition = Math.max(desiredTopOffset, topPositionForCentering);
 
-                    // Set CSS custom properties *before* triggering the animation
                     mergedWinnersSection.style.setProperty('--final-winner-width', `${targetWidth}px`);
                     mergedWinnersSection.style.setProperty('--final-winner-top-position', `${finalTopPosition}px`);
-
-                    // Apply the animation class. The animation handles the opacity from 0 to 1
-                    mergedWinnersSection.classList.add('zoom-in-expand-animation');
-
-                    // Listen for the end of the zoom-in-expand animation
-                    mergedWinnersSection.addEventListener('animationend', function handler(event) {
-                        if (event.animationName === 'zoom-in-expand') {
-                            mergedWinnersSection.removeEventListener('animationend', handler);
-                            mergedWinnersSection.classList.remove('zoom-in-expand-animation');
-                            // Now apply the final centered state with the pulsing border
-                            mergedWinnersSection.classList.add('final-winner-centered');
-                            // Ensure full opacity if animation didn't explicitly set it to 1 (it should via 'forwards')
-                            mergedWinnersSection.style.opacity = '1';
-                        }
-                    }, { once: true });
-                } else {
-                    console.warn("Main raffle container not found for final animation width calculation.");
                 }
+
+                // Apply the animation class. The animation handles the opacity from 0 to 1
+                mergedWinnersSection.classList.add('zoom-in-expand-animation');
+
+                // Listen for the end of the zoom-in-expand animation
+                mergedWinnersSection.addEventListener('animationend', function handler(event) {
+                    if (event.animationName === 'zoom-in-expand') {
+                        mergedWinnersSection.removeEventListener('animationend', handler);
+                        mergedWinnersSection.classList.remove('zoom-in-expand-animation');
+                        // Now apply the final centered state with the pulsing border
+                        mergedWinnersSection.classList.add('final-winner-centered');
+                        // Ensure full opacity if animation didn't explicitly set it to 1 (it should via 'forwards')
+                        mergedWinnersSection.style.opacity = '1';
+                    }
+                }, { once: true });
             }
         }
 
