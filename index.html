@@ -1148,6 +1148,8 @@
                 // New: 2-second delay after scrolling to top before winner circle move animation starts
                 await delay(2000);
 
+                // Ensure it's not hidden before starting crumble (it should already be visible from reveal-postit-animation)
+                mergedWinnersSection.classList.remove('hidden');
                 // Start crumble animation
                 mergedWinnersSection.classList.add('crumble-disappear-animation');
 
@@ -1164,41 +1166,44 @@
 
                 // --- After crumble finishes ---
                 mergedWinnersSection.classList.remove('crumble-disappear-animation');
-
-                // Explicitly clear all positioning/sizing/appearance related styles
-                // This is crucial to prevent lingering styles from interfering with the next animation's 0% state
+                // Clear all inline styles previously set by JS or the 'reveal-postit-animation'
                 mergedWinnersSection.style.cssText = ''; 
-                mergedWinnersSection.classList.remove('hidden'); // Ensure it's visible for animation
-                mergedWinnersSection.classList.remove('reveal-postit-animation'); // Ensure previous animations are gone
-                mergedWinnersSection.classList.remove('final-winner-centered'); // Ensure previous final state is gone
+                // Ensure it's visible, but with opacity 0, for the next animation's start
+                mergedWinnersSection.classList.remove('hidden'); 
+                mergedWinnersSection.classList.remove('reveal-postit-animation'); 
+                mergedWinnersSection.classList.remove('final-winner-centered'); 
 
-                // Set initial state for zoom-in-expand 0%
-                mergedWinnersSection.style.position = 'fixed'; // It needs to stay fixed for the animation
+                // Explicitly set the 0% state for zoom-in-expand animation
+                mergedWinnersSection.style.position = 'fixed';
                 mergedWinnersSection.style.top = '50%';
                 mergedWinnersSection.style.left = '50%';
-                mergedWinnersSection.style.right = 'auto'; // Important: remove right constraint
-                mergedWinnersSection.style.width = '10%'; // Corresponds to 0% width in animation
-                mergedWinnersSection.style.transform = 'translate(-50%, -50%) scale(0.1)'; // Corresponds to 0% transform in animation
-                mergedWinnersSection.style.borderRadius = '50%'; // Corresponds to 0% border-radius
-                mergedWinnersSection.style.boxShadow = 'none'; // Corresponds to 0% box-shadow
-                mergedWinnersSection.style.borderColor = 'transparent'; // Corresponds to 0% border-color
+                mergedWinnersSection.style.right = 'auto'; // Important: remove right constraint for horizontal centering
+                mergedWinnersSection.style.width = '10%'; 
+                mergedWinnersSection.style.transform = 'translate(-50%, -50%) scale(0.1)';
+                mergedWinnersSection.style.borderRadius = '50%';
+                mergedWinnersSection.style.boxShadow = 'none';
+                mergedWinnersSection.style.borderColor = 'transparent';
                 mergedWinnersSection.style.opacity = '0'; // Start completely transparent
+
 
                 // Force reflow here to ensure browser registers the style resets before starting new animation
                 void mergedWinnersSection.offsetWidth;
+                await delay(10); // Small additional delay for browser rendering cycle
+
 
                 // Set CSS custom properties *before* triggering the animation for the target state
                 const mainRaffleContainer = document.getElementById('main-raffle-container');
                 if (mainRaffleContainer) {
                     const targetWidth = mainRaffleContainer.offsetWidth;
                     const viewportHeight = window.innerHeight;
-                    // Get the actual height of the merged section when it's fully rendered (before scaling)
-                    // Temporarily make it visible (but transparent) to get accurate height
-                    mergedWinnersSection.style.visibility = 'hidden'; // Keep visually hidden
-                    mergedWinnersSection.style.position = 'absolute'; // Prevent it from affecting layout during measurement
-                    mergedWinnersSection.classList.remove('hidden'); // Temporarily remove display: none
+                    
+                    // Temporarily adjust position/visibility to get accurate height without affecting layout
+                    mergedWinnersSection.style.visibility = 'hidden'; 
+                    mergedWinnersSection.style.position = 'absolute'; 
+                    mergedWinnersSection.classList.remove('hidden'); 
+                    mergedWinnersSection.style.transform = 'none'; // Ensure no scaling affects height calculation
                     const mergedSectionHeight = mergedWinnersSection.offsetHeight;
-                    // Reset to original fixed position for animation
+                    // Reset visibility and position to fixed for the animation
                     mergedWinnersSection.style.visibility = '';
                     mergedWinnersSection.style.position = 'fixed';
 
