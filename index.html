@@ -385,16 +385,16 @@
 
     <!-- Merged Winners Section - This will be revealed at the end, now a pinned post-it -->
     <!-- Moved outside the main content container to ensure fixed positioning works correctly -->
-    <div id="merged-winners-section" class="fixed top-20 right-4 z-50 bg-yellow-100 p-4 rounded-lg shadow-xl hidden flex flex-col w-40 md:w-64 relative">
+    <div id="merged-winners-section" class="fixed top-20 right-4 z-50 bg-gradient-to-br from-yellow-50 to-yellow-200 p-5 rounded-lg shadow-2xl hidden flex flex-col w-64 md:w-80 lg:w-96 relative border-4 border-yellow-400">
         <!-- Red Pin for the Post-it -->
         <div class="absolute -top-2 -left-2 w-4 h-4 bg-red-500 rounded-full shadow-md"></div>
 
-        <h2 class="text-2xl font-bold text-gray-800 text-center mb-2">Winner Circle</h2>
-        <!-- Moved "Congratulations..." text here -->
-        <p class="text-gray-700 text-center text-xs mb-2">
+        <h2 class="text-2xl font-extrabold text-gray-800 text-center mb-3">Winner Circle</h2>
+        <!-- Moved "Congratulations..." text here and restyled -->
+        <p class="bg-yellow-300 border-2 border-yellow-400 text-gray-900 text-center text-sm md:text-base font-semibold p-2 rounded-md mb-4 shadow-inner">
             Congratulations to all our lucky winners! Thank you for participating in our church raffle.
         </p>
-        <div class="flex flex-col space-y-1"> <!-- Ensures stacking -->
+        <div class="flex flex-col space-y-2"> <!-- Increased spacing -->
             <!-- 1st Place - Background matches 1st place section, added border -->
             <div class="bg-purple-100 border-purple-500 border-2 p-2 rounded-md shadow-sm text-center">
                 <h3 class="text-lg font-bold text-purple-600">1st Place</h3>
