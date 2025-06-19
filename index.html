@@ -294,6 +294,22 @@
             animation: fadeOutAndHide 0.7s ease-out forwards; /* Apply animation for fading out */
             overflow: hidden; /* Ensure content is clipped during collapse */
         }
+
+        /* Countdown specific styles */
+        #countdown-timer {
+            font-size: 4rem; /* Large font for countdown */
+            font-weight: bold;
+            color: #ef4444; /* Red text for visibility */
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 1rem;
+            opacity: 0; /* Initially hidden */
+            transition: opacity 0.5s ease-in-out; /* Smooth fade in/out */
+            display: none; /* Hide via display property as well */
+        }
+        #countdown-timer.visible {
+            opacity: 1;
+            display: block; /* Show when visible */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -422,7 +438,12 @@
         <!-- Red Pin for the Post-it -->
         <div class="absolute -top-2 -left-2 w-4 h-4 bg-red-500 rounded-full shadow-md"></div>
 
-        <h2 class="text-2xl font-extrabold text-gray-800 text-center mb-3">Winner Circle</h2>
+        <h2 class="text-2xl font-extrabold text-gray-800 text-center mb-3 flex items-center justify-center">
+            Winner Circle <span class="ml-2 text-3xl">🏆</span>
+        </h2>
+        <!-- Countdown Timer Element -->
+        <div id="countdown-timer" class="text-center"></div>
+
         <!-- Moved "Congratulations..." text here and restyled -->
         <p class="bg-yellow-300 border-2 border-yellow-400 text-gray-900 text-center text-sm md:text-base font-semibold p-2 rounded-md mb-4 shadow-inner">
             Congratulations to all our lucky winners! Thank you for participating in our church raffle.
@@ -430,17 +451,23 @@
         <div class="flex flex-col space-y-2"> <!-- Increased spacing -->
             <!-- 1st Place - Background matches 1st place section, added border -->
             <div class="bg-purple-100 border-purple-500 border-2 p-2 rounded-md shadow-sm text-center">
-                <h3 class="text-lg font-bold text-purple-600">1st Place</h3>
+                <h3 class="text-lg font-bold text-purple-600 flex items-center justify-center">
+                    1st Place <span class="ml-2 text-xl">🥇</span>
+                </h3>
                 <p id="merged-first-winner" class="text-xl font-extrabold text-purple-800 whitespace-nowrap">---</p>
             </div>
             <!-- 2nd Place - Background matches 2nd place section, added border -->
             <div class="bg-gray-100 border-gray-500 border-2 p-2 rounded-md shadow-sm text-center">
-                <h3 class="text-base font-bold text-gray-600">2nd Place</h3>
+                <h3 class="text-base font-bold text-gray-600 flex items-center justify-center">
+                    2nd Place <span class="ml-2 text-xl">🥈</span>
+                </h3>
                 <p id="merged-second-winner" class="text-lg font-extrabold text-gray-800 whitespace-nowrap">---</p>
             </div>
             <!-- 3rd Place - Background matches 3rd place section, added border -->
             <div class="bg-amber-100 border-amber-500 border-2 p-2 rounded-md shadow-sm text-center">
-                <h3 class="text-base font-bold text-amber-600">3rd Place</h3>
+                <h3 class="text-base font-bold text-amber-600 flex items-center justify-center">
+                    3rd Place <span class="ml-2 text-xl">🥉</span>
+                </h3>
                 <p id="merged-third-winner" class="text-lg font-extrabold text-amber-800 whitespace-nowrap">---</p>
             </div>
         </div>
@@ -519,6 +546,9 @@
 
         // Reference for the powered by section
         const poweredBySection = document.getElementById('powered-by-section');
+
+        // Reference for the countdown timer
+        const countdownTimerElement = document.getElementById('countdown-timer');
 
 
         /**
@@ -606,6 +636,10 @@
             poweredBySection.querySelector('svg').classList.add('text-teal-700');
             poweredBySection.querySelector('p').classList.add('text-teal-800');
             poweredBySection.style.cssText = ''; // Clear any inline styles
+
+            // Hide countdown timer on reset
+            countdownTimerElement.classList.remove('visible');
+            countdownTimerElement.textContent = '';
         }
 
         /**
@@ -703,6 +737,10 @@
             poweredBySection.querySelector('p').classList.add('text-teal-800');
             poweredBySection.style.cssText = ''; // Clear any inline styles
 
+            // Hide countdown timer on initialization
+            countdownTimerElement.classList.remove('visible');
+            countdownTimerElement.textContent = '';
+
 
             try {
                 const [winnersData, winners1Data] = await Promise.all([
@@ -729,7 +767,8 @@
                 // If we reach here, it means files were fetched successfully and have enough tickets.
                 statusMessageElement.textContent = "Ticket data loaded successfully. Click 'Start Raffle Draw' to begin."; // Initial message before reveal
 
-            } catch (error) {
+            }
+            catch (error) {
                 // Error handled in fetchTicketNumbers, which already sets status message and disables buttons.
                 console.error("ERROR: Initialization failed in initializeRaffleData:", error);
                 statusMessageElement.textContent = `Failed to initialize raffle data. Please check console for details. Ensure 'winners.txt' and 'winners1.txt' are correctly placed and formatted.`;
@@ -913,6 +952,22 @@
                     resolve();
                 }, { once: true });
             });
+        }
+
+        /**
+         * Runs a simple countdown on the countdownTimerElement.
+         * @param {number} seconds - The number of seconds to count down from.
+         */
+        async function startCountdown(seconds) {
+            countdownTimerElement.classList.add('visible'); // Make countdown visible
+            for (let i = seconds; i > 0; i--) {
+                countdownTimerElement.textContent = i;
+                await delay(1000); // Wait for 1 second
+            }
+            countdownTimerElement.textContent = 'GO!'; // Final message
+            await delay(500); // Short delay for "GO!"
+            countdownTimerElement.classList.remove('visible'); // Hide countdown
+            countdownTimerElement.textContent = ''; // Clear text
         }
 
         /**
@@ -1101,8 +1156,8 @@
                 await delay(2000); // Delay before scrolling to top to allow user to see final state
                 window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                // New: 2-second delay after scrolling to top (changed from 5000ms to 2000ms)
-                await delay(2000);
+                // Start the countdown before centering the winner circle
+                await startCountdown(3); // 3-second countdown
 
                 // Get the main raffle container to determine target width
                 const mainRaffleContainer = document.getElementById('main-raffle-container');
