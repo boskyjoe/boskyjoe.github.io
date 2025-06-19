@@ -451,12 +451,12 @@
         <!-- Red Pin for the Post-it -->
         <div class="absolute -top-2 -left-2 w-4 h-4 bg-red-500 rounded-full shadow-md"></div>
 
-        <h2 class="text-2xl font-extrabold text-gray-800 text-center mb-3 flex items-center justify-center">
-            Winner Circle <span class="ml-2 text-3xl">🏆</span>
+        <h2 id="winner-circle-title" class="text-2xl font-extrabold text-gray-800 text-center mb-3 flex items-center justify-center">
+            Winner Circle <span id="trophy-icon" class="ml-2 text-3xl">🏆</span>
         </h2>
         
         <!-- Moved "Congratulations..." text here and restyled -->
-        <p class="bg-yellow-300 border-2 border-yellow-400 text-gray-900 text-center text-sm md:text-base font-semibold p-2 rounded-md mb-4 shadow-inner">
+        <p id="congratulations-message" class="bg-yellow-300 border-2 border-yellow-400 text-gray-900 text-center text-sm md:text-base font-semibold p-2 rounded-md mb-4 shadow-inner">
             Congratulations to all our lucky winners! Thank you for participating in our church raffle.
         </p>
         <div class="flex flex-col space-y-2"> <!-- Increased spacing -->
@@ -561,6 +561,11 @@
         // Reference for the countdown timer
         const countdownTimerElement = document.getElementById('countdown-timer');
 
+        // References for Winner Circle animation elements
+        const winnerCircleTitle = document.getElementById('winner-circle-title');
+        const trophyIcon = document.getElementById('trophy-icon');
+        const congratulationsMessage = document.getElementById('congratulations-message');
+
 
         /**
          * Utility function to introduce a delay.
@@ -634,6 +639,12 @@
             // Reset any inline styles that might have been set by the final animation
             mergedWinnersSection.style.removeProperty('--final-winner-width');
             mergedWinnersSection.style.removeProperty('--final-winner-top-position'); // Clear top position
+
+            // Remove pulsing animation from Winner Circle elements
+            winnerCircleTitle.classList.remove('pulsing-text');
+            trophyIcon.classList.remove('pulsing-text');
+            congratulationsMessage.classList.remove('pulsing-text');
+
 
             // Ensure the powered by section is hidden on reset and its styles are cleared
             poweredBySection.classList.add('hidden');
@@ -734,6 +745,11 @@
             // Reset any inline styles that might have been set by the final animation
             mergedWinnersSection.style.removeProperty('--final-winner-width');
             mergedWinnersSection.style.removeProperty('--final-winner-top-position'); // Clear top position
+
+            // Remove pulsing animation from Winner Circle elements on initialization
+            winnerCircleTitle.classList.remove('pulsing-text');
+            trophyIcon.classList.remove('pulsing-text');
+            congratulationsMessage.classList.remove('pulsing-text');
 
             // Ensure powered by section is hidden on initialization and its styles are cleared
             poweredBySection.classList.add('hidden');
@@ -1199,6 +1215,12 @@
 
                     // Trigger the final centering and expansion animation by adding the class
                     mergedWinnersSection.classList.add('final-winner-centered');
+
+                    // Apply pulsing animation to Winner Circle elements
+                    winnerCircleTitle.classList.add('pulsing-text');
+                    trophyIcon.classList.add('pulsing-text');
+                    congratulationsMessage.classList.add('pulsing-text');
+
                 } else {
                     console.warn("Main raffle container not found for final animation width calculation.");
                 }
