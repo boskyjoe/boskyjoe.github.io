@@ -944,9 +944,24 @@
 
             statusMessageElement.textContent = "Drawing winner..."; // Updated loading message for single winner
 
-            // Show the "Powered By" section when a generate button is clicked
-            poweredBySection.classList.remove('hidden');
-            poweredBySection.classList.remove('fade-out-and-hide-animation'); // Ensure it's not fading out
+            // Show the "Powered By" section and ensure it's at its full visible state
+            poweredBySection.classList.remove('hidden', 'fade-out-and-hide-animation');
+            // Reset any inline styles that might interfere with its natural size for the animation
+            poweredBySection.style.cssText = ''; // Clear inline styles first for a clean state
+            // Apply desired starting styles for the 'powered by' section
+            poweredBySection.style.opacity = '1';
+            poweredBySection.style.maxHeight = '100px'; // Set a max-height that accommodates content
+            poweredBySection.style.paddingTop = '1.5rem';
+            poweredBySection.style.paddingBottom = '1.5rem';
+            poweredBySection.style.marginTop = '2rem';
+            poweredBySection.style.marginBottom = '2rem';
+            poweredBySection.style.display = 'flex'; // Ensure it's a flex container for centering content
+
+
+            // Force reflow/repaint to ensure the browser registers these styles BEFORE the animation
+            // This is crucial for the animation to have a starting point.
+            void poweredBySection.offsetWidth; // eslint-disable-line no-unused-expressions
+
 
             // Clear previous background classes from poweredBySection
             poweredBySection.classList.remove('from-teal-100', 'to-cyan-200', 'from-amber-100', 'to-amber-200', 'from-gray-100', 'to-gray-200', 'from-purple-100', 'to-purple-200');
@@ -1086,8 +1101,8 @@
                 await delay(2000); // Delay before scrolling to top to allow user to see final state
                 window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                // New: 5-second delay after scrolling to top
-                await delay(5000);
+                // New: 2-second delay after scrolling to top (changed from 5000ms to 2000ms)
+                await delay(2000);
 
                 // Get the main raffle container to determine target width
                 const mainRaffleContainer = document.getElementById('main-raffle-container');
