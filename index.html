@@ -282,6 +282,18 @@
         .spin-animation {
             animation: spin 3s linear infinite; /* Adjust speed as needed */
         }
+
+        /* New Keyframes for fading out and then hiding */
+        @keyframes fadeOutAndHide {
+            0% { opacity: 1; max-height: 100px; padding: 1.5rem; margin-top: 2rem; margin-bottom: 2rem;} /* Start with current values */
+            99% { opacity: 0; max-height: 0; padding: 0; margin-top: 0; margin-bottom: 0;}
+            100% { opacity: 0; max-height: 0; padding: 0; margin-top: 0; margin-bottom: 0; display: none; } /* Fully hidden */
+        }
+
+        .fade-out-and-hide-animation {
+            animation: fadeOutAndHide 0.7s ease-out forwards; /* Apply animation for fading out */
+            overflow: hidden; /* Ensure content is clipped during collapse */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -389,11 +401,11 @@
             </div> <!-- End winner-sections-wrapper -->
 
             <!-- Animated "Powered By" Section -->
-            <div id="powered-by-section" class="bg-gradient-to-r from-teal-100 to-cyan-200 p-6 rounded-lg shadow-lg mt-8 relative z-10 flex flex-col items-center justify-center space-y-3">
-                <svg class="w-12 h-12 text-teal-700 spin-animation" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <div id="powered-by-section" class="bg-gradient-to-r from-teal-100 to-cyan-200 py-3 px-6 rounded-lg shadow-lg mt-8 mb-8 relative z-10 flex items-center justify-center space-x-2 hidden">
+                <svg class="w-8 h-8 text-teal-700 spin-animation flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                     <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path>
                 </svg>
-                <p class="text-xl md:text-2xl font-bold text-teal-800 pulsing-text">Draw powered by DataWings Solutions</p>
+                <p class="text-lg md:text-xl font-bold text-teal-800 pulsing-text whitespace-nowrap">Draw powered by DataWings Solutions</p>
             </div>
             <!-- End Animated "Powered By" Section -->
 
@@ -505,6 +517,9 @@
         const mergedSecondWinnerEl = document.getElementById('merged-second-winner');
         const mergedThirdWinnerEl = document.getElementById('merged-third-winner');
 
+        // Reference for the powered by section
+        const poweredBySection = document.getElementById('powered-by-section');
+
 
         /**
          * Utility function to introduce a delay.
@@ -578,6 +593,11 @@
             // Reset any inline styles that might have been set by the final animation
             mergedWinnersSection.style.removeProperty('--final-winner-width');
             mergedWinnersSection.style.removeProperty('--final-winner-top-position'); // Clear top position
+
+            // Ensure the powered by section is hidden on reset
+            poweredBySection.classList.add('hidden');
+            poweredBySection.classList.remove('fade-out-and-hide-animation');
+            poweredBySection.style.cssText = ''; // Clear any inline styles
         }
 
         /**
@@ -661,6 +681,11 @@
             // Reset any inline styles that might have been set by the final animation
             mergedWinnersSection.style.removeProperty('--final-winner-width');
             mergedWinnersSection.style.removeProperty('--final-winner-top-position'); // Clear top position
+
+            // Ensure powered by section is hidden on initialization
+            poweredBySection.classList.add('hidden');
+            poweredBySection.classList.remove('fade-out-and-hide-animation'); // Remove any lingering animation classes
+            poweredBySection.style.cssText = ''; // Clear any inline styles
 
 
             try {
@@ -903,6 +928,11 @@
 
             statusMessageElement.textContent = "Drawing winner..."; // Updated loading message for single winner
 
+            // Show the "Powered By" section when a generate button is clicked
+            poweredBySection.classList.remove('hidden');
+            poweredBySection.classList.remove('fade-out-and-hide-animation'); // Ensure it's not fading out
+
+
             // Create a Set to keep track of tickets picked for the current place (Primary only now)
             const pickedTicketsForThisPlace = new Set();
             let sourceArrayForPlace;
@@ -919,6 +949,9 @@
                 if (placePrefix === 'second') generateSecondBtn.disabled = false;
                 if (placePrefix === 'third') generateThirdBtn.disabled = false;
                 statusMessageElement.textContent = "Error: Invalid prize category.";
+
+                // Hide powered by section on error too
+                poweredBySection.classList.add('fade-out-and-hide-animation');
                 return; // Exit if invalid prefix
             }
 
@@ -926,6 +959,15 @@
             const primaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
             await animateNumberReveal(primaryElement, primaryWinner, animationDuration); // Pass duration
             console.log(`DEBUG: After Winning Number draw (${placePrefix}): allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
+
+            // Once the animation is done, fade out the "Powered By" section
+            poweredBySection.classList.add('fade-out-and-hide-animation');
+            // Listen for the end of the fade-out animation to truly hide it
+            poweredBySection.addEventListener('animationend', function handler() {
+                poweredBySection.classList.add('hidden');
+                poweredBySection.removeEventListener('animationend', handler);
+            }, { once: true });
+
 
             // If a winner is "N/A", it means the pool was exhausted, so stop further drawing for this prize
             if (primaryWinner === "N/A") {
