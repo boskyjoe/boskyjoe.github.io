@@ -456,7 +456,7 @@
         </h2>
         
         <!-- Moved "Congratulations..." text here and restyled -->
-        <p id="congratulations-message" class="bg-yellow-300 border-2 border-yellow-400 text-gray-900 text-center text-sm md:text-base font-semibold p-2 rounded-md mb-4 shadow-inner">
+        <p id="congratulations-message" class="bg-yellow-300 border-2 border-yellow-400 text-gray-900 text-center text-sm md:text-base font-semibold p-2 rounded-md mb-4 shadow-inner hidden">
             Congratulations to all our lucky winners! Thank you for participating in our church raffle.
         </p>
         <div class="flex flex-col space-y-2"> <!-- Increased spacing -->
@@ -644,6 +644,7 @@
             winnerCircleTitle.classList.remove('pulsing-text');
             trophyIcon.classList.remove('pulsing-text');
             congratulationsMessage.classList.remove('pulsing-text');
+            congratulationsMessage.classList.add('hidden'); // Ensure message is hidden on reset
 
 
             // Ensure the powered by section is hidden on reset and its styles are cleared
@@ -750,6 +751,7 @@
             winnerCircleTitle.classList.remove('pulsing-text');
             trophyIcon.classList.remove('pulsing-text');
             congratulationsMessage.classList.remove('pulsing-text');
+            congratulationsMessage.classList.add('hidden'); // Ensure message is hidden on initialization
 
             // Ensure powered by section is hidden on initialization and its styles are cleared
             poweredBySection.classList.add('hidden');
@@ -1215,6 +1217,9 @@
 
                     // Trigger the final centering and expansion animation by adding the class
                     mergedWinnersSection.classList.add('final-winner-centered');
+
+                    // Make the congratulations message visible and apply pulsing
+                    congratulationsMessage.classList.remove('hidden');
 
                     // Apply pulsing animation to Winner Circle elements
                     winnerCircleTitle.classList.add('pulsing-text');
