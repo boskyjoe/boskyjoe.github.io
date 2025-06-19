@@ -285,9 +285,9 @@
 
         /* New Keyframes for fading out and then hiding */
         @keyframes fadeOutAndHide {
-            0% { opacity: 1; max-height: 100px; padding: 1.5rem; margin-top: 2rem; margin-bottom: 2rem;} /* Start with current values */
-            99% { opacity: 0; max-height: 0; padding: 0; margin-top: 0; margin-bottom: 0;}
-            100% { opacity: 0; max-height: 0; padding: 0; margin-top: 0; margin-bottom: 0; display: none; } /* Fully hidden */
+            0% { opacity: 1; max-height: 100px; padding-top: 1.5rem; padding-bottom: 1.5rem; margin-top: 2rem; margin-bottom: 2rem;} /* Start with current values */
+            99% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0;}
+            100% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0; display: none; } /* Fully hidden */
         }
 
         .fade-out-and-hide-animation {
@@ -401,11 +401,11 @@
             </div> <!-- End winner-sections-wrapper -->
 
             <!-- Animated "Powered By" Section -->
-            <div id="powered-by-section" class="bg-gradient-to-r from-teal-100 to-cyan-200 py-3 px-6 rounded-lg shadow-lg mt-8 mb-8 relative z-10 flex items-center justify-center space-x-2 hidden">
-                <svg class="w-8 h-8 text-teal-700 spin-animation flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <div id="powered-by-section" class="py-3 px-6 rounded-lg shadow-lg mt-8 mb-8 relative z-10 flex items-center justify-center space-x-2 hidden">
+                <svg class="w-8 h-8 spin-animation flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                     <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path>
                 </svg>
-                <p class="text-lg md:text-xl font-bold text-teal-800 pulsing-text whitespace-nowrap">Draw powered by DataWings Solutions</p>
+                <p class="text-lg md:text-xl font-bold pulsing-text whitespace-nowrap">Draw powered by DataWings Solutions</p>
             </div>
             <!-- End Animated "Powered By" Section -->
 
@@ -594,9 +594,17 @@
             mergedWinnersSection.style.removeProperty('--final-winner-width');
             mergedWinnersSection.style.removeProperty('--final-winner-top-position'); // Clear top position
 
-            // Ensure the powered by section is hidden on reset
+            // Ensure the powered by section is hidden on reset and its styles are cleared
             poweredBySection.classList.add('hidden');
             poweredBySection.classList.remove('fade-out-and-hide-animation');
+            // Clear any specific color classes that might have been applied dynamically
+            poweredBySection.classList.remove('from-amber-100', 'to-amber-200', 'from-gray-100', 'to-gray-200', 'from-purple-100', 'to-purple-200');
+            poweredBySection.querySelector('svg').classList.remove('text-amber-700', 'text-gray-700', 'text-purple-700');
+            poweredBySection.querySelector('p').classList.remove('text-amber-800', 'text-gray-800', 'text-purple-800');
+            // Re-add default 'teal' colors so it's ready for the next activation
+            poweredBySection.classList.add('from-teal-100', 'to-cyan-200');
+            poweredBySection.querySelector('svg').classList.add('text-teal-700');
+            poweredBySection.querySelector('p').classList.add('text-teal-800');
             poweredBySection.style.cssText = ''; // Clear any inline styles
         }
 
@@ -682,9 +690,17 @@
             mergedWinnersSection.style.removeProperty('--final-winner-width');
             mergedWinnersSection.style.removeProperty('--final-winner-top-position'); // Clear top position
 
-            // Ensure powered by section is hidden on initialization
+            // Ensure powered by section is hidden on initialization and its styles are cleared
             poweredBySection.classList.add('hidden');
             poweredBySection.classList.remove('fade-out-and-hide-animation'); // Remove any lingering animation classes
+            // Clear any specific color classes that might have been applied dynamically
+            poweredBySection.classList.remove('from-amber-100', 'to-amber-200', 'from-gray-100', 'to-gray-200', 'from-purple-100', 'to-purple-200');
+            poweredBySection.querySelector('svg').classList.remove('text-amber-700', 'text-gray-700', 'text-purple-700');
+            poweredBySection.querySelector('p').classList.remove('text-amber-800', 'text-gray-800', 'text-purple-800');
+            // Re-add default 'teal' colors so it's ready for the next activation
+            poweredBySection.classList.add('from-teal-100', 'to-cyan-200');
+            poweredBySection.querySelector('svg').classList.add('text-teal-700');
+            poweredBySection.querySelector('p').classList.add('text-teal-800');
             poweredBySection.style.cssText = ''; // Clear any inline styles
 
 
@@ -931,6 +947,25 @@
             // Show the "Powered By" section when a generate button is clicked
             poweredBySection.classList.remove('hidden');
             poweredBySection.classList.remove('fade-out-and-hide-animation'); // Ensure it's not fading out
+
+            // Clear previous background classes from poweredBySection
+            poweredBySection.classList.remove('from-teal-100', 'to-cyan-200', 'from-amber-100', 'to-amber-200', 'from-gray-100', 'to-gray-200', 'from-purple-100', 'to-purple-200');
+            poweredBySection.querySelector('svg').classList.remove('text-teal-700', 'text-amber-700', 'text-gray-700', 'text-purple-700');
+            poweredBySection.querySelector('p').classList.remove('text-teal-800', 'text-amber-800', 'text-gray-800', 'text-purple-800');
+
+            if (placePrefix === 'third') {
+                poweredBySection.classList.add('from-amber-100', 'to-amber-200');
+                poweredBySection.querySelector('svg').classList.add('text-amber-700');
+                poweredBySection.querySelector('p').classList.add('text-amber-800');
+            } else if (placePrefix === 'second') {
+                poweredBySection.classList.add('from-gray-100', 'to-gray-200');
+                poweredBySection.querySelector('svg').classList.add('text-gray-700');
+                poweredBySection.querySelector('p').classList.add('text-gray-800');
+            } else if (placePrefix === 'first') {
+                poweredBySection.classList.add('from-purple-100', 'to-purple-200');
+                poweredBySection.querySelector('svg').classList.add('text-purple-700');
+                poweredBySection.querySelector('p').classList.add('text-purple-800');
+            }
 
 
             // Create a Set to keep track of tickets picked for the current place (Primary only now)
