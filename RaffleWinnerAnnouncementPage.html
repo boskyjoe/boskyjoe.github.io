@@ -105,7 +105,21 @@
             animation: highlight-winner 1s ease-out;
         }
 
-        /* Inactive section styling - only visual, no pointer-events: none */
+        /* NEW: Base hidden state for sections that will animate in */
+        .section-hidden-initial {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+            max-height: 0; /* Important for height transition */
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            overflow: hidden;
+            pointer-events: none; /* Disable interactions when hidden */
+            transition: all 0.8s ease-out; /* Smooth transition for revealing */
+        }
+
+        /* Inactive section styling - visual state when revealed but not currently active */
         .inactive-section {
             opacity: 0.5;
             filter: grayscale(80%); /* Visually desaturate */
@@ -113,14 +127,21 @@
             transform: scale(0.98); /* Slightly smaller when inactive */
         }
 
-        /* Active section styling - for pre-reveal grand entrance */
+        /* Active section styling - for pre-reveal grand entrance (target state after reveal) */
         .winner-section:not(.inactive-section) {
-            transform: scale(1);
+            /* These are the target values after reveal animation from section-hidden-initial */
             opacity: 1;
-            filter: grayscale(0%);
+            transform: translateY(0) scale(1);
+            max-height: 500px; /* A value larger than the actual section height */
+            padding: 1.5rem; /* Reapply original p-6 */
+            margin-bottom: 2rem; /* Reapply original mb-8 */
+            pointer-events: auto; /* Re-enable interactions */
             border: 3px solid #6366f1; /* A prominent border */
             box-shadow: 0 0 20px rgba(99, 102, 241, 0.6); /* Subtle glow */
-            transition: opacity 0.5s ease-out, filter 0.5s ease-out, transform 0.5s ease-out, scale 0.5s ease-out, border 0.3s ease-in-out, box-shadow 0.3s ease-in-out; /* Smooth transition for activation */
+            /* Ensure all properties that change have a transition duration */
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out, filter 0.8s ease-out,
+                        max-height 0.8s ease-out, padding 0.8s ease-out, margin 0.8s ease-out,
+                        border 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
         }
 
         /* Styles for the main reveal container (curtain effect) */
@@ -168,10 +189,21 @@
             z-index: 50; /* Equivalent to Tailwind's z-50 */
             box-shadow: 0 8px 16px rgba(0,0,0,0.2), 0 3px 6px rgba(0,0,0,0.15); /* More subtle shadows for page flip */
             transform-origin: right center; /* Pivot point for the 3D flip */
-            /* The 'transform' property will be managed by the reveal-postit animation */
-            transition: opacity 0.8s ease-out, transform 0.8s ease-out, box-shadow 0.8s ease-out; /* Smooth transitions */
+            /* Add transition for all properties for the final animation */
+            transition: all 1.5s ease-in-out;
+            /* Set initial width for consistency before final animation */
+            width: 15rem; /* Base for w-64 */
         }
-
+        @media (min-width: 768px) { /* md breakpoint */
+            #merged-winners-section {
+                width: 20rem; /* md:w-80 */
+            }
+        }
+        @media (min-width: 1024px) { /* lg breakpoint */
+            #merged-winners-section {
+                width: 24rem; /* lg:w-96 */
+            }
+        }
 
         /* Class to apply the 3D reveal animation */
         .reveal-postit-animation {
@@ -219,14 +251,86 @@
             padding-top: 0 !important;
             padding-bottom: 0 !important;
         }
+
+        /* New class for the final winner circle centered state */
+        .final-winner-centered {
+            /* Position horizontally centered */
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+
+            /* Override right positioning */
+            right: auto !important;
+
+            /* Dynamic top position to be set by JS */
+            top: var(--final-winner-top-position) !important;
+
+            /* Dynamic width set by JS */
+            width: var(--final-winner-width) !important;
+
+            /* Enhanced shadows and border */
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5), 0 5px 10px rgba(0,0,0,0.3) !important;
+            border-color: #FFD700 !important; /* Golden border */
+        }
+
+        /* New Keyframes for spinning icon */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Class for spinning icon */
+        .spin-animation {
+            animation: spin 3s linear infinite; /* Adjust speed as needed */
+        }
+
+        /* New Keyframes for fading out and then hiding */
+        @keyframes fadeOutAndHide {
+            0% { opacity: 1; max-height: 100px; padding-top: 1.5rem; padding-bottom: 1.5rem; margin-top: 2rem; margin-bottom: 2rem;} /* Start with current values */
+            99% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0;}
+            100% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0; display: none; } /* Fully hidden */
+        }
+
+        .fade-out-and-hide-animation {
+            animation: fadeOutAndHide 0.7s ease-out forwards; /* Apply animation for fading out */
+            overflow: hidden; /* Ensure content is clipped during collapse */
+        }
+
+        /* Countdown specific styles */
+        #countdown-timer {
+            position: fixed; /* Fixed position relative to the viewport */
+            top: 50%; /* Center vertically */
+            left: 50%; /* Center horizontally */
+            transform: translate(-50%, -50%); /* Adjust for element's own size */
+            font-size: 8rem; /* Even larger font for prominence */
+            font-weight: bold;
+            color: #ef4444; /* Red text for visibility */
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.4); /* More pronounced shadow */
+            z-index: 1000; /* Ensure it's on top of everything */
+            opacity: 0; /* Initially hidden */
+            transition: opacity 0.5s ease-in-out; /* Smooth fade in/out */
+            display: none; /* Hide via display property as well for accessibility */
+            background-color: rgba(255, 255, 255, 0.8); /* Slightly transparent white background */
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+        #countdown-timer.visible {
+            opacity: 1;
+            display: flex; /* Use flexbox to center content if needed, or just block */
+            align-items: center; /* For vertical centering of text */
+            justify-content: center; /* For horizontal centering of text */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
     <!-- Watermark Overlay Div for the entire page -->
     <div class="watermark-overlay"></div>
 
+    <!-- Countdown Timer Element - Moved to directly inside body for full screen centering -->
+    <div id="countdown-timer"></div>
+
     <!-- Main Content Container -->
-    <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center relative z-0">
+    <div id="main-raffle-container" class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center relative z-0">
         <!-- Subtle pattern for the main content box -->
         <div class="main-content-pattern"></div>
 
@@ -266,7 +370,6 @@
         <!-- Container for content revealed after click -->
         <div id="raffle-content-container" class="hidden">
             <p class="text-base text-gray-700 mb-10 relative z-10">
-                Congratulations to all our lucky winners! Thank you for participating in our church raffle.
                 Click the "Generate Winners" button for each place to reveal the winning ticket numbers.
                 <strong class="text-red-600">All winners are drawn from 'winners.txt'. Each ticket can only win once!</strong>
             </p>
@@ -278,7 +381,7 @@
             <!-- New wrapper for winner sections -->
             <div id="winner-sections-wrapper">
                 <!-- Third Place Section (now displayed first) -->
-                <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
+                <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
                     <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                         <span class="mr-3 text-4xl">🥉</span> 3rd Place Winner
                     </h2>
@@ -294,7 +397,7 @@
                 </div>
 
                 <!-- Second Place Section (now displayed second) -->
-                <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
+                <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
                     <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                         <span class="mr-3 text-4xl">🥈</span> 2nd Place Winner
                     </h2>
@@ -310,7 +413,7 @@
                 </div>
 
                 <!-- First Place Section (now displayed third) -->
-                <div id="first-place-section" class="winner-section bg-gradient-to-br from-purple-700 to-purple-900 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section hidden">
+                <div id="first-place-section" class="winner-section bg-gradient-to-br from-purple-700 to-purple-900 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
                     <h2 class="text-3xl font-bold text-white mb-6 flex-items-center justify-center">
                         <span class="mr-3 text-4xl">🥇</span> 1st Place Winner
                     </h2>
@@ -326,6 +429,15 @@
                 </div>
             </div> <!-- End winner-sections-wrapper -->
 
+            <!-- Animated "Powered By" Section -->
+            <div id="powered-by-section" class="py-3 px-6 rounded-lg shadow-lg mt-8 mb-8 relative z-10 flex items-center justify-center space-x-2 hidden">
+                <svg class="w-8 h-8 spin-animation flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path>
+                </svg>
+                <p class="text-lg md:text-xl font-bold pulsing-text whitespace-nowrap">Draw powered by DataWings Solutions</p>
+            </div>
+            <!-- End Animated "Powered By" Section -->
+
             <button id="reset-raffle-btn" class="winner-button mt-10 px-8 py-3 text-white font-semibold rounded-full shadow-lg" disabled>
                 Reset Raffle
             </button>
@@ -335,25 +447,38 @@
 
     <!-- Merged Winners Section - This will be revealed at the end, now a pinned post-it -->
     <!-- Moved outside the main content container to ensure fixed positioning works correctly -->
-    <div id="merged-winners-section" class="fixed top-20 right-4 z-50 bg-yellow-100 p-4 rounded-lg shadow-xl hidden flex flex-col w-40 md:w-64 relative">
+    <div id="merged-winners-section" class="fixed top-20 right-4 z-50 bg-gradient-to-br from-yellow-50 to-yellow-200 p-5 rounded-lg shadow-2xl hidden flex flex-col w-64 md:w-80 lg:w-96 relative border-4 border-yellow-400">
         <!-- Red Pin for the Post-it -->
         <div class="absolute -top-2 -left-2 w-4 h-4 bg-red-500 rounded-full shadow-md"></div>
 
-        <h2 class="text-2xl font-bold text-gray-800 text-center mb-2">Winner Circle</h2>
-        <div class="flex flex-col space-y-1"> <!-- Ensures stacking -->
+        <h2 id="winner-circle-title" class="text-2xl font-extrabold text-gray-800 text-center mb-3 flex items-center justify-center">
+            Winner Circle <span id="trophy-icon" class="ml-2 text-3xl">🏆</span>
+        </h2>
+        
+        <!-- Moved "Congratulations..." text here and restyled -->
+        <p id="congratulations-message" class="bg-yellow-300 border-2 border-yellow-400 text-gray-900 text-center text-sm md:text-base font-semibold p-2 rounded-md mb-4 shadow-inner hidden">
+            Congratulations to all our lucky winners! Thank you for participating in our church raffle.
+        </p>
+        <div class="flex flex-col space-y-2"> <!-- Increased spacing -->
             <!-- 1st Place - Background matches 1st place section, added border -->
             <div class="bg-purple-100 border-purple-500 border-2 p-2 rounded-md shadow-sm text-center">
-                <h3 class="text-lg font-bold text-purple-600">1st Place</h3>
+                <h3 class="text-lg font-bold text-purple-600 flex items-center justify-center">
+                    1st Place <span class="ml-2 text-xl">🥇</span>
+                </h3>
                 <p id="merged-first-winner" class="text-xl font-extrabold text-purple-800 whitespace-nowrap">---</p>
             </div>
             <!-- 2nd Place - Background matches 2nd place section, added border -->
             <div class="bg-gray-100 border-gray-500 border-2 p-2 rounded-md shadow-sm text-center">
-                <h3 class="text-base font-bold text-gray-600">2nd Place</h3>
+                <h3 class="text-base font-bold text-gray-600 flex items-center justify-center">
+                    2nd Place <span class="ml-2 text-xl">🥈</span>
+                </h3>
                 <p id="merged-second-winner" class="text-lg font-extrabold text-gray-800 whitespace-nowrap">---</p>
             </div>
             <!-- 3rd Place - Background matches 3rd place section, added border -->
             <div class="bg-amber-100 border-amber-500 border-2 p-2 rounded-md shadow-sm text-center">
-                <h3 class="text-base font-bold text-amber-600">3rd Place</h3>
+                <h3 class="text-base font-bold text-amber-600 flex items-center justify-center">
+                    3rd Place <span class="ml-2 text-xl">🥉</span>
+                </h3>
                 <p id="merged-third-winner" class="text-lg font-extrabold text-amber-800 whitespace-nowrap">---</p>
             </div>
         </div>
@@ -387,7 +512,7 @@
         console.log("Global allTimePickedTickets initialized/cleared. Size (top of script):", allTimePickedTickets.size);
 
         let raffleTicketsWinners = []; // Will be populated from winners.txt
-        // Removed raffleTicketsWinners1 as it's no longer needed
+        // Removed raffleTicketsWinners1 as all draws will be from winners.txt
 
         // Global variables to store the final winning numbers for each place
         let finalFirstWinner = '---';
@@ -429,6 +554,17 @@
         const mergedFirstWinnerEl = document.getElementById('merged-first-winner');
         const mergedSecondWinnerEl = document.getElementById('merged-second-winner');
         const mergedThirdWinnerEl = document.getElementById('merged-third-winner');
+
+        // Reference for the powered by section
+        const poweredBySection = document.getElementById('powered-by-section');
+
+        // Reference for the countdown timer
+        const countdownTimerElement = document.getElementById('countdown-timer');
+
+        // References for Winner Circle animation elements
+        const winnerCircleTitle = document.getElementById('winner-circle-title');
+        const trophyIcon = document.getElementById('trophy-icon');
+        const congratulationsMessage = document.getElementById('congratulations-message');
 
 
         /**
@@ -498,6 +634,35 @@
             mergedWinnersSection.classList.add('hidden');
             mergedWinnersSection.classList.remove('reveal-postit-animation'); // Remove the animation class
             mergedWinnersSection.style.transform = ''; // Reset transform on load
+            // Ensure the final state class is also removed on reset
+            mergedWinnersSection.classList.remove('final-winner-centered');
+            // Reset any inline styles that might have been set by the final animation
+            mergedWinnersSection.style.removeProperty('--final-winner-width');
+            mergedWinnersSection.style.removeProperty('--final-winner-top-position'); // Clear top position
+
+            // Remove pulsing animation from Winner Circle elements
+            winnerCircleTitle.classList.remove('pulsing-text');
+            trophyIcon.classList.remove('pulsing-text');
+            congratulationsMessage.classList.remove('pulsing-text');
+            congratulationsMessage.classList.add('hidden'); // Ensure message is hidden on reset
+
+
+            // Ensure the powered by section is hidden on reset and its styles are cleared
+            poweredBySection.classList.add('hidden');
+            poweredBySection.classList.remove('fade-out-and-hide-animation');
+            // Clear any specific color classes that might have been applied dynamically
+            poweredBySection.classList.remove('from-amber-100', 'to-amber-200', 'from-gray-100', 'to-gray-200', 'from-purple-100', 'to-purple-200');
+            poweredBySection.querySelector('svg').classList.remove('text-amber-700', 'text-gray-700', 'text-purple-700');
+            poweredBySection.querySelector('p').classList.remove('text-amber-800', 'text-gray-800', 'text-purple-800');
+            // Re-add default 'teal' colors so it's ready for the next activation
+            poweredBySection.classList.add('from-teal-100', 'to-cyan-200');
+            poweredBySection.querySelector('svg').classList.add('text-teal-700');
+            poweredBySection.querySelector('p').classList.add('text-teal-800');
+            poweredBySection.style.cssText = ''; // Clear any inline styles
+
+            // Hide countdown timer on reset
+            countdownTimerElement.classList.remove('visible');
+            countdownTimerElement.textContent = '';
         }
 
         /**
@@ -562,10 +727,10 @@
             revealWinnersBtn.disabled = false; // Ensure reveal button is enabled on load
             revealWinnersBtn.style.display = 'block'; // Ensure it's visible
 
-            // Set initial inactive and hidden state for all winner sections
-            firstPlaceSection.classList.add('inactive-section', 'hidden');
-            secondPlaceSection.classList.add('inactive-section', 'hidden');
-            thirdPlaceSection.classList.add('inactive-section', 'hidden'); // All inactive and hidden initially
+            // Apply initial hidden state for all winner sections for animations
+            firstPlaceSection.classList.add('inactive-section', 'section-hidden-initial');
+            secondPlaceSection.classList.add('inactive-section', 'section-hidden-initial');
+            thirdPlaceSection.classList.add('inactive-section', 'section-hidden-initial');
 
             // Disable and style reset button initially
             resetRaffleBtn.disabled = true;
@@ -576,16 +741,44 @@
             mergedWinnersSection.classList.add('hidden');
             mergedWinnersSection.classList.remove('reveal-postit-animation');
             mergedWinnersSection.style.transform = ''; // Reset transform on load
+            // Ensure the final state class is also removed on init
+            mergedWinnersSection.classList.remove('final-winner-centered');
+            // Reset any inline styles that might have been set by the final animation
+            mergedWinnersSection.style.removeProperty('--final-winner-width');
+            mergedWinnersSection.style.removeProperty('--final-winner-top-position'); // Clear top position
+
+            // Remove pulsing animation from Winner Circle elements on initialization
+            winnerCircleTitle.classList.remove('pulsing-text');
+            trophyIcon.classList.remove('pulsing-text');
+            congratulationsMessage.classList.remove('pulsing-text');
+            congratulationsMessage.classList.add('hidden'); // Ensure message is hidden on initialization
+
+            // Ensure powered by section is hidden on initialization and its styles are cleared
+            poweredBySection.classList.add('hidden');
+            poweredBySection.classList.remove('fade-out-and-hide-animation'); // Remove any lingering animation classes
+            // Clear any specific color classes that might have been applied dynamically
+            poweredBySection.classList.remove('from-amber-100', 'to-amber-200', 'from-gray-100', 'to-gray-200', 'from-purple-100', 'to-purple-200');
+            poweredBySection.querySelector('svg').classList.remove('text-amber-700', 'text-gray-700', 'text-purple-700');
+            poweredBySection.querySelector('p').classList.remove('text-amber-800', 'text-gray-800', 'text-purple-800');
+            // Re-add default 'teal' colors so it's ready for the next activation
+            poweredBySection.classList.add('from-teal-100', 'to-cyan-200');
+            poweredBySection.querySelector('svg').classList.add('text-teal-700');
+            poweredBySection.querySelector('p').classList.add('text-teal-800');
+            poweredBySection.style.cssText = ''; // Clear any inline styles
+
+            // Hide countdown timer on initialization
+            countdownTimerElement.classList.remove('visible');
+            countdownTimerElement.textContent = '';
 
 
             try {
-                // Fetch all tickets from 'winners.txt' only
-                raffleTicketsWinners = await fetchTicketNumbers('winners.txt');
+                const winnersData = await fetchTicketNumbers('winners.txt');
+                raffleTicketsWinners = winnersData; // All tickets now from winners.txt
 
                 console.log("DEBUG: Fetched winners.txt unique length:", raffleTicketsWinners.length);
 
-                // Now, check if the loaded array has enough UNIQUE tickets for picking all 3 places
-                if (raffleTicketsWinners.length < 3) {
+                // Now, check if the loaded array has enough UNIQUE tickets for picking all 3 winners
+                if (raffleTicketsWinners.length < 3) { // Needs at least 3 unique tickets
                     statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} unique tickets (needs at least 3 for all places). Please populate your file with more unique alphanumeric tickets.`;
                     disableAllGenerateButtons();
                     revealWinnersBtn.disabled = true; // Disable reveal button if not enough tickets
@@ -595,10 +788,11 @@
                 // If we reach here, it means files were fetched successfully and have enough tickets.
                 statusMessageElement.textContent = "Ticket data loaded successfully. Click 'Start Raffle Draw' to begin."; // Initial message before reveal
 
-            } catch (error) {
+            }
+            catch (error) {
                 // Error handled in fetchTicketNumbers, which already sets status message and disables buttons.
                 console.error("ERROR: Initialization failed in initializeRaffleData:", error);
-                statusMessageElement.textContent = `Failed to initialize raffle data. Please check console for details. Ensure 'winners.txt' is correctly placed and formatted with at least 3 unique tickets.`;
+                statusMessageElement.textContent = `Failed to initialize raffle data. Please check console for details. Ensure 'winners.txt' is correctly placed and formatted.`;
                 disableAllGenerateButtons();
             }
         }
@@ -782,6 +976,22 @@
         }
 
         /**
+         * Runs a simple countdown on the countdownTimerElement.
+         * @param {number} seconds - The number of seconds to count down from.
+         */
+        async function startCountdown(seconds) {
+            countdownTimerElement.classList.add('visible'); // Make countdown visible
+            for (let i = seconds; i > 0; i--) {
+                countdownTimerElement.textContent = i;
+                await delay(1000); // Wait for 1 second
+            }
+            countdownTimerElement.textContent = 'GO!'; // Final message
+            await delay(500); // Short delay for "GO!"
+            countdownTimerElement.classList.remove('visible'); // Hide countdown
+            countdownTimerElement.textContent = ''; // Clear text
+        }
+
+        /**
          * Updates the display elements for a specific place's winner (Primary only).
          * It now picks a winner based on the specified file source for each place.
          * @param {string} placePrefix - The prefix for the winner ID (e.g., 'first', 'second', 'third').
@@ -810,15 +1020,63 @@
 
             statusMessageElement.textContent = "Drawing winner..."; // Updated loading message for single winner
 
+            // Show the "Powered By" section and ensure it's at its full visible state
+            poweredBySection.classList.remove('hidden', 'fade-out-and-hide-animation');
+            // Reset any inline styles that might interfere with its natural size for the animation
+            poweredBySection.style.cssText = ''; // Clear inline styles first for a clean state
+            // Apply desired starting styles for the 'powered by' section
+            poweredBySection.style.opacity = '1';
+            poweredBySection.style.maxHeight = '100px'; // Set a max-height that accommodates content
+            poweredBySection.style.paddingTop = '1.5rem';
+            poweredBySection.style.paddingBottom = '1.5rem';
+            poweredBySection.style.marginTop = '2rem';
+            poweredBySection.style.marginBottom = '2rem';
+            poweredBySection.style.display = 'flex'; // Ensure it's a flex container for centering content
+
+
+            // Force reflow/repaint to ensure the browser registers these styles BEFORE the animation
+            // This is crucial for the animation to have a starting point.
+            void poweredBySection.offsetWidth; // eslint-disable-line no-unused-expressions
+
+
+            // Clear previous background classes from poweredBySection
+            poweredBySection.classList.remove('from-teal-100', 'to-cyan-200', 'from-amber-100', 'to-amber-200', 'from-gray-100', 'to-gray-200', 'from-purple-100', 'to-purple-200');
+            poweredBySection.querySelector('svg').classList.remove('text-teal-700', 'text-amber-700', 'text-gray-700', 'text-purple-700');
+            poweredBySection.querySelector('p').classList.remove('text-teal-800', 'text-amber-800', 'text-gray-800', 'text-purple-800');
+
+            if (placePrefix === 'third') {
+                poweredBySection.classList.add('from-amber-100', 'to-amber-200');
+                poweredBySection.querySelector('svg').classList.add('text-amber-700');
+                poweredBySection.querySelector('p').classList.add('text-amber-800');
+            } else if (placePrefix === 'second') {
+                poweredBySection.classList.add('from-gray-100', 'to-gray-200');
+                poweredBySection.querySelector('svg').classList.add('text-gray-700');
+                poweredBySection.querySelector('p').classList.add('text-gray-800');
+            } else if (placePrefix === 'first') {
+                poweredBySection.classList.add('from-purple-100', 'to-purple-200');
+                poweredBySection.querySelector('svg').classList.add('text-purple-700');
+                poweredBySection.querySelector('p').classList.add('text-purple-800');
+            }
+
+
             // Create a Set to keep track of tickets picked for the current place (Primary only now)
             const pickedTicketsForThisPlace = new Set();
-            // All winners are now drawn from raffleTicketsWinners (from winners.txt)
-            const sourceArrayForPlace = raffleTicketsWinners;
+            let sourceArrayForPlace = raffleTicketsWinners; // All draws are from winners.txt now
+
 
             // Pick the primary winner from the determined source array
             const primaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
             await animateNumberReveal(primaryElement, primaryWinner, animationDuration); // Pass duration
             console.log(`DEBUG: After Winning Number draw (${placePrefix}): allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
+
+            // Once the animation is done, fade out the "Powered By" section
+            poweredBySection.classList.add('fade-out-and-hide-animation');
+            // Listen for the end of the fade-out animation to truly hide it
+            poweredBySection.addEventListener('animationend', function handler() {
+                poweredBySection.classList.add('hidden');
+                poweredBySection.removeEventListener('animationend', handler);
+            }, { once: true });
+
 
             // If a winner is "N/A", it means the pool was exhausted, so stop further drawing for this prize
             if (primaryWinner === "N/A") {
@@ -846,17 +1104,27 @@
                 // Update the 3rd place winner in the merged section with fade-in animation
                 await fadeInNumber(mergedThirdWinnerEl, finalThirdWinner);
 
-                // Reveal and activate the second place section
-                secondPlaceSection.classList.remove('hidden'); // Make it visible
+                // Reveal and activate the second place section (remove initial hidden state)
+                secondPlaceSection.classList.remove('section-hidden-initial');
                 activateSection(secondPlaceSection, generateSecondBtn);
+
+                // Scroll to the next section (Second Place)
+                await delay(500); // Small delay before scrolling
+                secondPlaceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
                 statusMessageElement.textContent = "Click 'Generate 2nd Place Winner'."; // Specific instruction
             } else if (placePrefix === 'second') {
                 // Update the 2nd place winner in the merged section with fade-in animation
                 await fadeInNumber(mergedSecondWinnerEl, finalSecondWinner);
 
-                // Reveal and activate the first place section
-                firstPlaceSection.classList.remove('hidden'); // Make it visible
+                // Reveal and activate the first place section (remove initial hidden state)
+                firstPlaceSection.classList.remove('section-hidden-initial');
                 activateSection(firstPlaceSection, generateFirstBtn);
+
+                // Scroll to the next section (First Place)
+                await delay(500); // Small delay before scrolling
+                firstPlaceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
                 statusMessageElement.textContent = "Click 'Generate 1st Place Winner'."; // Specific instruction
             } else if (placePrefix === 'first') {
                 // Update the 1st place winner in the merged section with fade-in animation
@@ -887,6 +1155,55 @@
                 resetRaffleBtn.disabled = false;
                 resetRaffleBtn.classList.remove('bg-gray-300');
                 resetRaffleBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+
+                // Scroll to the top of the page after the final draw
+                await delay(2000); // Delay before scrolling to top to allow user to see final state
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                // Start the countdown before centering the winner circle
+                await startCountdown(3); // 3-second countdown
+
+                // Get the main raffle container to determine target width
+                const mainRaffleContainer = document.getElementById('main-raffle-container');
+                if (mainRaffleContainer) {
+                    const targetWidth = mainRaffleContainer.offsetWidth; // Get the actual rendered width
+                    const viewportHeight = window.innerHeight;
+                    const mergedSectionHeight = mergedWinnersSection.offsetHeight;
+
+                    // A good fixed offset to start from, ensuring it's below the church logo/title.
+                    // This creates an empty space at the top so the winner circle is centered in the
+                    // *remaining* vertical space.
+                    const desiredTopOffset = 100; // Example: 100px from the very top of the viewport
+
+                    // Calculate the top position to vertically center the merged section within the available space
+                    const topPositionForCentering = desiredTopOffset + (viewportHeight - desiredTopOffset - mergedSectionHeight) / 2;
+
+                    // Ensure it's not negative or too small, providing a minimum top offset
+                    const finalTopPosition = Math.max(desiredTopOffset, topPositionForCentering);
+
+                    // Set CSS custom properties (variables) on the merged section itself
+                    // This makes the CSS transition aware of the target width and top position.
+                    mergedWinnersSection.style.setProperty('--final-winner-width', `${targetWidth}px`);
+                    mergedWinnersSection.style.setProperty('--final-winner-top-position', `${finalTopPosition}px`);
+
+                    // Remove the reveal-postit-animation if it's still active to prevent conflict with transform.
+                    // This is important because the 'forwards' property would keep its transform.
+                    mergedWinnersSection.classList.remove('reveal-postit-animation');
+
+                    // Trigger the final centering and expansion animation by adding the class
+                    mergedWinnersSection.classList.add('final-winner-centered');
+
+                    // Make the congratulations message visible and apply pulsing
+                    congratulationsMessage.classList.remove('hidden');
+
+                    // Apply pulsing animation to Winner Circle elements
+                    winnerCircleTitle.classList.add('pulsing-text');
+                    trophyIcon.classList.add('pulsing-text');
+                    congratulationsMessage.classList.add('pulsing-text');
+
+                } else {
+                    console.warn("Main raffle container not found for final animation width calculation.");
+                }
             }
         }
 
@@ -943,8 +1260,8 @@
                     raffleContentContainer.removeEventListener('transitionend', handler);
                 }, { once: true });
 
-                // Activate the 3rd place section and enable its button after reveal
-                thirdPlaceSection.classList.remove('hidden'); // Make 3rd place visible
+                // Activate the 3rd place section and enable its button after reveal (remove initial hidden state)
+                thirdPlaceSection.classList.remove('section-hidden-initial');
                 activateSection(thirdPlaceSection, generateThirdBtn);
                 statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 3rd Place Winner' to begin.";
             });
