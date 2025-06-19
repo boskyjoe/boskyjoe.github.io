@@ -271,6 +271,17 @@
             box-shadow: 0 15px 30px rgba(0,0,0,0.5), 0 5px 10px rgba(0,0,0,0.3) !important;
             border-color: #FFD700 !important; /* Golden border */
         }
+
+        /* New Keyframes for spinning icon */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Class for spinning icon */
+        .spin-animation {
+            animation: spin 3s linear infinite; /* Adjust speed as needed */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -326,36 +337,6 @@
                 Loading ticket data...
             </div>
 
-            <!-- New card for Date, Time, IP Address, and User Agent -->
-            <div id="user-info-section" class="bg-blue-50 p-3 rounded-md shadow-sm mb-8 relative z-10">
-                <h2 class="text-xl font-bold text-blue-800 mb-3 flex items-center justify-center">
-                    <span class="mr-2 text-2xl">ℹ️</span> User Details
-                </h2>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-blue-900 text-sm border-collapse table-auto">
-                        <thead>
-                            <tr class="bg-blue-100">
-                                <th class="p-2 font-semibold">Date & Time</th>
-                                <th class="p-2 font-semibold">IP Address</th>
-                                <th class="p-2 font-semibold">City</th>
-                                <th class="p-2 font-semibold">Region</th>
-                                <th class="p-2 font-semibold">Country</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td id="current-datetime" class="p-2 whitespace-nowrap">Loading...</td>
-                                <td id="user-ip-address" class="p-2 whitespace-nowrap">Loading...</td>
-                                <td id="user-city" class="p-2 whitespace-nowrap">Loading...</td>
-                                <td id="user-region" class="p-2 whitespace-nowrap">Loading...</td>
-                                <td id="user-country" class="p-2 whitespace-nowrap">Loading...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <!-- End new card for Date, Time, IP Address, and User Agent -->
-
             <!-- New wrapper for winner sections -->
             <div id="winner-sections-wrapper">
                 <!-- Third Place Section (now displayed first) -->
@@ -406,6 +387,15 @@
                     </button>
                 </div>
             </div> <!-- End winner-sections-wrapper -->
+
+            <!-- Animated "Powered By" Section -->
+            <div id="powered-by-section" class="bg-gradient-to-r from-teal-100 to-cyan-200 p-6 rounded-lg shadow-lg mt-8 relative z-10 flex flex-col items-center justify-center space-y-3">
+                <svg class="w-12 h-12 text-teal-700 spin-animation" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path>
+                </svg>
+                <p class="text-xl md:text-2xl font-bold text-teal-800 pulsing-text">Draw powered by DataWings Solutions</p>
+            </div>
+            <!-- End Animated "Powered By" Section -->
 
             <button id="reset-raffle-btn" class="winner-button mt-10 px-8 py-3 text-white font-semibold rounded-full shadow-lg" disabled>
                 Reset Raffle
@@ -515,14 +505,6 @@
         const mergedSecondWinnerEl = document.getElementById('merged-second-winner');
         const mergedThirdWinnerEl = document.getElementById('merged-third-winner');
 
-        // References for the new User Info section
-        const userInfoSection = document.getElementById('user-info-section');
-        const currentDatetimeEl = document.getElementById('current-datetime');
-        const userIpAddressEl = document.getElementById('user-ip-address');
-        const userCityEl = document.getElementById('user-city'); // Element for City
-        const userRegionEl = document.getElementById('user-region'); // Element for Region
-        const userCountryEl = document.getElementById('user-country'); // Element for Country
-
 
         /**
          * Utility function to introduce a delay.
@@ -631,52 +613,6 @@
         }
 
         /**
-         * Fetches and displays user's IP address and User Agent information, and now location.
-         */
-        async function updateUserInfo() {
-            // Display current date and time
-            currentDatetimeEl.textContent = new Date().toLocaleString();
-
-            // Initialize location placeholders
-            userIpAddressEl.textContent = 'Fetching IP...';
-            userCityEl.textContent = 'Fetching city...';
-            userRegionEl.textContent = 'Fetching region...';
-            userCountryEl.textContent = 'Fetching country...';
-
-            try {
-                // Fetch IP Address and Geo-location
-                // Using ip-api.io for IP and geo-location which tends to work better in iframes.
-                const response = await fetch('https://ip-api.io/json/');
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch IP address and geo location (HTTP status: ${response.status})`);
-                }
-                const data = await response.json();
-
-                // Check for a 'success' status or if IP is directly available
-                if (data.ip || data.query) { // ip-api.io returns 'ip' or 'query' for the IP
-                    userIpAddressEl.textContent = data.ip || data.query || 'N/A';
-                    userCityEl.textContent = data.city || 'N/A';
-                    userRegionEl.textContent = data.region_name || data.region || 'N/A';
-                    userCountryEl.textContent = data.country_name || data.country || 'N/A';
-                } else {
-                    // Fallback for cases where the API might return an error structure
-                    userIpAddressEl.textContent = 'N/A';
-                    userCityEl.textContent = 'Failed';
-                    userRegionEl.textContent = 'Failed';
-                    userCountryEl.textContent = 'Failed';
-                    console.warn('Geo-IP API returned unexpected data or error:', data);
-                }
-
-            } catch (error) {
-                console.error('Error fetching user info:', error);
-                userIpAddressEl.textContent = 'Failed to get IP';
-                userCityEl.textContent = 'Failed';
-                userRegionEl.textContent = 'Failed';
-                userCountryEl.textContent = 'Failed';
-            }
-        }
-
-        /**
          * Initializes the application by fetching ticket data from external files.
          * Sets up initial UI state for the raffle.
          */
@@ -706,11 +642,10 @@
             revealWinnersBtn.disabled = false; // Ensure reveal button is enabled on load
             revealWinnersBtn.style.display = 'block'; // Ensure it's visible
 
-            // Apply initial hidden state for all winner sections and user info section for animations
+            // Apply initial hidden state for all winner sections for animations
             firstPlaceSection.classList.add('inactive-section', 'section-hidden-initial');
             secondPlaceSection.classList.add('inactive-section', 'section-hidden-initial');
             thirdPlaceSection.classList.add('inactive-section', 'section-hidden-initial');
-            userInfoSection.classList.add('section-hidden-initial'); // Apply to user info section as well
 
             // Disable and style reset button initially
             resetRaffleBtn.disabled = true;
@@ -752,7 +687,6 @@
 
                 // If we reach here, it means files were fetched successfully and have enough tickets.
                 statusMessageElement.textContent = "Ticket data loaded successfully. Click 'Start Raffle Draw' to begin."; // Initial message before reveal
-                await updateUserInfo(); // Populate user info on load
 
             } catch (error) {
                 // Error handled in fetchTicketNumbers, which already sets status message and disables buttons.
@@ -1165,9 +1099,6 @@
                     raffleContentContainer.style.maxHeight = 'none'; // Allow content to adjust naturally
                     raffleContentContainer.removeEventListener('transitionend', handler);
                 }, { once: true });
-
-                // Reveal the user info section (remove initial hidden state)
-                userInfoSection.classList.remove('section-hidden-initial');
 
                 // Activate the 3rd place section and enable its button after reveal (remove initial hidden state)
                 thirdPlaceSection.classList.remove('section-hidden-initial');
