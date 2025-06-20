@@ -390,21 +390,19 @@
             <div class="bg-blue-100 p-4 rounded-lg shadow-inner">
                 <!-- Merged Header Row for the Card (Image) -->
                 <div class="flex justify-center items-center mb-4">
-                    <img src="images/our dream logo.jpg" alt="Our Dream Logo" class="h-20 w-auto object-contain rounded-md shadow-lg">
+                    <!-- Increased size for the "Our Dream Logo" image -->
+                    <img src="images/our dream logo.jpg" alt="Our Dream Logo" class="h-28 w-auto object-contain rounded-md shadow-lg">
                 </div>
                 <!-- This div now wraps the grid and applies the 3D styling and new partial border -->
                 <div class="sponsor-card-content-wrapper bg-white p-4 rounded-xl">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Second Row, Column 1 (Sponsor Image) -->
-                        <div class="flex justify-center items-center p-2">
-                            <img src="images/ourpatron.jpg" alt="Our Patron" class="w-full h-auto max-h-64 object-contain rounded-lg shadow-lg">
-                        </div>
-                        <!-- Second Row, Column 2 (Gratitude Message) -->
-                        <div class="flex items-center text-left p-2">
-                            <p class="text-gray-800 text-sm md:text-base leading-relaxed">
-                                We extend our sincere gratitude to Mr. P.J.Jacob (Emjay Engineering Company) for his generous sponsorship of the Grand Prize for our raffle ticket fundraiser, held in aid of the Church land purchase project. His thoughtful support has significantly contributed to the success of this mission-driven initiative. Acts of generosity such as his not only strengthen our fundraising efforts but also reflect a deep commitment to the growth and service of the faith community. We pray that God continues to bless him and his endeavors abundantly.
-                            </p>
-                        </div>
+                    <!-- The content for the second row is now in a single div to allow text wrapping -->
+                    <div class="clearfix"> <!-- Use clearfix to clear floats if needed -->
+                        <!-- Sponsor Image (small, oval, left-aligned with text wrapping) -->
+                        <img src="images/ourpatron.jpg" alt="Our Patron" class="float-left w-24 h-24 object-cover rounded-full shadow-lg mr-4 mb-2">
+                        <!-- Gratitude Message -->
+                        <p class="text-gray-800 text-sm md:text-base leading-relaxed text-left">
+                            We extend our sincere gratitude to Mr. P.J.Jacob (Emjay Engineering Company) for his generous sponsorship of the Grand Prize for our raffle ticket fundraiser, held in aid of the Church land purchase project. His thoughtful support has significantly contributed to the success of this mission-driven initiative. Acts of generosity such as his not only strengthen our fundraising efforts but also reflect a deep commitment to the growth and service of the faith community. We pray that God continues to bless him and his endeavors abundantly.
+                        </p>
                     </div>
                 </div>
             </div>
