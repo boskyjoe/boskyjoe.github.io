@@ -348,6 +348,13 @@
             border-top-right-radius: 0.75rem; /* Match the main container's border-radius for the top-right corner */
             z-index: 1; /* Ensure it's on top of the background */
         }
+
+        /* New class for embossed shadow on the patron image */
+        .embossed-patron-shadow {
+            box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3), /* Main shadow for depth */
+                        -2px -2px 5px rgba(255, 255, 255, 0.7) inset, /* Top-left light highlight */
+                        2px 2px 5px rgba(0, 0, 0, 0.1) inset; /* Bottom-right dark inset shadow for contours */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -391,14 +398,14 @@
                 <!-- Merged Header Row for the Card (Image) -->
                 <div class="flex justify-center items-center mb-4">
                     <!-- Increased size for the "Our Dream Logo" image -->
-                    <img src="images/our dream logo.jpg" alt="Our Dream Logo" class="h-28 w-auto object-contain rounded-md shadow-lg">
+                    <img src="images/our dream logo.jpg" alt="Our Dream Logo" class="h-40 w-auto object-contain rounded-md shadow-lg">
                 </div>
                 <!-- This div now wraps the grid and applies the 3D styling and new partial border -->
                 <div class="sponsor-card-content-wrapper bg-white p-4 rounded-xl">
                     <!-- The content for the second row is now in a single div to allow text wrapping -->
                     <div class="clearfix"> <!-- Use clearfix to clear floats if needed -->
                         <!-- Sponsor Image (small, oval, left-aligned with text wrapping) -->
-                        <img src="images/ourpatron.jpg" alt="Our Patron" class="float-left w-24 h-24 object-cover rounded-full shadow-lg mr-4 mb-2">
+                        <img src="images/ourpatron.jpg" alt="Our Patron" class="float-left w-32 h-32 object-cover rounded-full shadow-lg mr-4 mb-2 embossed-patron-shadow">
                         <!-- Gratitude Message -->
                         <p class="text-gray-800 text-sm md:text-base leading-relaxed text-left">
                             We extend our sincere gratitude to Mr. P.J.Jacob (Emjay Engineering Company) for his generous sponsorship of the Grand Prize for our raffle ticket fundraiser, held in aid of the Church land purchase project. His thoughtful support has significantly contributed to the success of this mission-driven initiative. Acts of generosity such as his not only strengthen our fundraising efforts but also reflect a deep commitment to the growth and service of the faith community. We pray that God continues to bless him and his endeavors abundantly.
