@@ -320,6 +320,34 @@
             align-items: center; /* For vertical centering of text */
             justify-content: center; /* For horizontal centering of text */
         }
+
+        /* Custom styles for the 3D sponsor card content wrapper */
+        .sponsor-card-content-wrapper {
+            /* Custom box-shadow to simulate depth and light source */
+            box-shadow: 8px 8px 15px rgba(0, 0, 0, 0.2), /* Main drop shadow (right-bottom) */
+                        -2px -2px 5px rgba(255, 255, 255, 0.3) inset; /* Subtle top-left highlight (inset) */
+            border-right: 4px solid #60A5FA; /* Solid right border */
+            border-bottom: 4px solid #60A5FA; /* Solid bottom border */
+            border-top-left-radius: 0.75rem; /* Apply rounded corners */
+            border-bottom-left-radius: 0.75rem; /* Apply rounded corners */
+            border-bottom-right-radius: 0.75rem; /* Apply rounded corners */
+            position: relative; /* Needed for pseudo-element positioning */
+            overflow: hidden; /* Ensures pseudo-element doesn't go beyond rounded corners */
+        }
+
+        /* Pseudo-element for the partial top-right border highlight */
+        .sponsor-card-content-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%; /* Start from the middle horizontally */
+            width: 50%; /* Extends to the right edge */
+            height: 4px; /* Thickness of the border */
+            /* Gradient for the "light border" effect: fades from transparent to blue */
+            background: linear-gradient(to right, transparent 0%, rgba(96, 165, 250, 0.6) 20%, rgba(96, 165, 250, 1) 100%);
+            border-top-right-radius: 0.75rem; /* Match the main container's border-radius for the top-right corner */
+            z-index: 1; /* Ensure it's on top of the background */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -356,10 +384,29 @@
 
         <!-- Sponsor Section -->
         <div id="sponsor-section" class="bg-gradient-to-br from-blue-200 to-blue-400 p-4 md:p-6 rounded-xl shadow-2xl mt-6 mb-6 relative z-10">
-            <h2 class="text-2xl font-extrabold text-indigo-800 mb-4">Our Esteemed Sponsor</h2>
-            <!-- Replaced previous content with a single image -->
-            <div class="flex justify-center items-center mb-4">
-                <img src="images/patron.jpg" alt="Esteemed Patron" class="w-full h-auto rounded-lg shadow-lg object-contain">
+            <!-- Our Esteemed Sponsor Heading (kept separate) -->
+            <h2 class="text-2xl font-extrabold text-blue-800 text-center mb-4">Our Esteemed Sponsor</h2>
+            <!-- New Card Design for Sponsor Details -->
+            <div class="bg-blue-100 p-4 rounded-lg shadow-inner">
+                <!-- Merged Header Row for the Card (Image) -->
+                <div class="flex justify-center items-center mb-4">
+                    <img src="images/our dream logo.jpg" alt="Our Dream Logo" class="h-20 w-auto object-contain rounded-md shadow-lg">
+                </div>
+                <!-- This div now wraps the grid and applies the 3D styling and new partial border -->
+                <div class="sponsor-card-content-wrapper bg-white p-4 rounded-xl">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Second Row, Column 1 (Sponsor Image) -->
+                        <div class="flex justify-center items-center p-2">
+                            <img src="images/ourpatron.jpg" alt="Our Patron" class="w-full h-auto max-h-64 object-contain rounded-lg shadow-lg">
+                        </div>
+                        <!-- Second Row, Column 2 (Gratitude Message) -->
+                        <div class="flex items-center text-left p-2">
+                            <p class="text-gray-800 text-sm md:text-base leading-relaxed">
+                                We extend our sincere gratitude to Mr. P.J.Jacob (Emjay Engineering Company) for his generous sponsorship of the Grand Prize for our raffle ticket fundraiser, held in aid of the Church land purchase project. His thoughtful support has significantly contributed to the success of this mission-driven initiative. Acts of generosity such as his not only strengthen our fundraising efforts but also reflect a deep commitment to the growth and service of the faith community. We pray that God continues to bless him and his endeavors abundantly.
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
             <button id="reveal-winners-btn" class="mt-6 px-6 py-3 bg-purple-600 text-white font-bold text-lg rounded-full shadow-lg hover:bg-purple-700 transition duration-300 ease-in-out">
                 Start Raffle Draw
