@@ -4,21 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShutterSync CRM System</title>
-    <!-- External Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts for 'Inter' -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- External CSS file -->
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="flex flex-col items-center">
-    <!-- Top Navigation Bar -->
     <nav class="bg-blue-600 text-white p-4 w-full shadow-lg">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <!-- Brand/Logo -->
             <div class="text-2xl font-bold rounded-md py-1 px-3 bg-blue-700">ShutterSync</div>
 
-            <!-- Desktop Menu Items -->
             <div class="hidden md:flex space-x-6">
                 <a href="javascript:void(0)" data-section="home" class="hover:text-blue-200 transition-colors duration-200">Home</a>
                 <a href="javascript:void(0)" data-section="crm-section" class="hover:text-blue-200 transition-colors duration-200">User</a>
@@ -28,13 +22,11 @@
                 <a href="javascript:void(0)" data-section="events-section" class="hover:text-blue-200 transition-colors duration-200">Events</a>
             </div>
 
-            <!-- User Status & Logout -->
             <div class="flex items-center space-x-3">
                 <span id="userIdDisplay" class="text-sm text-gray-200 hidden md:block"></span>
                 <button id="logoutButton" class="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-md text-sm shadow-md hidden">Logout</button>
             </div>
 
-            <!-- Hamburger Menu for Mobile -->
             <div class="md:hidden flex items-center">
                 <button id="mobileMenuButton" class="text-white hover:text-blue-200 focus:outline-none">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -44,7 +36,6 @@
             </div>
         </div>
 
-        <!-- Mobile Menu (hidden by default) -->
         <div id="mobileMenu" class="hidden md:hidden bg-blue-700 mt-2 rounded-lg py-2 w-full">
             <a href="javascript:void(0)" data-section="home" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Home</a>
             <a href="javascript:void(0)" data-section="crm-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">User</a>
@@ -59,7 +50,6 @@
     </nav>
 
     <main class="w-full flex flex-col items-center p-5 max-w-7xl">
-        <!-- Login/Registration Section (Initially shown if not authenticated) -->
         <section id="auth-section" class="container">
             <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Welcome to ShutterSync</h2>
             <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200 max-w-md mx-auto">
@@ -73,6 +63,34 @@
                         <label for="authPassword" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
                         <input type="password" id="authPassword" placeholder="********" required>
                     </div>
+
+                    <div id="registerFields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="authUsername" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                            <input type="text" id="authUsername" placeholder="your_username">
+                        </div>
+                        <div>
+                            <label for="authFirstName" class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                            <input type="text" id="authFirstName" placeholder="John">
+                        </div>
+                        <div>
+                            <label for="authLastName" class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                            <input type="text" id="authLastName" placeholder="Doe">
+                        </div>
+                        <div>
+                            <label for="authPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                            <input type="tel" id="authPhone" placeholder="(123) 456-7890">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="authRole" class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                            <input type="text" id="authRole" placeholder="e.g., Volunteer Coordinator">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="authSkills" class="block text-sm font-medium text-gray-700 mb-1">Skills (comma-separated)</label>
+                            <textarea id="authSkills" rows="3" placeholder="e.g., Photography, Event Planning, Marketing"></textarea>
+                        </div>
+                    </div>
+
                     <div class="flex justify-between items-center mt-2">
                         <button type="submit" id="authSubmitButton" class="primary flex-grow mr-2">Login</button>
                         <button type="button" id="toggleAuthModeButton" class="secondary text-sm">Register</button>
@@ -82,7 +100,6 @@
             </div>
         </section>
 
-        <!-- CRM Description Section (Initially hidden, shown after login or via Home nav) -->
         <section id="home" class="container bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-center py-16 mb-8 shadow-xl hidden">
             <h1 class="text-5xl font-extrabold mb-4 animate-fadeIn">Welcome to ShutterSync CRM</h1>
             <p class="text-xl leading-relaxed max-w-3xl mx-auto opacity-90 animate-fadeIn delay-100">
@@ -96,7 +113,6 @@
             </div>
         </section>
 
-        <!-- Main CRM Functionality Section (Initially hidden, shown after login or via User/Companies/Services/Opportunities nav) -->
         <section id="crm-section" class="container hidden">
             <div class="flex flex-col md:flex-row justify-between items-center mb-6">
                 <h2 class="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Contact Management</h2>
@@ -105,7 +121,6 @@
                 </div>
             </div>
 
-            <!-- Add/Edit Contact Form -->
             <div class="bg-gray-50 p-6 rounded-lg shadow-sm mb-8 border border-gray-200">
                 <h3 id="contactFormTitle" class="text-2xl font-semibold text-gray-800 mb-6">Add New Contact</h3>
                 <form id="contactForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -131,28 +146,22 @@
                 </form>
             </div>
 
-            <!-- Contact List -->
             <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200">
                 <h3 class="text-2xl font-semibold text-gray-800 mb-6">Your Contacts</h3>
                 <div id="contactList" class="grid grid-cols-1 gap-6">
-                    <!-- Contacts will be dynamically loaded here -->
                     <p class="text-gray-500 text-center">Loading contacts...</p>
                 </div>
             </div>
         </section>
 
-        <!-- Events Section (Initially hidden, shown after login or via Events nav) -->
         <section id="events-section" class="container hidden">
             <h2 class="text-3xl font-bold text-gray-800">Events</h2>
             <p class="text-gray-600 mt-4">This section will contain details about your upcoming and past events.</p>
-            <!-- Content for Events will go here -->
-        </section>
+            </section>
     </main>
 
-    <!-- Modal Container -->
     <div id="modalContainer"></div>
 
-    <!-- External JavaScript file -->
     <script type="module" src="js/script.js"></script>
 </body>
 </html>
