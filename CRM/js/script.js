@@ -1,9 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
-import { getAuth, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
-// YOUR Firebase Configuration (copied directly from your provided script)
+// YOUR Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
     authDomain: "shuttersync-96971.firebaseapp.com",
@@ -35,6 +35,16 @@ const toggleAuthModeButton = document.getElementById('toggleAuthModeButton');
 const authMessage = document.getElementById('authMessage');
 const logoutButton = document.getElementById('logoutButton');
 const mobileLogoutButton = document.getElementById('mobileLogoutButton');
+
+// New registration fields
+const registerFields = document.getElementById('registerFields');
+const authUsername = document.getElementById('authUsername');
+const authFirstName = document.getElementById('authFirstName');
+const authLastName = document.getElementById('authLastName');
+const authPhone = document.getElementById('authPhone');
+const authRole = document.getElementById('authRole');
+const authSkills = document.getElementById('authSkills');
+
 
 const contactForm = document.getElementById('contactForm');
 const contactList = document.getElementById('contactList');
@@ -104,13 +114,14 @@ async function initializeFirebase() {
         db = getFirestore(app);
         auth = getAuth(app);
 
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUserId = user.uid;
-                userIdDisplay.textContent = `User: ${user.email || 'Anonymous'}`;
-                mobileUserIdDisplay.textContent = `User: ${user.email || 'Anonymous'}`;
+                userIdDisplay.textContent = `User: ${user.email || 'N/A'}`;
+                mobileUserIdDisplay.textContent = `User: ${user.email || 'N/A'}`;
                 logoutButton.classList.remove('hidden');
                 mobileLogoutButton.classList.remove('hidden');
+
                 // If logged in, hide auth section and show main content (e.g., home)
                 showSection('home');
                 listenForContacts(); // Start listening for contacts once authenticated
@@ -138,10 +149,30 @@ async function initializeFirebase() {
 async function registerUser(email, password) {
     authMessage.textContent = '';
     try {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Collect additional user profile data
+        const profileData = {
+            username: authUsername.value,
+            firstName: authFirstName.value,
+            lastName: authLastName.value,
+            phone: authPhone.value,
+            role: authRole.value,
+            skills: authSkills.value.split(',').map(s => s.trim()).filter(s => s.length > 0), // Store skills as an array
+            email: email, // Also store email in profile for easy access
+            createdAt: new Date().toISOString()
+        };
+
+        // Save profile data to Firestore
+        // Path: artifacts/{projectId}/users/{userId}/profile
+        const userProfileRef = doc(db, `artifacts/${appId}/users/${user.uid}/profile`);
+        await setDoc(userProfileRef, profileData, { merge: true }); // Use merge to avoid overwriting if doc already exists
+
         authMessage.textContent = 'Registration successful! You are now logged in.';
         authMessage.classList.remove('text-red-500');
         authMessage.classList.add('text-green-500');
+        authForm.reset(); // Clear form fields
     } catch (error) {
         console.error("Registration error:", error);
         authMessage.textContent = `Registration failed: ${error.message}`;
@@ -158,6 +189,7 @@ async function loginUser(email, password) {
         authMessage.textContent = 'Login successful!';
         authMessage.classList.remove('text-red-500');
         authMessage.classList.add('text-green-500');
+        authForm.reset(); // Clear form fields
     } catch (error) {
         console.error("Login error:", error);
         authMessage.textContent = `Login failed: ${error.message}`;
@@ -197,6 +229,7 @@ function getCollectionPath(type) {
     if (type === 'public') {
         return `artifacts/${appId}/public/data/contacts`;
     } else { // 'private'
+        // This path must match your security rules for private user data
         return `artifacts/${appId}/users/${currentUserId}/contacts`;
     }
 }
@@ -335,6 +368,13 @@ toggleAuthModeButton.addEventListener('click', () => {
     authSubmitButton.textContent = isLoginMode ? 'Login' : 'Register';
     toggleAuthModeButton.textContent = isLoginMode ? 'Register' : 'Login';
     authMessage.textContent = ''; // Clear previous messages
+
+    // Toggle visibility of additional registration fields
+    if (isLoginMode) {
+        registerFields.classList.add('hidden');
+    } else {
+        registerFields.classList.remove('hidden');
+    }
 });
 
 logoutButton.addEventListener('click', logoutUser);
