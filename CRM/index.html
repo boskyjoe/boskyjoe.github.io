@@ -4,474 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShutterSync CRM System</title>
-    <!-- Tailwind CSS CDN -->
+    <!-- External Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for 'Inter' -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column; /* Allow content to stack */
-            justify-content: flex-start;
-            align-items: center;
-        }
-        .container {
-            background-color: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            padding: 30px;
-            width: 100%;
-            max-width: 900px;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            margin-bottom: 20px; /* Space from bottom */
-        }
-        input, textarea {
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 10px 15px;
-            width: 100%;
-            box-sizing: border-box;
-            font-size: 1rem;
-            transition: border-color 0.2s;
-        }
-        input:focus, textarea:focus {
-            outline: none;
-            border-color: #3b82f6; /* Blue 500 */
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-        }
-        button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s, box-shadow 0.2s;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        button.primary {
-            background-color: #3b82f6; /* Blue 500 */
-            color: #ffffff;
-        }
-        button.primary:hover {
-            background-color: #2563eb; /* Blue 600 */
-            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
-        }
-        button.secondary {
-            background-color: #e5e7eb; /* Gray 200 */
-            color: #374151; /* Gray 700 */
-        }
-        button.secondary:hover {
-            background-color: #d1d5db; /* Gray 300 */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        button.danger {
-            background-color: #ef4444; /* Red 500 */
-            color: #ffffff;
-        }
-        button.danger:hover {
-            background-color: #dc2626; /* Red 600 */
-            box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
-        }
-        .contact-card {
-            background-color: #f9fafb; /* Gray 50 */
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            position: relative;
-        }
-        .contact-card h3 {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #1f2937; /* Gray 900 */
-            margin-bottom: 5px;
-        }
-        .contact-card p {
-            font-size: 0.95rem;
-            color: #4b5563; /* Gray 600 */
-        }
-        .contact-card .actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        /* Modal Styles */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: #ffffff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-            max-width: 400px;
-            width: 90%;
-            text-align: center;
-            animation: fadeIn 0.3s ease-out;
-        }
-        .modal-content h3 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #1f2937;
-            margin-bottom: 15px;
-        }
-        .modal-content p {
-            color: #4b5563;
-            margin-bottom: 25px;
-        }
-        .modal-content .modal-actions {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-            }
-            .contact-card .actions {
-                flex-direction: column;
-            }
-            button {
-                width: 100%;
-            }
-            /* Adjust padding for smaller screens to make space for fixed header */
-            body {
-                padding-top: 60px; /* Enough space for header height */
-            }
-            nav {
-                position: fixed;
-                top: 0;
-                width: 100%;
-                z-index: 999; /* Ensure navbar is on top */
-            }
-        }
-    </style>
-    <!-- Firebase SDKs (Updated to 11.9.1) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js"; // Added for analytics
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js"; // signInWithCustomToken removed
-        import { getFirestore, doc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // getDoc, where, getDocs removed as not directly used in core logic after onSnapshot
-
-        // YOUR Firebase Configuration (copied directly from your provided script)
-        const firebaseConfig = {
-            apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
-            authDomain: "shuttersync-96971.firebaseapp.com",
-            projectId: "shuttersync-96971",
-            storageBucket: "shuttersync-96971.firebasestorage.app",
-            messagingSenderId: "10782416018",
-            appId: "1:10782416018:web:361db5572882a62f291a4b",
-            measurementId: "G-T0W9CES4D3"
-        };
-
-        // Derive appId from the provided firebaseConfig.appId for consistency
-        const appId = firebaseConfig.appId.split(':')[1]; // Extracts "10782416018" from "1:10782416018:web:..."
-
-        let app;
-        let db;
-        let auth;
-        let currentUserId = null;
-        let currentCollectionType = 'private'; // 'private' or 'public'
-        let unsubscribe = null; // To store the onSnapshot unsubscribe function
-
-        // Get references to DOM elements
-        const contactForm = document.getElementById('contactForm');
-        const contactList = document.getElementById('contactList');
-        const userIdDisplay = document.getElementById('userIdDisplay');
-        const collectionToggleButton = document.getElementById('collectionToggleButton');
-        const modalContainer = document.getElementById('modalContainer');
-        const mobileMenuButton = document.getElementById('mobileMenuButton');
-        const mobileMenu = document.getElementById('mobileMenu');
-
-        // Select all main content sections
-        const homeSection = document.getElementById('home');
-        const crmSection = document.getElementById('crm-section');
-        const eventsSection = document.getElementById('events-section');
-        const allSections = [homeSection, crmSection, eventsSection];
-
-
-        // Function to show a custom confirmation modal
-        function showModal(title, message, onConfirm, onCancel) {
-            modalContainer.innerHTML = `
-                <div class="modal-overlay">
-                    <div class="modal-content">
-                        <h3>${title}</h3>
-                        <p>${message}</p>
-                        <div class="modal-actions">
-                            <button id="modalConfirmBtn" class="primary">Confirm</button>
-                            <button id="modalCancelBtn" class="secondary">Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            const modalConfirmBtn = document.getElementById('modalConfirmBtn');
-            const modalCancelBtn = document.getElementById('modalCancelBtn');
-
-            modalConfirmBtn.onclick = () => {
-                onConfirm();
-                modalContainer.innerHTML = ''; // Close modal
-            };
-            modalCancelBtn.onclick = () => {
-                if (onCancel) onCancel();
-                modalContainer.innerHTML = ''; // Close modal
-            };
-        }
-
-        // Function to show a specific section and hide others
-        function showSection(sectionId) {
-            allSections.forEach(section => {
-                if (section) { // Ensure section element exists
-                    section.classList.add('hidden');
-                }
-            });
-            const targetSection = document.getElementById(sectionId);
-            if (targetSection) {
-                targetSection.classList.remove('hidden');
-                // Scroll to the top of the displayed section for better UX
-                targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-            // Close mobile menu if open
-            mobileMenu.classList.add('hidden');
-        }
-
-        // Initialize Firebase and set up authentication listener
-        async function initializeFirebase() {
-            try {
-                // Initialize Firebase app with your configuration
-                app = initializeApp(firebaseConfig);
-                // Initialize Analytics (as per your script)
-                getAnalytics(app); // No need to store in a variable if not actively using analytics functions
-
-                db = getFirestore(app);
-                auth = getAuth(app);
-
-                // Listen for authentication state changes
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        // User is signed in
-                        currentUserId = user.uid;
-                    } else {
-                        // User is signed out or not yet authenticated
-                        // Sign in anonymously for GitHub Pages hosting, as no custom token is provided
-                        await signInAnonymously(auth);
-                        currentUserId = auth.currentUser.uid;
-                    }
-                    userIdDisplay.textContent = `User ID: ${currentUserId}`;
-                    // Once authenticated, start listening for contacts data
-                    listenForContacts();
-                });
-            } catch (error) {
-                console.error("Error initializing Firebase:", error);
-                userIdDisplay.textContent = "Error: Firebase Init Failed. Check console.";
-            }
-        }
-
-        // Determine the Firestore collection path based on type and user ID
-        function getCollectionPath(type) {
-            if (!currentUserId) {
-                console.error("currentUserId is null, cannot determine collection path.");
-                // Return a fallback path or prevent operations if user ID is critical
-                return `artifacts/${appId}/public/data/contacts_temp_fallback`;
-            }
-            if (type === 'public') {
-                return `artifacts/${appId}/public/data/contacts`;
-            } else { // 'private'
-                // Ensure userId is part of the path for private collections based on security rules
-                return `artifacts/${appId}/users/${currentUserId}/contacts`;
-            }
-        }
-
-        // Add or update a contact in Firestore
-        async function saveContact(contactData, contactId = null) {
-            if (!currentUserId) {
-                console.error("User not authenticated. Cannot save contact.");
-                showModal("Authentication Error", "You are not authenticated. Please refresh the page.", () => {});
-                return;
-            }
-
-            const collectionPath = getCollectionPath(currentCollectionType);
-            try {
-                if (contactId) {
-                    // Update existing contact document
-                    const contactDocRef = doc(db, collectionPath, contactId);
-                    await updateDoc(contactDocRef, contactData);
-                    console.log("Contact updated:", contactId);
-                } else {
-                    // Add a new contact document
-                    await addDoc(collection(db, collectionPath), contactData);
-                    console.log("Contact added.");
-                }
-                // Reset form and UI state after successful save/update
-                contactForm.reset();
-                contactForm.dataset.editingId = ''; // Clear editing state
-                document.getElementById('contactFormTitle').textContent = 'Add New Contact';
-                document.getElementById('submitButton').textContent = 'Add Contact';
-            } catch (error) {
-                console.error("Error saving contact:", error);
-                showModal("Error", "Failed to save contact. Please try again. " + error.message, () => {});
-            }
-        }
-
-        // Delete a contact from Firestore
-        async function deleteContact(contactId) {
-            if (!currentUserId) {
-                console.error("User not authenticated. Cannot delete contact.");
-                showModal("Authentication Error", "You are not authenticated. Please refresh the page.", () => {});
-                return;
-            }
-
-            const collectionPath = getCollectionPath(currentCollectionType);
-            showModal(
-                "Confirm Deletion",
-                "Are you sure you want to delete this contact? This action cannot be undone.",
-                async () => {
-                    try {
-                        await deleteDoc(doc(db, collectionPath, contactId));
-                        console.log("Contact deleted:", contactId);
-                        // onSnapshot listener will automatically update the UI
-                    } catch (error) {
-                        console.error("Error deleting contact:", error);
-                        showModal("Error", "Failed to delete contact. Please try again. " + error.message, () => {});
-                    }
-                }
-            );
-        }
-
-        // Listen for real-time updates to contacts in the currently selected collection
-        function listenForContacts() {
-            // Unsubscribe from previous listener to avoid memory leaks and duplicate updates
-            if (unsubscribe) {
-                unsubscribe();
-            }
-
-            if (!currentUserId) {
-                console.error("User not authenticated. Cannot listen for contacts.");
-                contactList.innerHTML = '<p class="text-gray-500 text-center">Please wait for authentication...</p>';
-                return;
-            }
-
-            const collectionPath = getCollectionPath(currentCollectionType);
-            const q = collection(db, collectionPath);
-
-            // Set up a new real-time listener
-            unsubscribe = onSnapshot(q, (snapshot) => {
-                contactList.innerHTML = ''; // Clear current list to re-render all contacts
-                if (snapshot.empty) {
-                    contactList.innerHTML = '<p class="text-gray-500 text-center">No contacts found in this collection.</p>';
-                    return;
-                }
-                // Iterate over changes and update UI
-                snapshot.forEach((doc) => {
-                    const contact = { id: doc.id, ...doc.data() };
-                    displayContact(contact);
-                });
-            }, (error) => {
-                console.error("Error listening to contacts:", error);
-                contactList.innerHTML = `<p class="text-red-500 text-center">Error loading contacts: ${error.message}</p>`;
-            });
-        }
-
-        // Dynamically create and append a contact card to the UI
-        function displayContact(contact) {
-            const contactCard = document.createElement('div');
-            contactCard.className = 'contact-card';
-            contactCard.dataset.id = contact.id; // Store Firestore document ID for easy reference
-            contactCard.innerHTML = `
-                <h3 class="text-lg font-semibold text-gray-900">${contact.name || 'N/A'}</h3>
-                <p class="text-sm text-gray-600">Email: ${contact.email || 'N/A'}</p>
-                <p class="text-sm text-gray-600">Phone: ${contact.phone || 'N/A'}</p>
-                <p class="text-sm text-gray-600">Notes: ${contact.notes || 'N/A'}</p>
-                <div class="actions">
-                    <button class="edit-btn secondary" data-id="${contact.id}">Edit</button>
-                    <button class="delete-btn danger" data-id="${contact.id}">Delete</button>
-                </div>
-            `;
-            contactList.appendChild(contactCard);
-
-            // Attach event listeners to the new buttons
-            contactCard.querySelector('.edit-btn').addEventListener('click', () => editContact(contact));
-            contactCard.querySelector('.delete-btn').addEventListener('click', () => deleteContact(contact.id));
-        }
-
-        // Populate the form fields with existing contact data for editing
-        function editContact(contact) {
-            document.getElementById('contactName').value = contact.name || '';
-            document.getElementById('contactEmail').value = contact.email || '';
-            document.getElementById('contactPhone').value = contact.phone || '';
-            document.getElementById('contactNotes').value = contact.notes || '';
-            contactForm.dataset.editingId = contact.id; // Set editing state with contact ID
-            document.getElementById('contactFormTitle').textContent = 'Edit Contact';
-            document.getElementById('submitButton').textContent = 'Update Contact';
-            // Smoothly scroll to the form section
-            contactForm.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        // Event Listeners for form submission and collection toggle
-        contactForm.addEventListener('submit', (e) => {
-            e.preventDefault(); // Prevent default form submission behavior
-            const contactData = {
-                name: document.getElementById('contactName').value,
-                email: document.getElementById('contactEmail').value,
-                phone: document.getElementById('contactPhone').value,
-                notes: document.getElementById('contactNotes').value
-            };
-            const editingId = contactForm.dataset.editingId; // Get ID if editing, otherwise it's empty
-            saveContact(contactData, editingId || null); // Pass null if adding a new contact
-        });
-
-        collectionToggleButton.addEventListener('click', () => {
-            currentCollectionType = currentCollectionType === 'private' ? 'public' : 'private';
-            collectionToggleButton.textContent = `Switch to ${currentCollectionType === 'private' ? 'Public' : 'Private'} Contacts`;
-            listenForContacts(); // Re-fetch and display contacts for the new collection type
-        });
-
-        // Hamburger menu toggle for mobile view
-        mobileMenuButton.addEventListener('click', () => {
-            mobileMenu.classList.toggle('hidden');
-        });
-
-        // Add event listeners for navigation links to show/hide sections
-        document.querySelectorAll('nav a').forEach(link => {
-            if (link.dataset.section) {
-                link.addEventListener('click', (e) => {
-                    e.preventDefault(); // Prevent default link behavior
-                    showSection(link.dataset.section);
-                });
-            }
-        });
-
-        // Initialize Firebase and show the home section when the window loads
-        window.onload = () => {
-            initializeFirebase();
-            showSection('home'); // Ensure only the home section is visible on initial load
-        };
-    </script>
+    <!-- External CSS file -->
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="flex flex-col items-center">
     <!-- Top Navigation Bar -->
@@ -487,10 +25,17 @@
                 <a href="javascript:void(0)" data-section="crm-section" class="hover:text-blue-200 transition-colors duration-200">Companies</a>
                 <a href="javascript:void(0)" data-section="crm-section" class="hover:text-blue-200 transition-colors duration-200">Services</a>
                 <a href="javascript:void(0)" data-section="crm-section" class="hover:text-blue-200 transition-colors duration-200">Opportunities</a>
+                <a href="javascript:void(0)" data-section="events-section" class="hover:text-blue-200 transition-colors duration-200">Events</a>
+            </div>
+
+            <!-- User Status & Logout -->
+            <div class="flex items-center space-x-3">
+                <span id="userIdDisplay" class="text-sm text-gray-200 hidden md:block"></span>
+                <button id="logoutButton" class="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-md text-sm shadow-md hidden">Logout</button>
             </div>
 
             <!-- Hamburger Menu for Mobile -->
-            <div class="md:hidden">
+            <div class="md:hidden flex items-center">
                 <button id="mobileMenuButton" class="text-white hover:text-blue-200 focus:outline-none">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-4 6h4"></path>
@@ -500,20 +45,45 @@
         </div>
 
         <!-- Mobile Menu (hidden by default) -->
-        <div id="mobileMenu" class="hidden md:hidden bg-blue-700 mt-2 rounded-lg py-2">
+        <div id="mobileMenu" class="hidden md:hidden bg-blue-700 mt-2 rounded-lg py-2 w-full">
             <a href="javascript:void(0)" data-section="home" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Home</a>
             <a href="javascript:void(0)" data-section="crm-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">User</a>
             <a href="javascript:void(0)" data-section="crm-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Companies</a>
             <a href="javascript:void(0)" data-section="crm-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Services</a>
             <a href="javascript:void(0)" data-section="crm-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Opportunities</a>
-            <div class="border-t border-blue-600 my-2"></div>
             <a href="javascript:void(0)" data-section="events-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Events</a>
+            <div class="border-t border-blue-600 my-2"></div>
+            <button id="mobileLogoutButton" class="block text-left w-full px-4 py-2 text-sm text-red-300 hover:bg-red-600 hover:text-white transition-colors duration-200 hidden">Logout</button>
+            <span id="mobileUserIdDisplay" class="block px-4 py-2 text-xs text-gray-400"></span>
         </div>
     </nav>
 
     <main class="w-full flex flex-col items-center p-5 max-w-7xl">
-        <!-- CRM Description Section (Initially shown) -->
-        <section id="home" class="container bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-center py-16 mb-8 shadow-xl">
+        <!-- Login/Registration Section (Initially shown if not authenticated) -->
+        <section id="auth-section" class="container">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Welcome to ShutterSync</h2>
+            <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200 max-w-md mx-auto">
+                <h3 id="authFormTitle" class="text-2xl font-semibold text-gray-800 mb-6 text-center">Login</h3>
+                <form id="authForm" class="grid grid-cols-1 gap-6">
+                    <div>
+                        <label for="authEmail" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="authEmail" placeholder="your@example.com" required>
+                    </div>
+                    <div>
+                        <label for="authPassword" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="authPassword" placeholder="********" required>
+                    </div>
+                    <div class="flex justify-between items-center mt-2">
+                        <button type="submit" id="authSubmitButton" class="primary flex-grow mr-2">Login</button>
+                        <button type="button" id="toggleAuthModeButton" class="secondary text-sm">Register</button>
+                    </div>
+                    <p id="authMessage" class="text-center text-red-500 mt-4"></p>
+                </form>
+            </div>
+        </section>
+
+        <!-- CRM Description Section (Initially hidden, shown after login or via Home nav) -->
+        <section id="home" class="container bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-center py-16 mb-8 shadow-xl hidden">
             <h1 class="text-5xl font-extrabold mb-4 animate-fadeIn">Welcome to ShutterSync CRM</h1>
             <p class="text-xl leading-relaxed max-w-3xl mx-auto opacity-90 animate-fadeIn delay-100">
                 A simple, effective, and free solution to manage your valuable contacts, track interactions,
@@ -526,13 +96,12 @@
             </div>
         </section>
 
-        <!-- Main CRM Functionality Section (Initially hidden) -->
+        <!-- Main CRM Functionality Section (Initially hidden, shown after login or via User/Companies/Services/Opportunities nav) -->
         <section id="crm-section" class="container hidden">
             <div class="flex flex-col md:flex-row justify-between items-center mb-6">
                 <h2 class="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Contact Management</h2>
                 <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
                     <button id="collectionToggleButton" class="secondary w-full md:w-auto">Switch to Public Contacts</button>
-                    <span id="userIdDisplay" class="text-sm text-gray-600 bg-gray-100 py-2 px-4 rounded-md">User ID: Loading...</span>
                 </div>
             </div>
 
@@ -572,7 +141,7 @@
             </div>
         </section>
 
-        <!-- Events Section (Initially hidden) -->
+        <!-- Events Section (Initially hidden, shown after login or via Events nav) -->
         <section id="events-section" class="container hidden">
             <h2 class="text-3xl font-bold text-gray-800">Events</h2>
             <p class="text-gray-600 mt-4">This section will contain details about your upcoming and past events.</p>
@@ -582,5 +151,8 @@
 
     <!-- Modal Container -->
     <div id="modalContainer"></div>
+
+    <!-- External JavaScript file -->
+    <script type="module" src="js/script.js"></script>
 </body>
 </html>
