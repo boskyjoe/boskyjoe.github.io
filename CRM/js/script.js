@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
-import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc, getDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 // YOUR Firebase Configuration
 const firebaseConfig = {
@@ -38,6 +38,11 @@ let isAdmin = false; // Flag to control admin specific UI/features
 // Data for Countries and States (Now fetched from Firestore)
 let appCountries = [];
 let appCountryStateMap = {};
+
+// New global state for bootstrap admin login
+let hasFirestoreAdmins = false; // Will be true if any user in 'users_data' has role 'Admin'
+const BOOTSTRAP_ADMIN_EMAIL = "admin@shuttersync.com";
+const BOOTSTRAP_ADMIN_PASSWORD = "ShutterSync@123";
 
 // Get references to DOM elements for Contacts
 const contactForm = document.getElementById('contactForm');
@@ -110,10 +115,23 @@ const userSkillsInput = document.getElementById('userSkills');
 const submitUserButton = document.getElementById('submitUserButton');
 const userList = document.getElementById('userList');
 
+// Bootstrap Admin Login Section elements
+const bootstrapAdminLoginSection = document.getElementById('bootstrap-admin-login-section');
+const bootstrapAdminLoginForm = document.getElementById('bootstrapAdminLoginForm');
+const bootstrapAdminEmailInput = document.getElementById('bootstrapAdminEmail');
+const bootstrapAdminPasswordInput = document.getElementById('bootstrapAdminPassword');
+const bootstrapAdminLoginButton = document.getElementById('bootstrapAdminLoginButton');
+const bootstrapAdminMessage = document.getElementById('bootstrapAdminMessage');
+
+
 // References to logout buttons and the new nav Google Login button
 const logoutButton = document.getElementById('logoutButton');
 const mobileLogoutButton = document.getElementById('mobileLogoutButton');
 const navGoogleLoginButton = document.getElementById('navGoogleLoginButton');
+
+// Admin menu elements (added IDs in HTML)
+const desktopAdminMenu = document.getElementById('desktopAdminMenu');
+const mobileAdminMenu = document.getElementById('mobileAdminMenu');
 
 
 // Select all main content sections
@@ -278,9 +296,25 @@ async function loadAdminCountryData() {
 
         adminMessageDiv.classList.add('hidden'); // Clear any previous messages
         console.log("Admin country data loaded into textareas.");
+    }
+    // No specific catch here as fetchCountryData already handles errors and shows modals
+    catch (error) {
+        console.error("Error in loadAdminCountryData:", error); // Log for debugging
+    }
+}
+
+// Function to check if any user with 'Admin' role exists in Firestore
+async function checkIfAnyFirestoreAdminExists() {
+    try {
+        const q = query(collection(db, 'users_data'), where("role", "==", "Admin"));
+        const querySnapshot = await getDocs(q);
+        hasFirestoreAdmins = !querySnapshot.empty;
+        console.log("Check for existing Firestore admins. Found:", hasFirestoreAdmins);
     } catch (error) {
-        console.error("Error loading admin country data:", error);
-        // Message already shown by fetchCountryData if it failed
+        console.error("Error checking for existing Firestore admins:", error);
+        // This is a critical error, but we'll allow the app to proceed potentially without admin access
+        hasFirestoreAdmins = false; // Assume no admins if there's an error
+        showModal("Data Access Error", `Could not verify admin status: ${error.message}. Proceeding with limited access.`, () => {});
     }
 }
 
@@ -293,83 +327,123 @@ async function initializeFirebase() {
         db = getFirestore(app);
         auth = getAuth(app);
 
+        // First, check if any 'Admin' role users exist in Firestore
+        await checkIfAnyFirestoreAdminExists();
+
         // Listen for auth state changes
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUserId = user.uid;
-                // Display user's email if available, otherwise fallback to UID
                 userIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
                 mobileUserIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
+                console.log("Current Firebase UID:", currentUserId);
 
-                console.log("Current Firebase UID:", currentUserId); // Log the actual UID for user to copy
+                let isCurrentSessionBootstrapAdmin = false;
 
-                // Determine if the current user is an admin
-                isAdmin = (currentUserId === ADMIN_FIREBASE_UID);
-                console.log("Is Admin:", isAdmin);
+                // Determine if this is the bootstrap admin scenario
+                if (!hasFirestoreAdmins && user.email === BOOTSTRAP_ADMIN_EMAIL) {
+                    isAdmin = true; // Grant admin access for bootstrap user
+                    isCurrentSessionBootstrapAdmin = true;
+                    console.log("Bootstrap Admin detected. Admin access granted for setup.");
+                } else if (user.email === BOOTSTRAP_ADMIN_EMAIL && hasFirestoreAdmins) {
+                    // If bootstrap admin logs in but permanent admins exist, they are NOT admin
+                    isAdmin = false;
+                    console.log("Bootstrap Admin email logged in, but permanent admins exist. Access restricted.");
+                } else {
+                    // For all other users (including Google users), check their role in Firestore
+                    const userProfileRef = doc(db, 'users_data', user.uid); // Assuming user's profile doc ID is their Firebase UID
+                    const userProfileSnap = await getDoc(userProfileRef);
+
+                    if (userProfileSnap.exists() && userProfileSnap.data().role === 'Admin') {
+                        isAdmin = true;
+                        console.log("User profile has 'Admin' role. Admin access granted.");
+                    } else {
+                        isAdmin = false;
+                        console.log("User is not admin (role not 'Admin' or profile not found).");
+                    }
+                }
 
                 if (!isAuthReady) { // Only run this block once after initial auth
                     isAuthReady = true;
-                    // Fetch and populate country/state data for CRM forms after auth is ready
-                    await fetchCountryData();
-                    populateCountries(); // Now populate after data is fetched
+                    await fetchCountryData(); // Fetch country data for forms
+                    populateCountries(); // Populate customer country dropdown
 
-                    // Enable/disable UI elements based on isAdmin status and general auth readiness
-                    submitCustomerButton.removeAttribute('disabled'); // Customer button always enabled (public data)
-                    collectionToggleButton.removeAttribute('disabled'); // Contacts toggle always enabled
-
-                    // Contacts submit button is conditional on admin role
+                    // UI Updates based on isAdmin status
                     if (isAdmin) {
+                        desktopAdminMenu.classList.remove('hidden');
+                        mobileAdminMenu.classList.remove('hidden');
                         submitContactButton.removeAttribute('disabled');
-                        uploadAdminDataButton.removeAttribute('disabled'); // Enable admin button for admins
-                        submitUserButton.removeAttribute('disabled'); // Enable user submit button for admins
+                        uploadAdminDataButton.removeAttribute('disabled');
+                        submitUserButton.removeAttribute('disabled');
                     } else {
+                        desktopAdminMenu.classList.add('hidden');
+                        mobileAdminMenu.classList.add('hidden');
                         submitContactButton.setAttribute('disabled', 'disabled');
-                        uploadAdminDataButton.setAttribute('disabled', 'disabled'); // Disable admin button for non-admins
-                        submitUserButton.setAttribute('disabled', 'disabled'); // Disable user submit button for non-admins
+                        uploadAdminDataButton.setAttribute('disabled', 'disabled');
+                        submitUserButton.setAttribute('disabled', 'disabled');
                     }
-                    showSection('home'); // Show initial content (home page)
+
+                    // Hide both login sections and show home section
+                    authSection.classList.add('hidden');
+                    bootstrapAdminLoginSection.classList.add('hidden');
+                    showSection('home');
+
+                    // If bootstrap admin just logged in, show a guiding message
+                    if (isCurrentSessionBootstrapAdmin) {
+                        showModal("Bootstrap Admin", "You are logged in as the bootstrap admin. Please navigate to 'Admin > Users' to create your permanent administrator account.", () => {
+                            showSection('users-management-section'); // Redirect to user management
+                        });
+                    }
+
                 }
-                // Hide Google login button and show logout buttons if logged in
+                // Always adjust visibility of login/logout buttons
                 navGoogleLoginButton.classList.add('hidden');
                 logoutButton.classList.remove('hidden');
                 mobileLogoutButton.classList.remove('hidden');
+
             } else {
-                // No user is signed in. Attempt anonymous login if not already authenticated.
-                if (!isAuthReady) { // Prevent re-triggering if already authenticated or processing
-                    try {
-                        console.log("No user found, attempting anonymous sign-in...");
-                        await signInAnonymously(auth);
-                        // onAuthStateChanged will fire again with the new anonymous user
-                    } catch (anonError) {
-                        console.error("Error during anonymous sign-in:", anonError);
-                        showModal("Authentication Error", `Failed to sign in anonymously: ${anonError.message}. Please refresh the page to try again.`, () => {});
-                        // Ensure UI is disabled if authentication fails
-                        submitContactButton.setAttribute('disabled', 'disabled');
-                        submitCustomerButton.setAttribute('disabled', 'disabled');
-                        collectionToggleButton.setAttribute('disabled', 'disabled');
-                        uploadAdminDataButton.setAttribute('disabled', 'disabled'); // Disable admin upload button too
-                        submitUserButton.setAttribute('disabled', 'disabled'); // Disable user submit button too
-                        allSections.forEach(section => { if(section) section.classList.add('hidden'); }); // Keep all content hidden
-                        isAuthReady = false;
-                        isAdmin = false;
-                    }
-                }
-                // Show Google login button and hide logout buttons if not logged in
-                navGoogleLoginButton.classList.remove('hidden');
+                // No user is signed in.
+                currentUserId = null;
+                isAdmin = false; // Ensure isAdmin is false when no user
+                console.log("No user signed in.");
+
+                // Always hide admin menus and disable buttons when not logged in
+                desktopAdminMenu.classList.add('hidden');
+                mobileAdminMenu.classList.add('hidden');
+                submitContactButton.setAttribute('disabled', 'disabled');
+                submitCustomerButton.setAttribute('disabled', 'disabled');
+                collectionToggleButton.setAttribute('disabled', 'disabled');
+                uploadAdminDataButton.setAttribute('disabled', 'disabled');
+                submitUserButton.setAttribute('disabled', 'disabled');
                 logoutButton.classList.add('hidden');
                 mobileLogoutButton.classList.add('hidden');
+
+
+                if (!isAuthReady) { // First load, or after explicit logout
+                    isAuthReady = true; // Mark as ready after initial auth check
+
+                    // Decide which login section to show based on admin existence
+                    if (!hasFirestoreAdmins) {
+                        bootstrapAdminLoginSection.classList.remove('hidden');
+                        authSection.classList.add('hidden'); // Hide Google login
+                        navGoogleLoginButton.classList.add('hidden'); // Ensure Google login button is hidden
+                        bootstrapAdminMessage.textContent = 'Please use the default admin login to set up the first administrator.';
+                        bootstrapAdminMessage.classList.remove('hidden');
+                    } else {
+                        authSection.classList.remove('hidden'); // Show Google login
+                        bootstrapAdminLoginSection.classList.add('hidden'); // Hide bootstrap login
+                        navGoogleLoginButton.classList.remove('hidden'); // Ensure Google login button is visible
+                    }
+                    showSection('auth-section'); // Show the appropriate login section
+                } else {
+                    // This block executes on subsequent auth state changes (e.g., logout)
+                    authSection.classList.remove('hidden'); // Show Google login after logout
+                    bootstrapAdminLoginSection.classList.add('hidden'); // Hide bootstrap login
+                    navGoogleLoginButton.classList.remove('hidden'); // Show Google login button
+                    showSection('auth-section'); // Go to login screen
+                }
             }
         });
-
-        // Initially hide all main sections and buttons until auth state is determined
-        allSections.forEach(section => { if(section) section.classList.add('hidden'); });
-        submitContactButton.setAttribute('disabled', 'disabled');
-        submitCustomerButton.setAttribute('disabled', 'disabled');
-        collectionToggleButton.setAttribute('disabled', 'disabled');
-        logoutButton.classList.add('hidden');
-        mobileLogoutButton.classList.add('hidden');
-        navGoogleLoginButton.classList.remove('hidden'); // Ensure Google login button is visible initially to prompt login
-
 
     } catch (error) {
         console.error("Error initializing Firebase application:", error);
@@ -379,14 +453,18 @@ async function initializeFirebase() {
 
 // Determine the Firestore collection path based on type and user ID
 function getCollectionPath(type, dataArea = 'contacts') {
-    if (!currentUserId) {
-        console.error("currentUserId is null, cannot determine collection path. Authentication not established.");
-        return `artifacts/${appId}/public/data/${dataArea}_fallback`;
+    if (!auth.currentUser) { // Use auth.currentUser to determine actual user state
+        // If no user is logged in, use a random ID for "anonymous" private paths for non-persistent data
+        // This is primarily for demonstrating UI, not for secure multi-user private data storage.
+        // For actual private data, authentication is always required.
+        console.warn("No authenticated user, using a random ID for collection path. Data may not persist.");
+        return `artifacts/${appId}/users/${crypto.randomUUID()}/${dataArea}`;
     }
+    const userId = auth.currentUser.uid;
     if (type === 'public') {
         return `artifacts/${appId}/public/data/${dataArea}`;
     } else { // 'private'
-        return `artifacts/${appId}/users/${currentUserId}/${dataArea}`;
+        return `artifacts/${appId}/users/${userId}/${dataArea}`;
     }
 }
 
@@ -1249,6 +1327,44 @@ userForm.addEventListener('submit', async (e) => {
     };
     const editingId = userForm.dataset.editingId;
     await saveUser(userData, editingId || null);
+});
+
+// Bootstrap Admin Login Form Event Listener
+bootstrapAdminLoginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    bootstrapAdminMessage.classList.add('hidden'); // Clear previous messages
+    bootstrapAdminLoginButton.disabled = true;
+    bootstrapAdminLoginButton.textContent = 'Logging In...';
+
+    const email = bootstrapAdminEmailInput.value;
+    const password = bootstrapAdminPasswordInput.value;
+
+    try {
+        // Attempt to sign in
+        await signInWithEmailAndPassword(auth, email, password);
+        // onAuthStateChanged will handle UI updates on successful login
+        console.log("Bootstrap admin signed in successfully.");
+    } catch (error) {
+        // If sign-in fails, try to create the user (only if 'auth/user-not-found')
+        if (error.code === 'auth/user-not-found') {
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                console.log("Bootstrap admin user created and signed in successfully.");
+                // onAuthStateChanged will handle UI updates on successful creation/login
+            } catch (createError) {
+                console.error("Error creating bootstrap admin user:", createError);
+                bootstrapAdminMessage.textContent = `Error: ${createError.message}`;
+                bootstrapAdminMessage.classList.remove('hidden');
+            }
+        } else {
+            console.error("Error signing in bootstrap admin:", error);
+            bootstrapAdminMessage.textContent = `Login failed: ${error.message}`;
+            bootstrapAdminMessage.classList.remove('hidden');
+        }
+    } finally {
+        bootstrapAdminLoginButton.disabled = false;
+        bootstrapAdminLoginButton.textContent = 'Login as Bootstrap Admin';
+    }
 });
 
 
