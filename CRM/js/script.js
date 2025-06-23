@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 // YOUR Firebase Configuration
@@ -20,8 +20,7 @@ const appId = firebaseConfig.projectId;
 let app;
 let db;
 let auth;
-// currentUserId will now be set by Firebase Auth onAuthStateChanged
-let currentUserId = null;
+let currentUserId = null; // Will be set by Firebase Auth onAuthStateChanged
 let isAuthReady = false; // Set to false initially, true when Firebase Auth confirms a user
 let currentCollectionType = 'private'; // 'private' or 'public' for contacts
 const currentCustomerCollectionType = 'public'; // Fixed to public as per requirement
@@ -77,9 +76,10 @@ const customerDescriptionInput = document.getElementById('customerDescription');
 const submitCustomerButton = document.getElementById('submitCustomerButton');
 const customerList = document.getElementById('customerList');
 
-// References to logout buttons (for hiding/showing, but will be hidden initially)
+// References to logout buttons
 const logoutButton = document.getElementById('logoutButton');
 const mobileLogoutButton = document.getElementById('mobileLogoutButton');
+const googleLoginButton = document.getElementById('googleLoginButton'); // NEW: Reference to Google Login Button
 
 
 // Select all main content sections
@@ -160,6 +160,18 @@ function showSection(sectionId) {
     }
 }
 
+// Handle Google Login
+async function handleGoogleLogin() {
+    const provider = new GoogleAuthProvider();
+    try {
+        await signInWithPopup(auth, provider);
+        // onAuthStateChanged listener will handle the rest
+    } catch (error) {
+        console.error("Error during Google login:", error);
+        showModal("Login Error", `Failed to sign in with Google: ${error.message}`, () => {});
+    }
+}
+
 // Initialize Firebase and set up authentication listener
 async function initializeFirebase() {
     try {
@@ -168,17 +180,13 @@ async function initializeFirebase() {
         db = getFirestore(app);
         auth = getAuth(app);
 
-        // Hide logout buttons initially, they will be hidden permanently with this hardcoded approach
-        logoutButton.classList.add('hidden');
-        mobileLogoutButton.classList.add('hidden');
-
         // Listen for auth state changes
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUserId = user.uid;
-                // Display the hardcoded email 'boskyjoe@gmail.com'
-                userIdDisplay.textContent = `User ID: boskyjoe@gmail.com`;
-                mobileUserIdDisplay.textContent = `User ID: boskyjoe@gmail.com`;
+                // Display user's email if available, otherwise fallback to UID
+                userIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
+                mobileUserIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
 
                 console.log("Current Firebase UID:", currentUserId); // Log the actual UID for user to copy
 
@@ -199,11 +207,19 @@ async function initializeFirebase() {
                         submitContactButton.setAttribute('disabled', 'disabled');
                     }
 
+                    // Show logout buttons and hide Google login button if logged in
+                    logoutButton.classList.remove('hidden');
+                    mobileLogoutButton.classList.remove('hidden');
+                    if (googleLoginButton) {
+                        googleLoginButton.classList.add('hidden');
+                    }
+
                     showSection('home'); // Show initial content (home page)
                 }
             } else {
                 // No user is signed in. Attempt anonymous login if not already authenticated.
-                if (!isAuthReady) {
+                // If the user logs out, or if this is initial load and no session, attempt anonymous sign-in.
+                if (!isAuthReady) { // Prevent re-triggering if already authenticated or processing
                     try {
                         console.log("No user found, attempting anonymous sign-in...");
                         await signInAnonymously(auth);
@@ -220,18 +236,17 @@ async function initializeFirebase() {
                         isAdmin = false;
                     }
                 }
+                // Hide logout buttons and show Google login button if not logged in
+                logoutButton.classList.add('hidden');
+                mobileLogoutButton.classList.add('hidden');
+                if (googleLoginButton) {
+                    googleLoginButton.classList.remove('hidden');
+                }
             }
         });
 
-        // Initial attempt to sign in anonymously if no user is present on load.
-        // This is outside the onAuthStateChanged listener to initiate the process quickly.
-        // The onAuthStateChanged listener will handle the state change and UI updates.
-        if (!auth.currentUser) {
-            signInAnonymously(auth).catch(error => {
-                console.error("Initial background anonymous sign-in attempt failed:", error);
-                // Errors are handled by the onAuthStateChanged listener's else block
-            });
-        }
+        // Trigger initial auth state check. If no current user, onAuthStateChanged will attempt anonymous sign-in.
+        // No explicit signInAnonymously call needed here anymore, onAuthStateChanged handles it.
 
     } catch (error) {
         console.error("Error initializing Firebase application:", error);
@@ -243,7 +258,6 @@ async function initializeFirebase() {
 function getCollectionPath(type, dataArea = 'contacts') {
     if (!currentUserId) {
         console.error("currentUserId is null, cannot determine collection path. Authentication not established.");
-        // Fallback, though UI controls should prevent reaching here for writes if not authenticated
         return `artifacts/${appId}/public/data/${dataArea}_fallback`;
     }
     if (type === 'public') {
@@ -259,7 +273,7 @@ function getCollectionPath(type, dataArea = 'contacts') {
 async function saveContact(contactData, contactId = null) {
     if (!isAuthReady || !currentUserId) {
         console.error("User not authenticated or session not established. Cannot save contact.");
-        showModal("Error", "Could not save contact. Anonymous session not established.", () => {});
+        showModal("Error", "Could not save contact. Authentication required.", () => {});
         return;
     }
     // Client-side admin check for adding contacts
@@ -292,7 +306,7 @@ async function saveContact(contactData, contactId = null) {
 async function deleteContact(contactId) {
     if (!isAuthReady || !currentUserId) {
         console.error("User not authenticated or session not established. Cannot delete contact.");
-        showModal("Error", "Could not delete contact. Anonymous session not established.", () => {});
+        showModal("Error", "Could not delete contact. Authentication required.", () => {});
         return;
     }
     // Client-side admin check for deleting contacts
@@ -441,7 +455,7 @@ customerTypeSelect.addEventListener('change', applyCustomerTypeValidation);
 async function saveCustomer(customerData, existingCustomerDocId = null) {
     if (!isAuthReady || !currentUserId) {
         console.error("User not authenticated or session not established. Cannot save customer.");
-        showModal("Error", "Could not save customer. Anonymous session not established.", () => {});
+        showModal("Error", "Could not save customer. Authentication required.", () => {});
         return;
     }
 
@@ -510,7 +524,7 @@ async function saveCustomer(customerData, existingCustomerDocId = null) {
 async function deleteCustomer(firestoreDocId) {
     if (!isAuthReady || !currentUserId) {
         console.error("User not authenticated or session not established. Cannot delete customer.");
-        showModal("Error", "Could not delete customer. Anonymous session not established.", () => {});
+        showModal("Error", "Could not delete customer. Authentication required.", () => {});
         return;
     }
 
@@ -729,6 +743,35 @@ document.querySelectorAll('nav a').forEach(link => {
         });
     }
 });
+
+// Add event listener for the Google Login Button
+if (googleLoginButton) {
+    googleLoginButton.addEventListener('click', handleGoogleLogin);
+}
+
+// Add event listeners for logout buttons
+logoutButton.addEventListener('click', async () => {
+    try {
+        await signOut(auth);
+        console.log("User signed out.");
+        // onAuthStateChanged will handle UI updates
+    } catch (error) {
+        console.error("Error signing out:", error);
+        showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
+    }
+});
+
+mobileLogoutButton.addEventListener('click', async () => {
+    try {
+        await signOut(auth);
+        console.log("User signed out.");
+        // onAuthStateChanged will handle UI updates
+    } catch (error) {
+        console.error("Error signing out:", error);
+        showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
+    }
+});
+
 
 // Initialize Firebase on window load
 window.onload = initializeFirebase;
