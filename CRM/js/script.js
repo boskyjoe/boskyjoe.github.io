@@ -61,10 +61,14 @@ const customerCompanyNameInput = document.getElementById('customerCompanyName');
 
 const customerEmailInput = document.getElementById('customerEmail');
 const customerPhoneInput = document.getElementById('customerPhone');
+
+// Address fields
+const customerCountrySelect = document.getElementById('customerCountry'); // NEW
 const customerAddressInput = document.getElementById('customerAddress');
 const customerCityInput = document.getElementById('customerCity');
-const customerStateInput = document.getElementById('customerState');
+const customerStateSelect = document.getElementById('customerState'); // Changed to select
 const customerZipCodeInput = document.getElementById('customerZipCode');
+const addressValidationMessage = document.getElementById('addressValidationMessage'); // NEW
 
 const individualIndustryGroup = document.getElementById('individualIndustryGroup');
 const customerIndustryInput = document.getElementById('customerIndustryInput');
@@ -87,6 +91,35 @@ const homeSection = document.getElementById('home');
 const crmSection = document.getElementById('crm-section');
 const eventsSection = document.getElementById('events-section');
 const allSections = [homeSection, crmSection, customersSection, eventsSection];
+
+
+// Data for Countries and States (Limited for demonstration)
+const countries = [
+    { name: "United States", code: "US" },
+    { name: "Canada", code: "CA" },
+    { name: "United Kingdom", code: "GB" },
+    { name: "India", code: "IN" },
+    { name: "Australia", code: "AU" },
+    { name: "Germany", code: "DE" },
+    { name: "France", code: "FR" },
+    { name: "Japan", code: "JP" },
+    { name: "Brazil", code: "BR" },
+    { name: "Mexico", code: "MX" }
+];
+
+const countryStateMap = {
+    "US": ["Alabama", "Alaska", "Arizona", "California", "New York", "Texas", "Florida"],
+    "CA": ["Alberta", "British Columbia", "Manitoba", "Ontario", "Quebec"],
+    "GB": ["England", "Scotland", "Wales", "Northern Ireland"],
+    "IN": ["Andhra Pradesh", "Karnataka", "Maharashtra", "Tamil Nadu", "Uttar Pradesh"],
+    "AU": ["New South Wales", "Queensland", "Victoria", "Western Australia"],
+    "DE": ["Baden-Württemberg", "Bavaria", "Berlin", "Hamburg", "North Rhine-Westphalia"],
+    "FR": ["Auvergne-Rhône-Alpes", "Brittany", "Île-de-France", "Occitanie", "Provence-Alpes-Côte d'Azur"],
+    "JP": ["Hokkaido", "Kanto", "Kansai", "Chubu", "Kyushu"],
+    "BR": ["São Paulo", "Rio de Janeiro", "Minas Gerais", "Bahia"],
+    "MX": ["Mexico City", "Jalisco", "Nuevo León", "Veracruz", "State of Mexico"],
+    // Add more countries and their states/provinces as needed
+};
 
 
 // Function to show a custom confirmation modal
@@ -248,6 +281,8 @@ async function initializeFirebase() {
         navGoogleLoginButton.classList.remove('hidden'); // Ensure Google login button is visible initially to prompt login
 
 
+        populateCountries(); // Call to populate countries dropdown on init
+
     } catch (error) {
         console.error("Error initializing Firebase application:", error);
         showModal("Firebase Initialization Error", `Initialization failed: ${error.message}`, () => {});
@@ -404,6 +439,50 @@ function editContact(contact) {
 
 /* --- CUSTOMERS CRUD OPERATIONS (UPDATED) --- */
 
+// Function to populate the country dropdown
+function populateCountries() {
+    customerCountrySelect.innerHTML = '<option value="">Select Country</option>'; // Clear existing and add default
+    countries.forEach(country => {
+        const option = document.createElement('option');
+        option.value = country.code;
+        option.textContent = country.name;
+        customerCountrySelect.appendChild(option);
+    });
+}
+
+// Function to populate the state/province dropdown based on selected country
+function populateStates(countryCode) {
+    customerStateSelect.innerHTML = '<option value="">Select State/Province</option>'; // Clear existing and add default
+    const states = countryStateMap[countryCode] || [];
+    states.forEach(state => {
+        const option = document.createElement('option');
+        option.value = state;
+        option.textContent = state;
+        customerStateSelect.appendChild(option);
+    });
+    // If no states available, potentially disable the dropdown or show a message
+    customerStateSelect.disabled = states.length === 0;
+}
+
+// Placeholder for address validation (requires external API for real validation)
+function validateAddress(address, city, state, zipCode, country) {
+    // This is a basic client-side check. A real-world application would use a service like:
+    // Google Maps Platform Address Validation API, USPS API, etc.
+    // Example: fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=...&key=YOUR_API_KEY`)
+    // For now, we'll just check if the fields are not empty.
+    const isValid = address.trim() !== '' && city.trim() !== '' && state.trim() !== '' && zipCode.trim() !== '' && country.trim() !== '';
+
+    if (!isValid) {
+        addressValidationMessage.classList.remove('hidden');
+        addressValidationMessage.textContent = "Please fill in all address fields.";
+    } else {
+        addressValidationMessage.classList.add('hidden');
+        addressValidationMessage.textContent = "";
+    }
+    return isValid;
+}
+
+
 // Function to apply validation rules based on customer type
 function applyCustomerTypeValidation() {
     const customerType = customerTypeSelect.value;
@@ -421,9 +500,6 @@ function applyCustomerTypeValidation() {
     customerCompanyNameInput.removeAttribute('required');
     customerIndustryInput.removeAttribute('required');
     customerIndustrySelect.removeAttribute('required');
-
-    // IMPORTANT: Removed the lines that clear input values here.
-    // The clearing should only happen in resetCustomerForm().
 
     if (customerType === 'Individual') {
         individualFieldsDiv.classList.remove('hidden');
@@ -444,6 +520,11 @@ function applyCustomerTypeValidation() {
 
 // Add event listener for customer type change
 customerTypeSelect.addEventListener('change', applyCustomerTypeValidation);
+
+// Add event listener for country change to populate states
+customerCountrySelect.addEventListener('change', (e) => {
+    populateStates(e.target.value);
+});
 
 
 // Add or update a customer in Firestore
@@ -481,10 +562,22 @@ async function saveCustomer(customerData, existingCustomerDocId = null) {
 
     // All other common fields are universally mandatory by HTML 'required' attribute, but a final check here is good
     if (!customerEmailInput.value.trim() || !customerPhoneInput.value.trim() ||
-        !customerAddressInput.value.trim() || !customerCityInput.value.trim() ||
-        !customerStateInput.value.trim() || !customerZipCodeInput.value.trim() ||
         !customerData.industry || !customerSinceInput.value.trim()) {
         showModal("Validation Error", "Please fill in all mandatory fields.", () => {});
+        return;
+    }
+
+    // Perform address validation
+    const addressValid = validateAddress(
+        customerAddressInput.value,
+        customerCityInput.value,
+        customerStateSelect.value, // Now a select
+        customerZipCodeInput.value,
+        customerCountrySelect.value // NEW country field
+    );
+
+    if (!addressValid) {
+        showModal("Validation Error", "Please provide a complete and valid address.", () => {});
         return;
     }
 
@@ -507,6 +600,14 @@ async function saveCustomer(customerData, existingCustomerDocId = null) {
             // and ensure it's numeric.
             const numericPart = Date.now().toString().slice(-8) + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
             const systemGeneratedCustomerId = 'COM-' + numericPart;
+
+            // Add address fields to customerData
+            customerData.country = customerCountrySelect.value.trim(); // NEW
+            customerData.address = customerAddressInput.value.trim();
+            customerData.city = customerCityInput.value.trim();
+            customerData.state = customerStateSelect.value.trim(); // Now a select
+            customerData.zipCode = customerZipCodeInput.value.trim();
+
 
             // Set the document with the full data including the custom customerId
             await setDoc(newDocRef, { ...customerData, customerId: systemGeneratedCustomerId });
@@ -596,7 +697,7 @@ function displayCustomer(customer) {
         <div class="px-2 py-1 truncate">${displayName}</div>
         <div class="px-2 py-1 truncate">${customer.email || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden md:block">${customer.phone || 'N/A'}</div>
-        <div class="px-2 py-1 truncate hidden lg:block">${customer.address || 'N/A'}, ${customer.city || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden lg:block">${customer.address || 'N/A'}, ${customer.city || 'N/A'}, ${customer.state || 'N/A'}, ${customer.country || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden lg:block">${customer.industry || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden sm:block">${customer.customerSince || 'N/A'}</div>
         <div class="px-2 py-1 flex justify-end space-x-2">
@@ -629,13 +730,18 @@ function editCustomer(customer) {
     customerTypeSelect.value = customer.customerType || '';
     customerEmailInput.value = customer.email || '';
     customerPhoneInput.value = customer.phone || '';
-    customerAddressInput.value = customer.address || '';
-    customerCityInput.value = customer.city || '';
-    customerStateInput.value = customer.state || '';
-    customerZipCodeInput.value = customer.zipCode || '';
     customerSinceInput.value = customer.customerSince || '';
     customerDescriptionInput.value = customer.description || '';
     customerForm.dataset.editingId = customer.id;
+
+    // Populate Address fields
+    customerCountrySelect.value = customer.country || ''; // NEW
+    populateStates(customer.country); // Populate states based on loaded country
+    customerAddressInput.value = customer.address || '';
+    customerCityInput.value = customer.city || '';
+    customerStateSelect.value = customer.state || '';
+    customerZipCodeInput.value = customer.zipCode || '';
+
 
     // Call applyCustomerTypeValidation BEFORE populating conditional fields
     // This ensures the correct fields are visible and required attributes are set
@@ -654,6 +760,8 @@ function editCustomer(customer) {
         customerIndustrySelect.value = customer.industry || '';
     }
 
+    addressValidationMessage.classList.add('hidden'); // Hide validation message on edit start
+
     customerForm.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -665,6 +773,12 @@ function resetCustomerForm() {
     submitCustomerButton.textContent = 'Add Customer';
     customerIdDisplayGroup.classList.add('hidden'); // Hide ID display group
     customerIdDisplay.textContent = ''; // Clear displayed ID
+
+    // Reset address fields and states
+    customerCountrySelect.value = '';
+    populateStates(''); // Clear states
+    addressValidationMessage.classList.add('hidden'); // Hide validation message
+
 
     // Set customer type to Individual by default and apply validation
     customerTypeSelect.value = 'Individual';
@@ -705,9 +819,11 @@ customerForm.addEventListener('submit', async (e) => {
         companyName: customerCompanyNameInput.value.trim(),
         email: customerEmailInput.value.trim(),
         phone: customerPhoneInput.value.trim(),
+        // Address fields are now explicitly collected from their respective inputs
+        country: customerCountrySelect.value.trim(), // NEW
         address: customerAddressInput.value.trim(),
         city: customerCityInput.value.trim(),
-        state: customerStateInput.value.trim(),
+        state: customerStateSelect.value.trim(), // Now a select
         zipCode: customerZipCodeInput.value.trim(),
         industry: '', // Will be set conditionally below
         customerSince: customerSinceInput.value, // Date input value is already string inYYYY-MM-DD
