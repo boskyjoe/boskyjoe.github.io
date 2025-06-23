@@ -133,6 +133,9 @@ const navGoogleLoginButton = document.getElementById('navGoogleLoginButton');
 const desktopAdminMenu = document.getElementById('desktopAdminMenu');
 const mobileAdminMenu = document.getElementById('mobileAdminMenu');
 
+// Reference to auth-section (for standard Google/email login)
+const authSection = document.getElementById('auth-section');
+
 
 // Select all main content sections
 const homeSection = document.getElementById('home');
@@ -176,6 +179,11 @@ function showSection(sectionId) {
             section.classList.add('hidden');
         }
     });
+    // Explicitly hide auth-section and bootstrap-admin-login-section by default
+    if (authSection) authSection.classList.add('hidden');
+    if (bootstrapAdminLoginSection) bootstrapAdminLoginSection.classList.add('hidden');
+
+
     const targetSection = document.getElementById(sectionId);
     if (targetSection) {
         targetSection.classList.remove('hidden');
@@ -368,44 +376,61 @@ async function initializeFirebase() {
                     await fetchCountryData(); // Fetch country data for forms
                     populateCountries(); // Populate customer country dropdown
 
-                    // UI Updates based on isAdmin status
+                    // Default UI state: hide all login options, hide admin menus, disable buttons
+                    authSection.classList.add('hidden');
+                    bootstrapAdminLoginSection.classList.add('hidden');
+                    navGoogleLoginButton.classList.add('hidden');
+                    desktopAdminMenu.classList.add('hidden');
+                    mobileAdminMenu.classList.add('hidden');
+                    submitContactButton.setAttribute('disabled', 'disabled');
+                    submitCustomerButton.setAttribute('disabled', 'disabled'); // Disable for non-admin on contact page
+                    collectionToggleButton.setAttribute('disabled', 'disabled'); // Disable for non-admin on contact page
+                    uploadAdminDataButton.setAttribute('disabled', 'disabled');
+                    submitUserButton.setAttribute('disabled', 'disabled');
+
+                    // If a user is logged in, show logout buttons
+                    logoutButton.classList.remove('hidden');
+                    mobileLogoutButton.classList.remove('hidden');
+
+
                     if (isAdmin) {
+                        // User is an admin (either bootstrap or permanent)
                         desktopAdminMenu.classList.remove('hidden');
                         mobileAdminMenu.classList.remove('hidden');
                         submitContactButton.removeAttribute('disabled');
                         uploadAdminDataButton.removeAttribute('disabled');
                         submitUserButton.removeAttribute('disabled');
+                        showSection('home'); // Admin goes to home
+                        if (isCurrentSessionBootstrapAdmin) {
+                            showModal("Bootstrap Admin", "You are logged in as the bootstrap admin. Please navigate to 'Admin > Users' to create your permanent administrator account.", () => {
+                                showSection('users-management-section');
+                            });
+                        }
                     } else {
-                        desktopAdminMenu.classList.add('hidden');
-                        mobileAdminMenu.classList.add('hidden');
-                        submitContactButton.setAttribute('disabled', 'disabled');
-                        uploadAdminDataButton.setAttribute('disabled', 'disabled');
-                        submitUserButton.setAttribute('disabled', 'disabled');
+                        // User is logged in, but not an admin.
+                        // Now, check if we are in the initial bootstrap phase (no permanent admins)
+                        if (!hasFirestoreAdmins) {
+                            console.log("Logged in as non-admin, no permanent admins found. Redirecting to bootstrap login.");
+                            bootstrapAdminLoginSection.classList.remove('hidden');
+                            bootstrapAdminMessage.textContent = 'Please use the default admin login to set up the first administrator.';
+                            bootstrapAdminMessage.classList.remove('hidden');
+                            showSection('auth-section'); // Show the auth section which now contains bootstrap login
+                        } else {
+                            // User is logged in, not an admin, AND permanent admins exist.
+                            // This is a regular non-admin user. Show home with limited permissions.
+                            showSection('home');
+                            // navGoogleLoginButton.classList.add('hidden'); // Ensure Google login button is hidden if already logged in
+                        }
                     }
-
-                    // Hide both login sections and show home section
-                    authSection.classList.add('hidden');
-                    bootstrapAdminLoginSection.classList.add('hidden');
-                    showSection('home');
-
-                    // If bootstrap admin just logged in, show a guiding message
-                    if (isCurrentSessionBootstrapAdmin) {
-                        showModal("Bootstrap Admin", "You are logged in as the bootstrap admin. Please navigate to 'Admin > Users' to create your permanent administrator account.", () => {
-                            showSection('users-management-section'); // Redirect to user management
-                        });
-                    }
-
                 }
-                // Always adjust visibility of login/logout buttons
-                navGoogleLoginButton.classList.add('hidden');
-                logoutButton.classList.remove('hidden');
-                mobileLogoutButton.classList.remove('hidden');
 
-            } else {
-                // No user is signed in.
+                // Always ensure standard login button is hidden when a user is signed in
+                navGoogleLoginButton.classList.add('hidden');
+
+
+            } else { // No user is signed in.
                 currentUserId = null;
                 isAdmin = false; // Ensure isAdmin is false when no user
-                console.log("No user signed in.");
 
                 // Always hide admin menus and disable buttons when not logged in
                 desktopAdminMenu.classList.add('hidden');
