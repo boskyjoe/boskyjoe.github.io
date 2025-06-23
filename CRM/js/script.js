@@ -20,7 +20,9 @@ const appId = firebaseConfig.projectId;
 let app;
 let db;
 let auth;
-let currentUserId = null;
+// NEW: Hardcoding currentUserId for development
+let currentUserId = 'boskyjoe@gmail.com';
+let isAuthReady = true; // NEW: Set to true immediately as user is hardcoded
 let currentCollectionType = 'private'; // 'private' or 'public' for contacts
 // Customer collection type is now fixed to 'public'
 const currentCustomerCollectionType = 'public'; // Fixed to public as per requirement
@@ -36,6 +38,7 @@ const modalContainer = document.getElementById('modalContainer');
 const mobileMenuButton = document.getElementById('mobileMenuButton');
 const mobileMenu = document.getElementById('mobileMenu');
 const mobileUserIdDisplay = document.getElementById('mobileUserIdDisplay');
+const submitContactButton = document.getElementById('submitButton'); // NEW: Reference to contact submit button
 
 // Get references to DOM elements for Customers (UPDATED and NEW)
 const customersSection = document.getElementById('customers-section'); // Renamed from companiesSection
@@ -67,6 +70,10 @@ const customerSinceInput = document.getElementById('customerSince'); // NEW
 const customerDescriptionInput = document.getElementById('customerDescription'); // Renamed from companyDescriptionInput
 const submitCustomerButton = document.getElementById('submitCustomerButton'); // Renamed from submitCompanyButton
 const customerList = document.getElementById('customerList'); // Renamed from companyList
+
+// References to logout buttons (for hiding)
+const logoutButton = document.getElementById('logoutButton');
+const mobileLogoutButton = document.getElementById('mobileLogoutButton');
 
 
 // Select all main content sections (updated for customersSection)
@@ -122,13 +129,17 @@ function showSection(sectionId) {
     if (unsubscribeContacts) { unsubscribeContacts(); }
     if (unsubscribeCustomers) { unsubscribeCustomers(); }
 
-    // Start specific listener for the active section
-    if (sectionId === 'crm-section') {
-        listenForContacts();
-    } else if (sectionId === 'customers-section') {
-        listenForCustomers();
-        // applyCustomerTypeValidation() is now called within resetCustomerForm()
-        resetCustomerForm(); // Reset form and apply initial validation state
+    // Start specific listener for the active section, but only if auth is ready
+    if (isAuthReady) {
+        if (sectionId === 'crm-section') {
+            listenForContacts();
+        } else if (sectionId === 'customers-section') {
+            listenForCustomers();
+            resetCustomerForm(); // Reset form and apply initial validation state
+        }
+    } else {
+        console.warn("Attempted to show section before Firebase Auth is ready:", sectionId);
+        // Optionally, show a "loading" or "authentication required" message here
     }
 }
 
@@ -138,32 +149,74 @@ async function initializeFirebase() {
         app = initializeApp(firebaseConfig);
         getAnalytics(app); // Initialize Analytics
         db = getFirestore(app);
-        auth = getAuth(app); // Still need auth for anonymous sign-in
+        auth = getAuth(app);
 
-        // Automatically sign in anonymously on load
+        // Directly display the hardcoded user ID
+        userIdDisplay.textContent = `User ID: ${currentUserId}`;
+        mobileUserIdDisplay.textContent = `User ID: ${currentUserId}`;
+
+        // Hide logout buttons as they are not functional with a hardcoded user
+        logoutButton.classList.add('hidden');
+        mobileLogoutButton.classList.add('hidden');
+
+        // Immediately enable relevant UI elements since auth is "ready"
+        submitContactButton.removeAttribute('disabled');
+        submitCustomerButton.removeAttribute('disabled');
+        collectionToggleButton.removeAttribute('disabled'); // Also enable this button
+        showSection('home'); // Show initial content (home page)
+
+        // Commented out Firebase auth listener and anonymous sign-in
+        /*
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUserId = user.uid;
-                userIdDisplay.textContent = `User ID: ${user.uid.substring(0, 8)}...`; // Display truncated ID
+                userIdDisplay.textContent = `User ID: ${user.uid.substring(0, 8)}...`;
                 mobileUserIdDisplay.textContent = `User ID: ${user.uid.substring(0, 8)}...`;
+
+                if (!isAuthReady) {
+                    isAuthReady = true;
+                    submitContactButton.removeAttribute('disabled');
+                    submitCustomerButton.removeAttribute('disabled');
+                    collectionToggleButton.removeAttribute('disabled');
+                    showSection('home');
+                }
             } else {
-                await signInAnonymously(auth);
+                if (!isAuthReady) {
+                    try {
+                        console.log("No user found, attempting anonymous sign-in...");
+                        await signInAnonymously(auth);
+                    } catch (anonError) {
+                        console.error("Error during anonymous sign-in:", anonError);
+                        showModal("Authentication Error", `Failed to sign in anonymously: ${anonError.message}. Please refresh the page to try again.`, () => {});
+                        submitContactButton.setAttribute('disabled', 'disabled');
+                        submitCustomerButton.setAttribute('disabled', 'disabled');
+                        collectionToggleButton.setAttribute('disabled', 'disabled');
+                        allSections.forEach(section => { if(section) section.classList.add('hidden'); });
+                        isAuthReady = false;
+                    }
+                }
             }
-            // Once authenticated (or anonymously signed in), show the home section
-            showSection('home');
         });
 
+        if (!auth.currentUser) {
+            signInAnonymously(auth).catch(error => {
+                console.error("Initial background anonymous sign-in attempt failed:", error);
+            });
+        }
+        */
+
     } catch (error) {
-        console.error("Error initializing Firebase:", error);
-        showModal("Firebase Error", `Initialization failed: ${error.message}`, () => {});
+        console.error("Error initializing Firebase application:", error);
+        showModal("Firebase Initialization Error", `Initialization failed: ${error.message}`, () => {});
     }
 }
 
 // Determine the Firestore collection path based on type and user ID
 function getCollectionPath(type, dataArea = 'contacts') { // dataArea added for flexibility
+    // With hardcoded user, this check is less critical but good for consistency
     if (!currentUserId) {
-        console.error("currentUserId is null, cannot determine collection path. Anonymous sign-in failed.");
-        return `artifacts/${appId}/public/data/${dataArea}_fallback`; // Fallback for critical error
+        console.error("currentUserId is null, cannot determine collection path. Authentication not established.");
+        return `artifacts/${appId}/public/data/${dataArea}_fallback`;
     }
     // For customers, 'type' will always be 'public' based on the constant `currentCustomerCollectionType`
     // For contacts, it will use `currentCollectionType` which can be private/public
@@ -178,8 +231,8 @@ function getCollectionPath(type, dataArea = 'contacts') { // dataArea added for 
 
 // Add or update a contact in Firestore
 async function saveContact(contactData, contactId = null) {
-    if (!currentUserId) {
-        console.error("User not authenticated. Cannot save contact. Anonymous session not established.", "saveContact");
+    if (!isAuthReady || !currentUserId) { // Check both auth ready flag and user ID
+        console.error("User not authenticated or session not established. Cannot save contact.");
         showModal("Error", "Could not save contact. Anonymous session not established.", () => {});
         return;
     }
@@ -197,7 +250,7 @@ async function saveContact(contactData, contactId = null) {
         contactForm.reset();
         contactForm.dataset.editingId = '';
         document.getElementById('contactFormTitle').textContent = 'Add New Contact';
-        document.getElementById('submitButton').textContent = 'Add Contact';
+        submitContactButton.textContent = 'Add Contact'; // Changed to use submitContactButton
     } catch (error) {
         console.error("Error saving contact:", error);
         showModal("Error", "Failed to save contact. Please try again. " + error.message, () => {});
@@ -206,8 +259,8 @@ async function saveContact(contactData, contactId = null) {
 
 // Delete a contact from Firestore
 async function deleteContact(contactId) {
-    if (!currentUserId) {
-        console.error("User not authenticated. Cannot delete contact. Anonymous sign-in issue.");
+    if (!isAuthReady || !currentUserId) { // Check both auth ready flag and user ID
+        console.error("User not authenticated or session not established. Cannot delete contact.");
         showModal("Error", "Could not delete contact. Anonymous session not established.", () => {});
         return;
     }
@@ -230,14 +283,14 @@ async function deleteContact(contactId) {
 
 // Listen for real-time updates to contacts
 function listenForContacts() {
-    if (unsubscribeContacts) {
-        unsubscribeContacts(); // Unsubscribe from previous listener
+    if (!isAuthReady || !currentUserId) { // Check both auth ready flag and user ID
+        console.error("User not authenticated or session not established. Cannot listen for contacts.");
+        contactList.innerHTML = '<p class="text-gray-500 text-center">Authentication required to load contacts.</p>';
+        return;
     }
 
-    if (!currentUserId) {
-        console.error("User not authenticated. Cannot listen for contacts. Anonymous sign-in issue.");
-        contactList.innerHTML = '<p class="text-gray-500 text-center">Failed to load contacts. Please refresh.</p>';
-        return;
+    if (unsubscribeContacts) {
+        unsubscribeContacts(); // Unsubscribe from previous listener
     }
 
     const collectionPath = getCollectionPath(currentCollectionType, 'contacts'); // Specify dataArea
@@ -288,7 +341,7 @@ function editContact(contact) {
     document.getElementById('contactNotes').value = contact.notes || '';
     contactForm.dataset.editingId = contact.id;
     document.getElementById('contactFormTitle').textContent = 'Edit Contact';
-    document.getElementById('submitButton').textContent = 'Update Contact';
+    submitContactButton.textContent = 'Update Contact'; // Changed to use submitContactButton
     contactForm.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -343,8 +396,8 @@ customerTypeSelect.addEventListener('change', applyCustomerTypeValidation);
 
 // Add or update a customer in Firestore
 async function saveCustomer(customerData, existingCustomerDocId = null) { // existingCustomerDocId is Firestore's auto-generated doc ID
-    if (!currentUserId) {
-        console.error("User not authenticated. Cannot save customer. Anonymous session not established.");
+    if (!isAuthReady || !currentUserId) { // Check both auth ready flag and user ID
+        console.error("User not authenticated or session not established. Cannot save customer.");
         showModal("Error", "Could not save customer. Anonymous session not established.", () => {});
         return;
     }
@@ -412,8 +465,8 @@ async function saveCustomer(customerData, existingCustomerDocId = null) { // exi
 
 // Delete a customer from Firestore
 async function deleteCustomer(firestoreDocId) { // This is Firestore's auto-generated doc ID
-    if (!currentUserId) {
-        console.error("User not authenticated. Cannot delete customer. Anonymous session not established.");
+    if (!isAuthReady || !currentUserId) { // Check both auth ready flag and user ID
+        console.error("User not authenticated or session not established. Cannot delete customer.");
         showModal("Error", "Could not delete customer. Anonymous session not established.", () => {});
         return;
     }
@@ -437,14 +490,14 @@ async function deleteCustomer(firestoreDocId) { // This is Firestore's auto-gene
 
 // Listen for real-time updates to customers
 function listenForCustomers() {
-    if (unsubscribeCustomers) {
-        unsubscribeCustomers(); // Unsubscribe from previous listener
+    if (!isAuthReady || !currentUserId) { // Check both auth ready flag and user ID
+        console.error("User not authenticated or session not established. Cannot listen for customers.");
+        customerList.innerHTML = '<p class="text-gray-500 text-center col-span-full">Authentication required to load customers.</p>';
+        return;
     }
 
-    if (!currentUserId) {
-        console.error("User not authenticated. Cannot listen for customers. Anonymous sign-in issue.");
-        customerList.innerHTML = '<p class="text-gray-500 text-center col-span-full">Failed to load customers. Please refresh.</p>';
-        return;
+    if (unsubscribeCustomers) {
+        unsubscribeCustomers(); // Unsubscribe from previous listener
     }
 
     // Always listen to the public collection for customers
