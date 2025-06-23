@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js"; // Removed createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut
 import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 // YOUR Firebase Configuration
@@ -25,44 +25,45 @@ let currentCollectionType = 'private'; // 'private' or 'public'
 let unsubscribe = null; // To store the onSnapshot unsubscribe function
 
 // Get references to DOM elements
-const authSection = document.getElementById('auth-section');
-const authForm = document.getElementById('authForm');
-const authFormTitle = document.getElementById('authFormTitle');
-const authEmail = document.getElementById('authEmail');
-const authPassword = document.getElementById('authPassword');
-const authSubmitButton = document.getElementById('authSubmitButton');
-const toggleAuthModeButton = document.getElementById('toggleAuthModeButton');
-const authMessage = document.getElementById('authMessage');
-const logoutButton = document.getElementById('logoutButton');
-const mobileLogoutButton = document.getElementById('mobileLogoutButton');
+// Removed auth-related DOM elements as login is temporarily bypassed
+// const authSection = document.getElementById('auth-section');
+// const authForm = document.getElementById('authForm');
+// const authFormTitle = document.getElementById('authFormTitle');
+// const authEmail = document.getElementById('authEmail');
+// const authPassword = document.getElementById('authPassword');
+// const authSubmitButton = document.getElementById('authSubmitButton');
+// const toggleAuthModeButton = document.getElementById('toggleAuthModeButton');
+// const authMessage = document.getElementById('authMessage');
+// const logoutButton = document.getElementById('logoutButton'); // Removed from global scope
+// const mobileLogoutButton = document.getElementById('mobileLogoutButton'); // Removed from global scope
 
-// New registration fields
-const registerFields = document.getElementById('registerFields');
-const authUsername = document.getElementById('authUsername');
-const authFirstName = document.getElementById('authFirstName');
-const authLastName = document.getElementById('authLastName');
-const authPhone = document.getElementById('authPhone');
-const authRole = document.getElementById('authRole');
-const authSkills = document.getElementById('authSkills');
+// New registration fields (kept for potential re-introduction, but commented out if not used)
+// const registerFields = document.getElementById('registerFields');
+// const authUsername = document.getElementById('authUsername');
+// const authFirstName = document.getElementById('authFirstName');
+// const authLastName = document.getElementById('authLastName');
+// const authPhone = document.getElementById('authPhone');
+// const authRole = document.getElementById('authRole');
+// const authSkills = document.getElementById('authSkills');
 
 
 const contactForm = document.getElementById('contactForm');
 const contactList = document.getElementById('contactList');
-const userIdDisplay = document.getElementById('userIdDisplay');
+const userIdDisplay = document.getElementById('userIdDisplay'); // This will now show anonymous ID or N/A
 const collectionToggleButton = document.getElementById('collectionToggleButton');
 const modalContainer = document.getElementById('modalContainer');
 const mobileMenuButton = document.getElementById('mobileMenuButton');
 const mobileMenu = document.getElementById('mobileMenu');
-const mobileUserIdDisplay = document.getElementById('mobileUserIdDisplay');
+const mobileUserIdDisplay = document.getElementById('mobileUserIdDisplay'); // This will now show anonymous ID or N/A
 
 
-// Select all main content sections
+// Select all main content sections (auth-section removed)
 const homeSection = document.getElementById('home');
 const crmSection = document.getElementById('crm-section');
 const eventsSection = document.getElementById('events-section');
-const allSections = [authSection, homeSection, crmSection, eventsSection];
+const allSections = [homeSection, crmSection, eventsSection]; // authSection removed
 
-let isLoginMode = true; // State for login/register form
+// let isLoginMode = true; // No longer needed as login is bypassed
 
 // Function to show a custom confirmation modal
 function showModal(title, message, onConfirm, onCancel) {
@@ -112,119 +113,47 @@ async function initializeFirebase() {
         app = initializeApp(firebaseConfig);
         getAnalytics(app); // Initialize Analytics
         db = getFirestore(app);
-        auth = getAuth(app);
+        auth = getAuth(app); // Still need auth for anonymous sign-in
 
+        // Automatically sign in anonymously on load
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUserId = user.uid;
-                userIdDisplay.textContent = `User: ${user.email || 'N/A'}`;
-                mobileUserIdDisplay.textContent = `User: ${user.email || 'N/A'}`;
-                logoutButton.classList.remove('hidden');
-                mobileLogoutButton.classList.remove('hidden');
-
-                // If logged in, hide auth section and show main content (e.g., home)
-                showSection('home');
-                listenForContacts(); // Start listening for contacts once authenticated
+                userIdDisplay.textContent = `User ID: ${user.uid.substring(0, 8)}...`; // Display truncated ID
+                mobileUserIdDisplay.textContent = `User ID: ${user.uid.substring(0, 8)}...`;
+                // No logout button visibility changes needed as it's removed for now
             } else {
-                currentUserId = null;
-                userIdDisplay.textContent = 'Not Logged In';
-                mobileUserIdDisplay.textContent = 'Not Logged In';
-                logoutButton.classList.add('hidden');
-                mobileLogoutButton.classList.add('hidden');
-                // If logged out, show the auth section
-                showSection('auth-section');
-                if (unsubscribe) {
-                    unsubscribe(); // Stop listening to contacts if logged out
-                }
-                contactList.innerHTML = '<p class="text-gray-500 text-center">Please log in to view contacts.</p>';
+                // If no user is authenticated, sign in anonymously
+                await signInAnonymously(auth);
+                // After anonymous sign-in, onAuthStateChanged will be triggered again with a user object
             }
+            // If logged in (or anonymously signed in), hide auth section and show main content (e.g., home)
+            showSection('home');
+            listenForContacts(); // Start listening for contacts once authenticated
         });
+
     } catch (error) {
         console.error("Error initializing Firebase:", error);
-        authMessage.textContent = `Error: Firebase Init Failed. ${error.message}`;
+        // authMessage.textContent = `Error: Firebase Init Failed. ${error.message}`; // authMessage no longer exists
+        showModal("Firebase Error", `Initialization failed: ${error.message}`, () => {});
     }
 }
 
-// User Registration
-async function registerUser(email, password) {
-    authMessage.textContent = '';
-    try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+// Removed User Registration function
+// async function registerUser(email, password) { ... }
 
-        // Collect additional user profile data
-        const profileData = {
-            username: authUsername.value,
-            firstName: authFirstName.value,
-            lastName: authLastName.value,
-            phone: authPhone.value,
-            role: authRole.value,
-            skills: authSkills.value.split(',').map(s => s.trim()).filter(s => s.length > 0), // Store skills as an array
-            email: email, // Also store email in profile for easy access
-            createdAt: new Date().toISOString()
-        };
+// Removed User Login function
+// async function loginUser(email, password) { ... }
 
-        // Save profile data to Firestore
-        // Path: artifacts/{projectId}/users/{userId}/profile
-        const userProfileRef = doc(db, `artifacts/${appId}/users/${user.uid}/profile`);
-        await setDoc(userProfileRef, profileData, { merge: true }); // Use merge to avoid overwriting if doc already exists
-
-        authMessage.textContent = 'Registration successful! You are now logged in.';
-        authMessage.classList.remove('text-red-500');
-        authMessage.classList.add('text-green-500');
-        authForm.reset(); // Clear form fields
-    } catch (error) {
-        console.error("Registration error:", error);
-        authMessage.textContent = `Registration failed: ${error.message}`;
-        authMessage.classList.remove('text-green-500');
-        authMessage.classList.add('text-red-500');
-    }
-}
-
-// User Login
-async function loginUser(email, password) {
-    authMessage.textContent = '';
-    try {
-        await signInWithEmailAndPassword(auth, email, password);
-        authMessage.textContent = 'Login successful!';
-        authMessage.classList.remove('text-red-500');
-        authMessage.classList.add('text-green-500');
-        authForm.reset(); // Clear form fields
-    } catch (error) {
-        console.error("Login error:", error);
-        authMessage.textContent = `Login failed: ${error.message}`;
-        authMessage.classList.remove('text-green-500');
-        authMessage.classList.add('text-red-500');
-    }
-}
-
-// User Logout
-async function logoutUser() {
-    showModal(
-        "Confirm Logout",
-        "Are you sure you want to log out?",
-        async () => {
-            try {
-                await signOut(auth);
-                console.log("User logged out.");
-                authMessage.textContent = 'You have been logged out.';
-                authMessage.classList.remove('text-red-500');
-                authMessage.classList.add('text-green-500');
-            } catch (error) {
-                console.error("Logout error:", error);
-                authMessage.textContent = `Logout failed: ${error.message}`;
-                authMessage.classList.remove('text-green-500');
-                authMessage.classList.add('text-red-500');
-            }
-        }
-    );
-}
+// Removed User Logout function
+// async function logoutUser() { ... }
 
 // Determine the Firestore collection path based on type and user ID
 function getCollectionPath(type) {
+    // CurrentUserId should always be available after anonymous sign-in
     if (!currentUserId) {
-        console.error("currentUserId is null, cannot determine collection path. Ensure user is authenticated.");
-        return `artifacts/${appId}/public/data/contacts_fallback`; // Fallback for error state
+        console.error("currentUserId is null, cannot determine collection path. Anonymous sign-in failed.");
+        return `artifacts/${appId}/public/data/contacts_fallback`; // Fallback for critical error
     }
     if (type === 'public') {
         return `artifacts/${appId}/public/data/contacts`;
@@ -236,9 +165,10 @@ function getCollectionPath(type) {
 
 // Add or update a contact in Firestore
 async function saveContact(contactData, contactId = null) {
+    // currentUserId will always be available due to anonymous sign-in
     if (!currentUserId) {
-        console.error("User not authenticated. Cannot save contact.");
-        showModal("Authentication Required", "Please log in to save contacts.", () => showSection('auth-section'));
+        console.error("User not authenticated. Cannot save contact. Anonymous sign-in issue.");
+        showModal("Error", "Could not save contact. Anonymous session not established.", () => {});
         return;
     }
 
@@ -264,9 +194,10 @@ async function saveContact(contactData, contactId = null) {
 
 // Delete a contact from Firestore
 async function deleteContact(contactId) {
+    // currentUserId will always be available due to anonymous sign-in
     if (!currentUserId) {
-        console.error("User not authenticated. Cannot delete contact.");
-        showModal("Authentication Required", "Please log in to delete contacts.", () => showSection('auth-section'));
+        console.error("User not authenticated. Cannot delete contact. Anonymous sign-in issue.");
+        showModal("Error", "Could not delete contact. Anonymous session not established.", () => {});
         return;
     }
 
@@ -292,9 +223,10 @@ function listenForContacts() {
         unsubscribe(); // Unsubscribe from previous listener
     }
 
+    // currentUserId will always be available due to anonymous sign-in
     if (!currentUserId) {
-        console.error("User not authenticated. Cannot listen for contacts.");
-        contactList.innerHTML = '<p class="text-gray-500 text-center">Please log in to view contacts.</p>';
+        console.error("User not authenticated. Cannot listen for contacts. Anonymous sign-in issue.");
+        contactList.innerHTML = '<p class="text-gray-500 text-center">Failed to load contacts. Please refresh.</p>';
         return;
     }
 
@@ -350,35 +282,11 @@ function editContact(contact) {
     contactForm.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Event Listeners
-authForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = authEmail.value;
-    const password = authPassword.value;
-    if (isLoginMode) {
-        await loginUser(email, password);
-    } else {
-        await registerUser(email, password);
-    }
-});
-
-toggleAuthModeButton.addEventListener('click', () => {
-    isLoginMode = !isLoginMode;
-    authFormTitle.textContent = isLoginMode ? 'Login' : 'Register';
-    authSubmitButton.textContent = isLoginMode ? 'Login' : 'Register';
-    toggleAuthModeButton.textContent = isLoginMode ? 'Register' : 'Login';
-    authMessage.textContent = ''; // Clear previous messages
-
-    // Toggle visibility of additional registration fields
-    if (isLoginMode) {
-        registerFields.classList.add('hidden');
-    } else {
-        registerFields.classList.remove('hidden');
-    }
-});
-
-logoutButton.addEventListener('click', logoutUser);
-mobileLogoutButton.addEventListener('click', logoutUser);
+// Event Listeners (authForm, toggleAuthModeButton, logout buttons removed)
+// authForm.addEventListener('submit', async (e) => { ... });
+// toggleAuthModeButton.addEventListener('click', () => { ... });
+// logoutButton.addEventListener('click', logoutUser);
+// mobileLogoutButton.addEventListener('click', logoutUser);
 
 contactForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -406,12 +314,8 @@ document.querySelectorAll('nav a').forEach(link => {
     if (link.dataset.section) {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            // Only allow navigation to non-auth sections if user is logged in
-            if (currentUserId || link.dataset.section === 'home' || link.dataset.section === 'auth-section') {
-                showSection(link.dataset.section);
-            } else {
-                showModal("Access Denied", "Please log in to access this section.", () => showSection('auth-section'));
-            }
+            // All sections are now accessible directly as there's no login gate
+            showSection(link.dataset.section);
         });
     }
 });
