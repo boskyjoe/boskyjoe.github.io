@@ -422,13 +422,8 @@ function applyCustomerTypeValidation() {
     customerIndustryInput.removeAttribute('required');
     customerIndustrySelect.removeAttribute('required');
 
-    // Clear values of conditional inputs to prevent stale data submission
-    customerFirstNameInput.value = '';
-    customerLastNameInput.value = '';
-    customerCompanyNameInput.value = '';
-    customerIndustryInput.value = '';
-    customerIndustrySelect.value = ''; // Reset select to default option
-
+    // IMPORTANT: Removed the lines that clear input values here.
+    // The clearing should only happen in resetCustomerForm().
 
     if (customerType === 'Individual') {
         individualFieldsDiv.classList.remove('hidden');
@@ -642,7 +637,12 @@ function editCustomer(customer) {
     customerDescriptionInput.value = customer.description || '';
     customerForm.dataset.editingId = customer.id;
 
-    // Populate conditional fields and apply validation rules
+    // Call applyCustomerTypeValidation BEFORE populating conditional fields
+    // This ensures the correct fields are visible and required attributes are set
+    // before we attempt to set their values.
+    applyCustomerTypeValidation(); // This will show/hide fields based on typeSelect.value
+
+    // Populate conditional fields AFTER applyCustomerTypeValidation has set visibility
     customerFirstNameInput.value = customer.firstName || '';
     customerLastNameInput.value = customer.lastName || '';
     customerCompanyNameInput.value = customer.companyName || '';
@@ -653,8 +653,6 @@ function editCustomer(customer) {
     } else if (customer.customerType === 'Company') {
         customerIndustrySelect.value = customer.industry || '';
     }
-
-    applyCustomerTypeValidation(); // This will show/hide fields based on typeSelect.value
 
     customerForm.scrollIntoView({ behavior: 'smooth' });
 }
