@@ -59,8 +59,8 @@
     </nav>
 
     <main class="w-full flex flex-col items-center p-5 max-w-7xl">
-        <!-- Login/Registration Section (Initially shown if not authenticated - currently hidden by JS) -->
-        <section id="auth-section" class="container hidden"> <!-- Added hidden as per current JS state -->
+        <!-- Login/Registration Section (Initially hidden as per current JS state) -->
+        <section id="auth-section" class="container hidden">
             <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Welcome to ShutterSync</h2>
             <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200 max-w-md mx-auto">
                 <h3 id="authFormTitle" class="text-2xl font-semibold text-gray-800 mb-6 text-center">Login</h3>
@@ -112,8 +112,8 @@
             </div>
         </section>
 
-        <!-- CRM Description Section (Initially hidden, shown after login or via Home nav) -->
-        <section id="home" class="container bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-center py-16 mb-8 shadow-xl hidden">
+        <!-- CRM Description Section (Now shown by default on page load) -->
+        <section id="home" class="container bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-center py-16 mb-8 shadow-xl">
             <h1 class="text-5xl font-extrabold mb-4 animate-fadeIn">Welcome to ShutterSync CRM</h1>
             <p class="text-xl leading-relaxed max-w-3xl mx-auto opacity-90 animate-fadeIn delay-100">
                 A simple, effective, and free solution to manage your valuable contacts, track interactions,
@@ -126,7 +126,7 @@
             </div>
         </section>
 
-        <!-- Main CRM Functionality Section (Initially hidden, shown after login or via User/Companies/Services/Opportunities nav) -->
+        <!-- Main CRM Functionality Section (Initially hidden) -->
         <section id="crm-section" class="container hidden">
             <div class="flex flex-col md:flex-row justify-between items-center mb-6">
                 <h2 class="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Contact Management</h2>
@@ -171,7 +171,7 @@
             </div>
         </section>
 
-        <!-- Companies CRUD Section (New) -->
+        <!-- Companies CRUD Section -->
         <section id="companies-section" class="container hidden">
             <div class="flex flex-col md:flex-row justify-between items-center mb-6">
                 <h2 class="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Company Management</h2>
