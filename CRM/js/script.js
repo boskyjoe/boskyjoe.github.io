@@ -26,6 +26,7 @@ let currentCollectionType = 'private'; // 'private' or 'public' for contacts
 const currentCustomerCollectionType = 'public'; // Fixed to public as per requirement
 let unsubscribeContacts = null; // To store the onSnapshot unsubscribe function for contacts
 let unsubscribeCustomers = null; // To store the onSnapshot unsubscribe function for customers
+let unsubscribeUsers = null; // To store the onSnapshot unsubscribe function for users
 
 // Hardcoded Firebase UID for the 'admin' user (boskyjoe@gmail.com).
 // YOU NEED TO REPLACE 'YOUR_ACTUAL_FIREBASE_UID_FOR_BOSKYJOE_ANONYMOUS_SESSION'
@@ -84,10 +85,43 @@ const customerDescriptionInput = document.getElementById('customerDescription');
 const submitCustomerButton = document.getElementById('submitCustomerButton');
 const customerList = document.getElementById('customerList'); // Reference to the div for customer rows
 
+// Admin Country Mapping Section elements
+const adminCountryMappingSection = document.getElementById('admin-country-mapping-section');
+const adminCountriesInput = document.getElementById('adminCountriesInput');
+const adminCountryStateMapInput = document.getElementById('adminCountryStateMapInput');
+const uploadAdminDataButton = document.getElementById('uploadAdminDataButton');
+const fullLoadRadio = document.getElementById('fullLoad');
+const incrementalLoadRadio = document.getElementById('incrementalLoad');
+const adminMessageDiv = document.getElementById('adminMessage');
+
+// Users Management Section elements
+const usersManagementSection = document.getElementById('users-management-section');
+const userForm = document.getElementById('userForm');
+const userFormTitle = document.getElementById('userFormTitle');
+const userIdDisplayGroup = document.getElementById('userIdDisplayGroup');
+const userIdDisplayInput = document.getElementById('userIdDisplayInput');
+const userNameInput = document.getElementById('userName');
+const userFirstNameInput = document.getElementById('userFirstName');
+const userLastNameInput = document.getElementById('userLastName');
+const userEmailInput = document.getElementById('userEmail');
+const userPhoneInput = document.getElementById('userPhone');
+const userRoleSelect = document.getElementById('userRole'); // Changed to select
+const userSkillsInput = document.getElementById('userSkills');
+const submitUserButton = document.getElementById('submitUserButton');
+const userList = document.getElementById('userList');
+
 // References to logout buttons and the new nav Google Login button
 const logoutButton = document.getElementById('logoutButton');
 const mobileLogoutButton = document.getElementById('mobileLogoutButton');
 const navGoogleLoginButton = document.getElementById('navGoogleLoginButton');
+
+
+// Select all main content sections
+const homeSection = document.getElementById('home');
+const crmSection = document.getElementById('crm-section');
+const eventsSection = document.getElementById('events-section');
+// Include new admin sections in allSections
+const allSections = [homeSection, crmSection, customersSection, eventsSection, adminCountryMappingSection, usersManagementSection];
 
 
 // Function to show a custom confirmation modal
@@ -134,6 +168,7 @@ function showSection(sectionId) {
     // Stop all listeners first to prevent redundant updates
     if (unsubscribeContacts) { unsubscribeContacts(); }
     if (unsubscribeCustomers) { unsubscribeCustomers(); }
+    if (unsubscribeUsers) { unsubscribeUsers(); } // Unsubscribe users listener
 
     // Start specific listener for the active section, but only if auth is ready
     if (isAuthReady) {
@@ -150,6 +185,31 @@ function showSection(sectionId) {
             resetCustomerForm(); // Reset form and apply initial validation state
             // The Add Customer button is always enabled as per previous logic (public data)
             submitCustomerButton.removeAttribute('disabled');
+        } else if (sectionId === 'admin-country-mapping-section') {
+            // Only allow admins to view/use this section
+            if (isAdmin) {
+                loadAdminCountryData(); // Load existing data into admin textareas
+                uploadAdminDataButton.removeAttribute('disabled');
+            } else {
+                showModal("Access Denied", "You do not have permission to access the Admin Country Mapping section.", () => {
+                    showSection('home'); // Redirect non-admins to home
+                });
+                // Ensure section remains hidden and button disabled for non-admins
+                adminCountryMappingSection.classList.add('hidden');
+                uploadAdminDataButton.setAttribute('disabled', 'disabled');
+            }
+        } else if (sectionId === 'users-management-section') { // NEW: Users management section
+            if (isAdmin) {
+                listenForUsers(); // Start listening for users data
+                resetUserForm(); // Reset user form
+                submitUserButton.removeAttribute('disabled'); // Enable user form button for admin
+            } else {
+                showModal("Access Denied", "You do not have permission to access the User Management section.", () => {
+                    showSection('home'); // Redirect non-admins to home
+                });
+                usersManagementSection.classList.add('hidden');
+                submitUserButton.setAttribute('disabled', 'disabled');
+            }
         }
     } else {
         console.warn("Attempted to show section before Firebase Auth is ready:", sectionId);
@@ -157,6 +217,8 @@ function showSection(sectionId) {
         submitContactButton.setAttribute('disabled', 'disabled');
         submitCustomerButton.setAttribute('disabled', 'disabled');
         collectionToggleButton.setAttribute('disabled', 'disabled');
+        uploadAdminDataButton.setAttribute('disabled', 'disabled'); // Disable admin upload button too
+        submitUserButton.setAttribute('disabled', 'disabled'); // Disable user submit button too
         // You might want to display a loading or "authentication required" message here
     }
 }
@@ -173,7 +235,7 @@ async function handleGoogleLogin() {
     }
 }
 
-// Function to fetch country and state data from Firestore
+// Function to fetch country and state data from Firestore for the CRM forms
 async function fetchCountryData() {
     try {
         const docRef = doc(db, "app_metadata", "countries_states");
@@ -187,10 +249,38 @@ async function fetchCountryData() {
         } else {
             console.warn("No 'countries_states' document found in 'app_metadata' collection.");
             showModal("Data Error", "Country and State data could not be loaded. Please ensure 'app_metadata/countries_states' document exists in Firestore.", () => {});
+            // Fallback: If no data, populate with an empty list to avoid errors
+            appCountries = [];
+            appCountryStateMap = {};
         }
     } catch (error) {
         console.error("Error fetching country data from Firestore:", error);
         showModal("Data Error", `Failed to load country data: ${error.message}`, () => {});
+        appCountries = [];
+        appCountryStateMap = {};
+    }
+}
+
+// Function to load existing data into the admin textareas
+async function loadAdminCountryData() {
+    try {
+        await fetchCountryData(); // Ensure global appCountries and appCountryStateMap are updated
+
+        // Convert appCountries array to semicolon-separated string
+        const countriesString = appCountries.map(c => `${c.name},${c.code}`).join(';');
+        adminCountriesInput.value = countriesString;
+
+        // Convert appCountryStateMap object to semicolon-separated string
+        const countryStateMapString = Object.entries(appCountryStateMap)
+            .map(([code, states]) => `${code}:${states.join(',')}`)
+            .join(';');
+        adminCountryStateMapInput.value = countryStateMapString;
+
+        adminMessageDiv.classList.add('hidden'); // Clear any previous messages
+        console.log("Admin country data loaded into textareas.");
+    } catch (error) {
+        console.error("Error loading admin country data:", error);
+        // Message already shown by fetchCountryData if it failed
     }
 }
 
@@ -202,10 +292,6 @@ async function initializeFirebase() {
         getAnalytics(app); // Initialize Analytics
         db = getFirestore(app);
         auth = getAuth(app);
-
-        // Fetch country data first, as it's needed for form population
-        await fetchCountryData();
-        populateCountries(); // Now populate after data is fetched
 
         // Listen for auth state changes
         onAuthStateChanged(auth, async (user) => {
@@ -223,6 +309,10 @@ async function initializeFirebase() {
 
                 if (!isAuthReady) { // Only run this block once after initial auth
                     isAuthReady = true;
+                    // Fetch and populate country/state data for CRM forms after auth is ready
+                    await fetchCountryData();
+                    populateCountries(); // Now populate after data is fetched
+
                     // Enable/disable UI elements based on isAdmin status and general auth readiness
                     submitCustomerButton.removeAttribute('disabled'); // Customer button always enabled (public data)
                     collectionToggleButton.removeAttribute('disabled'); // Contacts toggle always enabled
@@ -230,8 +320,12 @@ async function initializeFirebase() {
                     // Contacts submit button is conditional on admin role
                     if (isAdmin) {
                         submitContactButton.removeAttribute('disabled');
+                        uploadAdminDataButton.removeAttribute('disabled'); // Enable admin button for admins
+                        submitUserButton.removeAttribute('disabled'); // Enable user submit button for admins
                     } else {
                         submitContactButton.setAttribute('disabled', 'disabled');
+                        uploadAdminDataButton.setAttribute('disabled', 'disabled'); // Disable admin button for non-admins
+                        submitUserButton.setAttribute('disabled', 'disabled'); // Disable user submit button for non-admins
                     }
                     showSection('home'); // Show initial content (home page)
                 }
@@ -253,6 +347,8 @@ async function initializeFirebase() {
                         submitContactButton.setAttribute('disabled', 'disabled');
                         submitCustomerButton.setAttribute('disabled', 'disabled');
                         collectionToggleButton.setAttribute('disabled', 'disabled');
+                        uploadAdminDataButton.setAttribute('disabled', 'disabled'); // Disable admin upload button too
+                        submitUserButton.setAttribute('disabled', 'disabled'); // Disable user submit button too
                         allSections.forEach(section => { if(section) section.classList.add('hidden'); }); // Keep all content hidden
                         isAuthReady = false;
                         isAdmin = false;
@@ -424,7 +520,7 @@ function editContact(contact) {
     document.getElementById('contactPhone').value = contact.phone || '';
     document.getElementById('contactNotes').value = contact.notes || '';
     contactForm.dataset.editingId = contact.id;
-    document.getElementById('contactFormTitle').textContent = 'Edit Contact';
+    document.getElementById('contactFormTitle').textContent = 'Add New Contact';
     submitContactButton.textContent = 'Update Contact';
     contactForm.scrollIntoView({ behavior: 'smooth' });
 }
@@ -731,7 +827,12 @@ function editCustomer(customer) {
     populateStates(customer.country); // Populate states based on loaded country
     customerAddressInput.value = customer.address || '';
     customerCityInput.value = customer.city || '';
-    customerStateSelect.value = customer.state || ''; // Set state value after population
+    // Set state value after population, ensuring it exists in the new options
+    if (customer.state && Array.from(customerStateSelect.options).some(option => option.value === customer.state)) {
+        customerStateSelect.value = customer.state;
+    } else {
+        customerStateSelect.value = ''; // Reset if not found
+    }
     customerZipCodeInput.value = customer.zipCode || '';
 
 
@@ -777,6 +878,164 @@ function resetCustomerForm() {
     applyCustomerTypeValidation(); // Re-apply validation to hide/show fields correctly for a new entry
 }
 
+/* --- USERS CRUD OPERATIONS (NEW) --- */
+
+// Save (Add/Update) a User
+async function saveUser(userData, userId = null) {
+    if (!isAuthReady || !currentUserId || !isAdmin) {
+        showModal("Permission Denied", "Only administrators can manage users.", () => {});
+        return;
+    }
+
+    // Gmail email validation for Username
+    const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+    if (!gmailRegex.test(userData.userName)) {
+        showModal("Validation Error", "Username must be a valid Gmail email address.", () => {});
+        return;
+    }
+
+    // Basic validation for other required fields
+    if (!userData.firstName.trim() || !userData.lastName.trim() || !userData.email.trim() || !userData.role.trim()) {
+        showModal("Validation Error", "First Name, Last Name, Email, and Role are mandatory.", () => {});
+        return;
+    }
+
+    // Ensure skills is stored as an array
+    userData.skills = userData.skills.split(',').map(s => s.trim()).filter(s => s !== '');
+
+    const collectionPath = `users_data`; // Dedicated collection for users
+
+    try {
+        if (userId) {
+            // Update existing user
+            const userDocRef = doc(db, collectionPath, userId);
+            await updateDoc(userDocRef, userData);
+            console.log("User updated:", userId);
+        } else {
+            // Add new user
+            const newUserDocRef = doc(collection(db, collectionPath));
+            const systemGeneratedUserId = 'USR-' + Date.now().toString().slice(-8) + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            await setDoc(newUserDocRef, { ...userData, userId: systemGeneratedUserId });
+            console.log("User added with ID:", systemGeneratedUserId);
+        }
+        resetUserForm(); // Reset form after successful operation
+    } catch (error) {
+        console.error("Error saving user:", error);
+        showModal("Error", `Failed to save user: ${error.message}`, () => {});
+    }
+}
+
+// Delete a User
+async function deleteUser(firestoreDocId) {
+    if (!isAuthReady || !currentUserId || !isAdmin) {
+        showModal("Permission Denied", "Only administrators can manage users.", () => {});
+        return;
+    }
+
+    const collectionPath = `users_data`;
+    showModal(
+        "Confirm Deletion",
+        "Are you sure you want to delete this user? This action cannot be undone.",
+        async () => {
+            try {
+                await deleteDoc(doc(db, collectionPath, firestoreDocId));
+                console.log("User deleted Firestore Doc ID:", firestoreDocId);
+            } catch (error) {
+                console.error("Error deleting user:", error);
+                showModal("Error", `Failed to delete user: ${error.message}`, () => {});
+            }
+        }
+    );
+}
+
+// Listen for real-time updates to Users
+function listenForUsers() {
+    if (!isAuthReady || !currentUserId || !isAdmin) {
+        userList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Access Denied: Only administrators can view users.</p>';
+        return;
+    }
+
+    if (unsubscribeUsers) {
+        unsubscribeUsers(); // Unsubscribe from previous listener
+    }
+
+    const collectionPath = `users_data`;
+    const q = collection(db, collectionPath);
+
+    unsubscribeUsers = onSnapshot(q, (snapshot) => {
+        userList.innerHTML = ''; // Clear current list
+        if (snapshot.empty) {
+            userList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No users found. Add one above!</p>';
+            return;
+        }
+        snapshot.forEach((doc) => {
+            const user = { id: doc.id, ...doc.data() }; // doc.id is Firestore's internal ID
+            displayUser(user);
+        });
+    }, (error) => {
+        console.error("Error listening to users:", error);
+        userList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading users: ${error.message}</p>`;
+    });
+}
+
+// Display a single user in the UI as a grid row
+function displayUser(user) {
+    const userRow = document.createElement('div');
+    userRow.className = 'grid grid-cols-[100px_minmax(120px,_1.2fr)_1.5fr_1fr_1fr_1.5fr] gap-x-4 py-3 items-center text-sm border-b border-gray-100 last:border-b-0 hover:bg-gray-50';
+    userRow.dataset.id = user.id; // Store Firestore document ID for edit/delete actions
+
+    userRow.innerHTML = `
+        <div class="px-2 py-1 truncate font-medium text-gray-800">${user.userId || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${user.userName || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${user.email || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden sm:block">${user.role || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden md:block">${Array.isArray(user.skills) ? user.skills.join(', ') : user.skills || 'N/A'}</div>
+        <div class="px-2 py-1 flex justify-end space-x-2">
+            <button class="edit-btn text-blue-600 hover:text-blue-800 font-semibold text-xs" data-id="${user.id}">Edit</button>
+            <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${user.id}">Delete</button>
+        </div>
+    `;
+    userList.appendChild(userRow);
+
+    // Add event listeners for edit and delete buttons
+    userRow.querySelector('.edit-btn').addEventListener('click', () => editUser(user));
+    userRow.querySelector('.delete-btn').addEventListener('click', () => deleteUser(user.id));
+}
+
+// Populate form for editing a user
+function editUser(user) {
+    if (!isAdmin) {
+        showModal("Permission Denied", "Only administrators can edit users.", () => {});
+        return;
+    }
+    userFormTitle.textContent = 'Edit User';
+    submitUserButton.textContent = 'Update User';
+    userIdDisplayGroup.classList.remove('hidden');
+    userIdDisplayInput.textContent = user.userId || 'N/A'; // Display the system-generated User ID
+
+    userNameInput.value = user.userName || '';
+    userFirstNameInput.value = user.firstName || '';
+    userLastNameInput.value = user.lastName || '';
+    userEmailInput.value = user.email || '';
+    userPhoneInput.value = user.phone || '';
+    userRoleSelect.value = user.role || ''; // Set value for select
+    userSkillsInput.value = Array.isArray(user.skills) ? user.skills.join(', ') : user.skills || ''; // Convert array back to string
+
+    userForm.dataset.editingId = user.id; // Store Firestore document ID
+    userForm.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Reset User form function
+function resetUserForm() {
+    userForm.reset();
+    userForm.dataset.editingId = '';
+    userFormTitle.textContent = 'Add New User';
+    submitUserButton.textContent = 'Add User';
+    userIdDisplayGroup.classList.add('hidden'); // Hide ID display
+    userIdDisplayInput.textContent = ''; // Clear displayed ID
+    userRoleSelect.value = ''; // Reset select to default option
+}
+
 // --- Event Listeners ---
 
 // Contact Form Event Listener
@@ -808,14 +1067,14 @@ customerForm.addEventListener('submit', async (e) => {
         customerType: customerTypeSelect.value.trim(),
         firstName: customerFirstNameInput.value.trim(),
         lastName: customerLastNameInput.value.trim(),
-        companyName: customerCompanyNameInput.value.trim(),
+        companyName: customerCompanyNameInput.trim(),
         email: customerEmailInput.value.trim(),
         phone: customerPhoneInput.value.trim(),
         // Address fields are now explicitly collected from their respective inputs
-        country: customerCountrySelect.value.trim(), // NEW
+        country: customerCountrySelect.value.trim(),
         address: customerAddressInput.value.trim(),
         city: customerCityInput.value.trim(),
-        state: customerStateSelect.value.trim(), // Now a select
+        state: customerStateSelect.value.trim(),
         zipCode: customerZipCodeInput.value.trim(),
         industry: '', // Will be set conditionally below
         customerSince: customerSinceInput.value, // Date input value is already string inYYYY-MM-DD
@@ -876,6 +1135,120 @@ mobileLogoutButton.addEventListener('click', async () => {
         console.error("Error signing out:", error);
         showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
     }
+});
+
+// Admin Country Mapping Form Event Listener
+document.getElementById('countryMappingForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    adminMessageDiv.classList.add('hidden'); // Clear previous messages
+    uploadAdminDataButton.disabled = true;
+    uploadAdminDataButton.textContent = 'Uploading...';
+
+    const countriesString = adminCountriesInput.value;
+    const countryStateMapString = adminCountryStateMapInput.value;
+    const isFullLoad = fullLoadRadio.checked;
+
+    // Parse countries string into array of objects
+    function parseCountries(countriesString) {
+        if (!countriesString.trim()) return [];
+        return countriesString.split(';').map(item => {
+            const parts = item.split(',');
+            if (parts.length === 2) {
+                return { name: parts[0].trim(), code: parts[1].trim() };
+            }
+            return null;
+        }).filter(item => item !== null);
+    }
+
+    // Parse countryStateMap string into an object
+    function parseCountryStateMap(mapString) {
+        const map = {};
+        if (!mapString.trim()) return map;
+        mapString.split(';').forEach(item => {
+            const parts = item.split(':');
+            if (parts.length === 2) {
+                const countryCode = parts[0].trim();
+                const states = parts[1].split(',').map(s => s.trim());
+                map[countryCode] = states;
+            }
+        });
+        return map;
+    }
+
+    const dataToUpload = {};
+    let hasData = false;
+
+    if (countriesString.trim() !== '') {
+        dataToUpload.countries = parseCountries(countriesString);
+        hasData = true;
+    }
+    if (countryStateMapString.trim() !== '') {
+        dataToUpload.countryStateMap = parseCountryStateMap(countryStateMapString);
+        hasData = true;
+    }
+
+    if (!hasData && isFullLoad) {
+        // If full load is selected and both textareas are empty, clear the document
+        dataToUpload.countries = [];
+        dataToUpload.countryStateMap = {};
+        hasData = true; // Still consider it having data to upload (empty arrays)
+    } else if (!hasData && !isFullLoad) {
+        adminMessageDiv.textContent = 'No data provided for incremental update.';
+        adminMessageDiv.className = 'message error';
+        adminMessageDiv.classList.remove('hidden');
+        uploadAdminDataButton.disabled = false;
+        uploadAdminDataButton.textContent = 'Upload Data to Firestore';
+        return;
+    }
+
+
+    try {
+        const docRef = doc(db, "app_metadata", "countries_states");
+        if (isFullLoad) {
+            // Full Load: Overwrite the document completely with only the provided fields
+            await setDoc(docRef, dataToUpload, { merge: false });
+            adminMessageDiv.textContent = 'Data uploaded successfully (Full Load)!';
+            adminMessageDiv.className = 'message success';
+        } else {
+            // Incremental Load: Merge the provided fields into the existing document
+            // Note: For arrays and objects, `merge: true` replaces the *entire* field,
+            // it does not merge individual array elements or nested object properties.
+            await setDoc(docRef, dataToUpload, { merge: true });
+            adminMessageDiv.textContent = 'Data uploaded successfully (Incremental Load)!';
+            adminMessageDiv.className = 'message success';
+        }
+        adminMessageDiv.classList.remove('hidden');
+        console.log("Admin data upload successful:", dataToUpload);
+
+        // Re-fetch data for CRM forms and populate dropdowns after successful admin update
+        await fetchCountryData();
+        populateCountries();
+
+    } catch (error) {
+        console.error("Error uploading admin data:", error);
+        adminMessageDiv.textContent = `Error uploading data: ${error.message}`;
+        adminMessageDiv.className = 'message error';
+        adminMessageDiv.classList.remove('hidden');
+    } finally {
+        uploadAdminDataButton.disabled = false;
+        uploadAdminDataButton.textContent = 'Upload Data to Firestore';
+    }
+});
+
+// User Form Event Listener
+userForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const userData = {
+        userName: userNameInput.value.trim(),
+        firstName: userFirstNameInput.value.trim(),
+        lastName: userLastNameInput.value.trim(),
+        email: userEmailInput.value.trim(),
+        phone: userPhoneInput.value.trim(),
+        role: userRoleSelect.value.trim(), // Get value from select
+        skills: userSkillsInput.value.trim(), // Will be parsed to array in saveUser
+    };
+    const editingId = userForm.dataset.editingId;
+    await saveUser(userData, editingId || null);
 });
 
 
