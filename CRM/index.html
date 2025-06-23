@@ -8,8 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts for 'Inter' -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome for Icons (Google icon) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- External CSS file -->
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -23,30 +21,16 @@
             <!-- Desktop Menu Items -->
             <div class="hidden md:flex space-x-6">
                 <a href="javascript:void(0)" data-section="home" class="hover:text-blue-200 transition-colors duration-200">Home</a>
-                <a href="javascript:void(0)" data-section="crm-section" class="hover:text-blue-200 transition-colors duration-200">User</a>
+                <!-- Removed User link -->
                 <a href="javascript:void(0)" data-section="customers-section" class="hover:text-blue-200 transition-colors duration-200">Customers</a>
-                <a href="javascript:void(0)" data-section="crm-section" class="hover:text-blue-200 transition-colors duration-200">Services</a>
-                <a href="javascript:void(0)" data-section="crm-section" class="hover:text-blue-200 transition-colors duration-200">Opportunities</a>
+                <a href="javascript:void(0)" data-section="admin-country-mapping-section" class="hover:text-blue-200 transition-colors duration-200" id="desktopAdminMenu">Admin</a>
+                <a href="javascript:void(0)" data-section="users-management-section" class="hover:text-blue-200 transition-colors duration-200">Users</a>
                 <a href="javascript:void(0)" data-section="events-section" class="hover:text-blue-200 transition-colors duration-200">Events</a>
-
-                <!-- Admin Dropdown Menu - Initially Hidden -->
-                <div id="desktopAdminMenu" class="relative group hidden">
-                    <button class="hover:text-blue-200 transition-colors duration-200 flex items-center">
-                        Admin <i class="fas fa-caret-down ml-1"></i>
-                    </button>
-                    <div class="absolute hidden group-hover:block bg-blue-700 text-white rounded-md shadow-lg min-w-[150px] z-10">
-                        <a href="javascript:void(0)" data-section="admin-country-mapping-section" class="block px-4 py-2 hover:bg-blue-600 transition-colors duration-200">Country Mapping</a>
-                        <a href="javascript:void(0)" data-section="users-management-section" class="block px-4 py-2 hover:bg-blue-600 transition-colors duration-200">Users</a>
-                    </div>
-                </div>
             </div>
 
-            <!-- User Status & Login/Logout Buttons -->
+            <!-- User Status & Logout -->
             <div class="flex items-center space-x-3">
-                <!-- Google Login Button in Nav Bar -->
-                <button id="navGoogleLoginButton" class="bg-blue-500 hover:bg-blue-700 text-white p-2 rounded-full shadow-md text-sm hidden" title="Login with Google">
-                    <i class="fab fa-google"></i> <span class="hidden md:inline">Login</span>
-                </button>
+                <button id="navGoogleLoginButton" class="bg-white text-blue-600 py-1 px-3 rounded-md text-sm shadow-md">Google Login</button>
                 <span id="userIdDisplay" class="text-sm text-gray-200 hidden md:block"></span>
                 <button id="logoutButton" class="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-md text-sm shadow-md hidden">Logout</button>
             </div>
@@ -64,62 +48,60 @@
         <!-- Mobile Menu (hidden by default) -->
         <div id="mobileMenu" class="hidden md:hidden bg-blue-700 mt-2 rounded-lg py-2 w-full">
             <a href="javascript:void(0)" data-section="home" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Home</a>
-            <a href="javascript:void(0)" data-section="crm-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">User</a>
+            <!-- Removed User link -->
             <a href="javascript:void(0)" data-section="customers-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Customers</a>
-            <a href="javascript:void(0)" data-section="crm-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Services</a>
-            <a href="javascript:void(0)" data-section="crm-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Opportunities</a>
+            <a href="javascript:void(0)" data-section="admin-country-mapping-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200" id="mobileAdminMenu">Admin</a>
+            <a href="javascript:void(0)" data-section="users-management-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Users</a>
             <a href="javascript:void(0)" data-section="events-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Events</a>
             <div class="border-t border-blue-600 my-2"></div>
-            <!-- Admin menu for mobile - Initially Hidden -->
-            <div id="mobileAdminMenu" class="hidden">
-                <div class="block px-4 py-2 text-sm font-semibold text-blue-200">Admin</div>
-                <a href="javascript:void(0)" data-section="admin-country-mapping-section" class="block pl-8 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Country Mapping</a>
-                <a href="javascript:void(0)" data-section="users-management-section" class="block pl-8 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Users</a>
-            </div>
             <button id="mobileLogoutButton" class="block text-left w-full px-4 py-2 text-sm text-red-300 hover:bg-red-600 hover:text-white transition-colors duration-200 hidden">Logout</button>
             <span id="mobileUserIdDisplay" class="block px-4 py-2 text-xs text-gray-400"></span>
         </div>
     </nav>
 
     <main class="w-full flex flex-col items-center p-5 max-w-7xl">
-        <!-- Login/Registration Section (Now hidden by default and simplified) -->
-        <section id="auth-section" class="container hidden">
-            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Welcome to ShutterSync</h2>
-            <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200 max-w-md mx-auto">
-                <p class="text-center text-gray-700">Please log in to access the CRM features.</p>
-            </div>
-        </section>
-
-        <!-- Bootstrap Admin Login Section (NEW - Initially Hidden) -->
+        <!-- Bootstrap Admin Login Section -->
         <section id="bootstrap-admin-login-section" class="container hidden">
-            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Bootstrap Admin Login</h2>
-            <div class="bg-yellow-50 p-6 rounded-lg shadow-sm border border-yellow-200 max-w-md mx-auto mb-6">
-                <p class="text-center text-yellow-800 font-semibold">
-                    No administrators found in the system. Please use the default bootstrap admin credentials below to set up the first admin user.
-                </p>
-                <p class="text-center text-yellow-700 text-sm mt-2">
-                    Default Email: <strong>admin@shuttersync.com</strong><br>
-                    Default Password: <strong>ShutterSync@123</strong>
-                </p>
-            </div>
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Bootstrap Admin Setup</h2>
             <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200 max-w-md mx-auto">
-                <form id="bootstrapAdminLoginForm" class="flex flex-col gap-4">
+                <p id="bootstrapAdminMessage" class="text-center text-blue-600 mb-4 font-medium hidden">
+                    Please use the default admin login credentials to set up the first administrator.
+                </p>
+                <form id="bootstrapAdminLoginForm" class="grid grid-cols-1 gap-6">
                     <div>
                         <label for="bootstrapAdminEmail" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input type="email" id="bootstrapAdminEmail" value="admin@shuttersync.com" readonly class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 text-gray-600">
+                        <input type="email" id="bootstrapAdminEmail" value="admin@shuttersync.com" readonly class="bg-gray-100 cursor-not-allowed">
                     </div>
                     <div>
                         <label for="bootstrapAdminPassword" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                        <input type="password" id="bootstrapAdminPassword" value="ShutterSync@123" readonly class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 text-gray-600">
+                        <input type="password" id="bootstrapAdminPassword" value="ShutterSync@123" readonly class="bg-gray-100 cursor-not-allowed">
                     </div>
-                    <button type="submit" id="bootstrapAdminLoginButton" class="primary w-full">Login as Bootstrap Admin</button>
-                    <p id="bootstrapAdminMessage" class="text-center text-sm mt-2 hidden"></p>
+                    <div class="flex justify-center mt-2">
+                        <button type="submit" id="bootstrapAdminLoginButton" class="primary w-full">Login as Bootstrap Admin</button>
+                    </div>
                 </form>
             </div>
         </section>
 
+        <!-- Google Login / Auth Section (Standard Login) -->
+        <section id="auth-section" class="container hidden">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Sign In</h2>
+            <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200 max-w-md mx-auto">
+                <p class="text-center text-gray-600 mb-4">
+                    Sign in with your Google account to access all features.
+                </p>
+                <div class="flex justify-center mt-2">
+                    <button id="googleLoginButton" class="primary flex items-center justify-center space-x-2 w-full">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12.24 10.285V14.4H19.337C19.049 15.719 18.256 16.657 17.159 17.301C16.062 17.945 14.657 18.301 12.984 18.301C10.05 18.301 7.643 16.037 7.643 13.06C7.643 10.084 10.05 7.82 12.984 7.82C14.544 7.82 15.733 8.441 16.592 9.248L19.497 6.467C17.659 4.774 15.352 3.82 12.984 3.82C6.671 3.82 1.5 8.877 1.5 15.06C1.5 21.243 6.671 26.3 12.984 26.3C19.324 26.3 23.5 21.84 23.5 15.228C23.5 14.153 23.366 13.029 23.111 11.966H12.24Z" transform="scale(0.9) translate(1,1)"/>
+                        </svg>
+                        <span>Sign in with Google</span>
+                    </button>
+                </div>
+            </div>
+        </section>
 
-        <!-- CRM Description Section (Removed 'hidden' from here to show on load) -->
+        <!-- CRM Description Section (Initially shown) -->
         <section id="home" class="container bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-center py-16 mb-8 shadow-xl">
             <h1 class="text-5xl font-extrabold mb-4 animate-fadeIn">Welcome to ShutterSync CRM</h1>
             <p class="text-xl leading-relaxed max-w-3xl mx-auto opacity-90 animate-fadeIn delay-100">
@@ -127,54 +109,9 @@
                 and nurture relationships for your non-profit organization. Accessible anywhere, anytime.
             </p>
             <div class="mt-8">
-                <a href="javascript:void(0)" data-section="crm-section" class="bg-white text-blue-600 py-3 px-8 rounded-full text-lg font-semibold shadow-lg hover:bg-blue-100 transition-all duration-300 transform hover:scale-105">
+                <a href="javascript:void(0)" data-section="customers-section" class="bg-white text-blue-600 py-3 px-8 rounded-full text-lg font-semibold shadow-lg hover:bg-blue-100 transition-all duration-300 transform hover:scale-105">
                     Get Started
                 </a>
-            </div>
-        </section>
-
-        <!-- Main CRM Functionality Section (Contacts - Initially hidden) -->
-        <section id="crm-section" class="container hidden">
-            <div class="flex flex-col md:flex-row justify-between items-center mb-6">
-                <h2 class="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Contact Management</h2>
-                <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-                    <button id="collectionToggleButton" class="secondary w-full md:w-auto">Switch to Public Contacts</button>
-                </div>
-            </div>
-
-            <!-- Add/Edit Contact Form -->
-            <div class="bg-gray-50 p-6 rounded-lg shadow-sm mb-8 border border-gray-200">
-                <h3 id="contactFormTitle" class="text-2xl font-semibold text-gray-800 mb-6">Add New Contact</h3>
-                <form id="contactForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label for="contactName" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                        <input type="text" id="contactName" placeholder="John Doe" required>
-                    </div>
-                    <div>
-                        <label for="contactEmail" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input type="email" id="contactEmail" placeholder="john.doe@example.com">
-                    </div>
-                    <div>
-                        <label for="contactPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                        <input type="tel" id="contactPhone" placeholder="(123) 456-7890">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label for="contactNotes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                        <textarea id="contactNotes" rows="4" placeholder="Important details about this contact..."></textarea>
-                    </div>
-                    <div class="md:col-span-2 flex justify-end">
-                        <button type="submit" id="submitButton" class="primary w-full md:w-auto" disabled>Add Contact</button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Contact List -->
-            <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200">
-                <h3 class="text-2xl font-semibold text-gray-800 mb-6">Your Contacts</h3>
-                <div id="contactList" class="grid grid-cols-1 gap-6">
-                    <!-- Contacts will be dynamically loaded here -->
-                    <p class="text-gray-500 text-center">Loading contacts...</p>
-                </div>
             </div>
         </section>
 
@@ -188,257 +125,234 @@
             <div class="bg-gray-50 p-6 rounded-lg shadow-sm mb-8 border border-gray-200">
                 <h3 id="customerFormTitle" class="text-2xl font-semibold text-gray-800 mb-6">Add New Customer</h3>
                 <form id="customerForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Customer ID will be system generated and displayed during edit -->
+                    <!-- Customer ID display for edit mode -->
                     <div id="customerIdDisplayGroup" class="hidden">
                         <label for="customerIdDisplay" class="block text-sm font-medium text-gray-700 mb-1">Customer ID</label>
                         <span id="customerIdDisplay" class="block w-full border border-gray-200 bg-gray-100 rounded-md py-2 px-3 text-sm text-gray-600"></span>
                     </div>
 
                     <div>
-                        <label for="customerType" class="block text-sm font-medium text-gray-700 mb-1">Customer Type <span class="text-red-500">*</span></label>
-                        <select id="customerType" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
+                        <label for="customerType" class="block text-sm font-medium text-gray-700 mb-1">Customer Type</label>
+                        <select id="customerType" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             <option value="">Select Type</option>
-                            <option value="Individual" selected>Individual</option> <!-- Defaulted to Individual -->
+                            <option value="Individual">Individual</option>
                             <option value="Company">Company</option>
                         </select>
                     </div>
-                    <!-- Conditional fields based on Customer Type -->
-                    <div id="individualFields">
-                        <label for="customerFirstName" class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
-                        <input type="text" id="customerFirstName" placeholder="John">
-                    </div>
-                    <div id="lastNameField">
-                        <label for="customerLastName" class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
-                        <input type="text" id="customerLastName" placeholder="Doe">
-                    </div>
-                    <div id="companyNameField" class="hidden">
-                        <label for="customerCompanyName" class="block text-sm font-medium text-gray-700 mb-1">Company Name <span class="text-red-500">*</span></label>
-                        <input type="text" id="customerCompanyName" placeholder="Acme Corporation">
+
+                    <!-- Individual Fields (hidden by default) -->
+                    <div id="individualFields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 md:col-span-2">
+                        <div>
+                            <label for="customerFirstName" class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                            <input type="text" id="customerFirstName" placeholder="John">
+                        </div>
+                        <div id="lastNameField">
+                            <label for="customerLastName" class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                            <input type="text" id="customerLastName" placeholder="Doe">
+                        </div>
                     </div>
 
-                    <!-- Common Fields -->
+                    <!-- Company Name Field (hidden by default) -->
+                    <div id="companyNameField" class="hidden md:col-span-2">
+                        <label for="customerCompanyName" class="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                        <input type="text" id="customerCompanyName" placeholder="Acme Corp">
+                    </div>
+
                     <div>
-                        <label for="customerEmail" class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
-                        <input type="email" id="customerEmail" placeholder="email@example.com" required>
+                        <label for="customerEmail" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="customerEmail" placeholder="customer@example.com" required>
                     </div>
                     <div>
-                        <label for="customerPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone <span class="text-red-500">*</span></label>
+                        <label for="customerPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                         <input type="tel" id="customerPhone" placeholder="(123) 456-7890" required>
                     </div>
 
-                    <!-- Address Information Card -->
-                    <div class="md:col-span-2 p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
-                        <h4 class="text-lg font-semibold text-gray-800 mb-4">Address Information <span class="text-red-500">*</span></h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="customerCountry" class="block text-sm font-medium text-gray-700 mb-1">Country</label>
-                                <select id="customerCountry" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
-                                    <option value="">Select Country</option>
-                                    <!-- Options will be populated by JS -->
-                                </select>
-                            </div>
-                            <div class="md:col-span-2">
-                                <label for="customerAddress" class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                                <input type="text" id="customerAddress" placeholder="123 Main St" required>
-                            </div>
-                            <div>
-                                <label for="customerCity" class="block text-sm font-medium text-gray-700 mb-1">City</label>
-                                <input type="text" id="customerCity" placeholder="Anytown" required>
-                            </div>
-                            <div>
-                                <label for="customerState" class="block text-sm font-medium text-gray-700 mb-1">State/Province</label>
-                                <select id="customerState" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
-                                    <option value="">Select State/Province</option>
-                                    <!-- Options will be populated by JS based on country -->
-                                </select>
-                            </div>
-                            <div>
-                                <label for="customerZipCode" class="block text-sm font-medium text-gray-700 mb-1">Zip Code</label>
-                                <input type="text" id="customerZipCode" placeholder="90210" required>
-                            </div>
-                        </div>
-                        <p id="addressValidationMessage" class="text-sm mt-2 text-red-500 hidden">Address validation failed. Please check the address details.</p>
+                    <!-- Address Fields -->
+                    <div>
+                        <label for="customerCountry" class="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                        <select id="customerCountry" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
+                            <option value="">Select Country</option>
+                            <!-- Options populated by JS -->
+                        </select>
                     </div>
-                    <!-- End Address Information Card -->
+                    <div>
+                        <label for="customerAddress" class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                        <input type="text" id="customerAddress" placeholder="123 Main St" required>
+                    </div>
+                    <div>
+                        <label for="customerCity" class="block text-sm font-medium text-gray-700 mb-1">City</label>
+                        <input type="text" id="customerCity" placeholder="Anytown" required>
+                    </div>
+                    <div>
+                        <label for="customerState" class="block text-sm font-medium text-gray-700 mb-1">State/Province</label>
+                        <select id="customerState" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required disabled>
+                            <option value="">Select State/Province</option>
+                            <!-- Options populated by JS based on country -->
+                        </select>
+                    </div>
+                    <div>
+                        <label for="customerZipCode" class="block text-sm font-medium text-gray-700 mb-1">Zip Code</label>
+                        <input type="text" id="customerZipCode" placeholder="90210" required>
+                    </div>
+                    <div class="md:col-span-2">
+                        <p id="addressValidationMessage" class="text-red-500 text-sm mt-1 hidden"></p>
+                    </div>
 
-                    <!-- Industry Field based on Type -->
-                    <div id="individualIndustryGroup">
-                        <label for="customerIndustryInput" class="block text-sm font-medium text-gray-700 mb-1">Industry <span class="text-red-500">*</span></label>
-                        <input type="text" id="customerIndustryInput" placeholder="e.g., Photography">
+                    <!-- Industry Fields (conditional visibility) -->
+                    <div id="individualIndustryGroup" class="hidden md:col-span-2">
+                        <label for="customerIndustryInput" class="block text-sm font-medium text-gray-700 mb-1">Industry (Individual)</label>
+                        <input type="text" id="customerIndustryInput" placeholder="e.g., Photography, Art">
                     </div>
-                    <div id="companyIndustryGroup" class="hidden">
-                        <label for="customerIndustrySelect" class="block text-sm font-medium text-gray-700 mb-1">Industry <span class="text-red-500">*</span></label>
+                    <div id="companyIndustryGroup" class="hidden md:col-span-2">
+                        <label for="customerIndustrySelect" class="block text-sm font-medium text-gray-700 mb-1">Industry (Company)</label>
                         <select id="customerIndustrySelect" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             <option value="">Select Industry</option>
                             <option value="Technology">Technology</option>
                             <option value="Finance">Finance</option>
                             <option value="Healthcare">Healthcare</option>
                             <option value="Retail">Retail</option>
-                            <option value="Manufacturing">Manufacturing</option>
                             <option value="Education">Education</option>
-                            <option value="Non-Profit">Non-Profit</option>
-                            <option value="Consulting">Consulting</option>
+                            <option value="Non-profit">Non-profit</option>
                             <option value="Other">Other</option>
                         </select>
                     </div>
 
                     <div>
-                        <label for="customerSince" class="block text-sm font-medium text-gray-700 mb-1">Customer Since <span class="text-red-500">*</span></label>
+                        <label for="customerSince" class="block text-sm font-medium text-gray-700 mb-1">Customer Since</label>
                         <input type="date" id="customerSince" required>
                     </div>
                     <div class="md:col-span-2">
                         <label for="customerDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                        <textarea id="customerDescription" rows="3" placeholder="Brief description of the customer..."></textarea>
+                        <textarea id="customerDescription" rows="3" placeholder="Any additional notes or description about the customer..."></textarea>
                     </div>
                     <div class="md:col-span-2 flex justify-end">
-                        <button type="submit" id="submitCustomerButton" class="primary w-full md:w-auto" disabled>Add Customer</button>
+                        <button type="submit" id="submitCustomerButton" class="primary w-full md:w-auto">Add Customer</button>
                     </div>
                 </form>
             </div>
 
-            <!-- Customer List - Now a Data Grid View -->
-            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <!-- Customer List -->
+            <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200">
                 <h3 class="text-2xl font-semibold text-gray-800 mb-6">Your Customers</h3>
-                <div id="customerGridContainer" class="overflow-x-auto">
-                    <div class="grid grid-cols-[100px_minmax(150px,_1.5fr)_1.5fr_1fr_1.5fr_1fr_0.8fr_1.5fr] gap-x-4 pb-2 border-b border-gray-300 font-semibold text-gray-700 text-sm md:text-base">
-                        <div class="px-2 py-1">ID</div>
-                        <div class="px-2 py-1">Name/Company</div>
-                        <div class="px-2 py-1">Email</div>
-                        <div class="px-2 py-1 hidden md:block">Phone</div>
-                        <div class="px-2 py-1 hidden lg:block">Address</div>
-                        <div class="px-2 py-1 hidden lg:block">Industry</div>
-                        <div class="px-2 py-1 hidden sm:block">Since</div>
-                        <div class="px-2 py-1 text-right">Actions</div>
-                    </div>
-                    <div id="customerList" class="flex flex-col divide-y divide-gray-200 min-h-[100px]">
-                        <!-- Customer rows will be dynamically loaded here -->
-                        <p class="text-gray-500 text-center col-span-full py-4">No customers found. Add one above!</p>
-                    </div>
+                <div class="grid grid-cols-[100px_minmax(150px,_1.5fr)_1.5fr_1fr_1.5fr_1fr_0.8fr_1.5fr] gap-x-4 py-2 px-2 font-semibold text-sm text-gray-700 border-b border-gray-200">
+                    <div class="truncate">Customer ID</div>
+                    <div class="truncate">Name/Company</div>
+                    <div class="truncate">Email</div>
+                    <div class="truncate hidden md:block">Phone</div>
+                    <div class="truncate hidden lg:block">Address</div>
+                    <div class="truncate hidden lg:block">Industry</div>
+                    <div class="truncate hidden sm:block">Since</div>
+                    <div class="truncate text-right">Actions</div>
+                </div>
+                <div id="customerList" class="grid grid-cols-1 gap-4 mt-4">
+                    <!-- Customers will be dynamically loaded here -->
+                    <p class="text-gray-500 text-center col-span-full py-4">Loading customers...</p>
                 </div>
             </div>
         </section>
 
-        <!-- Admin Country Mapping Section (NEW) -->
+        <!-- Admin Country Mapping Section -->
         <section id="admin-country-mapping-section" class="container hidden">
-            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Admin: Country and State Mapping</h2>
-            <p class="mb-4 text-sm text-red-700 font-semibold text-center">
-                WARNING: This tool directly modifies your Firebase Firestore `app_metadata/countries_states` document.
-                <br>
-                For this tool to work, you MUST temporarily update your Firestore Security Rules to allow write access to
-                `app_metadata/{document=**}` for your authenticated user.
-                Remember to revert rules after use for security.
-            </p>
-
-            <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200 mb-8">
-                <h3 class="text-2xl font-semibold text-gray-800 mb-6">Manage Country Data</h3>
-                <form id="countryMappingForm">
-                    <div class="mb-6">
-                        <label for="countriesInput" class="block text-lg font-semibold mb-2">Countries (Format: Name,Code;...)</label>
-                        <textarea id="adminCountriesInput" class="w-full min-h-[120px] p-3 border rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="United States,US;Canada,CA;Germany,DE"></textarea>
-                        <p class="text-xs text-gray-500 mt-1">Example: `United States,US;Canada,CA;Germany,DE`</p>
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">Admin: Country and State Mapping</h2>
+            <div class="bg-gray-50 p-6 rounded-lg shadow-sm mb-8 border border-gray-200">
+                <p class="text-gray-600 mb-4">
+                    Upload or update country and state data used in customer forms.
+                    Countries should be in "Name,Code" format, separated by semicolons (e.g., USA,US;Canada,CA).
+                    Country-state map should be in "Code:State1,State2" format, separated by semicolons (e.g., US:California,Texas;CA:Ontario,Quebec).
+                </p>
+                <form id="countryMappingForm" class="grid grid-cols-1 gap-6">
+                    <div>
+                        <label for="adminCountriesInput" class="block text-sm font-medium text-gray-700 mb-1">Countries (Name,Code;...)</label>
+                        <textarea id="adminCountriesInput" rows="4" placeholder="e.g., United States,US;Canada,CA"></textarea>
                     </div>
-
-                    <div class="mb-6">
-                        <label for="countryStateMapInput" class="block text-lg font-semibold mb-2">Country State Map (Format: Code:State1,State2;...)</label>
-                        <textarea id="adminCountryStateMapInput" class="w-full min-h-[180px] p-3 border rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="US:Alabama,Alaska,Arizona;CA:Alberta,British Columbia;DE:Bavaria,Berlin"></textarea>
-                        <p class="text-xs text-gray-500 mt-1">Example: `US:Alabama,Alaska;CA:Ontario,Quebec`</p>
+                    <div>
+                        <label for="adminCountryStateMapInput" class="block text-sm font-medium text-gray-700 mb-1">Country-State Map (Code:State1,State2;...)</label>
+                        <textarea id="adminCountryStateMapInput" rows="4" placeholder="e.g., US:California,Texas;CA:Ontario,Quebec"></textarea>
                     </div>
-
-                    <div class="mb-6">
-                        <h4 class="text-lg font-semibold mb-2">Load Type:</h4>
-                        <div class="flex items-center space-x-4">
-                            <input type="radio" id="fullLoad" name="loadType" value="full" class="form-radio text-blue-600 h-4 w-4" checked>
-                            <label for="fullLoad" class="text-md font-medium text-gray-700">Full Load (Overwrite Document)</label>
-                        </div>
-                        <div class="flex items-center space-x-4 mt-2">
-                            <input type="radio" id="incrementalLoad" name="loadType" value="incremental" class="form-radio text-blue-600 h-4 w-4">
-                            <label for="incrementalLoad" class="text-md font-medium text-gray-700">Incremental Load (Merge Fields)</label>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-2">
-                            * Full Load will replace the entire "countries" and "countryStateMap" fields.
-                            * Incremental Load will merge the top-level fields. If a textarea is left blank, that specific field will not be updated.
-                        </p>
+                    <div class="flex items-center space-x-4">
+                        <input type="radio" id="fullLoad" name="loadType" value="full" checked>
+                        <label for="fullLoad" class="text-sm font-medium text-gray-700">Full Load (Overwrite existing data)</label>
+                        <input type="radio" id="incrementalLoad" name="loadType" value="incremental">
+                        <label for="incrementalLoad" class="text-sm font-medium text-gray-700">Incremental Load (Merge new data)</label>
                     </div>
-
-                    <button type="submit" id="uploadAdminDataButton" class="primary w-full md:w-auto">Upload Data to Firestore</button>
-                    <div id="adminMessage" class="message hidden mt-4"></div>
+                    <p id="adminMessage" class="text-center text-red-500 mt-2 hidden"></p>
+                    <div class="flex justify-end">
+                        <button type="submit" id="uploadAdminDataButton" class="primary w-full md:w-auto">Upload Data to Firestore</button>
+                    </div>
                 </form>
             </div>
         </section>
 
-        <!-- Users Management Section (NEW) -->
+        <!-- Users Management Section (Admin Only) -->
         <section id="users-management-section" class="container hidden">
-            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Admin: User Management</h2>
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">Admin: User Management</h2>
 
             <!-- Add/Edit User Form -->
             <div class="bg-gray-50 p-6 rounded-lg shadow-sm mb-8 border border-gray-200">
                 <h3 id="userFormTitle" class="text-2xl font-semibold text-gray-800 mb-6">Add New User</h3>
                 <form id="userForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- User ID will be system generated and displayed during edit -->
+                    <!-- User ID display for edit mode -->
                     <div id="userIdDisplayGroup" class="hidden">
                         <label for="userIdDisplayInput" class="block text-sm font-medium text-gray-700 mb-1">User ID</label>
                         <span id="userIdDisplayInput" class="block w-full border border-gray-200 bg-gray-100 rounded-md py-2 px-3 text-sm text-gray-600"></span>
                     </div>
 
                     <div>
-                        <label for="userName" class="block text-sm font-medium text-gray-700 mb-1">Username (Gmail) <span class="text-red-500">*</span></label>
-                        <input type="text" id="userName" placeholder="john.doe@gmail.com" required>
+                        <label for="userName" class="block text-sm font-medium text-gray-700 mb-1">Username (Gmail Only)</label>
+                        <input type="email" id="userName" placeholder="user@gmail.com" required pattern="^[a-zA-Z0-9._%+-]+@gmail\.com$">
                     </div>
                     <div>
-                        <label for="userFirstName" class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
-                        <input type="text" id="userFirstName" placeholder="John" required>
+                        <label for="userFirstName" class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                        <input type="text" id="userFirstName" placeholder="Jane" required>
                     </div>
                     <div>
-                        <label for="userLastName" class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
-                        <input type="text" id="userLastName" placeholder="Doe" required>
+                        <label for="userLastName" class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                        <input type="text" id="userLastName" placeholder="Smith" required>
                     </div>
                     <div>
-                        <label for="userEmail" class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
-                        <input type="email" id="userEmail" placeholder="john.doe@example.com" required>
+                        <label for="userEmail" class="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
+                        <input type="email" id="userEmail" placeholder="jane.smith@example.com" required>
                     </div>
                     <div>
-                        <label for="userPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                        <label for="userPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                         <input type="tel" id="userPhone" placeholder="(123) 456-7890">
                     </div>
                     <div>
-                        <label for="userRole" class="block text-sm font-medium text-gray-700 mb-1">Role <span class="text-red-500">*</span></label>
+                        <label for="userRole" class="block text-sm font-medium text-gray-700 mb-1">Role</label>
                         <select id="userRole" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
                             <option value="">Select Role</option>
                             <option value="Admin">Admin</option>
-                            <option value="Sales">Sales</option>
-                            <option value="Marketing">Marketing</option>
+                            <option value="User">User</option>
+                            <option value="Viewer">Viewer</option>
                         </select>
                     </div>
                     <div class="md:col-span-2">
                         <label for="userSkills" class="block text-sm font-medium text-gray-700 mb-1">Skills (comma-separated)</label>
-                        <textarea id="userSkills" rows="3" placeholder="e.g., Photography, Marketing, Customer Support"></textarea>
+                        <textarea id="userSkills" rows="3" placeholder="e.g., Photography, Event Planning, Marketing"></textarea>
                     </div>
                     <div class="md:col-span-2 flex justify-end">
-                        <button type="submit" id="submitUserButton" class="primary w-full md:w-auto" disabled>Add User</button>
+                        <button type="submit" id="submitUserButton" class="primary w-full md:w-auto">Add User</button>
                     </div>
                 </form>
             </div>
 
-            <!-- User List - Data Grid View -->
-            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <!-- User List -->
+            <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200">
                 <h3 class="text-2xl font-semibold text-gray-800 mb-6">Registered Users</h3>
-                <div id="userGridContainer" class="overflow-x-auto">
-                    <div class="grid grid-cols-[100px_minmax(120px,_1.2fr)_1.5fr_1fr_1fr_1.5fr] gap-x-4 pb-2 border-b border-gray-300 font-semibold text-gray-700 text-sm md:text-base">
-                        <div class="px-2 py-1">ID</div>
-                        <div class="px-2 py-1">Username</div>
-                        <div class="px-2 py-1">Email</div>
-                        <div class="px-2 py-1 hidden sm:block">Role</div>
-                        <div class="px-2 py-1 hidden md:block">Skills</div>
-                        <div class="px-2 py-1 text-right">Actions</div>
-                    </div>
-                    <div id="userList" class="flex flex-col divide-y divide-gray-200 min-h-[100px]">
-                        <!-- User rows will be dynamically loaded here -->
-                        <p class="text-gray-500 text-center col-span-full py-4">No users found. Add one above!</p>
-                    </div>
+                <div class="grid grid-cols-[100px_minmax(120px,_1.2fr)_1.5fr_1fr_1fr_1.5fr] gap-x-4 py-2 px-2 font-semibold text-sm text-gray-700 border-b border-gray-200">
+                    <div class="truncate">User ID</div>
+                    <div class="truncate">Username</div>
+                    <div class="truncate">Email</div>
+                    <div class="truncate hidden sm:block">Role</div>
+                    <div class="truncate hidden md:block">Skills</div>
+                    <div class="truncate text-right">Actions</div>
+                </div>
+                <div id="userList" class="grid grid-cols-1 gap-4 mt-4">
+                    <!-- Users will be dynamically loaded here -->
+                    <p class="text-gray-500 text-center col-span-full py-4">Loading users...</p>
                 </div>
             </div>
         </section>
-
 
         <!-- Events Section (Initially hidden) -->
         <section id="events-section" class="container hidden">
