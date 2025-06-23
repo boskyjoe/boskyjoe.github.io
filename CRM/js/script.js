@@ -57,7 +57,12 @@ const customerAddressInput = document.getElementById('customerAddress'); // Rena
 const customerCityInput = document.getElementById('customerCity');     // Renamed from companyCityInput
 const customerStateInput = document.getElementById('customerState');   // Renamed from companyStateInput
 const customerZipCodeInput = document.getElementById('customerZipCode'); // Renamed from companyZipCodeInput
-const customerIndustryInput = document.getElementById('customerIndustry'); // Renamed from companyIndustryInput
+
+const individualIndustryGroup = document.getElementById('individualIndustryGroup'); // NEW
+const customerIndustryInput = document.getElementById('customerIndustryInput'); // Renamed from customerIndustryInput
+const companyIndustryGroup = document.getElementById('companyIndustryGroup'); // NEW
+const customerIndustrySelect = document.getElementById('customerIndustrySelect'); // NEW
+
 const customerSinceInput = document.getElementById('customerSince'); // NEW
 const customerDescriptionInput = document.getElementById('customerDescription'); // Renamed from companyDescriptionInput
 const submitCustomerButton = document.getElementById('submitCustomerButton'); // Renamed from submitCompanyButton
@@ -115,14 +120,15 @@ function showSection(sectionId) {
     // Special handling for starting/stopping listeners when entering/leaving a section
     // Stop all listeners first to prevent redundant updates
     if (unsubscribeContacts) { unsubscribeContacts(); }
-    if (unsubscribeCustomers) { unsubscribeCustomers(); } // Renamed
+    if (unsubscribeCustomers) { unsubscribeCustomers(); }
 
     // Start specific listener for the active section
     if (sectionId === 'crm-section') {
         listenForContacts();
-    } else if (sectionId === 'customers-section') { // Renamed
-        listenForCustomers(); // Renamed
-        resetCustomerForm(); // Reset form when navigating to customers page
+    } else if (sectionId === 'customers-section') {
+        listenForCustomers();
+        // applyCustomerTypeValidation() is now called within resetCustomerForm()
+        resetCustomerForm(); // Reset form and apply initial validation state
     }
 }
 
@@ -292,21 +298,42 @@ function editContact(contact) {
 function applyCustomerTypeValidation() {
     const customerType = customerTypeSelect.value;
 
-    // Reset required attributes and visibility
+    // Hide all conditional groups first
+    individualFieldsDiv.classList.add('hidden');
+    lastNameField.classList.add('hidden');
+    companyNameFieldDiv.classList.add('hidden');
+    individualIndustryGroup.classList.add('hidden');
+    companyIndustryGroup.classList.add('hidden');
+
+    // Remove required attributes from all conditional inputs
     customerFirstNameInput.removeAttribute('required');
     customerLastNameInput.removeAttribute('required');
     customerCompanyNameInput.removeAttribute('required');
+    customerIndustryInput.removeAttribute('required');
+    customerIndustrySelect.removeAttribute('required');
 
-    individualFieldsDiv.classList.add('hidden');
-    companyNameFieldDiv.classList.add('hidden');
+    // Clear values of conditional inputs to prevent stale data submission
+    customerFirstNameInput.value = '';
+    customerLastNameInput.value = '';
+    customerCompanyNameInput.value = '';
+    customerIndustryInput.value = '';
+    customerIndustrySelect.value = ''; // Reset select to default option
+
 
     if (customerType === 'Individual') {
+        individualFieldsDiv.classList.remove('hidden');
+        lastNameField.classList.remove('hidden');
         customerFirstNameInput.setAttribute('required', 'required');
         customerLastNameInput.setAttribute('required', 'required');
-        individualFieldsDiv.classList.remove('hidden');
+
+        individualIndustryGroup.classList.remove('hidden');
+        customerIndustryInput.setAttribute('required', 'required');
     } else if (customerType === 'Company') {
-        customerCompanyNameInput.setAttribute('required', 'required');
         companyNameFieldDiv.classList.remove('hidden');
+        customerCompanyNameInput.setAttribute('required', 'required');
+
+        companyIndustryGroup.classList.remove('hidden');
+        customerIndustrySelect.setAttribute('required', 'required');
     }
 }
 
@@ -329,20 +356,29 @@ async function saveCustomer(customerData, existingCustomerDocId = null) { // exi
         return;
     }
 
-    if (customerType === 'Individual' && (!customerFirstNameInput.value.trim() || !customerLastNameInput.value.trim())) {
-        showModal("Validation Error", "For Individual customers, First Name and Last Name are mandatory.", () => {});
-        return;
-    }
-    if (customerType === 'Company' && !customerCompanyNameInput.value.trim()) {
-        showModal("Validation Error", "For Company customers, Company Name is mandatory.", () => {});
-        return;
+    if (customerType === 'Individual') {
+        if (!customerFirstNameInput.value.trim() || !customerLastNameInput.value.trim()) {
+            showModal("Validation Error", "For Individual customers, First Name and Last Name are mandatory.", () => {});
+            return;
+        }
+        customerData.companyName = ""; // Clear company name for individuals
+    } else if (customerType === 'Company') {
+        if (!customerCompanyNameInput.value.trim()) {
+            showModal("Validation Error", "For Company customers, Company Name is mandatory.", () => {});
+            return;
+        }
+        customerData.firstName = ""; // Clear first/last name for companies
+        customerData.lastName = "";
     }
 
-    // All other fields are universally mandatory by HTML 'required' attribute, but a final check here is good
+    // Collect the correct industry value based on type
+    customerData.industry = customerType === 'Individual' ? customerIndustryInput.value.trim() : customerIndustrySelect.value.trim();
+
+    // All other common fields are universally mandatory by HTML 'required' attribute, but a final check here is good
     if (!customerEmailInput.value.trim() || !customerPhoneInput.value.trim() ||
         !customerAddressInput.value.trim() || !customerCityInput.value.trim() ||
         !customerStateInput.value.trim() || !customerZipCodeInput.value.trim() ||
-        !customerIndustryInput.value.trim() || !customerSinceInput.value.trim()) {
+        !customerData.industry || !customerSinceInput.value.trim()) { // Check collected industry
         showModal("Validation Error", "Please fill in all mandatory fields.", () => {});
         return;
     }
@@ -377,7 +413,7 @@ async function saveCustomer(customerData, existingCustomerDocId = null) { // exi
 // Delete a customer from Firestore
 async function deleteCustomer(firestoreDocId) { // This is Firestore's auto-generated doc ID
     if (!currentUserId) {
-        console.error("User not authenticated. Cannot delete customer. Anonymous sign-in issue.");
+        console.error("User not authenticated. Cannot delete customer. Anonymous session not established.");
         showModal("Error", "Could not delete customer. Anonymous session not established.", () => {});
         return;
     }
@@ -401,7 +437,7 @@ async function deleteCustomer(firestoreDocId) { // This is Firestore's auto-gene
 
 // Listen for real-time updates to customers
 function listenForCustomers() {
-    if (unsubscribeCustomers) { // Renamed
+    if (unsubscribeCustomers) {
         unsubscribeCustomers(); // Unsubscribe from previous listener
     }
 
@@ -415,7 +451,7 @@ function listenForCustomers() {
     const collectionPath = getCollectionPath(currentCustomerCollectionType, 'customers'); // dataArea is 'customers'
     const q = collection(db, collectionPath);
 
-    unsubscribeCustomers = onSnapshot(q, (snapshot) => { // Renamed
+    unsubscribeCustomers = onSnapshot(q, (snapshot) => {
         customerList.innerHTML = ''; // Clear current list
         if (snapshot.empty) {
             // Display empty grid message
@@ -424,7 +460,7 @@ function listenForCustomers() {
         }
         snapshot.forEach((doc) => {
             const customer = { id: doc.id, ...doc.data() }; // doc.id is Firestore's internal ID
-            displayCustomer(customer); // Renamed
+            displayCustomer(customer);
         });
     }, (error) => {
         console.error("Error listening to customers:", error);
@@ -433,17 +469,26 @@ function listenForCustomers() {
 }
 
 // Display a single customer in the UI
-function displayCustomer(customer) { // Renamed
+function displayCustomer(customer) {
     const customerCard = document.createElement('div');
     // Enhanced card styling for a more professional look and grid item
     customerCard.className = 'bg-white p-6 rounded-lg shadow-md border border-gray-100 flex flex-col space-y-2';
     customerCard.dataset.id = customer.id; // Store Firestore document ID for edit/delete actions
+
+    // Determine the main heading based on customer type
+    let mainHeading = 'N/A';
+    if (customer.customerType === 'Company' && customer.companyName) {
+        mainHeading = customer.companyName;
+    } else if (customer.customerType === 'Individual' && (customer.firstName || customer.lastName)) {
+        mainHeading = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+    }
+
     customerCard.innerHTML = `
-        <h3 class="text-xl font-bold text-blue-700 mb-2">${customer.customerType === 'Company' ? customer.companyName : `${customer.firstName || ''} ${customer.lastName || ''}` || 'N/A'}</h3>
+        <h3 class="text-xl font-bold text-blue-700 mb-2">${mainHeading}</h3>
         <p class="text-sm text-gray-700"><strong>ID:</strong> ${customer.customerId || 'N/A'}</p>
         <p class="text-sm text-gray-600"><strong>Type:</strong> ${customer.customerType || 'N/A'}</p>
-        ${customer.customerType === 'Individual' ? `<p class="text-sm text-gray-600"><strong>Name:</strong> ${customer.firstName || 'N/A'} ${customer.lastName || 'N/A'}</p>` : ''}
-        ${customer.customerType === 'Company' ? `<p class="text-sm text-gray-600"><strong>Company:</strong> ${customer.companyName || 'N/A'}</p>` : ''}
+        ${customer.customerType === 'Individual' && (customer.firstName || customer.lastName) ? `<p class="text-sm text-gray-600"><strong>Name:</strong> ${customer.firstName || 'N/A'} ${customer.lastName || 'N/A'}</p>` : ''}
+        ${customer.customerType === 'Company' && customer.companyName ? `<p class="text-sm text-gray-600"><strong>Company:</strong> ${customer.companyName || 'N/A'}</p>` : ''}
         <p class="text-sm text-gray-600"><strong>Email:</strong> ${customer.email || 'N/A'}</p>
         <p class="text-sm text-gray-600"><strong>Phone:</strong> ${customer.phone || 'N/A'}</p>
         <p class="text-sm text-gray-600"><strong>Address:</strong> ${customer.address || 'N/A'}, ${customer.city || 'N/A'}, ${customer.state || 'N/A'} ${customer.zipCode || 'N/A'}</p>
@@ -451,18 +496,18 @@ function displayCustomer(customer) { // Renamed
         <p class="text-sm text-gray-600"><strong>Since:</strong> ${customer.customerSince || 'N/A'}</p>
         <p class="text-sm text-gray-600 flex-grow"><strong>Description:</strong> ${customer.description || 'N/A'}</p>
         <div class="actions flex justify-end gap-3 mt-4 pt-3 border-t border-gray-100">
-            <button class="edit-btn secondary px-4 py-2 text-sm" data-id="${customer.id}">Edit</button> <!-- Pass Firestore doc ID -->
-            <button class="delete-btn danger px-4 py-2 text-sm" data-id="${customer.id}">Delete</button> <!-- Pass Firestore doc ID -->
+            <button class="edit-btn secondary px-4 py-2 text-sm" data-id="${customer.id}">Edit</button>
+            <button class="delete-btn danger px-4 py-2 text-sm" data-id="${customer.id}">Delete</button>
         </div>
     `;
     customerList.appendChild(customerCard);
 
-    customerCard.querySelector('.edit-btn').addEventListener('click', () => editCustomer(customer)); // Renamed
-    customerCard.querySelector('.delete-btn').addEventListener('click', () => deleteCustomer(customer.id)); // Renamed
+    customerCard.querySelector('.edit-btn').addEventListener('click', () => editCustomer(customer));
+    customerCard.querySelector('.delete-btn').addEventListener('click', () => deleteCustomer(customer.id));
 }
 
 // Populate form for editing a customer
-function editCustomer(customer) { // Renamed
+function editCustomer(customer) {
     customerFormTitle.textContent = 'Edit Customer';
     submitCustomerButton.textContent = 'Update Customer';
 
@@ -470,36 +515,46 @@ function editCustomer(customer) { // Renamed
     customerIdDisplayGroup.classList.remove('hidden');
     customerIdDisplay.textContent = customer.customerId || 'N/A';
 
-    // Populate other fields
+    // Populate common fields
     customerTypeSelect.value = customer.customerType || '';
-    customerFirstNameInput.value = customer.firstName || '';
-    customerLastNameInput.value = customer.lastName || '';
-    customerCompanyNameInput.value = customer.companyName || '';
     customerEmailInput.value = customer.email || '';
     customerPhoneInput.value = customer.phone || '';
     customerAddressInput.value = customer.address || '';
     customerCityInput.value = customer.city || '';
     customerStateInput.value = customer.state || '';
     customerZipCodeInput.value = customer.zipCode || '';
-    customerIndustryInput.value = customer.industry || '';
-    customerSinceInput.value = customer.customerSince || ''; // Date input
+    customerSinceInput.value = customer.customerSince || '';
     customerDescriptionInput.value = customer.description || '';
-    customerForm.dataset.editingId = customer.id; // Store Firestore doc ID for update
+    customerForm.dataset.editingId = customer.id;
 
-    // Apply validation rules to show/hide fields correctly for editing
-    applyCustomerTypeValidation();
+    // Populate conditional fields and apply validation rules
+    customerFirstNameInput.value = customer.firstName || '';
+    customerLastNameInput.value = customer.lastName || '';
+    customerCompanyNameInput.value = customer.companyName || '';
+
+    // Set correct industry field value
+    if (customer.customerType === 'Individual') {
+        customerIndustryInput.value = customer.industry || '';
+    } else if (customer.customerType === 'Company') {
+        customerIndustrySelect.value = customer.industry || '';
+    }
+
+    applyCustomerTypeValidation(); // This will show/hide fields based on typeSelect.value
 
     customerForm.scrollIntoView({ behavior: 'smooth' });
 }
 
 // Reset Customer form function
-function resetCustomerForm() { // Renamed
+function resetCustomerForm() {
     customerForm.reset();
     customerForm.dataset.editingId = '';
     customerFormTitle.textContent = 'Add New Customer';
     submitCustomerButton.textContent = 'Add Customer';
     customerIdDisplayGroup.classList.add('hidden'); // Hide ID display group
     customerIdDisplay.textContent = ''; // Clear displayed ID
+
+    // Set customer type to Individual by default and apply validation
+    customerTypeSelect.value = 'Individual';
     applyCustomerTypeValidation(); // Re-apply validation to hide/show fields correctly for a new entry
 }
 
@@ -541,11 +596,19 @@ customerForm.addEventListener('submit', async (e) => {
         city: customerCityInput.value.trim(),
         state: customerStateInput.value.trim(),
         zipCode: customerZipCodeInput.value.trim(),
-        industry: customerIndustryInput.value.trim(),
-        customerSince: customerSinceInput.value, // Date input value is already string in YYYY-MM-DD
+        industry: '', // Will be set conditionally below
+        customerSince: customerSinceInput.value, // Date input value is already string inYYYY-MM-DD
         description: customerDescriptionInput.value.trim()
         // customerId field will be added/updated by saveCustomer function
     };
+
+    // Set the correct industry value based on customer type
+    if (customerTypeSelect.value === 'Individual') {
+        customerData.industry = customerIndustryInput.value.trim();
+    } else if (customerTypeSelect.value === 'Company') {
+        customerData.industry = customerIndustrySelect.value.trim();
+    }
+
     const editingId = customerForm.dataset.editingId; // This is the Firestore auto-generated doc ID
 
     await saveCustomer(customerData, editingId || null);
