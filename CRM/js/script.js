@@ -20,14 +20,20 @@ const appId = firebaseConfig.projectId;
 let app;
 let db;
 let auth;
-// NEW: Hardcoding currentUserId for development
-let currentUserId = 'boskyjoe@gmail.com';
-let isAuthReady = true; // NEW: Set to true immediately as user is hardcoded
+// currentUserId will now be set by Firebase Auth onAuthStateChanged
+let currentUserId = null;
+let isAuthReady = false; // Set to false initially, true when Firebase Auth confirms a user
 let currentCollectionType = 'private'; // 'private' or 'public' for contacts
-// Customer collection type is now fixed to 'public'
 const currentCustomerCollectionType = 'public'; // Fixed to public as per requirement
 let unsubscribeContacts = null; // To store the onSnapshot unsubscribe function for contacts
 let unsubscribeCustomers = null; // To store the onSnapshot unsubscribe function for customers
+
+// Hardcoded Firebase UID for the 'admin' user (boskyjoe@gmail.com).
+// YOU NEED TO REPLACE 'YOUR_ACTUAL_FIREBASE_UID_FOR_BOSKYJOE_ANONYMOUS_SESSION'
+// To get this: Run the app once, open developer console (F12), and look for
+// "Current Firebase UID:" log. Copy that UID and paste it here.
+const ADMIN_FIREBASE_UID = 'YOUR_ACTUAL_FIREBASE_UID_FOR_BOSKYJOE_ANONYMOUS_SESSION'; // Placeholder
+let isAdmin = false; // Flag to control admin specific UI/features
 
 // Get references to DOM elements for Contacts
 const contactForm = document.getElementById('contactForm');
@@ -38,45 +44,45 @@ const modalContainer = document.getElementById('modalContainer');
 const mobileMenuButton = document.getElementById('mobileMenuButton');
 const mobileMenu = document.getElementById('mobileMenu');
 const mobileUserIdDisplay = document.getElementById('mobileUserIdDisplay');
-const submitContactButton = document.getElementById('submitButton'); // NEW: Reference to contact submit button
+const submitContactButton = document.getElementById('submitButton');
 
-// Get references to DOM elements for Customers (UPDATED and NEW)
-const customersSection = document.getElementById('customers-section'); // Renamed from companiesSection
-const customerForm = document.getElementById('customerForm'); // Renamed from companyForm
-const customerFormTitle = document.getElementById('customerFormTitle'); // Renamed
-const customerIdDisplayGroup = document.getElementById('customerIdDisplayGroup'); // For displaying system-generated ID
-const customerIdDisplay = document.getElementById('customerIdDisplay'); // For displaying system-generated ID
+// Get references to DOM elements for Customers
+const customersSection = document.getElementById('customers-section');
+const customerForm = document.getElementById('customerForm');
+const customerFormTitle = document.getElementById('customerFormTitle');
+const customerIdDisplayGroup = document.getElementById('customerIdDisplayGroup');
+const customerIdDisplay = document.getElementById('customerIdDisplay');
 
-const customerTypeSelect = document.getElementById('customerType'); // NEW
-const individualFieldsDiv = document.getElementById('individualFields'); // NEW group for FirstName, LastName
-const customerFirstNameInput = document.getElementById('customerFirstName'); // NEW
-const customerLastNameInput = document.getElementById('customerLastName'); // NEW
-const companyNameFieldDiv = document.getElementById('companyNameField'); // NEW group for CompanyName
-const customerCompanyNameInput = document.getElementById('customerCompanyName'); // Renamed from companyNameInput
+const customerTypeSelect = document.getElementById('customerType');
+const individualFieldsDiv = document.getElementById('individualFields');
+const customerFirstNameInput = document.getElementById('customerFirstName');
+const customerLastNameInput = document.getElementById('customerLastName');
+const companyNameFieldDiv = document.getElementById('companyNameField');
+const customerCompanyNameInput = document.getElementById('customerCompanyName');
 
-const customerEmailInput = document.getElementById('customerEmail'); // Renamed from companyEmailInput
-const customerPhoneInput = document.getElementById('customerPhone'); // Renamed from companyPhoneInput
-const customerAddressInput = document.getElementById('customerAddress'); // Renamed from companyAddressInput
-const customerCityInput = document.getElementById('customerCity');     // Renamed from companyCityInput
-const customerStateInput = document.getElementById('customerState');   // Renamed from companyStateInput
-const customerZipCodeInput = document.getElementById('customerZipCode'); // Renamed from companyZipCodeInput
+const customerEmailInput = document.getElementById('customerEmail');
+const customerPhoneInput = document.getElementById('customerPhone');
+const customerAddressInput = document.getElementById('customerAddress');
+const customerCityInput = document.getElementById('customerCity');
+const customerStateInput = document.getElementById('customerState');
+const customerZipCodeInput = document.getElementById('customerZipCode');
 
-const individualIndustryGroup = document.getElementById('individualIndustryGroup'); // NEW
-const customerIndustryInput = document.getElementById('customerIndustryInput'); // Renamed from customerIndustryInput
-const companyIndustryGroup = document.getElementById('companyIndustryGroup'); // NEW
-const customerIndustrySelect = document.getElementById('customerIndustrySelect'); // NEW
+const individualIndustryGroup = document.getElementById('individualIndustryGroup');
+const customerIndustryInput = document.getElementById('customerIndustryInput');
+const companyIndustryGroup = document.getElementById('companyIndustryGroup');
+const customerIndustrySelect = document.getElementById('customerIndustrySelect');
 
-const customerSinceInput = document.getElementById('customerSince'); // NEW
-const customerDescriptionInput = document.getElementById('customerDescription'); // Renamed from companyDescriptionInput
-const submitCustomerButton = document.getElementById('submitCustomerButton'); // Renamed from submitCompanyButton
-const customerList = document.getElementById('customerList'); // Renamed from companyList
+const customerSinceInput = document.getElementById('customerSince');
+const customerDescriptionInput = document.getElementById('customerDescription');
+const submitCustomerButton = document.getElementById('submitCustomerButton');
+const customerList = document.getElementById('customerList');
 
-// References to logout buttons (for hiding)
+// References to logout buttons (for hiding/showing, but will be hidden initially)
 const logoutButton = document.getElementById('logoutButton');
 const mobileLogoutButton = document.getElementById('mobileLogoutButton');
 
 
-// Select all main content sections (updated for customersSection)
+// Select all main content sections
 const homeSection = document.getElementById('home');
 const crmSection = document.getElementById('crm-section');
 const eventsSection = document.getElementById('events-section');
@@ -124,7 +130,6 @@ function showSection(sectionId) {
     }
     mobileMenu.classList.add('hidden'); // Close mobile menu when navigating
 
-    // Special handling for starting/stopping listeners when entering/leaving a section
     // Stop all listeners first to prevent redundant updates
     if (unsubscribeContacts) { unsubscribeContacts(); }
     if (unsubscribeCustomers) { unsubscribeCustomers(); }
@@ -133,13 +138,25 @@ function showSection(sectionId) {
     if (isAuthReady) {
         if (sectionId === 'crm-section') {
             listenForContacts();
+            // Enable/disable Add Contact button based on admin status
+            if (isAdmin) {
+                submitContactButton.removeAttribute('disabled');
+            } else {
+                submitContactButton.setAttribute('disabled', 'disabled');
+            }
         } else if (sectionId === 'customers-section') {
             listenForCustomers();
             resetCustomerForm(); // Reset form and apply initial validation state
+            // The Add Customer button is always enabled as per previous logic (public data)
+            submitCustomerButton.removeAttribute('disabled');
         }
     } else {
         console.warn("Attempted to show section before Firebase Auth is ready:", sectionId);
-        // Optionally, show a "loading" or "authentication required" message here
+        // Ensure buttons are disabled if auth is not ready
+        submitContactButton.setAttribute('disabled', 'disabled');
+        submitCustomerButton.setAttribute('disabled', 'disabled');
+        collectionToggleButton.setAttribute('disabled', 'disabled');
+        // You might want to display a loading or "authentication required" message here
     }
 }
 
@@ -151,59 +168,70 @@ async function initializeFirebase() {
         db = getFirestore(app);
         auth = getAuth(app);
 
-        // Directly display the hardcoded user ID
-        userIdDisplay.textContent = `User ID: ${currentUserId}`;
-        mobileUserIdDisplay.textContent = `User ID: ${currentUserId}`;
-
-        // Hide logout buttons as they are not functional with a hardcoded user
+        // Hide logout buttons initially, they will be hidden permanently with this hardcoded approach
         logoutButton.classList.add('hidden');
         mobileLogoutButton.classList.add('hidden');
 
-        // Immediately enable relevant UI elements since auth is "ready"
-        submitContactButton.removeAttribute('disabled');
-        submitCustomerButton.removeAttribute('disabled');
-        collectionToggleButton.removeAttribute('disabled'); // Also enable this button
-        showSection('home'); // Show initial content (home page)
-
-        // Commented out Firebase auth listener and anonymous sign-in
-        /*
+        // Listen for auth state changes
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUserId = user.uid;
-                userIdDisplay.textContent = `User ID: ${user.uid.substring(0, 8)}...`;
-                mobileUserIdDisplay.textContent = `User ID: ${user.uid.substring(0, 8)}...`;
+                // Display the hardcoded email 'boskyjoe@gmail.com'
+                userIdDisplay.textContent = `User ID: boskyjoe@gmail.com`;
+                mobileUserIdDisplay.textContent = `User ID: boskyjoe@gmail.com`;
 
-                if (!isAuthReady) {
+                console.log("Current Firebase UID:", currentUserId); // Log the actual UID for user to copy
+
+                // Determine if the current user is an admin
+                isAdmin = (currentUserId === ADMIN_FIREBASE_UID);
+                console.log("Is Admin:", isAdmin);
+
+                if (!isAuthReady) { // Only run this block once after initial auth
                     isAuthReady = true;
-                    submitContactButton.removeAttribute('disabled');
-                    submitCustomerButton.removeAttribute('disabled');
-                    collectionToggleButton.removeAttribute('disabled');
-                    showSection('home');
+                    // Enable/disable UI elements based on isAdmin status and general auth readiness
+                    submitCustomerButton.removeAttribute('disabled'); // Customer button always enabled (public data)
+                    collectionToggleButton.removeAttribute('disabled'); // Contacts toggle always enabled
+
+                    // Contacts submit button is conditional on admin role
+                    if (isAdmin) {
+                        submitContactButton.removeAttribute('disabled');
+                    } else {
+                        submitContactButton.setAttribute('disabled', 'disabled');
+                    }
+
+                    showSection('home'); // Show initial content (home page)
                 }
             } else {
+                // No user is signed in. Attempt anonymous login if not already authenticated.
                 if (!isAuthReady) {
                     try {
                         console.log("No user found, attempting anonymous sign-in...");
                         await signInAnonymously(auth);
+                        // onAuthStateChanged will fire again with the new anonymous user
                     } catch (anonError) {
                         console.error("Error during anonymous sign-in:", anonError);
                         showModal("Authentication Error", `Failed to sign in anonymously: ${anonError.message}. Please refresh the page to try again.`, () => {});
+                        // Ensure UI is disabled if authentication fails
                         submitContactButton.setAttribute('disabled', 'disabled');
                         submitCustomerButton.setAttribute('disabled', 'disabled');
                         collectionToggleButton.setAttribute('disabled', 'disabled');
-                        allSections.forEach(section => { if(section) section.classList.add('hidden'); });
+                        allSections.forEach(section => { if(section) section.classList.add('hidden'); }); // Keep all content hidden
                         isAuthReady = false;
+                        isAdmin = false;
                     }
                 }
             }
         });
 
+        // Initial attempt to sign in anonymously if no user is present on load.
+        // This is outside the onAuthStateChanged listener to initiate the process quickly.
+        // The onAuthStateChanged listener will handle the state change and UI updates.
         if (!auth.currentUser) {
             signInAnonymously(auth).catch(error => {
                 console.error("Initial background anonymous sign-in attempt failed:", error);
+                // Errors are handled by the onAuthStateChanged listener's else block
             });
         }
-        */
 
     } catch (error) {
         console.error("Error initializing Firebase application:", error);
@@ -212,14 +240,12 @@ async function initializeFirebase() {
 }
 
 // Determine the Firestore collection path based on type and user ID
-function getCollectionPath(type, dataArea = 'contacts') { // dataArea added for flexibility
-    // With hardcoded user, this check is less critical but good for consistency
+function getCollectionPath(type, dataArea = 'contacts') {
     if (!currentUserId) {
         console.error("currentUserId is null, cannot determine collection path. Authentication not established.");
+        // Fallback, though UI controls should prevent reaching here for writes if not authenticated
         return `artifacts/${appId}/public/data/${dataArea}_fallback`;
     }
-    // For customers, 'type' will always be 'public' based on the constant `currentCustomerCollectionType`
-    // For contacts, it will use `currentCollectionType` which can be private/public
     if (type === 'public') {
         return `artifacts/${appId}/public/data/${dataArea}`;
     } else { // 'private'
@@ -231,9 +257,14 @@ function getCollectionPath(type, dataArea = 'contacts') { // dataArea added for 
 
 // Add or update a contact in Firestore
 async function saveContact(contactData, contactId = null) {
-    if (!isAuthReady || !currentUserId) { // Check both auth ready flag and user ID
+    if (!isAuthReady || !currentUserId) {
         console.error("User not authenticated or session not established. Cannot save contact.");
         showModal("Error", "Could not save contact. Anonymous session not established.", () => {});
+        return;
+    }
+    // Client-side admin check for adding contacts
+    if (!isAdmin) {
+        showModal("Permission Denied", "Only administrators can add or modify employee contacts.", () => {});
         return;
     }
 
@@ -250,7 +281,7 @@ async function saveContact(contactData, contactId = null) {
         contactForm.reset();
         contactForm.dataset.editingId = '';
         document.getElementById('contactFormTitle').textContent = 'Add New Contact';
-        submitContactButton.textContent = 'Add Contact'; // Changed to use submitContactButton
+        submitContactButton.textContent = 'Add Contact';
     } catch (error) {
         console.error("Error saving contact:", error);
         showModal("Error", "Failed to save contact. Please try again. " + error.message, () => {});
@@ -259,9 +290,14 @@ async function saveContact(contactData, contactId = null) {
 
 // Delete a contact from Firestore
 async function deleteContact(contactId) {
-    if (!isAuthReady || !currentUserId) { // Check both auth ready flag and user ID
+    if (!isAuthReady || !currentUserId) {
         console.error("User not authenticated or session not established. Cannot delete contact.");
         showModal("Error", "Could not delete contact. Anonymous session not established.", () => {});
+        return;
+    }
+    // Client-side admin check for deleting contacts
+    if (!isAdmin) {
+        showModal("Permission Denied", "Only administrators can delete employee contacts.", () => {});
         return;
     }
 
@@ -283,7 +319,7 @@ async function deleteContact(contactId) {
 
 // Listen for real-time updates to contacts
 function listenForContacts() {
-    if (!isAuthReady || !currentUserId) { // Check both auth ready flag and user ID
+    if (!isAuthReady || !currentUserId) {
         console.error("User not authenticated or session not established. Cannot listen for contacts.");
         contactList.innerHTML = '<p class="text-gray-500 text-center">Authentication required to load contacts.</p>';
         return;
@@ -323,25 +359,32 @@ function displayContact(contact) {
         <p class="text-sm text-gray-600">Phone: ${contact.phone || 'N/A'}</p>
         <p class="text-sm text-gray-600">Notes: ${contact.notes || 'N/A'}</p>
         <div class="actions">
-            <button class="edit-btn secondary" data-id="${contact.id}">Edit</button>
-            <button class="delete-btn danger" data-id="${contact.id}">Delete</button>
+            <button class="edit-btn secondary" data-id="${contact.id}" ${isAdmin ? '' : 'disabled'}>Edit</button>
+            <button class="delete-btn danger" data-id="${contact.id}" ${isAdmin ? '' : 'disabled'}>Delete</button>
         </div>
     `;
     contactList.appendChild(contactCard);
 
-    contactCard.querySelector('.edit-btn').addEventListener('click', () => editContact(contact));
-    contactCard.querySelector('.delete-btn').addEventListener('click', () => deleteContact(contact.id));
+    // Add event listeners only if the buttons are enabled
+    if (isAdmin) {
+        contactCard.querySelector('.edit-btn').addEventListener('click', () => editContact(contact));
+        contactCard.querySelector('.delete-btn').addEventListener('click', () => deleteContact(contact.id));
+    }
 }
 
 // Populate form for editing a contact
 function editContact(contact) {
+    if (!isAdmin) {
+        showModal("Permission Denied", "Only administrators can edit employee contacts.", () => {});
+        return;
+    }
     document.getElementById('contactName').value = contact.name || '';
     document.getElementById('contactEmail').value = contact.email || '';
     document.getElementById('contactPhone').value = contact.phone || '';
     document.getElementById('contactNotes').value = contact.notes || '';
     contactForm.dataset.editingId = contact.id;
     document.getElementById('contactFormTitle').textContent = 'Edit Contact';
-    submitContactButton.textContent = 'Update Contact'; // Changed to use submitContactButton
+    submitContactButton.textContent = 'Update Contact';
     contactForm.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -395,8 +438,8 @@ customerTypeSelect.addEventListener('change', applyCustomerTypeValidation);
 
 
 // Add or update a customer in Firestore
-async function saveCustomer(customerData, existingCustomerDocId = null) { // existingCustomerDocId is Firestore's auto-generated doc ID
-    if (!isAuthReady || !currentUserId) { // Check both auth ready flag and user ID
+async function saveCustomer(customerData, existingCustomerDocId = null) {
+    if (!isAuthReady || !currentUserId) {
         console.error("User not authenticated or session not established. Cannot save customer.");
         showModal("Error", "Could not save customer. Anonymous session not established.", () => {});
         return;
@@ -431,7 +474,7 @@ async function saveCustomer(customerData, existingCustomerDocId = null) { // exi
     if (!customerEmailInput.value.trim() || !customerPhoneInput.value.trim() ||
         !customerAddressInput.value.trim() || !customerCityInput.value.trim() ||
         !customerStateInput.value.trim() || !customerZipCodeInput.value.trim() ||
-        !customerData.industry || !customerSinceInput.value.trim()) { // Check collected industry
+        !customerData.industry || !customerSinceInput.value.trim()) {
         showModal("Validation Error", "Please fill in all mandatory fields.", () => {});
         return;
     }
@@ -464,8 +507,8 @@ async function saveCustomer(customerData, existingCustomerDocId = null) { // exi
 }
 
 // Delete a customer from Firestore
-async function deleteCustomer(firestoreDocId) { // This is Firestore's auto-generated doc ID
-    if (!isAuthReady || !currentUserId) { // Check both auth ready flag and user ID
+async function deleteCustomer(firestoreDocId) {
+    if (!isAuthReady || !currentUserId) {
         console.error("User not authenticated or session not established. Cannot delete customer.");
         showModal("Error", "Could not delete customer. Anonymous session not established.", () => {});
         return;
@@ -490,7 +533,7 @@ async function deleteCustomer(firestoreDocId) { // This is Firestore's auto-gene
 
 // Listen for real-time updates to customers
 function listenForCustomers() {
-    if (!isAuthReady || !currentUserId) { // Check both auth ready flag and user ID
+    if (!isAuthReady || !currentUserId) {
         console.error("User not authenticated or session not established. Cannot listen for customers.");
         customerList.innerHTML = '<p class="text-gray-500 text-center col-span-full">Authentication required to load customers.</p>';
         return;
@@ -507,7 +550,6 @@ function listenForCustomers() {
     unsubscribeCustomers = onSnapshot(q, (snapshot) => {
         customerList.innerHTML = ''; // Clear current list
         if (snapshot.empty) {
-            // Display empty grid message
             customerList.innerHTML = '<p class="text-gray-500 text-center col-span-full">No customers found. Add one above!</p>';
             return;
         }
@@ -524,7 +566,6 @@ function listenForCustomers() {
 // Display a single customer in the UI
 function displayCustomer(customer) {
     const customerCard = document.createElement('div');
-    // Enhanced card styling for a more professional look and grid item
     customerCard.className = 'bg-white p-6 rounded-lg shadow-md border border-gray-100 flex flex-col space-y-2';
     customerCard.dataset.id = customer.id; // Store Firestore document ID for edit/delete actions
 
@@ -549,18 +590,25 @@ function displayCustomer(customer) {
         <p class="text-sm text-gray-600"><strong>Since:</strong> ${customer.customerSince || 'N/A'}</p>
         <p class="text-sm text-gray-600 flex-grow"><strong>Description:</strong> ${customer.description || 'N/A'}</p>
         <div class="actions flex justify-end gap-3 mt-4 pt-3 border-t border-gray-100">
-            <button class="edit-btn secondary px-4 py-2 text-sm" data-id="${customer.id}">Edit</button>
-            <button class="delete-btn danger px-4 py-2 text-sm" data-id="${customer.id}">Delete</button>
+            <button class="edit-btn secondary px-4 py-2 text-sm" data-id="${customer.id}" ${isAdmin ? '' : 'disabled'}>Edit</button>
+            <button class="delete-btn danger px-4 py-2 text-sm" data-id="${customer.id}" ${isAdmin ? '' : 'disabled'}>Delete</button>
         </div>
     `;
     customerList.appendChild(customerCard);
 
-    customerCard.querySelector('.edit-btn').addEventListener('click', () => editCustomer(customer));
-    customerCard.querySelector('.delete-btn').addEventListener('click', () => deleteCustomer(customer.id));
+    // Add event listeners only if the buttons are enabled
+    if (isAdmin) {
+        customerCard.querySelector('.edit-btn').addEventListener('click', () => editCustomer(customer));
+        customerCard.querySelector('.delete-btn').addEventListener('click', () => deleteCustomer(customer.id));
+    }
 }
 
 // Populate form for editing a customer
 function editCustomer(customer) {
+    if (!isAdmin) {
+        showModal("Permission Denied", "Only administrators can edit employee contacts.", () => {});
+        return;
+    }
     customerFormTitle.textContent = 'Edit Customer';
     submitCustomerButton.textContent = 'Update Customer';
 
