@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js"; // Removed createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 // YOUR Firebase Configuration
@@ -21,49 +21,49 @@ let app;
 let db;
 let auth;
 let currentUserId = null;
-let currentCollectionType = 'private'; // 'private' or 'public'
-let unsubscribe = null; // To store the onSnapshot unsubscribe function
+let currentCollectionType = 'private'; // 'private' or 'public' for contacts
+let currentCompanyCollectionType = 'private'; // 'private' or 'public' for companies
+let unsubscribeContacts = null; // To store the onSnapshot unsubscribe function for contacts
+let unsubscribeCompanies = null; // To store the onSnapshot unsubscribe function for companies
 
-// Get references to DOM elements
-// Removed auth-related DOM elements as login is temporarily bypassed
-// const authSection = document.getElementById('auth-section');
-// const authForm = document.getElementById('authForm');
-// const authFormTitle = document.getElementById('authFormTitle');
-// const authEmail = document.getElementById('authEmail');
-// const authPassword = document.getElementById('authPassword');
-// const authSubmitButton = document.getElementById('authSubmitButton');
-// const toggleAuthModeButton = document.getElementById('toggleAuthModeButton');
-// const authMessage = document.getElementById('authMessage');
-// const logoutButton = document.getElementById('logoutButton'); // Removed from global scope
-// const mobileLogoutButton = document.getElementById('mobileLogoutButton'); // Removed from global scope
-
-// New registration fields (kept for potential re-introduction, but commented out if not used)
-// const registerFields = document.getElementById('registerFields');
-// const authUsername = document.getElementById('authUsername');
-// const authFirstName = document.getElementById('authFirstName');
-// const authLastName = document.getElementById('authLastName');
-// const authPhone = document.getElementById('authPhone');
-// const authRole = document.getElementById('authRole');
-// const authSkills = document.getElementById('authSkills');
-
-
+// Get references to DOM elements for Contacts
 const contactForm = document.getElementById('contactForm');
 const contactList = document.getElementById('contactList');
-const userIdDisplay = document.getElementById('userIdDisplay'); // This will now show anonymous ID or N/A
+const userIdDisplay = document.getElementById('userIdDisplay');
 const collectionToggleButton = document.getElementById('collectionToggleButton');
 const modalContainer = document.getElementById('modalContainer');
 const mobileMenuButton = document.getElementById('mobileMenuButton');
 const mobileMenu = document.getElementById('mobileMenu');
-const mobileUserIdDisplay = document.getElementById('mobileUserIdDisplay'); // This will now show anonymous ID or N/A
+const mobileUserIdDisplay = document.getElementById('mobileUserIdDisplay');
+
+// Get references to DOM elements for Companies (UPDATED)
+const companiesSection = document.getElementById('companies-section');
+const companyForm = document.getElementById('companyForm');
+const companyFormTitle = document.getElementById('companyFormTitle');
+const companyIdDisplayGroup = document.getElementById('companyIdDisplayGroup'); // New display group
+const companyIdDisplay = document.getElementById('companyIdDisplay'); // New element to display ID
+// Removed companyIdInput as it's no longer user-editable
+const companyNameInput = document.getElementById('companyName');
+const companyWebsiteInput = document.getElementById('companyWebsite');
+const companyIndustryInput = document.getElementById('companyIndustry');
+const companyAddressInput = document.getElementById('companyAddress');
+const companyCityInput = document.getElementById('companyCity');
+const companyStateInput = document.getElementById('companyState');
+const companyZipCodeInput = document.getElementById('companyZipCode');
+const companyPhoneInput = document.getElementById('companyPhone');
+const companyStatusSelect = document.getElementById('companyStatus');
+const companyDescriptionInput = document.getElementById('companyDescription');
+const submitCompanyButton = document.getElementById('submitCompanyButton');
+const companyList = document.getElementById('companyList');
+const companyCollectionToggleButton = document.getElementById('companyCollectionToggleButton');
 
 
-// Select all main content sections (auth-section removed)
+// Select all main content sections
 const homeSection = document.getElementById('home');
 const crmSection = document.getElementById('crm-section');
 const eventsSection = document.getElementById('events-section');
-const allSections = [homeSection, crmSection, eventsSection]; // authSection removed
+const allSections = [homeSection, crmSection, companiesSection, eventsSection];
 
-// let isLoginMode = true; // No longer needed as login is bypassed
 
 // Function to show a custom confirmation modal
 function showModal(title, message, onConfirm, onCancel) {
@@ -105,6 +105,18 @@ function showSection(sectionId) {
         targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     mobileMenu.classList.add('hidden'); // Close mobile menu when navigating
+
+    // Special handling for starting/stopping listeners when entering/leaving a section
+    // Stop all listeners first to prevent redundant updates
+    if (unsubscribeContacts) { unsubscribeContacts(); }
+    if (unsubscribeCompanies) { unsubscribeCompanies(); }
+
+    // Start specific listener for the active section
+    if (sectionId === 'crm-section') {
+        listenForContacts();
+    } else if (sectionId === 'companies-section') {
+        listenForCompanies();
+    }
 }
 
 // Initialize Firebase and set up authentication listener
@@ -121,58 +133,43 @@ async function initializeFirebase() {
                 currentUserId = user.uid;
                 userIdDisplay.textContent = `User ID: ${user.uid.substring(0, 8)}...`; // Display truncated ID
                 mobileUserIdDisplay.textContent = `User ID: ${user.uid.substring(0, 8)}...`;
-                // No logout button visibility changes needed as it's removed for now
             } else {
-                // If no user is authenticated, sign in anonymously
                 await signInAnonymously(auth);
-                // After anonymous sign-in, onAuthStateChanged will be triggered again with a user object
             }
-            // If logged in (or anonymously signed in), hide auth section and show main content (e.g., home)
+            // Once authenticated (or anonymously signed in), show the home section
             showSection('home');
-            listenForContacts(); // Start listening for contacts once authenticated
         });
 
     } catch (error) {
         console.error("Error initializing Firebase:", error);
-        // authMessage.textContent = `Error: Firebase Init Failed. ${error.message}`; // authMessage no longer exists
         showModal("Firebase Error", `Initialization failed: ${error.message}`, () => {});
     }
 }
 
-// Removed User Registration function
-// async function registerUser(email, password) { ... }
-
-// Removed User Login function
-// async function loginUser(email, password) { ... }
-
-// Removed User Logout function
-// async function logoutUser() { ... }
-
 // Determine the Firestore collection path based on type and user ID
-function getCollectionPath(type) {
-    // CurrentUserId should always be available after anonymous sign-in
+function getCollectionPath(type, dataArea = 'contacts') { // dataArea added for flexibility
     if (!currentUserId) {
         console.error("currentUserId is null, cannot determine collection path. Anonymous sign-in failed.");
-        return `artifacts/${appId}/public/data/contacts_fallback`; // Fallback for critical error
+        return `artifacts/${appId}/public/data/${dataArea}_fallback`; // Fallback for critical error
     }
     if (type === 'public') {
-        return `artifacts/${appId}/public/data/contacts`;
+        return `artifacts/${appId}/public/data/${dataArea}`;
     } else { // 'private'
-        // This path must match your security rules for private user data
-        return `artifacts/${appId}/users/${currentUserId}/contacts`;
+        return `artifacts/${appId}/users/${currentUserId}/${dataArea}`;
     }
 }
 
+/* --- CONTACTS CRUD OPERATIONS --- */
+
 // Add or update a contact in Firestore
 async function saveContact(contactData, contactId = null) {
-    // currentUserId will always be available due to anonymous sign-in
     if (!currentUserId) {
         console.error("User not authenticated. Cannot save contact. Anonymous sign-in issue.");
         showModal("Error", "Could not save contact. Anonymous session not established.", () => {});
         return;
     }
 
-    const collectionPath = getCollectionPath(currentCollectionType);
+    const collectionPath = getCollectionPath(currentCollectionType, 'contacts'); // Specify dataArea
     try {
         if (contactId) {
             const contactDocRef = doc(db, collectionPath, contactId);
@@ -194,14 +191,13 @@ async function saveContact(contactData, contactId = null) {
 
 // Delete a contact from Firestore
 async function deleteContact(contactId) {
-    // currentUserId will always be available due to anonymous sign-in
     if (!currentUserId) {
         console.error("User not authenticated. Cannot delete contact. Anonymous sign-in issue.");
         showModal("Error", "Could not delete contact. Anonymous session not established.", () => {});
         return;
     }
 
-    const collectionPath = getCollectionPath(currentCollectionType);
+    const collectionPath = getCollectionPath(currentCollectionType, 'contacts'); // Specify dataArea
     showModal(
         "Confirm Deletion",
         "Are you sure you want to delete this contact? This action cannot be undone.",
@@ -219,21 +215,20 @@ async function deleteContact(contactId) {
 
 // Listen for real-time updates to contacts
 function listenForContacts() {
-    if (unsubscribe) {
-        unsubscribe(); // Unsubscribe from previous listener
+    if (unsubscribeContacts) {
+        unsubscribeContacts(); // Unsubscribe from previous listener
     }
 
-    // currentUserId will always be available due to anonymous sign-in
     if (!currentUserId) {
         console.error("User not authenticated. Cannot listen for contacts. Anonymous sign-in issue.");
         contactList.innerHTML = '<p class="text-gray-500 text-center">Failed to load contacts. Please refresh.</p>';
         return;
     }
 
-    const collectionPath = getCollectionPath(currentCollectionType);
+    const collectionPath = getCollectionPath(currentCollectionType, 'contacts'); // Specify dataArea
     const q = collection(db, collectionPath);
 
-    unsubscribe = onSnapshot(q, (snapshot) => {
+    unsubscribeContacts = onSnapshot(q, (snapshot) => {
         contactList.innerHTML = '';
         if (snapshot.empty) {
             contactList.innerHTML = '<p class="text-gray-500 text-center">No contacts found in this collection.</p>';
@@ -282,12 +277,161 @@ function editContact(contact) {
     contactForm.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Event Listeners (authForm, toggleAuthModeButton, logout buttons removed)
-// authForm.addEventListener('submit', async (e) => { ... });
-// toggleAuthModeButton.addEventListener('click', () => { ... });
-// logoutButton.addEventListener('click', logoutUser);
-// mobileLogoutButton.addEventListener('click', logoutUser);
+/* --- COMPANIES CRUD OPERATIONS (UPDATED) --- */
 
+// Add or update a company in Firestore
+async function saveCompany(companyData, existingCompanyDocId = null) { // existingCompanyDocId is Firestore's auto-generated doc ID
+    if (!currentUserId) {
+        console.error("User not authenticated. Cannot save company. Anonymous sign-in issue.");
+        showModal("Error", "Could not save company. Anonymous session not established.", () => {});
+        return;
+    }
+
+    const collectionPath = getCollectionPath(currentCompanyCollectionType, 'companies');
+
+    try {
+        if (existingCompanyDocId) {
+            // Editing an existing company: simply update the document
+            const companyDocRef = doc(db, collectionPath, existingCompanyDocId);
+            await updateDoc(companyDocRef, companyData);
+            console.log("Company updated:", existingCompanyDocId);
+        } else {
+            // Adding a NEW company: let Firestore generate a document ID, then store custom CompanyID as a field
+            const docRef = await addDoc(collection(db, collectionPath), companyData); // Firestore generates doc ID
+            const systemGeneratedCompanyId = 'COM-' + docRef.id; // Create custom CompanyID
+            await updateDoc(docRef, { companyId: systemGeneratedCompanyId }); // Add companyId field to the document
+            console.log("Company added with system-generated ID:", systemGeneratedCompanyId);
+        }
+        // Reset form and UI state after successful save/update
+        companyForm.reset();
+        companyForm.dataset.editingId = '';
+        companyFormTitle.textContent = 'Add New Company';
+        submitCompanyButton.textContent = 'Add Company';
+        companyIdDisplayGroup.classList.add('hidden'); // Hide ID display group for new entry
+        companyIdDisplay.textContent = ''; // Clear displayed ID
+    } catch (error) {
+        console.error("Error saving company:", error);
+        showModal("Error", "Failed to save company. Please try again. " + error.message, () => {});
+    }
+}
+
+// Delete a company from Firestore
+async function deleteCompany(firestoreDocId) { // This is Firestore's auto-generated doc ID
+    if (!currentUserId) {
+        console.error("User not authenticated. Cannot delete company. Anonymous sign-in issue.");
+        showModal("Error", "Could not delete company. Anonymous session not established.", () => {});
+        return;
+    }
+
+    const collectionPath = getCollectionPath(currentCompanyCollectionType, 'companies');
+    showModal(
+        "Confirm Deletion",
+        "Are you sure you want to delete this company? This action cannot be undone.",
+        async () => {
+            try {
+                await deleteDoc(doc(db, collectionPath, firestoreDocId));
+                console.log("Company deleted Firestore Doc ID:", firestoreDocId);
+            } catch (error) {
+                console.error("Error deleting company:", error);
+                showModal("Error", "Failed to delete company. Please try again. " + error.message, () => {});
+            }
+        }
+    );
+}
+
+// Listen for real-time updates to companies
+function listenForCompanies() {
+    if (unsubscribeCompanies) {
+        unsubscribeCompanies(); // Unsubscribe from previous listener
+    }
+
+    if (!currentUserId) {
+        console.error("User not authenticated. Cannot listen for companies. Anonymous sign-in issue.");
+        companyList.innerHTML = '<p class="text-gray-500 text-center">Failed to load companies. Please refresh.</p>';
+        return;
+    }
+
+    const collectionPath = getCollectionPath(currentCompanyCollectionType, 'companies');
+    const q = collection(db, collectionPath);
+
+    unsubscribeCompanies = onSnapshot(q, (snapshot) => {
+        companyList.innerHTML = '';
+        if (snapshot.empty) {
+            companyList.innerHTML = '<p class="text-gray-500 text-center">No companies found in this collection.</p>';
+            return;
+        }
+        snapshot.forEach((doc) => {
+            const company = { id: doc.id, ...doc.data() }; // doc.id is Firestore's internal ID
+            displayCompany(company);
+        });
+    }, (error) => {
+        console.error("Error listening to companies:", error);
+        companyList.innerHTML = `<p class="text-red-500 text-center">Error loading companies: ${error.message}</p>`;
+    });
+}
+
+// Display a single company in the UI
+function displayCompany(company) {
+    const companyCard = document.createElement('div');
+    companyCard.className = 'contact-card'; // Reusing contact-card style for consistency
+    companyCard.dataset.id = company.id; // Store Firestore document ID for edit/delete actions
+    companyCard.innerHTML = `
+        <h3 class="text-lg font-semibold text-gray-900">${company.name || 'N/A'}</h3>
+        <p class="text-sm text-gray-600"><strong>Company ID:</strong> ${company.companyId || 'N/A'}</p> <!-- Display the custom companyId field -->
+        <p class="text-sm text-gray-600">Industry: ${company.industry || 'N/A'}</p>
+        <p class="text-sm text-gray-600">Website: <a href="${company.website}" target="_blank" class="text-blue-600 hover:underline">${company.website || 'N/A'}</a></p>
+        <p class="text-sm text-gray-600">Address: ${company.address || 'N/A'}, ${company.city || 'N/A'}, ${company.state || 'N/A'} ${company.zipCode || 'N/A'}</p>
+        <p class="text-sm text-gray-600">Phone: ${company.phone || 'N/A'}</p>
+        <p class="text-sm text-gray-600">Status: ${company.status || 'N/A'}</p>
+        <p class="text-sm text-gray-600">Description: ${company.description || 'N/A'}</p>
+        <div class="actions">
+            <button class="edit-btn secondary" data-id="${company.id}">Edit</button> <!-- Pass Firestore doc ID -->
+            <button class="delete-btn danger" data-id="${company.id}">Delete</button> <!-- Pass Firestore doc ID -->
+        </div>
+    `;
+    companyList.appendChild(companyCard);
+
+    companyCard.querySelector('.edit-btn').addEventListener('click', () => editCompany(company));
+    companyCard.querySelector('.delete-btn').addEventListener('click', () => deleteCompany(company.id));
+}
+
+// Populate form for editing a company
+function editCompany(company) {
+    companyFormTitle.textContent = 'Edit Company';
+    submitCompanyButton.textContent = 'Update Company';
+
+    // Display the system-generated Company ID
+    companyIdDisplayGroup.classList.remove('hidden');
+    companyIdDisplay.textContent = company.companyId || 'N/A';
+
+    // Populate other fields
+    companyNameInput.value = company.name || '';
+    companyWebsiteInput.value = company.website || '';
+    companyIndustryInput.value = company.industry || '';
+    companyAddressInput.value = company.address || '';
+    companyCityInput.value = company.city || '';
+    companyStateInput.value = company.state || '';
+    companyZipCodeInput.value = company.zipCode || '';
+    companyPhoneInput.value = company.phone || '';
+    companyStatusSelect.value = company.status || 'Other';
+    companyDescriptionInput.value = company.description || '';
+    companyForm.dataset.editingId = company.id; // Store Firestore doc ID for update
+    companyForm.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Reset Company form function (NEW)
+function resetCompanyForm() {
+    companyForm.reset();
+    companyForm.dataset.editingId = '';
+    companyFormTitle.textContent = 'Add New Company';
+    submitCompanyButton.textContent = 'Add Company';
+    companyIdDisplayGroup.classList.add('hidden'); // Hide ID display group
+    companyIdDisplay.textContent = ''; // Clear displayed ID
+}
+
+// --- Event Listeners ---
+
+// Contact Form Event Listener
 contactForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const contactData = {
@@ -300,21 +444,52 @@ contactForm.addEventListener('submit', (e) => {
     saveContact(contactData, editingId || null);
 });
 
+// Contact Collection Toggle Button Event Listener
 collectionToggleButton.addEventListener('click', () => {
     currentCollectionType = currentCollectionType === 'private' ? 'public' : 'private';
     collectionToggleButton.textContent = `Switch to ${currentCollectionType === 'private' ? 'Public' : 'Private'} Contacts`;
     listenForContacts(); // Reload contacts based on new collection type
 });
 
+// Company Form Event Listener
+companyForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const companyData = {
+        name: companyNameInput.value.trim(),
+        website: companyWebsiteInput.value.trim(),
+        industry: companyIndustryInput.value.trim(),
+        address: companyAddressInput.value.trim(),
+        city: companyCityInput.value.trim(),
+        state: companyStateInput.value.trim(),
+        zipCode: companyZipCodeInput.value.trim(),
+        phone: companyPhoneInput.value.trim(),
+        status: companyStatusSelect.value,
+        description: companyDescriptionInput.value.trim()
+        // companyId field will be added/updated by saveCompany function
+    };
+    const editingId = companyForm.dataset.editingId; // This is the Firestore auto-generated doc ID
+
+    await saveCompany(companyData, editingId || null);
+});
+
+// Company Collection Toggle Button Event Listener
+companyCollectionToggleButton.addEventListener('click', () => {
+    currentCompanyCollectionType = currentCompanyCollectionType === 'private' ? 'public' : 'private';
+    companyCollectionToggleButton.textContent = `Switch to ${currentCompanyCollectionType === 'private' ? 'Public' : 'Private'} Companies`;
+    listenForCompanies(); // Reload companies based on new collection type
+});
+
+// Mobile Menu Button Event Listener
 mobileMenuButton.addEventListener('click', () => {
     mobileMenu.classList.toggle('hidden');
 });
 
+// Navigation Links Event Listeners
 document.querySelectorAll('nav a').forEach(link => {
     if (link.dataset.section) {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            // All sections are now accessible directly as there's no login gate
             showSection(link.dataset.section);
         });
     }
