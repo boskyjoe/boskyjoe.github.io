@@ -32,7 +32,7 @@ let unsubscribeUsers = null; // To store the onSnapshot unsubscribe function for
 // YOU NEED TO REPLACE 'YOUR_ACTUAL_FIREBASE_UID_FOR_BOSKYJOE_ANONYMOUS_SESSION'
 // To get this: Run the app once, open developer console (F12), and look for
 // "Current Firebase UID:" log. Copy that UID and paste it here.
-const ADMIN_FIREBASE_UID = 'C7B4pJ4onlZ56P5yxBazCy5h30N2' //'YOUR_ACTUAL_FIREBASE_UID_FOR_BOSKYJOE_ANONYMOUS_SESSION'; // Placeholder
+const ADMIN_FIREBASE_UID = 'C7B4pJ4onlZ56P5yxBazCy5h30N2'; // Placeholder
 let isAdmin = false; // Flag to control admin specific UI/features
 
 // Data for Countries and States (Now fetched from Firestore)
