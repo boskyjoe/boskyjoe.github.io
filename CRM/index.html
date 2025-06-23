@@ -22,7 +22,7 @@
             <div class="hidden md:flex space-x-6">
                 <a href="javascript:void(0)" data-section="home" class="hover:text-blue-200 transition-colors duration-200">Home</a>
                 <a href="javascript:void(0)" data-section="crm-section" class="hover:text-blue-200 transition-colors duration-200">User</a>
-                <a href="javascript:void(0)" data-section="companies-section" class="hover:text-blue-200 transition-colors duration-200">Companies</a>
+                <a href="javascript:void(0)" data-section="customers-section" class="hover:text-blue-200 transition-colors duration-200">Customers</a>
                 <a href="javascript:void(0)" data-section="crm-section" class="hover:text-blue-200 transition-colors duration-200">Services</a>
                 <a href="javascript:void(0)" data-section="crm-section" class="hover:text-blue-200 transition-colors duration-200">Opportunities</a>
                 <a href="javascript:void(0)" data-section="events-section" class="hover:text-blue-200 transition-colors duration-200">Events</a>
@@ -48,7 +48,7 @@
         <div id="mobileMenu" class="hidden md:hidden bg-blue-700 mt-2 rounded-lg py-2 w-full">
             <a href="javascript:void(0)" data-section="home" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Home</a>
             <a href="javascript:void(0)" data-section="crm-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">User</a>
-            <a href="javascript:void(0)" data-section="companies-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Companies</a>
+            <a href="javascript:void(0)" data-section="customers-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Customers</a>
             <a href="javascript:void(0)" data-section="crm-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Services</a>
             <a href="javascript:void(0)" data-section="crm-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Opportunities</a>
             <a href="javascript:void(0)" data-section="events-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Events</a>
@@ -59,7 +59,7 @@
     </nav>
 
     <main class="w-full flex flex-col items-center p-5 max-w-7xl">
-        <!-- Login/Registration Section (Initially hidden as per current JS state) -->
+        <!-- Login/Registration Section (Currently hidden by JS as login is bypassed) -->
         <section id="auth-section" class="container hidden">
             <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Welcome to ShutterSync</h2>
             <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200 max-w-md mx-auto">
@@ -112,7 +112,7 @@
             </div>
         </section>
 
-        <!-- CRM Description Section (Now shown by default on page load) -->
+        <!-- CRM Description Section (Shown by default on page load) -->
         <section id="home" class="container bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-center py-16 mb-8 shadow-xl">
             <h1 class="text-5xl font-extrabold mb-4 animate-fadeIn">Welcome to ShutterSync CRM</h1>
             <p class="text-xl leading-relaxed max-w-3xl mx-auto opacity-90 animate-fadeIn delay-100">
@@ -126,7 +126,7 @@
             </div>
         </section>
 
-        <!-- Main CRM Functionality Section (Initially hidden) -->
+        <!-- Main CRM Functionality Section (Contacts - Initially hidden) -->
         <section id="crm-section" class="container hidden">
             <div class="flex flex-col md:flex-row justify-between items-center mb-6">
                 <h2 class="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Contact Management</h2>
@@ -171,86 +171,100 @@
             </div>
         </section>
 
-        <!-- Companies CRUD Section -->
-        <section id="companies-section" class="container hidden">
+        <!-- Customers CRUD Section (New) -->
+        <section id="customers-section" class="container hidden">
             <div class="flex flex-col md:flex-row justify-between items-center mb-6">
-                <h2 class="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Company Management</h2>
+                <h2 class="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Customer Management</h2>
                 <!-- Removed companyCollectionToggleButton as per request -->
             </div>
 
-            <!-- Add/Edit Company Form -->
+            <!-- Add/Edit Customer Form -->
             <div class="bg-gray-50 p-6 rounded-lg shadow-sm mb-8 border border-gray-200">
-                <h3 id="companyFormTitle" class="text-2xl font-semibold text-gray-800 mb-6">Add New Company</h3>
-                <form id="companyForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Company ID will be system generated and displayed during edit -->
-                    <div id="companyIdDisplayGroup" class="hidden">
-                        <label for="companyIdDisplay" class="block text-sm font-medium text-gray-700 mb-1">Company ID</label>
-                        <span id="companyIdDisplay" class="block w-full border border-gray-200 bg-gray-100 rounded-md py-2 px-3 text-sm text-gray-600"></span>
+                <h3 id="customerFormTitle" class="text-2xl font-semibold text-gray-800 mb-6">Add New Customer</h3>
+                <form id="customerForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Customer ID will be system generated and displayed during edit -->
+                    <div id="customerIdDisplayGroup" class="hidden">
+                        <label for="customerIdDisplay" class="block text-sm font-medium text-gray-700 mb-1">Customer ID</label>
+                        <span id="customerIdDisplay" class="block w-full border border-gray-200 bg-gray-100 rounded-md py-2 px-3 text-sm text-gray-600"></span>
                     </div>
+
                     <div>
-                        <label for="companyName" class="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                        <input type="text" id="companyName" placeholder="Acme Corporation" required>
-                    </div>
-                    <div>
-                        <label for="companyWebsite" class="block text-sm font-medium text-gray-700 mb-1">Website</label>
-                        <input type="url" id="companyWebsite" placeholder="https://www.acme.com">
-                    </div>
-                    <div>
-                        <label for="companyIndustry" class="block text-sm font-medium text-gray-700 mb-1">Industry</label>
-                        <input type="text" id="companyIndustry" placeholder="Technology">
-                    </div>
-                    <div>
-                        <label for="companyAddress" class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                        <input type="text" id="companyAddress" placeholder="123 Main St">
-                    </div>
-                    <div>
-                        <label for="companyCity" class="block text-sm font-medium text-gray-700 mb-1">City</label>
-                        <input type="text" id="companyCity" placeholder="Anytown">
-                    </div>
-                    <div>
-                        <label for="companyState" class="block text-sm font-medium text-gray-700 mb-1">State</label>
-                        <input type="text" id="companyState" placeholder="CA">
-                    </div>
-                    <div>
-                        <label for="companyZipCode" class="block text-sm font-medium text-gray-700 mb-1">Zip Code</label>
-                        <input type="text" id="companyZipCode" placeholder="90210">
-                    </div>
-                     <div>
-                        <label for="companyPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                        <input type="tel" id="companyPhone" placeholder="(123) 456-7890">
-                    </div>
-                    <div>
-                        <label for="companyStatus" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                        <select id="companyStatus" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            <option value="Lead">Lead</option>
-                            <option value="Client">Client</option>
-                            <option value="Partner">Partner</option>
-                            <option value="Vendor">Vendor</option>
-                            <option value="Other">Other</option>
+                        <label for="customerType" class="block text-sm font-medium text-gray-700 mb-1">Customer Type <span class="text-red-500">*</span></label>
+                        <select id="customerType" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
+                            <option value="">Select Type</option>
+                            <option value="Individual">Individual</option>
+                            <option value="Company">Company</option>
                         </select>
                     </div>
+                    <!-- Conditional fields based on Customer Type -->
+                    <div id="individualFields">
+                        <label for="customerFirstName" class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
+                        <input type="text" id="customerFirstName" placeholder="John">
+                    </div>
+                    <div id="lastNameField">
+                        <label for="customerLastName" class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
+                        <input type="text" id="customerLastName" placeholder="Doe">
+                    </div>
+                    <div id="companyNameField">
+                        <label for="customerCompanyName" class="block text-sm font-medium text-gray-700 mb-1">Company Name <span class="text-red-500">*</span></label>
+                        <input type="text" id="customerCompanyName" placeholder="Acme Corporation">
+                    </div>
+
+                    <!-- Common Fields -->
+                    <div>
+                        <label for="customerEmail" class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
+                        <input type="email" id="customerEmail" placeholder="email@example.com" required>
+                    </div>
+                    <div>
+                        <label for="customerPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone <span class="text-red-500">*</span></label>
+                        <input type="tel" id="customerPhone" placeholder="(123) 456-7890" required>
+                    </div>
+                    <div>
+                        <label for="customerAddress" class="block text-sm font-medium text-gray-700 mb-1">Address <span class="text-red-500">*</span></label>
+                        <input type="text" id="customerAddress" placeholder="123 Main St" required>
+                    </div>
+                    <div>
+                        <label for="customerCity" class="block text-sm font-medium text-gray-700 mb-1">City <span class="text-red-500">*</span></label>
+                        <input type="text" id="customerCity" placeholder="Anytown" required>
+                    </div>
+                    <div>
+                        <label for="customerState" class="block text-sm font-medium text-gray-700 mb-1">State <span class="text-red-500">*</span></label>
+                        <input type="text" id="customerState" placeholder="CA" required>
+                    </div>
+                    <div>
+                        <label for="customerZipCode" class="block text-sm font-medium text-gray-700 mb-1">Zip Code <span class="text-red-500">*</span></label>
+                        <input type="text" id="customerZipCode" placeholder="90210" required>
+                    </div>
+                    <div>
+                        <label for="customerIndustry" class="block text-sm font-medium text-gray-700 mb-1">Industry <span class="text-red-500">*</span></label>
+                        <input type="text" id="customerIndustry" placeholder="Technology" required>
+                    </div>
+                    <div>
+                        <label for="customerSince" class="block text-sm font-medium text-gray-700 mb-1">Customer Since <span class="text-red-500">*</span></label>
+                        <input type="date" id="customerSince" required>
+                    </div>
                     <div class="md:col-span-2">
-                        <label for="companyDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                        <textarea id="companyDescription" rows="3" placeholder="Brief description of the company..."></textarea>
+                        <label for="customerDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea id="customerDescription" rows="3" placeholder="Brief description of the customer..."></textarea>
                     </div>
                     <div class="md:col-span-2 flex justify-end">
-                        <button type="submit" id="submitCompanyButton" class="primary w-full md:w-auto">Add Company</button>
+                        <button type="submit" id="submitCustomerButton" class="primary w-full md:w-auto">Add Customer</button>
                     </div>
                 </form>
             </div>
 
-            <!-- Company List -->
+            <!-- Customer List -->
             <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200">
-                <h3 class="text-2xl font-semibold text-gray-800 mb-6">Your Companies</h3>
-                <div id="companyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-[200px] items-start">
-                    <!-- Companies will be dynamically loaded here -->
-                    <p class="text-gray-500 text-center col-span-full">Loading companies...</p>
+                <h3 class="text-2xl font-semibold text-gray-800 mb-6">Your Customers</h3>
+                <div id="customerList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-[200px] items-start">
+                    <!-- Customers will be dynamically loaded here -->
+                    <p class="text-gray-500 text-center col-span-full">No customers found. Add one above!</p>
                 </div>
             </div>
         </section>
 
 
-        <!-- Events Section (Initially hidden, shown after login or via Events nav) -->
+        <!-- Events Section (Initially hidden) -->
         <section id="events-section" class="container hidden">
             <h2 class="text-3xl font-bold text-gray-800">Events</h2>
             <p class="text-gray-600 mt-4">This section will contain details about your upcoming and past events.</p>
