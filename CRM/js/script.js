@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
 import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 // YOUR Firebase Configuration
 const firebaseConfig = {
@@ -34,6 +34,10 @@ let unsubscribeCustomers = null; // To store the onSnapshot unsubscribe function
 const ADMIN_FIREBASE_UID = 'YOUR_ACTUAL_FIREBASE_UID_FOR_BOSKYJOE_ANONYMOUS_SESSION'; // Placeholder
 let isAdmin = false; // Flag to control admin specific UI/features
 
+// Data for Countries and States (Now fetched from Firestore)
+let appCountries = [];
+let appCountryStateMap = {};
+
 // Get references to DOM elements for Contacts
 const contactForm = document.getElementById('contactForm');
 const contactList = document.getElementById('contactList');
@@ -63,12 +67,12 @@ const customerEmailInput = document.getElementById('customerEmail');
 const customerPhoneInput = document.getElementById('customerPhone');
 
 // Address fields
-const customerCountrySelect = document.getElementById('customerCountry'); // NEW
+const customerCountrySelect = document.getElementById('customerCountry');
 const customerAddressInput = document.getElementById('customerAddress');
 const customerCityInput = document.getElementById('customerCity');
-const customerStateSelect = document.getElementById('customerState'); // Changed to select
+const customerStateSelect = document.getElementById('customerState');
 const customerZipCodeInput = document.getElementById('customerZipCode');
-const addressValidationMessage = document.getElementById('addressValidationMessage'); // NEW
+const addressValidationMessage = document.getElementById('addressValidationMessage');
 
 const individualIndustryGroup = document.getElementById('individualIndustryGroup');
 const customerIndustryInput = document.getElementById('customerIndustryInput');
@@ -83,43 +87,7 @@ const customerList = document.getElementById('customerList'); // Reference to th
 // References to logout buttons and the new nav Google Login button
 const logoutButton = document.getElementById('logoutButton');
 const mobileLogoutButton = document.getElementById('mobileLogoutButton');
-const navGoogleLoginButton = document.getElementById('navGoogleLoginButton'); // Corrected ID reference
-
-
-// Select all main content sections
-const homeSection = document.getElementById('home');
-const crmSection = document.getElementById('crm-section');
-const eventsSection = document.getElementById('events-section');
-const allSections = [homeSection, crmSection, customersSection, eventsSection];
-
-
-// Data for Countries and States (Limited for demonstration)
-const countries = [
-    { name: "United States", code: "US" },
-    { name: "Canada", code: "CA" },
-    { name: "United Kingdom", code: "GB" },
-    { name: "India", code: "IN" },
-    { name: "Australia", code: "AU" },
-    { name: "Germany", code: "DE" },
-    { name: "France", code: "FR" },
-    { name: "Japan", code: "JP" },
-    { name: "Brazil", code: "BR" },
-    { name: "Mexico", code: "MX" }
-];
-
-const countryStateMap = {
-    "US": ["Alabama", "Alaska", "Arizona", "California", "New York", "Texas", "Florida"],
-    "CA": ["Alberta", "British Columbia", "Manitoba", "Ontario", "Quebec"],
-    "GB": ["England", "Scotland", "Wales", "Northern Ireland"],
-    "IN": ["Andhra Pradesh", "Karnataka", "Maharashtra", "Tamil Nadu", "Uttar Pradesh"],
-    "AU": ["New South Wales", "Queensland", "Victoria", "Western Australia"],
-    "DE": ["Baden-Württemberg", "Bavaria", "Berlin", "Hamburg", "North Rhine-Westphalia"],
-    "FR": ["Auvergne-Rhône-Alpes", "Brittany", "Île-de-France", "Occitanie", "Provence-Alpes-Côte d'Azur"],
-    "JP": ["Hokkaido", "Kanto", "Kansai", "Chubu", "Kyushu"],
-    "BR": ["São Paulo", "Rio de Janeiro", "Minas Gerais", "Bahia"],
-    "MX": ["Mexico City", "Jalisco", "Nuevo León", "Veracruz", "State of Mexico"],
-    // Add more countries and their states/provinces as needed
-};
+const navGoogleLoginButton = document.getElementById('navGoogleLoginButton');
 
 
 // Function to show a custom confirmation modal
@@ -205,6 +173,28 @@ async function handleGoogleLogin() {
     }
 }
 
+// Function to fetch country and state data from Firestore
+async function fetchCountryData() {
+    try {
+        const docRef = doc(db, "app_metadata", "countries_states");
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            appCountries = data.countries || [];
+            appCountryStateMap = data.countryStateMap || {};
+            console.log("Country and State data loaded from Firestore.");
+        } else {
+            console.warn("No 'countries_states' document found in 'app_metadata' collection.");
+            showModal("Data Error", "Country and State data could not be loaded. Please ensure 'app_metadata/countries_states' document exists in Firestore.", () => {});
+        }
+    } catch (error) {
+        console.error("Error fetching country data from Firestore:", error);
+        showModal("Data Error", `Failed to load country data: ${error.message}`, () => {});
+    }
+}
+
+
 // Initialize Firebase and set up authentication listener
 async function initializeFirebase() {
     try {
@@ -212,6 +202,10 @@ async function initializeFirebase() {
         getAnalytics(app); // Initialize Analytics
         db = getFirestore(app);
         auth = getAuth(app);
+
+        // Fetch country data first, as it's needed for form population
+        await fetchCountryData();
+        populateCountries(); // Now populate after data is fetched
 
         // Listen for auth state changes
         onAuthStateChanged(auth, async (user) => {
@@ -280,8 +274,6 @@ async function initializeFirebase() {
         mobileLogoutButton.classList.add('hidden');
         navGoogleLoginButton.classList.remove('hidden'); // Ensure Google login button is visible initially to prompt login
 
-
-        populateCountries(); // Call to populate countries dropdown on init
 
     } catch (error) {
         console.error("Error initializing Firebase application:", error);
@@ -442,7 +434,7 @@ function editContact(contact) {
 // Function to populate the country dropdown
 function populateCountries() {
     customerCountrySelect.innerHTML = '<option value="">Select Country</option>'; // Clear existing and add default
-    countries.forEach(country => {
+    appCountries.forEach(country => { // Use appCountries
         const option = document.createElement('option');
         option.value = country.code;
         option.textContent = country.name;
@@ -453,7 +445,7 @@ function populateCountries() {
 // Function to populate the state/province dropdown based on selected country
 function populateStates(countryCode) {
     customerStateSelect.innerHTML = '<option value="">Select State/Province</option>'; // Clear existing and add default
-    const states = countryStateMap[countryCode] || [];
+    const states = appCountryStateMap[countryCode] || []; // Use appCountryStateMap
     states.forEach(state => {
         const option = document.createElement('option');
         option.value = state;
@@ -739,7 +731,7 @@ function editCustomer(customer) {
     populateStates(customer.country); // Populate states based on loaded country
     customerAddressInput.value = customer.address || '';
     customerCityInput.value = customer.city || '';
-    customerStateSelect.value = customer.state || '';
+    customerStateSelect.value = customer.state || ''; // Set state value after population
     customerZipCodeInput.value = customer.zipCode || '';
 
 
