@@ -79,7 +79,7 @@ const customerList = document.getElementById('customerList');
 // References to logout buttons
 const logoutButton = document.getElementById('logoutButton');
 const mobileLogoutButton = document.getElementById('mobileLogoutButton');
-const googleLoginButton = document.getElementById('googleLoginButton'); // NEW: Reference to Google Login Button
+const navGoogleLoginButton = document.getElementById('navGoogleLoginButton'); // UPDATED ID
 
 
 // Select all main content sections
@@ -206,19 +206,14 @@ async function initializeFirebase() {
                     } else {
                         submitContactButton.setAttribute('disabled', 'disabled');
                     }
-
-                    // Show logout buttons and hide Google login button if logged in
-                    logoutButton.classList.remove('hidden');
-                    mobileLogoutButton.classList.remove('hidden');
-                    if (googleLoginButton) {
-                        googleLoginButton.classList.add('hidden');
-                    }
-
                     showSection('home'); // Show initial content (home page)
                 }
+                // Hide Google login button and show logout buttons if logged in
+                navGoogleLoginButton.classList.add('hidden');
+                logoutButton.classList.remove('hidden');
+                mobileLogoutButton.classList.remove('hidden');
             } else {
                 // No user is signed in. Attempt anonymous login if not already authenticated.
-                // If the user logs out, or if this is initial load and no session, attempt anonymous sign-in.
                 if (!isAuthReady) { // Prevent re-triggering if already authenticated or processing
                     try {
                         console.log("No user found, attempting anonymous sign-in...");
@@ -236,17 +231,22 @@ async function initializeFirebase() {
                         isAdmin = false;
                     }
                 }
-                // Hide logout buttons and show Google login button if not logged in
+                // Show Google login button and hide logout buttons if not logged in
+                navGoogleLoginButton.classList.remove('hidden');
                 logoutButton.classList.add('hidden');
                 mobileLogoutButton.classList.add('hidden');
-                if (googleLoginButton) {
-                    googleLoginButton.classList.remove('hidden');
-                }
             }
         });
 
-        // Trigger initial auth state check. If no current user, onAuthStateChanged will attempt anonymous sign-in.
-        // No explicit signInAnonymously call needed here anymore, onAuthStateChanged handles it.
+        // Initially hide all main sections and buttons until auth state is determined
+        allSections.forEach(section => { if(section) section.classList.add('hidden'); });
+        submitContactButton.setAttribute('disabled', 'disabled');
+        submitCustomerButton.setAttribute('disabled', 'disabled');
+        collectionToggleButton.setAttribute('disabled', 'disabled');
+        logoutButton.classList.add('hidden');
+        mobileLogoutButton.classList.add('hidden');
+        navGoogleLoginButton.classList.remove('hidden'); // Ensure Google login button is visible initially to prompt login
+
 
     } catch (error) {
         console.error("Error initializing Firebase application:", error);
@@ -744,9 +744,9 @@ document.querySelectorAll('nav a').forEach(link => {
     }
 });
 
-// Add event listener for the Google Login Button
-if (googleLoginButton) {
-    googleLoginButton.addEventListener('click', handleGoogleLogin);
+// Add event listener for the Google Login Button in the nav bar
+if (navGoogleLoginButton) { // Ensure the element exists before adding listener
+    navGoogleLoginButton.addEventListener('click', handleGoogleLogin);
 }
 
 // Add event listeners for logout buttons
