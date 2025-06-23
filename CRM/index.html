@@ -29,8 +29,8 @@
                 <a href="javascript:void(0)" data-section="crm-section" class="hover:text-blue-200 transition-colors duration-200">Opportunities</a>
                 <a href="javascript:void(0)" data-section="events-section" class="hover:text-blue-200 transition-colors duration-200">Events</a>
 
-                <!-- Admin Dropdown Menu -->
-                <div class="relative group">
+                <!-- Admin Dropdown Menu - Initially Hidden -->
+                <div id="desktopAdminMenu" class="relative group hidden">
                     <button class="hover:text-blue-200 transition-colors duration-200 flex items-center">
                         Admin <i class="fas fa-caret-down ml-1"></i>
                     </button>
@@ -70,10 +70,12 @@
             <a href="javascript:void(0)" data-section="crm-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Opportunities</a>
             <a href="javascript:void(0)" data-section="events-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Events</a>
             <div class="border-t border-blue-600 my-2"></div>
-            <!-- Admin menu for mobile -->
-            <div class="block px-4 py-2 text-sm font-semibold text-blue-200">Admin</div>
-            <a href="javascript:void(0)" data-section="admin-country-mapping-section" class="block pl-8 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Country Mapping</a>
-            <a href="javascript:void(0)" data-section="users-management-section" class="block pl-8 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Users</a>
+            <!-- Admin menu for mobile - Initially Hidden -->
+            <div id="mobileAdminMenu" class="hidden">
+                <div class="block px-4 py-2 text-sm font-semibold text-blue-200">Admin</div>
+                <a href="javascript:void(0)" data-section="admin-country-mapping-section" class="block pl-8 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Country Mapping</a>
+                <a href="javascript:void(0)" data-section="users-management-section" class="block pl-8 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Users</a>
+            </div>
             <button id="mobileLogoutButton" class="block text-left w-full px-4 py-2 text-sm text-red-300 hover:bg-red-600 hover:text-white transition-colors duration-200 hidden">Logout</button>
             <span id="mobileUserIdDisplay" class="block px-4 py-2 text-xs text-gray-400"></span>
         </div>
@@ -87,6 +89,35 @@
                 <p class="text-center text-gray-700">Please log in to access the CRM features.</p>
             </div>
         </section>
+
+        <!-- Bootstrap Admin Login Section (NEW - Initially Hidden) -->
+        <section id="bootstrap-admin-login-section" class="container hidden">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Bootstrap Admin Login</h2>
+            <div class="bg-yellow-50 p-6 rounded-lg shadow-sm border border-yellow-200 max-w-md mx-auto mb-6">
+                <p class="text-center text-yellow-800 font-semibold">
+                    No administrators found in the system. Please use the default bootstrap admin credentials below to set up the first admin user.
+                </p>
+                <p class="text-center text-yellow-700 text-sm mt-2">
+                    Default Email: <strong>admin@shuttersync.com</strong><br>
+                    Default Password: <strong>ShutterSync@123</strong>
+                </p>
+            </div>
+            <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200 max-w-md mx-auto">
+                <form id="bootstrapAdminLoginForm" class="flex flex-col gap-4">
+                    <div>
+                        <label for="bootstrapAdminEmail" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="bootstrapAdminEmail" value="admin@shuttersync.com" readonly class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 text-gray-600">
+                    </div>
+                    <div>
+                        <label for="bootstrapAdminPassword" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="bootstrapAdminPassword" value="ShutterSync@123" readonly class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 text-gray-600">
+                    </div>
+                    <button type="submit" id="bootstrapAdminLoginButton" class="primary w-full">Login as Bootstrap Admin</button>
+                    <p id="bootstrapAdminMessage" class="text-center text-sm mt-2 hidden"></p>
+                </form>
+            </div>
+        </section>
+
 
         <!-- CRM Description Section (Hidden by default, shown after login) -->
         <section id="home" class="container bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-center py-16 mb-8 shadow-xl hidden">
