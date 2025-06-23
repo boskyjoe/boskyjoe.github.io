@@ -21,11 +21,13 @@
             <!-- Desktop Menu Items -->
             <div class="hidden md:flex space-x-6">
                 <a href="javascript:void(0)" data-section="home" class="hover:text-blue-200 transition-colors duration-200">Home</a>
-                <!-- Removed User link -->
                 <a href="javascript:void(0)" data-section="customers-section" class="hover:text-blue-200 transition-colors duration-200">Customers</a>
-                <a href="javascript:void(0)" data-section="admin-country-mapping-section" class="hover:text-blue-200 transition-colors duration-200" id="desktopAdminMenu">Admin</a>
-                <a href="javascript:void(0)" data-section="users-management-section" class="hover:text-blue-200 transition-colors duration-200">Users</a>
                 <a href="javascript:void(0)" data-section="events-section" class="hover:text-blue-200 transition-colors duration-200">Events</a>
+                <!-- Admin menu items with IDs for JS control -->
+                <div id="desktopAdminMenu" class="hidden">
+                    <a href="javascript:void(0)" data-section="admin-country-mapping-section" class="hover:text-blue-200 transition-colors duration-200">Admin</a>
+                    <a href="javascript:void(0)" data-section="users-management-section" class="hover:text-blue-200 transition-colors duration-200">Users</a>
+                </div>
             </div>
 
             <!-- User Status & Logout -->
@@ -48,11 +50,13 @@
         <!-- Mobile Menu (hidden by default) -->
         <div id="mobileMenu" class="hidden md:hidden bg-blue-700 mt-2 rounded-lg py-2 w-full">
             <a href="javascript:void(0)" data-section="home" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Home</a>
-            <!-- Removed User link -->
             <a href="javascript:void(0)" data-section="customers-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Customers</a>
-            <a href="javascript:void(0)" data-section="admin-country-mapping-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200" id="mobileAdminMenu">Admin</a>
-            <a href="javascript:void(0)" data-section="users-management-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Users</a>
             <a href="javascript:void(0)" data-section="events-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Events</a>
+            <!-- Mobile Admin menu items with IDs for JS control -->
+            <div id="mobileAdminMenu" class="hidden">
+                <a href="javascript:void(0)" data-section="admin-country-mapping-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Admin</a>
+                <a href="javascript:void(0)" data-section="users-management-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Users</a>
+            </div>
             <div class="border-t border-blue-600 my-2"></div>
             <button id="mobileLogoutButton" class="block text-left w-full px-4 py-2 text-sm text-red-300 hover:bg-red-600 hover:text-white transition-colors duration-200 hidden">Logout</button>
             <span id="mobileUserIdDisplay" class="block px-4 py-2 text-xs text-gray-400"></span>
