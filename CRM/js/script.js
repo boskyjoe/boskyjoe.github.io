@@ -439,7 +439,7 @@ async function initializeFirebase() {
                     // This block executes on subsequent auth state changes (e.g., logout)
                     authSection.classList.remove('hidden'); // Show Google login after logout
                     bootstrapAdminLoginSection.classList.add('hidden'); // Hide bootstrap login
-                    navGoogleLoginButton.classList.remove('hidden'); // Show Google login button
+                    navGoogleLoginButton.classList.remove('hidden'); // Show Google Login button
                     showSection('auth-section'); // Go to login screen
                 }
             }
@@ -1209,7 +1209,8 @@ mobileLogoutButton.addEventListener('click', async () => {
         await signOut(auth);
         console.log("User signed out.");
         // onAuthStateChanged will handle UI updates
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error signing out:", error);
         showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
     }
