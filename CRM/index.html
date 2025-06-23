@@ -7,7 +7,7 @@
     <!-- External Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts for 'Inter' -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <!-- Font Awesome for Icons (Google icon) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- External CSS file -->
@@ -140,7 +140,6 @@
         <section id="customers-section" class="container hidden">
             <div class="flex flex-col md:flex-row justify-between items-center mb-6">
                 <h2 class="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Customer Management</h2>
-                <!-- Removed companyCollectionToggleButton as per request -->
             </div>
 
             <!-- Add/Edit Customer Form -->
@@ -162,11 +161,11 @@
                         </select>
                     </div>
                     <!-- Conditional fields based on Customer Type -->
-                    <div id="individualFields"> <!-- Removed hidden, will be shown by default -->
+                    <div id="individualFields">
                         <label for="customerFirstName" class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
                         <input type="text" id="customerFirstName" placeholder="John">
                     </div>
-                    <div id="lastNameField"> <!-- Removed hidden, will be shown by default -->
+                    <div id="lastNameField">
                         <label for="customerLastName" class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
                         <input type="text" id="customerLastName" placeholder="Doe">
                     </div>
@@ -201,7 +200,7 @@
                         <input type="text" id="customerZipCode" placeholder="90210" required>
                     </div>
                     <!-- Industry Field based on Type -->
-                    <div id="individualIndustryGroup"> <!-- Removed hidden, will be shown by default -->
+                    <div id="individualIndustryGroup">
                         <label for="customerIndustryInput" class="block text-sm font-medium text-gray-700 mb-1">Industry <span class="text-red-500">*</span></label>
                         <input type="text" id="customerIndustryInput" placeholder="e.g., Photography">
                     </div>
@@ -235,16 +234,27 @@
                 </form>
             </div>
 
-            <!-- Customer List -->
-            <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200">
+            <!-- Customer List - Now a Data Grid View -->
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                 <h3 class="text-2xl font-semibold text-gray-800 mb-6">Your Customers</h3>
-                <div id="customerList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-[200px] items-start">
-                    <!-- Customers will be dynamically loaded here -->
-                    <p class="text-gray-500 text-center col-span-full">No customers found. Add one above!</p>
+                <div id="customerGridContainer" class="overflow-x-auto">
+                    <div class="grid grid-cols-[100px_minmax(150px,_1.5fr)_1.5fr_1fr_1.5fr_1fr_0.8fr_1.5fr] gap-x-4 pb-2 border-b border-gray-300 font-semibold text-gray-700 text-sm md:text-base">
+                        <div class="px-2 py-1">ID</div>
+                        <div class="px-2 py-1">Name/Company</div>
+                        <div class="px-2 py-1">Email</div>
+                        <div class="px-2 py-1 hidden md:block">Phone</div>
+                        <div class="px-2 py-1 hidden lg:block">Address</div>
+                        <div class="px-2 py-1 hidden lg:block">Industry</div>
+                        <div class="px-2 py-1 hidden sm:block">Since</div>
+                        <div class="px-2 py-1 text-right">Actions</div>
+                    </div>
+                    <div id="customerList" class="flex flex-col divide-y divide-gray-200 min-h-[100px]">
+                        <!-- Customer rows will be dynamically loaded here -->
+                        <p class="text-gray-500 text-center col-span-full py-4">No customers found. Add one above!</p>
+                    </div>
                 </div>
             </div>
         </section>
-
 
         <!-- Events Section (Initially hidden) -->
         <section id="events-section" class="container hidden">
