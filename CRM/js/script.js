@@ -22,9 +22,7 @@ let db;
 let auth;
 let currentUserId = null; // Will be set by Firebase Auth onAuthStateChanged
 let isAuthReady = false; // Set to false initially, true when Firebase Auth confirms a user
-let currentCollectionType = 'private'; // 'private' or 'public' for contacts
 const currentCustomerCollectionType = 'public'; // Fixed to public as per requirement
-let unsubscribeContacts = null; // To store the onSnapshot unsubscribe function for contacts
 let unsubscribeCustomers = null; // To store the onSnapshot unsubscribe function for customers
 let unsubscribeUsers = null; // To store the onSnapshot unsubscribe function for users
 
@@ -43,17 +41,6 @@ let appCountryStateMap = {};
 let hasFirestoreAdmins = false; // Will be true if any user in 'users_data' has role 'Admin'
 const BOOTSTRAP_ADMIN_EMAIL = "admin@shuttersync.com";
 const BOOTSTRAP_ADMIN_PASSWORD = "ShutterSync@123";
-
-// Get references to DOM elements for Contacts
-const contactForm = document.getElementById('contactForm');
-const contactList = document.getElementById('contactList');
-const userIdDisplay = document.getElementById('userIdDisplay');
-const collectionToggleButton = document.getElementById('collectionToggleButton');
-const modalContainer = document.getElementById('modalContainer');
-const mobileMenuButton = document.getElementById('mobileMenuButton');
-const mobileMenu = document.getElementById('mobileMenu');
-const mobileUserIdDisplay = document.getElementById('mobileUserIdDisplay');
-const submitContactButton = document.getElementById('submitButton');
 
 // Get references to DOM elements for Customers
 const customersSection = document.getElementById('customers-section');
@@ -107,7 +94,7 @@ const userIdDisplayGroup = document.getElementById('userIdDisplayGroup');
 const userIdDisplayInput = document.getElementById('userIdDisplayInput');
 const userNameInput = document.getElementById('userName');
 const userFirstNameInput = document.getElementById('userFirstName');
-const userLastNameInput = document.getElementById('userLastName');
+const userLastNameInput = document = document.getElementById('userLastName');
 const userEmailInput = document.getElementById('userEmail');
 const userPhoneInput = document.getElementById('userPhone');
 const userRoleSelect = document.getElementById('userRole'); // Changed to select
@@ -137,12 +124,11 @@ const mobileAdminMenu = document.getElementById('mobileAdminMenu');
 const authSection = document.getElementById('auth-section');
 
 
-// Select all main content sections
+// Select all main content sections (Removed crm-section for User/Contact Management)
 const homeSection = document.getElementById('home');
-const crmSection = document.getElementById('crm-section');
 const eventsSection = document.getElementById('events-section');
 // Include new admin sections in allSections
-const allSections = [homeSection, crmSection, customersSection, eventsSection, adminCountryMappingSection, usersManagementSection];
+const allSections = [homeSection, customersSection, eventsSection, adminCountryMappingSection, usersManagementSection];
 
 
 // Function to show a custom confirmation modal
@@ -192,21 +178,12 @@ function showSection(sectionId) {
     mobileMenu.classList.add('hidden'); // Close mobile menu when navigating
 
     // Stop all listeners first to prevent redundant updates
-    if (unsubscribeContacts) { unsubscribeContacts(); }
     if (unsubscribeCustomers) { unsubscribeCustomers(); }
     if (unsubscribeUsers) { unsubscribeUsers(); } // Unsubscribe users listener
 
     // Start specific listener for the active section, but only if auth is ready
     if (isAuthReady) {
-        if (sectionId === 'crm-section') {
-            listenForContacts();
-            // Enable/disable Add Contact button based on admin status
-            if (isAdmin) {
-                submitContactButton.removeAttribute('disabled');
-            } else {
-                submitContactButton.setAttribute('disabled', 'disabled');
-            }
-        } else if (sectionId === 'customers-section') {
+        if (sectionId === 'customers-section') {
             listenForCustomers();
             resetCustomerForm(); // Reset form and apply initial validation state
             // The Add Customer button is always enabled as per previous logic (public data)
@@ -240,9 +217,7 @@ function showSection(sectionId) {
     } else {
         console.warn("Attempted to show section before Firebase Auth is ready:", sectionId);
         // Ensure buttons are disabled if auth is not ready
-        submitContactButton.setAttribute('disabled', 'disabled');
         submitCustomerButton.setAttribute('disabled', 'disabled');
-        collectionToggleButton.setAttribute('disabled', 'disabled');
         uploadAdminDataButton.setAttribute('disabled', 'disabled'); // Disable admin upload button too
         submitUserButton.setAttribute('disabled', 'disabled'); // Disable user submit button too
         // You might want to display a loading or "authentication required" message here
@@ -382,9 +357,7 @@ async function initializeFirebase() {
                     navGoogleLoginButton.classList.add('hidden');
                     desktopAdminMenu.classList.add('hidden');
                     mobileAdminMenu.classList.add('hidden');
-                    submitContactButton.setAttribute('disabled', 'disabled');
-                    submitCustomerButton.setAttribute('disabled', 'disabled'); // Disable for non-admin on contact page
-                    collectionToggleButton.setAttribute('disabled', 'disabled'); // Disable for non-admin on contact page
+                    submitCustomerButton.setAttribute('disabled', 'disabled'); // For Customers
                     uploadAdminDataButton.setAttribute('disabled', 'disabled');
                     submitUserButton.setAttribute('disabled', 'disabled');
 
@@ -397,7 +370,7 @@ async function initializeFirebase() {
                         // User is an admin (either bootstrap or permanent)
                         desktopAdminMenu.classList.remove('hidden');
                         mobileAdminMenu.classList.remove('hidden');
-                        submitContactButton.removeAttribute('disabled');
+                        submitCustomerButton.removeAttribute('disabled');
                         uploadAdminDataButton.removeAttribute('disabled');
                         submitUserButton.removeAttribute('disabled');
                         showSection('home'); // Admin goes to home
@@ -435,9 +408,7 @@ async function initializeFirebase() {
                 // Always hide admin menus and disable buttons when not logged in
                 desktopAdminMenu.classList.add('hidden');
                 mobileAdminMenu.classList.add('hidden');
-                submitContactButton.setAttribute('disabled', 'disabled');
                 submitCustomerButton.setAttribute('disabled', 'disabled');
-                collectionToggleButton.setAttribute('disabled', 'disabled');
                 uploadAdminDataButton.setAttribute('disabled', 'disabled');
                 submitUserButton.setAttribute('disabled', 'disabled');
                 logoutButton.classList.add('hidden');
@@ -477,7 +448,7 @@ async function initializeFirebase() {
 }
 
 // Determine the Firestore collection path based on type and user ID
-function getCollectionPath(type, dataArea = 'contacts') {
+function getCollectionPath(type, dataArea = 'customers') { // dataArea default changed to 'customers'
     if (!auth.currentUser) { // Use auth.currentUser to determine actual user state
         // If no user is logged in, use a random ID for "anonymous" private paths for non-persistent data
         // This is primarily for demonstrating UI, not for secure multi-user private data storage.
@@ -491,141 +462,6 @@ function getCollectionPath(type, dataArea = 'contacts') {
     } else { // 'private'
         return `artifacts/${appId}/users/${userId}/${dataArea}`;
     }
-}
-
-/* --- CONTACTS CRUD OPERATIONS --- */
-
-// Add or update a contact in Firestore
-async function saveContact(contactData, contactId = null) {
-    if (!isAuthReady || !currentUserId) {
-        console.error("User not authenticated or session not established. Cannot save contact.");
-        showModal("Error", "Could not save contact. Authentication required.", () => {});
-        return;
-    }
-    // Client-side admin check for adding contacts
-    if (!isAdmin) {
-        showModal("Permission Denied", "Only administrators can add or modify employee contacts.", () => {});
-        return;
-    }
-
-    const collectionPath = getCollectionPath(currentCollectionType, 'contacts'); // Specify dataArea
-    try {
-        if (contactId) {
-            const contactDocRef = doc(db, collectionPath, contactId);
-            await updateDoc(contactDocRef, contactData);
-            console.log("Contact updated:", contactId);
-        } else {
-            await addDoc(collection(db, collectionPath), contactData);
-            console.log("Contact added.");
-        }
-        contactForm.reset();
-        contactForm.dataset.editingId = '';
-        document.getElementById('contactFormTitle').textContent = 'Add New Contact';
-        submitContactButton.textContent = 'Add Contact';
-    } catch (error) {
-        console.error("Error saving contact:", error);
-        showModal("Error", "Failed to save contact. Please try again. " + error.message, () => {});
-    }
-}
-
-// Delete a contact from Firestore
-async function deleteContact(contactId) {
-    if (!isAuthReady || !currentUserId) {
-        console.error("User not authenticated or session not established. Cannot delete contact.");
-        showModal("Error", "Could not delete contact. Authentication required.", () => {});
-        return;
-    }
-    // Client-side admin check for deleting contacts
-    if (!isAdmin) {
-        showModal("Permission Denied", "Only administrators can delete employee contacts.", () => {});
-        return;
-    }
-
-    const collectionPath = getCollectionPath(currentCollectionType, 'contacts'); // Specify dataArea
-    showModal(
-        "Confirm Deletion",
-        "Are you sure you want to delete this contact? This action cannot be undone.",
-        async () => {
-            try {
-                await deleteDoc(doc(db, collectionPath, contactId));
-                console.log("Contact deleted:", contactId);
-            } catch (error) {
-                console.error("Error deleting contact:", error);
-                showModal("Error", "Failed to delete contact. Please try again. " + error.message, () => {});
-            }
-        }
-    );
-}
-
-// Listen for real-time updates to contacts
-function listenForContacts() {
-    if (!isAuthReady || !currentUserId) {
-        console.error("User not authenticated or session not established. Cannot listen for contacts.");
-        contactList.innerHTML = '<p class="text-gray-500 text-center">Authentication required to load contacts.</p>';
-        return;
-    }
-
-    if (unsubscribeContacts) {
-        unsubscribeContacts(); // Unsubscribe from previous listener
-    }
-
-    const collectionPath = getCollectionPath(currentCollectionType, 'contacts'); // Specify dataArea
-    const q = collection(db, collectionPath);
-
-    unsubscribeContacts = onSnapshot(q, (snapshot) => {
-        contactList.innerHTML = '';
-        if (snapshot.empty) {
-            contactList.innerHTML = '<p class="text-gray-500 text-center">No contacts found in this collection.</p>';
-            return;
-        }
-        snapshot.forEach((doc) => {
-            const contact = { id: doc.id, ...doc.data() };
-            displayContact(contact);
-        });
-    }, (error) => {
-        console.error("Error listening to contacts:", error);
-        contactList.innerHTML = `<p class="text-red-500 text-center">Error loading contacts: ${error.message}</p>`;
-    });
-}
-
-// Display a single contact in the UI
-function displayContact(contact) {
-    const contactCard = document.createElement('div');
-    contactCard.className = 'contact-card';
-    contactCard.dataset.id = contact.id;
-    contactCard.innerHTML = `
-        <h3 class="text-lg font-semibold text-gray-900">${contact.name || 'N/A'}</h3>
-        <p class="text-sm text-gray-600">Email: ${contact.email || 'N/A'}</p>
-        <p class="text-sm text-gray-600">Phone: ${contact.phone || 'N/A'}</p>
-        <p class="text-sm text-gray-600">Notes: ${contact.notes || 'N/A'}</p>
-        <div class="actions">
-            <button class="edit-btn secondary" data-id="${contact.id}" ${isAdmin ? '' : 'disabled'}>Edit</button>
-            <button class="delete-btn danger" data-id="${contact.id}" ${isAdmin ? '' : 'disabled'}>Delete</button>
-        </div>
-    `;
-    contactList.appendChild(contactCard);
-
-    // Add event listeners only if the buttons are enabled
-    if (isAdmin) {
-        contactCard.querySelector('.edit-btn').addEventListener('click', () => editContact(contact));
-        contactCard.querySelector('.delete-btn').addEventListener('click', () => deleteContact(contact.id));
-    }
-}
-
-// Populate form for editing a contact
-function editContact(contact) {
-    if (!isAdmin) {
-        showModal("Permission Denied", "Only administrators can edit employee contacts.", () => {});
-        return;
-    }
-    document.getElementById('contactName').value = contact.name || '';
-    document.getElementById('contactEmail').value = contact.email || '';
-    document.getElementById('contactPhone').value = contact.phone || '';
-    document.getElementById('contactNotes').value = contact.notes || '';
-    contactForm.dataset.editingId = contact.id;
-    document.getElementById('contactFormTitle').textContent = 'Add New Contact';
-    submitContactButton.textContent = 'Update Contact';
-    contactForm.scrollIntoView({ behavior: 'smooth' });
 }
 
 /* --- CUSTOMERS CRUD OPERATIONS (UPDATED) --- */
@@ -680,7 +516,8 @@ function applyCustomerTypeValidation() {
 
     // Hide all conditional groups first
     individualFieldsDiv.classList.add('hidden');
-    lastNameField.classList.add('hidden');
+    // Renamed from lastNameField to customerLastNameInput for consistency
+    customerLastNameInput.parentElement.classList.add('hidden');
     companyNameFieldDiv.classList.add('hidden');
     individualIndustryGroup.classList.add('hidden');
     companyIndustryGroup.classList.add('hidden');
@@ -694,7 +531,7 @@ function applyCustomerTypeValidation() {
 
     if (customerType === 'Individual') {
         individualFieldsDiv.classList.remove('hidden');
-        lastNameField.classList.remove('hidden');
+        customerLastNameInput.parentElement.classList.remove('hidden'); // Show last name field
         customerFirstNameInput.setAttribute('required', 'required');
         customerLastNameInput.setAttribute('required', 'required');
 
@@ -1141,26 +978,6 @@ function resetUserForm() {
 
 // --- Event Listeners ---
 
-// Contact Form Event Listener
-contactForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const contactData = {
-        name: document.getElementById('contactName').value,
-        email: document.getElementById('contactEmail').value,
-        phone: document.getElementById('contactPhone').value,
-        notes: document.getElementById('contactNotes').value
-    };
-    const editingId = contactForm.dataset.editingId;
-    saveContact(contactData, editingId || null);
-});
-
-// Contact Collection Toggle Button Event Listener
-collectionToggleButton.addEventListener('click', () => {
-    currentCollectionType = currentCollectionType === 'private' ? 'public' : 'private';
-    collectionToggleButton.textContent = `Switch to ${currentCollectionType === 'private' ? 'Public' : 'Private'} Contacts`;
-    listenForContacts(); // Reload contacts based on new collection type
-});
-
 // Customer Form Event Listener (Renamed and Updated for validation)
 customerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1170,7 +987,7 @@ customerForm.addEventListener('submit', async (e) => {
         customerType: customerTypeSelect.value.trim(),
         firstName: customerFirstNameInput.value.trim(),
         lastName: customerLastNameInput.value.trim(),
-        companyName: customerCompanyNameInput.trim(),
+        companyName: customerCompanyNameInput.value.trim(), // Use .value.trim() for input elements
         email: customerEmailInput.value.trim(),
         phone: customerPhoneInput.value.trim(),
         // Address fields are now explicitly collected from their respective inputs
