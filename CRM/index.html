@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts for 'Inter' -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght=400;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons (Google icon) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- External CSS file -->
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -28,8 +30,12 @@
                 <a href="javascript:void(0)" data-section="events-section" class="hover:text-blue-200 transition-colors duration-200">Events</a>
             </div>
 
-            <!-- User Status & Logout -->
+            <!-- User Status & Login/Logout Buttons -->
             <div class="flex items-center space-x-3">
+                <!-- Google Login Button in Nav Bar -->
+                <button id="navGoogleLoginButton" class="bg-blue-500 hover:bg-blue-700 text-white p-2 rounded-full shadow-md text-sm hidden" title="Login with Google">
+                    <i class="fab fa-google"></i> <span class="hidden md:inline">Login</span>
+                </button>
                 <span id="userIdDisplay" class="text-sm text-gray-200 hidden md:block"></span>
                 <button id="logoutButton" class="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-md text-sm shadow-md hidden">Logout</button>
             </div>
@@ -53,66 +59,21 @@
             <a href="javascript:void(0)" data-section="crm-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Opportunities</a>
             <a href="javascript:void(0)" data-section="events-section" class="block px-4 py-2 text-sm hover:bg-blue-600 transition-colors duration-200">Events</a>
             <div class="border-t border-blue-600 my-2"></div>
+            <!-- Mobile Google Login Button (redundant if main nav button is responsive) -->
+            <!-- For simplicity, we'll hide mobile specific login button and rely on navGoogleLoginButton responsiveness -->
             <button id="mobileLogoutButton" class="block text-left w-full px-4 py-2 text-sm text-red-300 hover:bg-red-600 hover:text-white transition-colors duration-200 hidden">Logout</button>
             <span id="mobileUserIdDisplay" class="block px-4 py-2 text-xs text-gray-400"></span>
         </div>
     </nav>
 
     <main class="w-full flex flex-col items-center p-5 max-w-7xl">
-        <!-- Login/Registration Section (Initially visible for login interaction) -->
-        <section id="auth-section" class="container"> <!-- Removed 'hidden' class here -->
+        <!-- Login/Registration Section (Now hidden by default and simplified) -->
+        <section id="auth-section" class="container hidden"> <!-- Added 'hidden' class here -->
             <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Welcome to ShutterSync</h2>
             <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200 max-w-md mx-auto">
-                <h3 id="authFormTitle" class="text-2xl font-semibold text-gray-800 mb-6 text-center">Login</h3>
-                <form id="authForm" class="grid grid-cols-1 gap-6">
-                    <!-- Common Fields for Login and Register -->
-                    <div>
-                        <label for="authEmail" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input type="email" id="authEmail" placeholder="your@example.com" required>
-                    </div>
-                    <div>
-                        <label for="authPassword" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                        <input type="password" id="authPassword" placeholder="********" required>
-                    </div>
-
-                    <!-- Additional Fields for Registration Mode Only -->
-                    <div id="registerFields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label for="authUsername" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                            <input type="text" id="authUsername" placeholder="your_username">
-                        </div>
-                        <div>
-                            <label for="authFirstName" class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                            <input type="text" id="authFirstName" placeholder="John">
-                        </div>
-                        <div>
-                            <label for="authLastName" class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                            <input type="text" id="authLastName" placeholder="Doe">
-                        </div>
-                        <div>
-                            <label for="authPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                            <input type="tel" id="authPhone" placeholder="(123) 456-7890">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label for="authRole" class="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                            <input type="text" id="authRole" placeholder="e.g., Volunteer Coordinator">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label for="authSkills" class="block text-sm font-medium text-gray-700 mb-1">Skills (comma-separated)</label>
-                            <textarea id="authSkills" rows="3" placeholder="e.g., Photography, Event Planning, Marketing"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-between items-center mt-2">
-                        <button type="submit" id="authSubmitButton" class="primary flex-grow mr-2">Login</button>
-                        <button type="button" id="toggleAuthModeButton" class="secondary text-sm">Register</button>
-                    </div>
-                    <p id="authMessage" class="text-center text-red-500 mt-4"></p>
-                </form>
-                <!-- NEW: Google Login Button -->
-                <button id="googleLoginButton" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md shadow-md mt-4">
-                    Login with Google
-                </button>
+                <p class="text-center text-gray-700">Please log in to access the CRM features.</p>
+                <!-- Removed email/password form -->
+                <!-- The Google Login button is now in the nav bar -->
             </div>
         </section>
 
