@@ -94,7 +94,7 @@ const userIdDisplayGroup = document.getElementById('userIdDisplayGroup');
 const userIdDisplayInput = document.getElementById('userIdDisplayInput');
 const userNameInput = document.getElementById('userName');
 const userFirstNameInput = document.getElementById('userFirstName');
-const userLastNameInput = document = document.getElementById('userLastName');
+const userLastNameInput = document.getElementById('userLastName');
 const userEmailInput = document.getElementById('userEmail');
 const userPhoneInput = document.getElementById('userPhone');
 const userRoleSelect = document.getElementById('userRole'); // Changed to select
@@ -124,11 +124,11 @@ const mobileAdminMenu = document.getElementById('mobileAdminMenu');
 const authSection = document.getElementById('auth-section');
 
 
-// Select all main content sections (Removed crm-section for User/Contact Management)
+// Select all main content sections (crm-section removed, customers-section used instead for general management)
 const homeSection = document.getElementById('home');
 const eventsSection = document.getElementById('events-section');
 // Include new admin sections in allSections
-const allSections = [homeSection, customersSection, eventsSection, adminCountryMappingSection, usersManagementSection];
+const allSections = [homeSection, customersSection, eventsSection, adminCountryMappingSection, usersManagementSection, authSection, bootstrapAdminLoginSection];
 
 
 // Function to show a custom confirmation modal
@@ -159,17 +159,68 @@ function showModal(title, message, onConfirm, onCancel) {
 }
 
 // Function to show a specific section and hide others
-function showSection(sectionId) {
+async function showSection(sectionId, forceLoginCheck = false) {
+    // If attempting to access an admin section
+    if (['admin-country-mapping-section', 'users-management-section'].includes(sectionId)) {
+        if (!isAuthReady) {
+            console.log("Auth not ready, waiting for authentication before checking admin sections.");
+            // Wait for auth to be ready, then attempt to show section again
+            // This case is primarily handled by onAuthStateChanged in initializeFirebase
+            return;
+        }
+
+        if (!currentUserId || !isAdmin) { // Not logged in or not admin
+            if (!currentUserId) { // Not logged in at all
+                console.log(`Access to ${sectionId} denied. No user logged in.`);
+                await checkIfAnyFirestoreAdminExists(); // Re-check if this is a bootstrap scenario
+                if (!hasFirestoreAdmins) {
+                    bootstrapAdminLoginSection.classList.remove('hidden');
+                    authSection.classList.add('hidden');
+                    navGoogleLoginButton.classList.add('hidden');
+                    bootstrapAdminMessage.textContent = 'Please use the default admin login to set up the first administrator to access admin features.';
+                    bootstrapAdminMessage.classList.remove('hidden');
+                    // Hide all other sections and explicitly show bootstrap login
+                    allSections.forEach(section => {
+                        if (section.id !== 'bootstrap-admin-login-section') {
+                            section.classList.add('hidden');
+                        }
+                    });
+                    bootstrapAdminLoginSection.classList.remove('hidden');
+                    return; // Stop execution, show bootstrap login
+                } else {
+                    // Regular user needs to log in, or current user isn't admin
+                    showModal("Access Denied", "You must be logged in as an administrator to access this section.", () => {
+                        showSection('home'); // Redirect non-admins to home
+                    });
+                    // Hide all sections except for home/auth for clarity
+                    allSections.forEach(section => {
+                        if (section.id !== 'auth-section' && section.id !== 'home') {
+                            section.classList.add('hidden');
+                        }
+                    });
+                    authSection.classList.remove('hidden'); // Show standard login
+                    bootstrapAdminLoginSection.classList.add('hidden'); // Ensure bootstrap is hidden
+                    navGoogleLoginButton.classList.remove('hidden'); // Show Google Login button
+                    return; // Stop execution
+                }
+            } else if (!isAdmin) { // Logged in but not admin
+                console.log(`Access to ${sectionId} denied. User is not an admin.`);
+                showModal("Access Denied", "You do not have permission to access this section. Administrator privileges required.", () => {
+                    showSection('home'); // Redirect non-admins to home
+                });
+                return; // Stop execution
+            }
+        }
+    }
+
+    // Hide all sections first
     allSections.forEach(section => {
         if (section) {
             section.classList.add('hidden');
         }
     });
-    // Explicitly hide auth-section and bootstrap-admin-login-section by default
-    if (authSection) authSection.classList.add('hidden');
-    if (bootstrapAdminLoginSection) bootstrapAdminLoginSection.classList.add('hidden');
 
-
+    // Then show the target section
     const targetSection = document.getElementById(sectionId);
     if (targetSection) {
         targetSection.classList.remove('hidden');
@@ -179,38 +230,27 @@ function showSection(sectionId) {
 
     // Stop all listeners first to prevent redundant updates
     if (unsubscribeCustomers) { unsubscribeCustomers(); }
-    if (unsubscribeUsers) { unsubscribeUsers(); } // Unsubscribe users listener
+    if (unsubscribeUsers) { unsubscribeUsers(); }
 
     // Start specific listener for the active section, but only if auth is ready
-    if (isAuthReady) {
+    if (isAuthReady) { // Ensure auth is ready before starting listeners
         if (sectionId === 'customers-section') {
             listenForCustomers();
             resetCustomerForm(); // Reset form and apply initial validation state
-            // The Add Customer button is always enabled as per previous logic (public data)
-            submitCustomerButton.removeAttribute('disabled');
+            submitCustomerButton.removeAttribute('disabled'); // Customers form always enabled for authenticated users
         } else if (sectionId === 'admin-country-mapping-section') {
-            // Only allow admins to view/use this section
-            if (isAdmin) {
+            if (isAdmin) { // Double check admin status for safety
                 loadAdminCountryData(); // Load existing data into admin textareas
                 uploadAdminDataButton.removeAttribute('disabled');
             } else {
-                showModal("Access Denied", "You do not have permission to access the Admin Country Mapping section.", () => {
-                    showSection('home'); // Redirect non-admins to home
-                });
-                // Ensure section remains hidden and button disabled for non-admins
-                adminCountryMappingSection.classList.add('hidden');
                 uploadAdminDataButton.setAttribute('disabled', 'disabled');
             }
-        } else if (sectionId === 'users-management-section') { // NEW: Users management section
-            if (isAdmin) {
+        } else if (sectionId === 'users-management-section') {
+            if (isAdmin) { // Double check admin status for safety
                 listenForUsers(); // Start listening for users data
                 resetUserForm(); // Reset user form
                 submitUserButton.removeAttribute('disabled'); // Enable user form button for admin
             } else {
-                showModal("Access Denied", "You do not have permission to access the User Management section.", () => {
-                    showSection('home'); // Redirect non-admins to home
-                });
-                usersManagementSection.classList.add('hidden');
                 submitUserButton.setAttribute('disabled', 'disabled');
             }
         }
@@ -218,11 +258,11 @@ function showSection(sectionId) {
         console.warn("Attempted to show section before Firebase Auth is ready:", sectionId);
         // Ensure buttons are disabled if auth is not ready
         submitCustomerButton.setAttribute('disabled', 'disabled');
-        uploadAdminDataButton.setAttribute('disabled', 'disabled'); // Disable admin upload button too
-        submitUserButton.setAttribute('disabled', 'disabled'); // Disable user submit button too
-        // You might want to display a loading or "authentication required" message here
+        uploadAdminDataButton.setAttribute('disabled', 'disabled');
+        submitUserButton.setAttribute('disabled', 'disabled');
     }
 }
+
 
 // Handle Google Login
 async function handleGoogleLogin() {
@@ -315,6 +355,7 @@ async function initializeFirebase() {
 
         // Listen for auth state changes
         onAuthStateChanged(auth, async (user) => {
+            isAuthReady = true; // Mark auth as ready as soon as state is known
             if (user) {
                 currentUserId = user.uid;
                 userIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
@@ -346,97 +387,62 @@ async function initializeFirebase() {
                     }
                 }
 
-                if (!isAuthReady) { // Only run this block once after initial auth
-                    isAuthReady = true;
-                    await fetchCountryData(); // Fetch country data for forms
-                    populateCountries(); // Populate customer country dropdown
+                // UI updates based on authentication status and role
+                navGoogleLoginButton.classList.add('hidden'); // Hide Google login button if logged in
+                logoutButton.classList.remove('hidden');
+                mobileLogoutButton.classList.remove('hidden');
 
-                    // Default UI state: hide all login options, hide admin menus, disable buttons
-                    authSection.classList.add('hidden');
-                    bootstrapAdminLoginSection.classList.add('hidden');
-                    navGoogleLoginButton.classList.add('hidden');
+                if (isAdmin) {
+                    desktopAdminMenu.classList.remove('hidden');
+                    mobileAdminMenu.classList.remove('hidden');
+                    // No need to disable submit buttons here, showSection handles it
+                } else {
                     desktopAdminMenu.classList.add('hidden');
                     mobileAdminMenu.classList.add('hidden');
-                    submitCustomerButton.setAttribute('disabled', 'disabled'); // For Customers
-                    uploadAdminDataButton.setAttribute('disabled', 'disabled');
-                    submitUserButton.setAttribute('disabled', 'disabled');
-
-                    // If a user is logged in, show logout buttons
-                    logoutButton.classList.remove('hidden');
-                    mobileLogoutButton.classList.remove('hidden');
-
-
-                    if (isAdmin) {
-                        // User is an admin (either bootstrap or permanent)
-                        desktopAdminMenu.classList.remove('hidden');
-                        mobileAdminMenu.classList.remove('hidden');
-                        submitCustomerButton.removeAttribute('disabled');
-                        uploadAdminDataButton.removeAttribute('disabled');
-                        submitUserButton.removeAttribute('disabled');
-                        showSection('home'); // Admin goes to home
-                        if (isCurrentSessionBootstrapAdmin) {
-                            showModal("Bootstrap Admin", "You are logged in as the bootstrap admin. Please navigate to 'Admin > Users' to create your permanent administrator account.", () => {
-                                showSection('users-management-section');
-                            });
-                        }
-                    } else {
-                        // User is logged in, but not an admin.
-                        // Now, check if we are in the initial bootstrap phase (no permanent admins)
-                        if (!hasFirestoreAdmins) {
-                            console.log("Logged in as non-admin, no permanent admins found. Redirecting to bootstrap login.");
-                            bootstrapAdminLoginSection.classList.remove('hidden');
-                            bootstrapAdminMessage.textContent = 'Please use the default admin login to set up the first administrator.';
-                            bootstrapAdminMessage.classList.remove('hidden');
-                            showSection('auth-section'); // Show the auth section which now contains bootstrap login
-                        } else {
-                            // User is logged in, not an admin, AND permanent admins exist.
-                            // This is a regular non-admin user. Show home with limited permissions.
-                            showSection('home');
-                            // navGoogleLoginButton.classList.add('hidden'); // Ensure Google login button is hidden if already logged in
-                        }
-                    }
+                    // No need to disable submit buttons here, showSection handles it
                 }
 
-                // Always ensure standard login button is hidden when a user is signed in
-                navGoogleLoginButton.classList.add('hidden');
+                // Fetch country data and populate dropdowns regardless of admin status for customer form
+                await fetchCountryData();
+                populateCountries();
 
+                // If coming from a login attempt, or initial load, redirect to home or admin setup
+                if (isCurrentSessionBootstrapAdmin) {
+                    showSection('users-management-section'); // Redirect to user management for initial admin setup
+                    showModal("Bootstrap Admin", "You are logged in as the bootstrap admin. Please navigate to 'Admin > Users' to create your permanent administrator account.", () => {});
+                } else {
+                    // If regular login or non-admin, go to home
+                    showSection('home');
+                }
 
             } else { // No user is signed in.
                 currentUserId = null;
                 isAdmin = false; // Ensure isAdmin is false when no user
 
-                // Always hide admin menus and disable buttons when not logged in
+                // Hide admin menus and logout buttons
                 desktopAdminMenu.classList.add('hidden');
                 mobileAdminMenu.classList.add('hidden');
-                submitCustomerButton.setAttribute('disabled', 'disabled');
-                uploadAdminDataButton.setAttribute('disabled', 'disabled');
-                submitUserButton.setAttribute('disabled', 'disabled');
                 logoutButton.classList.add('hidden');
                 mobileLogoutButton.classList.add('hidden');
 
+                // Disable all form submit buttons by default when not logged in
+                submitCustomerButton.setAttribute('disabled', 'disabled');
+                uploadAdminDataButton.setAttribute('disabled', 'disabled');
+                submitUserButton.setAttribute('disabled', 'disabled');
 
-                if (!isAuthReady) { // First load, or after explicit logout
-                    isAuthReady = true; // Mark as ready after initial auth check
-
-                    // Decide which login section to show based on admin existence
-                    if (!hasFirestoreAdmins) {
-                        bootstrapAdminLoginSection.classList.remove('hidden');
-                        authSection.classList.add('hidden'); // Hide Google login
-                        navGoogleLoginButton.classList.add('hidden'); // Ensure Google login button is hidden
-                        bootstrapAdminMessage.textContent = 'Please use the default admin login to set up the first administrator.';
-                        bootstrapAdminMessage.classList.remove('hidden');
-                    } else {
-                        authSection.classList.remove('hidden'); // Show Google login
-                        bootstrapAdminLoginSection.classList.add('hidden'); // Hide bootstrap login
-                        navGoogleLoginButton.classList.remove('hidden'); // Ensure Google login button is visible
-                    }
-                    showSection('auth-section'); // Show the appropriate login section
+                // Determine which login screen to show
+                if (!hasFirestoreAdmins) {
+                    bootstrapAdminLoginSection.classList.remove('hidden');
+                    authSection.classList.add('hidden');
+                    navGoogleLoginButton.classList.add('hidden');
+                    bootstrapAdminMessage.textContent = 'Please use the default admin login to set up the first administrator.';
+                    bootstrapAdminMessage.classList.remove('hidden');
+                    showSection('bootstrap-admin-login-section'); // Explicitly show this section
                 } else {
-                    // This block executes on subsequent auth state changes (e.g., logout)
-                    authSection.classList.remove('hidden'); // Show Google login after logout
-                    bootstrapAdminLoginSection.classList.add('hidden'); // Hide bootstrap login
+                    authSection.classList.remove('hidden');
+                    bootstrapAdminLoginSection.classList.add('hidden');
                     navGoogleLoginButton.classList.remove('hidden'); // Show Google Login button
-                    showSection('auth-section'); // Go to login screen
+                    showSection('auth-section'); // Explicitly show this section
                 }
             }
         });
@@ -448,13 +454,16 @@ async function initializeFirebase() {
 }
 
 // Determine the Firestore collection path based on type and user ID
-function getCollectionPath(type, dataArea = 'customers') { // dataArea default changed to 'customers'
+function getCollectionPath(type, dataArea = 'customers') {
     if (!auth.currentUser) { // Use auth.currentUser to determine actual user state
-        // If no user is logged in, use a random ID for "anonymous" private paths for non-persistent data
-        // This is primarily for demonstrating UI, not for secure multi-user private data storage.
-        // For actual private data, authentication is always required.
-        console.warn("No authenticated user, using a random ID for collection path. Data may not persist.");
-        return `artifacts/${appId}/users/${crypto.randomUUID()}/${dataArea}`;
+        console.warn("No authenticated user, cannot determine collection path securely.");
+        // For public data, still provide the public path even if not logged in
+        if (type === 'public') {
+            return `artifacts/${appId}/public/data/${dataArea}`;
+        }
+        // For private data, if no user is authenticated, it's an error scenario for data operations
+        showModal("Authentication Error", "You must be logged in to access private data.", () => {});
+        return null; // Return null to indicate path is not available
     }
     const userId = auth.currentUser.uid;
     if (type === 'public') {
@@ -463,6 +472,7 @@ function getCollectionPath(type, dataArea = 'customers') { // dataArea default c
         return `artifacts/${appId}/users/${userId}/${dataArea}`;
     }
 }
+
 
 /* --- CUSTOMERS CRUD OPERATIONS (UPDATED) --- */
 
@@ -516,8 +526,7 @@ function applyCustomerTypeValidation() {
 
     // Hide all conditional groups first
     individualFieldsDiv.classList.add('hidden');
-    // Renamed from lastNameField to customerLastNameInput for consistency
-    customerLastNameInput.parentElement.classList.add('hidden');
+    lastNameField.classList.add('hidden');
     companyNameFieldDiv.classList.add('hidden');
     individualIndustryGroup.classList.add('hidden');
     companyIndustryGroup.classList.add('hidden');
@@ -531,7 +540,7 @@ function applyCustomerTypeValidation() {
 
     if (customerType === 'Individual') {
         individualFieldsDiv.classList.remove('hidden');
-        customerLastNameInput.parentElement.classList.remove('hidden'); // Show last name field
+        lastNameField.classList.remove('hidden');
         customerFirstNameInput.setAttribute('required', 'required');
         customerLastNameInput.setAttribute('required', 'required');
 
@@ -612,6 +621,8 @@ async function saveCustomer(customerData, existingCustomerDocId = null) {
 
     // Always use the public collection for customers
     const collectionPath = getCollectionPath(currentCustomerCollectionType, 'customers'); // dataArea is 'customers'
+    if (!collectionPath) return; // Exit if path is not available due to auth error
+
 
     try {
         if (existingCustomerDocId) {
@@ -659,6 +670,8 @@ async function deleteCustomer(firestoreDocId) {
 
     // Always use the public collection for customers
     const collectionPath = getCollectionPath(currentCustomerCollectionType, 'customers'); // dataArea is 'customers'
+    if (!collectionPath) return; // Exit if path is not available due to auth error
+
     showModal(
         "Confirm Deletion",
         "Are you sure you want to delete this customer? This action cannot be undone.",
@@ -676,18 +689,20 @@ async function deleteCustomer(firestoreDocId) {
 
 // Listen for real-time updates to customers
 function listenForCustomers() {
+    if (unsubscribeCustomers) {
+        unsubscribeCustomers(); // Unsubscribe from previous listener
+    }
+
     if (!isAuthReady || !currentUserId) {
         console.error("User not authenticated or session not established. Cannot listen for customers.");
         customerList.innerHTML = '<p class="text-gray-500 text-center col-span-full">Authentication required to load customers.</p>';
         return;
     }
 
-    if (unsubscribeCustomers) {
-        unsubscribeCustomers(); // Unsubscribe from previous listener
-    }
-
     // Always listen to the public collection for customers
     const collectionPath = getCollectionPath(currentCustomerCollectionType, 'customers'); // dataArea is 'customers'
+    if (!collectionPath) return; // Exit if path is not available due to auth error
+
     const q = collection(db, collectionPath);
 
     unsubscribeCustomers = onSnapshot(q, (snapshot) => {
@@ -987,7 +1002,7 @@ customerForm.addEventListener('submit', async (e) => {
         customerType: customerTypeSelect.value.trim(),
         firstName: customerFirstNameInput.value.trim(),
         lastName: customerLastNameInput.value.trim(),
-        companyName: customerCompanyNameInput.value.trim(), // Use .value.trim() for input elements
+        companyName: customerCompanyNameInput.value.trim(),
         email: customerEmailInput.value.trim(),
         phone: customerPhoneInput.value.trim(),
         // Address fields are now explicitly collected from their respective inputs
@@ -1024,7 +1039,8 @@ document.querySelectorAll('nav a').forEach(link => {
     if (link.dataset.section) {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            showSection(link.dataset.section);
+            // Force a login check for admin sections
+            showSection(link.dataset.section, ['admin-country-mapping-section', 'users-management-section'].includes(link.dataset.section));
         });
     }
 });
