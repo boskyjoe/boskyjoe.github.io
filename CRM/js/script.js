@@ -74,12 +74,12 @@ const customerIndustrySelect = document.getElementById('customerIndustrySelect')
 const customerSinceInput = document.getElementById('customerSince');
 const customerDescriptionInput = document.getElementById('customerDescription');
 const submitCustomerButton = document.getElementById('submitCustomerButton');
-const customerList = document.getElementById('customerList');
+const customerList = document.getElementById('customerList'); // Reference to the div for customer rows
 
-// References to logout buttons
+// References to logout buttons and the new nav Google Login button
 const logoutButton = document.getElementById('logoutButton');
 const mobileLogoutButton = document.getElementById('mobileLogoutButton');
-const navGoogleLoginButton = document.getElementById('navGoogleLoginButton'); // UPDATED ID
+const navGoogleLoginButton = document.getElementById('navGoogleLoginButton'); // Corrected ID reference
 
 
 // Select all main content sections
@@ -504,9 +504,14 @@ async function saveCustomer(customerData, existingCustomerDocId = null) {
             await updateDoc(customerDocRef, customerData);
             console.log("Customer updated:", existingCustomerDocId);
         } else {
-            // Adding a NEW customer: let Firestore generate a document ID, then store custom CustomerID as a field
+            // Adding a NEW customer:
             const newDocRef = doc(collection(db, collectionPath)); // Get a reference with a new auto-generated ID
-            const systemGeneratedCustomerId = 'CUS-' + newDocRef.id; // Create custom CustomerID
+
+            // Generate numeric part for customerId
+            // Using a combination of timestamp and a small random number to increase uniqueness
+            // and ensure it's numeric.
+            const numericPart = Date.now().toString().slice(-8) + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            const systemGeneratedCustomerId = 'COM-' + numericPart;
 
             // Set the document with the full data including the custom customerId
             await setDoc(newDocRef, { ...customerData, customerId: systemGeneratedCustomerId });
@@ -564,7 +569,7 @@ function listenForCustomers() {
     unsubscribeCustomers = onSnapshot(q, (snapshot) => {
         customerList.innerHTML = ''; // Clear current list
         if (snapshot.empty) {
-            customerList.innerHTML = '<p class="text-gray-500 text-center col-span-full">No customers found. Add one above!</p>';
+            customerList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No customers found. Add one above!</p>';
             return;
         }
         snapshot.forEach((doc) => {
@@ -573,56 +578,51 @@ function listenForCustomers() {
         });
     }, (error) => {
         console.error("Error listening to customers:", error);
-        customerList.innerHTML = `<p class="text-red-500 text-center col-span-full">Error loading customers: ${error.message}</p>`;
+        customerList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading customers: ${error.message}</p>`;
     });
 }
 
-// Display a single customer in the UI
+// Display a single customer in the UI as a grid row
 function displayCustomer(customer) {
-    const customerCard = document.createElement('div');
-    customerCard.className = 'bg-white p-6 rounded-lg shadow-md border border-gray-100 flex flex-col space-y-2';
-    customerCard.dataset.id = customer.id; // Store Firestore document ID for edit/delete actions
+    const customerRow = document.createElement('div');
+    customerRow.className = 'grid grid-cols-[100px_minmax(150px,_1.5fr)_1.5fr_1fr_1.5fr_1fr_0.8fr_1.5fr] gap-x-4 py-3 items-center text-sm border-b border-gray-100 last:border-b-0 hover:bg-gray-50';
+    customerRow.dataset.id = customer.id; // Store Firestore document ID for edit/delete actions
 
-    // Determine the main heading based on customer type
-    let mainHeading = 'N/A';
+    // Determine the main display name based on customer type
+    let displayName = 'N/A';
     if (customer.customerType === 'Company' && customer.companyName) {
-        mainHeading = customer.companyName;
+        displayName = customer.companyName;
     } else if (customer.customerType === 'Individual' && (customer.firstName || customer.lastName)) {
-        mainHeading = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+        displayName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
     }
 
-    customerCard.innerHTML = `
-        <h3 class="text-xl font-bold text-blue-700 mb-2">${mainHeading}</h3>
-        <p class="text-sm text-gray-700"><strong>ID:</strong> ${customer.customerId || 'N/A'}</p>
-        <p class="text-sm text-gray-600"><strong>Type:</strong> ${customer.customerType || 'N/A'}</p>
-        ${customer.customerType === 'Individual' && (customer.firstName || customer.lastName) ? `<p class="text-sm text-gray-600"><strong>Name:</strong> ${customer.firstName || 'N/A'} ${customer.lastName || 'N/A'}</p>` : ''}
-        ${customer.customerType === 'Company' && customer.companyName ? `<p class="text-sm text-gray-600"><strong>Company:</strong> ${customer.companyName || 'N/A'}</p>` : ''}
-        <p class="text-sm text-gray-600"><strong>Email:</strong> ${customer.email || 'N/A'}</p>
-        <p class="text-sm text-gray-600"><strong>Phone:</strong> ${customer.phone || 'N/A'}</p>
-        <p class="text-sm text-gray-600"><strong>Address:</strong> ${customer.address || 'N/A'}, ${customer.city || 'N/A'}, ${customer.state || 'N/A'} ${customer.zipCode || 'N/A'}</p>
-        <p class="text-sm text-gray-600"><strong>Industry:</strong> ${customer.industry || 'N/A'}</p>
-        <p class="text-sm text-gray-600"><strong>Since:</strong> ${customer.customerSince || 'N/A'}</p>
-        <p class="text-sm text-gray-600 flex-grow"><strong>Description:</strong> ${customer.description || 'N/A'}</p>
-        <div class="actions flex justify-end gap-3 mt-4 pt-3 border-t border-gray-100">
-            <button class="edit-btn secondary px-4 py-2 text-sm" data-id="${customer.id}" ${isAdmin ? '' : 'disabled'}>Edit</button>
-            <button class="delete-btn danger px-4 py-2 text-sm" data-id="${customer.id}" ${isAdmin ? '' : 'disabled'}>Delete</button>
+    customerRow.innerHTML = `
+        <div class="px-2 py-1 truncate font-medium text-gray-800">${customer.customerId || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${displayName}</div>
+        <div class="px-2 py-1 truncate">${customer.email || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden md:block">${customer.phone || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden lg:block">${customer.address || 'N/A'}, ${customer.city || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden lg:block">${customer.industry || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden sm:block">${customer.customerSince || 'N/A'}</div>
+        <div class="px-2 py-1 flex justify-end space-x-2">
+            <button class="edit-btn text-blue-600 hover:text-blue-800 font-semibold text-xs" data-id="${customer.id}">Edit</button>
+            <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${customer.id}">Delete</button>
         </div>
     `;
-    customerList.appendChild(customerCard);
+    customerList.appendChild(customerRow);
 
-    // Add event listeners only if the buttons are enabled
-    if (isAdmin) {
-        customerCard.querySelector('.edit-btn').addEventListener('click', () => editCustomer(customer));
-        customerCard.querySelector('.delete-btn').addEventListener('click', () => deleteCustomer(customer.id));
-    }
+    customerRow.querySelector('.edit-btn').addEventListener('click', () => editCustomer(customer));
+    customerRow.querySelector('.delete-btn').addEventListener('click', () => deleteCustomer(customer.id));
 }
+
 
 // Populate form for editing a customer
 function editCustomer(customer) {
-    if (!isAdmin) {
-        showModal("Permission Denied", "Only administrators can edit employee contacts.", () => {});
+    if (!isAuthReady || !currentUserId) { // Add auth check
+        showModal("Permission Denied", "Authentication required to edit customers.", () => {});
         return;
     }
+    // No isAdmin check here, as customer data is public access for all authenticated users
     customerFormTitle.textContent = 'Edit Customer';
     submitCustomerButton.textContent = 'Update Customer';
 
