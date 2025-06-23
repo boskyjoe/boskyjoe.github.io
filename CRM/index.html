@@ -68,7 +68,7 @@
 
     <main class="w-full flex flex-col items-center p-5 max-w-7xl">
         <!-- Login/Registration Section (Now hidden by default and simplified) -->
-        <section id="auth-section" class="container hidden"> <!-- Added 'hidden' class here -->
+        <section id="auth-section" class="container hidden">
             <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Welcome to ShutterSync</h2>
             <div class="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200 max-w-md mx-auto">
                 <p class="text-center text-gray-700">Please log in to access the CRM features.</p>
@@ -183,22 +183,42 @@
                         <label for="customerPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone <span class="text-red-500">*</span></label>
                         <input type="tel" id="customerPhone" placeholder="(123) 456-7890" required>
                     </div>
-                    <div>
-                        <label for="customerAddress" class="block text-sm font-medium text-gray-700 mb-1">Address <span class="text-red-500">*</span></label>
-                        <input type="text" id="customerAddress" placeholder="123 Main St" required>
+
+                    <!-- Address Information Card -->
+                    <div class="md:col-span-2 p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-4">Address Information <span class="text-red-500">*</span></h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="customerCountry" class="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                                <select id="customerCountry" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
+                                    <option value="">Select Country</option>
+                                    <!-- Options will be populated by JS -->
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label for="customerAddress" class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                                <input type="text" id="customerAddress" placeholder="123 Main St" required>
+                            </div>
+                            <div>
+                                <label for="customerCity" class="block text-sm font-medium text-gray-700 mb-1">City</label>
+                                <input type="text" id="customerCity" placeholder="Anytown" required>
+                            </div>
+                            <div>
+                                <label for="customerState" class="block text-sm font-medium text-gray-700 mb-1">State/Province</label>
+                                <select id="customerState" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
+                                    <option value="">Select State/Province</option>
+                                    <!-- Options will be populated by JS based on country -->
+                                </select>
+                            </div>
+                            <div>
+                                <label for="customerZipCode" class="block text-sm font-medium text-gray-700 mb-1">Zip Code</label>
+                                <input type="text" id="customerZipCode" placeholder="90210" required>
+                            </div>
+                        </div>
+                        <p id="addressValidationMessage" class="text-sm mt-2 text-red-500 hidden">Address validation failed. Please check the address details.</p>
                     </div>
-                    <div>
-                        <label for="customerCity" class="block text-sm font-medium text-gray-700 mb-1">City <span class="text-red-500">*</span></label>
-                        <input type="text" id="customerCity" placeholder="Anytown" required>
-                    </div>
-                    <div>
-                        <label for="customerState" class="block text-sm font-medium text-gray-700 mb-1">State <span class="text-red-500">*</span></label>
-                        <input type="text" id="customerState" placeholder="CA" required>
-                    </div>
-                    <div>
-                        <label for="customerZipCode" class="block text-sm font-medium text-gray-700 mb-1">Zip Code <span class="text-red-500">*</span></label>
-                        <input type="text" id="customerZipCode" placeholder="90210" required>
-                    </div>
+                    <!-- End Address Information Card -->
+
                     <!-- Industry Field based on Type -->
                     <div id="individualIndustryGroup">
                         <label for="customerIndustryInput" class="block text-sm font-medium text-gray-700 mb-1">Industry <span class="text-red-500">*</span></label>
