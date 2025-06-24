@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js"; // Removed signInWithEmailAndPassword, createUserWithEmailAndPassword
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc, getDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 // YOUR Firebase Configuration
@@ -81,7 +81,7 @@ const usersManagementSection = document.getElementById('users-management-section
 const userForm = document.getElementById('userForm');
 const userFormTitle = document.getElementById('userFormTitle');
 const userIdDisplayGroup = document.getElementById('userIdDisplayGroup');
-const userIdDisplayInput = document.getElementById('userIdDisplayInput');
+const userIdDisplayInput = document.getElementById('userIdDisplayInput'); // Changed to an input element
 const userNameInput = document.getElementById('userName');
 const userFirstNameInput = document.getElementById('userFirstName');
 const userLastNameInput = document.getElementById('userLastName');
@@ -91,15 +91,6 @@ const userRoleSelect = document.getElementById('userRole'); // Changed to select
 const userSkillsInput = document.getElementById('userSkills');
 const submitUserButton = document.getElementById('submitUserButton');
 const userList = document.getElementById('userList');
-
-// Removed Bootstrap Admin Login Section elements as it's no longer needed for direct login
-// const bootstrapAdminLoginSection = document.getElementById('bootstrap-admin-login-section');
-// const bootstrapAdminLoginForm = document.getElementById('bootstrapAdminLoginForm');
-// const bootstrapAdminEmailInput = document.getElementById('bootstrapAdminEmail');
-// const bootstrapAdminPasswordInput = document.getElementById('bootstrapAdminPassword');
-// const bootstrapAdminLoginButton = document.getElementById('bootstrapAdminLoginButton');
-// const bootstrapAdminMessage = document.getElementById('bootstrapAdminMessage');
-
 
 // References to logout buttons and the new nav Google Login button
 const logoutButton = document.getElementById('logoutButton');
@@ -117,8 +108,7 @@ const authSection = document.getElementById('auth-section');
 // Select all main content sections
 const homeSection = document.getElementById('home');
 const eventsSection = document.getElementById('events-section');
-// Updated allSections to remove bootstrap-specific section
-const allSections = [homeSection, customersSection, eventsSection, adminCountryMappingSection, usersManagementSection, authSection];
+const allSections = [homeSection, customersSection, eventsSection, adminCountryMappingSection, usersManagementSection, authSection]; // Removed bootstrap-specific section
 
 
 // Function to show a custom confirmation modal
@@ -149,22 +139,15 @@ function showModal(title, message, onConfirm, onCancel) {
 }
 
 // Function to show a specific section and hide others
-async function showSection(sectionId) { // Removed forceLoginCheck parameter as login is now handled directly if needed
+async function showSection(sectionId) {
     // Check for admin section access only if the section is admin-specific
     if (['admin-country-mapping-section', 'users-management-section'].includes(sectionId)) {
-        if (!isAuthReady) {
-            console.log(`Auth not ready. Attempting Google login to access ${sectionId}.`);
+        if (!currentUserId) { // If not logged in at all
+            console.log(`Access to ${sectionId} denied. No user logged in. Prompting Google login.`);
             await handleGoogleLogin(); // Force Google login if not authenticated
             // After handleGoogleLogin, onAuthStateChanged will fire and re-evaluate isAdmin.
             // We'll rely on the onAuthStateChanged to call showSection again if successful.
             return; // Exit early, let onAuthStateChanged handle redirect
-        }
-
-        if (!currentUserId) { // No user is logged in even after attempting login
-            showModal("Access Denied", "You must be logged in to access this section.", () => {
-                showSection('home'); // Redirect to home if still not logged in
-            });
-            return;
         }
 
         if (!isAdmin) { // Logged in but not an admin
@@ -253,14 +236,13 @@ async function fetchCountryData() {
             console.log("Country and State data loaded from Firestore.");
         } else {
             console.warn("No 'countries_states' document found in 'app_metadata' collection.");
-            showModal("Data Error", "Country and State data could not be loaded. Please ensure 'app_metadata/countries_states' document exists in Firestore.", () => {});
-            // Fallback: If no data, populate with an empty list to avoid errors
+            // No modal here, as it might be first load and admin can upload it.
             appCountries = [];
             appCountryStateMap = {};
         }
     } catch (error) {
         console.error("Error fetching country data from Firestore:", error);
-        showModal("Data Error", `Failed to load country data: ${error.message}`, () => {});
+        // No modal here.
         appCountries = [];
         appCountryStateMap = {};
     }
@@ -284,18 +266,10 @@ async function loadAdminCountryData() {
         adminMessageDiv.classList.add('hidden'); // Clear any previous messages
         console.log("Admin country data loaded into textareas.");
     }
-    // No specific catch here as fetchCountryData already handles errors and shows modals
     catch (error) {
         console.error("Error in loadAdminCountryData:", error); // Log for debugging
     }
 }
-
-// Removed updateFirestoreAdminStatus as app_metadata/admin_status is no longer used for public admin check.
-// This logic is now purely based on the user's document in 'users_data'.
-
-// Removed checkIfAnyFirestoreAdminExists as it's no longer needed for public admin check.
-// Initial UI state will directly show 'home' or 'auth' based on login status.
-
 
 // Initialize Firebase and set up authentication listener
 async function initializeFirebase() {
@@ -316,39 +290,35 @@ async function initializeFirebase() {
                 mobileUserIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
                 console.log("onAuthStateChanged: Current Firebase UID:", currentUserId);
 
-                // For all logged-in users, check their role in Firestore
-                const userProfileRef = doc(db, 'users_data', user.uid); // Profile document ID MUST be their Firebase UID
+                // Fetch the user's profile document from Firestore
+                const userProfileRef = doc(db, 'users_data', user.uid);
                 const userProfileSnap = await getDoc(userProfileRef);
 
-                if (userProfileSnap.exists() && userProfileSnap.data().role === 'Admin') {
-                    isAdmin = true;
-                    console.log("onAuthStateChanged: User profile has 'Admin' role. Admin access granted.");
+                if (userProfileSnap.exists()) {
+                    // Profile exists, set isAdmin based on the 'role' field
+                    isAdmin = userProfileSnap.data().role === 'Admin';
+                    console.log("onAuthStateChanged: User profile exists. Admin status:", isAdmin);
                 } else {
-                    isAdmin = false;
-                    console.log("onAuthStateChanged: User is not admin (role not 'Admin' or profile not found).");
-
-                    // If user profile does not exist after first login (e.g., Google login), create a basic one
-                    if (!userProfileSnap.exists()) {
-                        console.log("Creating basic user profile for new user:", user.uid);
-                        try {
-                            const systemGeneratedUserId = 'USR-' + Date.now().toString().slice(-8) + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-                            await setDoc(userProfileRef, {
-                                userId: systemGeneratedUserId,
-                                userName: user.email || 'N/A',
-                                firstName: user.displayName ? user.displayName.split(' ')[0] : '',
-                                lastName: user.displayName ? user.displayName.split(' ').slice(1).join(' ') : '',
-                                email: user.email || 'N/A',
-                                phone: '', // Default empty
-                                role: 'User', // Default role for new users
-                                skills: [] // Default empty
-                            });
-                            console.log("Basic user profile created for:", user.uid);
-                            // After creating basic profile, check admin status again (though it will still be 'User')
-                            // This ensures if someone manually edits it in Firestore later, it's picked up.
-                        } catch (profileError) {
-                            console.error("Error creating basic user profile:", profileError);
-                            showModal("Profile Error", `Failed to create user profile: ${profileError.message}`, () => {});
-                        }
+                    // Profile does NOT exist (first login for this user)
+                    isAdmin = false; // Default to non-admin
+                    console.log("onAuthStateChanged: User profile does not exist for new user. Creating basic profile:", user.uid);
+                    try {
+                        await setDoc(userProfileRef, {
+                            userId: user.uid, // Store the Firebase Auth UID as the userId field
+                            userName: user.email || 'N/A',
+                            firstName: user.displayName ? user.displayName.split(' ')[0] : '',
+                            lastName: user.displayName ? user.displayName.split(' ').slice(1).join(' ') : '',
+                            email: user.email || 'N/A',
+                            phone: '', // Default empty
+                            role: 'User', // Default role for all new users on first login
+                            skills: [] // Default empty
+                        });
+                        console.log("Basic user profile created for:", user.uid);
+                        // No need to re-evaluate isAdmin here, it's already set to false
+                        // The user can be promoted to Admin by another Admin later.
+                    } catch (profileError) {
+                        console.error("Error creating basic user profile:", profileError);
+                        showModal("Profile Error", `Failed to create user profile: ${profileError.message}. Access to some features may be limited.`, () => {});
                     }
                 }
 
@@ -365,18 +335,18 @@ async function initializeFirebase() {
                     mobileAdminMenu.classList.add('hidden');
                 }
 
-                // Fetch country data and populate dropdowns regardless of admin status for customer form
+                // Fetch country data and populate dropdowns for customer form (always needed)
                 await fetchCountryData();
                 populateCountries();
 
-                // Always redirect to home after successful authentication (unless already on an admin page that triggered login)
+                // Always redirect to home after successful authentication (or if already on admin page, it will re-trigger showSection)
                 showSection('home');
 
 
             } else { // No user is signed in.
                 currentUserId = null;
                 isAdmin = false; // Ensure isAdmin is false when no user
-                console.log("onAuthStateChanged: No user signed in. Showing standard auth section.");
+                console.log("onAuthStateChanged: No user signed in. Showing home section by default.");
 
                 // Hide admin menus and logout buttons
                 desktopAdminMenu.classList.add('hidden');
@@ -389,7 +359,7 @@ async function initializeFirebase() {
                 uploadAdminDataButton.setAttribute('disabled', 'disabled');
                 submitUserButton.setAttribute('disabled', 'disabled');
 
-                // Always show the home section initially, auth will be prompted on demand
+                // Always show the home section initially
                 showSection('home');
                 // Ensure auth section is visible if no user logged in
                 authSection.classList.remove('hidden');
@@ -787,14 +757,14 @@ function resetCustomerForm() {
 /* --- USERS CRUD OPERATIONS (NEW) --- */
 
 // Save (Add/Update) a User
-// This function now ensures Firestore document IDs match Firebase Auth UIDs for user profiles.
+// This function now enforces Firestore document IDs to match Firebase Auth UIDs for user profiles.
 async function saveUser(userData, existingFirestoreDocId = null) {
     if (!isAuthReady || !currentUserId || !isAdmin) {
         showModal("Permission Denied", "Only administrators can manage users.", () => {});
         return;
     }
 
-    // Gmail email validation for Username (which is the email they log in with)
+    // Gmail email validation for userName (which is the email they log in with)
     const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
     if (!gmailRegex.test(userData.userName)) {
         showModal("Validation Error", "Username must be a valid Gmail email address.", () => {});
@@ -814,87 +784,35 @@ async function saveUser(userData, existingFirestoreDocId = null) {
 
     try {
         let targetDocRef;
+        let targetUid;
 
         if (existingFirestoreDocId) {
             // CASE 1: EDITING AN EXISTING USER
-            // The Firestore document ID is already known and provided.
+            // The Firestore document ID is already known and provided (it should be the user's UID).
             targetDocRef = doc(db, collectionPath, existingFirestoreDocId);
             await updateDoc(targetDocRef, userData);
             console.log("User updated:", existingFirestoreDocId);
         } else {
             // CASE 2: ADDING A NEW USER
-            // Here, we need to find the user's UID based on their email.
-            // This is problematic client-side if the user has never logged in.
-            // Best practice: A new user's profile is created when they first log in.
-            // Admin then edits that profile to assign roles.
+            // For new users, the admin MUST provide the Firebase Auth UID.
+            // This assumes the user has been created in Firebase Auth already.
+            targetUid = userIdDisplayInput.value.trim();
 
-            // To support creating *new* entries for existing Auth users (e.g., if their profile was deleted),
-            // or for the initial setup where an admin might add another admin via email:
-            // We need to fetch the UID by email. Firebase Client SDK does NOT provide this directly
-            // for security reasons (prevents enumerating UIDs).
-            // A server-side solution (Cloud Functions) would typically be used here.
-
-            // For now, if we're adding a NEW user, we assume it's for the currently logged in admin setting THEIR OWN
-            // profile initially, or editing an existing user whose profile was missing.
-            // We'll require the user to log in once for their profile to exist.
-
-            // The 'Add New User' in UI should primarily be for creating the *content* of the profile,
-            // with the ID matching the Auth UID.
-            // The simplest path for now: If a user logs in (even for the first time),
-            // their basic profile is automatically created in `onAuthStateChanged` if it doesn't exist.
-            // Then, an admin can *edit* that profile to assign a role.
-
-            // So, for adding new users directly via the form:
-            // We will lookup the user by their userName (email) in Firebase Auth.
-            // This is still a client-side limitation.
-            // The most robust way without cloud functions for 'add user' feature from admin UI:
-            // 1. User signs up/logs in once (Auth user created, basic profile in users_data).
-            // 2. Admin logs in, goes to Users list, sees basic profile.
-            // 3. Admin clicks 'Edit' on that profile, and assigns 'Admin' role.
-
-            // Given your UI has 'Add New User', we'll make an assumption here:
-            // We are adding a new user whose Firebase Auth UID will be determined by their email.
-            // This requires a Cloud Function OR the user exists in Auth already.
-            // Since we're in client-side only:
-            // If you are trying to *create* a user profile here and that user has NOT yet
-            // logged into Firebase Auth at least once, we won't know their UID.
-            // The most reliable "add new user" from Admin UI for a CLIENT-SIDE ONLY app:
-            // The admin form only *updates* profiles, it doesn't *create* Firebase Auth users.
-            // The 'id' for a new profile comes from the logged-in user if they are setting their own,
-            // or from the `edit` function's `user.id` when editing existing.
-
-            // To allow "adding new user" to work where `userId` will become the Firebase Auth UID:
-            // For now, the simplest solution for "adding new user" via the Admin UI,
-            // assuming the user being added *will* have their Firebase Auth UID match their email's UID
-            // when they eventually log in, is to explicitly *require* the Firebase UID to be entered
-            // or fetched. However, that's not how your current UI/workflow is set up.
-
-            // Let's refine the saveUser for NEW entries:
-            // It currently tries to create a new auto-generated ID, then replaces it.
-            // This conflicts with the UID-as-doc-ID strategy.
-
-            // If existingFirestoreDocId is null, it's a new entry.
-            // We must use the UID of the user whose profile is being created.
-            // If the user being added is the CURRENTLY LOGGED IN user (e.g., bootstrap admin creating their own admin profile),
-            // we use their UID.
-            if (auth.currentUser && userData.email === auth.currentUser.email) {
-                targetDocRef = doc(db, collectionPath, auth.currentUser.uid);
-                await setDoc(targetDocRef, { ...userData, userId: auth.currentUser.uid }); // Store UID also as userId field
-                console.log("New user profile created/updated for current user. Doc ID is UID:", auth.currentUser.uid);
-            } else {
-                // If the user being added is *not* the current authenticated user,
-                // we *cannot* safely determine their UID client-side to set the document ID.
-                // We'll prevent adding new users this way. They must log in once.
-                showModal("Cannot Add New User Directly",
-                          "To create a new user profile, the user must first log into ShutterSync with their Gmail account. After their initial login, you can return here to edit their profile and assign a role.",
-                          () => {});
-                console.error("Attempted to add new user whose Firebase Auth UID is unknown client-side.");
-                return; // Stop the function
+            if (!targetUid) {
+                showModal("Validation Error", "For new user profiles, you must provide the Firebase User ID (UID). This user should first be created in Firebase Authentication.", () => {});
+                userIdDisplayInput.focus();
+                return;
             }
+
+            // You might want to add more robust UID format validation here if needed
+            // e.g., if (targetUid.length < 28 || !/^[a-zA-Z0-9]+$/.test(targetUid)) { ... }
+
+            targetDocRef = doc(db, collectionPath, targetUid); // Use the provided UID as the document ID
+            await setDoc(targetDocRef, { ...userData, userId: targetUid }); // Store UID also as userId field
+            console.log("New user profile created. Doc ID is provided UID:", targetUid);
         }
 
         resetUserForm(); // Reset form after successful operation
-        // updateFirestoreAdminStatus(); // No longer needed for this simplified flow
     } catch (error) {
         console.error("Error saving user:", error);
         showModal("Error", `Failed to save user: ${error.message}`, () => {});
@@ -916,7 +834,6 @@ async function deleteUser(firestoreDocId) {
             try {
                 await deleteDoc(doc(db, collectionPath, firestoreDocId));
                 console.log("User deleted Firestore Doc ID:", firestoreDocId);
-                // No need to update updateFirestoreAdminStatus() here, as hasFirestoreAdmins is not tracked via a separate doc
             } catch (error) {
                 console.error("Error deleting user:", error);
                 showModal("Error", `Failed to delete user: ${error.message}`, () => {});
@@ -942,7 +859,7 @@ function listenForUsers() {
     unsubscribeUsers = onSnapshot(q, (snapshot) => {
         userList.innerHTML = ''; // Clear current list
         if (snapshot.empty) {
-            userList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No users found. Add one above!</p>';
+            userList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No users found. Add one above by providing their Firebase UID after creating them in Firebase Authentication!</p>';
             return;
         }
         snapshot.forEach((doc) => {
@@ -961,8 +878,7 @@ function displayUser(user) {
     userRow.className = 'grid grid-cols-[100px_minmax(120px,_1.2fr)_1.5fr_1fr_1fr_1.5fr] gap-x-4 py-3 items-center text-sm border-b border-gray-100 last:border-b-0 hover:bg-gray-50';
     userRow.dataset.id = user.id; // Store Firestore document ID for edit/delete actions
 
-    // Ensure userId is the Firebase Auth UID for consistency in display and lookup
-    const displayUid = user.id || 'N/A'; // Use Firestore doc ID for display if available, which should be the UID
+    const displayUid = user.id || 'N/A'; // Use Firestore doc ID for display, which should be the UID
 
     userRow.innerHTML = `
         <div class="px-2 py-1 truncate font-medium text-gray-800">${displayUid}</div>
@@ -990,8 +906,11 @@ function editUser(user) {
     }
     userFormTitle.textContent = 'Edit User';
     submitUserButton.textContent = 'Update User';
-    userIdDisplayGroup.classList.remove('hidden');
-    userIdDisplayInput.textContent = user.id || 'N/A'; // Display the Firestore Doc ID (which is the UID)
+
+    userIdDisplayGroup.classList.remove('hidden'); // Show UID group
+    userIdDisplayInput.value = user.id || 'N/A'; // Display the Firestore Doc ID (which is the UID)
+    userIdDisplayInput.setAttribute('readonly', 'readonly'); // Make it read-only when editing
+    userIdDisplayInput.classList.add('bg-gray-100'); // Add a class for visual indication of readonly
 
     userNameInput.value = user.userName || '';
     userFirstNameInput.value = user.firstName || '';
@@ -1009,11 +928,15 @@ function editUser(user) {
 function resetUserForm() {
     userForm.reset();
     userForm.dataset.editingId = '';
-    userFormTitle.textContent = 'Add New User'; // Keep 'Add New User' for potential future direct creation or if user logs in first
-    submitUserButton.textContent = 'Add User';
-    userIdDisplayGroup.classList.add('hidden'); // Hide UID display
-    userIdDisplayInput.textContent = ''; // Clear displayed UID
-    userRoleSelect.value = ''; // Reset select to default option
+    userFormTitle.textContent = 'Add New User Profile'; // Clarified title for new workflow
+    submitUserButton.textContent = 'Create User Profile'; // Clarified button text for new workflow
+
+    userIdDisplayGroup.classList.remove('hidden'); // Show UID group when adding new
+    userIdDisplayInput.value = ''; // Clear UID input
+    userIdDisplayInput.removeAttribute('readonly'); // Make it editable for new user profile
+    userIdDisplayInput.classList.remove('bg-gray-100'); // Remove readonly visual class
+    userIdDisplayInput.focus(); // Focus on the UID input for new user profile
+    userRoleSelect.value = ''; // Reset select to default option (or make it 'User' by default)
 }
 
 // --- Event Listeners ---
