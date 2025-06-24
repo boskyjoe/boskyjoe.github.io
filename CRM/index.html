@@ -39,6 +39,7 @@
                     <div class="absolute hidden group-hover:block bg-white min-w-[160px] shadow-lg rounded-md top-full left-1/2 -translate-x-1/2 py-2 overflow-hidden z-10">
                         <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 text-sm" data-section="users-management-section">Users</a>
                         <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 text-sm" data-section="admin-country-mapping-section">Country Data</a>
+                        <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 text-sm" data-section="currency-management-section">Currency</a>
                     </div>
                 </div>
 
@@ -71,6 +72,7 @@
                     <span class="text-gray-500 font-semibold text-sm">Admin:</span>
                     <a href="#" class="nav-link mobile-submenu" data-section="users-management-section">Users</a>
                     <a href="#" class="nav-link mobile-submenu" data-section="admin-country-mapping-section">Country Data</a>
+                    <a href="#" class="nav-link mobile-submenu" data-section="currency-management-section">Currency</a>
                 </div>
 
                 <span id="mobileUserIdDisplay" class="text-gray-600 text-sm pt-2 hidden"></span>
@@ -280,18 +282,18 @@
                             <!-- Financial Details -->
                             <h4 class="text-md font-semibold text-gray-800 mt-4 mb-4">Financial Details</h4>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div class="mb-4 w-full">
+                                <div class="mb-4 w-full relative"> <!-- Added relative for symbol positioning -->
                                     <label for="opportunityAmount" class="block text-sm font-medium text-gray-700">Amount: <span class="text-red-500">*</span></label>
-                                    <input type="number" id="opportunityAmount" class="form-input mt-1 w-full" step="0.01" placeholder="1500.00" required>
+                                    <div class="flex items-center">
+                                        <span id="currencySymbolDisplay" class="absolute left-3 text-gray-500 pointer-events-none"></span>
+                                        <input type="number" id="opportunityAmount" class="form-input mt-1 w-full pl-8" step="0.01" placeholder="1500.00" required>
+                                    </div>
                                 </div>
                                 <div class="mb-4 w-full">
                                     <label for="opportunityCurrency" class="block text-sm font-medium text-gray-700">Currency: <span class="text-red-500">*</span></label>
                                     <select id="opportunityCurrency" class="form-select mt-1 w-full" required>
-                                        <option value="USD">USD</option>
-                                        <option value="EUR">EUR</option>
-                                        <option value="GBP">GBP</option>
-                                        <option value="CAD">CAD</option>
-                                        <!-- Add more currencies as needed -->
+                                        <!-- Currencies will be populated dynamically from Firestore -->
+                                        <option value="">Select Currency</option>
                                     </select>
                                 </div>
                                 <div class="mb-4 w-full">
@@ -588,10 +590,8 @@
                                             <div class="mb-4 w-full">
                                                 <label for="quoteCurrency" class="block text-sm font-medium text-gray-700">Currency: <span class="text-red-500">*</span></label>
                                                 <select id="quoteCurrency" class="form-select mt-1 w-full" required>
-                                                    <option value="USD">USD</option>
-                                                    <option value="EUR">EUR</option>
-                                                    <option value="GBP">GBP</option>
-                                                    <option value="CAD">CAD</option>
+                                                    <!-- Currencies will be populated dynamically from Firestore -->
+                                                    <option value="">Select Currency</option>
                                                 </select>
                                             </div>
                                             <div class="mb-4 md:col-span-2 flex items-center mt-6">
@@ -671,6 +671,72 @@ MX:Aguascalientes,Baja California"></textarea>
                         <button type="submit" id="uploadAdminDataButton" class="btn-primary" disabled>Upload Data to Firestore</button>
                     </div>
                 </form>
+            </div>
+        </section>
+
+        <!-- Admin Currency Management Section (NEW) -->
+        <section id="currency-management-section" class="hidden section">
+            <h2 class="section-title">Admin: Currency Management</h2>
+
+            <div class="card mb-8">
+                <h3 id="currencyFormTitle" class="text-xl font-semibold mb-4 text-gray-800">Add New Currency</h3>
+                <form id="currencyForm">
+                    <div id="currencyCodeDisplayGroup" class="mb-4 hidden">
+                        <label for="currencyCodeDisplay" class="block text-sm font-medium text-gray-700">Currency Code:</label>
+                        <span id="currencyCodeDisplay" class="mt-1 block text-lg font-semibold text-gray-900"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="adminCurrenciesInput" class="block text-sm font-medium text-gray-700">
+                            Currency Data (JSON format): <span class="text-red-500">*</span>
+                            <i class="fas fa-info-circle text-gray-500 cursor-help ml-1 group relative">
+                                <span class="tooltip-text">
+                                    Paste currency data as a JSON object where keys are ISO currency codes
+                                    and values are objects with "currencyName", "symbol", and "symbol_native".
+                                    Example: {"USD": {"currencyName": "US Dollar", "symbol": "$", "symbol_native": "$"}}
+                                </span>
+                            </i>
+                        </label>
+                        <textarea id="adminCurrenciesInput" rows="10" class="form-textarea mt-1" placeholder='{
+  "USD": {
+    "currencyName": "US Dollar",
+    "symbol": "$",
+    "symbol_native": "$"
+  },
+  "EUR": {
+    "currencyName": "Euro",
+    "symbol": "€",
+    "symbol_native": "€"
+  },
+  "JPY": {
+    "currencyName": "Japanese Yen",
+    "symbol": "¥",
+    "symbol_native": "￥"
+  }
+}' required></textarea>
+                    </div>
+
+                    <div id="adminCurrencyMessage" class="message hidden mt-4"></div>
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="button" class="btn-secondary" onclick="resetCurrencyForm()">Reset Form</button>
+                        <button type="submit" id="submitCurrencyButton" class="btn-primary" disabled>Upload Currencies to Firestore</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card mt-8">
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">Existing Currencies</h3>
+                <div class="data-grid-header">
+                    <div class="px-2">Code</div>
+                    <div class="px-2">Name</div>
+                    <div class="px-2">Symbol</div>
+                    <div class="px-2">Native Symbol</div>
+                    <div class="px-2 text-right">Actions</div>
+                </div>
+                <div id="currencyList" class="divide-y divide-gray-100">
+                    <!-- Currency rows will be dynamically inserted here by JavaScript -->
+                    <p class="text-gray-500 text-center col-span-full py-4">Loading currencies...</p>
+                </div>
             </div>
         </section>
 
