@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome for icons (e.g., hamburger, Google) -->
+    <!-- Font Awesome for icons (e.g., hamburger, Google, info) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- Custom Stylesheet (Moved from inline style block) -->
     <link rel="stylesheet" href="css/style.css">
@@ -294,14 +294,42 @@ MX:Aguascalientes,Baja California"></textarea>
         <section id="users-management-section" class="hidden section">
             <h2 class="section-title">Admin: User Management</h2>
 
+            <!-- Instructions for User Management Page -->
+            <div id="user-management-instructions" class="card bg-blue-50 border-l-4 border-blue-400 text-blue-800 p-4 mb-6" role="alert">
+                <p class="font-bold">Important Instructions for User Management:</p>
+                <ul class="list-disc list-inside mt-2 text-sm">
+                    <li>This page is for administrators to manage user profiles in the system.</li>
+                    <li>
+                        To create a new user profile here, the user **MUST first be created in Firebase Authentication**.
+                        Go to your Firebase Console > Authentication, then add a new user (e.g., via Email/Password or Google).
+                        Once created, copy their unique **User UID**.
+                    </li>
+                    <li>Paste the Firebase User UID into the "User Firestore ID (UID)" field below when creating a new profile.</li>
+                    <li>Set the user's role to 'Admin' to grant them administrative access to CRM admin features.</li>
+                    <li>For existing users, their UID field will be read-only during editing.</li>
+                </ul>
+            </div>
+
             <div class="card mb-8">
                 <h3 id="userFormTitle" class="text-xl font-semibold mb-4 text-gray-800">Add New User Profile</h3>
                 <form id="userForm">
-                    <div id="userIdDisplayGroup" class="mb-4">
-                        <label for="userIdDisplayInput" class="block text-sm font-medium text-gray-700">User Firestore ID (UID):</label>
+                    <div id="userIdDisplayGroup" class="mb-4 relative">
+                        <label for="userIdDisplayInput" class="block text-sm font-medium text-gray-700">
+                            User Firestore ID (UID):
+                            <i class="fas fa-info-circle text-gray-500 cursor-help ml-1 group relative">
+                                <span class="tooltip-text">
+                                    This is the unique Firebase Authentication User ID.
+                                    Find it in your Firebase Console > Authentication,
+                                    after creating a user. It looks like a long string of letters and numbers (e.g., 'abcdefg12345').
+                                </span>
+                            </i>
+                        </label>
                         <input type="text" id="userIdDisplayInput" placeholder="Enter Firebase User UID here"
                                class="form-input mt-1" required>
-                        <p class="text-xs text-gray-500 mt-1">For new user profiles, this must be their Firebase Authentication UID. Create the user in Firebase Auth first, then paste their UID here.</p>
+                        <p class="text-xs text-gray-500 mt-1">
+                            For new user profiles, this must be their Firebase Authentication UID.
+                            Create the user in Firebase Auth first, then paste their UID here.
+                        </p>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="mb-4">
@@ -326,7 +354,7 @@ MX:Aguascalientes,Baja California"></textarea>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="mb-4">
                             <label for="userPhone" class="block text-sm font-medium text-gray-700">Phone:</label>
-                            <input type="tel" id="userPhone" class="form-input mt-1" placeholder="+1234567890">
+                            <input type="tel" id="userPhone" class="form-input mt-1" placeholder="+1234567890" required>
                         </div>
                         <div class="mb-4">
                             <label for="userRole" class="block text-sm font-medium text-gray-700">Role:</label>
@@ -339,7 +367,7 @@ MX:Aguascalientes,Baja California"></textarea>
                     </div>
                     <div class="mb-4">
                         <label for="userSkills" class="block text-sm font-medium text-gray-700">Skills (Comma-separated):</label>
-                        <input type="text" id="userSkills" class="form-input mt-1" placeholder="Photography, Editing, Marketing">
+                        <input type="text" id="userSkills" class="form-input mt-1" placeholder="Photography, Editing, Marketing" required>
                     </div>
                     <div class="mt-6 flex justify-end space-x-3">
                         <button type="button" class="btn-secondary" onclick="resetUserForm()">Reset Form</button>
