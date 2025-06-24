@@ -8,7 +8,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
-    storageBucket: "shuttersync-96971.firebasestorage.app",
+    storageBucket: "shuttersync-96971.firebaseapp.com",
     messagingSenderId: "10782416018",
     appId: "1:10782416018:web:361db5572882a62f291a4b",
     measurementId: "G-T0W9CES4D3"
@@ -25,11 +25,11 @@ let isAuthReady = false; // Set to false initially, true when Firebase Auth conf
 const currentCustomerCollectionType = 'public'; // Fixed to public as per requirement
 let unsubscribeCustomers = null; // To store the onSnapshot unsubscribe function for customers
 let unsubscribeUsers = null; // To store the onSnapshot unsubscribe function for users
-let unsubscribeOpportunities = null; // To store the onSnapshot unsubscribe function for opportunities
-let unsubscribeOpportunityContacts = null; // NEW: To store the onSnapshot unsubscribe for opportunity contacts
-let unsubscribeOpportunityLines = null; // NEW: To store the onSnapshot unsubscribe for opportunity lines
-let unsubscribeQuotes = null; // NEW: To store the onSnapshot unsubscribe for quotes
-
+let unsubscribeOpportunities = null; // NEW
+let unsubscribeOpportunityContacts = null; // NEW
+let unsubscribeOpportunityLines = null; // NEW
+let unsubscribeQuotes = null; // NEW
+let unsubscribeCurrencies = null; // NEW: For currency listener
 
 let isAdmin = false; // Flag to control admin specific UI/features
 let currentOpportunityId = null; // NEW: Stores the Firestore Doc ID of the currently selected/edited opportunity
@@ -39,8 +39,12 @@ let currentEditedOpportunity = null; // Stores the full opportunity object curre
 let appCountries = [];
 let appCountryStateMap = {};
 
+// Data for Currencies (NEW: Now fetched from Firestore)
+let allCurrencies = []; // Will store currency data from Firestore
+
 // Data for Customers (to populate Opportunity Customer dropdown)
 let allCustomers = [];
+
 
 // Get references to DOM elements for Customers
 const customersSection = document.getElementById('customers-section');
@@ -99,6 +103,7 @@ const opportunityIdDisplay = document.getElementById('opportunityIdDisplay');
 const opportunityCustomerSelect = document.getElementById('opportunityCustomer');
 const opportunityNameInput = document.getElementById('opportunityName');
 const opportunityAmountInput = document.getElementById('opportunityAmount');
+const currencySymbolDisplay = document.getElementById('currencySymbolDisplay'); // Span for currency symbol
 const opportunityCurrencySelect = document.getElementById('opportunityCurrency');
 const opportunityStageSelect = document.getElementById('opportunityStage');
 const opportunityExpectedStartDateInput = document.getElementById('opportunityExpectedStartDate');
@@ -153,7 +158,7 @@ const quoteNameInput = document.getElementById('quoteName');
 const quoteDescriptionInput = document.getElementById('quoteDescription');
 const quoteCustomerSelect = document.getElementById('quoteCustomer'); // Auto-filled from opportunity
 const quoteStartDateInput = document.getElementById('quoteStartDate');
-const quoteExpireDateInput = document.getElementById('quoteExpireDate');
+const quoteExpireDateInput = document="quoteExpireDate";
 const quoteStatusSelect = document.getElementById('quoteStatus');
 const quoteNetListAmountInput = document.getElementById('quoteNetListAmount');
 const quoteNetDiscountInput = document.getElementById('quoteNetDiscount');
@@ -172,6 +177,18 @@ const uploadAdminDataButton = document.getElementById('uploadAdminDataButton');
 const fullLoadRadio = document.getElementById('fullLoad');
 const incrementalLoadRadio = document.getElementById('incrementalLoad');
 const adminMessageDiv = document.getElementById('adminMessage');
+
+// Admin Currency Management Section elements (NEW)
+const currencyManagementSection = document.getElementById('currency-management-section');
+const currencyForm = document.getElementById('currencyForm');
+const currencyFormTitle = document.getElementById('currencyFormTitle');
+const currencyCodeDisplayGroup = document.getElementById('currencyCodeDisplayGroup');
+const currencyCodeDisplay = document.getElementById('currencyCodeDisplay');
+const adminCurrenciesInput = document.getElementById('adminCurrenciesInput');
+const submitCurrencyButton = document.getElementById('submitCurrencyButton');
+const adminCurrencyMessageDiv = document.getElementById('adminCurrencyMessage');
+const currencyList = document.getElementById('currencyList');
+
 
 // Users Management Section elements
 const usersManagementSection = document.getElementById('users-management-section');
@@ -212,7 +229,16 @@ const mobileMenu = document.getElementById('mobileMenu');
 // Select all main content sections
 const homeSection = document.getElementById('home');
 const eventsSection = document.getElementById('events-section');
-const allSections = [homeSection, customersSection, opportunitiesSection, eventsSection, adminCountryMappingSection, usersManagementSection, authSection];
+const allSections = [
+    homeSection,
+    customersSection,
+    opportunitiesSection,
+    eventsSection,
+    adminCountryMappingSection,
+    usersManagementSection,
+    authSection,
+    currencyManagementSection // NEW
+];
 
 
 // Function to show a custom confirmation modal
@@ -280,7 +306,7 @@ function setOpportunityLayout(layoutType) {
 // Function to show a specific section and hide others
 async function showSection(sectionId) {
     // Check for admin section access only if the section is admin-specific
-    if (['admin-country-mapping-section', 'users-management-section'].includes(sectionId)) {
+    if (['admin-country-mapping-section', 'users-management-section', 'currency-management-section'].includes(sectionId)) { // UPDATED for currency section
         if (!currentUserId) { // If not logged in at all
             console.log(`Access to ${sectionId} denied. No user logged in. Prompting Google login.`);
             await handleGoogleLogin(); // Force Google login if not authenticated
@@ -319,6 +345,7 @@ async function showSection(sectionId) {
     if (unsubscribeOpportunityContacts) { unsubscribeOpportunityContacts(); } // NEW
     if (unsubscribeOpportunityLines) { unsubscribeOpportunityLines(); } // NEW
     if (unsubscribeQuotes) { unsubscribeQuotes(); } // NEW
+    if (unsubscribeCurrencies) { unsubscribeCurrencies(); } // NEW
 
 
     // Reset currentOpportunityId and layout when navigating away from opportunities
@@ -339,6 +366,8 @@ async function showSection(sectionId) {
             listenForOpportunities();
             resetOpportunityForm(); // This will also hide linked object sections initially and set layout
             submitOpportunityButton.removeAttribute('disabled');
+            populateCurrencySelect(); // Populate currency dropdown for opportunities form
+            updateCurrencySymbolDisplay(); // Set initial currency symbol
         }
         else if (sectionId === 'admin-country-mapping-section') {
             if (isAdmin) { // Double check admin status for safety
@@ -347,7 +376,16 @@ async function showSection(sectionId) {
             } else {
                 uploadAdminDataButton.setAttribute('disabled', 'disabled');
             }
-        } else if (sectionId === 'users-management-section') {
+        } else if (sectionId === 'currency-management-section') { // NEW
+            if (isAdmin) {
+                listenForCurrencies(); // Start listening for currencies
+                resetCurrencyForm(); // Reset currency form
+                submitCurrencyButton.removeAttribute('disabled');
+            } else {
+                submitCurrencyButton.setAttribute('disabled', 'disabled');
+            }
+        }
+        else if (sectionId === 'users-management-section') {
             if (isAdmin) { // Double check admin status for safety
                 listenForUsers(); // Start listening for users data
                 resetUserForm(); // Reset user form
@@ -366,6 +404,7 @@ async function showSection(sectionId) {
         submitQuoteButton.setAttribute('disabled', 'disabled'); // NEW
         uploadAdminDataButton.setAttribute('disabled', 'disabled');
         submitUserButton.setAttribute('disabled', 'disabled');
+        submitCurrencyButton.setAttribute('disabled', 'disabled'); // NEW
     }
 }
 
@@ -432,6 +471,35 @@ async function loadAdminCountryData() {
     }
 }
 
+// NEW: Function to fetch currency data from Firestore
+async function fetchCurrencies() {
+    try {
+        const collectionRef = collection(db, "app_metadata", "currencies_data");
+        const querySnapshot = await getDocs(collectionRef);
+        allCurrencies = []; // Clear existing data
+        querySnapshot.forEach((docSnap) => {
+            allCurrencies.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        console.log("Currency data loaded from Firestore.");
+    } catch (error) {
+        console.error("Error fetching currency data from Firestore:", error);
+        allCurrencies = []; // Ensure it's empty on error
+    }
+}
+
+// NEW: Helper function to get currency symbol by code
+function getCurrencySymbol(code) {
+    const currency = allCurrencies.find(c => c.id === code); // Find by doc.id (which is currencyCode)
+    return currency ? currency.symbol : code; // Fallback to code if symbol not found
+}
+
+// NEW: Helper function to get currency name by code
+function getCurrencyName(code) {
+    const currency = allCurrencies.find(c => c.id === code);
+    return currency ? currency.currencyName : code; // Fallback to code if name not found
+}
+
+
 // Initialize Firebase and set up authentication listener
 async function initializeFirebase() {
     try {
@@ -439,6 +507,13 @@ async function initializeFirebase() {
         getAnalytics(app); // Initialize Analytics
         db = getFirestore(app);
         auth = getAuth(app);
+
+        // Load currency data and country data initially (can be done before auth state is fully known as they are public app_metadata)
+        await Promise.all([
+            fetchCurrencies(), // NEW: Load currency data here
+            fetchCountryData()
+        ]);
+
 
         // Listen for auth state changes
         onAuthStateChanged(auth, async (user) => {
@@ -499,8 +574,7 @@ async function initializeFirebase() {
                     mobileAdminMenu.classList.add('hidden');
                 }
 
-                // Fetch country data and populate dropdowns for customer form (always needed)
-                await fetchCountryData();
+                // Populate dropdowns for customer form (always needed)
                 populateCountries();
 
                 // Always redirect to home after successful authentication
@@ -532,6 +606,7 @@ async function initializeFirebase() {
                 submitQuoteButton.setAttribute('disabled', 'disabled'); // NEW
                 uploadAdminDataButton.setAttribute('disabled', 'disabled');
                 submitUserButton.setAttribute('disabled', 'disabled');
+                submitCurrencyButton.setAttribute('disabled', 'disabled'); // NEW
 
                 // Always show the home section initially
                 showSection('home');
@@ -833,7 +908,7 @@ function displayCustomer(customer) {
         <div class="px-2 py-1 truncate">${displayName}</div>
         <div class="px-2 py-1 truncate">${customer.email || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden md:block">${customer.phone || 'N/A'}</div>
-        <div class="px-2 py-1 truncate hidden lg:block">${customer.address || 'N/A'}, ${customer.city || 'N/A'}, ${customer.state || 'N/A'}, ${customer.country || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden lg:block">${customer.address || 'N/A'}, ${customer.city || 'N/A'}, ${customer.state || 'N/A'}, ${customer.zipCode || 'N/A'}, ${customer.country || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden lg:block">${customer.industry || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden sm:block">${customer.customerSince || 'N/A'}</div>
         <div class="px-2 py-1 flex justify-end space-x-2">
@@ -926,7 +1001,34 @@ function resetCustomerForm() {
     applyCustomerTypeValidation(); // Re-apply validation to hide/show fields correctly for a new entry
 }
 
-/* --- OPPORTUNITY CRUD OPERATIONS (UPDATED FOR NEW UI) --- */
+/* --- OPPORTUNITY CRUD OPERATIONS (UPDATED FOR NEW UI AND CURRENCY SYMBOLS) --- */
+
+// NEW: Function to populate the currency select dropdown for opportunities
+function populateCurrencySelect() {
+    opportunityCurrencySelect.innerHTML = '<option value="">Select Currency</option>'; // Clear existing options and add default
+
+    // Sort currencies by currencyCode (id) for consistent display
+    const sortedCurrencies = [...allCurrencies].sort((a, b) => a.id.localeCompare(b.id));
+
+    sortedCurrencies.forEach(currency => {
+        const option = document.createElement('option');
+        option.value = currency.id; // currencyCode is the doc.id
+        option.textContent = `${currency.id} (${currency.symbol})`; // e.g., "USD ($)"
+        opportunityCurrencySelect.appendChild(option);
+    });
+
+    // Set default value if available, e.g., USD
+    if (allCurrencies.some(c => c.id === 'USD')) {
+        opportunityCurrencySelect.value = 'USD';
+    }
+    updateCurrencySymbolDisplay(); // Update symbol when options are populated
+}
+
+// NEW: Function to update the currency symbol next to the amount input
+function updateCurrencySymbolDisplay() {
+    const selectedCurrencyCode = opportunityCurrencySelect.value;
+    currencySymbolDisplay.textContent = getCurrencySymbol(selectedCurrencyCode);
+}
 
 // Function to fetch customers and populate the dropdown for opportunities
 async function fetchCustomersForDropdown() {
@@ -1132,7 +1234,7 @@ function listenForOpportunities() {
     });
 }
 
-// Display a single opportunity in the UI
+// Display a single opportunity in the UI (UPDATED for currency symbol)
 function displayOpportunity(opportunity) {
     const opportunityRow = document.createElement('div');
     // Use data-grid-row class, and ensure its specific grid columns match the CSS
@@ -1143,12 +1245,16 @@ function displayOpportunity(opportunity) {
     const customer = allCustomers.find(c => c.id === opportunity.customer);
     const customerDisplayName = customer ? (customer.companyName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim()) : 'N/A';
 
+    // Get currency symbol
+    const currencySymbol = getCurrencySymbol(opportunity.currency);
+    const formattedAmount = opportunity.amount ? `${currencySymbol}${parseFloat(opportunity.amount).toFixed(2)}` : 'N/A';
+
 
     opportunityRow.innerHTML = `
         <div class="px-2 py-1 truncate font-medium text-gray-800">${opportunity.opportunityId || 'N/A'}</div>
         <div class="px-2 py-1 truncate">${opportunity.opportunityName || 'N/A'}</div>
         <div class="px-2 py-1 truncate">${customerDisplayName}</div>
-        <div class="px-2 py-1 truncate">${opportunity.amount ? `${opportunity.amount.toFixed(2)} ${opportunity.currency}` : 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${formattedAmount}</div>
         <div class="px-2 py-1 truncate">${opportunity.stage || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden sm:block">${opportunity.expectedStartDate || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden md:block">${opportunity.expectedCloseDate || 'N/A'}</div>
@@ -1164,7 +1270,7 @@ function displayOpportunity(opportunity) {
     opportunityRow.querySelector('.delete-btn').addEventListener('click', () => deleteOpportunity(opportunity.id));
 }
 
-// Populate form for editing an opportunity (UPDATED FOR NEW UI)
+// Populate form for editing an opportunity (UPDATED FOR NEW UI AND CURRENCY SYMBOL)
 function editOpportunity(opportunity) {
     if (!isAuthReady || !currentUserId) {
         showModal("Permission Denied", "Authentication required to edit opportunities.", () => {});
@@ -1199,6 +1305,7 @@ function editOpportunity(opportunity) {
     // Handle JSON or plain text for additional data
     opportunityDataInput.value = opportunity.opportunityData ? (typeof opportunity.opportunityData === 'object' ? JSON.stringify(opportunity.opportunityData, null, 2) : opportunity.opportunityData) : '';
 
+    updateCurrencySymbolDisplay(); // Update symbol for the input field
 
     linkedObjectsAccordion.classList.remove('hidden'); // Show linked objects accordion
 
@@ -1219,7 +1326,7 @@ function editOpportunity(opportunity) {
     opportunityForm.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Reset Opportunity form function (UPDATED FOR NEW UI)
+// Reset Opportunity form function (UPDATED FOR NEW UI AND CURRENCY SYMBOL)
 function resetOpportunityForm() {
     opportunityForm.reset();
     opportunityForm.dataset.editingId = '';
@@ -1237,6 +1344,7 @@ function resetOpportunityForm() {
 
     // Re-populate customers dropdown to ensure it's fresh
     fetchCustomersForDropdown();
+    populateCurrencySelect(); // Reset currency dropdown to default and update symbol display
 
     // Clear any existing sub-document lists
     opportunityContactList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No contacts added for this opportunity.</p>';
@@ -1261,17 +1369,18 @@ function resetOpportunityForm() {
     setOpportunityLayout('full_form_and_list');
 }
 
-// Function to update the summary card content
+// Function to update the summary card content (UPDATED for currency symbol)
 function updateOpportunitySummaryCard() {
     if (currentEditedOpportunity) {
         const customer = allCustomers.find(c => c.id === currentEditedOpportunity.customer);
         const customerDisplayName = customer ? (customer.companyName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim()) : 'N/A';
+        const currencySymbol = getCurrencySymbol(currentEditedOpportunity.currency);
 
         summaryOpportunityId.textContent = currentEditedOpportunity.opportunityId || 'N/A';
         summaryOpportunityName.textContent = currentEditedOpportunity.opportunityName || 'N/A';
         summaryOpportunityCustomer.textContent = customerDisplayName;
         summaryOpportunityStage.textContent = currentEditedOpportunity.stage || 'N/A';
-        summaryOpportunityAmount.textContent = currentEditedOpportunity.amount ? `${parseFloat(currentEditedOpportunity.amount).toFixed(2)} ${currentEditedOpportunity.currency}` : 'N/A';
+        summaryOpportunityAmount.textContent = currentEditedOpportunity.amount ? `${currencySymbol}${parseFloat(currentEditedOpportunity.amount).toFixed(2)}` : 'N/A';
     } else {
         summaryOpportunityId.textContent = '';
         summaryOpportunityName.textContent = 'No Opportunity Selected';
@@ -1306,7 +1415,7 @@ async function saveOpportunityContact(contactData, existingContactDocId = null) 
     });
 
     if (missingFields.length > 0) {
-        const message = `Please fill in all mandatory contact fields: ${missingFields.join(', ')}.`;
+        const message = `Please fill in all mandatory contact fields: ${[...new Set(missingFields)].join(', ')}.`;
         showModal("Validation Error", message, () => {});
         return;
     }
@@ -1744,11 +1853,13 @@ function displayQuote(quote) {
     quoteRow.className = 'data-grid-row grid-cols-[100px_1.5fr_1fr_0.8fr_0.8fr_1fr]';
     quoteRow.dataset.id = quote.id; // Firestore doc ID
 
+    const currencySymbol = getCurrencySymbol(quote.quoteCurrency);
+
     quoteRow.innerHTML = `
         <div class="px-2 py-1 truncate font-medium text-gray-800">${quote.quoteId || 'N/A'}</div>
         <div class="px-2 py-1 truncate">${quote.quoteName || 'N/A'}</div>
         <div class="px-2 py-1 truncate">${quote.quoteStatus || 'N/A'}</div>
-        <div class="px-2 py-1 truncate">${quote.quoteNetAmount ? quote.quoteNetAmount : 'N/A'} ${quote.quoteCurrency || ''}</div>
+        <div class="px-2 py-1 truncate">${quote.quoteNetAmount ? `${currencySymbol}${quote.quoteNetAmount}` : 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden sm:block">${quote.expireDate || 'N/A'}</div>
         <div class="px-2 py-1 flex justify-end space-x-2">
             <button class="edit-btn text-blue-600 hover:text-blue-800 font-semibold text-xs" data-id="${quote.id}">Edit</button>
@@ -2076,6 +2187,217 @@ function closeAllAccordions() {
     });
 }
 
+/* --- ADMIN CURRENCY MANAGEMENT (NEW) --- */
+
+async function saveCurrency(currencyData, existingCurrencyCode = null) {
+    if (!isAuthReady || !currentUserId || !isAdmin) {
+        showModal("Permission Denied", "Only administrators can manage currencies.", () => {});
+        return;
+    }
+
+    adminCurrencyMessageDiv.classList.add('hidden'); // Hide previous messages
+    submitCurrencyButton.disabled = true;
+    submitCurrencyButton.textContent = 'Uploading...';
+
+    let parsedData = {};
+    if (adminCurrenciesInput.value.trim() !== '') {
+        try {
+            parsedData = JSON.parse(adminCurrenciesInput.value.trim());
+            // Ensure parsedData is an object
+            if (typeof parsedData !== 'object' || Array.isArray(parsedData) || parsedData === null) {
+                throw new Error("Input must be a JSON object.");
+            }
+        } catch (e) {
+            adminCurrencyMessageDiv.textContent = `Invalid JSON format: ${e.message}`;
+            adminCurrencyMessageDiv.className = 'message error';
+            adminCurrencyMessageDiv.classList.remove('hidden');
+            submitCurrencyButton.disabled = false;
+            submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+            return;
+        }
+    } else if (!existingCurrencyCode) { // Only disallow empty if it's a new add, not an edit where data might be cleared
+        adminCurrencyMessageDiv.textContent = "Currency data cannot be empty.";
+        adminCurrencyMessageDiv.className = 'message error';
+        adminCurrencyMessageDiv.classList.remove('hidden');
+        submitCurrencyButton.disabled = false;
+        submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+        return;
+    }
+
+    const collectionPath = collection(db, "app_metadata", "currencies_data");
+
+    try {
+        let updatesPerformed = 0;
+        let errorsOccurred = 0;
+        let totalProcessed = 0;
+
+        if (existingCurrencyCode) { // Editing a single currency
+            const currencyDocRef = doc(db, collectionPath, existingCurrencyCode);
+            const currencyObject = Object.values(parsedData)[0]; // Expecting only one key-value pair for edit
+
+            if (!currencyObject || !currencyObject.currencyName || !currencyObject.symbol || !currencyObject.symbol_native) {
+                showModal("Validation Error", "Edited currency data must include currencyName, symbol, and symbol_native.", () => {});
+                return;
+            }
+
+            await updateDoc(currencyDocRef, currencyObject);
+            updatesPerformed++;
+            totalProcessed++;
+        } else { // Batch upload for new/multiple currencies
+            for (const code in parsedData) {
+                if (Object.prototype.hasOwnProperty.call(parsedData, code)) {
+                    totalProcessed++;
+                    const currency = parsedData[code];
+                    // Basic validation for each currency object
+                    if (typeof currency.currencyName !== 'string' || typeof currency.symbol !== 'string' || typeof currency.symbol_native !== 'string') {
+                        console.error(`Skipping invalid currency data for code ${code}: Missing currencyName, symbol, or symbol_native.`);
+                        errorsOccurred++;
+                        continue;
+                    }
+
+                    const currencyDocRef = doc(db, collectionPath, code); // Use currency code as document ID
+                    await setDoc(currencyDocRef, {
+                        currencyCode: code, // Also store code as a field for easier querying if needed
+                        currencyName: currency.currencyName,
+                        symbol: currency.symbol,
+                        symbol_native: currency.symbol_native
+                    }, { merge: true }); // Use merge: true for batch uploads
+                    updatesPerformed++;
+                }
+            }
+        }
+
+        adminCurrencyMessageDiv.textContent = `Upload complete. Total processed: ${totalProcessed}. Updated/Added: ${updatesPerformed}. Errors: ${errorsOccurred}.`;
+        adminCurrencyMessageDiv.className = errorsOccurred > 0 ? 'message error' : 'message success';
+        adminCurrencyMessageDiv.classList.remove('hidden');
+        console.log("Admin currency data upload successful.");
+
+        // Re-fetch currency data into `allCurrencies` after successful update
+        await fetchCurrencies();
+
+        resetCurrencyForm(); // Reset form after successful save
+    } catch (error) {
+        console.error("Error uploading currency data:", error);
+        adminCurrencyMessageDiv.textContent = `Error uploading currency data: ${error.message}`;
+        adminCurrencyMessageDiv.className = 'message error';
+        adminCurrencyMessageDiv.classList.remove('hidden');
+    } finally {
+        submitCurrencyButton.disabled = false;
+        submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+    }
+}
+
+
+async function deleteCurrency(currencyCode) {
+    if (!isAuthReady || !currentUserId || !isAdmin) {
+        showModal("Permission Denied", "Only administrators can manage currencies.", () => {});
+        return;
+    }
+
+    showModal(
+        "Confirm Deletion",
+        `Are you sure you want to delete the currency '${currencyCode}'? This action cannot be undone.`,
+        async () => {
+            try {
+                const currencyDocRef = doc(db, "app_metadata", "currencies_data", currencyCode);
+                await deleteDoc(currencyDocRef);
+                console.log("Currency deleted:", currencyCode);
+                showModal("Success", `Currency '${currencyCode}' deleted successfully!`, () => {});
+                await fetchCurrencies(); // Re-fetch to update allCurrencies array
+                populateCurrencySelect(); // Update opportunity form dropdown
+            } catch (error) {
+                console.error("Error deleting currency:", error);
+                showModal("Error", `Failed to delete currency: ${error.message}`, () => {});
+            }
+        }
+    );
+}
+
+function listenForCurrencies() {
+    if (unsubscribeCurrencies) {
+        unsubscribeCurrencies(); // Unsubscribe from previous listener
+    }
+
+    if (!isAuthReady || !currentUserId || !isAdmin) {
+        currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Access Denied: Only administrators can view currencies.</p>';
+        return;
+    }
+
+    const q = collection(db, "app_metadata", "currencies_data");
+
+    unsubscribeCurrencies = onSnapshot(q, (snapshot) => {
+        currencyList.innerHTML = ''; // Clear current list
+        if (snapshot.empty) {
+            currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No currencies found. Add them above!</p>';
+            return;
+        }
+        snapshot.forEach((doc) => {
+            const currency = { id: doc.id, ...doc.data() }; // doc.id is the currencyCode
+            displayCurrency(currency);
+        });
+    }, (error) => {
+        console.error("Error listening to currencies:", error);
+        currencyList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading currencies: ${error.message}</p>`;
+    });
+}
+
+function displayCurrency(currency) {
+    const currencyRow = document.createElement('div');
+    currencyRow.className = 'data-grid-row grid-cols-[0.8fr_1.5fr_0.8fr_0.8fr_1fr]'; // Adjust grid columns as needed
+    currencyRow.dataset.id = currency.id; // currency code is the Firestore doc ID
+
+    currencyRow.innerHTML = `
+        <div class="px-2 py-1 truncate font-medium text-gray-800">${currency.id || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${currency.currencyName || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${currency.symbol || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${currency.symbol_native || 'N/A'}</div>
+        <div class="px-2 py-1 flex justify-end space-x-2">
+            <button class="edit-btn text-blue-600 hover:text-blue-800 font-semibold text-xs" data-id="${currency.id}">Edit</button>
+            <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${currency.id}">Delete</button>
+        </div>
+    `;
+    currencyList.appendChild(currencyRow);
+
+    currencyRow.querySelector('.edit-btn').addEventListener('click', () => editCurrency(currency));
+    currencyRow.querySelector('.delete-btn').addEventListener('click', () => deleteCurrency(currency.id));
+}
+
+function editCurrency(currency) {
+    if (!isAdmin) {
+        showModal("Permission Denied", "Only administrators can edit currencies.", () => {});
+        return;
+    }
+    currencyFormTitle.textContent = `Edit Currency: ${currency.id}`;
+    submitCurrencyButton.textContent = 'Update Currency';
+
+    currencyCodeDisplayGroup.classList.remove('hidden');
+    currencyCodeDisplay.textContent = currency.id; // Display the code
+
+    // Pre-fill the textarea with the JSON for this specific currency
+    const currencyObject = {
+        [currency.id]: { // Use the currency code as the key
+            currencyName: currency.currencyName || '',
+            symbol: currency.symbol || '',
+            symbol_native: currency.symbol_native || ''
+        }
+    };
+    adminCurrenciesInput.value = JSON.stringify(currencyObject, null, 2); // Pretty print JSON
+
+    currencyForm.dataset.editingId = currency.id; // Store the currency code for updating
+    adminCurrencyMessageDiv.classList.add('hidden'); // Clear any previous messages
+    currencyForm.scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetCurrencyForm() {
+    currencyForm.reset();
+    currencyForm.dataset.editingId = '';
+    currencyFormTitle.textContent = 'Add New Currency';
+    submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+    currencyCodeDisplayGroup.classList.add('hidden');
+    currencyCodeDisplay.textContent = '';
+    adminCurrencyMessageDiv.classList.add('hidden'); // Clear messages
+}
+
 
 // --- Event Listeners ---
 
@@ -2115,7 +2437,7 @@ customerForm.addEventListener('submit', async (e) => {
     await saveCustomer(customerData, editingId || null);
 });
 
-// Opportunity Form Event Listener (NEW)
+// Opportunity Form Event Listener (NEW and UPDATED for currency symbol)
 opportunityForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -2137,6 +2459,10 @@ opportunityForm.addEventListener('submit', async (e) => {
     const editingId = opportunityForm.dataset.editingId;
     await saveOpportunity(opportunityData, editingId || null);
 });
+
+// Event listener for currency select change to update the symbol display
+opportunityCurrencySelect.addEventListener('change', updateCurrencySymbolDisplay);
+
 
 // Opportunity Contact Form Event Listener (NEW)
 opportunityContactForm.addEventListener('submit', async (e) => {
@@ -2363,6 +2689,15 @@ document.getElementById('countryMappingForm').addEventListener('submit', async (
         uploadAdminDataButton.textContent = 'Upload Data to Firestore';
     }
 });
+
+// Admin Currency Form Event Listener (NEW)
+currencyForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const editingId = currencyForm.dataset.editingId;
+    // The saveCurrency function directly reads from adminCurrenciesInput.value
+    await saveCurrency(null, editingId || null); // Pass null for data as it's read from input
+});
+
 
 // User Form Event Listener
 userForm.addEventListener('submit', async (e) => {
