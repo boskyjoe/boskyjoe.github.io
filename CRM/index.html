@@ -8,7 +8,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons (e.g., hamburger) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* Base styles from previous version, adjusted for better integration */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8faff; /* Light blue-gray background */
@@ -22,7 +25,11 @@
         .header {
             background-color: #ffffff;
             border-bottom: 1px solid #e0e7ff; /* Lighter blue border */
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08); /* More pronounced shadow for depth */
+            z-index: 1000; /* Ensure header is on top */
+            position: sticky;
+            top: 0;
+            width: 100%;
         }
         .nav-link {
             padding: 0.75rem 1rem;
@@ -30,6 +37,8 @@
             transition: all 0.2s ease-in-out;
             font-weight: 500;
             color: #4a5568; /* Gray-800 */
+            text-decoration: none; /* Ensure no underline */
+            display: block; /* For better click area in mobile */
         }
         .nav-link:hover {
             background-color: #edf2f7; /* Gray-100 */
@@ -45,11 +54,16 @@
             padding: 0.75rem 1.5rem;
             border-radius: 0.5rem;
             font-weight: 600;
-            transition: background-color 0.2s ease-in-out;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-out; /* Add transform for subtle click effect */
             cursor: pointer;
+            border: none; /* Remove default button border */
         }
         .btn-primary:hover {
             background-color: #5a62d9; /* Slightly lighter indigo */
+            transform: translateY(-1px); /* Slight lift on hover */
+        }
+        .btn-primary:active {
+            transform: translateY(0); /* Return on click */
         }
         .btn-secondary {
             background-color: #e2e8f0; /* Gray-200 */
@@ -57,11 +71,16 @@
             padding: 0.75rem 1.5rem;
             border-radius: 0.5rem;
             font-weight: 600;
-            transition: background-color 0.2s ease-in-out;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-out;
             cursor: pointer;
+            border: none;
         }
         .btn-secondary:hover {
             background-color: #cbd5e0; /* Gray-300 */
+            transform: translateY(-1px);
+        }
+        .btn-secondary:active {
+            transform: translateY(0);
         }
         .form-input, .form-select, .form-textarea {
             width: 100%;
@@ -79,7 +98,7 @@
         .card {
             background-color: #ffffff;
             border-radius: 0.75rem; /* rounded-lg */
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08); /* Slightly stronger shadow for cards */
             padding: 1.5rem;
         }
         .section-title {
@@ -162,50 +181,114 @@
             margin-bottom: 1rem;
             border: 1px solid #22c55e; /* Green-500 */
         }
+
+        /* Specific styles for new header and mobile menu */
+        .group.relative:hover .submenu {
+            display: block; /* Show submenu on hover for desktop */
+        }
+        .submenu {
+            display: none; /* Hidden by default */
+            position: absolute;
+            background-color: #ffffff;
+            min-width: 160px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+            z-index: 10;
+            border-radius: 0.5rem;
+            top: 100%; /* Position below parent link */
+            left: 50%; /* Center dropdown horizontally */
+            transform: translateX(-50%); /* Adjust for centering */
+            overflow: hidden; /* For rounded corners */
+            padding: 0.5rem 0; /* Vertical padding inside dropdown */
+        }
+        .submenu a {
+            color: #4a5568;
+            padding: 0.75rem 1rem;
+            text-decoration: none;
+            display: block;
+            text-align: left;
+            transition: background-color 0.2s;
+        }
+        .submenu a:hover {
+            background-color: #edf2f7;
+            color: #2d3748;
+        }
+
+        /* Mobile Menu specific styles */
+        #mobileMenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out; /* Smooth slide-down/up */
+        }
+        #mobileMenu.open {
+            max-height: 500px; /* Adjust based on content height, needs to be large enough */
+            transition: max-height 0.5s ease-in;
+        }
+        #mobileMenu .nav-link {
+            width: 100%; /* Full width for mobile links */
+        }
+        #mobileMenu .mobile-submenu {
+            padding-left: 1.5rem; /* Indent sub-items */
+        }
+
     </style>
 </head>
 <body class="bg-gray-50">
     <div id="modalContainer"></div>
 
     <!-- Header and Navigation -->
-    <header class="header sticky top-0 z-50">
+    <header class="header">
         <div class="container mx-auto flex items-center justify-between py-4">
+            <!-- Logo/Title -->
             <h1 class="text-2xl font-bold text-gray-900">ShutterSync CRM</h1>
+
+            <!-- Desktop Navigation -->
             <nav class="hidden md:flex items-center space-x-4">
                 <a href="#" class="nav-link" data-section="home">Home</a>
                 <a href="#" class="nav-link" data-section="customers-section">Customers</a>
                 <a href="#" class="nav-link" data-section="events-section">Events</a>
 
-                <!-- Admin Menu (Initially hidden, controlled by JS) -->
-                <div id="desktopAdminMenu" class="hidden flex items-center space-x-4 ml-4">
-                    <span class="text-gray-500 font-semibold">Admin:</span>
-                    <a href="#" class="nav-link" data-section="users-management-section">Users</a>
-                    <a href="#" class="nav-link" data-section="admin-country-mapping-section">Country Data</a>
+                <!-- Admin Menu Dropdown (Desktop) -->
+                <div id="desktopAdminMenu" class="hidden relative group">
+                    <button class="nav-link inline-flex items-center">
+                        Admin <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                    </button>
+                    <div class="submenu">
+                        <a href="#" class="nav-link" data-section="users-management-section">Users</a>
+                        <a href="#" class="nav-link" data-section="admin-country-mapping-section">Country Data</a>
+                    </div>
                 </div>
 
-                <span id="userIdDisplay" class="text-gray-600 text-sm ml-4"></span>
-                <button id="navGoogleLoginButton" class="btn-primary">Sign in with Google</button>
-                <button id="logoutButton" class="btn-secondary hidden">Logout</button>
+                <!-- User Info / Login/Logout Buttons -->
+                <div class="flex items-center space-x-4 ml-4">
+                    <span id="userIdDisplay" class="text-gray-600 text-sm hidden"></span>
+                    <button id="navGoogleLoginButton" class="btn-primary">
+                        <i class="fab fa-google mr-2"></i> Sign in
+                    </button>
+                    <button id="logoutButton" class="btn-secondary hidden">Logout</button>
+                </div>
             </nav>
-            <button id="mobileMenuButton" class="md:hidden text-gray-700 focus:outline-none">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+
+            <!-- Mobile Menu Button (Hamburger) -->
+            <button id="mobileMenuButton" class="md:hidden text-gray-700 focus:outline-none p-2 rounded-md hover:bg-gray-100 transition-colors">
+                <i class="fas fa-bars text-xl"></i>
             </button>
         </div>
-        <!-- Mobile Menu -->
-        <div id="mobileMenu" class="md:hidden bg-white border-t border-gray-200 hidden">
+
+        <!-- Mobile Menu (Hidden by default, toggled by JS) -->
+        <div id="mobileMenu" class="md:hidden bg-white border-t border-gray-200">
             <nav class="flex flex-col p-4 space-y-2">
                 <a href="#" class="nav-link" data-section="home">Home</a>
                 <a href="#" class="nav-link" data-section="customers-section">Customers</a>
                 <a href="#" class="nav-link" data-section="events-section">Events</a>
 
-                <!-- Mobile Admin Menu (Initially hidden, controlled by JS) -->
-                <div id="mobileAdminMenu" class="hidden flex flex-col space-y-2 pl-4 border-l border-gray-200">
-                    <span class="text-gray-500 font-semibold">Admin:</span>
-                    <a href="#" class="nav-link" data-section="users-management-section">Users</a>
-                    <a href="#" class="nav-link" data-section="admin-country-mapping-section">Country Data</a>
+                <!-- Mobile Admin Menu (Toggles visibility in JS) -->
+                <div id="mobileAdminMenu" class="hidden flex flex-col space-y-1 pl-4 border-l border-gray-200">
+                    <span class="text-gray-500 font-semibold text-sm">Admin:</span>
+                    <a href="#" class="nav-link mobile-submenu" data-section="users-management-section">Users</a>
+                    <a href="#" class="nav-link mobile-submenu" data-section="admin-country-mapping-section">Country Data</a>
                 </div>
 
-                <span id="mobileUserIdDisplay" class="text-gray-600 text-sm pt-2"></span>
+                <span id="mobileUserIdDisplay" class="text-gray-600 text-sm pt-2 hidden"></span>
                 <button id="mobileLogoutButton" class="btn-secondary mt-2 hidden">Logout</button>
             </nav>
         </div>
@@ -218,25 +301,23 @@
                 <h2 class="section-title">Welcome to ShutterSync CRM</h2>
                 <p class="text-lg text-gray-700">Your central hub for managing customers, events, and user access. Log in to get started.</p>
                 <div class="mt-6">
-                    <button id="auth-section-link" class="btn-primary" onclick="showSection('auth-section')">Login / Sign Up</button>
+                    <!-- This button only serves to hint about login if not already logged in by first clicking an Admin menu item -->
+                    <button id="googleLoginButton" class="btn-primary">
+                        <i class="fab fa-google mr-2"></i> Sign in with Google
+                    </button>
                 </div>
             </div>
         </section>
 
-        <!-- Authentication Section (Google Sign-In) -->
+        <!-- Authentication Section (Directly incorporated into Home for Google Sign-In) -->
+        <!-- This section is now purely a placeholder, actual login is via the header button -->
         <section id="auth-section" class="hidden section">
             <div class="card max-w-md mx-auto text-center">
-                <h2 class="section-title">Login or Sign Up</h2>
+                <h2 class="section-title">Login / Sign Up</h2>
                 <p class="text-gray-600 mb-6">Use your Google account to get started.</p>
-                <button id="googleLoginButton" class="btn-primary w-full flex items-center justify-center space-x-2">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12.24 10.211l-.03-.23H12c-2.316 0-3.904 1.157-3.904 3.037 0 1.954 1.637 3.057 3.904 3.057 2.062 0 3.197-.83 3.948-1.579l.067-.076L16.035 17c-.77.74-1.895 1.489-3.72 1.489-3.088 0-5.894-2.223-5.894-5.918 0-3.649 2.91-5.918 5.894-5.918 2.505 0 3.904 1.095 4.908 2.046.88.88 1.407 2.006 1.407 3.327 0 .285-.028.56-.057.838L12.24 10.211z" fill="#4285F4"/>
-                        <path d="M21.578 12.01c0-.188-.01-.376-.029-.564H12v2.248h4.945c-.244 1.258-.934 2.37-2.008 3.093l.034.032.067.076c.75.748 1.884 1.479 3.948 1.479 2.062 0 3.197-.83 3.948-1.579l.067-.076L21.578 12.01z" fill="#34A853"/>
-                        <path d="M12 21.492c-1.95 0-3.64-.694-4.882-1.889l-.031-.034-.07-.075c-.75-.747-1.884-1.479-3.948-1.479-2.062 0-3.197-.83-3.948-1.579l-.067-.076L12 21.492z" fill="#FBBC05"/>
-                        <path d="M12 2.51c1.95 0 3.64.694 4.882 1.889l.031.034.07.075c.75.747 1.884 1.479 3.948 1.479 2.062 0 3.197-.83 3.948-1.579l-.067-.076L12 2.51z" fill="#EA4335"/>
-                    </svg>
-                    <span>Sign in with Google</span>
-                </button>
+                <p class="text-sm text-gray-500">
+                    (Note: For the best experience, use the 'Sign in' button in the top navigation bar.)
+                </p>
             </div>
         </section>
 
@@ -431,7 +512,6 @@
                 <form id="userForm">
                     <div id="userIdDisplayGroup" class="mb-4">
                         <label for="userIdDisplayInput" class="block text-sm font-medium text-gray-700">User Firestore ID (UID):</label>
-                        <!-- THIS IS THE UPDATED INPUT FIELD -->
                         <input type="text" id="userIdDisplayInput" placeholder="Enter Firebase User UID here"
                                class="form-input mt-1" required>
                         <p class="text-xs text-gray-500 mt-1">For new user profiles, this must be their Firebase Authentication UID. Create the user in Firebase Auth first, then paste their UID here.</p>
