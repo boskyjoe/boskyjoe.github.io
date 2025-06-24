@@ -228,17 +228,72 @@ body {
     opacity: 1;
 }
 
-/* Specific styling for list items within tooltip, if any */
-.tooltip-text ul {
-    list-style: disc; /* Use disc for list items */
-    padding-left: 1.2rem; /* Indent for list items */
-    margin-top: 0.5rem;
-}
-.tooltip-text ul li {
-    margin-bottom: 0.2rem;
+/* Accordion Styles (NEW) */
+.accordion-item {
+    border: 1px solid #e2e8f0; /* Gray-200 */
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background-color: #ffffff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
-/* Smaller circle list style for nested lists */
-.tooltip-text ul.list-circle {
-    list-style: circle;
+.accordion-header {
+    width: 100%;
+    background-color: #f0f4f8; /* Light blue-gray header */
+    padding: 1rem 1.5rem;
+    text-align: left;
+    font-size: 1.125rem; /* text-lg */
+    font-weight: 600; /* semi-bold */
+    color: #2d3748; /* Gray-900 */
+    cursor: pointer;
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.accordion-header:hover {
+    background-color: #e2e8f0; /* Slightly darker on hover */
+}
+
+.accordion-icon {
+    transition: transform 0.3s ease-in-out;
+}
+
+.accordion-header.active .accordion-icon {
+    transform: rotate(180deg); /* Rotate icon when active */
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out;
+    padding: 0 1.5rem; /* Padding only for sides */
+}
+
+.accordion-content.open {
+    max-height: 1000px; /* Adjust as needed, should be larger than content */
+    padding-bottom: 1.5rem; /* Add bottom padding when open */
+}
+
+/* Additional styling for forms/lists within accordions */
+.accordion-content form {
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 1rem;
+}
+.accordion-content .grid {
+    margin-top: 1rem; /* Space between accordion form and list */
+}
+.accordion-content .grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 768px) { /* Medium screens and up */
+    .accordion-content .md\:grid-cols-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .accordion-content .md\:grid-cols-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
