@@ -103,7 +103,7 @@ const opportunityIdDisplay = document.getElementById('opportunityIdDisplay');
 const opportunityCustomerSelect = document.getElementById('opportunityCustomer');
 const opportunityNameInput = document.getElementById('opportunityName');
 const opportunityAmountInput = document.getElementById('opportunityAmount');
-const currencySymbolDisplay = document.getElementById('currencySymbolDisplay'); // Span for currency symbol
+let currencySymbolDisplay; // CHANGED: Declare with 'let', will be initialized in initializeFirebase
 const opportunityCurrencySelect = document.getElementById('opportunityCurrency');
 const opportunityStageSelect = document.getElementById('opportunityStage');
 const opportunityExpectedStartDateInput = document.getElementById('opportunityExpectedStartDate');
@@ -158,7 +158,7 @@ const quoteNameInput = document.getElementById('quoteName');
 const quoteDescriptionInput = document.getElementById('quoteDescription');
 const quoteCustomerSelect = document.getElementById('quoteCustomer'); // Auto-filled from opportunity
 const quoteStartDateInput = document.getElementById('quoteStartDate');
-const quoteExpireDateInput = document="quoteExpireDate";
+const quoteExpireDateInput = document.getElementById('quoteExpireDate');
 const quoteStatusSelect = document.getElementById('quoteStatus');
 const quoteNetListAmountInput = document.getElementById('quoteNetListAmount');
 const quoteNetDiscountInput = document.getElementById('quoteNetDiscount');
@@ -507,6 +507,13 @@ async function initializeFirebase() {
         getAnalytics(app); // Initialize Analytics
         db = getFirestore(app);
         auth = getAuth(app);
+
+        // NEW: Initialize currencySymbolDisplay here, AFTER the DOM is fully loaded
+        currencySymbolDisplay = document.getElementById('currencySymbolDisplay');
+        if (!currencySymbolDisplay) {
+            console.error("ERROR: currencySymbolDisplay element not found in the DOM!");
+            // You might want to display a user-facing error message or a fallback
+        }
 
         // Load currency data and country data initially (can be done before auth state is fully known as they are public app_metadata)
         await Promise.all([
@@ -1026,8 +1033,28 @@ function populateCurrencySelect() {
 
 // NEW: Function to update the currency symbol next to the amount input
 function updateCurrencySymbolDisplay() {
+    // Add defensive check for currencySymbolDisplay
+    if (!currencySymbolDisplay) {
+        console.error("updateCurrencySymbolDisplay: currencySymbolDisplay element is null. Cannot update symbol.");
+        return; // Exit if element is not available
+    }
+
     const selectedCurrencyCode = opportunityCurrencySelect.value;
-    currencySymbolDisplay.textContent = getCurrencySymbol(selectedCurrencyCode);
+    console.log("DEBUG: Selected Currency Code:", selectedCurrencyCode);
+    console.log("DEBUG: currencySymbolDisplay element:", currencySymbolDisplay);
+    console.log("DEBUG: Current textContent of currencySymbolDisplay:", currencySymbolDisplay.textContent);
+
+    const symbolToAssign = getCurrencySymbol(selectedCurrencyCode);
+    console.log("DEBUG: Symbol to assign:", symbolToAssign);
+
+    try {
+        currencySymbolDisplay.textContent = symbolToAssign; // Line 161
+        console.log("DEBUG: Successfully updated currency symbol to:", symbolToAssign);
+    } catch (error) {
+        console.error("ERROR: Failed to set currency symbol textContent:", error);
+        console.error("ERROR: currencySymbolDisplay object:", currencySymbolDisplay);
+        console.error("ERROR: Value attempted to set:", symbolToAssign);
+    }
 }
 
 // Function to fetch customers and populate the dropdown for opportunities
@@ -2233,12 +2260,24 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
 
         if (existingCurrencyCode) { // Editing a single currency
             const currencyDocRef = doc(db, collectionPath, existingCurrencyCode);
-            const currencyObject = Object.values(parsedData)[0]; // Expecting only one key-value pair for edit
+            // When editing, the textarea should contain only the JSON for the currency being edited
+            // e.g., {"USD": {"currencyName": "US Dollar", "symbol": "$", "symbol_native": "$"}}
+            // So we need to extract the actual currency object value.
+            const currencyObjectKey = Object.keys(parsedData)[0];
+            const currencyObject = parsedData[currencyObjectKey];
 
-            if (!currencyObject || !currencyObject.currencyName || !currencyObject.symbol || !currencyObject.symbol_native) {
+
+            if (!currencyObject || typeof currencyObject.currencyName !== 'string' || typeof currencyObject.symbol !== 'string' || typeof currencyObject.symbol_native !== 'string') {
                 showModal("Validation Error", "Edited currency data must include currencyName, symbol, and symbol_native.", () => {});
                 return;
             }
+
+            // Ensure the currency code in the JSON matches the editing ID
+            if (currencyObjectKey !== existingCurrencyCode) {
+                 showModal("Validation Error", `The currency code in the JSON (${currencyObjectKey}) must match the edited currency code (${existingCurrencyCode}).`, () => {});
+                 return;
+            }
+
 
             await updateDoc(currencyDocRef, currencyObject);
             updatesPerformed++;
