@@ -298,15 +298,21 @@ MX:Aguascalientes,Baja California"></textarea>
             <div id="user-management-instructions" class="card bg-blue-50 border-l-4 border-blue-400 text-blue-800 p-4 mb-6" role="alert">
                 <p class="font-bold">Important Instructions for User Management:</p>
                 <ul class="list-disc list-inside mt-2 text-sm">
-                    <li>This page is for administrators to manage user profiles in the system.</li>
+                    <li>This page allows administrators to manage user profiles within ShutterSync CRM.</li>
                     <li>
-                        To create a new user profile here, the user **MUST first be created in Firebase Authentication**.
-                        Go to your Firebase Console > Authentication, then add a new user (e.g., via Email/Password or Google).
-                        Once created, copy their unique **User UID**.
+                        **Recommended Workflow for New Users:**
+                        <ul class="list-circle list-inside ml-4 mt-1">
+                            <li>Ask new users to **first log in to the application** using their Google account (or other configured authentication method). This automatically creates their basic user entry in Firebase Authentication.</li>
+                            <li>Once they have logged in at least once, an administrator can then come to this "User Management" page.</li>
+                            <li>Find the user in the "Existing Users" list (they'll likely have the default 'User' role).</li>
+                            <li>Click "Edit" to assign them a specific role (e.g., 'Admin') and add any other profile details.</li>
+                        </ul>
                     </li>
-                    <li>Paste the Firebase User UID into the "User Firestore ID (UID)" field below when creating a new profile.</li>
-                    <li>Set the user's role to 'Admin' to grant them administrative access to CRM admin features.</li>
-                    <li>For existing users, their UID field will be read-only during editing.</li>
+                    <li>
+                        **Adding a User Profile Manually (Advanced):**
+                        If you need to add a user profile here *before* they log in (e.g., for specific setup scenarios), you **MUST** first create the user in your Firebase Console (Authentication section). Then, copy their unique **User UID** and paste it into the "User Firestore ID (UID)" field when creating their profile below.
+                    </li>
+                    <li>For existing users, the "User Firestore ID (UID)" field will be read-only during editing.</li>
                 </ul>
             </div>
 
@@ -319,7 +325,7 @@ MX:Aguascalientes,Baja California"></textarea>
                             <i class="fas fa-info-circle text-gray-500 cursor-help ml-1 group relative">
                                 <span class="tooltip-text">
                                     This is the unique Firebase Authentication User ID.
-                                    Find it in your Firebase Console > Authentication,
+                                    Find it in your Firebase Console &gt; Authentication,
                                     then click on the user's email to see their details. Copy the 'User UID' value.
                                     It looks like a long string of letters and numbers (e.g., 'abcdefg12345').
                                 </span>
