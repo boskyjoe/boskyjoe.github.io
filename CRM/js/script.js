@@ -25,12 +25,18 @@ let isAuthReady = false; // Set to false initially, true when Firebase Auth conf
 const currentCustomerCollectionType = 'public'; // Fixed to public as per requirement
 let unsubscribeCustomers = null; // To store the onSnapshot unsubscribe function for customers
 let unsubscribeUsers = null; // To store the onSnapshot unsubscribe function for users
+let unsubscribeOpportunities = null; // To store the onSnapshot unsubscribe function for opportunities
+let unsubscribeOpportunityContacts = null; // NEW: To store the onSnapshot unsubscribe for opportunity contacts
 
 let isAdmin = false; // Flag to control admin specific UI/features
+let currentOpportunityId = null; // NEW: Stores the Firestore Doc ID of the currently selected/edited opportunity
 
 // Data for Countries and States (Now fetched from Firestore)
 let appCountries = [];
 let appCountryStateMap = {};
+
+// Data for Customers (to populate Opportunity Customer dropdown)
+let allCustomers = [];
 
 // Get references to DOM elements for Customers
 const customersSection = document.getElementById('customers-section');
@@ -66,6 +72,79 @@ const customerSinceInput = document.getElementById('customerSince');
 const customerDescriptionInput = document.getElementById('customerDescription');
 const submitCustomerButton = document.getElementById('submitCustomerButton');
 const customerList = document.getElementById('customerList'); // Reference to the div for customer rows
+
+// Opportunity Section Elements (NEW)
+const opportunitiesSection = document.getElementById('opportunities-section');
+const opportunityForm = document.getElementById('opportunityForm');
+const opportunityFormTitle = document.getElementById('opportunityFormTitle');
+const opportunityIdDisplayGroup = document.getElementById('opportunityIdDisplayGroup');
+const opportunityIdDisplay = document.getElementById('opportunityIdDisplay');
+const opportunityCustomerSelect = document.getElementById('opportunityCustomer');
+const opportunityNameInput = document.getElementById('opportunityName');
+const opportunityAmountInput = document.getElementById('opportunityAmount');
+const opportunityCurrencySelect = document.getElementById('opportunityCurrency');
+const opportunityStageSelect = document.getElementById('opportunityStage');
+const opportunityExpectedStartDateInput = document.getElementById('opportunityExpectedStartDate');
+const opportunityExpectedCloseDateInput = document.getElementById('opportunityExpectedCloseDate');
+const opportunityEventTypeSelect = document.getElementById('opportunityEventType');
+const opportunityEventLocationProposedInput = document.getElementById('opportunityEventLocationProposed');
+const opportunityDescriptionInput = document.getElementById('opportunityDescription');
+const opportunityDataInput = document.getElementById('opportunityData');
+const submitOpportunityButton = document.getElementById('submitOpportunityButton');
+const opportunityList = document.getElementById('opportunityList'); // Reference to the div for opportunity rows
+
+const linkedObjectsAccordion = document.getElementById('linkedObjectsAccordion'); // Main accordion container
+const contactsAccordionHeader = document.getElementById('contactsAccordionHeader'); // Contacts accordion header
+const contactsAccordionContent = contactsAccordionHeader.nextElementSibling; // Contacts accordion content
+const linesAccordionHeader = document.getElementById('linesAccordionHeader'); // Lines accordion header
+const linesAccordionContent = linesAccordionHeader.nextElementSibling; // Lines accordion content
+const quotesAccordionHeader = document.getElementById('quotesAccordionHeader'); // Quotes accordion header
+const quotesAccordionContent = quotesAccordionHeader.nextElementSibling; // Quotes accordion content
+
+
+// Opportunity Contact Elements (NEW)
+const opportunityContactForm = document.getElementById('opportunityContactForm');
+const contactIdDisplayGroup = document.getElementById('contactIdDisplayGroup');
+const contactIdDisplay = document.getElementById('contactIdDisplay');
+const contactFirstNameInput = document.getElementById('contactFirstName');
+const contactLastNameInput = document.getElementById('contactLastName');
+const contactEmailInput = document.getElementById('contactEmail');
+const contactPhoneInput = document.getElementById('contactPhone');
+const contactRoleInput = document.getElementById('contactRole');
+const submitOpportunityContactButton = document.getElementById('submitOpportunityContactButton');
+const opportunityContactList = document.getElementById('opportunityContactList');
+
+// Opportunity Line Elements (NEW - Stubs)
+const opportunityLineForm = document.getElementById('opportunityLineForm');
+const optyLineIdDisplayGroup = document.getElementById('optyLineIdDisplayGroup');
+const optyLineIdDisplay = document.getElementById('optyLineIdDisplay');
+const lineServiceDescriptionInput = document.getElementById('lineServiceDescription');
+const lineUnitPriceInput = document.getElementById('lineUnitPrice');
+const lineQuantityInput = document.getElementById('lineQuantity');
+const lineDiscountInput = document.getElementById('lineDiscount');
+const lineNetPriceInput = document.getElementById('lineNetPrice');
+const lineStatusSelect = document.getElementById('lineStatus');
+const submitOpportunityLineButton = document.getElementById('submitOpportunityLineButton');
+const opportunityLineList = document.getElementById('opportunityLineList');
+
+// Quote Elements (NEW - Stubs)
+const quoteForm = document.getElementById('quoteForm');
+const quoteIdDisplayGroup = document.getElementById('quoteIdDisplayGroup');
+const quoteIdDisplay = document.getElementById('quoteIdDisplay');
+const quoteNameInput = document.getElementById('quoteName');
+const quoteDescriptionInput = document.getElementById('quoteDescription');
+const quoteCustomerSelect = document.getElementById('quoteCustomer'); // Auto-filled from opportunity
+const quoteStartDateInput = document.getElementById('quoteStartDate');
+const quoteExpireDateInput = document.getElementById('quoteExpireDate');
+const quoteStatusSelect = document.getElementById('quoteStatus');
+const quoteNetListAmountInput = document.getElementById('quoteNetListAmount');
+const quoteNetDiscountInput = document.getElementById('quoteNetDiscount');
+const quoteNetAmountInput = document.getElementById('quoteNetAmount');
+const quoteCurrencySelect = document.getElementById('quoteCurrency');
+const quoteIsFinalCheckbox = document.getElementById('quoteIsFinal');
+const submitQuoteButton = document.getElementById('submitQuoteButton');
+const quoteList = document.getElementById('quoteList');
+
 
 // Admin Country Mapping Section elements
 const adminCountryMappingSection = document.getElementById('admin-country-mapping-section');
@@ -115,7 +194,7 @@ const mobileMenu = document.getElementById('mobileMenu');
 // Select all main content sections
 const homeSection = document.getElementById('home');
 const eventsSection = document.getElementById('events-section');
-const allSections = [homeSection, customersSection, eventsSection, adminCountryMappingSection, usersManagementSection, authSection];
+const allSections = [homeSection, customersSection, opportunitiesSection, eventsSection, adminCountryMappingSection, usersManagementSection, authSection];
 
 
 // Function to show a custom confirmation modal
@@ -183,6 +262,14 @@ async function showSection(sectionId) {
     // Stop all listeners first to prevent redundant updates
     if (unsubscribeCustomers) { unsubscribeCustomers(); }
     if (unsubscribeUsers) { unsubscribeUsers(); }
+    if (unsubscribeOpportunities) { unsubscribeOpportunities(); } // NEW
+    if (unsubscribeOpportunityContacts) { unsubscribeOpportunityContacts(); } // NEW
+
+    // Reset currentOpportunityId when navigating away from opportunities
+    if (sectionId !== 'opportunities-section') {
+        currentOpportunityId = null;
+        linkedObjectsAccordion.classList.add('hidden'); // Hide linked objects if not in opportunity section
+    }
 
     // Start specific listener for the active section, but only if auth is ready
     if (isAuthReady) { // Ensure auth is ready before starting listeners
@@ -190,7 +277,13 @@ async function showSection(sectionId) {
             listenForCustomers();
             resetCustomerForm(); // Reset form and apply initial validation state
             submitCustomerButton.removeAttribute('disabled'); // Customers form always enabled for authenticated users
-        } else if (sectionId === 'admin-country-mapping-section') {
+        } else if (sectionId === 'opportunities-section') { // NEW
+            await fetchCustomersForDropdown(); // Fetch customers to populate dropdown
+            listenForOpportunities();
+            resetOpportunityForm(); // This will also hide linked object sections initially
+            submitOpportunityButton.removeAttribute('disabled');
+        }
+        else if (sectionId === 'admin-country-mapping-section') {
             if (isAdmin) { // Double check admin status for safety
                 loadAdminCountryData(); // Load existing data into admin textareas
                 uploadAdminDataButton.removeAttribute('disabled');
@@ -210,6 +303,10 @@ async function showSection(sectionId) {
         console.warn("Attempted to show section before Firebase Auth is ready:", sectionId);
         // Ensure buttons are disabled if auth is not ready
         submitCustomerButton.setAttribute('disabled', 'disabled');
+        submitOpportunityButton.setAttribute('disabled', 'disabled'); // NEW
+        submitOpportunityContactButton.setAttribute('disabled', 'disabled'); // NEW
+        submitOpportunityLineButton.setAttribute('disabled', 'disabled'); // NEW
+        submitQuoteButton.setAttribute('disabled', 'disabled'); // NEW
         uploadAdminDataButton.setAttribute('disabled', 'disabled');
         submitUserButton.setAttribute('disabled', 'disabled');
     }
@@ -372,6 +469,10 @@ async function initializeFirebase() {
 
                 // Disable all form submit buttons by default when not logged in
                 submitCustomerButton.setAttribute('disabled', 'disabled');
+                submitOpportunityButton.setAttribute('disabled', 'disabled'); // NEW
+                submitOpportunityContactButton.setAttribute('disabled', 'disabled'); // NEW
+                submitOpportunityLineButton.setAttribute('disabled', 'disabled'); // NEW
+                submitQuoteButton.setAttribute('disabled', 'disabled'); // NEW
                 uploadAdminDataButton.setAttribute('disabled', 'disabled');
                 submitUserButton.setAttribute('disabled', 'disabled');
 
@@ -408,7 +509,7 @@ function getCollectionPath(type, dataArea = 'customers') {
 }
 
 
-/* --- CUSTOMERS CRUD OPERATIONS (UPDATED) --- */
+/* --- CUSTOMERS CRUD OPERATIONS --- */
 
 // Function to populate the country dropdown
 function populateCountries() {
@@ -767,7 +868,850 @@ function resetCustomerForm() {
     applyCustomerTypeValidation(); // Re-apply validation to hide/show fields correctly for a new entry
 }
 
-/* --- USERS CRUD OPERATIONS (NEW) --- */
+/* --- OPPORTUNITY CRUD OPERATIONS (NEW) --- */
+
+// Function to fetch customers and populate the dropdown for opportunities
+async function fetchCustomersForDropdown() {
+    if (!isAuthReady || !currentUserId) {
+        console.warn("User not authenticated, cannot fetch customers for dropdown.");
+        return;
+    }
+    const collectionPath = getCollectionPath(currentCustomerCollectionType, 'customers');
+    if (!collectionPath) return;
+
+    try {
+        const querySnapshot = await getDocs(collection(db, collectionPath));
+        allCustomers = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        opportunityCustomerSelect.innerHTML = '<option value="">Select Customer</option>'; // Clear existing and add default
+        allCustomers.forEach(customer => {
+            const option = document.createElement('option');
+            option.value = customer.id; // Store Firestore doc ID
+            // Display name based on customer type
+            let displayName = customer.companyName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+            option.textContent = displayName || customer.email; // Fallback to email
+            opportunityCustomerSelect.appendChild(option);
+        });
+        console.log("Customers loaded for Opportunity dropdown.");
+    } catch (error) {
+        console.error("Error fetching customers for opportunity dropdown:", error);
+        showModal("Error", "Failed to load customers for opportunity dropdown. " + error.message, () => {});
+    }
+}
+
+// Save (Add/Update) an Opportunity
+async function saveOpportunity(opportunityData, existingOpportunityDocId = null) {
+    if (!isAuthReady || !currentUserId) {
+        console.error("User not authenticated. Cannot save opportunity.");
+        showModal("Error", "Could not save opportunity. Authentication required.", () => {});
+        return;
+    }
+
+    // Client-side validation for mandatory fields
+    const mandatoryFields = [
+        { field: opportunityData.customer, name: "Customer" },
+        { field: opportunityData.opportunityName.trim(), name: "Opportunity Name" },
+        { field: opportunityData.amount, name: "Amount" }, // Number type, check if it's a valid number
+        { field: opportunityData.currency.trim(), name: "Currency" },
+        { field: opportunityData.stage.trim(), name: "Stage" },
+        { field: opportunityData.expectedStartDate.trim(), name: "Expected Start Date" },
+        { field: opportunityData.expectedCloseDate.trim(), name: "Expected Close Date" },
+        { field: opportunityData.eventType.trim(), name: "Event Type" },
+        { field: opportunityData.eventLocationProposed.trim(), name: "Proposed Event Location" },
+        { field: opportunityData.description.trim(), name: "Description" }
+    ];
+
+    let missingFields = [];
+    mandatoryFields.forEach(item => {
+        if (!item.field || (typeof item.field === 'string' && item.field === '') || (item.name === "Amount" && (isNaN(item.field) || item.field <= 0))) {
+            missingFields.push(item.name);
+        }
+    });
+
+    if (missingFields.length > 0) {
+        const message = `Please fill in all mandatory fields: ${[...new Set(missingFields)].join(', ')}.`; // Use Set to remove duplicates
+        showModal("Validation Error", message, () => {});
+        return;
+    }
+
+    // Ensure amount is stored as a number
+    opportunityData.amount = parseFloat(opportunityData.amount);
+
+    // Parse opportunityDataInput if it's meant to be a JSON object
+    if (opportunityData.opportunityData.trim() !== '') {
+        try {
+            opportunityData.opportunityData = JSON.parse(opportunityData.opportunityData);
+        } catch (e) {
+            showModal("Validation Error", "Additional Opportunity Data must be valid JSON if provided.", () => {});
+            return;
+        }
+    } else {
+        opportunityData.opportunityData = {}; // Store as empty object if input is empty
+    }
+
+
+    const collectionPath = getCollectionPath(currentCustomerCollectionType, 'opportunities'); // Using public for opportunities
+    if (!collectionPath) return;
+
+    try {
+        if (existingOpportunityDocId) {
+            // Update existing opportunity
+            const opportunityDocRef = doc(db, collectionPath, existingOpportunityDocId);
+            await updateDoc(opportunityDocRef, opportunityData);
+            console.log("Opportunity updated:", existingOpportunityDocId);
+            showModal("Success", "Opportunity updated successfully!", () => {});
+        } else {
+            // Add new opportunity
+            const newDocRef = doc(collection(db, collectionPath));
+            const numericPart = Date.now().toString().slice(-8) + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            const systemGeneratedOpportunityId = 'OPTY-' + numericPart;
+
+            await setDoc(newDocRef, { ...opportunityData, opportunityId: systemGeneratedOpportunityId });
+            console.log("Opportunity added with ID:", systemGeneratedOpportunityId);
+            showModal("Success", "New opportunity created successfully!", () => {});
+        }
+        resetOpportunityForm();
+    } catch (error) {
+        console.error("Error saving opportunity:", error);
+        showModal("Error", `Failed to save opportunity: ${error.message}`, () => {});
+    }
+}
+
+// Delete an Opportunity
+async function deleteOpportunity(firestoreDocId) {
+    if (!isAuthReady || !currentUserId) {
+        console.error("User not authenticated. Cannot delete opportunity.");
+        showModal("Error", "Could not delete opportunity. Authentication required.", () => {});
+        return;
+    }
+
+    const collectionPath = getCollectionPath(currentCustomerCollectionType, 'opportunities');
+    if (!collectionPath) return;
+
+    showModal(
+        "Confirm Deletion",
+        "Are you sure you want to delete this opportunity? This action cannot be undone. All linked contacts, lines, and quotes will also be deleted.",
+        async () => {
+            try {
+                const opportunityDocRef = doc(db, collectionPath, firestoreDocId);
+
+                // Delete subcollections first (contacts, lines, quotes)
+                // Note: Firestore doesn't have native cascade delete. You must manually delete subcollections.
+                // This is a simplified example; for large subcollections, you'd use batch writes or Cloud Functions.
+                const subCollections = ['contacts', 'lines', 'quotes'];
+                for (const subColl of subCollections) {
+                    const subCollRef = collection(opportunityDocRef, subColl);
+                    const subDocsSnapshot = await getDocs(subCollRef);
+                    subDocsSnapshot.forEach(async (subDoc) => {
+                        await deleteDoc(subDoc.ref);
+                    });
+                }
+
+                await deleteDoc(opportunityDocRef);
+                console.log("Opportunity and its subcollections deleted Firestore Doc ID:", firestoreDocId);
+                showModal("Success", "Opportunity and its linked data deleted successfully!", () => {});
+            } catch (error) {
+                console.error("Error deleting opportunity:", error);
+                showModal("Error", `Failed to delete opportunity: ${error.message}`, () => {});
+            }
+        }
+    );
+}
+
+// Listen for real-time updates to Opportunities
+function listenForOpportunities() {
+    if (unsubscribeOpportunities) {
+        unsubscribeOpportunities();
+    }
+
+    if (!isAuthReady || !currentUserId) {
+        console.error("User not authenticated. Cannot listen for opportunities.");
+        opportunityList.innerHTML = '<p class="text-gray-500 text-center col-span-full">Authentication required to load opportunities.</p>';
+        return;
+    }
+
+    const collectionPath = getCollectionPath(currentCustomerCollectionType, 'opportunities');
+    if (!collectionPath) return;
+
+    const q = collection(db, collectionPath);
+
+    unsubscribeOpportunities = onSnapshot(q, (snapshot) => {
+        opportunityList.innerHTML = ''; // Clear current list
+        if (snapshot.empty) {
+            opportunityList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No opportunities found. Add one above!</p>';
+            return;
+        }
+        snapshot.forEach((doc) => {
+            const opportunity = { id: doc.id, ...doc.data() };
+            displayOpportunity(opportunity);
+        });
+    }, (error) => {
+        console.error("Error listening to opportunities:", error);
+        opportunityList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading opportunities: ${error.message}</p>`;
+    });
+}
+
+// Display a single opportunity in the UI
+function displayOpportunity(opportunity) {
+    const opportunityRow = document.createElement('div');
+    opportunityRow.className = 'grid grid-cols-[100px_minmax(120px,_1.5fr)_1fr_0.8fr_1fr_1.2fr_1.5fr_1.5fr_1fr] gap-x-4 py-3 items-center text-sm border-b border-gray-100 last:border-b-0 hover:bg-gray-50';
+    opportunityRow.dataset.id = opportunity.id; // Store Firestore document ID
+
+    // Find customer name using customerId
+    const customer = allCustomers.find(c => c.id === opportunity.customer);
+    const customerDisplayName = customer ? (customer.companyName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim()) : 'N/A';
+
+
+    opportunityRow.innerHTML = `
+        <div class="px-2 py-1 truncate font-medium text-gray-800">${opportunity.opportunityId || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${opportunity.opportunityName || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${customerDisplayName}</div>
+        <div class="px-2 py-1 truncate">${opportunity.amount ? `${opportunity.amount.toFixed(2)} ${opportunity.currency}` : 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${opportunity.stage || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden sm:block">${opportunity.expectedStartDate || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden md:block">${opportunity.expectedCloseDate || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden lg:block">${opportunity.eventType || 'N/A'}</div>
+        <div class="px-2 py-1 flex justify-end space-x-2">
+            <button class="edit-btn text-blue-600 hover:text-blue-800 font-semibold text-xs" data-id="${opportunity.id}">Edit</button>
+            <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${opportunity.id}">Delete</button>
+        </div>
+    `;
+    opportunityList.appendChild(opportunityRow);
+
+    opportunityRow.querySelector('.edit-btn').addEventListener('click', () => editOpportunity(opportunity));
+    opportunityRow.querySelector('.delete-btn').addEventListener('click', () => deleteOpportunity(opportunity.id));
+}
+
+// Populate form for editing an opportunity
+function editOpportunity(opportunity) {
+    if (!isAuthReady || !currentUserId) {
+        showModal("Permission Denied", "Authentication required to edit opportunities.", () => {});
+        return;
+    }
+    opportunityFormTitle.textContent = 'Edit Opportunity';
+    submitOpportunityButton.textContent = 'Update Opportunity';
+
+    opportunityIdDisplayGroup.classList.remove('hidden');
+    opportunityIdDisplay.textContent = opportunity.opportunityId || 'N/A';
+    opportunityForm.dataset.editingId = opportunity.id; // Store Firestore document ID
+    currentOpportunityId = opportunity.id; // Set the globally tracked current opportunity ID
+
+    // Populate fields
+    opportunityCustomerSelect.value = opportunity.customer || ''; // customerId (Firestore doc ID)
+    opportunityNameInput.value = opportunity.opportunityName || '';
+    opportunityAmountInput.value = opportunity.amount || '';
+    opportunityCurrencySelect.value = opportunity.currency || '';
+    opportunityStageSelect.value = opportunity.stage || '';
+    opportunityExpectedStartDateInput.value = opportunity.expectedStartDate || '';
+    opportunityExpectedCloseDateInput.value = opportunity.expectedCloseDate || '';
+    opportunityEventTypeSelect.value = opportunity.eventType || '';
+    opportunityEventLocationProposedInput.value = opportunity.eventLocationProposed || '';
+    opportunityDescriptionInput.value = opportunity.description || '';
+    // Handle JSON or plain text for additional data
+    opportunityDataInput.value = opportunity.opportunityData ? (typeof opportunity.opportunityData === 'object' ? JSON.stringify(opportunity.opportunityData, null, 2) : opportunity.opportunityData) : '';
+
+
+    linkedObjectsAccordion.classList.remove('hidden'); // Show linked objects accordion
+
+    // Always reset and then listen for sub-collections when editing an opportunity
+    resetOpportunityContactForm(); // Clear contact form for new entry
+    listenForOpportunityContacts(currentOpportunityId); // Start listening for contacts of this opportunity
+
+    resetOpportunityLineForm(); // Clear line form
+    listenForOpportunityLines(currentOpportunityId); // Start listening for lines (stub)
+
+    resetQuoteForm(); // Clear quote form
+    listenForQuotes(currentOpportunityId); // Start listening for quotes (stub)
+
+    // Close all accordions by default when opening an opportunity
+    closeAllAccordions();
+
+
+    opportunityForm.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Reset Opportunity form function
+function resetOpportunityForm() {
+    opportunityForm.reset();
+    opportunityForm.dataset.editingId = '';
+    opportunityFormTitle.textContent = 'Add New Opportunity';
+    submitOpportunityButton.textContent = 'Add Opportunity';
+    opportunityIdDisplayGroup.classList.add('hidden');
+    opportunityIdDisplay.textContent = '';
+    opportunityDataInput.value = ''; // Ensure additional data is cleared
+    currentOpportunityId = null; // Clear the globally tracked current opportunity ID
+
+    linkedObjectsAccordion.classList.add('hidden'); // Hide linked objects accordion again
+    closeAllAccordions(); // Ensure all accordions are closed
+
+    // Re-populate customers dropdown to ensure it's fresh
+    fetchCustomersForDropdown();
+
+    // Clear any existing sub-document lists
+    opportunityContactList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No contacts added for this opportunity.</p>';
+    opportunityLineList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No opportunity lines added for this opportunity.</p>';
+    quoteList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No quotes added for this opportunity.</p>';
+
+    // Unsubscribe from any previous sub-collection listeners
+    if (unsubscribeOpportunityContacts) { unsubscribeOpportunityContacts(); }
+    // if (unsubscribeOpportunityLines) { unsubscribeOpportunityLines(); } // For future
+    // if (unsubscribeQuotes) { unsubscribeQuotes(); } // For future
+
+    // Re-enable all sub-form buttons if they were disabled
+    submitOpportunityContactButton.removeAttribute('disabled');
+    submitOpportunityLineButton.removeAttribute('disabled');
+    submitQuoteButton.removeAttribute('disabled');
+
+    // Ensure initial state for quote customer dropdown
+    quoteCustomerSelect.innerHTML = '<option value="">Auto-filled from Opportunity</option>';
+    quoteCustomerSelect.setAttribute('disabled', 'disabled');
+}
+
+
+/* --- OPPORTUNITY CONTACTS CRUD (Fully Implemented Example) --- */
+
+async function saveOpportunityContact(contactData, existingContactDocId = null) {
+    if (!isAuthReady || !currentUserId || !currentOpportunityId) {
+        showModal("Error", "Please select an Opportunity first to add/edit contacts.", () => {});
+        return;
+    }
+
+    const mandatoryFields = [
+        { field: contactData.firstName.trim(), name: "First Name" },
+        { field: contactData.lastName.trim(), name: "Last Name" },
+        { field: contactData.email.trim(), name: "Email" },
+        { field: contactData.phone.trim(), name: "Phone" },
+        { field: contactData.role.trim(), name: "Role" }
+    ];
+
+    let missingFields = [];
+    mandatoryFields.forEach(item => {
+        if (!item.field) {
+            missingFields.push(item.name);
+        }
+    });
+
+    if (missingFields.length > 0) {
+        const message = `Please fill in all mandatory contact fields: ${missingFields.join(', ')}.`;
+        showModal("Validation Error", message, () => {});
+        return;
+    }
+
+    const collectionPath = `${getCollectionPath(currentCustomerCollectionType, 'opportunities')}/${currentOpportunityId}/contacts`;
+
+    try {
+        if (existingContactDocId) {
+            // Update existing contact
+            const contactDocRef = doc(db, collectionPath, existingContactDocId);
+            await updateDoc(contactDocRef, contactData);
+            console.log("Opportunity Contact updated:", existingContactDocId);
+            showModal("Success", "Contact updated successfully!", () => {});
+        } else {
+            // Add new contact
+            const newDocRef = doc(collection(db, collectionPath));
+            // Generate a simple contact ID
+            const numericPart = Date.now().toString().slice(-6) + Math.floor(Math.random() * 100).toString().padStart(2, '0');
+            const systemGeneratedContactId = 'CTCT-' + numericPart;
+            await setDoc(newDocRef, { ...contactData, contactId: systemGeneratedContactId, opportunityId: currentOpportunityId });
+            console.log("Opportunity Contact added with ID:", systemGeneratedContactId);
+            showModal("Success", "New contact added successfully!", () => {});
+        }
+        resetOpportunityContactForm();
+    } catch (error) {
+        console.error("Error saving opportunity contact:", error);
+        showModal("Error", `Failed to save contact: ${error.message}`, () => {});
+    }
+}
+
+async function deleteOpportunityContact(firestoreDocId) {
+    if (!isAuthReady || !currentUserId || !currentOpportunityId) {
+        showModal("Permission Denied", "Not authenticated or no opportunity selected.", () => {});
+        return;
+    }
+    const collectionPath = `${getCollectionPath(currentCustomerCollectionType, 'opportunities')}/${currentOpportunityId}/contacts`;
+
+    showModal(
+        "Confirm Deletion",
+        "Are you sure you want to delete this contact?",
+        async () => {
+            try {
+                await deleteDoc(doc(db, collectionPath, firestoreDocId));
+                console.log("Opportunity Contact deleted Firestore Doc ID:", firestoreDocId);
+                showModal("Success", "Contact deleted successfully!", () => {});
+            } catch (error) {
+                console.error("Error deleting contact:", error);
+                showModal("Error", `Failed to delete contact: ${error.message}`, () => {});
+            }
+        }
+    );
+}
+
+function listenForOpportunityContacts(opportunityId) {
+    if (unsubscribeOpportunityContacts) {
+        unsubscribeOpportunityContacts();
+    }
+    if (!opportunityId) {
+        opportunityContactList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Select an Opportunity to view contacts.</p>';
+        return;
+    }
+
+    const collectionPath = `${getCollectionPath(currentCustomerCollectionType, 'opportunities')}/${opportunityId}/contacts`;
+    const q = collection(db, collectionPath);
+
+    unsubscribeOpportunityContacts = onSnapshot(q, (snapshot) => {
+        opportunityContactList.innerHTML = '';
+        if (snapshot.empty) {
+            opportunityContactList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No contacts added for this opportunity.</p>';
+            return;
+        }
+        snapshot.forEach((doc) => {
+            const contact = { id: doc.id, ...doc.data() };
+            displayOpportunityContact(contact);
+        });
+    }, (error) => {
+        console.error("Error listening to opportunity contacts:", error);
+        opportunityContactList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading contacts: ${error.message}</p>`;
+    });
+}
+
+function displayOpportunityContact(contact) {
+    const contactRow = document.createElement('div');
+    contactRow.className = 'grid grid-cols-[100px_1fr_1fr_1fr_1.2fr_1fr] gap-x-4 py-3 items-center text-sm border-b border-gray-100 last:border-b-0 hover:bg-gray-50';
+    contactRow.dataset.id = contact.id;
+
+    contactRow.innerHTML = `
+        <div class="px-2 py-1 truncate font-medium text-gray-800">${contact.contactId || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${contact.firstName || ''} ${contact.lastName || ''}</div>
+        <div class="px-2 py-1 truncate">${contact.email || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden sm:block">${contact.phone || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden md:block">${contact.role || 'N/A'}</div>
+        <div class="px-2 py-1 flex justify-end space-x-2">
+            <button class="edit-btn text-blue-600 hover:text-blue-800 font-semibold text-xs" data-id="${contact.id}">Edit</button>
+            <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${contact.id}">Delete</button>
+        </div>
+    `;
+    opportunityContactList.appendChild(contactRow);
+
+    contactRow.querySelector('.edit-btn').addEventListener('click', () => editOpportunityContact(contact));
+    contactRow.querySelector('.delete-btn').addEventListener('click', () => deleteOpportunityContact(contact.id));
+}
+
+function editOpportunityContact(contact) {
+    if (!isAuthReady || !currentUserId || !currentOpportunityId) {
+        showModal("Permission Denied", "Not authenticated or no opportunity selected.", () => {});
+        return;
+    }
+    opportunityContactForm.dataset.editingId = contact.id;
+    submitOpportunityContactButton.textContent = 'Update Contact';
+
+    contactIdDisplayGroup.classList.remove('hidden');
+    contactIdDisplay.textContent = contact.contactId || 'N/A';
+
+    contactFirstNameInput.value = contact.firstName || '';
+    contactLastNameInput.value = contact.lastName || '';
+    contactEmailInput.value = contact.email || '';
+    contactPhoneInput.value = contact.phone || '';
+    contactRoleInput.value = contact.role || '';
+
+    contactsAccordionContent.classList.add('open'); // Ensure accordion is open
+    contactsAccordionHeader.classList.add('active');
+    contactsAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
+}
+
+function resetOpportunityContactForm() {
+    opportunityContactForm.reset();
+    opportunityContactForm.dataset.editingId = '';
+    submitOpportunityContactButton.textContent = 'Add Contact';
+    contactIdDisplayGroup.classList.add('hidden');
+    contactIdDisplay.textContent = '';
+}
+
+
+/* --- OPPORTUNITY LINES CRUD (STUBS) --- */
+
+async function saveOpportunityLine(lineData, existingLineDocId = null) {
+    if (!isAuthReady || !currentUserId || !currentOpportunityId) {
+        showModal("Error", "Please select an Opportunity first to add/edit lines.", () => {});
+        return;
+    }
+    // Placeholder for validation
+    const mandatoryFields = [
+        { field: lineData.serviceDescription.trim(), name: "Service Description" },
+        { field: lineData.unitPrice, name: "Unit Price" },
+        { field: lineData.quantity, name: "Quantity" },
+        { field: lineData.status.trim(), name: "Status" }
+    ];
+
+    let missingFields = [];
+    mandatoryFields.forEach(item => {
+        if (!item.field || (typeof item.field === 'string' && item.field === '') || (item.name === "Unit Price" && (isNaN(item.field) || item.field <= 0)) || (item.name === "Quantity" && (isNaN(item.field) || item.field <= 0))) {
+            missingFields.push(item.name);
+        }
+    });
+
+    if (missingFields.length > 0) {
+        const message = `Please fill in all mandatory opportunity line fields: ${[...new Set(missingFields)].join(', ')}.`;
+        showModal("Validation Error", message, () => {});
+        return;
+    }
+
+    // Calculate Net Price: (UnitPrice * Quantity) * (1 - Discount/100)
+    const unitPrice = parseFloat(lineData.unitPrice);
+    const quantity = parseInt(lineData.quantity);
+    const discount = parseFloat(lineData.discount) || 0; // Default to 0 if not provided
+    lineData.netPrice = (unitPrice * quantity * (1 - discount / 100)).toFixed(2); // Round to 2 decimal places
+
+    lineData.unitPrice = unitPrice; // Ensure these are numbers for Firestore
+    lineData.quantity = quantity;
+    lineData.discount = discount;
+
+
+    const collectionPath = `${getCollectionPath(currentCustomerCollectionType, 'opportunities')}/${currentOpportunityId}/lines`;
+
+    try {
+        if (existingLineDocId) {
+            // Update existing line
+            const lineDocRef = doc(db, collectionPath, existingLineDocId);
+            await updateDoc(lineDocRef, lineData);
+            console.log("Opportunity Line updated:", existingLineDocId);
+            showModal("Success", "Opportunity line updated successfully!", () => {});
+        } else {
+            // Add new line
+            const newDocRef = doc(collection(db, collectionPath));
+            const numericPart = Date.now().toString().slice(-6) + Math.floor(Math.random() * 100).toString().padStart(2, '0');
+            const systemGeneratedLineId = 'LINE-' + numericPart;
+            await setDoc(newDocRef, { ...lineData, optyLineId: systemGeneratedLineId, opportunityId: currentOpportunityId });
+            console.log("Opportunity Line added with ID:", systemGeneratedLineId);
+            showModal("Success", "New opportunity line added successfully!", () => {});
+        }
+        resetOpportunityLineForm();
+    } catch (error) {
+        console.error("Error saving opportunity line:", error);
+        showModal("Error", `Failed to save opportunity line: ${error.message}`, () => {});
+    }
+}
+
+async function deleteOpportunityLine(firestoreDocId) {
+    if (!isAuthReady || !currentUserId || !currentOpportunityId) {
+        showModal("Permission Denied", "Not authenticated or no opportunity selected.", () => {});
+        return;
+    }
+    const collectionPath = `${getCollectionPath(currentCustomerCollectionType, 'opportunities')}/${currentOpportunityId}/lines`;
+
+    showModal(
+        "Confirm Deletion",
+        "Are you sure you want to delete this opportunity line?",
+        async () => {
+            try {
+                await deleteDoc(doc(db, collectionPath, firestoreDocId));
+                console.log("Opportunity Line deleted Firestore Doc ID:", firestoreDocId);
+                showModal("Success", "Opportunity line deleted successfully!", () => {});
+            } catch (error) {
+                console.error("Error deleting opportunity line:", error);
+                showModal("Error", `Failed to delete opportunity line: ${error.message}`, () => {});
+            }
+        }
+    );
+}
+
+// Stub: Listen for real-time updates to Opportunity Lines
+function listenForOpportunityLines(opportunityId) {
+    // Implement onSnapshot listener for lines sub-collection here
+    console.log(`[STUB] Listening for opportunity lines for opportunity: ${opportunityId}`);
+    // Example:
+    // if (unsubscribeOpportunityLines) { unsubscribeOpportunityLines(); }
+    // if (!opportunityId) { /* handle no opportunity selected */ return; }
+    // const q = collection(db, `${getCollectionPath(currentCustomerCollectionType, 'opportunities')}/${opportunityId}/lines`);
+    // unsubscribeOpportunityLines = onSnapshot(q, (snapshot) => { /* update UI */ });
+
+    // For now, just clear the list if we're not actively listening
+    if (!opportunityId) {
+        opportunityLineList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Select an Opportunity to view lines.</p>';
+    } else {
+        // Placeholder for display
+        opportunityLineList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Opportunity Lines: (Implementation pending)</p>';
+        // Implement onSnapshot here if you wish for real-time updates for lines
+        const collectionPath = `${getCollectionPath(currentCustomerCollectionType, 'opportunities')}/${opportunityId}/lines`;
+        const q = collection(db, collectionPath);
+
+        // This is a basic listener for demonstration, replace with full CRUD display
+        unsubscribeOpportunityLines = onSnapshot(q, (snapshot) => {
+            opportunityLineList.innerHTML = '';
+            if (snapshot.empty) {
+                opportunityLineList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No opportunity lines added for this opportunity.</p>';
+            } else {
+                snapshot.forEach((doc) => {
+                    const line = { id: doc.id, ...doc.data() };
+                    displayOpportunityLine(line); // Call a display function
+                });
+            }
+        }, (error) => {
+            console.error("Error listening to opportunity lines:", error);
+            opportunityLineList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading lines: ${error.message}</p>`;
+        });
+    }
+
+}
+
+function displayOpportunityLine(line) {
+    const lineRow = document.createElement('div');
+    lineRow.className = 'grid grid-cols-[100px_1.5fr_0.8fr_0.5fr_0.8fr_0.8fr_1fr] gap-x-4 py-3 items-center text-sm border-b border-gray-100 last:border-b-0 hover:bg-gray-50';
+    lineRow.dataset.id = line.id; // Firestore doc ID
+
+    lineRow.innerHTML = `
+        <div class="px-2 py-1 truncate font-medium text-gray-800">${line.optyLineId || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${line.serviceDescription || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${line.unitPrice ? line.unitPrice.toFixed(2) : 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${line.quantity || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${line.discount ? `${line.discount}%` : '0%'}</div>
+        <div class="px-2 py-1 truncate">${line.netPrice ? line.netPrice : 'N/A'}</div>
+        <div class="px-2 py-1 flex justify-end space-x-2">
+            <button class="edit-btn text-blue-600 hover:text-blue-800 font-semibold text-xs" data-id="${line.id}">Edit</button>
+            <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${line.id}">Delete</button>
+        </div>
+    `;
+    opportunityLineList.appendChild(lineRow);
+
+    lineRow.querySelector('.edit-btn').addEventListener('click', () => editOpportunityLine(line));
+    lineRow.querySelector('.delete-btn').addEventListener('click', () => deleteOpportunityLine(line.id));
+}
+
+
+function editOpportunityLine(line) {
+    if (!isAuthReady || !currentUserId || !currentOpportunityId) {
+        showModal("Permission Denied", "Not authenticated or no opportunity selected.", () => {});
+        return;
+    }
+    opportunityLineForm.dataset.editingId = line.id;
+    submitOpportunityLineButton.textContent = 'Update Line';
+
+    optyLineIdDisplayGroup.classList.remove('hidden');
+    optyLineIdDisplay.textContent = line.optyLineId || 'N/A';
+
+    lineServiceDescriptionInput.value = line.serviceDescription || '';
+    lineUnitPriceInput.value = line.unitPrice || '';
+    lineQuantityInput.value = line.quantity || '';
+    lineDiscountInput.value = line.discount || '';
+    lineNetPriceInput.value = line.netPrice || '';
+    lineStatusSelect.value = line.status || '';
+
+    linesAccordionContent.classList.add('open'); // Ensure accordion is open
+    linesAccordionHeader.classList.add('active');
+    linesAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
+}
+
+function resetOpportunityLineForm() {
+    opportunityLineForm.reset();
+    opportunityLineForm.dataset.editingId = '';
+    submitOpportunityLineButton.textContent = 'Add Line';
+    optyLineIdDisplayGroup.classList.add('hidden');
+    optyLineIdDisplay.textContent = '';
+    lineNetPriceInput.value = ''; // Clear calculated net price
+}
+
+
+/* --- QUOTES CRUD (STUBS) --- */
+
+async function saveQuote(quoteData, existingQuoteDocId = null) {
+    if (!isAuthReady || !currentUserId || !currentOpportunityId) {
+        showModal("Error", "Please select an Opportunity first to add/edit quotes.", () => {});
+        return;
+    }
+    // Placeholder for validation
+    const mandatoryFields = [
+        { field: quoteData.quoteName.trim(), name: "Quote Name" },
+        { field: quoteData.customer.trim(), name: "Customer" },
+        { field: quoteData.startDate.trim(), name: "Start Date" },
+        { field: quoteData.expireDate.trim(), name: "Expire Date" },
+        { field: quoteData.quoteStatus.trim(), name: "Status" },
+        { field: quoteData.quoteCurrency.trim(), name: "Currency" }
+    ];
+
+    let missingFields = [];
+    mandatoryFields.forEach(item => {
+        if (!item.field) {
+            missingFields.push(item.name);
+        }
+    });
+
+    if (missingFields.length > 0) {
+        const message = `Please fill in all mandatory quote fields: ${[...new Set(missingFields)].join(', ')}.`;
+        showModal("Validation Error", message, () => {});
+        return;
+    }
+
+    // Ensure amounts are numbers
+    quoteData.quoteNetListAmount = parseFloat(quoteData.quoteNetListAmount) || 0;
+    quoteData.quoteNetDiscount = parseFloat(quoteData.quoteNetDiscount) || 0;
+    // Calculate Net Amount: NetListAmount - NetDiscount
+    quoteData.quoteNetAmount = (quoteData.quoteNetListAmount - quoteData.quoteNetDiscount).toFixed(2);
+    quoteData.isFinal = quoteData.isFinal === true; // Ensure boolean
+
+    const collectionPath = `${getCollectionPath(currentCustomerCollectionType, 'opportunities')}/${currentOpportunityId}/quotes`;
+
+    try {
+        if (existingQuoteDocId) {
+            // Update existing quote
+            const quoteDocRef = doc(db, collectionPath, existingQuoteDocId);
+            await updateDoc(quoteDocRef, quoteData);
+            console.log("Quote updated:", existingQuoteDocId);
+            showModal("Success", "Quote updated successfully!", () => {});
+        } else {
+            // Add new quote
+            const newDocRef = doc(collection(db, collectionPath));
+            const numericPart = Date.now().toString().slice(-6) + Math.floor(Math.random() * 100).toString().padStart(2, '0');
+            const systemGeneratedQuoteId = 'QTE-' + numericPart;
+            await setDoc(newDocRef, { ...quoteData, quoteId: systemGeneratedQuoteId, opportunityId: currentOpportunityId });
+            console.log("Quote added with ID:", systemGeneratedQuoteId);
+            showModal("Success", "New quote added successfully!", () => {});
+        }
+        resetQuoteForm();
+    } catch (error) {
+        console.error("Error saving quote:", error);
+        showModal("Error", `Failed to save quote: ${error.message}`, () => {});
+    }
+}
+
+async function deleteQuote(firestoreDocId) {
+    if (!isAuthReady || !currentUserId || !currentOpportunityId) {
+        showModal("Permission Denied", "Not authenticated or no opportunity selected.", () => {});
+        return;
+    }
+    const collectionPath = `${getCollectionPath(currentCustomerCollectionType, 'opportunities')}/${currentOpportunityId}/quotes`;
+
+    showModal(
+        "Confirm Deletion",
+        "Are you sure you want to delete this quote?",
+        async () => {
+            try {
+                await deleteDoc(doc(db, collectionPath, firestoreDocId));
+                console.log("Quote deleted Firestore Doc ID:", firestoreDocId);
+                showModal("Success", "Quote deleted successfully!", () => {});
+            } catch (error) {
+                console.error("Error deleting quote:", error);
+                showModal("Error", `Failed to delete quote: ${error.message}`, () => {});
+            }
+        }
+    );
+}
+
+// Stub: Listen for real-time updates to Quotes
+function listenForQuotes(opportunityId) {
+    // Implement onSnapshot listener for quotes sub-collection here
+    console.log(`[STUB] Listening for quotes for opportunity: ${opportunityId}`);
+    // Example:
+    // if (unsubscribeQuotes) { unsubscribeQuotes(); }
+    // if (!opportunityId) { /* handle no opportunity selected */ return; }
+    // const q = collection(db, `${getCollectionPath(currentCustomerCollectionType, 'opportunities')}/${opportunityId}/quotes`);
+    // unsubscribeQuotes = onSnapshot(q, (snapshot) => { /* update UI */ });
+
+    // For now, just clear the list if we're not actively listening
+    if (!opportunityId) {
+        quoteList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Select an Opportunity to view quotes.</p>';
+    } else {
+        // Placeholder for display
+        quoteList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Quotes: (Implementation pending)</p>';
+        // Implement onSnapshot here if you wish for real-time updates for quotes
+        const collectionPath = `${getCollectionPath(currentCustomerCollectionType, 'opportunities')}/${opportunityId}/quotes`;
+        const q = collection(db, collectionPath);
+
+        unsubscribeQuotes = onSnapshot(q, (snapshot) => {
+            quoteList.innerHTML = '';
+            if (snapshot.empty) {
+                quoteList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No quotes added for this opportunity.</p>';
+            } else {
+                snapshot.forEach((doc) => {
+                    const quote = { id: doc.id, ...doc.data() };
+                    displayQuote(quote); // Call a display function
+                });
+            }
+        }, (error) => {
+            console.error("Error listening to quotes:", error);
+            quoteList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading quotes: ${error.message}</p>`;
+        });
+    }
+}
+
+function displayQuote(quote) {
+    const quoteRow = document.createElement('div');
+    quoteRow.className = 'grid grid-cols-[100px_1.5fr_1fr_0.8fr_0.8fr_1fr] gap-x-4 py-3 items-center text-sm border-b border-gray-100 last:border-b-0 hover:bg-gray-50';
+    quoteRow.dataset.id = quote.id; // Firestore doc ID
+
+    quoteRow.innerHTML = `
+        <div class="px-2 py-1 truncate font-medium text-gray-800">${quote.quoteId || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${quote.quoteName || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${quote.quoteStatus || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${quote.quoteNetAmount ? quote.quoteNetAmount : 'N/A'} ${quote.quoteCurrency || ''}</div>
+        <div class="px-2 py-1 truncate hidden sm:block">${quote.expireDate || 'N/A'}</div>
+        <div class="px-2 py-1 flex justify-end space-x-2">
+            <button class="edit-btn text-blue-600 hover:text-blue-800 font-semibold text-xs" data-id="${quote.id}">Edit</button>
+            <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${quote.id}">Delete</button>
+        </div>
+    `;
+    quoteList.appendChild(quoteRow);
+
+    quoteRow.querySelector('.edit-btn').addEventListener('click', () => editQuote(quote));
+    quoteRow.querySelector('.delete-btn').addEventListener('click', () => deleteQuote(quote.id));
+}
+
+function editQuote(quote) {
+    if (!isAuthReady || !currentUserId || !currentOpportunityId) {
+        showModal("Permission Denied", "Not authenticated or no opportunity selected.", () => {});
+        return;
+    }
+    quoteForm.dataset.editingId = quote.id;
+    submitQuoteButton.textContent = 'Update Quote';
+
+    quoteIdDisplayGroup.classList.remove('hidden');
+    quoteIdDisplay.textContent = quote.quoteId || 'N/A';
+
+    quoteNameInput.value = quote.quoteName || '';
+    quoteDescriptionInput.value = quote.quoteDescription || '';
+
+    // Auto-fill customer from current opportunity
+    const currentCustomer = allCustomers.find(c => c.id === opportunityCustomerSelect.value);
+    if (currentCustomer) {
+        quoteCustomerSelect.innerHTML = `<option value="${currentCustomer.id}">${currentCustomer.companyName || `${currentCustomer.firstName} ${currentCustomer.lastName}`.trim() || currentCustomer.email}</option>`;
+        quoteCustomerSelect.value = currentCustomer.id;
+    } else {
+        quoteCustomerSelect.innerHTML = '<option value="">Customer Not Found</option>';
+        quoteCustomerSelect.value = '';
+    }
+    quoteCustomerSelect.setAttribute('disabled', 'disabled'); // Always disabled as it's linked to opportunity
+
+    quoteStartDateInput.value = quote.startDate || '';
+    quoteExpireDateInput.value = quote.expireDate || '';
+    quoteStatusSelect.value = quote.quoteStatus || '';
+    quoteNetListAmountInput.value = quote.quoteNetListAmount || '';
+    quoteNetDiscountInput.value = quote.quoteNetDiscount || '';
+    quoteNetAmountInput.value = quote.quoteNetAmount || ''; // This is calculated
+    quoteCurrencySelect.value = quote.quoteCurrency || '';
+    quoteIsFinalCheckbox.checked = quote.isFinal === true;
+
+    quotesAccordionContent.classList.add('open'); // Ensure accordion is open
+    quotesAccordionHeader.classList.add('active');
+    quotesAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
+}
+
+function resetQuoteForm() {
+    quoteForm.reset();
+    quoteForm.dataset.editingId = '';
+    submitQuoteButton.textContent = 'Add Quote';
+    quoteIdDisplayGroup.classList.add('hidden');
+    quoteIdDisplay.textContent = '';
+    quoteNetAmountInput.value = ''; // Clear calculated net amount
+    quoteIsFinalCheckbox.checked = false;
+
+    // Reset customer dropdown for quote form (auto-filled from opportunity, so just show placeholder)
+    quoteCustomerSelect.innerHTML = '<option value="">Auto-filled from Opportunity</option>';
+    quoteCustomerSelect.setAttribute('disabled', 'disabled');
+}
+
+
+/* --- USERS CRUD OPERATIONS --- */
 
 // Save (Add/Update) a User
 // This function now enforces Firestore document IDs to match Firebase Auth UIDs for user profiles.
@@ -811,7 +1755,7 @@ async function saveUser(userData, existingFirestoreDocId = null) {
 
 
     if (missingFields.length > 0) {
-        const message = `Please fill in all mandatory fields: ${missingFields.join(', ')}.`;
+        const message = `Please fill in all mandatory fields: ${[...new Set(missingFields)].join(', ')}.`; // Use Set to remove duplicates
         showModal("Validation Error", message, () => {});
         return;
     }
@@ -986,6 +1930,30 @@ function resetUserForm() {
     userRoleSelect.value = 'User'; // Default role for new user profiles
 }
 
+// --- Accordion Logic ---
+function toggleAccordion(header, content) {
+    header.classList.toggle('active');
+    if (content.classList.contains('open')) {
+        content.classList.remove('open');
+        content.style.maxHeight = null; // Reset max-height to allow transition
+    } else {
+        content.classList.add('open');
+        content.style.maxHeight = content.scrollHeight + "px"; // Set max-height to content height
+    }
+}
+
+function closeAllAccordions() {
+    document.querySelectorAll('.accordion-header').forEach(header => {
+        header.classList.remove('active');
+        const content = header.nextElementSibling;
+        if (content) {
+            content.classList.remove('open');
+            content.style.maxHeight = null;
+        }
+    });
+}
+
+
 // --- Event Listeners ---
 
 // Customer Form Event Listener (Renamed and Updated for validation)
@@ -1023,6 +1991,78 @@ customerForm.addEventListener('submit', async (e) => {
 
     await saveCustomer(customerData, editingId || null);
 });
+
+// Opportunity Form Event Listener (NEW)
+opportunityForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const opportunityData = {
+        customer: opportunityCustomerSelect.value, // This is the Firestore customer document ID
+        opportunityName: opportunityNameInput.value,
+        amount: opportunityAmountInput.value, // Will be parsed to float in saveOpportunity
+        currency: opportunityCurrencySelect.value,
+        stage: opportunityStageSelect.value,
+        expectedStartDate: opportunityExpectedStartDateInput.value,
+        expectedCloseDate: opportunityExpectedCloseDateInput.value,
+        eventType: opportunityEventTypeSelect.value,
+        eventLocationProposed: opportunityEventLocationProposedInput.value,
+        description: opportunityDescriptionInput.value,
+        opportunityData: opportunityDataInput.value, // Can be JSON string or plain text, will be parsed if possible
+    };
+
+    const editingId = opportunityForm.dataset.editingId;
+    await saveOpportunity(opportunityData, editingId || null);
+});
+
+// Opportunity Contact Form Event Listener (NEW)
+opportunityContactForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const contactData = {
+        firstName: contactFirstNameInput.value,
+        lastName: contactLastNameInput.value,
+        email: contactEmailInput.value,
+        phone: contactPhoneInput.value,
+        role: contactRoleInput.value
+    };
+    const editingId = opportunityContactForm.dataset.editingId;
+    await saveOpportunityContact(contactData, editingId || null);
+});
+
+// Opportunity Line Form Event Listener (NEW - STUB)
+opportunityLineForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const lineData = {
+        serviceDescription: lineServiceDescriptionInput.value,
+        unitPrice: lineUnitPriceInput.value,
+        quantity: lineQuantityInput.value,
+        discount: lineDiscountInput.value,
+        netPrice: lineNetPriceInput.value, // This will be calculated in saveOpportunityLine
+        status: lineStatusSelect.value
+    };
+    const editingId = opportunityLineForm.dataset.editingId;
+    await saveOpportunityLine(lineData, editingId || null);
+});
+
+// Quote Form Event Listener (NEW - STUB)
+quoteForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const quoteData = {
+        quoteName: quoteNameInput.value,
+        quoteDescription: quoteDescriptionInput.value,
+        customer: quoteCustomerSelect.value, // This is linked to the opportunity's customer
+        startDate: quoteStartDateInput.value,
+        expireDate: quoteExpireDateInput.value,
+        quoteStatus: quoteStatusSelect.value,
+        quoteNetListAmount: quoteNetListAmountInput.value,
+        quoteNetDiscount: quoteNetDiscountInput.value,
+        quoteNetAmount: quoteNetAmountInput.value, // This will be calculated in saveQuote
+        quoteCurrency: quoteCurrencySelect.value,
+        isFinal: quoteIsFinalCheckbox.checked
+    };
+    const editingId = quoteForm.dataset.editingId;
+    await saveQuote(quoteData, editingId || null);
+});
+
 
 // Mobile Menu Button Event Listener
 mobileMenuButton.addEventListener('click', () => {
@@ -1215,6 +2255,12 @@ userForm.addEventListener('submit', async (e) => {
     const editingId = userForm.dataset.editingId; // This is the Firestore document ID if editing
     await saveUser(userData, editingId || null);
 });
+
+
+// Accordion Event Listeners (NEW)
+contactsAccordionHeader.addEventListener('click', () => toggleAccordion(contactsAccordionHeader, contactsAccordionContent));
+linesAccordionHeader.addEventListener('click', () => toggleAccordion(linesAccordionHeader, linesAccordionContent));
+quotesAccordionHeader.addEventListener('click', () => toggleAccordion(quotesAccordionHeader, quotesAccordionContent));
 
 
 // Initialize Firebase on window load
