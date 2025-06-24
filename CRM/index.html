@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome for icons (e.g., hamburger) -->
+    <!-- Font Awesome for icons (e.g., hamburger, Google) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         /* Base styles from previous version, adjusted for better integration */
@@ -25,7 +25,7 @@
         .header {
             background-color: #ffffff;
             border-bottom: 1px solid #e0e7ff; /* Lighter blue border */
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08); /* More pronounced shadow for depth */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* More pronounced shadow for depth */
             z-index: 1000; /* Ensure header is on top */
             position: sticky;
             top: 0;
@@ -38,7 +38,7 @@
             font-weight: 500;
             color: #4a5568; /* Gray-800 */
             text-decoration: none; /* Ensure no underline */
-            display: block; /* For better click area in mobile */
+            display: block; /* For better click area in mobile, and block-level within dropdowns */
         }
         .nav-link:hover {
             background-color: #edf2f7; /* Gray-100 */
@@ -182,37 +182,6 @@
             border: 1px solid #22c55e; /* Green-500 */
         }
 
-        /* Specific styles for new header and mobile menu */
-        .group.relative:hover .submenu {
-            display: block; /* Show submenu on hover for desktop */
-        }
-        .submenu {
-            display: none; /* Hidden by default */
-            position: absolute;
-            background-color: #ffffff;
-            min-width: 160px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
-            z-index: 10;
-            border-radius: 0.5rem;
-            top: 100%; /* Position below parent link */
-            left: 50%; /* Center dropdown horizontally */
-            transform: translateX(-50%); /* Adjust for centering */
-            overflow: hidden; /* For rounded corners */
-            padding: 0.5rem 0; /* Vertical padding inside dropdown */
-        }
-        .submenu a {
-            color: #4a5568;
-            padding: 0.75rem 1rem;
-            text-decoration: none;
-            display: block;
-            text-align: left;
-            transition: background-color 0.2s;
-        }
-        .submenu a:hover {
-            background-color: #edf2f7;
-            color: #2d3748;
-        }
-
         /* Mobile Menu specific styles */
         #mobileMenu {
             max-height: 0;
@@ -249,12 +218,14 @@
 
                 <!-- Admin Menu Dropdown (Desktop) -->
                 <div id="desktopAdminMenu" class="hidden relative group">
-                    <button class="nav-link inline-flex items-center">
+                    <!-- The main 'Admin' link/button -->
+                    <a href="#" class="nav-link inline-flex items-center">
                         Admin <i class="fas fa-chevron-down ml-2 text-xs"></i>
-                    </button>
-                    <div class="submenu">
-                        <a href="#" class="nav-link" data-section="users-management-section">Users</a>
-                        <a href="#" class="nav-link" data-section="admin-country-mapping-section">Country Data</a>
+                    </a>
+                    <!-- The submenu content, styled with Tailwind for dropdown effect -->
+                    <div class="absolute hidden group-hover:block bg-white min-w-[160px] shadow-lg rounded-md top-full left-1/2 -translate-x-1/2 py-2 overflow-hidden z-10">
+                        <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 text-sm" data-section="users-management-section">Users</a>
+                        <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 text-sm" data-section="admin-country-mapping-section">Country Data</a>
                     </div>
                 </div>
 
