@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
 import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc, getDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc, getDoc, where, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 // YOUR Firebase Configuration
 const firebaseConfig = {
@@ -59,7 +59,7 @@ const customerPhoneInput = document.getElementById('customerPhone');
 
 // Address fields
 const customerCountrySelect = document.getElementById('customerCountry');
-const customerAddressInput = document.getElementById('customerAddress'); // FIX: Removed "= document"
+const customerAddressInput = document.getElementById('customerAddress');
 const customerCityInput = document.getElementById('customerCity');
 const customerStateSelect = document.getElementById('customerState');
 const customerZipCodeInput = document.getElementById('customerZipCode');
@@ -162,8 +162,7 @@ async function showSection(sectionId, forceLoginCheck = false) {
     if (['admin-country-mapping-section', 'users-management-section'].includes(sectionId)) {
         if (!isAuthReady) {
             console.log("Auth not ready, waiting for authentication before checking admin sections.");
-            // Wait for auth to be ready, then attempt to show section again
-            // This case is primarily handled by onAuthStateChanged in initializeFirebase
+            // This scenario is handled by onAuthStateChanged after init.
             return;
         }
 
@@ -326,18 +325,52 @@ async function loadAdminCountryData() {
     }
 }
 
-// Function to check if any user with 'Admin' role exists in Firestore
-async function checkIfAnyFirestoreAdminExists() {
+// NEW FUNCTION: Updates the hasAdmins status in app_metadata/admin_status
+async function updateFirestoreAdminStatus() {
+    if (!db || !auth.currentUser) {
+        console.warn("Firestore or authenticated user not available. Cannot update admin status.");
+        return;
+    }
+
     try {
+        // First, check how many 'Admin' role users exist in 'users_data'
         const q = query(collection(db, 'users_data'), where("role", "==", "Admin"));
         const querySnapshot = await getDocs(q);
-        hasFirestoreAdmins = !querySnapshot.empty;
-        console.log("checkIfAnyFirestoreAdminExists: Found existing Firestore Admins:", hasFirestoreAdmins);
+        const currentHasAdmins = !querySnapshot.empty;
+
+        const adminStatusDocRef = doc(db, "app_metadata", "admin_status");
+        await setDoc(adminStatusDocRef, { hasAdmins: currentHasAdmins }, { merge: false }); // Overwrite the field
+        console.log("Firestore admin status updated to:", currentHasAdmins);
+
+        // Also update the global hasFirestoreAdmins flag
+        hasFirestoreAdmins = currentHasAdmins;
     } catch (error) {
-        console.error("Error checking for existing Firestore admins:", error);
+        console.error("Error updating Firestore admin status:", error);
+        // Do not show modal here, as this runs in background after user operations
+    }
+}
+
+
+// MODIFIED checkIfAnyFirestoreAdminExists to read from app_metadata/admin_status
+async function checkIfAnyFirestoreAdminExists() {
+    try {
+        const adminStatusDocRef = doc(db, 'app_metadata', 'admin_status');
+        const docSnap = await getDoc(adminStatusDocRef);
+
+        if (docSnap.exists()) {
+            hasFirestoreAdmins = docSnap.data().hasAdmins || false; // Default to false if field is missing
+            console.log("checkIfAnyFirestoreAdminExists: Read from app_metadata/admin_status. Found existing Firestore Admins:", hasFirestoreAdmins);
+        } else {
+            // If the document doesn't exist, assume no admins yet (initial state)
+            hasFirestoreAdmins = false;
+            console.log("checkIfAnyFirestoreAdminExists: app_metadata/admin_status document does not exist. Assuming no admins.");
+            // Optionally, create it immediately so future reads don't fail, but let the first admin write it.
+        }
+    } catch (error) {
+        console.error("Error checking for existing Firestore admins via app_metadata/admin_status:", error);
         // This is a critical error, but we'll allow the app to proceed potentially without admin access
-        hasFirestoreAdmins = false; // Assume no admins if there's an error
-        showModal("Data Access Error", `Could not verify admin status: ${error.message}. Proceeding with limited access.`, () => {});
+        hasFirestoreAdmins = false; // Assume no admins if there's an error due to permission or other issues
+        // The modal for this specific error is now handled by the calling `initializeFirebase` or `showSection` if needed.
     }
 }
 
@@ -351,14 +384,14 @@ async function initializeFirebase() {
         auth = getAuth(app);
 
         console.log("initializeFirebase: Calling checkIfAnyFirestoreAdminExists...");
-        // First, check if any 'Admin' role users exist in Firestore
+        // First, check if any 'Admin' role users exist in Firestore (from app_metadata/admin_status)
         await checkIfAnyFirestoreAdminExists();
-        console.log("initializeFirebase: hasFirestoreAdmins after check:", hasFirestoreAdmins);
+        console.log("initializeFirebase: hasFirestoreAdmins after initial check:", hasFirestoreAdmins);
 
         // Listen for auth state changes
         onAuthStateChanged(auth, async (user) => {
             isAuthReady = true; // Mark auth as ready as soon as state is known
-            console.log("onAuthStateChanged: Auth state changed. User:", user ? user.email || user.uid : "null", "hasFirestoreAdmins:", hasFirestoreAdmins);
+            console.log("onAuthStateChanged: Auth state changed. User:", user ? user.email || user.uid : "null", "hasFirestoreAdmins (global):", hasFirestoreAdmins);
 
             if (user) {
                 currentUserId = user.uid;
@@ -369,12 +402,13 @@ async function initializeFirebase() {
                 let isCurrentSessionBootstrapAdmin = false;
 
                 // Determine if this is the bootstrap admin scenario
-                if (!hasFirestoreAdmins && user.email === BOOTSTRAP_ADMIN_EMAIL) {
+                // This condition relies on the global hasFirestoreAdmins flag correctly reflecting the *actual* admin count
+                if (!hasFirestoreAdmins && user.email === BOOTSTRAP_ADMIN_EMAIL && user.uid === ADMIN_FIREBASE_UID) {
                     isAdmin = true; // Grant admin access for bootstrap user
                     isCurrentSessionBootstrapAdmin = true;
                     console.log("onAuthStateChanged: Bootstrap Admin detected. Admin access granted for setup.");
                 } else if (user.email === BOOTSTRAP_ADMIN_EMAIL && hasFirestoreAdmins) {
-                    // If bootstrap admin logs in but permanent admins exist, they are NOT admin
+                    // If bootstrap admin email logs in but permanent admins exist, they are NOT admin
                     isAdmin = false;
                     console.log("onAuthStateChanged: Bootstrap Admin email logged in, but permanent admins exist. Access restricted.");
                 } else {
@@ -399,11 +433,9 @@ async function initializeFirebase() {
                 if (isAdmin) {
                     desktopAdminMenu.classList.remove('hidden');
                     mobileAdminMenu.classList.remove('hidden');
-                    // No need to disable submit buttons here, showSection handles it
                 } else {
                     desktopAdminMenu.classList.add('hidden');
                     mobileAdminMenu.classList.add('hidden');
-                    // No need to disable submit buttons here, showSection handles it
                 }
 
                 // Fetch country data and populate dropdowns regardless of admin status for customer form
@@ -424,7 +456,7 @@ async function initializeFirebase() {
             } else { // No user is signed in.
                 currentUserId = null;
                 isAdmin = false; // Ensure isAdmin is false when no user
-                console.log("onAuthStateChanged: No user signed in. hasFirestoreAdmins:", hasFirestoreAdmins);
+                console.log("onAuthStateChanged: No user signed in. hasFirestoreAdmins (global):", hasFirestoreAdmins);
 
                 // Hide admin menus and logout buttons
                 desktopAdminMenu.classList.add('hidden');
@@ -535,9 +567,7 @@ function applyCustomerTypeValidation() {
 
     // Hide all conditional groups first
     individualFieldsDiv.classList.add('hidden');
-    // 'lastNameField' is not directly defined as a global DOM element. It should be part of individualFieldsDiv if using Tailwind CSS to hide/show.
-    // Assuming lastNameField is correctly handled by individualFieldsDiv's visibility.
-    customerLastNameInput.closest('div').classList.add('hidden'); // Assuming customerLastNameInput is directly inside a div for layout
+    customerLastNameInput.closest('div').classList.add('hidden');
     companyNameFieldDiv.classList.add('hidden');
     individualIndustryGroup.classList.add('hidden');
     companyIndustryGroup.classList.add('hidden');
@@ -551,7 +581,7 @@ function applyCustomerTypeValidation() {
 
     if (customerType === 'Individual') {
         individualFieldsDiv.classList.remove('hidden');
-        customerLastNameInput.closest('div').classList.remove('hidden'); // Show last name field's div
+        customerLastNameInput.closest('div').classList.remove('hidden');
         customerFirstNameInput.setAttribute('required', 'required');
         customerLastNameInput.setAttribute('required', 'required');
 
@@ -885,6 +915,7 @@ async function saveUser(userData, userId = null) {
             console.log("User added with ID:", systemGeneratedUserId);
         }
         resetUserForm(); // Reset form after successful operation
+        await updateFirestoreAdminStatus(); // Update admin status after user save
     } catch (error) {
         console.error("Error saving user:", error);
         showModal("Error", `Failed to save user: ${error.message}`, () => {});
@@ -906,6 +937,7 @@ async function deleteUser(firestoreDocId) {
             try {
                 await deleteDoc(doc(db, collectionPath, firestoreDocId));
                 console.log("User deleted Firestore Doc ID:", firestoreDocId);
+                await updateFirestoreAdminStatus(); // Update admin status after user delete
             } catch (error) {
                 console.error("Error deleting user:", error);
                 showModal("Error", `Failed to delete user: ${error.message}`, () => {});
