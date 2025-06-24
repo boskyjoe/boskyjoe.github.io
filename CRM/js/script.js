@@ -1052,19 +1052,41 @@ document.getElementById('countryMappingForm').addEventListener('submit', async (
     const countryStateMapString = adminCountryStateMapInput.value;
     const isFullLoad = fullLoadRadio.checked;
 
-    // Parse countries string into array of objects (NEW: split by newline)
+    // Parse countries string into array of objects (newline-separated, filter unique codes)
     function parseCountries(countriesString) {
+        const uniqueCodes = new Set();
+        const parsedCountries = [];
+        const duplicatesFound = [];
+
         if (!countriesString.trim()) return [];
-        return countriesString.split('\n').map(item => { // Changed split delimiter to newline
-            const parts = item.split(',');
+
+        countriesString.split('\n').forEach(line => {
+            const parts = line.split(',');
             if (parts.length === 2) {
-                return { name: parts[0].trim(), code: parts[1].trim() };
+                const name = parts[0].trim();
+                const code = parts[1].trim();
+                if (name !== '' && code !== '') {
+                    if (uniqueCodes.has(code)) {
+                        duplicatesFound.push(code);
+                    } else {
+                        uniqueCodes.add(code);
+                        parsedCountries.push({ name, code });
+                    }
+                }
             }
-            return null;
-        }).filter(item => item !== null && item.name !== '' && item.code !== ''); // Filter out empty valid lines
+        });
+
+        if (duplicatesFound.length > 0) {
+            const msg = `Warning: Duplicate country codes found and ignored: ${duplicatesFound.join(', ')}. Only the first occurrence was used.`;
+            adminMessageDiv.textContent = msg;
+            adminMessageDiv.className = 'message error'; // Use error styling for warnings too
+            adminMessageDiv.classList.remove('hidden');
+            console.warn(msg);
+        }
+        return parsedCountries;
     }
 
-    // Parse countryStateMap string into an object (NEW: split by newline first)
+    // Parse countryStateMap string into an object (newline-separated)
     function parseCountryStateMap(mapString) {
         const map = {};
         if (!mapString.trim()) return map;
@@ -1082,24 +1104,35 @@ document.getElementById('countryMappingForm').addEventListener('submit', async (
     }
 
     const dataToUpload = {};
-    let hasData = false;
+    let hasValidDataForUpload = false;
 
-    if (countriesString.trim() !== '') {
-        dataToUpload.countries = parseCountries(countriesString);
-        if (dataToUpload.countries.length > 0) hasData = true; // Only if actual country data exists
-    }
-    if (countryStateMapString.trim() !== '') {
-        dataToUpload.countryStateMap = parseCountryStateMap(countryStateMapString);
-        if (Object.keys(dataToUpload.countryStateMap).length > 0) hasData = true; // Only if actual map data exists
+    // Process countries data
+    const parsedCountries = parseCountries(countriesString);
+    if (parsedCountries.length > 0) {
+        dataToUpload.countries = parsedCountries;
+        hasValidDataForUpload = true;
     }
 
-    if (!hasData && isFullLoad) {
-        // If full load is selected and both textareas are empty/parsed empty, clear the document
+    // Process countryStateMap data
+    const parsedCountryStateMap = parseCountryStateMap(countryStateMapString);
+    if (Object.keys(parsedCountryStateMap).length > 0) {
+        dataToUpload.countryStateMap = parsedCountryStateMap;
+        hasValidDataForUpload = true;
+    }
+
+    // Special case: If full load is selected and BOTH textareas are empty, this means clearing the document.
+    // Otherwise, if a textarea is empty, its corresponding field will not be included in dataToUpload
+    // and thus not affected by merge:true.
+    if (!hasValidDataForUpload && isFullLoad) {
+        // If full load is selected AND no valid data was parsed from EITHER textarea,
+        // it implies the user wants to completely clear both fields.
         dataToUpload.countries = [];
         dataToUpload.countryStateMap = {};
-        hasData = true; // Still consider it having data to upload (empty arrays/objects)
-    } else if (!hasData && !isFullLoad) {
-        adminMessageDiv.textContent = 'No valid data provided for incremental update.'; // More specific message
+        hasValidDataForUpload = true; // Mark as having intent to update (with empty data)
+    } else if (!hasValidDataForUpload && !isFullLoad) {
+        // If incremental load is selected AND no valid data was parsed,
+        // there's nothing to update.
+        adminMessageDiv.textContent = 'No valid data provided for update.';
         adminMessageDiv.className = 'message error';
         adminMessageDiv.classList.remove('hidden');
         uploadAdminDataButton.disabled = false;
@@ -1107,22 +1140,14 @@ document.getElementById('countryMappingForm').addEventListener('submit', async (
         return;
     }
 
-
     try {
         const docRef = doc(db, "app_metadata", "countries_states");
-        if (isFullLoad) {
-            // Full Load: Overwrite the document completely with only the provided fields
-            await setDoc(docRef, dataToUpload, { merge: false });
-            adminMessageDiv.textContent = 'Data uploaded successfully (Full Load)!';
-            adminMessageDiv.className = 'message success';
-        } else {
-            // Incremental Load: Merge the provided fields into the existing document
-            // Note: For arrays and objects, `merge: true` replaces the *entire* field,
-            // it does not merge individual array elements or nested object properties.
-            await setDoc(docRef, dataToUpload, { merge: true });
-            adminMessageDiv.textContent = 'Data uploaded successfully (Incremental Load)!';
-            adminMessageDiv.className = 'message success';
-        }
+        // Always use merge: true to avoid deleting unspecified fields.
+        // If the user wants to empty a field, they have to ensure the parsed array/object is empty.
+        await setDoc(docRef, dataToUpload, { merge: true });
+
+        adminMessageDiv.textContent = `Data uploaded successfully (${isFullLoad ? 'Full Load (Merge)' : 'Incremental Load'})!`;
+        adminMessageDiv.className = 'message success';
         adminMessageDiv.classList.remove('hidden');
         console.log("Admin data upload successful:", dataToUpload);
 
