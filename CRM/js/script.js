@@ -59,7 +59,7 @@ const customerPhoneInput = document.getElementById('customerPhone');
 
 // Address fields
 const customerCountrySelect = document.getElementById('customerCountry');
-const customerAddressInput = document = document.getElementById('customerAddress');
+const customerAddressInput = document.getElementById('customerAddress'); // FIX: Removed "= document"
 const customerCityInput = document.getElementById('customerCity');
 const customerStateSelect = document.getElementById('customerState');
 const customerZipCodeInput = document.getElementById('customerZipCode');
