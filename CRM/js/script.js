@@ -260,11 +260,11 @@ async function loadAdminCountryData() {
     try {
         await fetchCountryData(); // Ensure global appCountries and appCountryStateMap are updated
 
-        // Convert appCountries array to semicolon-separated string
-        const countriesString = appCountries.map(c => `${c.name},${c.code}`).join(';');
+        // Convert appCountries array to NEWLINE-separated string for display
+        const countriesString = appCountries.map(c => `${c.name},${c.code}`).join('\n');
         adminCountriesInput.value = countriesString;
 
-        // Convert appCountryStateMap object to semicolon-separated string
+        // Convert appCountryStateMap object to semicolon-separated string (remains unchanged)
         const countryStateMapString = Object.entries(appCountryStateMap)
             .map(([code, states]) => `${code}:${states.join(',')}`)
             .join(';');
@@ -1052,10 +1052,10 @@ document.getElementById('countryMappingForm').addEventListener('submit', async (
     const countryStateMapString = adminCountryStateMapInput.value;
     const isFullLoad = fullLoadRadio.checked;
 
-    // Parse countries string into array of objects
+    // Parse countries string into array of objects (NEW: split by newline)
     function parseCountries(countriesString) {
         if (!countriesString.trim()) return [];
-        return countriesString.split(';').map(item => {
+        return countriesString.split('\n').map(item => { // Changed split delimiter to newline
             const parts = item.split(',');
             if (parts.length === 2) {
                 return { name: parts[0].trim(), code: parts[1].trim() };
@@ -1064,7 +1064,7 @@ document.getElementById('countryMappingForm').addEventListener('submit', async (
         }).filter(item => item !== null);
     }
 
-    // Parse countryStateMap string into an object
+    // Parse countryStateMap string into an object (remains unchanged)
     function parseCountryStateMap(mapString) {
         const map = {};
         if (!mapString.trim()) return map;
