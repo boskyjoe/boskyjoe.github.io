@@ -537,6 +537,7 @@ function applyCustomerTypeValidation() {
     individualFieldsDiv.classList.add('hidden');
     // 'lastNameField' is not directly defined as a global DOM element. It should be part of individualFieldsDiv if using Tailwind CSS to hide/show.
     // Assuming lastNameField is correctly handled by individualFieldsDiv's visibility.
+    customerLastNameInput.closest('div').classList.add('hidden'); // Assuming customerLastNameInput is directly inside a div for layout
     companyNameFieldDiv.classList.add('hidden');
     individualIndustryGroup.classList.add('hidden');
     companyIndustryGroup.classList.add('hidden');
@@ -550,7 +551,7 @@ function applyCustomerTypeValidation() {
 
     if (customerType === 'Individual') {
         individualFieldsDiv.classList.remove('hidden');
-        // If lastNameField needs separate handling: document.getElementById('lastNameField').classList.remove('hidden');
+        customerLastNameInput.closest('div').classList.remove('hidden'); // Show last name field's div
         customerFirstNameInput.setAttribute('required', 'required');
         customerLastNameInput.setAttribute('required', 'required');
 
