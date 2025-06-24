@@ -172,6 +172,7 @@ async function showSection(sectionId, forceLoginCheck = false) {
                 console.log(`Access to ${sectionId} denied. No user logged in.`);
                 await checkIfAnyFirestoreAdminExists(); // Re-check if this is a bootstrap scenario
                 if (!hasFirestoreAdmins) {
+                    console.log("No Firestore Admins found. Showing bootstrap login.");
                     bootstrapAdminLoginSection.classList.remove('hidden');
                     authSection.classList.add('hidden');
                     navGoogleLoginButton.classList.add('hidden');
@@ -186,6 +187,7 @@ async function showSection(sectionId, forceLoginCheck = false) {
                     bootstrapAdminLoginSection.classList.remove('hidden');
                     return; // Stop execution, show bootstrap login
                 } else {
+                    console.log("Firestore Admins exist. Redirecting to standard login for admin section access.");
                     // Regular user needs to log in, or current user isn't admin
                     showModal("Access Denied", "You must be logged in as an administrator to access this section.", () => {
                         showSection('home'); // Redirect non-admins to home
@@ -330,7 +332,7 @@ async function checkIfAnyFirestoreAdminExists() {
         const q = query(collection(db, 'users_data'), where("role", "==", "Admin"));
         const querySnapshot = await getDocs(q);
         hasFirestoreAdmins = !querySnapshot.empty;
-        console.log("Check for existing Firestore admins. Found:", hasFirestoreAdmins);
+        console.log("checkIfAnyFirestoreAdminExists: Found existing Firestore Admins:", hasFirestoreAdmins);
     } catch (error) {
         console.error("Error checking for existing Firestore admins:", error);
         // This is a critical error, but we'll allow the app to proceed potentially without admin access
@@ -348,17 +350,21 @@ async function initializeFirebase() {
         db = getFirestore(app);
         auth = getAuth(app);
 
+        console.log("initializeFirebase: Calling checkIfAnyFirestoreAdminExists...");
         // First, check if any 'Admin' role users exist in Firestore
         await checkIfAnyFirestoreAdminExists();
+        console.log("initializeFirebase: hasFirestoreAdmins after check:", hasFirestoreAdmins);
 
         // Listen for auth state changes
         onAuthStateChanged(auth, async (user) => {
             isAuthReady = true; // Mark auth as ready as soon as state is known
+            console.log("onAuthStateChanged: Auth state changed. User:", user ? user.email || user.uid : "null", "hasFirestoreAdmins:", hasFirestoreAdmins);
+
             if (user) {
                 currentUserId = user.uid;
                 userIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
                 mobileUserIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
-                console.log("Current Firebase UID:", currentUserId);
+                console.log("onAuthStateChanged: Current Firebase UID:", currentUserId);
 
                 let isCurrentSessionBootstrapAdmin = false;
 
@@ -366,11 +372,11 @@ async function initializeFirebase() {
                 if (!hasFirestoreAdmins && user.email === BOOTSTRAP_ADMIN_EMAIL) {
                     isAdmin = true; // Grant admin access for bootstrap user
                     isCurrentSessionBootstrapAdmin = true;
-                    console.log("Bootstrap Admin detected. Admin access granted for setup.");
+                    console.log("onAuthStateChanged: Bootstrap Admin detected. Admin access granted for setup.");
                 } else if (user.email === BOOTSTRAP_ADMIN_EMAIL && hasFirestoreAdmins) {
                     // If bootstrap admin logs in but permanent admins exist, they are NOT admin
                     isAdmin = false;
-                    console.log("Bootstrap Admin email logged in, but permanent admins exist. Access restricted.");
+                    console.log("onAuthStateChanged: Bootstrap Admin email logged in, but permanent admins exist. Access restricted.");
                 } else {
                     // For all other users (including Google users), check their role in Firestore
                     const userProfileRef = doc(db, 'users_data', user.uid); // Assuming user's profile doc ID is their Firebase UID
@@ -378,10 +384,10 @@ async function initializeFirebase() {
 
                     if (userProfileSnap.exists() && userProfileSnap.data().role === 'Admin') {
                         isAdmin = true;
-                        console.log("User profile has 'Admin' role. Admin access granted.");
+                        console.log("onAuthStateChanged: User profile has 'Admin' role. Admin access granted.");
                     } else {
                         isAdmin = false;
-                        console.log("User is not admin (role not 'Admin' or profile not found).");
+                        console.log("onAuthStateChanged: User is not admin (role not 'Admin' or profile not found).");
                     }
                 }
 
@@ -406,16 +412,19 @@ async function initializeFirebase() {
 
                 // If coming from a login attempt, or initial load, redirect to home or admin setup
                 if (isCurrentSessionBootstrapAdmin) {
+                    console.log("onAuthStateChanged: Redirecting to users-management-section for bootstrap admin.");
                     showSection('users-management-section'); // Redirect to user management for initial admin setup
                     showModal("Bootstrap Admin", "You are logged in as the bootstrap admin. Please navigate to 'Admin > Users' to create your permanent administrator account.", () => {});
                 } else {
                     // If regular login or non-admin, go to home
+                    console.log("onAuthStateChanged: Redirecting to home section.");
                     showSection('home');
                 }
 
             } else { // No user is signed in.
                 currentUserId = null;
                 isAdmin = false; // Ensure isAdmin is false when no user
+                console.log("onAuthStateChanged: No user signed in. hasFirestoreAdmins:", hasFirestoreAdmins);
 
                 // Hide admin menus and logout buttons
                 desktopAdminMenu.classList.add('hidden');
@@ -430,6 +439,7 @@ async function initializeFirebase() {
 
                 // Determine which login screen to show
                 if (!hasFirestoreAdmins) {
+                    console.log("onAuthStateChanged: No Firestore Admins. Showing bootstrap admin login section.");
                     bootstrapAdminLoginSection.classList.remove('hidden');
                     authSection.classList.add('hidden');
                     navGoogleLoginButton.classList.add('hidden');
@@ -437,6 +447,7 @@ async function initializeFirebase() {
                     bootstrapAdminMessage.classList.remove('hidden');
                     showSection('bootstrap-admin-login-section'); // Explicitly show this section
                 } else {
+                    console.log("onAuthStateChanged: Firestore Admins exist. Showing standard auth section.");
                     authSection.classList.remove('hidden');
                     bootstrapAdminLoginSection.classList.add('hidden');
                     navGoogleLoginButton.classList.remove('hidden'); // Show Google Login button
@@ -524,7 +535,8 @@ function applyCustomerTypeValidation() {
 
     // Hide all conditional groups first
     individualFieldsDiv.classList.add('hidden');
-    lastNameField.classList.add('hidden');
+    // 'lastNameField' is not directly defined as a global DOM element. It should be part of individualFieldsDiv if using Tailwind CSS to hide/show.
+    // Assuming lastNameField is correctly handled by individualFieldsDiv's visibility.
     companyNameFieldDiv.classList.add('hidden');
     individualIndustryGroup.classList.add('hidden');
     companyIndustryGroup.classList.add('hidden');
@@ -538,7 +550,7 @@ function applyCustomerTypeValidation() {
 
     if (customerType === 'Individual') {
         individualFieldsDiv.classList.remove('hidden');
-        lastNameField.classList.remove('hidden');
+        // If lastNameField needs separate handling: document.getElementById('lastNameField').classList.remove('hidden');
         customerFirstNameInput.setAttribute('required', 'required');
         customerLastNameInput.setAttribute('required', 'required');
 
