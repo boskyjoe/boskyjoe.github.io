@@ -115,7 +115,7 @@ const mobileMenu = document.getElementById('mobileMenu');
 // Select all main content sections
 const homeSection = document.getElementById('home');
 const eventsSection = document.getElementById('events-section');
-const allSections = [homeSection, customersSection, eventsSection, adminCountryMappingSection, usersManagementSection, authSection]; // Removed bootstrap-specific section
+const allSections = [homeSection, customersSection, eventsSection, adminCountryMappingSection, usersManagementSection, authSection];
 
 
 // Function to show a custom confirmation modal
@@ -264,10 +264,10 @@ async function loadAdminCountryData() {
         const countriesString = appCountries.map(c => `${c.name},${c.code}`).join('\n');
         adminCountriesInput.value = countriesString;
 
-        // Convert appCountryStateMap object to semicolon-separated string (remains unchanged)
+        // Convert appCountryStateMap object to NEWLINE-separated string for display
         const countryStateMapString = Object.entries(appCountryStateMap)
             .map(([code, states]) => `${code}:${states.join(',')}`)
-            .join(';');
+            .join('\n'); // Changed join delimiter to newline
         adminCountryStateMapInput.value = countryStateMapString;
 
         adminMessageDiv.classList.add('hidden'); // Clear any previous messages
@@ -1061,19 +1061,21 @@ document.getElementById('countryMappingForm').addEventListener('submit', async (
                 return { name: parts[0].trim(), code: parts[1].trim() };
             }
             return null;
-        }).filter(item => item !== null);
+        }).filter(item => item !== null && item.name !== '' && item.code !== ''); // Filter out empty valid lines
     }
 
-    // Parse countryStateMap string into an object (remains unchanged)
+    // Parse countryStateMap string into an object (NEW: split by newline first)
     function parseCountryStateMap(mapString) {
         const map = {};
         if (!mapString.trim()) return map;
-        mapString.split(';').forEach(item => {
-            const parts = item.split(':');
+        mapString.split('\n').forEach(line => { // Changed split delimiter to newline
+            const parts = line.split(':');
             if (parts.length === 2) {
                 const countryCode = parts[0].trim();
-                const states = parts[1].split(',').map(s => s.trim());
-                map[countryCode] = states;
+                const states = parts[1].split(',').map(s => s.trim()).filter(s => s !== ''); // Filter empty states
+                if (countryCode !== '') { // Only add if country code is not empty
+                    map[countryCode] = states;
+                }
             }
         });
         return map;
@@ -1084,20 +1086,20 @@ document.getElementById('countryMappingForm').addEventListener('submit', async (
 
     if (countriesString.trim() !== '') {
         dataToUpload.countries = parseCountries(countriesString);
-        hasData = true;
+        if (dataToUpload.countries.length > 0) hasData = true; // Only if actual country data exists
     }
     if (countryStateMapString.trim() !== '') {
         dataToUpload.countryStateMap = parseCountryStateMap(countryStateMapString);
-        hasData = true;
+        if (Object.keys(dataToUpload.countryStateMap).length > 0) hasData = true; // Only if actual map data exists
     }
 
     if (!hasData && isFullLoad) {
-        // If full load is selected and both textareas are empty, clear the document
+        // If full load is selected and both textareas are empty/parsed empty, clear the document
         dataToUpload.countries = [];
         dataToUpload.countryStateMap = {};
-        hasData = true; // Still consider it having data to upload (empty arrays)
+        hasData = true; // Still consider it having data to upload (empty arrays/objects)
     } else if (!hasData && !isFullLoad) {
-        adminMessageDiv.textContent = 'No data provided for incremental update.';
+        adminMessageDiv.textContent = 'No valid data provided for incremental update.'; // More specific message
         adminMessageDiv.className = 'message error';
         adminMessageDiv.classList.remove('hidden');
         uploadAdminDataButton.disabled = false;
