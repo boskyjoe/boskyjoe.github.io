@@ -26,7 +26,7 @@
             <nav class="hidden md:flex items-center space-x-4">
                 <a href="#" class="nav-link" data-section="home">Home</a>
                 <a href="#" class="nav-link" data-section="customers-section">Customers</a>
-                <a href="#" class="nav-link" data-section="opportunities-section">Opportunities</a> <!-- NEW -->
+                <a href="#" class="nav-link" data-section="opportunities-section">Opportunities</a>
                 <a href="#" class="nav-link" data-section="events-section">Events</a>
 
                 <!-- Admin Menu Dropdown (Desktop) -->
@@ -63,7 +63,7 @@
             <nav class="flex flex-col p-4 space-y-2">
                 <a href="#" class="nav-link" data-section="home">Home</a>
                 <a href="#" class="nav-link" data-section="customers-section">Customers</a>
-                <a href="#" class="nav-link" data-section="opportunities-section">Opportunities</a> <!-- NEW -->
+                <a href="#" class="nav-link" data-section="opportunities-section">Opportunities</a>
                 <a href="#" class="nav-link" data-section="events-section">Events</a>
 
                 <!-- Mobile Admin Menu (Toggles visibility in JS) -->
@@ -251,25 +251,28 @@
             <div class="card mb-8">
                 <h3 id="opportunityFormTitle" class="text-xl font-semibold mb-4 text-gray-800">Add New Opportunity</h3>
                 <form id="opportunityForm">
-                    <div id="opportunityIdDisplayGroup" class="mb-4 hidden">
-                        <label for="opportunityIdDisplay" class="block text-sm font-medium text-gray-700">Opportunity ID:</label>
-                        <span id="opportunityIdDisplay" class="mt-1 block text-lg font-semibold text-gray-900"></span>
-                    </div>
-
+                    <!-- Basic Information -->
+                    <h4 class="text-md font-semibold text-gray-800 mb-4">Basic Information</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div id="opportunityIdDisplayGroup" class="mb-4 hidden">
+                            <label for="opportunityIdDisplay" class="block text-sm font-medium text-gray-700">Opportunity ID:</label>
+                            <span id="opportunityIdDisplay" class="mt-1 block text-lg font-semibold text-gray-900"></span>
+                        </div>
                         <div class="mb-4">
+                            <label for="opportunityName" class="block text-sm font-medium text-gray-700">Opportunity Name: <span class="text-red-500">*</span></label>
+                            <input type="text" id="opportunityName" class="form-input mt-1" placeholder="New Photography Project" required>
+                        </div>
+                        <div class="mb-4 md:col-span-1">
                             <label for="opportunityCustomer" class="block text-sm font-medium text-gray-700">Customer: <span class="text-red-500">*</span></label>
                             <select id="opportunityCustomer" class="form-select mt-1" required>
                                 <option value="">Select Customer</option>
                                 <!-- Customers will be populated by JS -->
                             </select>
                         </div>
-                        <div class="mb-4">
-                            <label for="opportunityName" class="block text-sm font-medium text-gray-700">Opportunity Name: <span class="text-red-500">*</span></label>
-                            <input type="text" id="opportunityName" class="form-input mt-1" placeholder="New Photography Project" required>
-                        </div>
                     </div>
 
+                    <!-- Financial Details -->
+                    <h4 class="text-md font-semibold text-gray-800 mt-4 mb-4">Financial Details</h4>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="mb-4">
                             <label for="opportunityAmount" class="block text-sm font-medium text-gray-700">Amount: <span class="text-red-500">*</span></label>
@@ -298,6 +301,8 @@
                         </div>
                     </div>
 
+                    <!-- Timeline -->
+                    <h4 class="text-md font-semibold text-gray-800 mt-4 mb-4">Timeline</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="mb-4">
                             <label for="opportunityExpectedStartDate" class="block text-sm font-medium text-gray-700">Expected Start Date: <span class="text-red-500">*</span></label>
@@ -309,6 +314,8 @@
                         </div>
                     </div>
 
+                    <!-- Event Specifics -->
+                    <h4 class="text-md font-semibold text-gray-800 mt-4 mb-4">Event Specifics</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="mb-4">
                             <label for="opportunityEventType" class="block text-sm font-medium text-gray-700">Event Type: <span class="text-red-500">*</span></label>
@@ -327,6 +334,8 @@
                         </div>
                     </div>
 
+                    <!-- Description & Additional Data -->
+                    <h4 class="text-md font-semibold text-gray-800 mt-4 mb-4">Description & Additional Data</h4>
                     <div class="mb-4">
                         <label for="opportunityDescription" class="block text-sm font-medium text-gray-700">Description: <span class="text-red-500">*</span></label>
                         <textarea id="opportunityDescription" rows="3" class="form-textarea mt-1" placeholder="Detailed description of the opportunity..." required></textarea>
