@@ -321,7 +321,7 @@ MX:Aguascalientes,Baja California"></textarea>
                 <form id="userForm">
                     <div id="userIdDisplayGroup" class="mb-4 relative">
                         <label for="userIdDisplayInput" class="block text-sm font-medium text-gray-700">
-                            User Firestore ID (UID):
+                            User Firestore ID (UID): <span class="text-red-500">*</span>
                             <i class="fas fa-info-circle text-gray-500 cursor-help ml-1 group relative">
                                 <span class="tooltip-text">
                                     This is the unique Firebase Authentication User ID.
@@ -340,31 +340,31 @@ MX:Aguascalientes,Baja California"></textarea>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="mb-4">
-                            <label for="userName" class="block text-sm font-medium text-gray-700">User Name (Email):</label>
+                            <label for="userName" class="block text-sm font-medium text-gray-700">User Name (Email): <span class="text-red-500">*</span></label>
                             <input type="email" id="userName" class="form-input mt-1" placeholder="user@gmail.com" required>
                         </div>
                         <div class="mb-4">
-                            <label for="userEmail" class="block text-sm font-medium text-gray-700">Contact Email:</label>
+                            <label for="userEmail" class="block text-sm font-medium text-gray-700">Contact Email: <span class="text-red-500">*</span></label>
                             <input type="email" id="userEmail" class="form-input mt-1" placeholder="contact@example.com" required>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="mb-4">
-                            <label for="userFirstName" class="block text-sm font-medium text-gray-700">First Name:</label>
+                            <label for="userFirstName" class="block text-sm font-medium text-gray-700">First Name: <span class="text-red-500">*</span></label>
                             <input type="text" id="userFirstName" class="form-input mt-1" placeholder="Jane" required>
                         </div>
                         <div class="mb-4">
-                            <label for="userLastName" class="block text-sm font-medium text-gray-700">Last Name:</label>
+                            <label for="userLastName" class="block text-sm font-medium text-gray-700">Last Name: <span class="text-red-500">*</span></label>
                             <input type="text" id="userLastName" class="form-input mt-1" placeholder="Doe" required>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="mb-4">
-                            <label for="userPhone" class="block text-sm font-medium text-gray-700">Phone:</label>
+                            <label for="userPhone" class="block text-sm font-medium text-gray-700">Phone: <span class="text-red-500">*</span></label>
                             <input type="tel" id="userPhone" class="form-input mt-1" placeholder="+1234567890" required>
                         </div>
                         <div class="mb-4">
-                            <label for="userRole" class="block text-sm font-medium text-gray-700">Role:</label>
+                            <label for="userRole" class="block text-sm font-medium text-gray-700">Role: <span class="text-red-500">*</span></label>
                             <select id="userRole" class="form-select mt-1" required>
                                 <option value="">Select Role</option>
                                 <option value="Admin">Admin</option>
@@ -373,7 +373,7 @@ MX:Aguascalientes,Baja California"></textarea>
                         </div>
                     </div>
                     <div class="mb-4">
-                        <label for="userSkills" class="block text-sm font-medium text-gray-700">Skills (Comma-separated):</label>
+                        <label for="userSkills" class="block text-sm font-medium text-gray-700">Skills (Comma-separated): <span class="text-red-500">*</span></label>
                         <input type="text" id="userSkills" class="form-input mt-1" placeholder="Photography, Editing, Marketing" required>
                     </div>
                     <div class="mt-6 flex justify-end space-x-3">
