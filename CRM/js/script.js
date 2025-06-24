@@ -780,19 +780,42 @@ async function saveUser(userData, existingFirestoreDocId = null) {
     // Gmail email validation for userName (which is the email they log in with)
     const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
     if (!gmailRegex.test(userData.userName)) {
-        showModal("Validation Error", "Username must be a valid Gmail email address.", () => {});
+        showModal("Validation Error", "User Name (Email) must be a valid Gmail email address.", () => {});
         return;
     }
 
-    // Basic validation for other required fields
-    if (!userData.firstName.trim() || !userData.lastName.trim() || !userData.email.trim() || !userData.role.trim() || !userData.phone.trim() || !userData.skills.length) {
-        showModal("Validation Error", "All fields (First Name, Last Name, Email, Phone, Role, Skills) are mandatory.", () => {});
+    // Explicit validation for all mandatory fields
+    const mandatoryFields = [
+        { field: userData.firstName.trim(), name: "First Name" },
+        { field: userData.lastName.trim(), name: "Last Name" },
+        { field: userData.email.trim(), name: "Contact Email" },
+        { field: userData.phone.trim(), name: "Phone" },
+        { field: userData.role.trim(), name: "Role" }
+    ];
+
+    let missingFields = [];
+    mandatoryFields.forEach(item => {
+        if (!item.field) {
+            missingFields.push(item.name);
+        }
+    });
+
+    // Skills field check (after trimming and filtering empty strings from comma-separated input)
+    // The skills input value is `userData.skills` (a string), which is converted to an array inside this function.
+    // So, we need to check if the *resultant array* has any valid skills.
+    const processedSkills = userData.skills.split(',').map(s => s.trim()).filter(s => s !== '');
+    if (processedSkills.length === 0) {
+        missingFields.push("Skills");
+    }
+    userData.skills = processedSkills; // Update userData.skills to the processed array for saving
+
+
+    if (missingFields.length > 0) {
+        const message = `Please fill in all mandatory fields: ${missingFields.join(', ')}.`;
+        showModal("Validation Error", message, () => {});
         return;
     }
 
-
-    // Ensure skills is stored as an array
-    userData.skills = userData.skills.split(',').map(s => s.trim()).filter(s => s !== '');
 
     const collectionPath = `users_data`; // Dedicated collection for users
 
@@ -806,6 +829,7 @@ async function saveUser(userData, existingFirestoreDocId = null) {
             targetDocRef = doc(db, collectionPath, existingFirestoreDocId);
             await updateDoc(targetDocRef, userData);
             console.log("User updated:", existingFirestoreDocId);
+            showModal("Success", "User profile updated successfully!", () => {});
         } else {
             // CASE 2: ADDING A NEW USER PROFILE
             // For new user profiles, the admin MUST provide the Firebase Auth UID.
@@ -818,12 +842,20 @@ async function saveUser(userData, existingFirestoreDocId = null) {
                 return;
             }
 
+            // Check if a user profile with this UID already exists
+            const existingProfileSnap = await getDoc(doc(db, collectionPath, targetUid));
+            if (existingProfileSnap.exists()) {
+                showModal("Creation Error", "A user profile with this UID already exists. Please edit the existing profile or provide a unique UID for a new user.", () => {});
+                return;
+            }
+
             // You might want to add more robust UID format validation here if needed
             // e.g., if (targetUid.length < 28 || !/^[a-zA-Z0-9]+$/.test(targetUid)) { ... }
 
             targetDocRef = doc(db, collectionPath, targetUid); // Use the provided UID as the document ID
             await setDoc(targetDocRef, { ...userData, userId: targetUid }); // Store UID also as userId field
             console.log("New user profile created. Doc ID is provided UID:", targetUid);
+            showModal("Success", "New user profile created successfully!", () => {});
         }
 
         resetUserForm(); // Reset form after successful operation
@@ -848,6 +880,7 @@ async function deleteUser(firestoreDocId) {
             try {
                 await deleteDoc(doc(db, collectionPath, firestoreDocId));
                 console.log("User deleted Firestore Doc ID:", firestoreDocId);
+                showModal("Success", "User profile deleted successfully!", () => {});
             } catch (error) {
                 console.error("Error deleting user:", error);
                 showModal("Error", `Failed to delete user: ${error.message}`, () => {});
