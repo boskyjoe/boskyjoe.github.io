@@ -45,6 +45,9 @@ let allCurrencies = []; // Will store currency data from Firestore
 // Data for Customers (to populate Opportunity Customer dropdown)
 let allCustomers = [];
 
+// NEW: Constant for the global app settings document ID
+const APP_SETTINGS_DOC_ID = "app_settings";
+
 
 // Get references to DOM elements for Customers
 const customersSection = document.getElementById('customers-section');
@@ -474,7 +477,8 @@ async function loadAdminCountryData() {
 // NEW: Function to fetch currency data from Firestore
 async function fetchCurrencies() {
     try {
-        const collectionRef = collection(db, "app_metadata", "currencies_data");
+        // CHANGED: Corrected collection reference to include a document ID for `app_settings`
+        const collectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
         const querySnapshot = await getDocs(collectionRef);
         allCurrencies = []; // Clear existing data
         querySnapshot.forEach((docSnap) => {
@@ -511,7 +515,7 @@ async function initializeFirebase() {
         // NEW: Initialize currencySymbolDisplay here, AFTER the DOM is fully loaded
         currencySymbolDisplay = document.getElementById('currencySymbolDisplay');
         if (!currencySymbolDisplay) {
-            console.error("ERROR: currencySymbolDisplay element not found in the DOM!");
+            console.error("ERROR: currencySymbolDisplay element not found in the DOM! Currency symbol display may not work.");
             // You might want to display a user-facing error message or a fallback
         }
 
@@ -1048,7 +1052,7 @@ function updateCurrencySymbolDisplay() {
     console.log("DEBUG: Symbol to assign:", symbolToAssign);
 
     try {
-        currencySymbolDisplay.textContent = symbolToAssign; // Line 161
+        currencySymbolDisplay.textContent = symbolToAssign;
         console.log("DEBUG: Successfully updated currency symbol to:", symbolToAssign);
     } catch (error) {
         console.error("ERROR: Failed to set currency symbol textContent:", error);
@@ -2251,7 +2255,8 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
         return;
     }
 
-    const collectionPath = collection(db, "app_metadata", "currencies_data");
+    // CHANGED: Corrected collection reference to include a document ID for `app_settings`
+    const collectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
 
     try {
         let updatesPerformed = 0;
@@ -2259,7 +2264,7 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
         let totalProcessed = 0;
 
         if (existingCurrencyCode) { // Editing a single currency
-            const currencyDocRef = doc(db, collectionPath, existingCurrencyCode);
+            const currencyDocRef = doc(db, collectionRef, existingCurrencyCode); // doc() needs a collection ref and ID
             // When editing, the textarea should contain only the JSON for the currency being edited
             // e.g., {"USD": {"currencyName": "US Dollar", "symbol": "$", "symbol_native": "$"}}
             // So we need to extract the actual currency object value.
@@ -2294,7 +2299,7 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
                         continue;
                     }
 
-                    const currencyDocRef = doc(db, collectionPath, code); // Use currency code as document ID
+                    const currencyDocRef = doc(db, collectionRef, code); // Use currency code as document ID
                     await setDoc(currencyDocRef, {
                         currencyCode: code, // Also store code as a field for easier querying if needed
                         currencyName: currency.currencyName,
@@ -2338,7 +2343,8 @@ async function deleteCurrency(currencyCode) {
         `Are you sure you want to delete the currency '${currencyCode}'? This action cannot be undone.`,
         async () => {
             try {
-                const currencyDocRef = doc(db, "app_metadata", "currencies_data", currencyCode);
+                // CHANGED: Corrected doc reference for `app_settings`
+                const currencyDocRef = doc(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data", currencyCode);
                 await deleteDoc(currencyDocRef);
                 console.log("Currency deleted:", currencyCode);
                 showModal("Success", `Currency '${currencyCode}' deleted successfully!`, () => {});
@@ -2362,7 +2368,8 @@ function listenForCurrencies() {
         return;
     }
 
-    const q = collection(db, "app_metadata", "currencies_data");
+    // CHANGED: Corrected collection reference to include a document ID for `app_settings`
+    const q = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
 
     unsubscribeCurrencies = onSnapshot(q, (snapshot) => {
         currencyList.innerHTML = ''; // Clear current list
