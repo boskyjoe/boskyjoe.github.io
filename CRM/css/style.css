@@ -328,6 +328,9 @@ body {
 .accordion-content .grid {
     margin-top: 1rem; /* Space between accordion form and list */
 }
+.accordion-content .grid-cols-1 { /* Ensure full width on mobile within accordions */
+    grid-template-columns: minmax(0, 1fr);
+}
 .accordion-content .grid-cols-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -356,6 +359,21 @@ body {
     box-shadow: inset 0 -2px 0 rgba(0,0,0,0.05); /* Subtle shadow line */
 }
 
+/* For contact/line/quote headers, adjust grid template if needed */
+.accordion-content .data-grid-header {
+    /* Contacts grid */
+    grid-template-columns: 100px 1fr 1fr 1fr 1.2fr 1fr;
+}
+.accordion-content .data-grid-header:nth-of-type(1) { /* Specific to contact/line/quote header */
+    border-radius: 0.375rem 0.375rem 0 0; /* Match inner card rounding */
+}
+
+
+.data-grid-body {
+    /* No direct styles, acts as container for data-grid-rows */
+    overflow-x: auto; /* Enable horizontal scrolling for grids on small screens if necessary */
+}
+
 .data-grid-row {
     display: grid;
     /* This grid template should match the JS displayOpportunity function's grid-cols for consistency */
@@ -368,6 +386,12 @@ body {
     color: #4a5568; /* Gray-700 */
     transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
 }
+/* For contact/line/quote rows, adjust grid template if needed */
+.accordion-content .data-grid-row {
+    /* Contacts grid */
+    grid-template-columns: 100px 1fr 1fr 1fr 1.2fr 1fr;
+}
+
 
 /* Alternating row colors for better readability */
 .data-grid-row:nth-child(even) {
@@ -384,6 +408,10 @@ body {
     border-bottom: none; /* No border for the last row */
     border-radius: 0 0 0.75rem 0.75rem; /* Rounded bottom corners */
 }
+.accordion-content .data-grid-row:last-child { /* Inner grid rows */
+    border-radius: 0 0 0.375rem 0.375rem;
+}
+
 
 /* Hide columns on smaller screens */
 .data-grid-row .hidden { display: none; } /* Default hidden */
@@ -409,4 +437,71 @@ body {
 .data-grid-header > div:last-child,
 .data-grid-row > div:last-child {
     justify-content: flex-end; /* Align last column content to the right */
+}
+
+/* NEW: Styles for the Opportunity Management Two-Panel Layout */
+#opportunity-view-container {
+    display: flex;
+    flex-direction: column; /* Default to column on mobile */
+    gap: 1.5rem; /* Space between panels */
+}
+
+/* On medium screens and up, apply row layout and initial widths */
+@media (min-width: 768px) {
+    #opportunity-view-container {
+        flex-direction: row;
+        align-items: flex-start; /* Align items to the top */
+        height: auto; /* Allow height to adjust to content */
+    }
+    #opportunity-left-panel {
+        width: 70%;
+    }
+    #opportunity-right-panel {
+        width: 30%;
+        margin-top: 0; /* Remove top margin inherited from mobile */
+    }
+
+    /* States for dynamic resizing */
+    #opportunity-left-panel.shrink {
+        width: 30%;
+    }
+    #opportunity-right-panel.expand {
+        width: 70%;
+    }
+    #opportunity-left-panel.stretch {
+        width: 100%; /* For full view when not in split mode */
+    }
+    #opportunity-right-panel.hidden-panel {
+        width: 0;
+        min-width: 0; /* Ensure it truly collapses */
+        opacity: 0;
+        overflow: hidden; /* Hide overflow content */
+    }
+}
+
+/* Styles for the summary card when left panel shrinks */
+#opportunity-summary-card {
+    height: auto; /* Allow height to fit content */
+    min-height: 150px; /* A minimum height for the summary card */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1.5rem;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.08); /* Distinct shadow */
+    border: 1px solid #e0e7ff; /* Light blue border */
+    background-color: #f8faff; /* Lighter background */
+}
+/* Hide full form and existing list when summary card is active */
+#opportunity-left-panel.shrink #opportunity-full-form-view,
+#opportunity-left-panel.shrink #opportunity-existing-list-view {
+    display: none;
+}
+/* Show summary card when left panel shrinks */
+#opportunity-left-panel.shrink #opportunity-summary-card {
+    display: block; /* Overrides default hidden for summary card */
+}
+
+/* Hide summary card when left panel is full width */
+#opportunity-left-panel:not(.shrink) #opportunity-summary-card {
+    display: none;
 }
