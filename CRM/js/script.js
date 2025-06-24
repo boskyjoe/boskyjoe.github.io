@@ -33,6 +33,7 @@ let unsubscribeQuotes = null; // NEW: To store the onSnapshot unsubscribe for qu
 
 let isAdmin = false; // Flag to control admin specific UI/features
 let currentOpportunityId = null; // NEW: Stores the Firestore Doc ID of the currently selected/edited opportunity
+let currentEditedOpportunity = null; // Stores the full opportunity object currently being edited
 
 // Data for Countries and States (Now fetched from Firestore)
 let appCountries = [];
@@ -76,8 +77,21 @@ const customerDescriptionInput = document.getElementById('customerDescription');
 const submitCustomerButton = document.getElementById('submitCustomerButton');
 const customerList = document.getElementById('customerList'); // Reference to the div for customer rows
 
-// Opportunity Section Elements (NEW)
+// Opportunity Section Elements (NEW - and now restructured)
 const opportunitiesSection = document.getElementById('opportunities-section');
+const opportunityViewContainer = document.getElementById('opportunity-view-container'); // NEW main flex container
+const opportunityLeftPanel = document.getElementById('opportunity-left-panel');     // NEW left panel
+const opportunityRightPanel = document.getElementById('opportunity-right-panel');   // NEW right panel
+const opportunityFullFormView = document.getElementById('opportunity-full-form-view'); // NEW: The full form card
+const opportunityExistingListView = document.getElementById('opportunity-existing-list-view'); // NEW: The existing opportunities list card
+const opportunitySummaryCard = document.getElementById('opportunity-summary-card'); // NEW summary card
+const summaryOpportunityId = document.getElementById('summaryOpportunityId');       // NEW summary elements
+const summaryOpportunityName = document.getElementById('summaryOpportunityName');
+const summaryOpportunityCustomer = document.getElementById('summaryOpportunityCustomer');
+const summaryOpportunityStage = document.getElementById('summaryOpportunityStage');
+const summaryOpportunityAmount = document.getElementById('summaryOpportunityAmount');
+
+
 const opportunityForm = document.getElementById('opportunityForm');
 const opportunityFormTitle = document.getElementById('opportunityFormTitle');
 const opportunityIdDisplayGroup = document.getElementById('opportunityIdDisplayGroup');
@@ -228,6 +242,41 @@ function showModal(title, message, onConfirm, onCancel) {
     };
 }
 
+// Function to control the layout of the opportunity section
+function setOpportunityLayout(layoutType) {
+    // Hide all internal opportunity views first
+    opportunityFullFormView.classList.add('hidden');
+    opportunityExistingListView.classList.add('hidden');
+    opportunitySummaryCard.classList.add('hidden');
+
+    // Reset panel classes
+    opportunityLeftPanel.classList.remove('shrink', 'stretch');
+    opportunityRightPanel.classList.remove('expand', 'hidden-panel');
+
+    switch (layoutType) {
+        case 'full_form_and_list': // Default view for adding new, or after resetting edit form
+            opportunityFullFormView.classList.remove('hidden');
+            opportunityExistingListView.classList.remove('hidden');
+            opportunityLeftPanel.classList.add('stretch'); // Take full width
+            opportunityRightPanel.classList.add('hidden-panel'); // Hide right panel completely
+            break;
+        case 'edit_split_70_30': // Initial edit view: form + list (70) and accordions (30)
+            opportunityFullFormView.classList.remove('hidden');
+            opportunityExistingListView.classList.remove('hidden');
+            // Classes for width are handled by CSS directly on md: screen size
+            break;
+        case 'edit_split_30_70': // Accordion expanded view: summary card (30) and accordions (70)
+            opportunitySummaryCard.classList.remove('hidden');
+            opportunityLeftPanel.classList.add('shrink');
+            opportunityRightPanel.classList.add('expand');
+            break;
+        default:
+            console.error("Unknown opportunity layout type:", layoutType);
+            break;
+    }
+}
+
+
 // Function to show a specific section and hide others
 async function showSection(sectionId) {
     // Check for admin section access only if the section is admin-specific
@@ -272,9 +321,10 @@ async function showSection(sectionId) {
     if (unsubscribeQuotes) { unsubscribeQuotes(); } // NEW
 
 
-    // Reset currentOpportunityId when navigating away from opportunities
+    // Reset currentOpportunityId and layout when navigating away from opportunities
     if (sectionId !== 'opportunities-section') {
         currentOpportunityId = null;
+        currentEditedOpportunity = null; // Clear the edited opportunity
         linkedObjectsAccordion.classList.add('hidden'); // Hide linked objects if not in opportunity section
     }
 
@@ -287,7 +337,7 @@ async function showSection(sectionId) {
         } else if (sectionId === 'opportunities-section') { // NEW
             await fetchCustomersForDropdown(); // Fetch customers to populate dropdown
             listenForOpportunities();
-            resetOpportunityForm(); // This will also hide linked object sections initially
+            resetOpportunityForm(); // This will also hide linked object sections initially and set layout
             submitOpportunityButton.removeAttribute('disabled');
         }
         else if (sectionId === 'admin-country-mapping-section') {
@@ -766,7 +816,8 @@ function listenForCustomers() {
 // Display a single customer in the UI as a grid row
 function displayCustomer(customer) {
     const customerRow = document.createElement('div');
-    customerRow.className = 'grid grid-cols-[100px_minmax(150px,_1.5fr)_1.5fr_1fr_1.5fr_1fr_0.8fr_1.5fr] gap-x-4 py-3 items-center text-sm border-b border-gray-100 last:border-b-0 hover:bg-gray-50';
+    // Use data-grid-row class
+    customerRow.className = 'data-grid-row grid-cols-[100px_minmax(150px,_1.5fr)_1.5fr_1fr_1.5fr_1fr_0.8fr_1.5fr]';
     customerRow.dataset.id = customer.id; // Store Firestore document ID for edit/delete actions
 
     // Determine the main display name based on customer type
@@ -875,7 +926,7 @@ function resetCustomerForm() {
     applyCustomerTypeValidation(); // Re-apply validation to hide/show fields correctly for a new entry
 }
 
-/* --- OPPORTUNITY CRUD OPERATIONS (UPDATED) --- */
+/* --- OPPORTUNITY CRUD OPERATIONS (UPDATED FOR NEW UI) --- */
 
 // Function to fetch customers and populate the dropdown for opportunities
 async function fetchCustomersForDropdown() {
@@ -911,8 +962,10 @@ async function fetchCustomersForDropdown() {
 
 // Event listener for customer selection to auto-populate service address
 opportunityCustomerSelect.addEventListener('change', (e) => {
-    // Only auto-fill if the service address is currently empty
-    if (opportunityServiceAddressInput.value.trim() === '') {
+    // Only auto-fill if the service address is currently empty OR if a new opportunity is being created (no editingId)
+    // This prevents overwriting user-edited address when an opportunity is loaded for editing.
+    const isEditing = opportunityForm.dataset.editingId;
+    if (!isEditing || opportunityServiceAddressInput.value.trim() === '') {
         const selectedCustomerId = e.target.value;
         const selectedCustomer = allCustomers.find(c => c.id === selectedCustomerId);
 
@@ -1082,7 +1135,8 @@ function listenForOpportunities() {
 // Display a single opportunity in the UI
 function displayOpportunity(opportunity) {
     const opportunityRow = document.createElement('div');
-    opportunityRow.className = 'grid grid-cols-[100px_minmax(120px,_1.5fr)_1fr_0.8fr_1fr_1.2fr_1.5fr_1.5fr_1fr] gap-x-4 py-3 items-center text-sm border-b border-gray-100 last:border-b-0 hover:bg-gray-50';
+    // Use data-grid-row class, and ensure its specific grid columns match the CSS
+    opportunityRow.className = 'data-grid-row grid-cols-[100px_minmax(120px,_1.5fr)_1fr_0.8fr_1fr_1.2fr_1.5fr_1.5fr_1fr]';
     opportunityRow.dataset.id = opportunity.id; // Store Firestore document ID
 
     // Find customer name using customerId
@@ -1110,12 +1164,18 @@ function displayOpportunity(opportunity) {
     opportunityRow.querySelector('.delete-btn').addEventListener('click', () => deleteOpportunity(opportunity.id));
 }
 
-// Populate form for editing an opportunity
+// Populate form for editing an opportunity (UPDATED FOR NEW UI)
 function editOpportunity(opportunity) {
     if (!isAuthReady || !currentUserId) {
         showModal("Permission Denied", "Authentication required to edit opportunities.", () => {});
         return;
     }
+
+    currentEditedOpportunity = opportunity; // Store the full opportunity object globally
+
+    // Set layout to 70:30 split view
+    setOpportunityLayout('edit_split_70_30');
+
     opportunityFormTitle.textContent = 'Edit Opportunity';
     submitOpportunityButton.textContent = 'Update Opportunity';
 
@@ -1134,7 +1194,7 @@ function editOpportunity(opportunity) {
     opportunityExpectedCloseDateInput.value = opportunity.expectedCloseDate || '';
     opportunityEventTypeSelect.value = opportunity.eventType || '';
     opportunityEventLocationProposedInput.value = opportunity.eventLocationProposed || '';
-    opportunityServiceAddressInput.value = opportunity.serviceAddress || ''; // NEW FIELD
+    opportunityServiceAddressInput.value = opportunity.serviceAddress || '';
     opportunityDescriptionInput.value = opportunity.description || '';
     // Handle JSON or plain text for additional data
     opportunityDataInput.value = opportunity.opportunityData ? (typeof opportunity.opportunityData === 'object' ? JSON.stringify(opportunity.opportunityData, null, 2) : opportunity.opportunityData) : '';
@@ -1159,7 +1219,7 @@ function editOpportunity(opportunity) {
     opportunityForm.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Reset Opportunity form function
+// Reset Opportunity form function (UPDATED FOR NEW UI)
 function resetOpportunityForm() {
     opportunityForm.reset();
     opportunityForm.dataset.editingId = '';
@@ -1170,6 +1230,7 @@ function resetOpportunityForm() {
     opportunityDataInput.value = ''; // Ensure additional data is cleared
     opportunityServiceAddressInput.value = ''; // NEW: Clear service address
     currentOpportunityId = null; // Clear the globally tracked current opportunity ID
+    currentEditedOpportunity = null; // Clear the edited opportunity
 
     linkedObjectsAccordion.classList.add('hidden'); // Hide linked objects accordion again
     closeAllAccordions(); // Ensure all accordions are closed
@@ -1195,6 +1256,29 @@ function resetOpportunityForm() {
     // Ensure initial state for quote customer dropdown
     quoteCustomerSelect.innerHTML = '<option value="">Auto-filled from Opportunity</option>';
     quoteCustomerSelect.setAttribute('disabled', 'disabled');
+
+    // Revert layout to full form and list view for new opportunity creation
+    setOpportunityLayout('full_form_and_list');
+}
+
+// Function to update the summary card content
+function updateOpportunitySummaryCard() {
+    if (currentEditedOpportunity) {
+        const customer = allCustomers.find(c => c.id === currentEditedOpportunity.customer);
+        const customerDisplayName = customer ? (customer.companyName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim()) : 'N/A';
+
+        summaryOpportunityId.textContent = currentEditedOpportunity.opportunityId || 'N/A';
+        summaryOpportunityName.textContent = currentEditedOpportunity.opportunityName || 'N/A';
+        summaryOpportunityCustomer.textContent = customerDisplayName;
+        summaryOpportunityStage.textContent = currentEditedOpportunity.stage || 'N/A';
+        summaryOpportunityAmount.textContent = currentEditedOpportunity.amount ? `${parseFloat(currentEditedOpportunity.amount).toFixed(2)} ${currentEditedOpportunity.currency}` : 'N/A';
+    } else {
+        summaryOpportunityId.textContent = '';
+        summaryOpportunityName.textContent = 'No Opportunity Selected';
+        summaryOpportunityCustomer.textContent = '';
+        summaryOpportunityStage.textContent = '';
+        summaryOpportunityAmount.textContent = '';
+    }
 }
 
 
@@ -1306,7 +1390,8 @@ function listenForOpportunityContacts(opportunityId) {
 
 function displayOpportunityContact(contact) {
     const contactRow = document.createElement('div');
-    contactRow.className = 'grid grid-cols-[100px_1fr_1fr_1fr_1.2fr_1fr] gap-x-4 py-3 items-center text-sm border-b border-gray-100 last:border-b-0 hover:bg-gray-50';
+    // Use data-grid-row class, and ensure its specific grid columns match the CSS
+    contactRow.className = 'data-grid-row grid-cols-[100px_1fr_1fr_1fr_1.2fr_1fr]';
     contactRow.dataset.id = contact.id;
 
     contactRow.innerHTML = `
@@ -1343,8 +1428,11 @@ function editOpportunityContact(contact) {
     contactPhoneInput.value = contact.phone || '';
     contactRoleInput.value = contact.role || '';
 
-    contactsAccordionContent.classList.add('open'); // Ensure accordion is open
-    contactsAccordionHeader.classList.add('active');
+    // Ensure the related section expands and this accordion opens
+    setOpportunityLayout('edit_split_30_70'); // Shrink left, expand right
+    closeAllAccordions(); // Close others first
+    toggleAccordion(contactsAccordionHeader, contactsAccordionContent); // Open this one
+
     contactsAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
 }
 
@@ -1477,7 +1565,8 @@ function listenForOpportunityLines(opportunityId) {
 
 function displayOpportunityLine(line) {
     const lineRow = document.createElement('div');
-    lineRow.className = 'grid grid-cols-[100px_1.5fr_0.8fr_0.5fr_0.8fr_0.8fr_1fr] gap-x-4 py-3 items-center text-sm border-b border-gray-100 last:border-b-0 hover:bg-gray-50';
+    // Use data-grid-row class, and ensure its specific grid columns match the CSS
+    lineRow.className = 'data-grid-row grid-cols-[100px_1.5fr_0.8fr_0.5fr_0.8fr_0.8fr_1fr]';
     lineRow.dataset.id = line.id; // Firestore doc ID
 
     lineRow.innerHTML = `
@@ -1517,8 +1606,11 @@ function editOpportunityLine(line) {
     lineNetPriceInput.value = line.netPrice || '';
     lineStatusSelect.value = line.status || '';
 
-    linesAccordionContent.classList.add('open'); // Ensure accordion is open
-    linesAccordionHeader.classList.add('active');
+    // Ensure the related section expands and this accordion opens
+    setOpportunityLayout('edit_split_30_70'); // Shrink left, expand right
+    closeAllAccordions(); // Close others first
+    toggleAccordion(linesAccordionHeader, linesAccordionContent); // Open this one
+
     linesAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
 }
 
@@ -1648,7 +1740,8 @@ function listenForQuotes(opportunityId) {
 
 function displayQuote(quote) {
     const quoteRow = document.createElement('div');
-    quoteRow.className = 'grid grid-cols-[100px_1.5fr_1fr_0.8fr_0.8fr_1fr] gap-x-4 py-3 items-center text-sm border-b border-gray-100 last:border-b-0 hover:bg-gray-50';
+    // Use data-grid-row class, and ensure its specific grid columns match the CSS
+    quoteRow.className = 'data-grid-row grid-cols-[100px_1.5fr_1fr_0.8fr_0.8fr_1fr]';
     quoteRow.dataset.id = quote.id; // Firestore doc ID
 
     quoteRow.innerHTML = `
@@ -1702,8 +1795,11 @@ function editQuote(quote) {
     quoteCurrencySelect.value = quote.quoteCurrency || '';
     quoteIsFinalCheckbox.checked = quote.isFinal === true;
 
-    quotesAccordionContent.classList.add('open'); // Ensure accordion is open
-    quotesAccordionHeader.classList.add('active');
+    // Ensure the related section expands and this accordion opens
+    setOpportunityLayout('edit_split_30_70'); // Shrink left, expand right
+    closeAllAccordions(); // Close others first
+    toggleAccordion(quotesAccordionHeader, quotesAccordionContent); // Open this one
+
     quotesAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
 }
 
@@ -1941,15 +2037,31 @@ function resetUserForm() {
     userRoleSelect.value = 'User'; // Default role for new user profiles
 }
 
-// --- Accordion Logic ---
+// --- Accordion Logic (UPDATED for dynamic panel sizing) ---
 function toggleAccordion(header, content) {
-    header.classList.toggle('active');
-    if (content.classList.contains('open')) {
+    // If the clicked accordion is already open, close it and revert to 70:30
+    if (content.classList.contains('open') && window.innerWidth >= 768) { // Only shrink/expand on desktop
         content.classList.remove('open');
-        content.style.maxHeight = null; // Reset max-height to allow transition
+        content.style.maxHeight = null;
+        header.classList.remove('active');
+        setOpportunityLayout('edit_split_70_30'); // Revert to 70:30 layout
+        opportunityForm.scrollIntoView({ behavior: 'smooth', block: 'start' }); // Scroll form into view
     } else {
+        // Close all other accordions first
+        closeAllAccordions();
+
+        // Open the clicked accordion
         content.classList.add('open');
-        content.style.maxHeight = content.scrollHeight + "px"; // Set max-height to content height
+        content.style.maxHeight = content.scrollHeight + "px";
+        header.classList.add('active');
+
+        // Only shrink left panel if on desktop and an opportunity is being edited
+        if (currentOpportunityId && window.innerWidth >= 768) {
+            setOpportunityLayout('edit_split_30_70'); // Shrink left, expand right
+            updateOpportunitySummaryCard(); // Update the summary card
+        }
+        // Scroll the accordion header into view
+        header.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 }
 
@@ -1976,7 +2088,7 @@ customerForm.addEventListener('submit', async (e) => {
         customerType: customerTypeSelect.value.trim(),
         firstName: customerFirstNameInput.value.trim(),
         lastName: customerLastNameInput.value.trim(),
-        companyName: customerCompanyNameInput.trim(), // Use .trim() for company name
+        companyName: customerCompanyNameInput.value.trim(), // Use .value.trim() for company name
         email: customerEmailInput.value.trim(),
         phone: customerPhoneInput.value.trim(),
         // Address fields are now explicitly collected from their respective inputs
@@ -2269,10 +2381,19 @@ userForm.addEventListener('submit', async (e) => {
 });
 
 
-// Accordion Event Listeners (NEW)
+// Accordion Event Listeners (UPDATED for dynamic panel sizing)
 contactsAccordionHeader.addEventListener('click', () => toggleAccordion(contactsAccordionHeader, contactsAccordionContent));
 linesAccordionHeader.addEventListener('click', () => toggleAccordion(linesAccordionHeader, linesAccordionContent));
 quotesAccordionHeader.addEventListener('click', () => toggleAccordion(quotesAccordionHeader, quotesAccordionContent));
+
+// Event listener for the summary card to expand the left panel
+opportunitySummaryCard.addEventListener('click', () => {
+    if (window.innerWidth >= 768) { // Only apply on desktop
+        setOpportunityLayout('edit_split_70_30'); // Expand left, shrink right
+        closeAllAccordions(); // Close any open accordions on the right
+        opportunityForm.scrollIntoView({ behavior: 'smooth', block: 'start' }); // Scroll form into view
+    }
+});
 
 
 // Initialize Firebase on window load
