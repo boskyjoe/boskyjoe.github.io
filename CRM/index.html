@@ -257,9 +257,11 @@
                 <h3 class="text-xl font-semibold mb-4 text-gray-800">Upload Country & State Data</h3>
                 <form id="countryMappingForm">
                     <div class="mb-4">
-                        <label for="adminCountriesInput" class="block text-sm font-medium text-gray-700">Countries (Semicolon-separated: Name,Code;Name,Code):</label>
-                        <textarea id="adminCountriesInput" rows="5" class="form-textarea mt-1" placeholder="United States,US;Canada,CA;Mexico,MX"></textarea>
-                        <p class="text-xs text-gray-500 mt-1">Example: United States,US;Canada,CA</p>
+                        <label for="adminCountriesInput" class="block text-sm font-medium text-gray-700">Countries (One per line: Name,Code):</label>
+                        <textarea id="adminCountriesInput" rows="5" class="form-textarea mt-1" placeholder="United States,US
+Canada,CA
+Mexico,MX"></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Example: United States,US (each on a new line)</p>
                     </div>
                     <div class="mb-4">
                         <label for="adminCountryStateMapInput" class="block text-sm font-medium text-gray-700">Country-State Map (Semicolon-separated: Code:State1,State2;Code:State1,State2):</label>
