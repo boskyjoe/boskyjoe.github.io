@@ -115,7 +115,7 @@ const mobileMenu = document.getElementById('mobileMenu');
 // Select all main content sections
 const homeSection = document.getElementById('home');
 const eventsSection = document.getElementById('events-section');
-const allSections = [homeSection, customersSection, eventsSection, adminCountryMappingSection, usersManagementSection, authSection];
+const allSections = [homeSection, customersSection, eventsSection, adminCountryMappingSection, usersManagementSection, authSection]; // Removed bootstrap-specific section
 
 
 // Function to show a custom confirmation modal
@@ -296,7 +296,7 @@ async function initializeFirebase() {
                 userIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
                 mobileUserIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
 
-                // Show User ID and Logout buttons
+                // Show User ID and Logout buttons, Hide Google login buttons
                 userIdDisplay.classList.remove('hidden');
                 mobileUserIdDisplay.classList.remove('hidden');
                 navGoogleLoginButton.classList.add('hidden');
@@ -349,7 +349,7 @@ async function initializeFirebase() {
                 await fetchCountryData();
                 populateCountries();
 
-                // Always redirect to home after successful authentication (or if already on admin page, it will re-trigger showSection)
+                // Always redirect to home after successful authentication
                 showSection('home');
 
 
@@ -378,7 +378,6 @@ async function initializeFirebase() {
                 // Always show the home section initially
                 showSection('home');
                 // The auth-section itself is hidden, login happens via header button
-                // authSection.classList.remove('hidden'); // Keep this hidden, use header button
             }
         });
 
@@ -964,7 +963,7 @@ customerForm.addEventListener('submit', async (e) => {
         customerType: customerTypeSelect.value.trim(),
         firstName: customerFirstNameInput.value.trim(),
         lastName: customerLastNameInput.value.trim(),
-        companyName: customerCompanyNameInput.value.trim(),
+        companyName: customerCompanyNameInput.trim(), // Use .trim() for company name
         email: customerEmailInput.value.trim(),
         phone: customerPhoneInput.value.trim(),
         // Address fields are now explicitly collected from their respective inputs
@@ -998,14 +997,15 @@ mobileMenuButton.addEventListener('click', () => {
 
 // Navigation Links Event Listeners
 document.querySelectorAll('nav a').forEach(link => {
+    // Only add listener if the link has a data-section attribute
     if (link.dataset.section) {
         link.addEventListener('click', (e) => {
-            e.preventDefault();
-            // showSection now handles login/auth checks directly
-            showSection(link.dataset.section);
+            e.preventDefault(); // Prevent default link behavior
+            showSection(link.dataset.section); // Call showSection with the target section ID
         });
     }
 });
+
 
 // Event listener for the Google Login Button in the header (nav bar)
 if (navGoogleLoginButton) {
