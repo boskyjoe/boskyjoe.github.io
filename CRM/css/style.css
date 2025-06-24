@@ -455,10 +455,12 @@ body {
     }
     #opportunity-left-panel {
         width: 70%;
+        transition: width 0.3s ease-in-out; /* Smooth width transition */
     }
     #opportunity-right-panel {
         width: 30%;
         margin-top: 0; /* Remove top margin inherited from mobile */
+        transition: width 0.3s ease-in-out, opacity 0.3s ease-in-out; /* Smooth width/opacity transition */
     }
 
     /* States for dynamic resizing */
@@ -479,7 +481,7 @@ body {
     }
 }
 
-/* Styles for the summary card when left panel shrinks */
+/* Styles for the summary card when left panel shrinks (UPDATED for clickable feedback) */
 #opportunity-summary-card {
     height: auto; /* Allow height to fit content */
     min-height: 150px; /* A minimum height for the summary card */
@@ -487,10 +489,23 @@ body {
     flex-direction: column;
     justify-content: space-between;
     padding: 1.5rem;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.08); /* Distinct shadow */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.08); /* Initial distinct shadow */
     border: 1px solid #e0e7ff; /* Light blue border */
     background-color: #f8faff; /* Lighter background */
+    cursor: pointer; /* Explicitly show pointer on hover */
+    transition: all 0.2s ease-in-out; /* Smooth transitions for visual effects */
 }
+#opportunity-summary-card:hover {
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15); /* Stronger shadow on hover */
+    transform: translateY(-2px); /* Lift effect on hover */
+}
+#opportunity-summary-card:active {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Subtle shadow on click for "pressed" effect */
+    transform: translateY(0); /* "Press down" effect */
+    background-color: #eef1f5; /* Slightly darker background on active */
+}
+
+
 /* Hide full form and existing list when summary card is active */
 #opportunity-left-panel.shrink #opportunity-full-form-view,
 #opportunity-left-panel.shrink #opportunity-existing-list-view {
