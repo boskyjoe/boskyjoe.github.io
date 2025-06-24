@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
-import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc, getDoc, where, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js"; // Removed signInWithEmailAndPassword, createUserWithEmailAndPassword
+import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc, getDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 // YOUR Firebase Configuration
 const firebaseConfig = {
@@ -26,19 +26,11 @@ const currentCustomerCollectionType = 'public'; // Fixed to public as per requir
 let unsubscribeCustomers = null; // To store the onSnapshot unsubscribe function for customers
 let unsubscribeUsers = null; // To store the onSnapshot unsubscribe function for users
 
-// Hardcoded Firebase UID for the 'admin' user (admin@shuttersync.com).
-// THIS HAS BEEN UPDATED WITH THE CORRECT UID YOU PROVIDED.
-const ADMIN_FIREBASE_UID = 'CpW5XxAaDxbd3C7eCVVgGvmJrOI2';
 let isAdmin = false; // Flag to control admin specific UI/features
 
 // Data for Countries and States (Now fetched from Firestore)
 let appCountries = [];
 let appCountryStateMap = {};
-
-// New global state for bootstrap admin login
-let hasFirestoreAdmins = false; // Will be true if any user in 'users_data' has role 'Admin'
-const BOOTSTRAP_ADMIN_EMAIL = "admin@shuttersync.com";
-const BOOTSTRAP_ADMIN_PASSWORD = "ShutterSync@123";
 
 // Get references to DOM elements for Customers
 const customersSection = document.getElementById('customers-section');
@@ -100,13 +92,13 @@ const userSkillsInput = document.getElementById('userSkills');
 const submitUserButton = document.getElementById('submitUserButton');
 const userList = document.getElementById('userList');
 
-// Bootstrap Admin Login Section elements
-const bootstrapAdminLoginSection = document.getElementById('bootstrap-admin-login-section');
-const bootstrapAdminLoginForm = document.getElementById('bootstrapAdminLoginForm');
-const bootstrapAdminEmailInput = document.getElementById('bootstrapAdminEmail');
-const bootstrapAdminPasswordInput = document.getElementById('bootstrapAdminPassword');
-const bootstrapAdminLoginButton = document.getElementById('bootstrapAdminLoginButton');
-const bootstrapAdminMessage = document.getElementById('bootstrapAdminMessage');
+// Removed Bootstrap Admin Login Section elements as it's no longer needed for direct login
+// const bootstrapAdminLoginSection = document.getElementById('bootstrap-admin-login-section');
+// const bootstrapAdminLoginForm = document.getElementById('bootstrapAdminLoginForm');
+// const bootstrapAdminEmailInput = document.getElementById('bootstrapAdminEmail');
+// const bootstrapAdminPasswordInput = document.getElementById('bootstrapAdminPassword');
+// const bootstrapAdminLoginButton = document.getElementById('bootstrapAdminLoginButton');
+// const bootstrapAdminMessage = document.getElementById('bootstrapAdminMessage');
 
 
 // References to logout buttons and the new nav Google Login button
@@ -122,11 +114,11 @@ const mobileAdminMenu = document.getElementById('mobileAdminMenu');
 const authSection = document.getElementById('auth-section');
 
 
-// Select all main content sections (crm-section removed, customers-section used instead for general management)
+// Select all main content sections
 const homeSection = document.getElementById('home');
 const eventsSection = document.getElementById('events-section');
-// Include new admin sections in allSections
-const allSections = [homeSection, customersSection, eventsSection, adminCountryMappingSection, usersManagementSection, authSection, bootstrapAdminLoginSection];
+// Updated allSections to remove bootstrap-specific section
+const allSections = [homeSection, customersSection, eventsSection, adminCountryMappingSection, usersManagementSection, authSection];
 
 
 // Function to show a custom confirmation modal
@@ -157,58 +149,29 @@ function showModal(title, message, onConfirm, onCancel) {
 }
 
 // Function to show a specific section and hide others
-async function showSection(sectionId, forceLoginCheck = false) {
-    // If attempting to access an admin section
+async function showSection(sectionId) { // Removed forceLoginCheck parameter as login is now handled directly if needed
+    // Check for admin section access only if the section is admin-specific
     if (['admin-country-mapping-section', 'users-management-section'].includes(sectionId)) {
         if (!isAuthReady) {
-            console.log("Auth not ready, waiting for authentication before checking admin sections.");
-            // This scenario is handled by onAuthStateChanged after init.
+            console.log(`Auth not ready. Attempting Google login to access ${sectionId}.`);
+            await handleGoogleLogin(); // Force Google login if not authenticated
+            // After handleGoogleLogin, onAuthStateChanged will fire and re-evaluate isAdmin.
+            // We'll rely on the onAuthStateChanged to call showSection again if successful.
+            return; // Exit early, let onAuthStateChanged handle redirect
+        }
+
+        if (!currentUserId) { // No user is logged in even after attempting login
+            showModal("Access Denied", "You must be logged in to access this section.", () => {
+                showSection('home'); // Redirect to home if still not logged in
+            });
             return;
         }
 
-        if (!currentUserId || !isAdmin) { // Not logged in or not admin
-            if (!currentUserId) { // Not logged in at all
-                console.log(`Access to ${sectionId} denied. No user logged in.`);
-                await checkIfAnyFirestoreAdminExists(); // Re-check if this is a bootstrap scenario
-                if (!hasFirestoreAdmins) {
-                    console.log("No Firestore Admins found. Showing bootstrap login.");
-                    bootstrapAdminLoginSection.classList.remove('hidden');
-                    authSection.classList.add('hidden');
-                    navGoogleLoginButton.classList.add('hidden');
-                    bootstrapAdminMessage.textContent = 'Please use the default admin login to set up the first administrator to access admin features.';
-                    bootstrapAdminMessage.classList.remove('hidden');
-                    // Hide all other sections and explicitly show bootstrap login
-                    allSections.forEach(section => {
-                        if (section.id !== 'bootstrap-admin-login-section') {
-                            section.classList.add('hidden');
-                        }
-                    });
-                    bootstrapAdminLoginSection.classList.remove('hidden');
-                    return; // Stop execution, show bootstrap login
-                } else {
-                    console.log("Firestore Admins exist. Redirecting to standard login for admin section access.");
-                    // Regular user needs to log in, or current user isn't admin
-                    showModal("Access Denied", "You must be logged in as an administrator to access this section.", () => {
-                        showSection('home'); // Redirect non-admins to home
-                    });
-                    // Hide all sections except for home/auth for clarity
-                    allSections.forEach(section => {
-                        if (section.id !== 'auth-section' && section.id !== 'home') {
-                            section.classList.add('hidden');
-                        }
-                    });
-                    authSection.classList.remove('hidden'); // Show standard login
-                    bootstrapAdminLoginSection.classList.add('hidden'); // Ensure bootstrap is hidden
-                    navGoogleLoginButton.classList.remove('hidden'); // Show Google Login button
-                    return; // Stop execution
-                }
-            } else if (!isAdmin) { // Logged in but not admin
-                console.log(`Access to ${sectionId} denied. User is not an admin.`);
-                showModal("Access Denied", "You do not have permission to access this section. Administrator privileges required.", () => {
-                    showSection('home'); // Redirect non-admins to home
-                });
-                return; // Stop execution
-            }
+        if (!isAdmin) { // Logged in but not an admin
+            showModal("Unauthorized Access", "You do not have administrative privileges to access this section.", () => {
+                showSection('home'); // Redirect non-admins to home
+            });
+            return;
         }
     }
 
@@ -268,10 +231,12 @@ async function handleGoogleLogin() {
     const provider = new GoogleAuthProvider();
     try {
         await signInWithPopup(auth, provider);
-        // onAuthStateChanged listener will handle the rest
+        // onAuthStateChanged listener will handle the rest (role check, redirect)
     } catch (error) {
         console.error("Error during Google login:", error);
-        showModal("Login Error", `Failed to sign in with Google: ${error.message}`, () => {});
+        showModal("Login Error", `Failed to sign in with Google: ${error.message}`, () => {
+            showSection('home'); // Redirect to home if Google login fails
+        });
     }
 }
 
@@ -325,54 +290,11 @@ async function loadAdminCountryData() {
     }
 }
 
-// NEW FUNCTION: Updates the hasAdmins status in app_metadata/admin_status
-async function updateFirestoreAdminStatus() {
-    if (!db || !auth.currentUser) {
-        console.warn("Firestore or authenticated user not available. Cannot update admin status.");
-        return;
-    }
+// Removed updateFirestoreAdminStatus as app_metadata/admin_status is no longer used for public admin check.
+// This logic is now purely based on the user's document in 'users_data'.
 
-    try {
-        // First, check how many 'Admin' role users exist in 'users_data'
-        const q = query(collection(db, 'users_data'), where("role", "==", "Admin"));
-        const querySnapshot = await getDocs(q);
-        const currentHasAdmins = !querySnapshot.empty;
-
-        const adminStatusDocRef = doc(db, "app_metadata", "admin_status");
-        await setDoc(adminStatusDocRef, { hasAdmins: currentHasAdmins }, { merge: false }); // Overwrite the field
-        console.log("Firestore admin status updated to:", currentHasAdmins);
-
-        // Also update the global hasFirestoreAdmins flag
-        hasFirestoreAdmins = currentHasAdmins;
-    } catch (error) {
-        console.error("Error updating Firestore admin status:", error);
-        // Do not show modal here, as this runs in background after user operations
-    }
-}
-
-
-// MODIFIED checkIfAnyFirestoreAdminExists to read from app_metadata/admin_status
-async function checkIfAnyFirestoreAdminExists() {
-    try {
-        const adminStatusDocRef = doc(db, 'app_metadata', 'admin_status');
-        const docSnap = await getDoc(adminStatusDocRef);
-
-        if (docSnap.exists()) {
-            hasFirestoreAdmins = docSnap.data().hasAdmins || false; // Default to false if field is missing
-            console.log("checkIfAnyFirestoreAdminExists: Read from app_metadata/admin_status. Found existing Firestore Admins:", hasFirestoreAdmins);
-        } else {
-            // If the document doesn't exist, assume no admins yet (initial state)
-            hasFirestoreAdmins = false;
-            console.log("checkIfAnyFirestoreAdminExists: app_metadata/admin_status document does not exist. Assuming no admins.");
-            // Optionally, create it immediately so future reads don't fail, but let the first admin write it.
-        }
-    } catch (error) {
-        console.error("Error checking for existing Firestore admins via app_metadata/admin_status:", error);
-        // This is a critical error, but we'll allow the app to proceed potentially without admin access
-        hasFirestoreAdmins = false; // Assume no admins if there's an error due to permission or other issues
-        // The modal for this specific error is now handled by the calling `initializeFirebase` or `showSection` if needed.
-    }
-}
+// Removed checkIfAnyFirestoreAdminExists as it's no longer needed for public admin check.
+// Initial UI state will directly show 'home' or 'auth' based on login status.
 
 
 // Initialize Firebase and set up authentication listener
@@ -383,15 +305,10 @@ async function initializeFirebase() {
         db = getFirestore(app);
         auth = getAuth(app);
 
-        console.log("initializeFirebase: Calling checkIfAnyFirestoreAdminExists...");
-        // First, check if any 'Admin' role users exist in Firestore (from app_metadata/admin_status)
-        await checkIfAnyFirestoreAdminExists();
-        console.log("initializeFirebase: hasFirestoreAdmins after initial check:", hasFirestoreAdmins);
-
         // Listen for auth state changes
         onAuthStateChanged(auth, async (user) => {
             isAuthReady = true; // Mark auth as ready as soon as state is known
-            console.log("onAuthStateChanged: Auth state changed. User:", user ? user.email || user.uid : "null", "hasFirestoreAdmins (global):", hasFirestoreAdmins);
+            console.log("onAuthStateChanged: Auth state changed. User:", user ? user.email || user.uid : "null");
 
             if (user) {
                 currentUserId = user.uid;
@@ -399,29 +316,39 @@ async function initializeFirebase() {
                 mobileUserIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
                 console.log("onAuthStateChanged: Current Firebase UID:", currentUserId);
 
-                let isCurrentSessionBootstrapAdmin = false;
+                // For all logged-in users, check their role in Firestore
+                const userProfileRef = doc(db, 'users_data', user.uid); // Profile document ID MUST be their Firebase UID
+                const userProfileSnap = await getDoc(userProfileRef);
 
-                // Determine if this is the bootstrap admin scenario
-                // This condition relies on the global hasFirestoreAdmins flag correctly reflecting the *actual* admin count
-                if (!hasFirestoreAdmins && user.email === BOOTSTRAP_ADMIN_EMAIL && user.uid === ADMIN_FIREBASE_UID) {
-                    isAdmin = true; // Grant admin access for bootstrap user
-                    isCurrentSessionBootstrapAdmin = true;
-                    console.log("onAuthStateChanged: Bootstrap Admin detected. Admin access granted for setup.");
-                } else if (user.email === BOOTSTRAP_ADMIN_EMAIL && hasFirestoreAdmins) {
-                    // If bootstrap admin email logs in but permanent admins exist, they are NOT admin
-                    isAdmin = false;
-                    console.log("onAuthStateChanged: Bootstrap Admin email logged in, but permanent admins exist. Access restricted.");
+                if (userProfileSnap.exists() && userProfileSnap.data().role === 'Admin') {
+                    isAdmin = true;
+                    console.log("onAuthStateChanged: User profile has 'Admin' role. Admin access granted.");
                 } else {
-                    // For all other users (including Google users), check their role in Firestore
-                    const userProfileRef = doc(db, 'users_data', user.uid); // Assuming user's profile doc ID is their Firebase UID
-                    const userProfileSnap = await getDoc(userProfileRef);
+                    isAdmin = false;
+                    console.log("onAuthStateChanged: User is not admin (role not 'Admin' or profile not found).");
 
-                    if (userProfileSnap.exists() && userProfileSnap.data().role === 'Admin') {
-                        isAdmin = true;
-                        console.log("onAuthStateChanged: User profile has 'Admin' role. Admin access granted.");
-                    } else {
-                        isAdmin = false;
-                        console.log("onAuthStateChanged: User is not admin (role not 'Admin' or profile not found).");
+                    // If user profile does not exist after first login (e.g., Google login), create a basic one
+                    if (!userProfileSnap.exists()) {
+                        console.log("Creating basic user profile for new user:", user.uid);
+                        try {
+                            const systemGeneratedUserId = 'USR-' + Date.now().toString().slice(-8) + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+                            await setDoc(userProfileRef, {
+                                userId: systemGeneratedUserId,
+                                userName: user.email || 'N/A',
+                                firstName: user.displayName ? user.displayName.split(' ')[0] : '',
+                                lastName: user.displayName ? user.displayName.split(' ').slice(1).join(' ') : '',
+                                email: user.email || 'N/A',
+                                phone: '', // Default empty
+                                role: 'User', // Default role for new users
+                                skills: [] // Default empty
+                            });
+                            console.log("Basic user profile created for:", user.uid);
+                            // After creating basic profile, check admin status again (though it will still be 'User')
+                            // This ensures if someone manually edits it in Firestore later, it's picked up.
+                        } catch (profileError) {
+                            console.error("Error creating basic user profile:", profileError);
+                            showModal("Profile Error", `Failed to create user profile: ${profileError.message}`, () => {});
+                        }
                     }
                 }
 
@@ -442,21 +369,14 @@ async function initializeFirebase() {
                 await fetchCountryData();
                 populateCountries();
 
-                // If coming from a login attempt, or initial load, redirect to home or admin setup
-                if (isCurrentSessionBootstrapAdmin) {
-                    console.log("onAuthStateChanged: Redirecting to users-management-section for bootstrap admin.");
-                    showSection('users-management-section'); // Redirect to user management for initial admin setup
-                    showModal("Bootstrap Admin", "You are logged in as the bootstrap admin. Please navigate to 'Admin > Users' to create your permanent administrator account.", () => {});
-                } else {
-                    // If regular login or non-admin, go to home
-                    console.log("onAuthStateChanged: Redirecting to home section.");
-                    showSection('home');
-                }
+                // Always redirect to home after successful authentication (unless already on an admin page that triggered login)
+                showSection('home');
+
 
             } else { // No user is signed in.
                 currentUserId = null;
                 isAdmin = false; // Ensure isAdmin is false when no user
-                console.log("onAuthStateChanged: No user signed in. hasFirestoreAdmins (global):", hasFirestoreAdmins);
+                console.log("onAuthStateChanged: No user signed in. Showing standard auth section.");
 
                 // Hide admin menus and logout buttons
                 desktopAdminMenu.classList.add('hidden');
@@ -469,22 +389,12 @@ async function initializeFirebase() {
                 uploadAdminDataButton.setAttribute('disabled', 'disabled');
                 submitUserButton.setAttribute('disabled', 'disabled');
 
-                // Determine which login screen to show
-                if (!hasFirestoreAdmins) {
-                    console.log("onAuthStateChanged: No Firestore Admins. Showing bootstrap admin login section.");
-                    bootstrapAdminLoginSection.classList.remove('hidden');
-                    authSection.classList.add('hidden');
-                    navGoogleLoginButton.classList.add('hidden');
-                    bootstrapAdminMessage.textContent = 'Please use the default admin login to set up the first administrator.';
-                    bootstrapAdminMessage.classList.remove('hidden');
-                    showSection('bootstrap-admin-login-section'); // Explicitly show this section
-                } else {
-                    console.log("onAuthStateChanged: Firestore Admins exist. Showing standard auth section.");
-                    authSection.classList.remove('hidden');
-                    bootstrapAdminLoginSection.classList.add('hidden');
-                    navGoogleLoginButton.classList.remove('hidden'); // Show Google Login button
-                    showSection('auth-section'); // Explicitly show this section
-                }
+                // Always show the home section initially, auth will be prompted on demand
+                showSection('home');
+                // Ensure auth section is visible if no user logged in
+                authSection.classList.remove('hidden');
+                // Ensure Google Login button is visible as it's the primary login method now
+                navGoogleLoginButton.classList.remove('hidden');
             }
         });
 
@@ -877,8 +787,8 @@ function resetCustomerForm() {
 /* --- USERS CRUD OPERATIONS (NEW) --- */
 
 // Save (Add/Update) a User
-// This function now correctly handles Firestore document IDs to match Firebase Auth UIDs.
-async function saveUser(userData, existingFirestoreDocId = null) { // Renamed parameter for clarity
+// This function now ensures Firestore document IDs match Firebase Auth UIDs for user profiles.
+async function saveUser(userData, existingFirestoreDocId = null) {
     if (!isAuthReady || !currentUserId || !isAdmin) {
         showModal("Permission Denied", "Only administrators can manage users.", () => {});
         return;
@@ -903,7 +813,7 @@ async function saveUser(userData, existingFirestoreDocId = null) { // Renamed pa
     const collectionPath = `users_data`; // Dedicated collection for users
 
     try {
-        let targetDocRef; // This will be the Firestore DocumentReference
+        let targetDocRef;
 
         if (existingFirestoreDocId) {
             // CASE 1: EDITING AN EXISTING USER
@@ -913,47 +823,78 @@ async function saveUser(userData, existingFirestoreDocId = null) { // Renamed pa
             console.log("User updated:", existingFirestoreDocId);
         } else {
             // CASE 2: ADDING A NEW USER
-            // This is the critical part to ensure the Firestore document ID matches the Auth UID.
-            // When an admin adds a new user, that user might not have logged in yet,
-            // so we don't have their UID client-side.
-            // The Firebase Auth UID is only known after a user logs in for the first time.
+            // Here, we need to find the user's UID based on their email.
+            // This is problematic client-side if the user has never logged in.
+            // Best practice: A new user's profile is created when they first log in.
+            // Admin then edits that profile to assign roles.
 
-            // The simplest and most secure pattern for client-side applications:
-            // User profiles (in users_data) are created *only when the user logs in for the first time*,
-            // or when an admin edits an *existing* user's profile.
-            // This means an admin cannot create a profile for a user who has never logged in.
-            // Instead, if a user logs in for the first time, a basic profile could be created.
-            // Then, an admin could edit that profile to assign a role.
+            // To support creating *new* entries for existing Auth users (e.g., if their profile was deleted),
+            // or for the initial setup where an admin might add another admin via email:
+            // We need to fetch the UID by email. Firebase Client SDK does NOT provide this directly
+            // for security reasons (prevents enumerating UIDs).
+            // A server-side solution (Cloud Functions) would typically be used here.
 
-            // For the purpose of getting your "Admin" menu to show:
-            // The user who is currently logged in (bootstrap admin or new admin)
-            // will have their `auth.currentUser.uid` available.
-            // If they are setting up their OWN profile, we MUST use their `uid` as the doc ID.
+            // For now, if we're adding a NEW user, we assume it's for the currently logged in admin setting THEIR OWN
+            // profile initially, or editing an existing user whose profile was missing.
+            // We'll require the user to log in once for their profile to exist.
 
-            // Check if the userName (email) being saved matches the currently logged-in user's email
-            if (auth.currentUser && userData.userName === auth.currentUser.email) {
-                targetDocRef = doc(db, collectionPath, auth.currentUser.uid); // Use current user's UID as doc ID
-                console.log("Saving profile for current user. Using UID as doc ID:", auth.currentUser.uid);
+            // The 'Add New User' in UI should primarily be for creating the *content* of the profile,
+            // with the ID matching the Auth UID.
+            // The simplest path for now: If a user logs in (even for the first time),
+            // their basic profile is automatically created in `onAuthStateChanged` if it doesn't exist.
+            // Then, an admin can *edit* that profile to assign a role.
+
+            // So, for adding new users directly via the form:
+            // We will lookup the user by their userName (email) in Firebase Auth.
+            // This is still a client-side limitation.
+            // The most robust way without cloud functions for 'add user' feature from admin UI:
+            // 1. User signs up/logs in once (Auth user created, basic profile in users_data).
+            // 2. Admin logs in, goes to Users list, sees basic profile.
+            // 3. Admin clicks 'Edit' on that profile, and assigns 'Admin' role.
+
+            // Given your UI has 'Add New User', we'll make an assumption here:
+            // We are adding a new user whose Firebase Auth UID will be determined by their email.
+            // This requires a Cloud Function OR the user exists in Auth already.
+            // Since we're in client-side only:
+            // If you are trying to *create* a user profile here and that user has NOT yet
+            // logged into Firebase Auth at least once, we won't know their UID.
+            // The most reliable "add new user" from Admin UI for a CLIENT-SIDE ONLY app:
+            // The admin form only *updates* profiles, it doesn't *create* Firebase Auth users.
+            // The 'id' for a new profile comes from the logged-in user if they are setting their own,
+            // or from the `edit` function's `user.id` when editing existing.
+
+            // To allow "adding new user" to work where `userId` will become the Firebase Auth UID:
+            // For now, the simplest solution for "adding new user" via the Admin UI,
+            // assuming the user being added *will* have their Firebase Auth UID match their email's UID
+            // when they eventually log in, is to explicitly *require* the Firebase UID to be entered
+            // or fetched. However, that's not how your current UI/workflow is set up.
+
+            // Let's refine the saveUser for NEW entries:
+            // It currently tries to create a new auto-generated ID, then replaces it.
+            // This conflicts with the UID-as-doc-ID strategy.
+
+            // If existingFirestoreDocId is null, it's a new entry.
+            // We must use the UID of the user whose profile is being created.
+            // If the user being added is the CURRENTLY LOGGED IN user (e.g., bootstrap admin creating their own admin profile),
+            // we use their UID.
+            if (auth.currentUser && userData.email === auth.currentUser.email) {
+                targetDocRef = doc(db, collectionPath, auth.currentUser.uid);
+                await setDoc(targetDocRef, { ...userData, userId: auth.currentUser.uid }); // Store UID also as userId field
+                console.log("New user profile created/updated for current user. Doc ID is UID:", auth.currentUser.uid);
             } else {
-                // If the admin is trying to save a *new* user whose email does NOT match the current admin's email,
-                // and if this user has never logged in before, we don't know their UID client-side.
-                // We'll prevent this operation and inform the admin.
+                // If the user being added is *not* the current authenticated user,
+                // we *cannot* safely determine their UID client-side to set the document ID.
+                // We'll prevent adding new users this way. They must log in once.
                 showModal("Cannot Add New User Directly",
-                          "To add a new user profile, the user must first log into ShutterSync at least once with their Gmail account. After their initial login, you can edit their profile and assign a role.",
+                          "To create a new user profile, the user must first log into ShutterSync with their Gmail account. After their initial login, you can return here to edit their profile and assign a role.",
                           () => {});
-                console.error("Attempted to add new user whose UID is unknown client-side.");
-                return; // Prevent the save operation
+                console.error("Attempted to add new user whose Firebase Auth UID is unknown client-side.");
+                return; // Stop the function
             }
-
-            // Generate a system-generated user ID to be STORED *within* the document's content
-            // This is separate from the Firestore document ID.
-            const systemGeneratedUserId = 'USR-' + Date.now().toString().slice(-8) + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-            await setDoc(targetDocRef, { ...userData, userId: systemGeneratedUserId });
-            console.log("New user saved with UID as doc ID:", targetDocRef.id);
         }
 
         resetUserForm(); // Reset form after successful operation
-        await updateFirestoreAdminStatus(); // Update admin status in app_metadata after user save
+        // updateFirestoreAdminStatus(); // No longer needed for this simplified flow
     } catch (error) {
         console.error("Error saving user:", error);
         showModal("Error", `Failed to save user: ${error.message}`, () => {});
@@ -975,7 +916,7 @@ async function deleteUser(firestoreDocId) {
             try {
                 await deleteDoc(doc(db, collectionPath, firestoreDocId));
                 console.log("User deleted Firestore Doc ID:", firestoreDocId);
-                await updateFirestoreAdminStatus(); // Update admin status after user delete
+                // No need to update updateFirestoreAdminStatus() here, as hasFirestoreAdmins is not tracked via a separate doc
             } catch (error) {
                 console.error("Error deleting user:", error);
                 showModal("Error", `Failed to delete user: ${error.message}`, () => {});
@@ -996,8 +937,6 @@ function listenForUsers() {
     }
 
     const collectionPath = `users_data`;
-    // Changed query to filter by 'role' and sort, if needed, not by UID directly in query
-    // The previous 'where' was unnecessary, we just need all users_data to display.
     const q = collection(db, collectionPath);
 
     unsubscribeUsers = onSnapshot(q, (snapshot) => {
@@ -1022,8 +961,11 @@ function displayUser(user) {
     userRow.className = 'grid grid-cols-[100px_minmax(120px,_1.2fr)_1.5fr_1fr_1fr_1.5fr] gap-x-4 py-3 items-center text-sm border-b border-gray-100 last:border-b-0 hover:bg-gray-50';
     userRow.dataset.id = user.id; // Store Firestore document ID for edit/delete actions
 
+    // Ensure userId is the Firebase Auth UID for consistency in display and lookup
+    const displayUid = user.id || 'N/A'; // Use Firestore doc ID for display if available, which should be the UID
+
     userRow.innerHTML = `
-        <div class="px-2 py-1 truncate font-medium text-gray-800">${user.userId || 'N/A'}</div>
+        <div class="px-2 py-1 truncate font-medium text-gray-800">${displayUid}</div>
         <div class="px-2 py-1 truncate">${user.userName || 'N/A'}</div>
         <div class="px-2 py-1 truncate">${user.email || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden sm:block">${user.role || 'N/A'}</div>
@@ -1049,7 +991,7 @@ function editUser(user) {
     userFormTitle.textContent = 'Edit User';
     submitUserButton.textContent = 'Update User';
     userIdDisplayGroup.classList.remove('hidden');
-    userIdDisplayInput.textContent = user.userId || 'N/A'; // Display the system-generated User ID
+    userIdDisplayInput.textContent = user.id || 'N/A'; // Display the Firestore Doc ID (which is the UID)
 
     userNameInput.value = user.userName || '';
     userFirstNameInput.value = user.firstName || '';
@@ -1059,7 +1001,7 @@ function editUser(user) {
     userRoleSelect.value = user.role || ''; // Set value for select
     userSkillsInput.value = Array.isArray(user.skills) ? user.skills.join(', ') : user.skills || ''; // Convert array back to string
 
-    userForm.dataset.editingId = user.id; // Store Firestore document ID
+    userForm.dataset.editingId = user.id; // Store Firestore document ID for update
     userForm.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -1067,10 +1009,10 @@ function editUser(user) {
 function resetUserForm() {
     userForm.reset();
     userForm.dataset.editingId = '';
-    userFormTitle.textContent = 'Add New User';
+    userFormTitle.textContent = 'Add New User'; // Keep 'Add New User' for potential future direct creation or if user logs in first
     submitUserButton.textContent = 'Add User';
-    userIdDisplayGroup.classList.add('hidden'); // Hide ID display
-    userIdDisplayInput.textContent = ''; // Clear displayed ID
+    userIdDisplayGroup.classList.add('hidden'); // Hide UID display
+    userIdDisplayInput.textContent = ''; // Clear displayed UID
     userRoleSelect.value = ''; // Reset select to default option
 }
 
@@ -1122,8 +1064,8 @@ document.querySelectorAll('nav a').forEach(link => {
     if (link.dataset.section) {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            // Force a login check for admin sections
-            showSection(link.dataset.section, ['admin-country-mapping-section', 'users-management-section'].includes(link.dataset.section));
+            // showSection now handles login/auth checks directly
+            showSection(link.dataset.section);
         });
     }
 });
@@ -1269,44 +1211,6 @@ userForm.addEventListener('submit', async (e) => {
     };
     const editingId = userForm.dataset.editingId; // This is the Firestore document ID if editing
     await saveUser(userData, editingId || null);
-});
-
-// Bootstrap Admin Login Form Event Listener
-bootstrapAdminLoginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    bootstrapAdminMessage.classList.add('hidden'); // Clear previous messages
-    bootstrapAdminLoginButton.disabled = true;
-    bootstrapAdminLoginButton.textContent = 'Logging In...';
-
-    const email = bootstrapAdminEmailInput.value;
-    const password = bootstrapAdminPasswordInput.value;
-
-    try {
-        // Attempt to sign in
-        await signInWithEmailAndPassword(auth, email, password);
-        // onAuthStateChanged will handle UI updates on successful login
-        console.log("Bootstrap admin signed in successfully.");
-    } catch (error) {
-        // If sign-in fails, try to create the user (only if 'auth/user-not-found')
-        if (error.code === 'auth/user-not-found') {
-            try {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                console.log("Bootstrap admin user created and signed in successfully.");
-                // onAuthStateChanged will handle UI updates on successful creation/login
-            } catch (createError) {
-                console.error("Error creating bootstrap admin user:", createError);
-                bootstrapAdminMessage.textContent = `Error: ${createError.message}`;
-                bootstrapAdminMessage.classList.remove('hidden');
-            }
-        } else {
-            console.error("Error signing in bootstrap admin:", error);
-            bootstrapAdminMessage.textContent = `Login failed: ${error.message}`;
-            bootstrapAdminMessage.classList.remove('hidden');
-        }
-    } finally {
-        bootstrapAdminLoginButton.disabled = false;
-        bootstrapAdminLoginButton.textContent = 'Login as Bootstrap Admin';
-    }
 });
 
 
