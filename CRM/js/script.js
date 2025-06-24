@@ -26,11 +26,9 @@ const currentCustomerCollectionType = 'public'; // Fixed to public as per requir
 let unsubscribeCustomers = null; // To store the onSnapshot unsubscribe function for customers
 let unsubscribeUsers = null; // To store the onSnapshot unsubscribe function for users
 
-// Hardcoded Firebase UID for the 'admin' user (boskyjoe@gmail.com).
-// YOU NEED TO REPLACE 'YOUR_ACTUAL_FIREBASE_UID_FOR_BOSKYJOE_ANONYMOUS_SESSION'
-// To get this: Run the app once, open developer console (F12), and look for
-// "Current Firebase UID:" log. Copy that UID and paste it here.
-const ADMIN_FIREBASE_UID = 'C7B4pJ4onlZ56P5yxBazCy5h30N2'; // Placeholder
+// Hardcoded Firebase UID for the 'admin' user (admin@shuttersync.com).
+// THIS HAS BEEN UPDATED WITH THE CORRECT UID YOU PROVIDED.
+const ADMIN_FIREBASE_UID = 'CpW5XxAaDxbd3C7eCVVgGvmJrOI2';
 let isAdmin = false; // Flag to control admin specific UI/features
 
 // Data for Countries and States (Now fetched from Firestore)
@@ -61,7 +59,7 @@ const customerPhoneInput = document.getElementById('customerPhone');
 
 // Address fields
 const customerCountrySelect = document.getElementById('customerCountry');
-const customerAddressInput = document.getElementById('customerAddress');
+const customerAddressInput = document = document.getElementById('customerAddress');
 const customerCityInput = document.getElementById('customerCity');
 const customerStateSelect = document.getElementById('customerState');
 const customerZipCodeInput = document.getElementById('customerZipCode');
