@@ -95,20 +95,27 @@ const userList = document.getElementById('userList');
 // References to logout buttons and the new nav Google Login button
 const logoutButton = document.getElementById('logoutButton');
 const mobileLogoutButton = document.getElementById('mobileLogoutButton');
-const navGoogleLoginButton = document.getElementById('navGoogleLoginButton');
+const navGoogleLoginButton = document.getElementById('navGoogleLoginButton'); // Top right Google Sign In button
+
+// Home section Google login button (for visual hint on home page)
+const googleLoginButtonHome = document.getElementById('googleLoginButton');
 
 // Admin menu elements (added IDs in HTML)
 const desktopAdminMenu = document.getElementById('desktopAdminMenu');
 const mobileAdminMenu = document.getElementById('mobileAdminMenu');
 
-// Reference to auth-section (for standard Google/email login)
+// Reference to auth-section (for standard Google/email login) - This section is mostly decorative now
 const authSection = document.getElementById('auth-section');
+
+// Mobile Menu Button and Container
+const mobileMenuButton = document.getElementById('mobileMenuButton');
+const mobileMenu = document.getElementById('mobileMenu');
 
 
 // Select all main content sections
 const homeSection = document.getElementById('home');
 const eventsSection = document.getElementById('events-section');
-const allSections = [homeSection, customersSection, eventsSection, adminCountryMappingSection, usersManagementSection, authSection]; // Removed bootstrap-specific section
+const allSections = [homeSection, customersSection, eventsSection, adminCountryMappingSection, usersManagementSection, authSection];
 
 
 // Function to show a custom confirmation modal
@@ -171,7 +178,7 @@ async function showSection(sectionId) {
         targetSection.classList.remove('hidden');
         targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    mobileMenu.classList.add('hidden'); // Close mobile menu when navigating
+    mobileMenu.classList.remove('open'); // Close mobile menu when navigating (if open)
 
     // Stop all listeners first to prevent redundant updates
     if (unsubscribeCustomers) { unsubscribeCustomers(); }
@@ -288,6 +295,15 @@ async function initializeFirebase() {
                 currentUserId = user.uid;
                 userIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
                 mobileUserIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
+
+                // Show User ID and Logout buttons
+                userIdDisplay.classList.remove('hidden');
+                mobileUserIdDisplay.classList.remove('hidden');
+                navGoogleLoginButton.classList.add('hidden');
+                googleLoginButtonHome.classList.add('hidden'); // Also hide the home page login button
+                logoutButton.classList.remove('hidden');
+                mobileLogoutButton.classList.remove('hidden');
+
                 console.log("onAuthStateChanged: Current Firebase UID:", currentUserId);
 
                 // Fetch the user's profile document from Firestore
@@ -314,19 +330,13 @@ async function initializeFirebase() {
                             skills: [] // Default empty
                         });
                         console.log("Basic user profile created for:", user.uid);
-                        // No need to re-evaluate isAdmin here, it's already set to false
-                        // The user can be promoted to Admin by another Admin later.
                     } catch (profileError) {
                         console.error("Error creating basic user profile:", profileError);
                         showModal("Profile Error", `Failed to create user profile: ${profileError.message}. Access to some features may be limited.`, () => {});
                     }
                 }
 
-                // UI updates based on authentication status and role
-                navGoogleLoginButton.classList.add('hidden'); // Hide Google login button if logged in
-                logoutButton.classList.remove('hidden');
-                mobileLogoutButton.classList.remove('hidden');
-
+                // Show/Hide Admin menus based on isAdmin flag
                 if (isAdmin) {
                     desktopAdminMenu.classList.remove('hidden');
                     mobileAdminMenu.classList.remove('hidden');
@@ -349,10 +359,16 @@ async function initializeFirebase() {
                 console.log("onAuthStateChanged: No user signed in. Showing home section by default.");
 
                 // Hide admin menus and logout buttons
+                userIdDisplay.classList.add('hidden'); // Hide desktop user ID
+                mobileUserIdDisplay.classList.add('hidden'); // Hide mobile user ID
                 desktopAdminMenu.classList.add('hidden');
                 mobileAdminMenu.classList.add('hidden');
                 logoutButton.classList.add('hidden');
                 mobileLogoutButton.classList.add('hidden');
+
+                // Show Google Login buttons
+                navGoogleLoginButton.classList.remove('hidden');
+                googleLoginButtonHome.classList.remove('hidden'); // Show home page login button
 
                 // Disable all form submit buttons by default when not logged in
                 submitCustomerButton.setAttribute('disabled', 'disabled');
@@ -361,10 +377,8 @@ async function initializeFirebase() {
 
                 // Always show the home section initially
                 showSection('home');
-                // Ensure auth section is visible if no user logged in
-                authSection.classList.remove('hidden');
-                // Ensure Google Login button is visible as it's the primary login method now
-                navGoogleLoginButton.classList.remove('hidden');
+                // The auth-section itself is hidden, login happens via header button
+                // authSection.classList.remove('hidden'); // Keep this hidden, use header button
             }
         });
 
@@ -793,8 +807,8 @@ async function saveUser(userData, existingFirestoreDocId = null) {
             await updateDoc(targetDocRef, userData);
             console.log("User updated:", existingFirestoreDocId);
         } else {
-            // CASE 2: ADDING A NEW USER
-            // For new users, the admin MUST provide the Firebase Auth UID.
+            // CASE 2: ADDING A NEW USER PROFILE
+            // For new user profiles, the admin MUST provide the Firebase Auth UID.
             // This assumes the user has been created in Firebase Auth already.
             targetUid = userIdDisplayInput.value.trim();
 
@@ -904,8 +918,8 @@ function editUser(user) {
         showModal("Permission Denied", "Only administrators can edit users.", () => {});
         return;
     }
-    userFormTitle.textContent = 'Edit User';
-    submitUserButton.textContent = 'Update User';
+    userFormTitle.textContent = 'Edit User Profile'; // Clarified title
+    submitUserButton.textContent = 'Update User Profile'; // Clarified button text
 
     userIdDisplayGroup.classList.remove('hidden'); // Show UID group
     userIdDisplayInput.value = user.id || 'N/A'; // Display the Firestore Doc ID (which is the UID)
@@ -928,15 +942,15 @@ function editUser(user) {
 function resetUserForm() {
     userForm.reset();
     userForm.dataset.editingId = '';
-    userFormTitle.textContent = 'Add New User Profile'; // Clarified title for new workflow
-    submitUserButton.textContent = 'Create User Profile'; // Clarified button text for new workflow
+    userFormTitle.textContent = 'Add New User Profile';
+    submitUserButton.textContent = 'Create User Profile';
 
     userIdDisplayGroup.classList.remove('hidden'); // Show UID group when adding new
     userIdDisplayInput.value = ''; // Clear UID input
     userIdDisplayInput.removeAttribute('readonly'); // Make it editable for new user profile
     userIdDisplayInput.classList.remove('bg-gray-100'); // Remove readonly visual class
     userIdDisplayInput.focus(); // Focus on the UID input for new user profile
-    userRoleSelect.value = ''; // Reset select to default option (or make it 'User' by default)
+    userRoleSelect.value = 'User'; // Default role for new user profiles
 }
 
 // --- Event Listeners ---
@@ -979,7 +993,7 @@ customerForm.addEventListener('submit', async (e) => {
 
 // Mobile Menu Button Event Listener
 mobileMenuButton.addEventListener('click', () => {
-    mobileMenu.classList.toggle('hidden');
+    mobileMenu.classList.toggle('open'); // Toggle 'open' class for max-height transition
 });
 
 // Navigation Links Event Listeners
@@ -993,9 +1007,14 @@ document.querySelectorAll('nav a').forEach(link => {
     }
 });
 
-// Add event listener for the Google Login Button in the nav bar
-if (navGoogleLoginButton) { // Ensure the element exists before adding listener
+// Event listener for the Google Login Button in the header (nav bar)
+if (navGoogleLoginButton) {
     navGoogleLoginButton.addEventListener('click', handleGoogleLogin);
+}
+
+// Event listener for the Google Login button on the Home section
+if (googleLoginButtonHome) {
+    googleLoginButtonHome.addEventListener('click', handleGoogleLogin);
 }
 
 // Add event listeners for logout buttons
