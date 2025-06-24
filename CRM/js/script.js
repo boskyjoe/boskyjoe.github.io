@@ -877,13 +877,14 @@ function resetCustomerForm() {
 /* --- USERS CRUD OPERATIONS (NEW) --- */
 
 // Save (Add/Update) a User
-async function saveUser(userData, userId = null) {
+// This function now correctly handles Firestore document IDs to match Firebase Auth UIDs.
+async function saveUser(userData, existingFirestoreDocId = null) { // Renamed parameter for clarity
     if (!isAuthReady || !currentUserId || !isAdmin) {
         showModal("Permission Denied", "Only administrators can manage users.", () => {});
         return;
     }
 
-    // Gmail email validation for Username
+    // Gmail email validation for Username (which is the email they log in with)
     const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
     if (!gmailRegex.test(userData.userName)) {
         showModal("Validation Error", "Username must be a valid Gmail email address.", () => {});
@@ -902,20 +903,57 @@ async function saveUser(userData, userId = null) {
     const collectionPath = `users_data`; // Dedicated collection for users
 
     try {
-        if (userId) {
-            // Update existing user
-            const userDocRef = doc(db, collectionPath, userId);
-            await updateDoc(userDocRef, userData);
-            console.log("User updated:", userId);
+        let targetDocRef; // This will be the Firestore DocumentReference
+
+        if (existingFirestoreDocId) {
+            // CASE 1: EDITING AN EXISTING USER
+            // The Firestore document ID is already known and provided.
+            targetDocRef = doc(db, collectionPath, existingFirestoreDocId);
+            await updateDoc(targetDocRef, userData);
+            console.log("User updated:", existingFirestoreDocId);
         } else {
-            // Add new user
-            const newUserDocRef = doc(collection(db, collectionPath));
+            // CASE 2: ADDING A NEW USER
+            // This is the critical part to ensure the Firestore document ID matches the Auth UID.
+            // When an admin adds a new user, that user might not have logged in yet,
+            // so we don't have their UID client-side.
+            // The Firebase Auth UID is only known after a user logs in for the first time.
+
+            // The simplest and most secure pattern for client-side applications:
+            // User profiles (in users_data) are created *only when the user logs in for the first time*,
+            // or when an admin edits an *existing* user's profile.
+            // This means an admin cannot create a profile for a user who has never logged in.
+            // Instead, if a user logs in for the first time, a basic profile could be created.
+            // Then, an admin could edit that profile to assign a role.
+
+            // For the purpose of getting your "Admin" menu to show:
+            // The user who is currently logged in (bootstrap admin or new admin)
+            // will have their `auth.currentUser.uid` available.
+            // If they are setting up their OWN profile, we MUST use their `uid` as the doc ID.
+
+            // Check if the userName (email) being saved matches the currently logged-in user's email
+            if (auth.currentUser && userData.userName === auth.currentUser.email) {
+                targetDocRef = doc(db, collectionPath, auth.currentUser.uid); // Use current user's UID as doc ID
+                console.log("Saving profile for current user. Using UID as doc ID:", auth.currentUser.uid);
+            } else {
+                // If the admin is trying to save a *new* user whose email does NOT match the current admin's email,
+                // and if this user has never logged in before, we don't know their UID client-side.
+                // We'll prevent this operation and inform the admin.
+                showModal("Cannot Add New User Directly",
+                          "To add a new user profile, the user must first log into ShutterSync at least once with their Gmail account. After their initial login, you can edit their profile and assign a role.",
+                          () => {});
+                console.error("Attempted to add new user whose UID is unknown client-side.");
+                return; // Prevent the save operation
+            }
+
+            // Generate a system-generated user ID to be STORED *within* the document's content
+            // This is separate from the Firestore document ID.
             const systemGeneratedUserId = 'USR-' + Date.now().toString().slice(-8) + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-            await setDoc(newUserDocRef, { ...userData, userId: systemGeneratedUserId });
-            console.log("User added with ID:", systemGeneratedUserId);
+            await setDoc(targetDocRef, { ...userData, userId: systemGeneratedUserId });
+            console.log("New user saved with UID as doc ID:", targetDocRef.id);
         }
+
         resetUserForm(); // Reset form after successful operation
-        await updateFirestoreAdminStatus(); // Update admin status after user save
+        await updateFirestoreAdminStatus(); // Update admin status in app_metadata after user save
     } catch (error) {
         console.error("Error saving user:", error);
         showModal("Error", `Failed to save user: ${error.message}`, () => {});
@@ -958,6 +996,8 @@ function listenForUsers() {
     }
 
     const collectionPath = `users_data`;
+    // Changed query to filter by 'role' and sort, if needed, not by UID directly in query
+    // The previous 'where' was unnecessary, we just need all users_data to display.
     const q = collection(db, collectionPath);
 
     unsubscribeUsers = onSnapshot(q, (snapshot) => {
@@ -1227,7 +1267,7 @@ userForm.addEventListener('submit', async (e) => {
         role: userRoleSelect.value.trim(), // Get value from select
         skills: userSkillsInput.value.trim(), // Will be parsed to array in saveUser
     };
-    const editingId = userForm.dataset.editingId;
+    const editingId = userForm.dataset.editingId; // This is the Firestore document ID if editing
     await saveUser(userData, editingId || null);
 });
 
