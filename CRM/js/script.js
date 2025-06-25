@@ -274,7 +274,6 @@ function setOpportunityLayout(layoutType) {
     // Hide all internal opportunity views first
     if (opportunityFullFormView) opportunityFullFormView.classList.add('hidden');
     if (opportunityExistingListView) opportunityExistingListView.classList.add('hidden');
-    // REMOVED: if (opportunitySummaryCard) opportunitySummaryCard.classList.add('hidden');
 
     // Reset panel classes
     if (opportunityLeftPanel) opportunityLeftPanel.classList.remove('shrink', 'stretch');
@@ -291,8 +290,9 @@ function setOpportunityLayout(layoutType) {
             if (opportunityFullFormView) opportunityFullFormView.classList.remove('hidden');
             if (opportunityExistingListView) opportunityExistingListView.classList.remove('hidden');
             // Classes for width are handled by CSS directly on md: screen size
+            // This case implicitly relies on the default md:w-7/10 and md:w-3/10 being active.
+            // It also implicitly makes opportunityRightPanel visible by not adding 'hidden-panel'.
             break;
-        // REMOVED: case 'edit_split_30_70' as it relied on summary card for left panel
         default:
             console.error("Unknown opportunity layout type:", layoutType);
             break;
