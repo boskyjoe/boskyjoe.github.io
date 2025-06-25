@@ -4,234 +4,230 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShutterSync CRM</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts - Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome for icons (e.g., hamburger, Google, info, chevron) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Custom Stylesheet (Moved from inline style block) -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-100 font-inter">
+
+    <!-- Modal Container -->
     <div id="modalContainer"></div>
 
-    <!-- Header and Navigation -->
-    <header class="header">
-        <div class="container mx-auto flex items-center justify-between py-4">
-            <!-- Logo/Title -->
-            <h1 class="text-2xl font-bold text-gray-900">ShutterSync CRM</h1>
-
-            <!-- Desktop Navigation -->
-            <nav class="hidden md:flex items-center space-x-4">
-                <a href="#" class="nav-link" data-section="home">Home</a>
-                <a href="#" class="nav-link" data-section="customers-section">Customers</a>
-                <a href="#" class="nav-link" data-section="opportunities-section">Opportunities</a>
-                <a href="#" class="nav-link" data-section="events-section">Events</a>
-
-                <!-- Admin Menu Dropdown (Desktop) -->
-                <div id="desktopAdminMenu" class="hidden relative group">
-                    <!-- The main 'Admin' link/button -->
-                    <a href="#" class="nav-link inline-flex items-center">
-                        Admin <i class="fas fa-chevron-down ml-2 text-xs"></i>
-                    </a>
-                    <!-- The submenu content, styled with Tailwind for dropdown effect -->
-                    <div class="absolute hidden group-hover:block bg-white min-w-[160px] shadow-lg rounded-md top-full left-1/2 -translate-x-1/2 py-2 overflow-hidden z-10">
-                        <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 text-sm" data-section="users-management-section">Users</a>
-                        <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 text-sm" data-section="admin-country-mapping-section">Country Data</a>
-                        <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 text-sm" data-section="currency-management-section">Currency</a>
-                    </div>
-                </div>
-
-                <!-- User Info / Login/Logout Buttons -->
-                <div class="flex items-center space-x-4 ml-4">
-                    <span id="userIdDisplay" class="text-gray-600 text-sm hidden"></span>
-                    <button id="navGoogleLoginButton" class="btn-primary">
-                        <i class="fab fa-google mr-2"></i> Sign in
-                    </button>
-                    <button id="logoutButton" class="btn-secondary hidden">Logout</button>
-                </div>
-            </nav>
-
-            <!-- Mobile Menu Button (Hamburger) -->
-            <button id="mobileMenuButton" class="md:hidden text-gray-700 focus:outline-none p-2 rounded-md hover:bg-gray-100 transition-colors">
-                <i class="fas fa-bars text-xl"></i>
-            </button>
+    <!-- Header -->
+    <header class="bg-white shadow-md py-4 px-6 flex items-center justify-between">
+        <div class="flex items-center">
+            <h1 class="text-2xl font-bold text-gray-800">ShutterSync CRM</h1>
         </div>
-
-        <!-- Mobile Menu (Hidden by default, toggled by JS) -->
-        <div id="mobileMenu" class="md:hidden bg-white border-t border-gray-200">
-            <nav class="flex flex-col p-4 space-y-2">
-                <a href="#" class="nav-link" data-section="home">Home</a>
-                <a href="#" class="nav-link" data-section="customers-section">Customers</a>
-                <a href="#" class="nav-link" data-section="opportunities-section">Opportunities</a>
-                <a href="#" class="nav-link" data-section="events-section">Events</a>
-
-                <!-- Mobile Admin Menu (Toggles visibility in JS) -->
-                <div id="mobileAdminMenu" class="hidden flex flex-col space-y-1 pl-4 border-l border-gray-200">
-                    <span class="text-gray-500 font-semibold text-sm">Admin:</span>
-                    <a href="#" class="nav-link mobile-submenu" data-section="users-management-section">Users</a>
-                    <a href="#" class="nav-link mobile-submenu" data-section="admin-country-mapping-section">Country Data</a>
-                    <a href="#" class="nav-link mobile-submenu" data-section="currency-management-section">Currency</a>
+        <!-- Desktop Navigation -->
+        <nav class="hidden md:flex space-x-6">
+            <a href="#" data-section="home" class="text-gray-600 hover:text-blue-600 font-medium">Home</a>
+            <a href="#" data-section="customers-section" class="text-gray-600 hover:text-blue-600 font-medium">Customers</a>
+            <a href="#" data-section="opportunities-section" class="text-gray-600 hover:text-blue-600 font-medium">Opportunities</a>
+            <a href="#" data-section="events-section" class="text-gray-600 hover:text-blue-600 font-medium">Events</a>
+            <!-- Admin Dropdown for Desktop -->
+            <div class="relative group" id="desktopAdminMenu">
+                <button class="text-gray-600 hover:text-blue-600 font-medium focus:outline-none flex items-center">
+                    Admin
+                    <svg class="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="absolute hidden group-hover:block bg-white shadow-lg rounded-md mt-2 py-1 w-48 z-10">
+                    <a href="#" data-section="admin-country-mapping-section" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Country/State Mapping</a>
+                    <a href="#" data-section="currency-management-section" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Currency Management</a>
+                    <a href="#" data-section="users-management-section" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Users Management</a>
                 </div>
-
-                <span id="mobileUserIdDisplay" class="text-gray-600 text-sm pt-2 hidden"></span>
-                <button id="mobileLogoutButton" class="btn-secondary mt-2 hidden">Logout</button>
-            </nav>
+            </div>
+        </nav>
+        <!-- User Actions (Desktop) -->
+        <div class="hidden md:flex items-center space-x-4">
+            <span id="userIdDisplay" class="text-gray-600 text-sm hidden"></span>
+            <button id="navGoogleLoginButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition duration-150 ease-in-out">Sign in with Google</button>
+            <button id="logoutButton" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md hidden transition duration-150 ease-in-out">Logout</button>
+        </div>
+        <!-- Mobile Menu Button -->
+        <div class="md:hidden">
+            <button id="mobileMenuButton" class="text-gray-600 focus:outline-none">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+            </button>
         </div>
     </header>
 
-    <main class="container py-8">
-        <!-- Home Section -->
-        <section id="home" class="section">
-            <div class="card p-8 text-center">
-                <h2 class="section-title">Welcome to ShutterSync CRM</h2>
-                <p class="text-lg text-gray-700">Your central hub for managing customers, events, and user access. Log in to get started.</p>
-                <div class="mt-6">
-                    <!-- This button only serves to hint about login if not already logged in by first clicking an Admin menu item -->
-                    <button id="googleLoginButton" class="btn-primary">
-                        <i class="fab fa-google mr-2"></i> Sign in with Google
-                    </button>
+    <!-- Mobile Menu (Hidden by default) -->
+    <div id="mobileMenu" class="md:hidden bg-white shadow-lg pb-4 transition-all ease-in-out duration-300 max-h-0 overflow-hidden">
+        <nav class="flex flex-col px-6 py-2 space-y-2">
+            <a href="#" data-section="home" class="block text-gray-600 hover:text-blue-600 font-medium py-2">Home</a>
+            <a href="#" data-section="customers-section" class="block text-gray-600 hover:text-blue-600 font-medium py-2">Customers</a>
+            <a href="#" data-section="opportunities-section" class="block text-gray-600 hover:text-blue-600 font-medium py-2">Opportunities</a>
+            <a href="#" data-section="events-section" class="block text-gray-600 hover:text-blue-600 font-medium py-2">Events</a>
+            <!-- Admin Dropdown for Mobile -->
+            <div class="relative" id="mobileAdminMenu">
+                <button class="text-gray-600 hover:text-blue-600 font-medium py-2 w-full text-left focus:outline-none flex items-center justify-between">
+                    Admin
+                    <svg class="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="flex flex-col pl-4 mt-1 space-y-1">
+                    <a href="#" data-section="admin-country-mapping-section" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Country/State Mapping</a>
+                    <a href="#" data-section="currency-management-section" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Currency Management</a>
+                    <a href="#" data-section="users-management-section" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Users Management</a>
                 </div>
             </div>
-        </section>
+            <!-- Mobile User Actions -->
+            <span id="mobileUserIdDisplay" class="text-gray-600 text-sm py-2 hidden"></span>
+            <button id="mobileLogoutButton" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md hidden transition duration-150 ease-in-out">Logout</button>
+        </nav>
+    </div>
 
-        <!-- Authentication Section (Directly incorporated into Home for Google Sign-In) -->
-        <!-- This section is now purely a placeholder, actual login is via the header button -->
-        <section id="auth-section" class="hidden section">
-            <div class="card max-w-md mx-auto text-center">
-                <h2 class="section-title">Login / Sign Up</h2>
-                <p class="text-gray-600 mb-6">Use your Google account to get started.</p>
-                <p class="text-sm text-gray-500">
-                    (Note: For the best experience, use the 'Sign in' button in the top navigation bar.)
-                </p>
+    <!-- Main Content Area -->
+    <main class="py-8">
+        <!-- Home Section -->
+        <section id="home" class="container mx-auto px-4 text-center">
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">Welcome to ShutterSync CRM</h2>
+            <p class="text-lg text-gray-600 mb-8">Your all-in-one solution for managing customers, opportunities, and events.</p>
+            <div class="flex flex-col items-center justify-center space-y-4">
+                <button id="googleLoginButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg text-lg transition duration-150 ease-in-out">
+                    Sign In with Google to Get Started
+                </button>
             </div>
         </section>
 
         <!-- Customers Section -->
-        <section id="customers-section" class="hidden section">
-            <h2 class="section-title">Customer Management</h2>
+        <section id="customers-section" class="hidden container mx-auto px-4 py-8">
+            <div class="bg-white rounded-lg shadow p-6 mb-8 max-w-4xl mx-auto">
+                <h2 id="customerFormTitle" class="text-2xl font-bold mb-4 text-gray-800">Add New Customer</h2>
 
-            <div class="card mb-8">
-                <h3 id="customerFormTitle" class="text-xl font-semibold mb-4 text-gray-800">Add New Customer</h3>
-                <form id="customerForm">
-                    <div id="customerIdDisplayGroup" class="mb-4 hidden">
-                        <label for="customerIdDisplay" class="block text-sm font-medium text-gray-700">Customer ID:</label>
-                        <span id="customerIdDisplay" class="mt-1 block text-lg font-semibold text-gray-900"></span>
+                <div id="customerIdDisplayGroup" class="mb-4 hidden">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Customer ID (Read Only):</label>
+                    <p id="customerIdDisplay" class="text-lg font-semibold text-gray-900"></p>
+                </div>
+
+                <form id="customerForm" class="space-y-4">
+                    <!-- Customer Type -->
+                    <div>
+                        <label for="customerType" class="block text-gray-700 text-sm font-bold mb-2">Customer Type <span class="text-red-500">*</span></label>
+                        <select id="customerType" name="customerType" required
+                            class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 bg-white">
+                            <option value="Individual">Individual</option>
+                            <option value="Company">Company</option>
+                        </select>
+                    </div>
+
+                    <!-- Individual Fields -->
+                    <div id="individualFields" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="customerFirstName" class="block text-gray-700 text-sm font-bold mb-2">First Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="customerFirstName" name="firstName" placeholder="John" required
+                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="customerLastName" class="block text-gray-700 text-sm font-bold mb-2">Last Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="customerLastName" name="lastName" placeholder="Doe" required
+                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                        </div>
+                    </div>
+
+                    <!-- Company Name Field -->
+                    <div id="companyNameField" class="hidden">
+                        <label for="customerCompanyName" class="block text-gray-700 text-sm font-bold mb-2">Company Name <span class="text-red-500">*</span></label>
+                        <input type="text" id="customerCompanyName" name="companyName" placeholder="Acme Corp"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="mb-4">
-                            <label for="customerType" class="block text-sm font-medium text-gray-700">Customer Type:</label>
-                            <select id="customerType" class="form-select mt-1" required>
-                                <option value="Individual">Individual</option>
-                                <option value="Company">Company</option>
-                            </select>
+                        <div>
+                            <label for="customerEmail" class="block text-gray-700 text-sm font-bold mb-2">Email <span class="text-red-500">*</span></label>
+                            <input type="email" id="customerEmail" name="email" placeholder="john.doe@example.com" required
+                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
                         </div>
-                        <!-- Individual Fields -->
-                        <div id="individualFields" class="mb-4">
-                            <label for="customerFirstName" class="block text-sm font-medium text-gray-700">First Name:</label>
-                            <input type="text" id="customerFirstName" class="form-input mt-1" placeholder="John">
-                        </div>
-                        <div class="mb-4">
-                            <label for="customerLastName" class="block text-sm font-medium text-gray-700">Last Name:</label>
-                            <input type="text" id="customerLastName" class="form-input mt-1" placeholder="Doe">
-                        </div>
-                        <!-- Company Field -->
-                        <div id="companyNameField" class="mb-4 hidden">
-                            <label for="customerCompanyName" class="block text-sm font-medium text-gray-700">Company Name:</label>
-                            <input type="text" id="customerCompanyName" class="form-input mt-1" placeholder="Acme Corp">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="mb-4">
-                            <label for="customerEmail" class="block text-sm font-medium text-gray-700">Email:</label>
-                            <input type="email" id="customerEmail" class="form-input mt-1" placeholder="john.doe@example.com" required>
-                        </div>
-                        <div class="mb-4">
-                            <label for="customerPhone" class="block text-sm font-medium text-gray-700">Phone:</label>
-                            <input type="tel" id="customerPhone" class="form-input mt-1" placeholder="+1234567890" required>
+                        <div>
+                            <label for="customerPhone" class="block text-gray-700 text-sm font-bold mb-2">Phone <span class="text-red-500">*</span></label>
+                            <input type="tel" id="customerPhone" name="phone" placeholder="+1 (555) 123-4567" required
+                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
                         </div>
                     </div>
 
                     <!-- Address Fields -->
-                    <h4 class="text-md font-semibold text-gray-800 mt-4 mb-2">Address Information:</h4>
-                    <div id="addressValidationMessage" class="message error hidden"></div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="mb-4">
-                            <label for="customerCountry" class="block text-sm font-medium text-gray-700">Country:</label>
-                            <select id="customerCountry" class="form-select mt-1" required>
-                                <option value="">Select Country</option>
-                            </select>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Address <span class="text-red-500">*</span></label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+                            <div>
+                                <select id="customerCountry" name="country" required
+                                    class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 bg-white">
+                                    <option value="">Select Country</option>
+                                </select>
+                            </div>
+                            <div>
+                                <input type="text" id="customerAddress" name="address" placeholder="123 Main St" required
+                                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                            </div>
                         </div>
-                        <div class="mb-4">
-                            <label for="customerAddress" class="block text-sm font-medium text-gray-700">Street Address:</label>
-                            <input type="text" id="customerAddress" class="form-input mt-1" placeholder="123 Main St" required>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <input type="text" id="customerCity" name="city" placeholder="Anytown" required
+                                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                            </div>
+                            <div>
+                                <select id="customerState" name="state" required
+                                    class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 bg-white" disabled>
+                                    <option value="">Select State/Province</option>
+                                </select>
+                            </div>
+                            <div>
+                                <input type="text" id="customerZipCode" name="zipCode" placeholder="12345" required
+                                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                            </div>
                         </div>
-                        <div class="mb-4">
-                            <label for="customerCity" class="block text-sm font-medium text-gray-700">City:</label>
-                            <input type="text" id="customerCity" class="form-input mt-1" placeholder="Anytown" required>
-                        </div>
-                        <div class="mb-4">
-                            <label for="customerState" class="block text-sm font-medium text-gray-700">State/Province:</label>
-                            <select id="customerState" class="form-select mt-1" required disabled>
-                                <option value="">Select State/Province</option>
-                            </select>
-                        </div>
-                        <div class="mb-4 md:col-span-2">
-                            <label for="customerZipCode" class="block text-sm font-medium text-gray-700">Zip/Postal Code:</label>
-                            <input type="text" id="customerZipCode" class="form-input mt-1" placeholder="12345" required>
-                        </div>
+                        <p id="addressValidationMessage" class="text-red-500 text-xs italic mt-2 hidden">Please fill in all address fields.</p>
                     </div>
 
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Individual Industry -->
-                        <div id="individualIndustryGroup" class="mb-4">
-                            <label for="customerIndustryInput" class="block text-sm font-medium text-gray-700">Industry (Individual):</label>
-                            <input type="text" id="customerIndustryInput" class="form-input mt-1" placeholder="Photography, Design, etc.">
-                        </div>
-                        <!-- Company Industry Select -->
-                        <div id="companyIndustryGroup" class="mb-4 hidden">
-                            <label for="customerIndustrySelect" class="block text-sm font-medium text-gray-700">Industry (Company):</label>
-                            <select id="customerIndustrySelect" class="form-select mt-1">
-                                <option value="">Select Industry</option>
-                                <option value="IT">IT Services</option>
-                                <option value="Finance">Finance</option>
-                                <option value="Healthcare">Healthcare</option>
-                                <option value="Retail">Retail</option>
-                                <option value="Manufacturing">Manufacturing</option>
-                                <option value="Education">Education</option>
-                                <option value="Hospitality">Hospitality</option>
-                                <option value="Real Estate">Real Estate</option>
-                                <option value="Marketing">Marketing</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="customerSince" class="block text-sm font-medium text-gray-700">Customer Since:</label>
-                            <input type="date" id="customerSince" class="form-input mt-1" required>
-                        </div>
-                        <div class="mb-4 md:col-span-2">
-                            <label for="customerDescription" class="block text-sm font-medium text-gray-700">Description:</label>
-                            <textarea id="customerDescription" rows="3" class="form-textarea mt-1" placeholder="Any additional notes about the customer..."></textarea>
-                        </div>
+                    <!-- Industry Fields (Conditional) -->
+                    <div id="individualIndustryGroup" class="hidden">
+                        <label for="customerIndustryInput" class="block text-gray-700 text-sm font-bold mb-2">Industry <span class="text-red-500">*</span></label>
+                        <input type="text" id="customerIndustryInput" name="industry" placeholder="Technology, Healthcare, etc."
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                    </div>
+                    <div id="companyIndustryGroup" class="hidden">
+                        <label for="customerIndustrySelect" class="block text-gray-700 text-sm font-bold mb-2">Industry <span class="text-red-500">*</span></label>
+                        <select id="customerIndustrySelect" name="industry"
+                            class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 bg-white">
+                            <option value="">Select Industry</option>
+                            <option value="Technology">Technology</option>
+                            <option value="Healthcare">Healthcare</option>
+                            <option value="Finance">Finance</option>
+                            <option value="Retail">Retail</option>
+                            <option value="Manufacturing">Manufacturing</option>
+                            <option value="Education">Education</option>
+                            <option value="Government">Government</option>
+                            <option value="Other">Other</option>
+                        </select>
                     </div>
 
-                    <div class="mt-6 flex justify-end space-x-3">
-                        <button type="button" class="btn-secondary" onclick="resetCustomerForm()">Reset Form</button>
-                        <button type="submit" id="submitCustomerButton" class="btn-primary" disabled>Add Customer</button>
+                    <div>
+                        <label for="customerSince" class="block text-gray-700 text-sm font-bold mb-2">Customer Since <span class="text-red-500">*</span></label>
+                        <input type="date" id="customerSince" name="customerSince" required
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="customerDescription" class="block text-gray-700 text-sm font-bold mb-2">Description</label>
+                        <textarea id="customerDescription" name="description" rows="3" placeholder="Any additional notes about the customer..."
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <button type="submit" id="submitCustomerButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
+                            Add Customer
+                        </button>
+                        <button type="button" id="resetCustomerFormButton" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-md focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
+                            Clear Form
+                        </button>
                     </div>
                 </form>
             </div>
 
-            <div class="card mt-8">
-                <h3 class="text-xl font-semibold mb-4 text-gray-800">Existing Customers</h3>
-                <div class="data-grid-header">
+            <!-- Existing Customers List -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-bold mb-4 text-gray-800">Existing Customers</h3>
+                <div class="data-grid-header grid grid-cols-[100px_minmax(150px,_1.5fr)_1.5fr_1fr_1.5fr_1fr_0.8fr_1.5fr] gap-x-4 py-2 border-b border-gray-200 font-semibold text-gray-600 text-sm">
                     <div class="px-2">Customer ID</div>
-                    <div class="px-2">Name/Company</div>
+                    <div class="px-2">Name</div>
                     <div class="px-2">Email</div>
                     <div class="px-2 hidden md:block">Phone</div>
                     <div class="px-2 hidden lg:block">Address</div>
@@ -239,141 +235,137 @@
                     <div class="px-2 hidden sm:block">Since</div>
                     <div class="px-2 text-right">Actions</div>
                 </div>
-                <div id="customerList" class="divide-y divide-gray-100">
-                    <!-- Customer rows will be dynamically inserted here by JavaScript -->
-                    <p class="text-gray-500 text-center col-span-full py-4">Loading customers...</p>
+                <div id="customerList" class="data-grid-body divide-y divide-gray-100">
+                    <!-- Customer rows will be loaded here by JavaScript -->
+                    <p class="text-gray-500 text-center col-span-full py-4">No customers loaded.</p>
                 </div>
             </div>
         </section>
 
-        <!-- Opportunities Section (NEW Structure) -->
-        <section id="opportunities-section" class="hidden section">
-            <h2 class="section-title">Opportunity Management</h2>
+        <!-- Opportunities Section -->
+        <section id="opportunities-section" class="hidden container mx-auto px-4 py-8">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Opportunities Management</h2>
 
-            <!-- Main container for the 2-column layout -->
-            <div id="opportunity-view-container" class="flex flex-col md:flex-row md:space-x-6">
+            <div id="opportunity-view-container" class="flex flex-col md:flex-row gap-6">
 
-                <!-- Left Panel: Edit Form and Existing Opportunities Table -->
-                <div id="opportunity-left-panel" class="w-full md:w-7/10 transition-all duration-300 ease-in-out flex-shrink-0">
-                    <!-- This content is shown when the left panel is expanded (70%) -->
-                    <div id="opportunity-full-form-view" class="card mb-8">
-                        <h3 id="opportunityFormTitle" class="text-xl font-semibold mb-4 text-gray-800">Add New Opportunity</h3>
-                        <form id="opportunityForm">
-                            <!-- Basic Information -->
-                            <h4 class="text-md font-semibold text-gray-800 mb-4">Basic Information</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div id="opportunityIdDisplayGroup" class="mb-4 hidden w-full">
-                                    <label for="opportunityIdDisplay" class="block text-sm font-medium text-gray-700">Opportunity ID:</label>
-                                    <span id="opportunityIdDisplay" class="mt-1 block text-lg font-semibold text-gray-900"></span>
-                                </div>
-                                <div class="mb-4 w-full">
-                                    <label for="opportunityName" class="block text-sm font-medium text-gray-700">Opportunity Name: <span class="text-red-500">*</span></label>
-                                    <input type="text" id="opportunityName" class="form-input mt-1 w-full" placeholder="New Photography Project" required>
-                                </div>
-                                <div class="mb-4 md:col-span-1 w-full">
-                                    <label for="opportunityCustomer" class="block text-sm font-medium text-gray-700">Customer: <span class="text-red-500">*</span></label>
-                                    <select id="opportunityCustomer" class="form-select mt-1 w-full" required>
-                                        <option value="">Select Customer</option>
-                                        <!-- Customers will be populated by JS -->
-                                    </select>
-                                </div>
+                <!-- Left Panel (Full Form / Summary) -->
+                <div id="opportunity-left-panel" class="flex-1 md:w-3/5 md:flex-none">
+
+                    <!-- Opportunity Form Card (initially shown for adding new) -->
+                    <div id="opportunity-full-form-view" class="bg-white rounded-lg shadow p-6 mb-6">
+                        <h3 id="opportunityFormTitle" class="text-xl font-bold mb-4 text-gray-800">Add New Opportunity</h3>
+
+                        <div id="opportunityIdDisplayGroup" class="mb-4 hidden">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Opportunity ID (Read Only):</label>
+                            <p id="opportunityIdDisplay" class="text-lg font-semibold text-gray-900"></p>
+                        </div>
+
+                        <form id="opportunityForm" class="space-y-4">
+                            <div>
+                                <label for="opportunityCustomer" class="block text-gray-700 text-sm font-bold mb-2">Customer <span class="text-red-500">*</span></label>
+                                <select id="opportunityCustomer" name="customer" required
+                                    class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 bg-white">
+                                    <option value="">Select Customer</option>
+                                    <!-- Options populated by JS -->
+                                </select>
                             </div>
-
-                            <!-- Financial Details -->
-                            <h4 class="text-md font-semibold text-gray-800 mt-4 mb-4">Financial Details</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div class="mb-4 w-full relative"> <!-- Added relative for symbol positioning -->
-                                    <label for="opportunityAmount" class="block text-sm font-medium text-gray-700">Amount: <span class="text-red-500">*</span></label>
+                            <div>
+                                <label for="opportunityName" class="block text-gray-700 text-sm font-bold mb-2">Opportunity Name <span class="text-red-500">*</span></label>
+                                <input type="text" id="opportunityName" name="opportunityName" placeholder="Wedding Photography Package" required
+                                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="opportunityAmount" class="block text-gray-700 text-sm font-bold mb-2">Amount <span class="text-red-500">*</span></label>
                                     <div class="flex items-center">
-                                        <span id="currencySymbolDisplay" class="absolute left-3 text-gray-500 pointer-events-none"></span>
-                                        <input type="number" id="opportunityAmount" class="form-input mt-1 w-full pl-8" step="0.01" placeholder="1500.00" required>
+                                        <span id="currencySymbolDisplay" class="text-xl font-semibold mr-2">$</span>
+                                        <input type="number" id="opportunityAmount" name="amount" placeholder="5000.00" step="0.01" required
+                                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
                                     </div>
                                 </div>
-                                <div class="mb-4 w-full">
-                                    <label for="opportunityCurrency" class="block text-sm font-medium text-gray-700">Currency: <span class="text-red-500">*</span></label>
-                                    <select id="opportunityCurrency" class="form-select mt-1 w-full" required>
-                                        <!-- Currencies will be populated dynamically from Firestore -->
+                                <div>
+                                    <label for="opportunityCurrency" class="block text-gray-700 text-sm font-bold mb-2">Currency <span class="text-red-500">*</span></label>
+                                    <select id="opportunityCurrency" name="currency" required
+                                        class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 bg-white">
                                         <option value="">Select Currency</option>
-                                    </select>
-                                </div>
-                                <div class="mb-4 w-full">
-                                    <label for="opportunityStage" class="block text-sm font-medium text-gray-700">Stage: <span class="text-red-500">*</span></label>
-                                    <select id="opportunityStage" class="form-select mt-1 w-full" required>
-                                        <option value="">Select Stage</option>
-                                        <option value="Qualification">Qualification</option>
-                                        <option value="Proposal">Proposal</option>
-                                        <option value="Negotiation">Negotiation</option>
-                                        <option value="Closed Won">Closed Won</option>
-                                        <option value="Closed Lost">Closed Lost</option>
+                                        <!-- Options populated by JS -->
                                     </select>
                                 </div>
                             </div>
-
-                            <!-- Timeline -->
-                            <h4 class="text-md font-semibold text-gray-800 mt-4 mb-4">Timeline</h4>
+                            <div>
+                                <label for="opportunityStage" class="block text-gray-700 text-sm font-bold mb-2">Stage <span class="text-red-500">*</span></label>
+                                <select id="opportunityStage" name="stage" required
+                                    class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 bg-white">
+                                    <option value="">Select Stage</option>
+                                    <option value="New Lead">New Lead</option>
+                                    <option value="Qualification">Qualification</option>
+                                    <option value="Proposal Sent">Proposal Sent</option>
+                                    <option value="Negotiation">Negotiation</option>
+                                    <option value="Closed Won">Closed Won</option>
+                                    <option value="Closed Lost">Closed Lost</option>
+                                </select>
+                            </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="mb-4 w-full">
-                                    <label for="opportunityExpectedStartDate" class="block text-sm font-medium text-gray-700">Expected Start Date: <span class="text-red-500">*</span></label>
-                                    <input type="date" id="opportunityExpectedStartDate" class="form-input mt-1 w-full" required>
+                                <div>
+                                    <label for="opportunityExpectedStartDate" class="block text-gray-700 text-sm font-bold mb-2">Expected Start Date <span class="text-red-500">*</span></label>
+                                    <input type="date" id="opportunityExpectedStartDate" name="expectedStartDate" required
+                                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
                                 </div>
-                                <div class="mb-4 w-full">
-                                    <label for="opportunityExpectedCloseDate" class="block text-sm font-medium text-gray-700">Expected Close Date: <span class="text-red-500">*</span></label>
-                                    <input type="date" id="opportunityExpectedCloseDate" class="form-input mt-1 w-full" required>
-                                </div>
-                            </div>
-
-                            <!-- Event Specifics -->
-                            <h4 class="text-md font-semibold text-gray-800 mt-4 mb-4">Event Specifics</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="mb-4 w-full">
-                                    <label for="opportunityEventType" class="block text-sm font-medium text-gray-700">Event Type: <span class="text-red-500">*</span></label>
-                                    <select id="opportunityEventType" class="form-select mt-1 w-full" required>
-                                        <option value="">Select Event Type</option>
-                                        <option value="Wedding">Wedding</option>
-                                        <option value="Corporate Event">Corporate Event</option>
-                                        <option value="Portrait Session">Portrait Session</option>
-                                        <option value="Commercial">Commercial</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                                <div class="mb-4 w-full">
-                                    <label for="opportunityEventLocationProposed" class="block text-sm font-medium text-gray-700">Proposed Event Location: <span class="text-red-500">*</span></label>
-                                    <input type="text" id="opportunityEventLocationProposed" class="form-input mt-1 w-full" placeholder="Grand Ballroom, City Center" required>
+                                <div>
+                                    <label for="opportunityExpectedCloseDate" class="block text-gray-700 text-sm font-bold mb-2">Expected Close Date <span class="text-red-500">*</span></label>
+                                    <input type="date" id="opportunityExpectedCloseDate" name="expectedCloseDate" required
+                                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
                                 </div>
                             </div>
-                            <!-- NEW Service Address Field -->
-                            <div class="mb-4 w-full">
-                                <label for="opportunityServiceAddress" class="block text-sm font-medium text-gray-700">Service Address: <span class="text-red-500">*</span></label>
-                                <textarea id="opportunityServiceAddress" rows="3" class="form-textarea mt-1 w-full" placeholder="Full service address including street, city, state, zip" required></textarea>
-                                <p class="text-xs text-gray-500 mt-1">This address can be auto-filled from the selected customer but can be manually updated.</p>
+                            <div>
+                                <label for="opportunityEventType" class="block text-gray-700 text-sm font-bold mb-2">Event Type <span class="text-red-500">*</span></label>
+                                <select id="opportunityEventType" name="eventType" required
+                                    class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 bg-white">
+                                    <option value="">Select Event Type</option>
+                                    <option value="Wedding">Wedding</option>
+                                    <option value="Corporate Event">Corporate Event</option>
+                                    <option value="Portrait Session">Portrait Session</option>
+                                    <option value="Product Shoot">Product Shoot</option>
+                                    <option value="Other">Other</option>
+                                </select>
                             </div>
-
-
-                            <!-- Description & Additional Data -->
-                            <h4 class="text-md font-semibold text-gray-800 mt-4 mb-4">Description & Additional Data</h4>
-                            <div class="mb-4 w-full">
-                                <label for="opportunityDescription" class="block text-sm font-medium text-gray-700">Description: <span class="text-red-500">*</span></label>
-                                <textarea id="opportunityDescription" rows="3" class="form-textarea mt-1 w-full" placeholder="Detailed description of the opportunity..." required></textarea>
+                            <div>
+                                <label for="opportunityEventLocationProposed" class="block text-gray-700 text-sm font-bold mb-2">Proposed Event Location <span class="text-red-500">*</span></label>
+                                <input type="text" id="opportunityEventLocationProposed" name="eventLocationProposed" placeholder="Venue Name or City" required
+                                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
                             </div>
-
-                            <div class="mb-4 w-full">
-                                <label for="opportunityData" class="block text-sm font-medium text-gray-700">Additional Opportunity Data (JSON or text):</label>
-                                <textarea id="opportunityData" rows="5" class="form-textarea mt-1 w-full" placeholder='{"notes": "Initial contact made", "priority": "High"}'></textarea>
-                                <p class="text-xs text-gray-500 mt-1">For any extra structured or unstructured data specific to this opportunity.</p>
+                            <div>
+                                <label for="opportunityServiceAddress" class="block text-gray-700 text-sm font-bold mb-2">Service Address <span class="text-red-500">*</span></label>
+                                <input type="text" id="opportunityServiceAddress" name="serviceAddress" placeholder="123 Main St, Anytown, CA 12345, USA" required
+                                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
                             </div>
-
-
-                            <div class="mt-6 flex justify-end space-x-3">
-                                <button type="button" class="btn-secondary" onclick="resetOpportunityForm()">Reset Form</button>
-                                <button type="submit" id="submitOpportunityButton" class="btn-primary" disabled>Add Opportunity</button>
+                            <div>
+                                <label for="opportunityDescription" class="block text-gray-700 text-sm font-bold mb-2">Description <span class="text-red-500">*</span></label>
+                                <textarea id="opportunityDescription" name="description" rows="3" placeholder="Detailed description of the opportunity" required
+                                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"></textarea>
+                            </div>
+                            <div>
+                                <label for="opportunityData" class="block text-gray-700 text-sm font-bold mb-2">Additional Opportunity Data (JSON)</label>
+                                <textarea id="opportunityData" name="opportunityData" rows="3" placeholder='{"notes": "Follow up in 2 days", "priority": "High"}'
+                                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"></textarea>
+                                <p class="text-xs text-gray-500 mt-1">Enter valid JSON data here.</p>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <button type="submit" id="submitOpportunityButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
+                                    Add Opportunity
+                                </button>
+                                <button type="button" id="resetOpportunityFormButton" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-md focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
+                                    Clear Form
+                                </button>
                             </div>
                         </form>
                     </div>
 
-                    <div id="opportunity-existing-list-view" class="card mt-8">
-                        <h3 class="text-xl font-semibold mb-4 text-gray-800">Existing Opportunities</h3>
-                        <div class="data-grid-header">
-                            <div class="px-2">OPTY ID</div>
+                    <!-- Opportunity List Card (always visible in left panel) -->
+                    <div id="opportunity-existing-list-view" class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">Existing Opportunities</h3>
+                        <div class="data-grid-header grid grid-cols-[100px_minmax(120px,_1.5fr)_1fr_0.8fr_1fr_1.2fr_1.5fr_1.5fr_1fr] gap-x-4 py-2 border-b border-gray-200 font-semibold text-gray-600 text-sm">
+                            <div class="px-2">Opportunity ID</div>
                             <div class="px-2">Name</div>
                             <div class="px-2">Customer</div>
                             <div class="px-2">Amount</div>
@@ -383,474 +375,476 @@
                             <div class="px-2 hidden lg:block">Event Type</div>
                             <div class="px-2 text-right">Actions</div>
                         </div>
-                        <div id="opportunityList" class="divide-y divide-gray-100">
-                            <!-- Opportunity rows will be dynamically inserted here by JavaScript -->
-                            <p class="text-gray-500 text-center col-span-full py-4">Loading opportunities...</p>
+                        <div id="opportunityList" class="data-grid-body divide-y divide-gray-100">
+                            <!-- Opportunity rows will be loaded here by JavaScript -->
+                            <p class="text-gray-500 text-center col-span-full py-4">No opportunities loaded.</p>
+                        </div>
+                    </div>
+                </div> <!-- End Left Panel -->
+
+
+                <!-- Right Panel (Linked Objects) -->
+                <div id="opportunity-right-panel" class="md:w-2/5 md:flex-none hidden-panel">
+
+                    <!-- Opportunity Summary Card (shows when right panel is expanded) -->
+                    <div id="opportunity-summary-card" class="bg-white rounded-lg shadow p-6 mb-6 hidden">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">Opportunity Summary</h3>
+                        <div class="space-y-2">
+                            <p class="text-gray-700"><span class="font-semibold">ID:</span> <span id="summaryOpportunityId"></span></p>
+                            <p class="text-gray-700"><span class="font-semibold">Name:</span> <span id="summaryOpportunityName"></span></p>
+                            <p class="text-gray-700"><span class="font-semibold">Customer:</span> <span id="summaryOpportunityCustomer"></span></p>
+                            <p class="text-gray-700"><span class="font-semibold">Stage:</span> <span id="summaryOpportunityStage"></span></p>
+                            <p class="text-gray-700"><span class="font-semibold">Amount:</span> <span id="summaryOpportunityAmount"></span></p>
                         </div>
                     </div>
 
-                    <!-- This will be the summary card shown when the left panel is at 30% -->
-                    <div id="opportunity-summary-card" class="card mt-4 hidden cursor-pointer transition-transform duration-200 ease-in-out hover:scale-[1.01]">
-                        <h4 class="text-lg font-semibold text-gray-800 mb-2">Selected Opportunity</h4>
-                        <div class="text-sm text-gray-700">
-                            <p class="mb-1"><span class="font-medium">ID:</span> <span id="summaryOpportunityId"></span></p>
-                            <p class="mb-1"><span class="font-medium">Name:</span> <span id="summaryOpportunityName"></span></p>
-                            <p class="mb-1"><span class="font-medium">Customer:</span> <span id="summaryOpportunityCustomer"></span></p>
-                            <p class="mb-1"><span class="font-medium">Stage:</span> <span id="summaryOpportunityStage"></span></p>
-                            <p class="mb-1"><span class="font-medium">Amount:</span> <span id="summaryOpportunityAmount"></span></p>
-                            <p class="text-xs text-gray-500 mt-2">Click to expand opportunity form.</p>
-                        </div>
-                    </div>
-                </div>
+                    <!-- Linked Objects Accordion -->
+                    <div id="linkedObjectsAccordion" class="bg-white rounded-lg shadow hidden">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800 p-6 pb-0">Linked Objects</h3>
 
-                <!-- Right Panel: Related Section with Accordions -->
-                <div id="opportunity-right-panel" class="w-full md:w-3/10 transition-all duration-300 ease-in-out flex-shrink-0 mt-6 md:mt-0">
-                    <div class="card p-6 h-full flex flex-col">
-                        <h3 class="text-xl font-semibold mb-4 text-gray-800">Related</h3>
-
-                        <!-- Linked Objects Accordion Sections -->
-                        <div id="linkedObjectsAccordion" class="flex-grow flex flex-col space-y-4">
-
-                            <!-- Opportunity Contacts Accordion -->
-                            <div class="accordion-item">
-                                <button class="accordion-header" id="contactsAccordionHeader">
-                                    Opportunity Contacts <i class="fas fa-chevron-down accordion-icon"></i>
-                                </button>
-                                <div class="accordion-content">
-                                    <h4 class="text-lg font-medium mb-4 text-gray-700">Add New Contact</h4>
-                                    <form id="opportunityContactForm" class="mb-6">
-                                        <div id="contactIdDisplayGroup" class="mb-4 hidden w-full">
-                                            <label for="contactIdDisplay" class="block text-sm font-medium text-gray-700">Contact ID:</label>
-                                            <span id="contactIdDisplay" class="mt-1 block text-lg font-semibold text-gray-900"></span>
+                        <!-- Contacts Accordion -->
+                        <div class="accordion-item border-t border-gray-200">
+                            <div class="accordion-header p-6 cursor-pointer flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition duration-150 ease-in-out">
+                                <h4 class="text-lg font-semibold text-gray-800">Contacts</h4>
+                                <svg class="w-5 h-5 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                            <div class="accordion-content px-6 pb-6 overflow-hidden max-h-0 transition-all duration-300 ease-in-out">
+                                <div class="py-4">
+                                    <h5 class="text-md font-semibold mb-2">Add/Edit Contact</h5>
+                                    <form id="opportunityContactForm" class="space-y-3">
+                                        <div id="contactIdDisplayGroup" class="mb-2 hidden">
+                                            <label class="block text-gray-700 text-xs font-bold mb-1">Contact ID (Read Only):</label>
+                                            <p id="contactIdDisplay" class="text-sm font-semibold text-gray-900"></p>
                                         </div>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div class="mb-4 w-full">
-                                                <label for="contactFirstName" class="block text-sm font-medium text-gray-700">First Name: <span class="text-red-500">*</span></label>
-                                                <input type="text" id="contactFirstName" class="form-input mt-1 w-full" placeholder="Jane" required>
-                                            </div>
-                                            <div class="mb-4 w-full">
-                                                <label for="contactLastName" class="block text-sm font-medium text-gray-700">Last Name: <span class="text-red-500">*</span></label>
-                                                <input type="text" id="contactLastName" class="form-input mt-1 w-full" placeholder="Doe" required>
-                                            </div>
-                                            <div class="mb-4 w-full">
-                                                <label for="contactEmail" class="block text-sm font-medium text-gray-700">Email: <span class="text-red-500">*</span></label>
-                                                <input type="email" id="contactEmail" class="form-input mt-1 w-full" placeholder="jane.doe@example.com" required>
-                                            </div>
-                                            <div class="mb-4 w-full">
-                                                <label for="contactPhone" class="block text-sm font-medium text-gray-700">Phone: <span class="text-red-500">*</span></label>
-                                                <input type="tel" id="contactPhone" class="form-input mt-1 w-full" placeholder="+1234567890" required>
-                                            </div>
-                                            <div class="mb-4 md:col-span-2 w-full">
-                                                <label for="contactRole" class="block text-sm font-medium text-gray-700">Role: <span class="text-red-500">*</span></label>
-                                                <input type="text" id="contactRole" class="form-input mt-1 w-full" placeholder="Decision Maker, Technical Contact" required>
-                                            </div>
+                                        <div>
+                                            <label for="contactFirstName" class="block text-gray-700 text-xs font-bold mb-1">First Name <span class="text-red-500">*</span></label>
+                                            <input type="text" id="contactFirstName" name="firstName" required placeholder="Contact First Name"
+                                                class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm">
                                         </div>
-                                        <div class="mt-4 flex justify-end space-x-3">
-                                            <button type="button" class="btn-secondary" onclick="resetOpportunityContactForm()">Reset Contact Form</button>
-                                            <button type="submit" id="submitOpportunityContactButton" class="btn-primary">Add Contact</button>
+                                        <div>
+                                            <label for="contactLastName" class="block text-gray-700 text-xs font-bold mb-1">Last Name <span class="text-red-500">*</span></label>
+                                            <input type="text" id="contactLastName" name="lastName" required placeholder="Contact Last Name"
+                                                class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm">
+                                        </div>
+                                        <div>
+                                            <label for="contactEmail" class="block text-gray-700 text-xs font-bold mb-1">Email <span class="text-red-500">*</span></label>
+                                            <input type="email" id="contactEmail" name="email" required placeholder="contact@example.com"
+                                                class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm">
+                                        </div>
+                                        <div>
+                                            <label for="contactPhone" class="block text-gray-700 text-xs font-bold mb-1">Phone <span class="text-red-500">*</span></label>
+                                            <input type="tel" id="contactPhone" name="phone" required placeholder="+1 (555) 987-6543"
+                                                class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm">
+                                        </div>
+                                        <div>
+                                            <label for="contactRole" class="block text-gray-700 text-xs font-bold mb-1">Role <span class="text-red-500">*</span></label>
+                                            <input type="text" id="contactRole" name="role" required placeholder="Decision Maker, Influencer"
+                                                class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm">
+                                        </div>
+                                        <div class="flex justify-end space-x-2">
+                                            <button type="submit" id="submitOpportunityContactButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded text-sm transition duration-150 ease-in-out">Add Contact</button>
+                                            <button type="button" id="resetOpportunityContactFormButton" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-1 px-3 rounded text-sm transition duration-150 ease-in-out">Clear</button>
                                         </div>
                                     </form>
-
-                                    <h4 class="text-lg font-medium mb-4 text-gray-700 mt-6">Existing Contacts</h4>
-                                    <div class="data-grid-header">
-                                        <div class="px-2">Contact ID</div>
-                                        <div class="px-2">Name</div>
-                                        <div class="px-2">Email</div>
-                                        <div class="px-2 hidden sm:block">Phone</div>
-                                        <div class="px-2 hidden md:block">Role</div>
-                                        <div class="px-2 text-right">Actions</div>
+                                </div>
+                                <div class="py-4 border-t border-gray-200">
+                                    <h5 class="text-md font-semibold mb-2">Opportunity Contacts</h5>
+                                    <div class="data-grid-header grid grid-cols-[100px_1fr_1fr_1fr_1.2fr_1fr] gap-x-2 py-1 border-b border-gray-200 font-semibold text-gray-600 text-xs">
+                                        <div class="px-1">Contact ID</div>
+                                        <div class="px-1">Name</div>
+                                        <div class="px-1">Email</div>
+                                        <div class="px-1 hidden sm:block">Phone</div>
+                                        <div class="px-1 hidden md:block">Role</div>
+                                        <div class="px-1 text-right">Actions</div>
                                     </div>
-                                    <div id="opportunityContactList" class="data-grid-body">
+                                    <div id="opportunityContactList" class="data-grid-body divide-y divide-gray-100 text-xs">
+                                        <!-- Contacts loaded here -->
                                         <p class="text-gray-500 text-center col-span-full py-4">No contacts added for this opportunity.</p>
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Opportunity Lines Accordion -->
-                            <div class="accordion-item">
-                                <button class="accordion-header" id="linesAccordionHeader">
-                                    Opportunity Lines <i class="fas fa-chevron-down accordion-icon"></i>
-                                </button>
-                                <div class="accordion-content">
-                                    <h4 class="text-lg font-medium mb-4 text-gray-700">Add New Opportunity Line</h4>
-                                    <form id="opportunityLineForm" class="mb-6">
-                                        <div id="optyLineIdDisplayGroup" class="mb-4 hidden w-full">
-                                            <label for="optyLineIdDisplay" class="block text-sm font-medium text-gray-700">Line ID:</label>
-                                            <span id="optyLineIdDisplay" class="mt-1 block text-lg font-semibold text-gray-900"></span>
+                        <!-- Lines Accordion -->
+                        <div class="accordion-item border-t border-gray-200">
+                            <div class="accordion-header p-6 cursor-pointer flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition duration-150 ease-in-out">
+                                <h4 class="text-lg font-semibold text-gray-800">Opportunity Lines</h4>
+                                <svg class="w-5 h-5 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                            <div class="accordion-content px-6 pb-6 overflow-hidden max-h-0 transition-all duration-300 ease-in-out">
+                                <div class="py-4">
+                                    <h5 class="text-md font-semibold mb-2">Add/Edit Line Item</h5>
+                                    <form id="opportunityLineForm" class="space-y-3">
+                                        <div id="optyLineIdDisplayGroup" class="mb-2 hidden">
+                                            <label class="block text-gray-700 text-xs font-bold mb-1">Line ID (Read Only):</label>
+                                            <p id="optyLineIdDisplay" class="text-sm font-semibold text-gray-900"></p>
                                         </div>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div class="mb-4 md:col-span-2 w-full">
-                                                <label for="lineServiceDescription" class="block text-sm font-medium text-gray-700">Service Description: <span class="text-red-500">*</span></label>
-                                                <input type="text" id="lineServiceDescription" class="form-input mt-1 w-full" placeholder="Full Wedding Photography Package" required>
+                                        <div>
+                                            <label for="lineServiceDescription" class="block text-gray-700 text-xs font-bold mb-1">Service/Product Description <span class="text-red-500">*</span></label>
+                                            <input type="text" id="lineServiceDescription" name="serviceDescription" required placeholder="Full Day Wedding Coverage"
+                                                class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm">
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label for="lineUnitPrice" class="block text-gray-700 text-xs font-bold mb-1">Unit Price <span class="text-red-500">*</span></label>
+                                                <input type="number" id="lineUnitPrice" name="unitPrice" required step="0.01" placeholder="2500.00"
+                                                    class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm">
                                             </div>
-                                            <div class="mb-4 w-full">
-                                                <label for="lineUnitPrice" class="block text-sm font-medium text-gray-700">Unit Price: <span class="text-red-500">*</span></label>
-                                                <input type="number" id="lineUnitPrice" class="form-input mt-1 w-full" step="0.01" placeholder="1000.00" required>
-                                            </div>
-                                            <div class="mb-4 w-full">
-                                                <label for="lineQuantity" class="block text-sm font-medium text-gray-700">Quantity: <span class="text-red-500">*</span></label>
-                                                <input type="number" id="lineQuantity" class="form-input mt-1 w-full" step="1" min="1" value="1" required>
-                                            </div>
-                                            <div class="mb-4 w-full">
-                                                <label for="lineDiscount" class="block text-sm font-medium text-gray-700">Discount (%):</label>
-                                                <input type="number" id="lineDiscount" class="form-input mt-1 w-full" step="0.01" min="0" max="100" value="0">
-                                            </div>
-                                            <div class="mb-4 w-full">
-                                                <label for="lineNetPrice" class="block text-sm font-medium text-gray-700">Net Price:</label>
-                                                <input type="number" id="lineNetPrice" class="form-input mt-1 w-full" step="0.01" readonly disabled>
-                                            </div>
-                                            <div class="mb-4 md:col-span-2 w-full">
-                                                <label for="lineStatus" class="block text-sm font-medium text-gray-700">Status: <span class="text-red-500">*</span></label>
-                                                <select id="lineStatus" class="form-select mt-1 w-full" required>
-                                                    <option value="New">New</option>
-                                                    <option value="Approved">Approved</option>
-                                                    <option value="Rejected">Rejected</option>
-                                                </select>
+                                            <div>
+                                                <label for="lineQuantity" class="block text-gray-700 text-xs font-bold mb-1">Quantity <span class="text-red-500">*</span></label>
+                                                <input type="number" id="lineQuantity" name="quantity" required step="1" placeholder="1"
+                                                    class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm">
                                             </div>
                                         </div>
-                                        <div class="mt-4 flex justify-end space-x-3">
-                                            <button type="button" class="btn-secondary" onclick="resetOpportunityLineForm()">Reset Line Form</button>
-                                            <button type="submit" id="submitOpportunityLineButton" class="btn-primary">Add Line</button>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label for="lineDiscount" class="block text-gray-700 text-xs font-bold mb-1">Discount (%)</label>
+                                                <input type="number" id="lineDiscount" name="discount" step="0.01" placeholder="0.00"
+                                                    class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm">
+                                            </div>
+                                            <div>
+                                                <label for="lineNetPrice" class="block text-gray-700 text-xs font-bold mb-1">Net Price (Calculated)</label>
+                                                <input type="text" id="lineNetPrice" name="netPrice" readonly disabled placeholder="0.00"
+                                                    class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm bg-gray-100">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label for="lineStatus" class="block text-gray-700 text-xs font-bold mb-1">Status <span class="text-red-500">*</span></label>
+                                            <select id="lineStatus" name="status" required
+                                                class="shadow border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm bg-white">
+                                                <option value="">Select Status</option>
+                                                <option value="Proposed">Proposed</option>
+                                                <option value="Accepted">Accepted</option>
+                                                <option value="Rejected">Rejected</option>
+                                                <option value="On Hold">On Hold</option>
+                                            </select>
+                                        </div>
+                                        <div class="flex justify-end space-x-2">
+                                            <button type="submit" id="submitOpportunityLineButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded text-sm transition duration-150 ease-in-out">Add Line</button>
+                                            <button type="button" id="resetOpportunityLineFormButton" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-1 px-3 rounded text-sm transition duration-150 ease-in-out">Clear</button>
                                         </div>
                                     </form>
-
-                                    <h4 class="text-lg font-medium mb-4 text-gray-700 mt-6">Existing Opportunity Lines</h4>
-                                    <div class="data-grid-header">
-                                        <div class="px-2">Line ID</div>
-                                        <div class="px-2">Description</div>
-                                        <div class="px-2">Unit Price</div>
-                                        <div class="px-2">Qty</div>
-                                        <div class="px-2">Discount</div>
-                                        <div class="px-2">Net Price</div>
-                                        <div class="px-2 text-right">Actions</div>
+                                </div>
+                                <div class="py-4 border-t border-gray-200">
+                                    <h5 class="text-md font-semibold mb-2">Opportunity Lines</h5>
+                                    <div class="data-grid-header grid grid-cols-[100px_1.5fr_0.8fr_0.5fr_0.8fr_0.8fr_1fr] gap-x-2 py-1 border-b border-gray-200 font-semibold text-gray-600 text-xs">
+                                        <div class="px-1">Line ID</div>
+                                        <div class="px-1">Description</div>
+                                        <div class="px-1">Unit Price</div>
+                                        <div class="px-1">Qty</div>
+                                        <div class="px-1">Disc.</div>
+                                        <div class="px-1">Net Price</div>
+                                        <div class="px-1 text-right">Actions</div>
                                     </div>
-                                    <div id="opportunityLineList" class="data-grid-body">
+                                    <div id="opportunityLineList" class="data-grid-body divide-y divide-gray-100 text-xs">
+                                        <!-- Lines loaded here -->
                                         <p class="text-gray-500 text-center col-span-full py-4">No opportunity lines added for this opportunity.</p>
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Quotes Accordion -->
-                            <div class="accordion-item">
-                                <button class="accordion-header" id="quotesAccordionHeader">
-                                    Quotes <i class="fas fa-chevron-down accordion-icon"></i>
-                                </button>
-                                <div class="accordion-content">
-                                    <h4 class="text-lg font-medium mb-4 text-gray-700">Add New Quote</h4>
-                                    <form id="quoteForm" class="mb-6">
-                                        <div id="quoteIdDisplayGroup" class="mb-4 hidden w-full">
-                                            <label for="quoteIdDisplay" class="block text-sm font-medium text-gray-700">Quote ID:</label>
-                                            <span id="quoteIdDisplay" class="mt-1 block text-lg font-semibold text-gray-900"></span>
+                        <!-- Quotes Accordion -->
+                        <div class="accordion-item border-t border-gray-200">
+                            <div class="accordion-header p-6 cursor-pointer flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition duration-150 ease-in-out">
+                                <h4 class="text-lg font-semibold text-gray-800">Quotes</h4>
+                                <svg class="w-5 h-5 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                            <div class="accordion-content px-6 pb-6 overflow-hidden max-h-0 transition-all duration-300 ease-in-out">
+                                <div class="py-4">
+                                    <h5 class="text-md font-semibold mb-2">Add/Edit Quote</h5>
+                                    <form id="quoteForm" class="space-y-3">
+                                        <div id="quoteIdDisplayGroup" class="mb-2 hidden">
+                                            <label class="block text-gray-700 text-xs font-bold mb-1">Quote ID (Read Only):</label>
+                                            <p id="quoteIdDisplay" class="text-sm font-semibold text-gray-900"></p>
                                         </div>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div class="mb-4 w-full">
-                                                <label for="quoteName" class="block text-sm font-medium text-gray-700">Quote Name: <span class="text-red-500">*</span></label>
-                                                <input type="text" id="quoteName" class="form-input mt-1 w-full" placeholder="Wedding Package Quote" required>
+                                        <div>
+                                            <label for="quoteName" class="block text-gray-700 text-xs font-bold mb-1">Quote Name <span class="text-red-500">*</span></label>
+                                            <input type="text" id="quoteName" name="quoteName" required placeholder="Wedding Package Quote v1"
+                                                class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm">
+                                        </div>
+                                        <div>
+                                            <label for="quoteDescription" class="block text-gray-700 text-xs font-bold mb-1">Description</label>
+                                            <textarea id="quoteDescription" name="quoteDescription" rows="2" placeholder="Full package quote for John & Jane Doe wedding"
+                                                class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm"></textarea>
+                                        </div>
+                                        <div>
+                                            <label for="quoteCustomer" class="block text-gray-700 text-xs font-bold mb-1">Customer</label>
+                                            <select id="quoteCustomer" name="customer" disabled
+                                                class="shadow border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm bg-gray-100">
+                                                <option value="">Auto-filled from Opportunity</option>
+                                            </select>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label for="quoteStartDate" class="block text-gray-700 text-xs font-bold mb-1">Start Date <span class="text-red-500">*</span></label>
+                                                <input type="date" id="quoteStartDate" name="startDate" required
+                                                    class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm">
                                             </div>
-                                            <div class="mb-4 w-full">
-                                                <label for="quoteDescription" class="block text-sm font-medium text-gray-700">Description:</label>
-                                                <textarea id="quoteDescription" rows="2" class="form-textarea mt-1 w-full" placeholder="Quote for full photography services."></textarea>
+                                            <div>
+                                                <label for="quoteExpireDate" class="block text-gray-700 text-xs font-bold mb-1">Expire Date <span class="text-red-500">*</span></label>
+                                                <input type="date" id="quoteExpireDate" name="expireDate" required
+                                                    class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm">
                                             </div>
-                                            <div class="mb-4 w-full">
-                                                <label for="quoteCustomer" class="block text-sm font-medium text-gray-700">Customer: <span class="text-red-500">*</span></label>
-                                                <select id="quoteCustomer" class="form-select mt-1 w-full" required disabled>
-                                                    <!-- Customer will be auto-filled from Opportunity's customer -->
-                                                    <option value="">Auto-filled from Opportunity</option>
-                                                </select>
+                                        </div>
+                                        <div>
+                                            <label for="quoteStatus" class="block text-gray-700 text-xs font-bold mb-1">Status <span class="text-red-500">*</span></label>
+                                            <select id="quoteStatus" name="quoteStatus" required
+                                                class="shadow border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm bg-white">
+                                                <option value="">Select Status</option>
+                                                <option value="Draft">Draft</option>
+                                                <option value="Sent">Sent</option>
+                                                <option value="Accepted">Accepted</option>
+                                                <option value="Declined">Declined</option>
+                                                <option value="Expired">Expired</option>
+                                            </select>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label for="quoteNetListAmount" class="block text-gray-700 text-xs font-bold mb-1">Net List Amount</label>
+                                                <input type="number" id="quoteNetListAmount" name="netListAmount" step="0.01" placeholder="5000.00"
+                                                    class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm">
                                             </div>
-                                            <div class="mb-4 w-full">
-                                                <label for="quoteStartDate" class="block text-sm font-medium text-gray-700">Start Date: <span class="text-red-500">*</span></label>
-                                                <input type="date" id="quoteStartDate" class="form-input mt-1 w-full" required>
+                                            <div>
+                                                <label for="quoteNetDiscount" class="block text-gray-700 text-xs font-bold mb-1">Net Discount</label>
+                                                <input type="number" id="quoteNetDiscount" name="netDiscount" step="0.01" placeholder="0.00"
+                                                    class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm">
                                             </div>
-                                            <div class="mb-4 w-full">
-                                                <label for="quoteExpireDate" class="block text-sm font-medium text-gray-700">Expire Date: <span class="text-red-500">*</span></label>
-                                                <input type="date" id="quoteExpireDate" class="form-input mt-1 w-full" required>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label for="quoteNetAmount" class="block text-gray-700 text-xs font-bold mb-1">Net Amount (Calculated)</label>
+                                                <input type="text" id="quoteNetAmount" name="netAmount" readonly disabled placeholder="5000.00"
+                                                    class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm bg-gray-100">
                                             </div>
-                                            <div class="mb-4 w-full">
-                                                <label for="quoteStatus" class="block text-sm font-medium text-gray-700">Status: <span class="text-red-500">*</span></label>
-                                                <select id="quoteStatus" class="form-select mt-1 w-full" required>
-                                                    <option value="Draft">Draft</option>
-                                                    <option value="Presented">Presented</option>
-                                                    <option value="Accepted">Accepted</option>
-                                                    <option value="Rejected">Rejected</option>
-                                                </select>
-                                            </div>
-                                            <div class="mb-4 w-full">
-                                                <label for="quoteNetListAmount" class="block text-sm font-medium text-gray-700">Net List Amount:</label>
-                                                <input type="number" id="quoteNetListAmount" class="form-input mt-1 w-full" step="0.01" placeholder="0.00">
-                                            </div>
-                                            <div class="mb-4 w-full">
-                                                <label for="quoteNetDiscount" class="block text-sm font-medium text-gray-700">Net Discount:</label>
-                                                <input type="number" id="quoteNetDiscount" class="form-input mt-1 w-full" step="0.01" placeholder="0.00">
-                                            </div>
-                                            <div class="mb-4 w-full">
-                                                <label for="quoteNetAmount" class="block text-sm font-medium text-gray-700">Net Amount:</label>
-                                                <input type="number" id="quoteNetAmount" class="form-input mt-1 w-full" step="0.01" placeholder="0.00" readonly disabled>
-                                            </div>
-                                            <div class="mb-4 w-full">
-                                                <label for="quoteCurrency" class="block text-sm font-medium text-gray-700">Currency: <span class="text-red-500">*</span></label>
-                                                <select id="quoteCurrency" class="form-select mt-1 w-full" required>
-                                                    <!-- Currencies will be populated dynamically from Firestore -->
+                                            <div>
+                                                <label for="quoteCurrency" class="block text-gray-700 text-xs font-bold mb-1">Currency <span class="text-red-500">*</span></label>
+                                                <select id="quoteCurrency" name="currency" required
+                                                    class="shadow border rounded w-full py-1 px-2 text-gray-700 leading-tight text-sm bg-white">
                                                     <option value="">Select Currency</option>
+                                                    <!-- Options populated by JS via fetchCurrencies -->
                                                 </select>
                                             </div>
-                                            <div class="mb-4 md:col-span-2 flex items-center mt-6">
-                                                <input type="checkbox" id="quoteIsFinal" class="form-checkbox">
-                                                <label for="quoteIsFinal" class="ml-2 block text-sm font-medium text-gray-700">Is Final Quote</label>
-                                            </div>
                                         </div>
-                                        <div class="mt-4 flex justify-end space-x-3">
-                                            <button type="button" class="btn-secondary" onclick="resetQuoteForm()">Reset Quote Form</button>
-                                            <button type="submit" id="submitQuoteButton" class="btn-primary">Add Quote</button>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="quoteIsFinal" name="isFinal" class="mr-2 leading-tight">
+                                            <label for="quoteIsFinal" class="text-gray-700 text-sm">Is Final Version?</label>
+                                        </div>
+                                        <div class="flex justify-end space-x-2">
+                                            <button type="submit" id="submitQuoteButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded text-sm transition duration-150 ease-in-out">Add Quote</button>
+                                            <button type="button" id="resetQuoteFormButton" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-1 px-3 rounded text-sm transition duration-150 ease-in-out">Clear</button>
                                         </div>
                                     </form>
-
-                                    <h4 class="text-lg font-medium mb-4 text-gray-700 mt-6">Existing Quotes</h4>
-                                    <div class="data-grid-header">
-                                        <div class="px-2">Quote ID</div>
-                                        <div class="px-2">Name</div>
-                                        <div class="px-2">Status</div>
-                                        <div class="px-2">Net Amt</div>
-                                        <div class="px-2 hidden sm:block">Expire Date</div>
-                                        <div class="px-2 text-right">Actions</div>
+                                </div>
+                                <div class="py-4 border-t border-gray-200">
+                                    <h5 class="text-md font-semibold mb-2">Quotes</h5>
+                                    <div class="data-grid-header grid grid-cols-[100px_1.5fr_1fr_0.8fr_0.8fr_1fr] gap-x-2 py-1 border-b border-gray-200 font-semibold text-gray-600 text-xs">
+                                        <div class="px-1">Quote ID</div>
+                                        <div class="px-1">Name</div>
+                                        <div class="px-1">Status</div>
+                                        <div class="px-1">Amount</div>
+                                        <div class="px-1 hidden sm:block">Expire Date</div>
+                                        <div class="px-1 text-right">Actions</div>
                                     </div>
-                                    <div id="quoteList" class="data-grid-body">
+                                    <div id="quoteList" class="data-grid-body divide-y divide-gray-100 text-xs">
+                                        <!-- Quotes loaded here -->
                                         <p class="text-gray-500 text-center col-span-full py-4">No quotes added for this opportunity.</p>
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                        </div> <!-- End of linkedObjectsAccordion -->
-                    </div>
-                </div>
-            </div> <!-- End of opportunity-view-container -->
+                    </div> <!-- End Linked Objects Accordion -->
+                </div> <!-- End Right Panel -->
+            </div>
         </section>
 
         <!-- Events Section -->
-        <section id="events-section" class="hidden section">
-            <div class="card p-8 text-center">
-                <h2 class="section-title">Events Management</h2>
-                <p class="text-lg text-gray-700">This section is under construction. Stay tuned for event scheduling and tracking features!</p>
+        <section id="events-section" class="hidden container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">Upcoming Events</h2>
+            <p class="text-lg text-gray-600 mb-8">Manage your scheduled photography events here.</p>
+            <div class="bg-white rounded-lg shadow p-6">
+                <p class="text-gray-700">This section is under development. Event listing and management features will be added soon!</p>
             </div>
         </section>
 
-        <!-- Admin Country Data Mapping Section -->
-        <section id="admin-country-mapping-section" class="hidden section">
-            <h2 class="section-title">Admin: Country Data Management</h2>
-            <div class="card mb-8">
-                <h3 class="text-xl font-semibold mb-4 text-gray-800">Upload Country & State Data</h3>
-                <form id="countryMappingForm">
-                    <div class="mb-4">
-                        <label for="adminCountriesInput" class="block text-sm font-medium text-gray-700">Countries (One per line: Name,Code):</label>
-                        <textarea id="adminCountriesInput" rows="5" class="form-textarea mt-1" placeholder="United States,US
+        <!-- Admin Country Mapping Section -->
+        <section id="admin-country-mapping-section" class="hidden container mx-auto px-4 py-8">
+            <div class="bg-white rounded-lg shadow p-6 mb-8 max-w-2xl mx-auto">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Admin: Country & State Mapping</h2>
+                <form id="countryMappingForm" class="space-y-4">
+                    <div>
+                        <label for="adminCountriesInput" class="block text-gray-700 text-sm font-bold mb-2">Countries Data (CSV)</label>
+                        <textarea id="adminCountriesInput" rows="5"
+                            placeholder="Enter country data in CSV format, one country per line. Example:
+United States,US
 Canada,CA
-Mexico,MX"></textarea>
-                        <p class="text-xs text-gray-500 mt-1">Example: United States,US (each on a new line)</p>
+Mexico,MX"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Format: <code>CountryName,CountryCode</code></p>
                     </div>
-                    <div class="mb-4">
-                        <label for="adminCountryStateMapInput" class="block text-sm font-medium text-gray-700">Country-State Map (One per line: Code:State1,State2,State3):</label>
-                        <textarea id="adminCountryStateMapInput" rows="10" class="form-textarea mt-1" placeholder="US:Alabama,Alaska,Arizona
-CA:Alberta,British Columbia
-MX:Aguascalientes,Baja California"></textarea>
-                        <p class="text-xs text-gray-500 mt-1">Example: US:Alabama,Alaska,Arizona (each on a new line)</p>
+                    <div>
+                        <label for="adminCountryStateMapInput" class="block text-gray-700 text-sm font-bold mb-2">Country-State Map Data (CSV)</label>
+                        <textarea id="adminCountryStateMapInput" rows="10"
+                            placeholder="Enter country-state map data in CSV format, one country's states per line. Example:
+US:California,Texas,New York
+CA:Ontario,Quebec,British Columbia"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Format: <code>CountryCode:State1,State2,State3</code></p>
                     </div>
-                    <div class="mb-4">
-                        <div class="flex items-center space-x-4">
-                            <label class="inline-flex items-center">
-                                <input type="radio" name="loadType" id="fullLoad" value="full" class="form-radio" checked>
-                                <span class="ml-2 text-sm text-gray-700">Full Load (Overwrite)</span>
-                            </label>
-                            <label class="inline-flex items-center">
-                                <input type="radio" name="loadType" id="incrementalLoad" value="incremental" class="form-radio">
-                                <span class="ml-2 text-sm text-gray-700">Incremental Load (Merge)</span>
-                            </label>
-                        </div>
+                    <div class="flex items-center space-x-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="loadType" id="fullLoad" value="full" class="form-radio" checked>
+                            <span class="ml-2 text-gray-700">Full Load (Overwrite existing arrays, merge objects)</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="loadType" id="incrementalLoad" value="incremental" class="form-radio">
+                            <span class="ml-2 text-gray-700">Incremental Load (Merge changes)</span>
+                        </label>
                     </div>
-                    <div id="adminMessage" class="message hidden mt-4"></div>
-                    <div class="mt-6 flex justify-end">
-                        <button type="submit" id="uploadAdminDataButton" class="btn-primary" disabled>Upload Data to Firestore</button>
+                    <div class="flex items-center justify-between">
+                        <button type="submit" id="uploadAdminDataButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
+                            Upload Data to Firestore
+                        </button>
                     </div>
                 </form>
+                <div id="adminMessage" class="message hidden mt-4 text-sm px-4 py-3 rounded relative" role="alert"></div>
             </div>
         </section>
 
-        <!-- Admin Currency Management Section (NEW) -->
-        <section id="currency-management-section" class="hidden section">
-            <h2 class="section-title">Admin: Currency Management</h2>
+        <!-- Admin Currency Management Section -->
+        <section id="currency-management-section" class="hidden container mx-auto px-4 py-8">
+            <div class="bg-white rounded-lg shadow p-6 mb-8 max-w-2xl mx-auto">
+                <h2 id="currencyFormTitle" class="text-2xl font-bold mb-4 text-gray-800">Add New Currency</h2>
 
-            <div class="card mb-8">
-                <h3 id="currencyFormTitle" class="text-xl font-semibold mb-4 text-gray-800">Add New Currency</h3>
-                <form id="currencyForm">
-                    <div id="currencyCodeDisplayGroup" class="mb-4 hidden">
-                        <label for="currencyCodeDisplay" class="block text-sm font-medium text-gray-700">Currency Code:</label>
-                        <span id="currencyCodeDisplay" class="mt-1 block text-lg font-semibold text-gray-900"></span>
+                <div id="currencyCodeDisplayGroup" class="mb-4 hidden">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Currency Code (Read Only):</label>
+                    <p id="currencyCodeDisplay" class="text-lg font-semibold text-gray-900"></p>
+                </div>
+
+                <form id="currencyForm" class="space-y-4">
+                    <div>
+                        <label for="adminCurrenciesInput" class="block text-gray-700 text-sm font-bold mb-2">Currencies Data (Comma-Separated Values):</label>
+                        <textarea id="adminCurrenciesInput" rows="10"
+                            placeholder="Enter currency data in CSV format, one currency per line.
+Example:
+USD,United States Dollar,$,$
+EUR,Euro,€,€
+GBP,British Pound,£,£"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Format: <code>CurrencyCode,CurrencyName,Symbol,NativeSymbol</code>. No commas allowed within values.</p>
                     </div>
-
-                    <div class="mb-4">
-                        <label for="adminCurrenciesInput" class="block text-sm font-medium text-gray-700">
-                            Currency Data (JSON format): <span class="text-red-500">*</span>
-                            <i class="fas fa-info-circle text-gray-500 cursor-help ml-1 group relative">
-                                <span class="tooltip-text">
-                                    Paste currency data as a JSON object where keys are ISO currency codes
-                                    and values are objects with "currencyName", "symbol", and "symbol_native".
-                                    Example: {"USD": {"currencyName": "US Dollar", "symbol": "$", "symbol_native": "$"}}
-                                </span>
-                            </i>
-                        </label>
-                        <textarea id="adminCurrenciesInput" rows="10" class="form-textarea mt-1" placeholder='{
-  "USD": {
-    "currencyName": "US Dollar",
-    "symbol": "$",
-    "symbol_native": "$"
-  },
-  "EUR": {
-    "currencyName": "Euro",
-    "symbol": "€",
-    "symbol_native": "€"
-  },
-  "JPY": {
-    "currencyName": "Japanese Yen",
-    "symbol": "¥",
-    "symbol_native": "￥"
-  }
-}' required></textarea>
-                    </div>
-
-                    <div id="adminCurrencyMessage" class="message hidden mt-4"></div>
-                    <div class="mt-6 flex justify-end space-x-3">
-                        <button type="button" class="btn-secondary" onclick="resetCurrencyForm()">Reset Form</button>
-                        <button type="submit" id="submitCurrencyButton" class="btn-primary" disabled>Upload Currencies to Firestore</button>
+                    <div class="flex items-center justify-between">
+                        <button type="submit" id="submitCurrencyButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
+                            Upload Currencies to Firestore
+                        </button>
                     </div>
                 </form>
+                <div id="adminCurrencyMessage" class="message hidden mt-4 text-sm px-4 py-3 rounded relative" role="alert"></div>
             </div>
 
-            <div class="card mt-8">
-                <h3 class="text-xl font-semibold mb-4 text-gray-800">Existing Currencies</h3>
-                <div class="data-grid-header">
+            <!-- Existing currencies list below for display and editing -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-bold mb-4 text-gray-800">Existing Currencies</h3>
+                <div class="data-grid-header grid grid-cols-[0.8fr_1.5fr_0.8fr_0.8fr_1fr] gap-x-4 py-2 border-b border-gray-200 font-semibold text-gray-600 text-sm">
                     <div class="px-2">Code</div>
                     <div class="px-2">Name</div>
                     <div class="px-2">Symbol</div>
                     <div class="px-2">Native Symbol</div>
                     <div class="px-2 text-right">Actions</div>
                 </div>
-                <div id="currencyList" class="divide-y divide-gray-100">
-                    <!-- Currency rows will be dynamically inserted here by JavaScript -->
-                    <p class="text-gray-500 text-center col-span-full py-4">Loading currencies...</p>
+                <div id="currencyList" class="data-grid-body divide-y divide-gray-100">
+                    <!-- Currencies will be loaded here by JavaScript -->
+                    <p class="text-gray-500 text-center col-span-full py-4">No currencies loaded.</p>
                 </div>
             </div>
         </section>
 
         <!-- Users Management Section -->
-        <section id="users-management-section" class="hidden section">
-            <h2 class="section-title">Admin: User Management</h2>
+        <section id="users-management-section" class="hidden container mx-auto px-4 py-8">
+            <div class="bg-white rounded-lg shadow p-6 mb-8 max-w-2xl mx-auto">
+                <h2 id="userFormTitle" class="text-2xl font-bold mb-4 text-gray-800">Add New User Profile</h2>
 
-            <!-- Instructions for User Management Page -->
-            <div id="user-management-instructions" class="card bg-blue-50 border-l-4 border-blue-400 text-blue-800 p-4 mb-6" role="alert">
-                <p class="font-bold">Important Instructions for User Management:</p>
-                <ul class="list-disc list-inside mt-2 text-sm">
-                    <li>This page allows administrators to manage user profiles within ShutterSync CRM.</li>
-                    <li>
-                        **Recommended Workflow for New Users:**
-                        <ul class="list-circle list-inside ml-4 mt-1">
-                            <li>Ask new users to **first log in to the application** using their Google account (or other configured authentication method). This automatically creates their basic user entry in Firebase Authentication.</li>
-                            <li>Once they have logged in at least once, an administrator can then come to this "User Management" page.</li>
-                            <li>Find the user in the "Existing Users" list (they'll likely have the default 'User' role).</li>
-                            <li>Click "Edit" to assign them a specific role (e.g., 'Admin') and add any other profile details.</li>
-                        </ul>
-                    </li>
-                    <li>
-                        **Adding a User Profile Manually (Advanced):**
-                        If you need to add a user profile here *before* they log in (e.g., for specific setup scenarios), you **MUST** first create the user in your Firebase Console (Authentication section). Then, copy their unique **User UID** and paste it into the "User Firestore ID (UID)" field when creating their profile below.
-                    </li>
-                    <li>For existing users, the "User Firestore ID (UID)" field will be read-only during editing.</li>
-                </ul>
-            </div>
+                <div id="userIdDisplayGroup" class="mb-4">
+                    <label for="userIdDisplayInput" class="block text-gray-700 text-sm font-bold mb-2">Firebase User ID (UID) <span class="text-red-500">*</span></label>
+                    <input type="text" id="userIdDisplayInput" name="userId" placeholder="Firebase User UID (e.g., abc123def456)" required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                    <p class="text-xs text-gray-500 mt-1">This ID must match the user's UID in Firebase Authentication. For new users, create them in Firebase Authentication first.</p>
+                </div>
 
-            <div class="card mb-8">
-                <h3 id="userFormTitle" class="text-xl font-semibold mb-4 text-gray-800">Add New User Profile</h3>
-                <form id="userForm">
-                    <div id="userIdDisplayGroup" class="mb-4 relative">
-                        <label for="userIdDisplayInput" class="block text-sm font-medium text-gray-700">
-                            User Firestore ID (UID): <span class="text-red-500">*</span>
-                            <i class="fas fa-info-circle text-gray-500 cursor-help ml-1 group relative">
-                                <span class="tooltip-text">
-                                    This is the unique Firebase Authentication User ID.
-                                    Find it in your Firebase Console &gt; Authentication,
-                                    then click on the user's email to see their details. Copy the 'User UID' value.
-                                    It looks like a long string of letters and numbers (e.g., 'abcdefg12345').
-                                </span>
-                            </i>
-                        </label>
-                        <input type="text" id="userIdDisplayInput" placeholder="Enter Firebase User UID here"
-                               class="form-input mt-1" required>
-                        <p class="text-xs text-gray-500 mt-1">
-                            For new user profiles, this must be their Firebase Authentication UID.
-                            Create the user in Firebase Auth first, then paste their UID here.
-                        </p>
+                <form id="userForm" class="space-y-4">
+                    <div>
+                        <label for="userName" class="block text-gray-700 text-sm font-bold mb-2">User Name (Gmail) <span class="text-red-500">*</span></label>
+                        <input type="email" id="userName" name="userName" placeholder="user@gmail.com" required
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                        <p class="text-xs text-gray-500 mt-1">Must be a valid Gmail address.</p>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="mb-4">
-                            <label for="userName" class="block text-sm font-medium text-gray-700">User Name (Email): <span class="text-red-500">*</span></label>
-                            <input type="email" id="userName" class="form-input mt-1" placeholder="user@gmail.com" required>
+                        <div>
+                            <label for="userFirstName" class="block text-gray-700 text-sm font-bold mb-2">First Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="userFirstName" name="firstName" placeholder="Jane" required
+                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
                         </div>
-                        <div class="mb-4">
-                            <label for="userEmail" class="block text-sm font-medium text-gray-700">Contact Email: <span class="text-red-500">*</span></label>
-                            <input type="email" id="userEmail" class="form-input mt-1" placeholder="contact@example.com" required>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="mb-4">
-                            <label for="userFirstName" class="block text-sm font-medium text-gray-700">First Name: <span class="text-red-500">*</span></label>
-                            <input type="text" id="userFirstName" class="form-input mt-1" placeholder="Jane" required>
-                        </div>
-                        <div class="mb-4">
-                            <label for="userLastName" class="block text-sm font-medium text-gray-700">Last Name: <span class="text-red-500">*</span></label>
-                            <input type="text" id="userLastName" class="form-input mt-1" placeholder="Doe" required>
+                        <div>
+                            <label for="userLastName" class="block text-gray-700 text-sm font-bold mb-2">Last Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="userLastName" name="lastName" placeholder="Doe" required
+                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="mb-4">
-                            <label for="userPhone" class="block text-sm font-medium text-gray-700">Phone: <span class="text-red-500">*</span></label>
-                            <input type="tel" id="userPhone" class="form-input mt-1" placeholder="+1234567890" required>
-                        </div>
-                        <div class="mb-4">
-                            <label for="userRole" class="block text-sm font-medium text-gray-700">Role: <span class="text-red-500">*</span></label>
-                            <select id="userRole" class="form-select mt-1" required>
-                                <option value="">Select Role</option>
-                                <option value="Admin">Admin</option>
-                                <option value="User">User</option>
-                            </select>
-                        </div>
+                    <div>
+                        <label for="userEmail" class="block text-gray-700 text-sm font-bold mb-2">Contact Email <span class="text-red-500">*</span></label>
+                        <input type="email" id="userEmail" name="email" placeholder="contact@example.com" required
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                        <p class="text-xs text-gray-500 mt-1">This is a contact email, not necessarily the login email.</p>
                     </div>
-                    <div class="mb-4">
-                        <label for="userSkills" class="block text-sm font-medium text-gray-700">Skills (Comma-separated): <span class="text-red-500">*</span></label>
-                        <input type="text" id="userSkills" class="form-input mt-1" placeholder="Photography, Editing, Marketing" required>
+                    <div>
+                        <label for="userPhone" class="block text-gray-700 text-sm font-bold mb-2">Phone <span class="text-red-500">*</span></label>
+                        <input type="tel" id="userPhone" name="phone" placeholder="+1 (555) 111-2222" required
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
                     </div>
-                    <div class="mt-6 flex justify-end space-x-3">
-                        <button type="button" class="btn-secondary" onclick="resetUserForm()">Reset Form</button>
-                        <button type="submit" id="submitUserButton" class="btn-primary" disabled>Create User Profile</button>
+                    <div>
+                        <label for="userRole" class="block text-gray-700 text-sm font-bold mb-2">Role <span class="text-red-500">*</span></label>
+                        <select id="userRole" name="role" required
+                            class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 bg-white">
+                            <option value="User">User</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="userSkills" class="block text-gray-700 text-sm font-bold mb-2">Skills (comma-separated) <span class="text-red-500">*</span></label>
+                        <input type="text" id="userSkills" name="skills" placeholder="Photography, Editing, Sales" required
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <button type="submit" id="submitUserButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
+                            Create User Profile
+                        </button>
+                        <button type="button" id="resetUserFormButton" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-md focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
+                            Clear Form
+                        </button>
                     </div>
                 </form>
             </div>
 
-            <div class="card mt-8">
-                <h3 class="text-xl font-semibold mb-4 text-gray-800">Existing Users</h3>
-                <div class="data-grid-header">
-                    <div class="px-2">User ID (UID)</div>
+            <!-- Existing Users List -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-bold mb-4 text-gray-800">Existing Users</h3>
+                <div class="grid grid-cols-[100px_minmax(120px,_1.2fr)_1.5fr_1fr_1fr_1.5fr] gap-x-4 py-2 border-b border-gray-200 font-semibold text-gray-600 text-sm">
+                    <div class="px-2">User ID</div>
                     <div class="px-2">User Name</div>
                     <div class="px-2">Email</div>
                     <div class="px-2 hidden sm:block">Role</div>
                     <div class="px-2 hidden md:block">Skills</div>
                     <div class="px-2 text-right">Actions</div>
                 </div>
-                <div id="userList" class="divide-y divide-gray-100">
-                    <!-- User rows will be dynamically inserted here by JavaScript -->
-                    <p class="text-gray-500 text-center col-span-full py-4">Loading users...</p>
+                <div id="userList" class="data-grid-body divide-y divide-gray-100">
+                    <!-- User rows will be loaded here by JavaScript -->
+                    <p class="text-gray-500 text-center col-span-full py-4">No users loaded.</p>
                 </div>
             </div>
         </section>
     </main>
 
-    <script src="js/script.js" type="module"></script>
+    <script type="module" src="js/script.js"></script>
 </body>
 </html>
