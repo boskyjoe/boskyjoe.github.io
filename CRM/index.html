@@ -4,173 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShutterSync CRM</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8fafc; /* Light gray background */
-            color: #334155; /* Slate 700 */
-        }
-        /* Custom modal styles */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 0.75rem; /* rounded-lg */
-            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); /* shadow-xl */
-            max-width: 90%;
-            width: 400px;
-            text-align: center;
-            position: relative; /* For potential close button positioning */
-        }
-        .modal-actions {
-            margin-top: 1.5rem;
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-        }
-        .modal-actions button {
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem; /* rounded-md */
-            font-weight: 600; /* font-semibold */
-            cursor: pointer;
-            transition: background-color 0.2s ease-in-out;
-        }
-        .modal-actions .primary {
-            background-color: #3b82f6; /* blue-500 */
-            color: white;
-        }
-        .modal-actions .primary:hover {
-            background-color: #2563eb; /* blue-600 */
-        }
-        .modal-actions .secondary {
-            background-color: #e2e8f0; /* gray-200 */
-            color: #475569; /* slate-700 */
-        }
-        .modal-actions .secondary:hover {
-            background-color: #cbd5e1; /* gray-300 */
-        }
-
-        /* Styling for messages */
-        .message {
-            padding: 0.75rem 1.25rem;
-            border-radius: 0.5rem;
-            margin-top: 1rem;
-            font-size: 0.875rem; /* text-sm */
-            font-weight: 500; /* font-medium */
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .message.success {
-            background-color: #d1fae5; /* green-100 */
-            color: #065f46; /* green-800 */
-            border: 1px solid #34d399; /* green-400 */
-        }
-
-        .message.error {
-            background-color: #fee2e2; /* red-100 */
-            color: #991b1b; /* red-800 */
-            border: 1px solid #ef4444; /* red-400 */
-        }
-
-        /* Mobile menu specific styles */
-        #mobileMenu {
-            transition: max-height 0.3s ease-out;
-            overflow: hidden;
-            max-height: 0; /* Hidden by default */
-        }
-        #mobileMenu.open {
-            max-height: 500px; /* Adjust as needed to accommodate content */
-        }
-
-        /* Admin submenu styling */
-        .submenu {
-            padding-left: 1rem; /* Indent sub-items */
-        }
-
-        /* Grid header styling */
-        .data-grid-header {
-            @apply bg-gray-100 text-gray-600 uppercase text-xs font-semibold px-4 py-2 border-b border-gray-200 rounded-t-lg;
-            display: grid;
-            /* Grid columns will be set by specific sections */
-        }
-
-        /* Grid row styling */
-        .data-grid-row {
-            @apply border-b border-gray-100 last:border-b-0 py-2 items-center text-sm hover:bg-gray-50;
-            display: grid;
-            /* Grid columns will be set by specific sections */
-        }
-
-        /* Hide the scrollbar for webkit browsers */
-        ::-webkit-scrollbar {
-            display: none;
-        }
-
-        /* Hide scrollbar for IE, Edge and Firefox */
-        body {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-
-        /* Opportunity section layout */
-        .opportunity-panel {
-            transition: all 0.3s ease-in-out;
-        }
-        .opportunity-panel.stretch {
-            width: 100%;
-        }
-        .opportunity-panel.shrink {
-            width: 30%; /* For desktop split view */
-        }
-        .opportunity-panel.expand {
-            width: 70%; /* For desktop split view */
-        }
-        .opportunity-panel.hidden-panel {
-            display: none; /* Completely hide panel */
-        }
-
-        /* Accordion styles */
-        .accordion-header {
-            @apply cursor-pointer flex justify-between items-center bg-gray-50 p-4 border-b border-gray-200 text-lg font-semibold text-gray-800 rounded-md mb-2;
-            transition: background-color 0.2s ease;
-        }
-        .accordion-header:hover {
-            @apply bg-gray-100;
-        }
-        .accordion-header.active {
-            @apply bg-blue-50 border-blue-200 text-blue-700;
-        }
-        .accordion-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out;
-            padding: 0 1rem; /* Added padding to prevent content from touching edges */
-        }
-        .accordion-content.open {
-            max-height: 1000px; /* Adjust as needed */
-        }
-
-        /* Small stylistic adjustment for readonly inputs */
-        input[readonly] {
-            @apply bg-gray-100 cursor-not-allowed;
-        }
-
-    </style>
+    <!-- Custom CSS File -->
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="bg-gray-50">
     <!-- Modal Container -->
@@ -272,7 +111,7 @@
 
                 <div class="mb-4">
                     <label for="customerType" class="block text-sm font-medium text-gray-700 mb-1">Customer Type <span class="text-red-500">*</span></label>
-                    <select id="customerType" name="customerType" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <select id="customerType" name="customerType" required class="form-input-style">
                         <option value="Individual">Individual</option>
                         <option value="Company">Company</option>
                     </select>
@@ -282,49 +121,49 @@
                 <div id="individualFields" class="grid grid-cols-1 sm:grid-cols-2 gap-6 md:col-span-2">
                     <div class="mb-4">
                         <label for="customerFirstName" class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
-                        <input type="text" id="customerFirstName" name="firstName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <input type="text" id="customerFirstName" name="firstName" class="form-input-style">
                     </div>
                     <div class="mb-4">
                         <label for="customerLastName" class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
-                        <input type="text" id="customerLastName" name="lastName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <input type="text" id="customerLastName" name="lastName" class="form-input-style">
                     </div>
                 </div>
 
                 <!-- Fields for Company Customer Type -->
                 <div id="companyNameField" class="mb-4 md:col-span-2 hidden">
                     <label for="customerCompanyName" class="block text-sm font-medium text-gray-700 mb-1">Company Name <span class="text-red-500">*</span></label>
-                    <input type="text" id="customerCompanyName" name="companyName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <input type="text" id="customerCompanyName" name="companyName" class="form-input-style">
                 </div>
 
                 <div class="mb-4">
                     <label for="customerEmail" class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
-                    <input type="email" id="customerEmail" name="email" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <input type="email" id="customerEmail" name="email" required class="form-input-style">
                 </div>
                 <div class="mb-4">
                     <label for="customerPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone <span class="text-red-500">*</span></label>
-                    <input type="tel" id="customerPhone" name="phone" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <input type="tel" id="customerPhone" name="phone" required class="form-input-style">
                 </div>
 
-                <!-- Address Fields (NEW) -->
+                <!-- Address Fields -->
                 <div class="mb-4 md:col-span-2">
                     <label for="customerAddress" class="block text-sm font-medium text-gray-700 mb-1">Address <span class="text-red-500">*</span></label>
-                    <input type="text" id="customerAddress" name="address" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <input type="text" id="customerAddress" name="address" required class="form-input-style">
                 </div>
                 <div class="mb-4">
                     <label for="customerCity" class="block text-sm font-medium text-gray-700 mb-1">City <span class="text-red-500">*</span></label>
-                    <input type="text" id="customerCity" name="city" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <input type="text" id="customerCity" name="city" required class="form-input-style">
                 </div>
                 <div class="mb-4">
                     <label for="customerCountry" class="block text-sm font-medium text-gray-700 mb-1">Country <span class="text-red-500">*</span></label>
-                    <select id="customerCountry" name="country" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></select>
+                    <select id="customerCountry" name="country" required class="form-input-style"></select>
                 </div>
                 <div class="mb-4">
                     <label for="customerState" class="block text-sm font-medium text-gray-700 mb-1">State/Province <span class="text-red-500">*</span></label>
-                    <select id="customerState" name="state" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></select>
+                    <select id="customerState" name="state" required class="form-input-style"></select>
                 </div>
                 <div class="mb-4">
                     <label for="customerZipCode" class="block text-sm font-medium text-gray-700 mb-1">Zip Code <span class="text-red-500">*</span></label>
-                    <input type="text" id="customerZipCode" name="zipCode" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <input type="text" id="customerZipCode" name="zipCode" required class="form-input-style">
                 </div>
                 <div id="addressValidationMessage" class="md:col-span-2 text-red-600 text-sm hidden"></div>
 
@@ -332,11 +171,11 @@
                 <!-- Conditional Industry Fields -->
                 <div id="individualIndustryGroup" class="mb-4">
                     <label for="customerIndustryInput" class="block text-sm font-medium text-gray-700 mb-1">Industry (Individual) <span class="text-red-500">*</span></label>
-                    <input type="text" id="customerIndustryInput" name="industry" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <input type="text" id="customerIndustryInput" name="industry" class="form-input-style">
                 </div>
                 <div id="companyIndustryGroup" class="mb-4 hidden">
                     <label for="customerIndustrySelect" class="block text-sm font-medium text-gray-700 mb-1">Industry (Company) <span class="text-red-500">*</span></label>
-                    <select id="customerIndustrySelect" name="industry" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <select id="customerIndustrySelect" name="industry" class="form-input-style">
                         <option value="">Select Industry</option>
                         <option value="Technology">Technology</option>
                         <option value="Healthcare">Healthcare</option>
@@ -350,11 +189,11 @@
 
                 <div class="mb-4">
                     <label for="customerSince" class="block text-sm font-medium text-gray-700 mb-1">Customer Since <span class="text-red-500">*</span></label>
-                    <input type="date" id="customerSince" name="customerSince" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <input type="date" id="customerSince" name="customerSince" required class="form-input-style">
                 </div>
                 <div class="mb-4 md:col-span-2">
                     <label for="customerDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea id="customerDescription" name="description" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                    <textarea id="customerDescription" name="description" rows="3" class="form-input-style"></textarea>
                 </div>
 
                 <div class="md:col-span-2 flex justify-end space-x-3">
@@ -370,7 +209,7 @@
             <!-- Customer List -->
             <div class="mt-8 bg-white p-6 rounded-lg shadow-md overflow-x-auto">
                 <h3 class="text-2xl font-semibold text-gray-800 mb-4">Existing Customers</h3>
-                <div class="data-grid-header grid-cols-[100px_minmax(150px,_1.5fr)_1.5fr_1fr_1.5fr_1fr_0.8fr_1.5fr]">
+                <div class="data-grid-header grid grid-cols-[100px_minmax(150px,_1.5fr)_1.5fr_1fr_1.5fr_1fr_0.8fr_1.5fr]">
                     <div class="px-2 py-1">ID</div>
                     <div class="px-2 py-1">Name</div>
                     <div class="px-2 py-1">Email</div>
@@ -387,7 +226,7 @@
             </div>
         </section>
 
-        <!-- Opportunities Section (NEW Structure) -->
+        <!-- Opportunities Section -->
         <section id="opportunities-section" class="hidden bg-white p-6 rounded-lg shadow-md mb-8">
             <h2 class="text-3xl font-bold text-blue-700 mb-6">Opportunity Management</h2>
 
@@ -405,30 +244,30 @@
 
                         <div class="mb-4">
                             <label for="opportunityCustomer" class="block text-sm font-medium text-gray-700 mb-1">Customer <span class="text-red-500">*</span></label>
-                            <select id="opportunityCustomer" name="customer" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></select>
+                            <select id="opportunityCustomer" name="customer" required class="form-input-style"></select>
                         </div>
 
                         <div class="mb-4">
                             <label for="opportunityName" class="block text-sm font-medium text-gray-700 mb-1">Opportunity Name <span class="text-red-500">*</span></label>
-                            <input type="text" id="opportunityName" name="opportunityName" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <input type="text" id="opportunityName" name="opportunityName" required class="form-input-style">
                         </div>
 
                         <div class="mb-4 flex items-end">
                             <div class="flex-grow">
                                 <label for="opportunityAmount" class="block text-sm font-medium text-gray-700 mb-1">Amount <span class="text-red-500">*</span></label>
-                                <input type="number" id="opportunityAmount" name="amount" required min="0" step="0.01" class="mt-1 block w-full border border-gray-300 rounded-l-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                <input type="number" id="opportunityAmount" name="amount" required min="0" step="0.01" class="form-input-style rounded-r-none">
                             </div>
-                            <span id="currencySymbolDisplay" class="bg-gray-200 p-2 border border-gray-300 border-l-0 rounded-r-md text-gray-600"></span>
+                            <span id="currencySymbolDisplay" class="bg-gray-200 p-2 border border-gray-300 border-l-0 rounded-r-md text-gray-600 py-2 sm:text-sm flex items-center"></span>
                         </div>
 
                         <div class="mb-4">
                             <label for="opportunityCurrency" class="block text-sm font-medium text-gray-700 mb-1">Currency <span class="text-red-500">*</span></label>
-                            <select id="opportunityCurrency" name="currency" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></select>
+                            <select id="opportunityCurrency" name="currency" required class="form-input-style"></select>
                         </div>
 
                         <div class="mb-4">
                             <label for="opportunityStage" class="block text-sm font-medium text-gray-700 mb-1">Stage <span class="text-red-500">*</span></label>
-                            <select id="opportunityStage" name="stage" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <select id="opportunityStage" name="stage" required class="form-input-style">
                                 <option value="">Select Stage</option>
                                 <option value="New Lead">New Lead</option>
                                 <option value="Qualification">Qualification</option>
@@ -441,17 +280,17 @@
 
                         <div class="mb-4">
                             <label for="opportunityExpectedStartDate" class="block text-sm font-medium text-gray-700 mb-1">Expected Start Date <span class="text-red-500">*</span></label>
-                            <input type="date" id="opportunityExpectedStartDate" name="expectedStartDate" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <input type="date" id="opportunityExpectedStartDate" name="expectedStartDate" required class="form-input-style">
                         </div>
 
                         <div class="mb-4">
                             <label for="opportunityExpectedCloseDate" class="block text-sm font-medium text-gray-700 mb-1">Expected Close Date <span class="text-red-500">*</span></label>
-                            <input type="date" id="opportunityExpectedCloseDate" name="expectedCloseDate" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <input type="date" id="opportunityExpectedCloseDate" name="expectedCloseDate" required class="form-input-style">
                         </div>
 
                         <div class="mb-4">
                             <label for="opportunityEventType" class="block text-sm font-medium text-gray-700 mb-1">Event Type <span class="text-red-500">*</span></label>
-                            <select id="opportunityEventType" name="eventType" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <select id="opportunityEventType" name="eventType" required class="form-input-style">
                                 <option value="">Select Type</option>
                                 <option value="Wedding">Wedding</option>
                                 <option value="Corporate Event">Corporate Event</option>
@@ -462,22 +301,22 @@
 
                         <div class="mb-4">
                             <label for="opportunityEventLocationProposed" class="block text-sm font-medium text-gray-700 mb-1">Proposed Event Location <span class="text-red-500">*</span></label>
-                            <input type="text" id="opportunityEventLocationProposed" name="eventLocationProposed" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <input type="text" id="opportunityEventLocationProposed" name="eventLocationProposed" required class="form-input-style">
                         </div>
 
                         <div class="mb-4 md:col-span-2">
                             <label for="opportunityServiceAddress" class="block text-sm font-medium text-gray-700 mb-1">Service Address <span class="text-red-500">*</span></label>
-                            <input type="text" id="opportunityServiceAddress" name="serviceAddress" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Auto-filled from customer, or enter manually">
+                            <input type="text" id="opportunityServiceAddress" name="serviceAddress" required class="form-input-style" placeholder="Auto-filled from customer, or enter manually">
                         </div>
 
                         <div class="mb-4 md:col-span-2">
                             <label for="opportunityDescription" class="block text-sm font-medium text-gray-700 mb-1">Description <span class="text-red-500">*</span></label>
-                            <textarea id="opportunityDescription" name="description" rows="3" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                            <textarea id="opportunityDescription" name="description" rows="3" required class="form-input-style"></textarea>
                         </div>
 
                         <div class="mb-4 md:col-span-2">
                             <label for="opportunityData" class="block text-sm font-medium text-gray-700 mb-1">Additional Opportunity Data (JSON)</label>
-                            <textarea id="opportunityData" name="opportunityData" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder='{"key": "value"}'></textarea>
+                            <textarea id="opportunityData" name="opportunityData" rows="3" class="form-input-style" placeholder='{"key": "value"}'></textarea>
                             <p class="text-xs text-gray-500 mt-1">Optional: Enter valid JSON data.</p>
                         </div>
 
@@ -494,7 +333,7 @@
                     <!-- Opportunity List -->
                     <div id="opportunityExistingListView" class="mt-8 bg-white p-6 rounded-lg shadow-md overflow-x-auto">
                         <h3 class="text-2xl font-semibold text-gray-800 mb-4">Existing Opportunities</h3>
-                        <div class="data-grid-header grid-cols-[100px_minmax(120px,_1.5fr)_1fr_0.8fr_1fr_1.2fr_1.5fr_1.5fr_1fr]">
+                        <div class="data-grid-header grid grid-cols-[100px_minmax(120px,_1.5fr)_1fr_0.8fr_1fr_1.2fr_1.5fr_1.5fr_1fr]">
                             <div class="px-2 py-1">ID</div>
                             <div class="px-2 py-1">Name</div>
                             <div class="px-2 py-1">Customer</div>
@@ -541,23 +380,23 @@
                                     </div>
                                     <div>
                                         <label for="contactFirstName" class="block text-sm font-medium text-gray-700">First Name <span class="text-red-500">*</span></label>
-                                        <input type="text" id="contactFirstName" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <input type="text" id="contactFirstName" required class="form-input-style">
                                     </div>
                                     <div>
                                         <label for="contactLastName" class="block text-sm font-medium text-gray-700">Last Name <span class="text-red-500">*</span></label>
-                                        <input type="text" id="contactLastName" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <input type="text" id="contactLastName" required class="form-input-style">
                                     </div>
                                     <div>
                                         <label for="contactEmail" class="block text-sm font-medium text-gray-700">Email <span class="text-red-500">*</span></label>
-                                        <input type="email" id="contactEmail" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <input type="email" id="contactEmail" required class="form-input-style">
                                     </div>
                                     <div>
                                         <label for="contactPhone" class="block text-sm font-medium text-gray-700">Phone <span class="text-red-500">*</span></label>
-                                        <input type="tel" id="contactPhone" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <input type="tel" id="contactPhone" required class="form-input-style">
                                     </div>
                                     <div class="sm:col-span-2">
                                         <label for="contactRole" class="block text-sm font-medium text-gray-700">Role <span class="text-red-500">*</span></label>
-                                        <input type="text" id="contactRole" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <input type="text" id="contactRole" required class="form-input-style">
                                     </div>
                                     <div class="sm:col-span-2 flex justify-end space-x-2">
                                         <button type="button" id="resetOpportunityContactFormButton" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">Reset</button>
@@ -566,7 +405,7 @@
                                 </form>
                                 <div class="p-4 bg-gray-50 rounded-b-lg mt-4">
                                     <h4 class="text-lg font-semibold text-gray-800 mb-3">Linked Contacts</h4>
-                                    <div class="data-grid-header grid-cols-[100px_1fr_1fr_1fr_1.2fr_1fr]">
+                                    <div class="data-grid-header grid grid-cols-[100px_1fr_1fr_1fr_1.2fr_1fr]">
                                         <div class="px-2 py-1">ID</div>
                                         <div class="px-2 py-1">Name</div>
                                         <div class="px-2 py-1">Email</div>
@@ -596,27 +435,27 @@
                                     </div>
                                     <div class="sm:col-span-2">
                                         <label for="lineServiceDescription" class="block text-sm font-medium text-gray-700">Service Description <span class="text-red-500">*</span></label>
-                                        <input type="text" id="lineServiceDescription" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <input type="text" id="lineServiceDescription" required class="form-input-style">
                                     </div>
                                     <div>
                                         <label for="lineUnitPrice" class="block text-sm font-medium text-gray-700">Unit Price <span class="text-red-500">*</span></label>
-                                        <input type="number" id="lineUnitPrice" required min="0" step="0.01" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <input type="number" id="lineUnitPrice" required min="0" step="0.01" class="form-input-style">
                                     </div>
                                     <div>
                                         <label for="lineQuantity" class="block text-sm font-medium text-gray-700">Quantity <span class="text-red-500">*</span></label>
-                                        <input type="number" id="lineQuantity" required min="1" step="1" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <input type="number" id="lineQuantity" required min="1" step="1" class="form-input-style">
                                     </div>
                                     <div>
                                         <label for="lineDiscount" class="block text-sm font-medium text-gray-700">Discount (%)</label>
-                                        <input type="number" id="lineDiscount" min="0" max="100" step="0.01" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <input type="number" id="lineDiscount" min="0" max="100" step="0.01" class="form-input-style">
                                     </div>
                                     <div>
                                         <label for="lineNetPrice" class="block text-sm font-medium text-gray-700">Net Price</label>
-                                        <input type="text" id="lineNetPrice" readonly class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100">
+                                        <input type="text" id="lineNetPrice" readonly class="form-input-style bg-gray-100">
                                     </div>
                                     <div class="sm:col-span-2">
                                         <label for="lineStatus" class="block text-sm font-medium text-gray-700">Status <span class="text-red-500">*</span></label>
-                                        <select id="lineStatus" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <select id="lineStatus" required class="form-input-style">
                                             <option value="">Select Status</option>
                                             <option value="Active">Active</option>
                                             <option value="Cancelled">Cancelled</option>
@@ -630,7 +469,7 @@
                                 </form>
                                 <div class="p-4 bg-gray-50 rounded-b-lg mt-4">
                                     <h4 class="text-lg font-semibold text-gray-800 mb-3">Linked Lines</h4>
-                                    <div class="data-grid-header grid-cols-[100px_1.5fr_0.8fr_0.5fr_0.8fr_0.8fr_1fr]">
+                                    <div class="data-grid-header grid grid-cols-[100px_1.5fr_0.8fr_0.5fr_0.8fr_0.8fr_1fr]">
                                         <div class="px-2 py-1">ID</div>
                                         <div class="px-2 py-1">Description</div>
                                         <div class="px-2 py-1">Unit Price</div>
@@ -661,29 +500,29 @@
                                     </div>
                                     <div class="sm:col-span-2">
                                         <label for="quoteName" class="block text-sm font-medium text-gray-700">Quote Name <span class="text-red-500">*</span></label>
-                                        <input type="text" id="quoteName" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <input type="text" id="quoteName" required class="form-input-style">
                                     </div>
                                     <div class="sm:col-span-2">
                                         <label for="quoteDescription" class="block text-sm font-medium text-gray-700">Description</label>
-                                        <textarea id="quoteDescription" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"></textarea>
+                                        <textarea id="quoteDescription" rows="2" class="form-input-style"></textarea>
                                     </div>
                                     <div>
                                         <label for="quoteCustomer" class="block text-sm font-medium text-gray-700">Customer</label>
-                                        <select id="quoteCustomer" disabled class="mt-1 block w-full bg-gray-100 border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <select id="quoteCustomer" disabled class="form-input-style bg-gray-100">
                                             <option value="">Auto-filled from Opportunity</option>
                                         </select>
                                     </div>
                                     <div>
                                         <label for="quoteStartDate" class="block text-sm font-medium text-gray-700">Start Date <span class="text-red-500">*</span></label>
-                                        <input type="date" id="quoteStartDate" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <input type="date" id="quoteStartDate" required class="form-input-style">
                                     </div>
                                     <div>
                                         <label for="quoteExpireDate" class="block text-sm font-medium text-gray-700">Expire Date <span class="text-red-500">*</span></label>
-                                        <input type="date" id="quoteExpireDate" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <input type="date" id="quoteExpireDate" required class="form-input-style">
                                     </div>
                                     <div>
                                         <label for="quoteStatus" class="block text-sm font-medium text-gray-700">Status <span class="text-red-500">*</span></label>
-                                        <select id="quoteStatus" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <select id="quoteStatus" required class="form-input-style">
                                             <option value="">Select Status</option>
                                             <option value="Draft">Draft</option>
                                             <option value="Sent">Sent</option>
@@ -693,19 +532,19 @@
                                     </div>
                                     <div>
                                         <label for="quoteNetListAmount" class="block text-sm font-medium text-gray-700">Net List Amount</label>
-                                        <input type="number" id="quoteNetListAmount" min="0" step="0.01" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <input type="number" id="quoteNetListAmount" min="0" step="0.01" class="form-input-style">
                                     </div>
                                     <div>
                                         <label for="quoteNetDiscount" class="block text-sm font-medium text-gray-700">Net Discount</label>
-                                        <input type="number" id="quoteNetDiscount" min="0" step="0.01" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <input type="number" id="quoteNetDiscount" min="0" step="0.01" class="form-input-style">
                                     </div>
                                     <div>
                                         <label for="quoteNetAmount" class="block text-sm font-medium text-gray-700">Net Amount</label>
-                                        <input type="text" id="quoteNetAmount" readonly class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100">
+                                        <input type="text" id="quoteNetAmount" readonly class="form-input-style bg-gray-100">
                                     </div>
                                     <div>
                                         <label for="quoteCurrency" class="block text-sm font-medium text-gray-700">Currency <span class="text-red-500">*</span></label>
-                                        <select id="quoteCurrency" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                        <select id="quoteCurrency" required class="form-input-style">
                                             <option value="">Select Currency</option>
                                             <!-- Currencies will be populated by JS -->
                                         </select>
@@ -721,7 +560,7 @@
                                 </form>
                                 <div class="p-4 bg-gray-50 rounded-b-lg mt-4">
                                     <h4 class="text-lg font-semibold text-gray-800 mb-3">Linked Quotes</h4>
-                                    <div class="data-grid-header grid-cols-[100px_1.5fr_1fr_0.8fr_0.8fr_1fr]">
+                                    <div class="data-grid-header grid grid-cols-[100px_1.5fr_1fr_0.8fr_0.8fr_1fr]">
                                         <div class="px-2 py-1">ID</div>
                                         <div class="px-2 py-1">Name</div>
                                         <div class="px-2 py-1">Status</div>
@@ -787,7 +626,7 @@
                     <textarea id="adminCountriesInput" rows="10" placeholder="e.g.,
 United States,US
 Canada,CA
-Mexico,MX" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono"></textarea>
+Mexico,MX" class="form-input-style font-mono"></textarea>
                     <p class="text-xs text-gray-500 mt-1">Provide country Name and 2-letter Code. Each country on a new line.</p>
                 </div>
 
@@ -796,7 +635,7 @@ Mexico,MX" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm 
                     <textarea id="adminCountryStateMapInput" rows="10" placeholder="e.g.,
 US:AL,AK,AZ,AR
 CA:AB,BC,MB
-MX:AGU,BCN,BJS" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono"></textarea>
+MX:AGU,BCN,BJS" class="form-input-style font-mono"></textarea>
                     <p class="text-xs text-gray-500 mt-1">Provide Country Code followed by a colon and comma-separated states/provinces. Each country's states on a new line.</p>
                 </div>
 
@@ -829,7 +668,7 @@ MX:AGU,BCN,BJS" class="mt-1 block w-full border border-gray-300 rounded-md shado
                     <textarea id="adminCurrenciesInput" rows="5" placeholder="e.g.,
 USD,United States Dollar,$,$
 EUR,Euro,€,€
-GBP,British Pound,£,£" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono"></textarea>
+GBP,British Pound,£,£" class="form-input-style font-mono"></textarea>
                     <p class="text-xs text-gray-500 mt-1">Provide ISO 4217 Code (e.g., USD), Currency Name, Symbol, and Native Symbol. Each currency on a new line. For editing, provide only one line matching the currency's code.</p>
                 </div>
 
@@ -848,7 +687,7 @@ GBP,British Pound,£,£" class="mt-1 block w-full border border-gray-300 rounded
             <!-- Currency List -->
             <div class="mt-8 bg-white p-6 rounded-lg shadow-md overflow-x-auto">
                 <h3 class="text-2xl font-semibold text-gray-800 mb-4">Existing Currencies</h3>
-                <div class="data-grid-header grid-cols-[0.8fr_1.5fr_0.8fr_0.8fr_1fr]">
+                <div class="data-grid-header grid grid-cols-[0.8fr_1.5fr_0.8fr_0.8fr_1fr]">
                     <div class="px-2 py-1">Code</div>
                     <div class="px-2 py-1">Name</div>
                     <div class="px-2 py-1">Symbol</div>
@@ -874,34 +713,34 @@ GBP,British Pound,£,£" class="mt-1 block w-full border border-gray-300 rounded
 
                 <div id="userIdDisplayGroup" class="mb-4 md:col-span-2">
                     <label for="userIdDisplayInput" class="block text-sm font-medium text-gray-700 mb-1">Firebase User ID (UID) <span class="text-red-500">*</span></label>
-                    <input type="text" id="userIdDisplayInput" name="userId" required placeholder="Enter Firebase User UID (e.g., aBcDeFg123xyz)" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono">
+                    <input type="text" id="userIdDisplayInput" name="userId" required placeholder="Enter Firebase User UID (e.g., aBcDeFg123xyz)" class="form-input-style font-mono">
                     <p class="text-xs text-gray-500 mt-1">This is the unique ID from Firebase Authentication.</p>
                 </div>
 
                 <div class="mb-4">
                     <label for="userName" class="block text-sm font-medium text-gray-700 mb-1">User Name (Gmail Email) <span class="text-red-500">*</span></label>
-                    <input type="email" id="userName" name="userName" required placeholder="user@gmail.com" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <input type="email" id="userName" name="userName" required placeholder="user@gmail.com" class="form-input-style">
                     <p class="text-xs text-gray-500 mt-1">Must be a valid Gmail address.</p>
                 </div>
                 <div class="mb-4">
                     <label for="userFirstName" class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
-                    <input type="text" id="userFirstName" name="firstName" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <input type="text" id="userFirstName" name="firstName" required class="form-input-style">
                 </div>
                 <div class="mb-4">
                     <label for="userLastName" class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
-                    <input type="text" id="userLastName" name="lastName" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <input type="text" id="userLastName" name="lastName" required class="form-input-style">
                 </div>
                 <div class="mb-4">
                     <label for="userEmail" class="block text-sm font-medium text-gray-700 mb-1">Contact Email <span class="text-red-500">*</span></label>
-                    <input type="email" id="userEmail" name="email" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <input type="email" id="userEmail" name="email" required class="form-input-style">
                 </div>
                 <div class="mb-4">
                     <label for="userPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone <span class="text-red-500">*</span></label>
-                    <input type="tel" id="userPhone" name="phone" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <input type="tel" id="userPhone" name="phone" required class="form-input-style">
                 </div>
                 <div class="mb-4">
                     <label for="userRole" class="block text-sm font-medium text-gray-700 mb-1">Role <span class="text-red-500">*</span></label>
-                    <select id="userRole" name="role" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <select id="userRole" name="role" required class="form-input-style">
                         <option value="User">User</option>
                         <option value="Admin">Admin</option>
                     </select>
@@ -909,7 +748,7 @@ GBP,British Pound,£,£" class="mt-1 block w-full border border-gray-300 rounded
                 </div>
                 <div class="mb-4 md:col-span-2">
                     <label for="userSkills" class="block text-sm font-medium text-gray-700 mb-1">Skills (comma-separated) <span class="text-red-500">*</span></label>
-                    <input type="text" id="userSkills" name="skills" required placeholder="e.g., Photography, Editing, Marketing" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <input type="text" id="userSkills" name="skills" required placeholder="e.g., Photography, Editing, Marketing" class="form-input-style">
                     <p class="text-xs text-gray-500 mt-1">Enter skills separated by commas.</p>
                 </div>
 
@@ -927,7 +766,7 @@ GBP,British Pound,£,£" class="mt-1 block w-full border border-gray-300 rounded
             <!-- User List -->
             <div class="mt-8 bg-white p-6 rounded-lg shadow-md overflow-x-auto">
                 <h3 class="text-2xl font-semibold text-gray-800 mb-4">Existing User Profiles</h3>
-                <div class="data-grid-header grid-cols-[100px_minmax(120px,_1.2fr)_1.5fr_1fr_1fr_1.5fr]">
+                <div class="data-grid-header grid grid-cols-[100px_minmax(120px,_1.2fr)_1.5fr_1fr_1fr_1.5fr]">
                     <div class="px-2 py-1">UID</div>
                     <div class="px-2 py-1">User Name</div>
                     <div class="px-2 py-1">Contact Email</div>
