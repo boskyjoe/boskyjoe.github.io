@@ -5,13 +5,28 @@ import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection
 
 // YOUR Firebase Configuration - MANDATORY: Use __firebase_config provided by the Canvas environment.
 let firebaseConfig;
-if (typeof __firebase_config !== 'undefined') {
-    firebaseConfig = JSON.parse(__firebase_config);
-} else {
-    // Fallback for local development or if __firebase_config isn't injected (should not happen in Canvas)
-    console.warn("Using fallback Firebase config. __firebase_config not found.");
+try {
+    // Check if __firebase_config is defined and not empty, then parse it.
+    if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+        firebaseConfig = JSON.parse(__firebase_config);
+    } else {
+        // Fallback if __firebase_config is undefined, null, or an empty string.
+        console.warn("__firebase_config is undefined or empty. Using fallback Firebase config.");
+        firebaseConfig = {
+            apiKey: "YOUR_FALLBACK_API_KEY", // Replace with a dummy or actual key if testing outside Canvas
+            authDomain: "your-project-id.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project-id.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID",
+            measurementId: "YOUR_MEASUREMENT_ID"
+        };
+    }
+} catch (e) {
+    // Catch JSON parsing errors if __firebase_config is malformed.
+    console.error("Error parsing __firebase_config JSON. Using fallback.", e);
     firebaseConfig = {
-        apiKey: "YOUR_FALLBACK_API_KEY", // Replace with a dummy or actual key if testing outside Canvas
+        apiKey: "YOUR_FALLBACK_API_KEY",
         authDomain: "your-project-id.firebaseapp.com",
         projectId: "your-project-id",
         storageBucket: "your-project-id.appspot.com",
@@ -20,6 +35,7 @@ if (typeof __firebase_config !== 'undefined') {
         measurementId: "YOUR_MEASUREMENT_ID"
     };
 }
+
 
 // Use __app_id for Firestore collection paths as per mandatory instructions.
 // Fallback to projectId from firebaseConfig if __app_id is somehow not defined.
@@ -531,587 +547,592 @@ function getCurrencyName(code) {
 
 // Initialize Firebase and set up authentication listener
 async function initializeFirebase() {
-    try {
-        app = initializeApp(firebaseConfig);
-        getAnalytics(app); // Initialize Analytics
-        db = getFirestore(app);
-        auth = getAuth(app);
-
-        // --- IMPORTANT: Initialize all DOM element references here AFTER app initialization ---
-        homeSection = document.getElementById('home');
-        eventsSection = document.getElementById('events-section');
-        mobileMenu = document.getElementById('mobileMenu');
-        desktopAdminMenu = document.getElementById('desktopAdminMenu');
-        mobileAdminMenu = document.getElementById('mobileAdminMenu');
-
-        desktopAdminMenuToggle = document.getElementById('desktopAdminMenuToggle');
-        desktopAdminSubMenu = document.getElementById('desktopAdminSubMenu');
-        mobileAdminMenuToggle = document.getElementById('mobileAdminMenuToggle');
-        mobileAdminSubMenu = document.getElementById('mobileAdminSubMenu');
-
-        homeSignInMessage = document.getElementById('homeSignInMessage'); // NEW: Get reference to home sign-in message
-
-
-        opportunityLeftPanel = document.getElementById('opportunity-left-panel');
-        opportunityRightPanel = document.getElementById('opportunity-right-panel');
-        opportunityFullFormView = document.getElementById('opportunity-full-form-view');
-        opportunityExistingListView = document.getElementById('opportunity-existing-list-view');
-        // REMOVED: opportunitySummaryCard, summaryOpportunityId, summaryOpportunityName, summaryOpportunityCustomer, summaryOpportunityStage, summaryOpportunityAmount
-
-        linkedObjectsAccordion = document.getElementById('linkedObjectsAccordion');
-        contactsAccordionHeader = document.getElementById('contactsAccordionHeader');
-        contactsAccordionContent = contactsAccordionHeader ? contactsAccordionHeader.nextElementSibling : null;
-        linesAccordionHeader = document.getElementById('linesAccordionHeader');
-        linesAccordionContent = linesAccordionHeader ? linesAccordionHeader.nextElementSibling : null;
-        quotesAccordionHeader = document.getElementById('quotesAccordionHeader');
-        quotesAccordionContent = quotesAccordionHeader ? quotesAccordionHeader.nextElementSibling : null;
-
-        currencySymbolDisplay = document.getElementById('currencySymbolDisplay');
-        if (!currencySymbolDisplay) {
-            console.error("ERROR: currencySymbolDisplay element not found in the DOM! Currency symbol display may not work.");
+    // Only initialize Firebase app and services if they haven't been initialized already
+    if (!app) {
+        try {
+            app = initializeApp(firebaseConfig);
+            getAnalytics(app); // Initialize Analytics
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch (error) {
+            console.error("Error initializing Firebase services:", error);
+            showModal("Firebase Service Error", `Failed to initialize Firebase services: ${error.message}`, () => {});
+            return; // Exit if core services fail to initialize
         }
-
-        // Re-populate allSections array now that elements are initialized
-        allSections = [
-            homeSection,
-            customersSection,
-            opportunitiesSection,
-            eventsSection,
-            adminCountryMappingSection,
-            usersManagementSection,
-            authSection,
-            currencyManagementSection
-        ].filter(section => section !== null); // Filter out any that might still be null if HTML is malformed
+    }
 
 
-        // Add Event Listeners for accordions AFTER they are initialized
-        if (contactsAccordionHeader) contactsAccordionHeader.addEventListener('click', () => toggleAccordion(contactsAccordionHeader, contactsAccordionContent));
-        if (linesAccordionHeader) linesAccordionHeader.addEventListener('click', () => toggleAccordion(linesAccordionHeader, linesAccordionContent));
-        if (quotesAccordionHeader) quotesAccordionHeader.addEventListener('click', () => toggleAccordion(quotesAccordionHeader, quotesAccordionContent));
-        // REMOVED: Event listener for the summary card
+    // --- IMPORTANT: Initialize all DOM element references here AFTER app initialization ---
+    homeSection = document.getElementById('home');
+    eventsSection = document.getElementById('events-section');
+    mobileMenu = document.getElementById('mobileMenu');
+    desktopAdminMenu = document.getElementById('desktopAdminMenu');
+    mobileAdminMenu = document.getElementById('mobileAdminMenu');
 
-        // --- NEW: Admin Submenu Toggle Listeners ---
-        if (desktopAdminMenuToggle && desktopAdminMenu) { // Ensure desktopAdminMenu is parent of toggle
-            desktopAdminMenuToggle.addEventListener('click', (e) => {
-                e.preventDefault(); // Prevent default link behavior
-                // Toggle 'active' class on desktopAdminMenu (the <li> parent)
-                desktopAdminMenu.classList.toggle('active');
-            });
-        }
-        // Listener for clicks *outside* the desktop admin menu to close it
-        document.addEventListener('click', (e) => {
-            if (desktopAdminMenu && !desktopAdminMenu.contains(e.target)) {
-                // If the click is outside the desktop admin menu, close it
-                desktopAdminMenu.classList.remove('active');
-            }
+    desktopAdminMenuToggle = document.getElementById('desktopAdminMenuToggle');
+    desktopAdminSubMenu = document.getElementById('desktopAdminSubMenu');
+    mobileAdminMenuToggle = document.getElementById('mobileAdminMenuToggle');
+    mobileAdminSubMenu = document.getElementById('mobileAdminSubMenu');
+
+    homeSignInMessage = document.getElementById('homeSignInMessage'); // NEW: Get reference to home sign-in message
+
+
+    opportunityLeftPanel = document.getElementById('opportunity-left-panel');
+    opportunityRightPanel = document.getElementById('opportunity-right-panel');
+    opportunityFullFormView = document.getElementById('opportunity-full-form-view');
+    opportunityExistingListView = document.getElementById('opportunity-existing-list-view');
+    // REMOVED: opportunitySummaryCard, summaryOpportunityId, summaryOpportunityName, summaryOpportunityCustomer, summaryOpportunityStage, summaryOpportunityAmount
+
+    linkedObjectsAccordion = document.getElementById('linkedObjectsAccordion');
+    contactsAccordionHeader = document.getElementById('contactsAccordionHeader');
+    contactsAccordionContent = contactsAccordionHeader ? contactsAccordionHeader.nextElementSibling : null;
+    linesAccordionHeader = document.getElementById('linesAccordionHeader');
+    linesAccordionContent = linesAccordionHeader ? linesAccordionHeader.nextElementSibling : null;
+    quotesAccordionHeader = document.getElementById('quotesAccordionHeader');
+    quotesAccordionContent = quotesAccordionHeader ? quotesAccordionHeader.nextElementSibling : null;
+
+    currencySymbolDisplay = document.getElementById('currencySymbolDisplay');
+    if (!currencySymbolDisplay) {
+        console.error("ERROR: currencySymbolDisplay element not found in the DOM! Currency symbol display may not work.");
+    }
+
+    // Re-populate allSections array now that elements are initialized
+    allSections = [
+        homeSection,
+        customersSection,
+        opportunitiesSection,
+        eventsSection,
+        adminCountryMappingSection,
+        usersManagementSection,
+        authSection,
+        currencyManagementSection
+    ].filter(section => section !== null); // Filter out any that might still be null if HTML is malformed
+
+
+    // Add Event Listeners for accordions AFTER they are initialized
+    if (contactsAccordionHeader) contactsAccordionHeader.addEventListener('click', () => toggleAccordion(contactsAccordionHeader, contactsAccordionContent));
+    if (linesAccordionHeader) linesAccordionHeader.addEventListener('click', () => toggleAccordion(linesAccordionHeader, linesAccordionContent));
+    if (quotesAccordionHeader) quotesAccordionHeader.addEventListener('click', () => toggleAccordion(quotesAccordionHeader, quotesAccordionContent));
+    // REMOVED: Event listener for the summary card
+
+    // --- NEW: Admin Submenu Toggle Listeners ---
+    if (desktopAdminMenuToggle && desktopAdminMenu) { // Ensure desktopAdminMenu is parent of toggle
+        desktopAdminMenuToggle.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            // Toggle 'active' class on desktopAdminMenu (the <li> parent)
+            desktopAdminMenu.classList.toggle('active');
         });
-
-
-        if (mobileAdminMenuToggle && mobileAdminSubMenu) {
-            mobileAdminMenuToggle.addEventListener('click', (e) => {
-                e.preventDefault(); // Prevent default link behavior
-                // Toggle 'hidden' class on the submenu directly, as per CSS for mobile submenu
-                mobileAdminSubMenu.classList.toggle('hidden');
-            });
+    }
+    // Listener for clicks *outside* the desktop admin menu to close it
+    document.addEventListener('click', (e) => {
+        if (desktopAdminMenu && !desktopAdminMenu.contains(e.target)) {
+            // If the click is outside the desktop admin menu, close it
+            desktopAdminMenu.classList.remove('active');
         }
+    });
 
 
-        // Listen for auth state changes
-        onAuthStateChanged(auth, async (user) => {
-            isAuthReady = true; // Mark auth as ready as soon as state is known
-            console.log("onAuthStateChanged: Auth state changed. User:", user ? user.email || user.uid : "null");
-
-            if (user) {
-                currentUserId = user.uid;
-                userIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
-                mobileUserIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
-
-                // Show User ID and Logout buttons, Hide Google login buttons
-                userIdDisplay.classList.remove('hidden');
-                mobileUserIdDisplay.classList.remove('hidden');
-                navGoogleLoginButton.classList.add('hidden');
-                googleLoginButtonHome.classList.add('hidden'); // Also hide the home page login button
-                logoutButton.classList.remove('hidden');
-                mobileLogoutButton.classList.remove('hidden');
-                if (homeSignInMessage) homeSignInMessage.classList.add('hidden'); // Hide sign-in message
-
-                console.log("onAuthStateChanged: Current Firebase UID:", currentUserId);
-
-                // Fetch the user's profile document from Firestore
-                const userProfileRef = doc(db, 'users_data', user.uid);
-                const userProfileSnap = await getDoc(userProfileRef);
-
-                // MOVED THESE FETCHES HERE - AFTER AUTH STATE IS CONFIRMED
-                await Promise.all([
-                    fetchCurrencies(),
-                    fetchCountryData()
-                ]);
+    if (mobileAdminMenuToggle && mobileAdminSubMenu) {
+        mobileAdminMenuToggle.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            // Toggle 'hidden' class on the submenu directly, as per CSS for mobile submenu
+            mobileAdminSubMenu.classList.toggle('hidden');
+        });
+    }
 
 
-                if (userProfileSnap.exists()) {
-                    // Profile exists, set isAdmin based on the 'role' and `profileAccess` field
-                    const userData = userProfileSnap.data();
+    // Listen for auth state changes
+    onAuthStateChanged(auth, async (user) => {
+        isAuthReady = true; // Mark auth as ready as soon as state is known
+        console.log("onAuthStateChanged: Auth state changed. User:", user ? user.email || user.uid : "null");
 
-                    // --- ADDED DEBUG LOGGING HERE ---
-                    console.log("DEBUG: User data from Firestore - Role:", userData.role, " (Type:", typeof userData.role, ")");
-                    console.log("DEBUG: User data from Firestore - Profile Access:", userData.profileAccess, " (Type:", typeof userData.profileAccess, ")");
+        if (user) {
+            currentUserId = user.uid;
+            userIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
+            mobileUserIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
 
-                    // Ensure profileAccess is strictly boolean true
-                    isAdmin = (userData.role === 'Admin' && userData.profileAccess === true);
-                    console.log("onAuthStateChanged: User profile exists. Admin status:", isAdmin);
-                } else {
-                    // Profile does NOT exist (first login for this user)
-                    // Create a basic profile with default 'User' role
-                    try {
-                        await setDoc(userProfileRef, {
-                            userId: user.uid, // Store the Firebase Auth UID as the userId field
-                            userName: user.email || 'N/A',
-                            firstName: user.displayName ? user.displayName.split(' ')[0] : '',
-                            lastName: user.displayName ? user.displayName.split(' ').slice(1).join(' ') : '',
-                            email: user.email || 'N/A',
-                            phone: '', // Default empty
-                            role: 'User', // Default role for all new users on first login
-                            profileAccess: true // For a new user profile created on first login, allow access by default.
-                        });
-                        console.log("Basic user profile created for:", user.uid);
-                        isAdmin = false; // Explicitly set to false for newly created default 'User' profile.
-                    } catch (profileError) {
-                        console.error("Error creating basic user profile:", profileError);
-                        showModal("Profile Error", `Failed to create user profile: ${profileError.message}. Access to some features may be limited.`, () => {});
-                    }
+            // Show User ID and Logout buttons, Hide Google login buttons
+            userIdDisplay.classList.remove('hidden');
+            mobileUserIdDisplay.classList.remove('hidden');
+            navGoogleLoginButton.classList.add('hidden');
+            googleLoginButtonHome.classList.add('hidden'); // Also hide the home page login button
+            logoutButton.classList.remove('hidden');
+            mobileLogoutButton.classList.remove('hidden');
+            if (homeSignInMessage) homeSignInMessage.classList.add('hidden'); // Hide sign-in message
+
+            console.log("onAuthStateChanged: Current Firebase UID:", currentUserId);
+
+            // Fetch the user's profile document from Firestore
+            const userProfileRef = doc(db, 'users_data', user.uid);
+            const userProfileSnap = await getDoc(userProfileRef);
+
+            // MOVED THESE FETCHES HERE - AFTER AUTH STATE IS CONFIRMED
+            await Promise.all([
+                fetchCurrencies(),
+                fetchCountryData()
+            ]);
+
+
+            if (userProfileSnap.exists()) {
+                // Profile exists, set isAdmin based on the 'role' and `profileAccess` field
+                const userData = userProfileSnap.data();
+
+                // --- ADDED DEBUG LOGGING HERE ---
+                console.log("DEBUG: User data from Firestore - Role:", userData.role, " (Type:", typeof userData.role, ")");
+                console.log("DEBUG: User data from Firestore - Profile Access:", userData.profileAccess, " (Type:", typeof userData.profileAccess, ")");
+
+                // Ensure profileAccess is strictly boolean true
+                isAdmin = (userData.role === 'Admin' && userData.profileAccess === true);
+                console.log("onAuthStateChanged: User profile exists. Admin status:", isAdmin);
+            } else {
+                // Profile does NOT exist (first login for this user)
+                // Create a basic profile with default 'User' role
+                try {
+                    await setDoc(userProfileRef, {
+                        userId: user.uid, // Store the Firebase Auth UID as the userId field
+                        userName: user.email || 'N/A',
+                        firstName: user.displayName ? user.displayName.split(' ')[0] : '',
+                        lastName: user.displayName ? user.displayName.split(' ').slice(1).join(' ') : '',
+                        email: user.email || 'N/A',
+                        phone: '', // Default empty
+                        role: 'User', // Default role for all new users on first login
+                        profileAccess: true // For a new user profile created on first login, allow access by default.
+                    });
+                    console.log("Basic user profile created for:", user.uid);
+                    isAdmin = false; // Explicitly set to false for newly created default 'User' profile.
+                } catch (profileError) {
+                    console.error("Error creating basic user profile:", profileError);
+                    showModal("Profile Error", `Failed to create user profile: ${profileError.message}. Access to some features may be limited.`, () => {});
                 }
+            }
 
-                // Show/Hide Admin menus based on isAdmin flag
-                if (isAdmin) {
-                    if (desktopAdminMenu) desktopAdminMenu.classList.remove('hidden');
-                    if (mobileAdminMenu) mobileAdminMenu.classList.remove('hidden');
-                } else {
-                    if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
-                    if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
-                }
-
-                // Populate dropdowns for customer form (always needed)
-                populateCountries();
-
-                // Always redirect to home after successful authentication
-                showSection('home');
-
-
-            } else { // No user is signed in.
-                currentUserId = null;
-                isAdmin = false; // Ensure isAdmin is false when no user
-                console.log("onAuthStateChanged: No user signed in. Showing home section by default.");
-
-                // Clear loaded app-wide data when logged out
-                appCountries = [];
-                appCountryStateMap = {};
-                allCurrencies = [];
-
-                // Hide admin menus and logout buttons
-                userIdDisplay.classList.add('hidden'); // Hide desktop user ID
-                mobileUserIdDisplay.classList.add('hidden'); // Hide mobile user ID
+            // Show/Hide Admin menus based on isAdmin flag
+            if (isAdmin) {
+                if (desktopAdminMenu) desktopAdminMenu.classList.remove('hidden');
+                if (mobileAdminMenu) mobileAdminMenu.classList.remove('hidden');
+            } else {
                 if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
                 if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
-                logoutButton.classList.add('hidden');
-                mobileLogoutButton.classList.add('hidden');
-
-                // Hide admin submenus explicitly on logout
-                if (desktopAdminSubMenu) desktopAdminMenu.classList.remove('active'); // Ensure desktop dropdown is closed
-                if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden'); // Ensure mobile dropdown is closed
-
-
-                // Show Google Login buttons
-                if (navGoogleLoginButton) navGoogleLoginButton.classList.remove('hidden');
-                if (googleLoginButtonHome) googleLoginButtonHome.classList.remove('hidden'); // Show home page login button
-                if (homeSignInMessage) homeSignInMessage.classList.remove('hidden'); // Show sign-in message
-
-                // Disable all form submit buttons by default when not logged in
-                submitCustomerButton.setAttribute('disabled', 'disabled');
-                submitOpportunityButton.setAttribute('disabled', 'disabled'); // NEW
-                submitOpportunityContactButton.setAttribute('disabled', 'disabled'); // NEW
-                submitOpportunityLineButton.setAttribute('disabled', 'disabled'); // NEW
-                submitQuoteButton.setAttribute('disabled', 'disabled'); // NEW
-                uploadAdminDataButton.setAttribute('disabled', 'disabled');
-                submitUserButton.setAttribute('disabled', 'disabled');
-                submitCurrencyButton.setAttribute('disabled', 'disabled'); // NEW
-
-                // Always show the home section initially
-                showSection('home');
-                // The auth-section itself is hidden, login happens via header button
             }
-        });
 
-        // --- Event Listeners ---
-        // Customer Form Event Listener (Renamed and Updated for validation)
-        if (customerForm) {
-            customerForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
+            // Populate dropdowns for customer form (always needed)
+            populateCountries();
 
-                // Collect data from all fields, regardless of visibility, as values will be empty if hidden/optional
-                const customerData = {
-                    customerType: customerTypeSelect.value.trim(),
-                    firstName: customerFirstNameInput.value.trim(),
-                    lastName: customerLastNameInput.value.trim(),
-                    companyName: customerCompanyNameInput.value.trim(), // Use .value.trim() for company name
-                    email: customerEmailInput.value.trim(),
-                    phone: customerPhoneInput.value.trim(),
-                    // Address fields are now explicitly collected from their respective inputs
-                    country: customerCountrySelect.value.trim(),
-                    address: customerAddressInput.value.trim(),
-                    city: customerCityInput.value.trim(),
-                    state: customerStateSelect.value.trim(),
-                    zipCode: customerZipCodeInput.value.trim(),
-                    industry: '', // Will be set conditionally below
-                    customerSince: customerSinceInput.value, // Date input value is already string inYYYY-MM-DD
-                    description: customerDescriptionInput.value.trim()
-                    // customerId field will be added/updated by saveCustomer function
-                };
+            // Always redirect to home after successful authentication
+            showSection('home');
 
-                // Set the correct industry value based on customer type
-                if (customerTypeSelect.value === 'Individual') {
-                    customerData.industry = customerIndustryInput.value.trim();
-                } else if (customerTypeSelect.value === 'Company') {
-                    customerData.industry = customerIndustrySelect.value.trim();
-                }
 
-                const editingId = customerForm.dataset.editingId; // This is the Firestore auto-generated doc ID
+        } else { // No user is signed in.
+            currentUserId = null;
+            isAdmin = false; // Ensure isAdmin is false when no user
+            console.log("onAuthStateChanged: No user signed in. Showing home section by default.");
 
-                await saveCustomer(customerData, editingId || null);
-            });
+            // Clear loaded app-wide data when logged out
+            appCountries = [];
+            appCountryStateMap = {};
+            allCurrencies = [];
+
+            // Hide admin menus and logout buttons
+            userIdDisplay.classList.add('hidden'); // Hide desktop user ID
+            mobileUserIdDisplay.classList.add('hidden'); // Hide mobile user ID
+            if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
+            if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
+            logoutButton.classList.add('hidden');
+            mobileLogoutButton.classList.add('hidden');
+
+            // Hide admin submenus explicitly on logout
+            if (desktopAdminSubMenu) desktopAdminMenu.classList.remove('active'); // Ensure desktop dropdown is closed
+            if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden'); // Ensure mobile dropdown is closed
+
+
+            // Show Google Login buttons
+            if (navGoogleLoginButton) navGoogleLoginButton.classList.remove('hidden');
+            if (googleLoginButtonHome) googleLoginButtonHome.classList.remove('hidden'); // Show home page login button
+            if (homeSignInMessage) homeSignInMessage.classList.remove('hidden'); // Show sign-in message
+
+            // Disable all form submit buttons by default when not logged in
+            submitCustomerButton.setAttribute('disabled', 'disabled');
+            submitOpportunityButton.setAttribute('disabled', 'disabled'); // NEW
+            submitOpportunityContactButton.setAttribute('disabled', 'disabled'); // NEW
+            submitOpportunityLineButton.setAttribute('disabled', 'disabled'); // NEW
+            submitQuoteButton.setAttribute('disabled', 'disabled'); // NEW
+            uploadAdminDataButton.setAttribute('disabled', 'disabled');
+            submitUserButton.setAttribute('disabled', 'disabled');
+            submitCurrencyButton.setAttribute('disabled', 'disabled'); // NEW
+
+            // Always show the home section initially
+            showSection('home');
+            // The auth-section itself is hidden, login happens via header button
         }
-        // Opportunity Form Event Listener (NEW and UPDATED for currency symbol)
-        if (opportunityForm) {
-            opportunityForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
+    });
 
-                const opportunityData = {
-                    customer: opportunityCustomerSelect.value, // This is the Firestore customer document ID
-                    opportunityName: opportunityNameInput.value,
-                    amount: opportunityAmountInput.value, // Will be parsed to float in saveOpportunity
-                    currency: opportunityCurrencySelect.value,
-                    stage: opportunityStageSelect.value,
-                    expectedStartDate: opportunityExpectedStartDateInput.value,
-                    expectedCloseDate: opportunityExpectedCloseDateInput.value,
-                    eventType: opportunityEventTypeSelect.value,
-                    eventLocationProposed: opportunityEventLocationProposedInput.value,
-                    serviceAddress: opportunityServiceAddressInput.value, // NEW Field
-                    description: opportunityDescriptionInput.value,
-                    opportunityData: opportunityDataInput.value, // Can be JSON string or plain text, will be parsed if possible
-                };
+    // --- Event Listeners ---
+    // Customer Form Event Listener (Renamed and Updated for validation)
+    if (customerForm) {
+        customerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-                const editingId = opportunityForm.dataset.editingId;
-                await saveOpportunity(opportunityData, editingId || null);
-            });
-        }
+            // Collect data from all fields, regardless of visibility, as values will be empty if hidden/optional
+            const customerData = {
+                customerType: customerTypeSelect.value.trim(),
+                firstName: customerFirstNameInput.value.trim(),
+                lastName: customerLastNameInput.value.trim(),
+                companyName: customerCompanyNameInput.value.trim(), // Use .value.trim() for company name
+                email: customerEmailInput.value.trim(),
+                phone: customerPhoneInput.value.trim(),
+                // Address fields are now explicitly collected from their respective inputs
+                country: customerCountrySelect.value.trim(),
+                address: customerAddressInput.value.trim(),
+                city: customerCityInput.value.trim(),
+                state: customerStateSelect.value.trim(),
+                zipCode: customerZipCodeInput.value.trim(),
+                industry: '', // Will be set conditionally below
+                customerSince: customerSinceInput.value, // Date input value is already string inYYYY-MM-DD
+                description: customerDescriptionInput.value.trim()
+                // customerId field will be added/updated by saveCustomer function
+            };
 
-        // Event listener for currency select change to update the symbol display
-        if (opportunityCurrencySelect) {
-            opportunityCurrencySelect.addEventListener('change', updateCurrencySymbolDisplay);
-        }
-
-
-        // Opportunity Contact Form Event Listener (NEW)
-        if (opportunityContactForm) {
-            opportunityContactForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const contactData = {
-                    firstName: contactFirstNameInput.value,
-                    lastName: contactLastNameInput.value,
-                    email: contactEmailInput.value,
-                    phone: contactPhoneInput.value,
-                    role: contactRoleInput.value
-                };
-                const editingId = opportunityContactForm.dataset.editingId;
-                await saveOpportunityContact(contactData, editingId || null);
-            });
-        }
-
-        // Opportunity Line Form Event Listener (NEW - STUB)
-        if (opportunityLineForm) {
-            opportunityLineForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const lineData = {
-                    serviceDescription: lineServiceDescriptionInput.value,
-                    unitPrice: lineUnitPriceInput.value,
-                    quantity: lineQuantityInput.value,
-                    discount: lineDiscountInput.value,
-                    netPrice: lineNetPriceInput.value, // This will be calculated in saveOpportunityLine
-                    status: lineStatusSelect.value
-                };
-                const editingId = opportunityLineForm.dataset.editingId;
-                await saveOpportunityLine(lineData, editingId || null);
-            });
-        }
-
-        // Quote Form Event Listener (NEW - STUB)
-        if (quoteForm) {
-            quoteForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const quoteData = {
-                    quoteName: quoteNameInput.value,
-                    quoteDescription: quoteDescriptionInput.value,
-                    customer: quoteCustomerSelect.value, // This is linked to the opportunity's customer
-                    startDate: quoteStartDateInput.value,
-                    expireDate: quoteExpireDateInput.value,
-                    quoteStatus: quoteStatusSelect.value,
-                    quoteNetListAmount: quoteNetListAmountInput.value,
-                    quoteNetDiscount: quoteNetDiscountInput.value,
-                    quoteNetAmount: quoteNetAmountInput.value, // This will be calculated in saveQuote
-                    quoteCurrency: quoteCurrencySelect.value,
-                    isFinal: quoteIsFinalCheckbox.checked
-                };
-                const editingId = quoteForm.dataset.editingId;
-                await saveQuote(quoteData, editingId || null);
-            });
-        }
-
-
-        // Mobile Menu Button Event Listener
-        if (mobileMenuButton) {
-            mobileMenuButton.addEventListener('click', () => {
-                if (mobileMenu) mobileMenu.classList.toggle('open'); // Toggle 'open' class for max-height transition
-                // Close admin submenus if mobile menu is closed or being opened/closed
-                if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden');
-            });
-        }
-
-
-        // Navigation Links Event Listeners
-        document.querySelectorAll('nav a').forEach(link => {
-            // Only add listener if the link has a data-section attribute
-            if (link.dataset.section) {
-                link.addEventListener('click', (e) => {
-                    e.preventDefault(); // Prevent default link behavior
-                    showSection(link.dataset.section); // Call showSection with the target section ID
-                });
+            // Set the correct industry value based on customer type
+            if (customerTypeSelect.value === 'Individual') {
+                customerData.industry = customerIndustryInput.value.trim();
+            } else if (customerTypeSelect.value === 'Company') {
+                customerData.industry = customerIndustrySelect.value.trim();
             }
+
+            const editingId = customerForm.dataset.editingId; // This is the Firestore auto-generated doc ID
+
+            await saveCustomer(customerData, editingId || null);
         });
-
-
-        // Event listener for the Google Login Button in the header (nav bar)
-        if (navGoogleLoginButton) {
-            navGoogleLoginButton.addEventListener('click', handleGoogleLogin);
-        }
-
-        // Event listener for the Google Login button on the Home section
-        if (googleLoginButtonHome) {
-            googleLoginButtonHome.addEventListener('click', handleGoogleLogin);
-        }
-
-        // Add event listeners for logout buttons
-        if (logoutButton) {
-            logoutButton.addEventListener('click', async () => {
-                try {
-                    await signOut(auth);
-                    console.log("User signed out.");
-                    // onAuthStateChanged will handle UI updates
-                } catch (error) {
-                    console.error("Error signing out:", error);
-                    showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
-                }
-            });
-        }
-
-        if (mobileLogoutButton) {
-            mobileLogoutButton.addEventListener('click', async () => {
-                try {
-                    await signOut(auth);
-                    console.log("User signed out.");
-                    // onAuthStateChanged will handle UI updates
-                }
-                catch (error) {
-                    console.error("Error signing out:", error);
-                    showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
-                }
-            });
-        }
-
-        // Admin Country Mapping Form Event Listener
-        if (document.getElementById('countryMappingForm')) {
-            document.getElementById('countryMappingForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                if (adminMessageDiv) adminMessageDiv.classList.add('hidden'); // Clear previous messages
-                if (uploadAdminDataButton) {
-                    uploadAdminDataButton.disabled = true;
-                    uploadAdminDataButton.textContent = 'Uploading...';
-                }
-
-
-                const countriesString = adminCountriesInput.value;
-                const countryStateMapString = adminCountryStateMapInput.value;
-                const isFullLoad = fullLoadRadio.checked;
-
-                // Parse countries string into array of objects (newline-separated, filter unique codes)
-                function parseCountries(countriesString) {
-                    const uniqueCodes = new Set();
-                    const parsedCountries = [];
-                    const duplicatesFound = [];
-
-                    if (!countriesString.trim()) return [];
-
-                    countriesString.split('\n').forEach(line => {
-                        const parts = line.split(',');
-                        if (parts.length === 2) {
-                            const name = parts[0].trim();
-                            const code = parts[1].trim();
-                            if (name !== '' && code !== '') {
-                                if (uniqueCodes.has(code)) {
-                                    duplicatesFound.push(code);
-                                } else {
-                                    uniqueCodes.add(code);
-                                    parsedCountries.push({ name, code });
-                                }
-                            }
-                        }
-                    });
-
-                    if (duplicatesFound.length > 0) {
-                        const msg = `Warning: Duplicate country codes found and ignored: ${duplicatesFound.join(', ')}. Only the first occurrence was used.`;
-                        if (adminMessageDiv) {
-                            adminMessageDiv.textContent = msg;
-                            adminMessageDiv.className = 'message error'; // Use error styling for warnings too
-                            adminMessageDiv.classList.remove('hidden');
-                        }
-                        console.warn(msg);
-                    }
-                    return parsedCountries;
-                }
-
-                // Parse countryStateMap string into an object (newline-separated)
-                function parseCountryStateMap(mapString) {
-                    const map = {};
-                    if (!mapString.trim()) return map;
-                    mapString.split('\n').forEach(line => { // Changed split delimiter to newline
-                        const parts = line.split(':');
-                        if (parts.length === 2) {
-                            const countryCode = parts[0].trim();
-                            const states = parts[1].split(',').map(s => s.trim()).filter(s => s !== ''); // Filter empty states
-                            if (countryCode !== '') { // Only add if country code is not empty
-                                map[countryCode] = states;
-                            }
-                        }
-                    });
-                    return map;
-                }
-
-                const dataToUpload = {};
-                let hasValidDataForUpload = false;
-
-                // Process countries data
-                const parsedCountries = parseCountries(countriesString);
-                if (parsedCountries.length > 0) {
-                    dataToUpload.countries = parsedCountries;
-                    hasValidDataForUpload = true;
-                }
-
-                // Process countryStateMap data
-                const parsedCountryStateMap = parseCountryStateMap(countryStateMapString);
-                if (Object.keys(parsedCountryStateMap).length > 0) {
-                    dataToUpload.countryStateMap = parsedCountryStateMap;
-                    hasValidDataForUpload = true;
-                }
-
-                // Special case: If full load is selected and BOTH textareas are empty, this means clearing the document.
-                // Otherwise, if a textarea is empty, its corresponding field will not be included in dataToUpload
-                // and thus not affected by merge:true.
-                if (!hasValidDataForUpload && isFullLoad) {
-                    // If full load is selected AND no valid data was parsed from EITHER textarea,
-                    // it implies the user wants to completely clear both fields.
-                    dataToUpload.countries = [];
-                    dataToUpload.countryStateMap = {};
-                    hasValidDataForUpload = true; // Mark as having intent to update (with empty data)
-                } else if (!hasValidDataForUpload && !isFullLoad) {
-                    // If incremental load is selected AND no valid data was parsed,
-                    // there's nothing to update.
-                    if (adminMessageDiv) {
-                        adminMessageDiv.textContent = 'No valid data provided for update.';
-                        adminMessageDiv.className = 'message error';
-                        adminMessageDiv.classList.remove('hidden');
-                    }
-                    if (uploadAdminDataButton) {
-                        uploadAdminDataButton.disabled = false;
-                        uploadAdminDataButton.textContent = 'Upload Data to Firestore';
-                    }
-                    return;
-                }
-
-                try {
-                    const docRef = doc(db, "app_metadata", "countries_states");
-                    // Always use merge: true to avoid deleting unspecified fields.
-                    // If the user wants to empty a field, they have to ensure the parsed array/object is empty.
-                    await setDoc(docRef, dataToUpload, { merge: true });
-
-                    if (adminMessageDiv) {
-                        adminMessageDiv.textContent = `Data uploaded successfully (${isFullLoad ? 'Full Load (Merge)' : 'Incremental Load'})!`;
-                        adminMessageDiv.className = 'message success';
-                        adminMessageDiv.classList.remove('hidden');
-                    }
-                    console.log("Admin data upload successful:", dataToUpload);
-
-                    // Re-fetch data for CRM forms and populate dropdowns after successful admin update
-                    await fetchCountryData();
-                    populateCountries();
-
-                } catch (error) {
-                    console.error("Error uploading admin data:", error);
-                    if (adminMessageDiv) {
-                        adminMessageDiv.textContent = `Error uploading data: ${error.message}`;
-                        adminMessageDiv.className = 'message error';
-                        adminMessageDiv.classList.remove('hidden');
-                    }
-                } finally {
-                    if (uploadAdminDataButton) {
-                        uploadAdminDataButton.disabled = false;
-                        uploadAdminDataButton.textContent = 'Upload Data to Firestore';
-                    }
-                }
-            });
-        }
-
-        // Admin Currency Form Event Listener (NEW)
-        if (currencyForm) {
-            currencyForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const editingId = currencyForm.dataset.editingId;
-                // For CSV, currencyData parameter is not directly used, as the function reads from the textarea.
-                await saveCurrency(null, editingId || null);
-            });
-        }
-
-
-        // User Form Event Listener
-        if (userForm) {
-            userForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const userData = {
-                    userName: userNameInput.value.trim(),
-                    firstName: userFirstNameInput.value.trim(),
-                    lastName: userLastNameInput.value.trim(),
-                    email: userEmailInput.value.trim(),
-                    phone: userPhoneInput.value.trim(),
-                    role: userRoleSelect.value.trim(), // Get value from select
-                    skills: userSkillsInput.value.trim(), // Will be parsed to array in saveUser
-                };
-                const editingId = userForm.dataset.editingId; // This is the Firestore document ID if editing
-                await saveUser(userData, editingId || null);
-            });
-        }
-
-
-        // Reset Form Buttons - add event listeners
-        document.getElementById('resetCustomerFormButton')?.addEventListener('click', resetCustomerForm);
-        document.getElementById('resetOpportunityFormButton')?.addEventListener('click', resetOpportunityForm);
-        document.getElementById('resetOpportunityContactFormButton')?.addEventListener('click', resetOpportunityContactForm);
-        document.getElementById('resetOpportunityLineFormButton')?.addEventListener('click', resetOpportunityLineForm);
-        document.getElementById('resetQuoteFormButton')?.addEventListener('click', resetQuoteForm);
-        document.getElementById('resetUserFormButton')?.addEventListener('click', resetUserForm);
-        document.getElementById('resetCurrencyFormButton')?.addEventListener('click', resetCurrencyForm); // NEW
-
-
-    } catch (error) {
-        console.error("Error initializing Firebase application:", error);
-        showModal("Firebase Initialization Error", `Initialization failed: ${error.message}`, () => {});
     }
+    // Opportunity Form Event Listener (NEW and UPDATED for currency symbol)
+    if (opportunityForm) {
+        opportunityForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const opportunityData = {
+                customer: opportunityCustomerSelect.value, // This is the Firestore customer document ID
+                opportunityName: opportunityNameInput.value,
+                amount: opportunityAmountInput.value, // Will be parsed to float in saveOpportunity
+                currency: opportunityCurrencySelect.value,
+                stage: opportunityStageSelect.value,
+                expectedStartDate: opportunityExpectedStartDateInput.value,
+                expectedCloseDate: opportunityExpectedCloseDateInput.value,
+                eventType: opportunityEventTypeSelect.value,
+                eventLocationProposed: opportunityEventLocationProposedInput.value,
+                serviceAddress: opportunityServiceAddressInput.value, // NEW Field
+                description: opportunityDescriptionInput.value,
+                opportunityData: opportunityDataInput.value, // Can be JSON string or plain text, will be parsed if possible
+            };
+
+            const editingId = opportunityForm.dataset.editingId;
+            await saveOpportunity(opportunityData, editingId || null);
+        });
+    }
+
+    // Event listener for currency select change to update the symbol display
+    if (opportunityCurrencySelect) {
+        opportunityCurrencySelect.addEventListener('change', updateCurrencySymbolDisplay);
+    }
+
+
+    // Opportunity Contact Form Event Listener (NEW)
+    if (opportunityContactForm) {
+        opportunityContactForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const contactData = {
+                firstName: contactFirstNameInput.value,
+                lastName: contactLastNameInput.value,
+                email: contactEmailInput.value,
+                phone: contactPhoneInput.value,
+                role: contactRoleInput.value
+            };
+            const editingId = opportunityContactForm.dataset.editingId;
+            await saveOpportunityContact(contactData, editingId || null);
+        });
+    }
+
+    // Opportunity Line Form Event Listener (NEW - STUB)
+    if (opportunityLineForm) {
+        opportunityLineForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const lineData = {
+                serviceDescription: lineServiceDescriptionInput.value,
+                unitPrice: lineUnitPriceInput.value,
+                quantity: lineQuantityInput.value,
+                discount: lineDiscountInput.value,
+                netPrice: lineNetPriceInput.value, // This will be calculated in saveOpportunityLine
+                status: lineStatusSelect.value
+            };
+            const editingId = opportunityLineForm.dataset.editingId;
+            await saveOpportunityLine(lineData, editingId || null);
+        });
+    }
+
+    // Quote Form Event Listener (NEW - STUB)
+    if (quoteForm) {
+        quoteForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const quoteData = {
+                quoteName: quoteNameInput.value,
+                quoteDescription: quoteDescriptionInput.value,
+                customer: quoteCustomerSelect.value, // This is linked to the opportunity's customer
+                startDate: quoteStartDateInput.value,
+                expireDate: quoteExpireDateInput.value,
+                quoteStatus: quoteStatusSelect.value,
+                quoteNetListAmount: quoteNetListAmountInput.value,
+                quoteNetDiscount: quoteNetDiscountInput.value,
+                quoteNetAmount: quoteNetAmountInput.value, // This will be calculated in saveQuote
+                quoteCurrency: quoteCurrencySelect.value,
+                isFinal: quoteIsFinalCheckbox.checked
+            };
+            const editingId = quoteForm.dataset.editingId;
+            await saveQuote(quoteData, editingId || null);
+        });
+    }
+
+
+    // Mobile Menu Button Event Listener
+    if (mobileMenuButton) {
+        mobileMenuButton.addEventListener('click', () => {
+            if (mobileMenu) mobileMenu.classList.toggle('open'); // Toggle 'open' class for max-height transition
+            // Close admin submenus if mobile menu is closed or being opened/closed
+            if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden');
+        });
+    }
+
+
+    // Navigation Links Event Listeners
+    document.querySelectorAll('nav a').forEach(link => {
+        // Only add listener if the link has a data-section attribute
+        if (link.dataset.section) {
+            link.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                showSection(link.dataset.section); // Call showSection with the target section ID
+            });
+        }
+    });
+
+
+    // Event listener for the Google Login Button in the header (nav bar)
+    if (navGoogleLoginButton) {
+        navGoogleLoginButton.addEventListener('click', handleGoogleLogin);
+    }
+
+    // Event listener for the Google Login button on the Home section
+    if (googleLoginButtonHome) {
+        googleLoginButtonHome.addEventListener('click', handleGoogleLogin);
+    }
+
+    // Add event listeners for logout buttons
+    if (logoutButton) {
+        logoutButton.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                console.log("User signed out.");
+                // onAuthStateChanged will handle UI updates
+            } catch (error) {
+                console.error("Error signing out:", error);
+                showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
+            }
+        });
+    }
+
+    if (mobileLogoutButton) {
+        mobileLogoutButton.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                console.log("User signed out.");
+                // onAuthStateChanged will handle UI updates
+            }
+            catch (error) {
+                console.error("Error signing out:", error);
+                showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
+            }
+        });
+    }
+
+    // Admin Country Mapping Form Event Listener
+    if (document.getElementById('countryMappingForm')) {
+        document.getElementById('countryMappingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (adminMessageDiv) adminMessageDiv.classList.add('hidden'); // Clear previous messages
+            if (uploadAdminDataButton) {
+                uploadAdminDataButton.disabled = true;
+                uploadAdminDataButton.textContent = 'Uploading...';
+            }
+
+
+            const countriesString = adminCountriesInput.value;
+            const countryStateMapString = adminCountryStateMapInput.value;
+            const isFullLoad = fullLoadRadio.checked;
+
+            // Parse countries string into array of objects (newline-separated, filter unique codes)
+            function parseCountries(countriesString) {
+                const uniqueCodes = new Set();
+                const parsedCountries = [];
+                const duplicatesFound = [];
+
+                if (!countriesString.trim()) return [];
+
+                countriesString.split('\n').forEach(line => {
+                    const parts = line.split(',');
+                    if (parts.length === 2) {
+                        const name = parts[0].trim();
+                        const code = parts[1].trim();
+                        if (name !== '' && code !== '') {
+                            if (uniqueCodes.has(code)) {
+                                duplicatesFound.push(code);
+                            } else {
+                                uniqueCodes.add(code);
+                                parsedCountries.push({ name, code });
+                            }
+                        }
+                    }
+                });
+
+                if (duplicatesFound.length > 0) {
+                    const msg = `Warning: Duplicate country codes found and ignored: ${duplicatesFound.join(', ')}. Only the first occurrence was used.`;
+                    if (adminMessageDiv) {
+                        adminMessageDiv.textContent = msg;
+                        adminMessageDiv.className = 'message error'; // Use error styling for warnings too
+                        adminMessageDiv.classList.remove('hidden');
+                    }
+                    console.warn(msg);
+                }
+                return parsedCountries;
+            }
+
+            // Parse countryStateMap string into an object (newline-separated)
+            function parseCountryStateMap(mapString) {
+                const map = {};
+                if (!mapString.trim()) return map;
+                mapString.split('\n').forEach(line => { // Changed split delimiter to newline
+                    const parts = line.split(':');
+                    if (parts.length === 2) {
+                        const countryCode = parts[0].trim();
+                        const states = parts[1].split(',').map(s => s.trim()).filter(s => s !== ''); // Filter empty states
+                        if (countryCode !== '') { // Only add if country code is not empty
+                            map[countryCode] = states;
+                        }
+                    }
+                });
+                return map;
+            }
+
+            const dataToUpload = {};
+            let hasValidDataForUpload = false;
+
+            // Process countries data
+            const parsedCountries = parseCountries(countriesString);
+            if (parsedCountries.length > 0) {
+                dataToUpload.countries = parsedCountries;
+                hasValidDataForUpload = true;
+            }
+
+            // Process countryStateMap data
+            const parsedCountryStateMap = parseCountryStateMap(countryStateMapString);
+            if (Object.keys(parsedCountryStateMap).length > 0) {
+                dataToUpload.countryStateMap = parsedCountryStateMap;
+                hasValidDataForUpload = true;
+            }
+
+            // Special case: If full load is selected and BOTH textareas are empty, this means clearing the document.
+            // Otherwise, if a textarea is empty, its corresponding field will not be included in dataToUpload
+            // and thus not affected by merge:true.
+            if (!hasValidDataForUpload && isFullLoad) {
+                // If full load is selected AND no valid data was parsed from EITHER textarea,
+                // it implies the user wants to completely clear both fields.
+                dataToUpload.countries = [];
+                dataToUpload.countryStateMap = {};
+                hasValidDataForUpload = true; // Mark as having intent to update (with empty data)
+            } else if (!hasValidDataForUpload && !isFullLoad) {
+                // If incremental load is selected AND no valid data was parsed,
+                // there's nothing to update.
+                if (adminMessageDiv) {
+                    adminMessageDiv.textContent = 'No valid data provided for update.';
+                    adminMessageDiv.className = 'message error';
+                    adminMessageDiv.classList.remove('hidden');
+                }
+                if (uploadAdminDataButton) {
+                    uploadAdminDataButton.disabled = false;
+                    uploadAdminDataButton.textContent = 'Upload Data to Firestore';
+                }
+                return;
+            }
+
+            try {
+                const docRef = doc(db, "app_metadata", "countries_states");
+                // Always use merge: true to avoid deleting unspecified fields.
+                // If the user wants to empty a field, they have to ensure the parsed array/object is empty.
+                await setDoc(docRef, dataToUpload, { merge: true });
+
+                if (adminMessageDiv) {
+                    adminMessageDiv.textContent = `Data uploaded successfully (${isFullLoad ? 'Full Load (Merge)' : 'Incremental Load'})!`;
+                    adminMessageDiv.className = 'message success';
+                    adminMessageDiv.classList.remove('hidden');
+                }
+                console.log("Admin data upload successful:", dataToUpload);
+
+                // Re-fetch data for CRM forms and populate dropdowns after successful admin update
+                await fetchCountryData();
+                populateCountries();
+
+            } catch (error) {
+                console.error("Error uploading admin data:", error);
+                if (adminMessageDiv) {
+                    adminMessageDiv.textContent = `Error uploading data: ${error.message}`;
+                    adminMessageDiv.className = 'message error';
+                    adminMessageDiv.classList.remove('hidden');
+                }
+            } finally {
+                if (uploadAdminDataButton) {
+                    uploadAdminDataButton.disabled = false;
+                    uploadAdminDataButton.textContent = 'Upload Data to Firestore';
+                }
+            }
+        });
+    }
+
+    // Admin Currency Form Event Listener (NEW)
+    if (currencyForm) {
+        currencyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const editingId = currencyForm.dataset.editingId;
+            // For CSV, currencyData parameter is not directly used, as the function reads from the textarea.
+            await saveCurrency(null, editingId || null);
+        });
+    }
+
+
+    // User Form Event Listener
+    if (userForm) {
+        userForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userData = {
+                userName: userNameInput.value.trim(),
+                firstName: userFirstNameInput.value.trim(),
+                lastName: userLastNameInput.value.trim(),
+                email: userEmailInput.value.trim(),
+                phone: userPhoneInput.value.trim(),
+                role: userRoleSelect.value.trim(), // Get value from select
+                skills: userSkillsInput.value.trim(), // Will be parsed to array in saveUser
+            };
+            const editingId = userForm.dataset.editingId; // This is the Firestore document ID if editing
+            await saveUser(userData, editingId || null);
+        });
+    }
+
+
+    // Reset Form Buttons - add event listeners
+    document.getElementById('resetCustomerFormButton')?.addEventListener('click', resetCustomerForm);
+    document.getElementById('resetOpportunityFormButton')?.addEventListener('click', resetOpportunityForm);
+    document.getElementById('resetOpportunityContactFormButton')?.addEventListener('click', resetOpportunityContactForm);
+    document.getElementById('resetOpportunityLineFormButton')?.addEventListener('click', resetOpportunityLineForm);
+    document.getElementById('resetQuoteFormButton')?.addEventListener('click', resetQuoteForm);
+    document.getElementById('resetUserFormButton')?.addEventListener('click', resetUserForm);
+    document.getElementById('resetCurrencyFormButton')?.addEventListener('click', resetCurrencyForm); // NEW
+
+
 }
 
 // Determine the Firestore collection path based on type and user ID
@@ -2796,6 +2817,7 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
         console.log("Admin currency data upload process finished.");
 
         await fetchCurrencies(); // Re-fetch all currencies to update the global array
+        populateCurrencySelect(); // Update opportunity form dropdown
         resetCurrencyForm();
     } catch (error) {
         console.error("Error uploading currency data (caught in try-catch):", error);
