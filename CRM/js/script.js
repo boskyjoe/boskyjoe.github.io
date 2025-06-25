@@ -624,7 +624,15 @@ async function initializeFirebase() {
                             phone: '', // Default empty
                             role: 'User', // Default role for all new users on first login
                             skills: [], // Default empty array
-                            profileAccess: true // Default access for all new users
+                            // profileAccess will be determined by the saveUser function for new users now,
+                            // but for the initial profile creation via onAuthStateChanged,
+                            // it should default to false if the role is User, and true if role is Admin (not applicable here).
+                            // For a user created with 'User' role, profileAccess should be false unless explicitly set to true by an Admin.
+                            // However, for initial login, if the profile isn't there, we *must* give them access to *some* sections.
+                            // The `isAdmin` logic handles showing/hiding admin sections.
+                            // So, let's set profileAccess to true for first-time login to allow general access.
+                            // Admins can then manage it via the UI.
+                            profileAccess: true // Default access for all new users during their first login
                         });
                         console.log("Basic user profile created for:", user.uid);
                         // A new user with role 'User' should NOT be an admin initially.
@@ -920,7 +928,6 @@ async function deleteCustomer(firestoreDocId) {
                 console.error("Error deleting customer:", error);
                 showModal("Error", "Failed to delete customer. Please try again. " + error.message, () => {});
             }
-        
         }
     );
 }
@@ -1458,7 +1465,7 @@ function resetOpportunityForm() {
 function updateOpportunitySummaryCard() {
     if (currentEditedOpportunity && summaryOpportunityId && summaryOpportunityName && summaryOpportunityCustomer && summaryOpportunityStage && summaryOpportunityAmount) {
         const customer = allCustomers.find(c => c.id === currentEditedOpportunity.customer);
-        const customerDisplayName = customer ? (customer.companyName || `${currentEditedOpportunity.firstName || ''} ${currentEditedOpportunity.lastName || ''}`.trim()) : 'N/A';
+        const customerDisplayName = customer ? (customer.companyName || `${customer.firstName || ''} ${currentEditedOpportunity.lastName || ''}`.trim()) : 'N/A';
         const currencySymbol = getCurrencySymbol(currentEditedOpportunity.currency);
 
         summaryOpportunityId.textContent = currentEditedOpportunity.opportunityId || 'N/A';
@@ -2069,6 +2076,8 @@ async function saveUser(userData, existingFirestoreDocId = null) {
         return;
     }
 
+    // --- NEW LOGIC FOR profileAccess BASED ON ROLE ---
+    userData.profileAccess = (userData.role === 'Admin'); // Set to true if Admin, false otherwise
 
     const collectionPath = `users_data`; // Dedicated collection for users
 
