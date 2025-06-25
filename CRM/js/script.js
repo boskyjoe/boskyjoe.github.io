@@ -145,7 +145,7 @@ const opportunityLineForm = document.getElementById('opportunityLineForm');
 const optyLineIdDisplayGroup = document.getElementById('optyLineIdDisplayGroup');
 const optyLineIdDisplay = document.getElementById('optyLineIdDisplay');
 const lineServiceDescriptionInput = document.getElementById('lineServiceDescription');
-const lineUnitPriceInput = document.getElementById('lineUnitPrice'); // CORRECTED THIS LINE
+const lineUnitPriceInput = document.getElementById('lineUnitPrice'); 
 const lineQuantityInput = document.getElementById('lineQuantity');
 const lineDiscountInput = document.getElementById('lineDiscount');
 const lineNetPriceInput = document.getElementById('lineNetPrice');
@@ -1357,7 +1357,7 @@ function editOpportunity(opportunity) {
     opportunityForm.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Reset Opportunity form function (UPDATED FOR NEW UI AND CURRENCY SYMBOL)
+// Reset Opportunity form function (UPDATED FOR NEW UI AND CURRENCY SYMBOLS)
 function resetOpportunityForm() {
     opportunityForm.reset();
     opportunityForm.dataset.editingId = '';
@@ -2255,8 +2255,23 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
         return;
     }
 
+    // --- ENHANCED DEBUGGING: Check `db` and path components before Firestore calls ---
+    console.log(`DEBUGGING Firestore path in saveCurrency:`);
+    console.log(`  db (type: ${typeof db}, value: ${db})`);
+    console.log(`  "app_metadata" (type: ${typeof "app_metadata"}, value: "app_metadata")`);
+    console.log(`  APP_SETTINGS_DOC_ID (type: ${typeof APP_SETTINGS_DOC_ID}, value: "${APP_SETTINGS_DOC_ID}")`);
+    console.log(`  "currencies_data" (type: ${typeof "currencies_data"}, value: "currencies_data")`);
+
+    if (!db) {
+        console.error("DEBUGGING Firestore path: 'db' is undefined or null when trying to create collection reference.");
+        showModal("Error", "Firebase database not initialized. Please refresh the page and try again.", () => {});
+        submitCurrencyButton.disabled = false;
+        submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+        return;
+    }
+
     const collectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
-    console.log("DEBUG saveCurrency: collectionPath reference obtained.");
+    console.log("DEBUG saveCurrency: collectionPath reference obtained:", collectionRef);
 
     try {
         let updatesPerformed = 0;
@@ -2265,7 +2280,15 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
 
         if (existingCurrencyCode) { // Editing a single currency
             console.log(`DEBUG saveCurrency: Attempting to edit currency with ID: ${existingCurrencyCode} (Type: ${typeof existingCurrencyCode})`);
-            const currencyDocRef = doc(db, collectionRef, existingCurrencyCode);
+            
+            if (typeof existingCurrencyCode !== 'string' || existingCurrencyCode.trim() === '') {
+                console.error("DEBUGGING Firestore path: existingCurrencyCode is not a valid string.", {existingCurrencyCode, type: typeof existingCurrencyCode});
+                showModal("Validation Error", "Invalid currency code for editing. Please ensure a valid currency is selected.", () => {});
+                submitCurrencyButton.disabled = false;
+                submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+                return;
+            }
+
             const currencyObjectKey = Object.keys(parsedData)[0];
             const currencyObject = parsedData[currencyObjectKey];
 
@@ -2284,6 +2307,8 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
             };
 
             console.log("DEBUG saveCurrency: Final currency data for update:", finalCurrencyData);
+            console.log(`DEBUGGING Firestore path: doc(db, collectionRef, "${existingCurrencyCode}") call`);
+            const currencyDocRef = doc(db, collectionRef, existingCurrencyCode);
             await updateDoc(currencyDocRef, finalCurrencyData);
             updatesPerformed++;
             totalProcessed++;
@@ -2310,6 +2335,7 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
                     }
 
                     console.log(`DEBUG saveCurrency: Adding/Updating currency '${code}' (Type: ${typeof code}) with data:`, finalCurrencyData);
+                    console.log(`DEBUGGING Firestore path: doc(db, collectionRef, "${code}") call`);
                     const currencyDocRef = doc(db, collectionRef, code);
                     await setDoc(currencyDocRef, finalCurrencyData, { merge: true });
                     updatesPerformed++;
