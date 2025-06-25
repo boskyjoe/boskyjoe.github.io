@@ -1,127 +1,162 @@
-/* Base styles from previous version, adjusted for better integration */
+/* General Body and Container */
 body {
     font-family: 'Inter', sans-serif;
-    background-color: #f0f2f5; /* Lighter background for more contrast */
-    color: #333;
-}
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 1.5rem; /* Increased padding */
-}
-.header {
-    background-color: #ffffff;
-    border-bottom: 1px solid #e0e7ff; /* Lighter blue border */
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* More pronounced shadow for depth */
-    z-index: 1000; /* Ensure header is on top */
-    position: sticky;
-    top: 0;
-    width: 100%;
-}
-.nav-link {
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    transition: all 0.2s ease-in-out;
-    font-weight: 500;
-    color: #4a5568; /* Gray-800 */
-    text-decoration: none; /* Ensure no underline */
-    display: block; /* For better click area in mobile, and block-level within dropdowns */
-}
-.nav-link:hover {
-    background-color: #edf2f7; /* Gray-100 */
-    color: #2d3748; /* Gray-900 */
-}
-.nav-link.active {
-    background-color: #4c51bf; /* Indigo-700 */
-    color: #ffffff;
-}
-.btn-primary {
-    background-color: #4c51bf; /* Indigo-700 */
-    color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    transition: background-color 0.2s ease-in-out, transform 0.1s ease-out; /* Add transform for subtle click effect */
-    cursor: pointer;
-    border: none; /* Remove default button border */
-}
-.btn-primary:hover {
-    background-color: #5a62d9; /* Slightly lighter indigo */
-    transform: translateY(-1px); /* Slight lift on hover */
-}
-.btn-primary:active {
-    transform: translateY(0); /* Return on click */
-}
-.btn-primary:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none; /* Disable hover/active effects when disabled */
-}
-.btn-secondary {
-    background-color: #e2e8f0; /* Gray-200 */
-    color: #2d3748; /* Gray-900 */
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    transition: background-color 0.2s ease-in-out, transform 0.1s ease-out;
-    cursor: pointer;
-    border: none;
-}
-.btn-secondary:hover {
-    background-color: #cbd5e0; /* Gray-300 */
-    transform: translateY(-1px);
-}
-.btn-secondary:active {
-    transform: translateY(0);
-}
-.btn-secondary:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none; /* Disable hover/active effects when disabled */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
-/* Form element consistency (UPDATED FOR HEIGHT) */
+main {
+    flex: 1; /* Allows main content to grow and push footer down */
+}
+
+/* Base Card Styling */
+.card {
+    background-color: white;
+    padding: 1.5rem; /* p-6 */
+    border-radius: 0.5rem; /* rounded-lg */
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* shadow-md */
+    margin-bottom: 1.5rem; /* mb-6 */
+}
+
+/* Section Titles */
+.section-title {
+    font-size: 1.875rem; /* text-3xl */
+    font-weight: 700; /* font-bold */
+    color: #1f2937; /* text-gray-900 */
+    margin-bottom: 1.5rem; /* mb-6 */
+    text-align: center;
+}
+
+/* Form Elements */
 .form-input,
 .form-select,
 .form-textarea {
+    display: block;
     width: 100%;
-    padding: 0.65rem 1rem;
-    border: 1px solid #cbd5e0; /* Gray-300 */
+    padding: 0.5rem 0.75rem; /* py-2 px-3 */
+    border: 1px solid #d1d5db; /* border-gray-300 */
     border-radius: 0.375rem; /* rounded-md */
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05); /* shadow-sm */
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    /* Ensure consistent height for single-line inputs and selects */
-    height: 2.75rem; /* ~44px, common height for form fields */
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
-}
-
-.form-textarea {
-    min-height: 5rem; /* Minimum height for textareas, overrides fixed height */
-    height: auto; /* Allow height to adjust based on rows/content for multi-line */
-    resize: vertical; /* Allow vertical resizing only */
+    font-size: 0.875rem; /* sm:text-sm */
 }
 
 .form-input:focus,
 .form-select:focus,
 .form-textarea:focus {
-    border-color: #a7b3ff; /* Indigo-200 */
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); /* Indigo-500 with opacity */
+    border-color: #3b82f6; /* blue-500 */
     outline: none;
-}
-.card {
-    background-color: #ffffff;
-    border-radius: 0.75rem; /* rounded-lg */
-    box-shadow: 0 6px 15px rgba(0,0,0,0.1); /* Slightly stronger shadow for cards */
-    padding: 2rem; /* Increased padding */
-}
-.section-title {
-    font-size: 2rem; /* Larger text-3xl */
-    font-weight: 700; /* font-bold */
-    color: #2d3748; /* Gray-900 */
-    margin-bottom: 2rem; /* More space below title */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5); /* ring-blue-500 / ring-offset-0 */
 }
 
-/* Modal Styles */
+/* Buttons */
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 1.25rem; /* px-5 py-2.5 */
+    border-radius: 0.5rem; /* rounded-md */
+    font-weight: 600; /* font-semibold */
+    font-size: 0.875rem; /* text-sm */
+    color: white;
+    background-color: #2563eb; /* bg-blue-600 */
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.btn-primary:hover {
+    background-color: #1d4ed8; /* bg-blue-700 */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.btn-primary:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5); /* ring-4 ring-blue-500 */
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: #93c5fd; /* light blue */
+}
+
+
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 1.25rem; /* px-5 py-2.5 */
+    border-radius: 0.5rem; /* rounded-md */
+    font-weight: 600; /* font-semibold */
+    font-size: 0.875rem; /* text-sm */
+    color: #374151; /* text-gray-700 */
+    background-color: #f9fafb; /* bg-gray-50 */
+    border: 1px solid #d1d5db; /* border-gray-300 */
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.btn-secondary:hover {
+    background-color: #f3f4f6; /* bg-gray-100 */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.btn-secondary:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(209, 213, 219, 0.5); /* ring-4 ring-gray-300 */
+}
+
+.btn-secondary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: #e5e7eb; /* light gray */
+}
+
+/* Navigation Links */
+.nav-link {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    transition: background-color 0.2s ease-in-out;
+    text-decoration: none;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Mobile Menu Specifics */
+#mobileMenu {
+    max-height: 0;
+    transition: max-height 0.3s ease-out;
+}
+
+#mobileMenu.open {
+    max-height: 300px; /* Adjust as needed to fit content */
+}
+
+.mobile-submenu {
+    max-height: 0;
+    transition: max-height 0.3s ease-out;
+    background-color: rgba(0, 0, 0, 0.1); /* Slightly darker for submenu */
+    padding-left: 1.5rem; /* pl-6 */
+}
+
+.mobile-submenu.hidden {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.mobile-submenu .nav-link {
+    font-size: 0.95rem; /* Slightly smaller for submenu items */
+}
+
+/* Modals */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -134,29 +169,49 @@ body {
     align-items: center;
     z-index: 1000;
 }
+
 .modal-content {
     background-color: white;
     padding: 2rem;
     border-radius: 0.75rem;
-    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-    max-width: 450px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    max-width: 90%;
+    width: 400px;
     text-align: center;
+    transform: scale(0.95);
+    opacity: 0;
+    animation: modal-fade-in 0.3s forwards cubic-bezier(0.25, 0.8, 0.25, 1);
 }
+
+@keyframes modal-fade-in {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
 .modal-content h3 {
     font-size: 1.5rem;
     font-weight: 700;
+    color: #1f2937;
     margin-bottom: 1rem;
-    color: #2d3748;
 }
+
 .modal-content p {
+    color: #4b5563;
     margin-bottom: 1.5rem;
-    color: #4a5568;
 }
+
 .modal-actions {
     display: flex;
     justify-content: center;
     gap: 1rem;
 }
+
 .modal-actions button {
     padding: 0.75rem 1.5rem;
     border-radius: 0.5rem;
@@ -164,359 +219,256 @@ body {
     cursor: pointer;
     transition: background-color 0.2s ease-in-out;
 }
-.modal-actions button.primary {
-    background-color: #4c51bf;
+
+.modal-actions .primary {
+    background-color: #2563eb;
     color: white;
 }
-.modal-actions button.primary:hover {
-    background-color: #5a62d9;
-}
-.modal-actions button.secondary {
-    background-color: #e2e8f0;
-    color: #2d3748;
-}
-.modal-actions button.secondary:hover {
-    background-color: #cbd5e0;
-}
-.message.error {
-    background-color: #fee2e2; /* Red-100 */
-    color: #b91c1c; /* Red-700 */
-    padding: 0.75rem 1rem;
-    border-radius: 0.375rem;
-    margin-bottom: 1rem;
-    border: 1px solid #ef4444; /* Red-500 */
-}
-.message.success {
-    background-color: #dcfce7; /* Green-100 */
-    color: #166534; /* Green-700 */
-    padding: 0.75rem 1rem;
-    border-radius: 0.375rem;
-    margin-bottom: 1rem;
-    border: 1px solid #22c55e; /* Green-500 */
+
+.modal-actions .primary:hover {
+    background-color: #1d4ed8;
 }
 
-/* Mobile Menu specific styles */
-#mobileMenu {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-out; /* Smooth slide-down/up */
-}
-#mobileMenu.open {
-    max-height: 500px; /* Adjust based on content height, needs to be large enough */
-    transition: max-height 0.5s ease-in;
-}
-#mobileMenu .nav-link {
-    width: 100%; /* Full width for mobile links */
-}
-#mobileMenu .mobile-submenu {
-    padding-left: 1.5rem; /* Indent sub-items */
+.modal-actions .secondary {
+    background-color: #e5e7eb;
+    color: #374151;
+    border: 1px solid #d1d5db;
 }
 
-/* Tooltip styles */
-/* The parent of .tooltip-text needs to have 'position: relative;' */
-/* In index.html, this is handled by `relative group` on the `<i>` tag's parent. */
-.tooltip-text {
-    visibility: hidden;
-    opacity: 0; /* Start hidden and transparent */
-    max-width: 280px; /* Increased max width for longer instructions */
-    background-color: #333;
-    color: #fff;
-    text-align: left; /* Align text left for better readability of instructions */
-    border-radius: 0.375rem;
-    padding: 0.75rem 1rem; /* More padding */
-    position: absolute;
-    z-index: 100;
-    bottom: calc(100% + 10px); /* Position above the icon + 10px gap */
-    left: 50%;
-    transform: translateX(-50%); /* Center horizontally relative to parent */
-    transition: opacity 0.3s ease, visibility 0.3s ease; /* Smooth transition */
-    font-size: 0.85rem;
-    line-height: 1.4;
-    pointer-events: none; /* Allows interaction with elements behind it */
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+.modal-actions .secondary:hover {
+    background-color: #d1d5db;
 }
 
-/* Tooltip arrow/pointer */
-.tooltip-text::before {
-    content: "";
-    position: absolute;
-    top: 100%; /* At the bottom of the tooltip */
-    left: 50%;
-    margin-left: -8px; /* Half the width of the triangle base to center it */
-    border-width: 8px; /* Larger arrow for better visibility */
-    border-style: solid;
-    border-color: #333 transparent transparent transparent; /* Arrow color matches background */
-}
-
-/* Show tooltip on hover of the parent group (the <i> tag) */
-.group:hover .tooltip-text {
-    visibility: visible;
-    opacity: 1;
-}
-
-/* Accordion Styles (UPDATED FOR 3D EFFECT AND HIGHLIGHTS) */
-.accordion-item {
-    border: 1px solid #e2e8f0; /* Gray-200 */
-    border-radius: 0.75rem; /* Slightly more rounded */
-    overflow: hidden;
-    background-color: #ffffff;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.05); /* Initial subtle shadow */
-    transition: all 0.3s ease-in-out; /* Smooth transition for hover effects */
-}
-
-.accordion-item:hover {
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1); /* Lift effect on hover */
-    transform: translateY(-2px); /* Slight vertical lift */
-}
-
-.accordion-header {
-    width: 100%;
-    background-color: #f8faff; /* Very light blue-gray for default state */
-    padding: 1.2rem 1.5rem; /* More vertical padding */
-    text-align: left;
-    font-size: 1.125rem; /* text-lg */
-    font-weight: 600; /* semi-bold */
-    color: #2d3748; /* Gray-900 */
-    cursor: pointer;
-    border: none;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-    position: relative; /* For pseudo-element highlight */
-}
-
-.accordion-header:hover {
-    background-color: #ebf0f5; /* Slightly darker on hover */
-}
-
-.accordion-header.active {
-    background-color: #e0e7ff; /* Light indigo highlight when active */
-    color: #2d3748;
-    box-shadow: inset 0 3px 5px rgba(0,0,0,0.05); /* Inner shadow for pressed effect */
-}
-
-.accordion-icon {
-    transition: transform 0.3s ease-in-out;
-}
-
-.accordion-header.active .accordion-icon {
-    transform: rotate(180deg); /* Rotate icon when active */
-}
-
-.accordion-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out; /* Transition padding too */
-    padding: 0 1.5rem; /* Padding only for sides when closed */
-    background-color: #ffffff; /* Content background */
-    border-top: 1px solid #f0f2f5; /* Subtle separation */
-}
-
-.accordion-content.open {
-    max-height: 1200px; /* Increased, adjust as needed to contain all content */
-    padding-top: 1.5rem; /* Add top padding when open */
-    padding-bottom: 1.5rem; /* Add bottom padding when open */
-}
-
-/* Additional styling for forms/lists within accordions */
-.accordion-content form {
-    padding-top: 1rem;
-    border-top: 1px solid #e2e8f0;
-    margin-top: 1rem;
-}
-.accordion-content .grid {
-    margin-top: 1rem; /* Space between accordion form and list */
-}
-.accordion-content .grid-cols-1 { /* Ensure full width on mobile within accordions */
-    grid-template-columns: minmax(0, 1fr);
-}
-.accordion-content .grid-cols-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-@media (min-width: 768px) { /* Medium screens and up */
-    .accordion-content .md\:grid-cols-2 {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .accordion-content .md\:grid-cols-3 {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-}
-
-/* DHTML-like Grid Styling for Existing Opportunities (NEW) */
+/* Data Grid / List Styling (Customers, Opportunities, Users, Currencies) */
 .data-grid-header {
     display: grid;
-    /* This grid template should match the JS displayOpportunity function's grid-cols for consistency */
-    grid-template-columns: 100px minmax(120px, 1.5fr) 1fr 0.8fr 1fr 1.2fr 1.5fr 1.5fr 1fr;
-    gap: 1rem; /* More prominent gap */
-    padding: 0.75rem 1rem; /* Padding for headers */
-    background-color: #e0e7ff; /* Light blue header background */
-    color: #3f51b5; /* Deeper blue text */
-    font-weight: 700; /* Bold headers */
-    text-transform: uppercase;
-    font-size: 0.75rem; /* text-xs */
-    border-radius: 0.5rem 0.5rem 0 0; /* Rounded top corners */
-    box-shadow: inset 0 -2px 0 rgba(0,0,0,0.05); /* Subtle shadow line */
+    /* Adjust grid-template-columns for each section in JS or directly here for common structure */
+    background-color: #e0f2fe; /* blue-100 */
+    font-weight: 600; /* font-semibold */
+    padding: 0.75rem 0.5rem; /* py-3 px-2 */
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+    color: #1e40af; /* blue-800 */
+    font-size: 0.875rem; /* text-sm */
+    gap: 0.5rem; /* gap-2 */
 }
 
-/* For contact/line/quote headers, adjust grid template if needed */
-.accordion-content .data-grid-header {
-    /* Contacts grid */
-    grid-template-columns: 100px 1fr 1fr 1fr 1.2fr 1fr;
+/* Specific grid columns for Customer List */
+#customerList + .data-grid-header { /* Target header before customerList */
+    grid-template-columns: 0.8fr 1.5fr 1.5fr 1fr 2fr 1fr 0.8fr 0.8fr; /* Responsive adjustments will be needed */
 }
-.accordion-content .data-grid-header:nth-of-type(1) { /* Specific to contact/line/quote header */
-    border-radius: 0.375rem 0.375rem 0 0; /* Match inner card rounding */
+
+#customerList .data-grid-row {
+    grid-template-columns: 0.8fr 1.5fr 1.5fr 1fr 2fr 1fr 0.8fr 0.8fr;
 }
 
 
+/* Specific grid columns for Opportunity List */
+#opportunityList + .data-grid-header { /* Target header before opportunityList */
+    grid-template-columns: 0.8fr 1.5fr 1.5fr 1fr 1fr 0.8fr 0.8fr 1fr 0.8fr;
+}
+
+#opportunityList .data-grid-row {
+    grid-template-columns: 0.8fr 1.5fr 1.5fr 1fr 1fr 0.8fr 0.8fr 1fr 0.8fr;
+}
+
+/* Specific grid columns for User List */
+#userList + .data-grid-header {
+    grid-template-columns: 1fr 1.5fr 1.5fr 0.8fr 1.5fr 0.8fr;
+}
+#userList .data-grid-row {
+    grid-template-columns: 1fr 1.5fr 1.5fr 0.8fr 1.5fr 0.8fr;
+}
+
+/* Specific grid columns for Currency List */
+#currencyList + .data-grid-header {
+    grid-template-columns: 1fr 1.5fr 1fr 1fr 0.8fr;
+}
+#currencyList .data-grid-row {
+    grid-template-columns: 1fr 1.5fr 1fr 1fr 0.8fr;
+}
+
+
+/* Data grid body rows */
 .data-grid-body {
-    /* No direct styles, acts as container for data-grid-rows */
-    overflow-x: auto; /* Enable horizontal scrolling for grids on small screens if necessary */
+    background-color: white; /* bg-white */
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+    overflow-x: auto; /* For horizontal scrolling on small screens */
 }
 
 .data-grid-row {
     display: grid;
-    /* This grid template should match the JS displayOpportunity function's grid-cols for consistency */
-    grid-template-columns: 100px minmax(120px, 1.5fr) 1fr 0.8fr 1fr 1.2fr 1.5fr 1.5fr 1fr;
-    gap: 1rem; /* Consistent gap with header */
-    padding: 0.75rem 1rem; /* Padding for rows */
-    background-color: #ffffff;
-    border-bottom: 1px solid #f0f2f5; /* Lighter row separator */
+    align-items: center;
+    padding: 0.75rem 0.5rem; /* py-3 px-2 */
+    border-bottom: 1px solid #f3f4f6; /* border-b border-gray-100 */
     font-size: 0.875rem; /* text-sm */
-    color: #4a5568; /* Gray-700 */
-    transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
-}
-/* For contact/line/quote rows, adjust grid template if needed */
-.accordion-content .data-grid-row {
-    /* Contacts grid */
-    grid-template-columns: 100px 1fr 1fr 1fr 1.2fr 1fr;
-}
-
-
-/* Alternating row colors for better readability */
-.data-grid-row:nth-child(even) {
-    background-color: #fdfefe; /* Very slight different shade */
+    color: #374151; /* text-gray-700 */
+    gap: 0.5rem; /* gap-2 */
 }
 
 .data-grid-row:hover {
-    background-color: #eef1f5; /* Light hover effect */
-    transform: translateY(-1px); /* Subtle lift on hover */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Small shadow on hover */
+    background-color: #f9fafb; /* bg-gray-50 */
 }
 
-.data-grid-row:last-child {
-    border-bottom: none; /* No border for the last row */
-    border-radius: 0 0 0.75rem 0.75rem; /* Rounded bottom corners */
+/* Ensure actions column doesn't wrap excessively */
+.data-grid-row .flex.justify-end {
+    white-space: nowrap; /* Prevent buttons from wrapping */
 }
-.accordion-content .data-grid-row:last-child { /* Inner grid rows */
-    border-radius: 0 0 0.375rem 0.375rem;
+
+/* Responsive adjustments for data grids */
+@media (max-width: 1023px) { /* Equivalent to lg breakpoint for hidden columns */
+    #customerList + .data-grid-header,
+    #customerList .data-grid-row {
+        grid-template-columns: 0.8fr 1.5fr 1.5fr 1fr 0.8fr; /* Hide Address, Industry */
+    }
+    #opportunityList + .data-grid-header,
+    #opportunityList .data-grid-row {
+        grid-template-columns: 0.8fr 1.5fr 1.5fr 1fr 1fr 0.8fr 0.8fr; /* Hide Event Type */
+    }
+}
+
+@media (max-width: 767px) { /* Equivalent to md breakpoint for hidden columns */
+    #customerList + .data-grid-header,
+    #customerList .data-grid-row {
+        grid-template-columns: 1fr 1.5fr 1.5fr 0.8fr; /* Hide Phone, Address, Industry */
+    }
+    #opportunityList + .data-grid-header,
+    #opportunityList .data-grid-row {
+        grid-template-columns: 0.8fr 1.5fr 1.5fr 1fr 1fr 0.8fr; /* Hide Close Date, Event Type */
+    }
+    #userList + .data-grid-header,
+    #userList .data-grid-row {
+        grid-template-columns: 1fr 1.5fr 1.5fr 0.8fr 0.8fr; /* Hide Skills */
+    }
+}
+
+@media (max-width: 639px) { /* Equivalent to sm breakpoint for hidden columns */
+    #customerList + .data-grid-header,
+    #customerList .data-grid-row {
+        grid-template-columns: 1fr 1.5fr 0.8fr 0.8fr; /* Hide Email, Phone, Address, Industry, Since */
+    }
+    #opportunityList + .data-grid-header,
+    #opportunityList .data-grid-row {
+        grid-template-columns: 0.8fr 1.5fr 1.5fr 1fr 0.8fr; /* Hide Start Date, Close Date, Event Type */
+    }
+    #userList + .data-grid-header,
+    #userList .data-grid-row {
+        grid-template-columns: 1fr 1.5fr 0.8fr 0.8fr; /* Hide Role, Skills */
+    }
+    #currencyList + .data-grid-header,
+    #currencyList .data-grid-row {
+        grid-template-columns: 1fr 1.5fr 0.8fr; /* Hide Symbol, Native Symbol */
+    }
 }
 
 
-/* Hide columns on smaller screens */
-.data-grid-row .hidden { display: none; } /* Default hidden */
-@media (min-width: 640px) { /* sm breakpoint */
-    .data-grid-row .hidden.sm\:block { display: block; }
-}
-@media (min-width: 768px) { /* md breakpoint */
-    .data-grid-row .hidden.md\:block { display: block; }
-}
-@media (min-width: 1024px) { /* lg breakpoint */
-    .data-grid-row .hidden.lg\:block { display: block; }
-}
-
-/* Text alignment for grid cells */
-.data-grid-header > div,
-.data-grid-row > div {
-    white-space: nowrap; /* Prevent wrapping for truncated text */
-    overflow: hidden;
-    text-overflow: ellipsis; /* Add ellipsis for overflow */
-    display: flex; /* Use flex to align content (especially for actions) */
-    align-items: center; /* Vertically center content */
-}
-.data-grid-header > div:last-child,
-.data-grid-row > div:last-child {
-    justify-content: flex-end; /* Align last column content to the right */
-}
-
-/* NEW: Styles for the Opportunity Management Two-Panel Layout */
+/* Opportunity Section Specifics */
+/* Ensure the flex container allows wrapping on small screens */
 #opportunity-view-container {
     display: flex;
-    flex-direction: column; /* Default to column on mobile */
-    gap: 1.5rem; /* Space between panels */
+    flex-direction: column; /* Default to column on small screens */
+    gap: 1.5rem; /* gap-6 */
 }
 
-/* On medium screens and up, apply row layout and initial widths */
-@media (min-width: 768px) {
+@media (min-width: 768px) { /* md breakpoint */
     #opportunity-view-container {
-        flex-direction: row;
-        align-items: flex-start; /* Align items to the top */
-        height: auto; /* Allow height to adjust to content */
+        flex-direction: row; /* Row on medium and larger screens */
     }
-    #opportunity-left-panel {
-        width: 70%;
-        transition: width 0.3s ease-in-out; /* Smooth width transition */
-    }
-    #opportunity-right-panel {
-        width: 30%;
-        margin-top: 0; /* Remove top margin inherited from mobile */
-        transition: width 0.3s ease-in-out, opacity 0.3s ease-in-out; /* Smooth width/opacity transition */
+    .opportunity-panel {
+        /* Default Tailwind widths from HTML for md: */
+        /* md:w-7/10 for left, md:w-3/10 for right */
+        flex-shrink: 0; /* Prevent shrinking below content when not active */
     }
 
-    /* States for dynamic resizing */
-    #opportunity-left-panel.shrink {
-        width: 30%;
+    /* Custom utility classes for overriding Tailwind's default w-X/10 on wider screens */
+    /* These will be applied dynamically by JS for the accordion expand/shrink */
+    .opportunity-panel.md\:w-full { width: 100%; }
+    .opportunity-panel.md\:w-7\/10 { width: 70%; }
+    .opportunity-panel.md\:w-3\/10 { width: 30%; }
+
+    .opportunity-panel.shrink-left {
+        width: 30% !important; /* Use !important to ensure override for shrinking left */
+        transition: width 0.3s ease-in-out;
     }
-    #opportunity-right-panel.expand {
-        width: 70%;
+    .opportunity-panel.expand-right {
+        width: 70% !important; /* Use !important to ensure override for expanding right */
+        transition: width 0.3s ease-in-out;
     }
-    #opportunity-left-panel.stretch {
-        width: 100%; /* For full view when not in split mode */
-    }
-    #opportunity-right-panel.hidden-panel {
-        width: 0;
-        min-width: 0; /* Ensure it truly collapses */
-        opacity: 0;
-        overflow: hidden; /* Hide overflow content */
+
+    .opportunity-panel.hidden-panel {
+        display: none; /* Hide entirely */
     }
 }
 
-/* Styles for the summary card when left panel shrinks (UPDATED for clickable feedback) */
-#opportunity-summary-card {
-    height: auto; /* Allow height to fit content */
-    min-height: 150px; /* A minimum height for the summary card */
+
+/* Accordion Styling */
+.accordion-item {
+    margin-bottom: 0.5rem;
+    border: 1px solid #e5e7eb; /* border-gray-200 */
+    border-radius: 0.5rem; /* rounded-lg */
+    overflow: hidden; /* Hide overflow when content collapses */
+}
+
+.accordion-header {
+    background-color: #eff6ff; /* blue-50 */
+    padding: 1rem 1.25rem; /* py-4 px-5 */
+    cursor: pointer;
+    font-weight: 600; /* font-semibold */
+    color: #1e40af; /* blue-800 */
     display: flex;
-    flex-direction: column;
     justify-content: space-between;
-    padding: 1.5rem;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.08); /* Initial distinct shadow */
-    border: 1px solid #e0e7ff; /* Light blue border */
-    background-color: #f8faff; /* Lighter background */
-    cursor: pointer; /* Explicitly show pointer on hover */
-    transition: all 0.2s ease-in-out; /* Smooth transitions for visual effects */
-}
-#opportunity-summary-card:hover {
-    box-shadow: 0 8px 16px rgba(0,0,0,0.15); /* Stronger shadow on hover */
-    transform: translateY(-2px); /* Lift effect on hover */
-}
-#opportunity-summary-card:active {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Subtle shadow on click for "pressed" effect */
-    transform: translateY(0); /* "Press down" effect */
-    background-color: #eef1f5; /* Slightly darker background on active */
+    align-items: center;
+    transition: background-color 0.2s ease-in-out;
 }
 
-
-/* Hide full form and existing list when summary card is active */
-#opportunity-left-panel.shrink #opportunity-full-form-view,
-#opportunity-left-panel.shrink #opportunity-existing-list-view {
-    display: none;
-}
-/* Show summary card when left panel shrinks */
-#opportunity-left-panel.shrink #opportunity-summary-card {
-    display: block; /* Overrides default hidden for summary card */
+.accordion-header:hover {
+    background-color: #dbeafe; /* blue-100 */
 }
 
-/* Hide summary card when left panel is full width */
-#opportunity-left-panel:not(.shrink) #opportunity-summary-card {
-    display: none;
+.accordion-header .accordion-icon {
+    transition: transform 0.3s ease-in-out;
+}
+
+.accordion-header.active .accordion-icon {
+    transform: rotate(180deg);
+}
+
+.accordion-content {
+    background-color: white;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-in-out; /* Smooth transition for expand/collapse */
+}
+
+.accordion-content.open {
+    max-height: fit-content; /* Adjust based on content */
+    /* This will be set by JS dynamically to the scrollHeight */
+}
+
+/* Message Styles (Success/Error) */
+.message {
+    padding: 0.75rem 1rem; /* px-4 py-3 */
+    border-radius: 0.375rem; /* rounded-md */
+    margin-bottom: 1rem; /* mb-4 */
+    font-size: 0.875rem; /* text-sm */
+    font-weight: 500; /* medium */
+    text-align: center;
+}
+
+.message.success {
+    background-color: #d1fae5; /* green-100 */
+    color: #065f46; /* green-800 */
+    border: 1px solid #34d399; /* green-400 */
+}
+
+.message.error {
+    background-color: #fee2e2; /* red-100 */
+    color: #991b1b; /* red-800 */
+    border: 1px solid #f87171; /* red-400 */
+}
+
+/* Height for home section */
+.min-h-screen-minus-header {
+    min-height: calc(100vh - 4rem - 3rem); /* Screen height - header height - footer height */
 }
