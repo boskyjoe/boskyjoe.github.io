@@ -189,7 +189,7 @@ const currencyCodeDisplayGroup = document.getElementById('currencyCodeDisplayGro
 const currencyCodeDisplay = document.getElementById('currencyCodeDisplay');
 const adminCurrenciesInput = document.getElementById('adminCurrenciesInput');
 const submitCurrencyButton = document.getElementById('submitCurrencyButton');
-const adminCurrencyMessageDiv = document.getElementById('adminCurrencyMessageDiv'); // Corrected ID
+const adminCurrencyMessageDiv = document.getElementById('adminCurrencyMessageDiv');
 const currencyList = document.getElementById('currencyList');
 
 
@@ -2357,7 +2357,8 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
         return;
     }
 
-    const collectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
+    // Corrected collection reference for currencies data
+    const currenciesCollectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
 
     try {
         let updatesPerformed = 0;
@@ -2369,6 +2370,7 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
             const parts = line.split(',');
 
             // Explicitly get each part and ensure it's a string, defaulting to empty if not present.
+            // This prevents `undefined` values from reaching Firestore functions expecting strings.
             const code = parts[0] ? parts[0].trim() : '';
             const currencyName = parts[1] ? parts[1].trim() : '';
             const symbol = parts[2] ? parts[2].trim() : '';
@@ -2399,7 +2401,9 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
                 symbol_native: symbol_native
             };
 
-            const currencyDocRef = doc(db, collectionRef, code);
+            // CORRECTED: Use doc(collectionRef, documentId)
+            const currencyDocRef = doc(currenciesCollectionRef, code); // Pass the collection reference directly
+
             await setDoc(currencyDocRef, currencyDataToSave, { merge: true }); // Use setDoc with merge to create or update
             updatesPerformed++;
         }
