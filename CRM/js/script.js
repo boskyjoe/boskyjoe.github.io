@@ -3,21 +3,27 @@ import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc, getDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
-// YOUR Firebase Configuration
-// Changed from 'const' to 'let' to avoid "Attempted to assign to readonly property" error
-// if the environment or Firebase SDK attempts to modify this object during initialization.
-let firebaseConfig = {
-    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
-    authDomain: "shuttersync-96971.firebaseapp.com",
-    projectId: "shuttersync-96971",
-    storageBucket: "shuttersync-96971.firebaseapp.com",
-    messagingSenderId: "10782416018",
-    appId: "1:10782416018:web:361db5572882a62f291a4b",
-    measurementId: "G-T0W9CES4D3"
-};
+// YOUR Firebase Configuration - MANDATORY: Use __firebase_config provided by the Canvas environment.
+let firebaseConfig;
+if (typeof __firebase_config !== 'undefined') {
+    firebaseConfig = JSON.parse(__firebase_config);
+} else {
+    // Fallback for local development or if __firebase_config isn't injected (should not happen in Canvas)
+    console.warn("Using fallback Firebase config. __firebase_config not found.");
+    firebaseConfig = {
+        apiKey: "YOUR_FALLBACK_API_KEY", // Replace with a dummy or actual key if testing outside Canvas
+        authDomain: "your-project-id.firebaseapp.com",
+        projectId: "your-project-id",
+        storageBucket: "your-project-id.appspot.com",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID",
+        measurementId: "YOUR_MEASUREMENT_ID"
+    };
+}
 
-// Use projectId as appId for Firestore collection paths for consistency and stability
-const appId = firebaseConfig.projectId;
+// Use __app_id for Firestore collection paths as per mandatory instructions.
+// Fallback to projectId from firebaseConfig if __app_id is somehow not defined.
+const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
 
 let app;
 let db;
@@ -526,9 +532,6 @@ function getCurrencyName(code) {
 // Initialize Firebase and set up authentication listener
 async function initializeFirebase() {
     try {
-        // REMOVED THE DUPLICATE firebaseConfig REASSIGNMENT HERE
-        // The global `let firebaseConfig` declared at the top is used.
-
         app = initializeApp(firebaseConfig);
         getAnalytics(app); // Initialize Analytics
         db = getFirestore(app);
@@ -2531,7 +2534,7 @@ function editCurrency(currency) {
     if (currencyCodeDisplay) currencyCodeDisplay.textContent = currency.id; // Display the code
 
     // Pre-fill the textarea with the CSV for this specific currency
-    if (adminCurrenciesInput) adminCurrenciesInput.value = `${currency.id},${currency.currencyName || ''},${currency.symbol || ''},${currency.symbol_native || ''}`;
+    if (adminCurrenciesInput) adminCurrenciesInput.value = `${currency.id},${currency.currencyName || ''},${currency.symbol || '',},${currency.symbol_native || ''}`;
 
     if (currencyForm) currencyForm.dataset.editingId = currency.id; // Store the currency code for updating
     if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden'); // Clear any previous messages
@@ -2600,7 +2603,7 @@ if (opportunityForm) {
             currency: opportunityCurrencySelect.value,
             stage: opportunityStageSelect.value,
             expectedStartDate: opportunityExpectedStartDateInput.value,
-            expectedCloseDate: opportunityOpportunityCloseDateInput.value,
+            expectedCloseDate: opportunityExpectedCloseDateInput.value,
             eventType: opportunityEventTypeSelect.value,
             eventLocationProposed: opportunityEventLocationProposedInput.value,
             serviceAddress: opportunityServiceAddressInput.value, // NEW Field
