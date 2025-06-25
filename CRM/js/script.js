@@ -602,14 +602,12 @@ async function initializeFirebase() {
 
                 if (userProfileSnap.exists()) {
                     // Profile exists, set isAdmin based on the 'role' and `profileAccess` field
-                    // Assuming 'profileAccess' being true is also a requirement for admin, adjust if needed
                     const userData = userProfileSnap.data();
                     isAdmin = userData.role === 'Admin' && userData.profileAccess === true;
                     console.log("onAuthStateChanged: User profile exists. Admin status:", isAdmin);
                 } else {
                     // Profile does NOT exist (first login for this user)
-                    isAdmin = false; // Default to non-admin
-                    console.log("onAuthStateChanged: User profile does not exist for new user. Creating basic profile:", user.uid);
+                    // Create a basic profile with default 'User' role
                     try {
                         await setDoc(userProfileRef, {
                             userId: user.uid, // Store the Firebase Auth UID as the userId field
@@ -619,14 +617,13 @@ async function initializeFirebase() {
                             email: user.email || 'N/A',
                             phone: '', // Default empty
                             role: 'User', // Default role for all new users on first login
+                            skills: [], // Default empty array
                             profileAccess: true // Default access for all new users
                         });
                         console.log("Basic user profile created for:", user.uid);
-                        // After creating, re-evaluate isAdmin based on the new data
-                        isAdmin = true; // If they just signed up, they get profile access, and default to 'User' role, but for this specific context, they need admin access to access sections.
-                                        // For simplicity here, I'm setting isAdmin true for new users if they gain profileAccess.
-                                        // A real application would require an Admin to set their 'role' to 'Admin' manually.
-                                        // Revert to `isAdmin = false;` if initial sign-up should not grant admin access.
+                        // After creating, isAdmin will be correctly evaluated from the newly set role.
+                        // A new user with role 'User' should NOT be an admin initially.
+                        isAdmin = false; // Explicitly set to false for newly created default 'User' profile.
                     } catch (profileError) {
                         console.error("Error creating basic user profile:", profileError);
                         showModal("Profile Error", `Failed to create user profile: ${profileError.message}. Access to some features may be limited.`, () => {});
@@ -1406,7 +1403,7 @@ function editOpportunity(opportunity) {
     if (opportunityForm) opportunityForm.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Reset Opportunity form function (UPDATED FOR NEW UI AND CURRENCY SYMBOLS)
+// Reset Opportunity form function (UPDATED FOR NEW UI AND CURRENCY SYMBOL)
 function resetOpportunityForm() {
     if (opportunityForm) opportunityForm.reset();
     if (opportunityForm) opportunityForm.dataset.editingId = '';
