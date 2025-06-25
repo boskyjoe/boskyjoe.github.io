@@ -582,13 +582,24 @@ async function initializeFirebase() {
         if (desktopAdminMenuToggle && desktopAdminSubMenu) {
             desktopAdminMenuToggle.addEventListener('click', (e) => {
                 e.preventDefault(); // Prevent default link behavior
-                desktopAdminSubMenu.classList.toggle('hidden'); // Toggle visibility
+                // Toggle 'active' class on parent li to control submenu visibility via CSS
+                desktopAdminMenuToggle.closest('li').classList.toggle('active');
             });
         }
+        // Listener for clicks *outside* the desktop admin menu to close it
+        document.addEventListener('click', (e) => {
+            if (desktopAdminMenu && !desktopAdminMenu.contains(e.target)) {
+                // If the click is outside the desktop admin menu, close it
+                desktopAdminMenu.classList.remove('active');
+            }
+        });
+
+
         if (mobileAdminMenuToggle && mobileAdminSubMenu) {
             mobileAdminMenuToggle.addEventListener('click', (e) => {
                 e.preventDefault(); // Prevent default link behavior
-                mobileAdminSubMenu.classList.toggle('hidden'); // Toggle visibility
+                // Toggle 'hidden' class on the submenu directly, as per CSS for mobile submenu
+                mobileAdminSubMenu.classList.toggle('hidden');
             });
         }
 
@@ -647,9 +658,7 @@ async function initializeFirebase() {
                             email: user.email || 'N/A',
                             phone: '', // Default empty
                             role: 'User', // Default role for all new users on first login
-                            skills: [], // Default empty array
-                            // For a new user profile created on first login, allow access by default.
-                            profileAccess: true
+                            profileAccess: true // For a new user profile created on first login, allow access by default.
                         });
                         console.log("Basic user profile created for:", user.uid);
                         isAdmin = false; // Explicitly set to false for newly created default 'User' profile.
