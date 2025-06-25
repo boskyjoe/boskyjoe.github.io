@@ -526,6 +526,9 @@ function getCurrencyName(code) {
 // Initialize Firebase and set up authentication listener
 async function initializeFirebase() {
     try {
+        // REMOVED THE DUPLICATE firebaseConfig REASSIGNMENT HERE
+        // The global `let firebaseConfig` declared at the top is used.
+
         app = initializeApp(firebaseConfig);
         getAnalytics(app); // Initialize Analytics
         db = getFirestore(app);
@@ -2597,7 +2600,7 @@ if (opportunityForm) {
             currency: opportunityCurrencySelect.value,
             stage: opportunityStageSelect.value,
             expectedStartDate: opportunityExpectedStartDateInput.value,
-            expectedCloseDate: opportunityExpectedCloseDateInput.value,
+            expectedCloseDate: opportunityOpportunityCloseDateInput.value,
             eventType: opportunityEventTypeSelect.value,
             eventLocationProposed: opportunityEventLocationProposedInput.value,
             serviceAddress: opportunityServiceAddressInput.value, // NEW Field
