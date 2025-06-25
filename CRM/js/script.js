@@ -568,14 +568,6 @@ async function initializeFirebase() {
             });
         }
 
-
-        // Load currency data and country data initially (can be done before auth state is fully known as they are public app_metadata)
-        await Promise.all([
-            fetchCurrencies(), // NEW: Load currency data here
-            fetchCountryData()
-        ]);
-
-
         // Listen for auth state changes
         onAuthStateChanged(auth, async (user) => {
             isAuthReady = true; // Mark auth as ready as soon as state is known
@@ -599,6 +591,13 @@ async function initializeFirebase() {
                 // Fetch the user's profile document from Firestore
                 const userProfileRef = doc(db, 'users_data', user.uid);
                 const userProfileSnap = await getDoc(userProfileRef);
+
+                // MOVED THESE FETCHES HERE - AFTER AUTH STATE IS CONFIRMED
+                await Promise.all([
+                    fetchCurrencies(),
+                    fetchCountryData()
+                ]);
+
 
                 if (userProfileSnap.exists()) {
                     // Profile exists, set isAdmin based on the 'role' and `profileAccess` field
@@ -624,18 +623,10 @@ async function initializeFirebase() {
                             phone: '', // Default empty
                             role: 'User', // Default role for all new users on first login
                             skills: [], // Default empty array
-                            // profileAccess will be determined by the saveUser function for new users now,
-                            // but for the initial profile creation via onAuthStateChanged,
-                            // it should default to false if the role is User, and true if role is Admin (not applicable here).
-                            // For a user created with 'User' role, profileAccess should be false unless explicitly set to true by an Admin.
-                            // However, for initial login, if the profile isn't there, we *must* give them access to *some* sections.
-                            // The `isAdmin` logic handles showing/hiding admin sections.
-                            // So, let's set profileAccess to true for first-time login to allow general access.
-                            // Admins can then manage it via the UI.
-                            profileAccess: true // Default access for all new users during their first login
+                            // For a new user profile created on first login, allow access by default.
+                            profileAccess: true
                         });
                         console.log("Basic user profile created for:", user.uid);
-                        // A new user with role 'User' should NOT be an admin initially.
                         isAdmin = false; // Explicitly set to false for newly created default 'User' profile.
                     } catch (profileError) {
                         console.error("Error creating basic user profile:", profileError);
@@ -663,6 +654,11 @@ async function initializeFirebase() {
                 currentUserId = null;
                 isAdmin = false; // Ensure isAdmin is false when no user
                 console.log("onAuthStateChanged: No user signed in. Showing home section by default.");
+
+                // Clear loaded app-wide data when logged out
+                appCountries = [];
+                appCountryStateMap = {};
+                allCurrencies = [];
 
                 // Hide admin menus and logout buttons
                 userIdDisplay.classList.add('hidden'); // Hide desktop user ID
@@ -928,6 +924,7 @@ async function deleteCustomer(firestoreDocId) {
                 console.error("Error deleting customer:", error);
                 showModal("Error", "Failed to delete customer. Please try again. " + error.message, () => {});
             }
+        
         }
     );
 }
@@ -1465,7 +1462,7 @@ function resetOpportunityForm() {
 function updateOpportunitySummaryCard() {
     if (currentEditedOpportunity && summaryOpportunityId && summaryOpportunityName && summaryOpportunityCustomer && summaryOpportunityStage && summaryOpportunityAmount) {
         const customer = allCustomers.find(c => c.id === currentEditedOpportunity.customer);
-        const customerDisplayName = customer ? (customer.companyName || `${customer.firstName || ''} ${currentEditedOpportunity.lastName || ''}`.trim()) : 'N/A';
+        const customerDisplayName = customer ? (customer.companyName || `${currentEditedOpportunity.firstName || ''} ${currentEditedOpportunity.lastName || ''}`.trim()) : 'N/A';
         const currencySymbol = getCurrencySymbol(currentEditedOpportunity.currency);
 
         summaryOpportunityId.textContent = currentEditedOpportunity.opportunityId || 'N/A';
