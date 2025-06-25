@@ -275,23 +275,41 @@ function setOpportunityLayout(layoutType) {
     if (opportunityFullFormView) opportunityFullFormView.classList.add('hidden');
     if (opportunityExistingListView) opportunityExistingListView.classList.add('hidden');
 
-    // Reset panel classes
-    if (opportunityLeftPanel) opportunityLeftPanel.classList.remove('shrink', 'stretch');
-    if (opportunityRightPanel) opportunityRightPanel.classList.remove('expand', 'hidden-panel');
+    // Remove all dynamic width classes from panels first
+    if (opportunityLeftPanel) {
+        // Remove Tailwind's default md:w-X/10 classes
+        opportunityLeftPanel.classList.remove('md:w-full', 'md:w-7/10', 'md:w-3/10');
+        // Remove custom dynamic classes
+        opportunityLeftPanel.classList.remove('shrink-left');
+    }
+    if (opportunityRightPanel) {
+        opportunityRightPanel.classList.remove('hidden-panel');
+        // Remove Tailwind's default md:w-X/10 classes
+        opportunityRightPanel.classList.remove('md:w-full', 'md:w-7/10', 'md:w-3/10');
+        // Remove custom dynamic classes
+        opportunityRightPanel.classList.remove('expand-right');
+    }
 
     switch (layoutType) {
         case 'full_form_and_list': // Default view for adding new, or after resetting edit form
             if (opportunityFullFormView) opportunityFullFormView.classList.remove('hidden');
             if (opportunityExistingListView) opportunityExistingListView.classList.remove('hidden');
-            if (opportunityLeftPanel) opportunityLeftPanel.classList.add('stretch'); // Take full width
+            if (opportunityLeftPanel) opportunityLeftPanel.classList.add('md:w-full'); // Take full width
             if (opportunityRightPanel) opportunityRightPanel.classList.add('hidden-panel'); // Hide right panel completely
             break;
         case 'edit_split_70_30': // Initial edit view: form + list (70) and accordions (30)
             if (opportunityFullFormView) opportunityFullFormView.classList.remove('hidden');
             if (opportunityExistingListView) opportunityExistingListView.classList.remove('hidden');
-            // Classes for width are handled by CSS directly on md: screen size
-            // This case implicitly relies on the default md:w-7/10 and md:w-3/10 being active.
-            // It also implicitly makes opportunityRightPanel visible by not adding 'hidden-panel'.
+            if (opportunityLeftPanel) opportunityLeftPanel.classList.add('md:w-7/10');
+            if (opportunityRightPanel) opportunityRightPanel.classList.remove('hidden-panel');
+            if (opportunityRightPanel) opportunityRightPanel.classList.add('md:w-3/10');
+            break;
+        case 'edit_split_30_70': // Accordion open view: form + list (30) and accordions (70)
+            if (opportunityFullFormView) opportunityFullFormView.classList.remove('hidden');
+            if (opportunityExistingListView) opportunityExistingListView.classList.remove('hidden');
+            if (opportunityLeftPanel) opportunityLeftPanel.classList.add('shrink-left'); // Custom class for shrinking
+            if (opportunityRightPanel) opportunityRightPanel.classList.remove('hidden-panel');
+            if (opportunityRightPanel) opportunityRightPanel.classList.add('expand-right'); // Custom class for expanding
             break;
         default:
             console.error("Unknown opportunity layout type:", layoutType);
@@ -1378,7 +1396,7 @@ function editOpportunity(opportunity) {
 
     currentEditedOpportunity = opportunity; // Store the full opportunity object globally
 
-    // Set layout to 70:30 split view
+    // Set layout to 70:30 split view initially
     setOpportunityLayout('edit_split_70_30');
 
     opportunityFormTitle.textContent = 'Edit Opportunity';
@@ -1406,6 +1424,7 @@ function editOpportunity(opportunity) {
 
     updateCurrencySymbolDisplay(); // Update symbol for the input field
 
+    if (linkedObjectsAccordion) opportunityRightPanel.classList.remove('hidden-panel'); // Ensure right panel is visible
     if (linkedObjectsAccordion) linkedObjectsAccordion.classList.remove('hidden'); // Show linked objects accordion
 
     // Always reset and then listen for sub-collections when editing an opportunity
@@ -1469,8 +1488,6 @@ function resetOpportunityForm() {
     // Revert layout to full form and list view for new opportunity creation
     setOpportunityLayout('full_form_and_list');
 }
-
-// REMOVED: Function to update the summary card content
 
 /* --- OPPORTUNITY CONTACTS CRUD (Fully Implemented Example) --- */
 
@@ -1619,7 +1636,6 @@ function editOpportunityContact(contact) {
     if (contactRoleInput) contactRoleInput.value = contact.role || '';
 
     // Ensure the related section expands and this accordion opens
-    // Removed specific 'edit_split_30_70' layout call here, relying on default 'edit_split_70_30'
     closeAllAccordions(); // Close others first
     if (contactsAccordionHeader && contactsAccordionContent) toggleAccordion(contactsAccordionHeader, contactsAccordionContent); // Open this one
 
@@ -1797,7 +1813,6 @@ function editOpportunityLine(line) {
     if (lineStatusSelect) lineStatusSelect.value = line.status || '';
 
     // Ensure the related section expands and this accordion opens
-    // Removed specific 'edit_split_30_70' layout call here, relying on default 'edit_split_70_30'
     closeAllAccordions(); // Close others first
     if (linesAccordionHeader && linesAccordionContent) toggleAccordion(linesAccordionHeader, linesAccordionContent); // Open this one
 
@@ -1992,7 +2007,6 @@ function editQuote(quote) {
     if (quoteIsFinalCheckbox) quoteIsFinalCheckbox.checked = quote.isFinal === true;
 
     // Ensure the related section expands and this accordion opens
-    // Removed specific 'edit_split_30_70' layout call here, relying on default 'edit_split_70_30'
     closeAllAccordions(); // Close others first
     if (quotesAccordionHeader && quotesAccordionContent) toggleAccordion(quotesAccordionHeader, quotesAccordionContent); // Open this one
 
@@ -2242,37 +2256,46 @@ function resetUserForm() {
 }
 
 // --- Accordion Logic (UPDATED for dynamic panel sizing) ---
+function areAllAccordionsClosed() {
+    // Select all accordion content elements within the linkedObjectsAccordion
+    const accordionContents = document.querySelectorAll('#linkedObjectsAccordion .accordion-content');
+    for (const content of accordionContents) {
+        if (content.classList.contains('open')) {
+            return false; // Found an open accordion
+        }
+    }
+    return true; // All accordions are closed
+}
+
 function toggleAccordion(header, content) {
-    // If the clicked accordion is already open, close it and revert to 70:30
-    if (content && content.classList.contains('open') && window.innerWidth >= 768) { // Only shrink/expand on desktop
+    if (!content || !header) return; // Defensive check
+
+    // If the clicked accordion is already open, close it
+    if (content.classList.contains('open')) {
         content.classList.remove('open');
         content.style.maxHeight = null;
-        if (header) header.classList.remove('active');
-        // Now that summary card is removed, this specific action to toggle the layout (30:70 to 70:30)
-        // by clicking on an accordion header is also removed.
-        // It should implicitly stay in 70:30, or if you want a specific "shrink left" behavior, it needs a new trigger.
-        // For now, it will simply close the accordion and the layout will remain 70:30.
+        header.classList.remove('active');
+
+        // After closing, check if ALL accordions are now closed. If so, revert layout.
+        if (areAllAccordionsClosed() && currentOpportunityId) { // Only revert if an opportunity is being edited
+            setOpportunityLayout('edit_split_70_30');
+        }
     } else {
         // Close all other accordions first
         closeAllAccordions();
 
         // Open the clicked accordion
-        if (content) {
-            content.classList.add('open');
-            content.style.maxHeight = content.scrollHeight + "px";
-        }
-        if (header) header.classList.add('active');
+        content.classList.add('open');
+        // Set maxHeight dynamically to content's scrollHeight for smooth transition
+        content.style.maxHeight = content.scrollHeight + "px";
+        header.classList.add('active');
 
-        // Only ensure right panel is visible (not expanded) if on desktop and an opportunity is being edited
-        if (currentOpportunityId && window.innerWidth >= 768) {
-            // No change to overall panel width here, as we are removing the 30:70 state.
-            // The initial edit will be 70:30.
-            // setOpportunityLayout('edit_split_30_70'); // REMOVED as summary card is gone.
-            // This just ensures the right panel is *visible* if it was somehow hidden
-            if (opportunityRightPanel) opportunityRightPanel.classList.remove('hidden-panel');
+        // When any accordion opens, set the layout to shrink the left panel and expand the right
+        if (currentOpportunityId && window.innerWidth >= 768) { // Only change layout on desktop and if editing
+            setOpportunityLayout('edit_split_30_70');
         }
-        // Scroll the accordion header into view
-        if (header) header.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Scroll the accordion header into view, considering the new layout
+        header.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 }
 
