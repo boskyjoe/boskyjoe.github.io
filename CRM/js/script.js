@@ -91,13 +91,7 @@ let opportunityLeftPanel; // Moved to be initialized after DOM load
 let opportunityRightPanel;   // Moved to be initialized after DOM load
 let opportunityFullFormView; // Moved to be initialized after DOM load
 let opportunityExistingListView; // Moved to be initialized after DOM load
-let opportunitySummaryCard; // Moved to be initialized after DOM load
-let summaryOpportunityId;       // Moved to be initialized after DOM load
-let summaryOpportunityName;
-let summaryOpportunityCustomer;
-let summaryOpportunityStage;
-let summaryOpportunityAmount;
-
+// REMOVED: opportunitySummaryCard, summaryOpportunityId, summaryOpportunityName, summaryOpportunityCustomer, summaryOpportunityStage, summaryOpportunityAmount
 
 const opportunityForm = document.getElementById('opportunityForm');
 const opportunityFormTitle = document.getElementById('opportunityFormTitle');
@@ -280,7 +274,7 @@ function setOpportunityLayout(layoutType) {
     // Hide all internal opportunity views first
     if (opportunityFullFormView) opportunityFullFormView.classList.add('hidden');
     if (opportunityExistingListView) opportunityExistingListView.classList.add('hidden');
-    if (opportunitySummaryCard) opportunitySummaryCard.classList.add('hidden');
+    // REMOVED: if (opportunitySummaryCard) opportunitySummaryCard.classList.add('hidden');
 
     // Reset panel classes
     if (opportunityLeftPanel) opportunityLeftPanel.classList.remove('shrink', 'stretch');
@@ -298,11 +292,7 @@ function setOpportunityLayout(layoutType) {
             if (opportunityExistingListView) opportunityExistingListView.classList.remove('hidden');
             // Classes for width are handled by CSS directly on md: screen size
             break;
-        case 'edit_split_30_70': // Accordion expanded view: summary card (30) and accordions (70)
-            if (opportunitySummaryCard) opportunitySummaryCard.classList.remove('hidden');
-            if (opportunityLeftPanel) opportunityLeftPanel.classList.add('shrink');
-            if (opportunityRightPanel) opportunityRightPanel.classList.add('expand');
-            break;
+        // REMOVED: case 'edit_split_30_70' as it relied on summary card for left panel
         default:
             console.error("Unknown opportunity layout type:", layoutType);
             break;
@@ -536,12 +526,7 @@ async function initializeFirebase() {
         opportunityRightPanel = document.getElementById('opportunity-right-panel');
         opportunityFullFormView = document.getElementById('opportunity-full-form-view');
         opportunityExistingListView = document.getElementById('opportunity-existing-list-view');
-        opportunitySummaryCard = document.getElementById('opportunity-summary-card');
-        summaryOpportunityId = document.getElementById('summaryOpportunityId');
-        summaryOpportunityName = document.getElementById('summaryOpportunityName');
-        summaryOpportunityCustomer = document.getElementById('summaryOpportunityCustomer');
-        summaryOpportunityStage = document.getElementById('summaryOpportunityStage');
-        summaryOpportunityAmount = document.getElementById('summaryOpportunityAmount');
+        // REMOVED: opportunitySummaryCard, summaryOpportunityId, summaryOpportunityName, summaryOpportunityCustomer, summaryOpportunityStage, summaryOpportunityAmount
 
         linkedObjectsAccordion = document.getElementById('linkedObjectsAccordion');
         contactsAccordionHeader = document.getElementById('contactsAccordionHeader');
@@ -573,16 +558,7 @@ async function initializeFirebase() {
         if (contactsAccordionHeader) contactsAccordionHeader.addEventListener('click', () => toggleAccordion(contactsAccordionHeader, contactsAccordionContent));
         if (linesAccordionHeader) linesAccordionHeader.addEventListener('click', () => toggleAccordion(linesAccordionHeader, linesAccordionContent));
         if (quotesAccordionHeader) quotesAccordionHeader.addEventListener('click', () => toggleAccordion(quotesAccordionHeader, quotesAccordionContent));
-        // Event listener for the summary card to expand the left panel
-        if (opportunitySummaryCard) {
-            opportunitySummaryCard.addEventListener('click', () => {
-                if (window.innerWidth >= 768) { // Only apply on desktop
-                    setOpportunityLayout('edit_split_70_30'); // Expand left, shrink right
-                    closeAllAccordions(); // Close any open accordions on the right
-                    if (opportunityForm) opportunityForm.scrollIntoView({ behavior: 'smooth', block: 'start' }); // Scroll form into view
-                }
-            });
-        }
+        // REMOVED: Event listener for the summary card
 
         // --- NEW: Admin Submenu Toggle Listeners ---
         if (desktopAdminMenuToggle && desktopAdminSubMenu) {
@@ -1494,27 +1470,7 @@ function resetOpportunityForm() {
     setOpportunityLayout('full_form_and_list');
 }
 
-// Function to update the summary card content (UPDATED for currency symbol)
-function updateOpportunitySummaryCard() {
-    if (currentEditedOpportunity && summaryOpportunityId && summaryOpportunityName && summaryOpportunityCustomer && summaryOpportunityStage && summaryOpportunityAmount) {
-        const customer = allCustomers.find(c => c.id === currentEditedOpportunity.customer);
-        const customerDisplayName = customer ? (customer.companyName || `${currentEditedOpportunity.firstName || ''} ${currentEditedOpportunity.lastName || ''}`.trim()) : 'N/A';
-        const currencySymbol = getCurrencySymbol(currentEditedOpportunity.currency);
-
-        summaryOpportunityId.textContent = currentEditedOpportunity.opportunityId || 'N/A';
-        summaryOpportunityName.textContent = currentEditedOpportunity.opportunityName || 'N/A';
-        summaryOpportunityCustomer.textContent = customerDisplayName;
-        summaryOpportunityStage.textContent = currentEditedOpportunity.stage || 'N/A';
-        summaryOpportunityAmount.textContent = currentEditedOpportunity.amount ? `${currencySymbol}${parseFloat(currentEditedOpportunity.amount).toFixed(2)}` : 'N/A';
-    } else {
-        if (summaryOpportunityId) summaryOpportunityId.textContent = '';
-        if (summaryOpportunityName) summaryOpportunityName.textContent = 'No Opportunity Selected';
-        if (summaryOpportunityCustomer) summaryOpportunityCustomer.textContent = '';
-        if (summaryOpportunityStage) summaryOpportunityStage.textContent = '';
-        if (summaryOpportunityAmount) summaryOpportunityAmount.textContent = '';
-    }
-}
-
+// REMOVED: Function to update the summary card content
 
 /* --- OPPORTUNITY CONTACTS CRUD (Fully Implemented Example) --- */
 
@@ -1663,7 +1619,7 @@ function editOpportunityContact(contact) {
     if (contactRoleInput) contactRoleInput.value = contact.role || '';
 
     // Ensure the related section expands and this accordion opens
-    setOpportunityLayout('edit_split_30_70'); // Shrink left, expand right
+    // Removed specific 'edit_split_30_70' layout call here, relying on default 'edit_split_70_30'
     closeAllAccordions(); // Close others first
     if (contactsAccordionHeader && contactsAccordionContent) toggleAccordion(contactsAccordionHeader, contactsAccordionContent); // Open this one
 
@@ -1841,7 +1797,7 @@ function editOpportunityLine(line) {
     if (lineStatusSelect) lineStatusSelect.value = line.status || '';
 
     // Ensure the related section expands and this accordion opens
-    setOpportunityLayout('edit_split_30_70'); // Shrink left, expand right
+    // Removed specific 'edit_split_30_70' layout call here, relying on default 'edit_split_70_30'
     closeAllAccordions(); // Close others first
     if (linesAccordionHeader && linesAccordionContent) toggleAccordion(linesAccordionHeader, linesAccordionContent); // Open this one
 
@@ -2036,7 +1992,7 @@ function editQuote(quote) {
     if (quoteIsFinalCheckbox) quoteIsFinalCheckbox.checked = quote.isFinal === true;
 
     // Ensure the related section expands and this accordion opens
-    setOpportunityLayout('edit_split_30_70'); // Shrink left, expand right
+    // Removed specific 'edit_split_30_70' layout call here, relying on default 'edit_split_70_30'
     closeAllAccordions(); // Close others first
     if (quotesAccordionHeader && quotesAccordionContent) toggleAccordion(quotesAccordionHeader, quotesAccordionContent); // Open this one
 
@@ -2292,8 +2248,10 @@ function toggleAccordion(header, content) {
         content.classList.remove('open');
         content.style.maxHeight = null;
         if (header) header.classList.remove('active');
-        setOpportunityLayout('edit_split_70_30'); // Revert to 70:30 layout
-        if (opportunityForm) opportunityForm.scrollIntoView({ behavior: 'smooth', block: 'start' }); // Scroll form into view
+        // Now that summary card is removed, this specific action to toggle the layout (30:70 to 70:30)
+        // by clicking on an accordion header is also removed.
+        // It should implicitly stay in 70:30, or if you want a specific "shrink left" behavior, it needs a new trigger.
+        // For now, it will simply close the accordion and the layout will remain 70:30.
     } else {
         // Close all other accordions first
         closeAllAccordions();
@@ -2305,10 +2263,13 @@ function toggleAccordion(header, content) {
         }
         if (header) header.classList.add('active');
 
-        // Only shrink left panel if on desktop and an opportunity is being edited
+        // Only ensure right panel is visible (not expanded) if on desktop and an opportunity is being edited
         if (currentOpportunityId && window.innerWidth >= 768) {
-            setOpportunityLayout('edit_split_30_70'); // Shrink left, expand right
-            updateOpportunitySummaryCard(); // Update the summary card
+            // No change to overall panel width here, as we are removing the 30:70 state.
+            // The initial edit will be 70:30.
+            // setOpportunityLayout('edit_split_30_70'); // REMOVED as summary card is gone.
+            // This just ensures the right panel is *visible* if it was somehow hidden
+            if (opportunityRightPanel) opportunityRightPanel.classList.remove('hidden-panel');
         }
         // Scroll the accordion header into view
         if (header) header.scrollIntoView({ behavior: 'smooth', block: 'center' });
