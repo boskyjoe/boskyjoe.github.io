@@ -3,38 +3,18 @@ import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc, getDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
-// YOUR Firebase Configuration - MANDATORY: Use __firebase_config provided by the Canvas environment.
-let firebaseConfig;
-try {
-    // Check if __firebase_config is defined and not empty, then parse it.
-    if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-        firebaseConfig = JSON.parse(__firebase_config);
-    } else {
-        // Fallback if __firebase_config is undefined, null, or an empty string.
-        console.warn("__firebase_config is undefined or empty. Using fallback Firebase config.");
-        firebaseConfig = {
-            apiKey: "YOUR_FALLBACK_API_KEY", // Replace with a dummy or actual key if testing outside Canvas
-            authDomain: "your-project-id.firebaseapp.com",
-            projectId: "your-project-id",
-            storageBucket: "your-project-id.appspot.com",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID",
-            measurementId: "YOUR_MEASUREMENT_ID"
-        };
-    }
-} catch (e) {
-    // Catch JSON parsing errors if __firebase_config is malformed.
-    console.error("Error parsing __firebase_config JSON. Using fallback.", e);
-    firebaseConfig = {
-        apiKey: "YOUR_FALLBACK_API_KEY",
-        authDomain: "your-project-id.firebaseapp.com",
-        projectId: "your-project-id",
-        storageBucket: "your-project-id.appspot.com",
-        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-        appId: "YOUR_APP_ID",
-        measurementId: "YOUR_MEASUREMENT_ID"
-    };
-}
+// YOUR Firebase Configuration - Provided by the user and directly embedded.
+const firebaseConfig = {
+    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
+    authDomain: "shuttersync-96971.firebaseapp.com",
+    projectId: "shuttersync-96971",
+    storageBucket: "shuttersync-96971.firebaseapp.com",
+    messagingSenderId: "10782416018",
+    appId: "1:10782416018:web:361db5572882a62f291a4b",
+    measurementId: "G-T0W9CES4D3"
+};
+
+console.log("Using directly provided Firebase config:", firebaseConfig);
 
 
 // Use __app_id for Firestore collection paths as per mandatory instructions.
@@ -73,173 +53,176 @@ let allCustomers = [];
 const APP_SETTINGS_DOC_ID = "app_settings";
 
 
-// Get references to DOM elements for Customers
-const customersSection = document.getElementById('customers-section');
-const customerForm = document.getElementById('customerForm');
-const customerFormTitle = document.getElementById('customerFormTitle');
-const customerIdDisplayGroup = document.getElementById('customerIdDisplayGroup');
-const customerIdDisplay = document.getElementById('customerIdDisplay');
+// Declare DOM element variables at a higher scope (or globally with 'let')
+// but assign them only once inside initializeFirebase to avoid issues.
+let customersSection;
+let customerForm;
+let customerFormTitle;
+let customerIdDisplayGroup;
+let customerIdDisplay;
 
-const customerTypeSelect = document.getElementById('customerType');
-const individualFieldsDiv = document.getElementById('individualFields');
-const customerFirstNameInput = document.getElementById('customerFirstName');
-const customerLastNameInput = document.getElementById('customerLastName');
-const companyNameFieldDiv = document.getElementById('companyNameField');
-const customerCompanyNameInput = document.getElementById('customerCompanyName');
+let customerTypeSelect;
+let individualFieldsDiv;
+let customerFirstNameInput;
+let customerLastNameInput;
+let companyNameFieldDiv;
+let customerCompanyNameInput;
 
-const customerEmailInput = document.getElementById('customerEmail');
-const customerPhoneInput = document.getElementById('customerPhone');
+let customerEmailInput;
+let customerPhoneInput;
 
 // Address fields
-const customerCountrySelect = document.getElementById('customerCountry');
-const customerAddressInput = document.getElementById('customerAddress');
-const customerCityInput = document.getElementById('customerCity');
-const customerStateSelect = document.getElementById('customerState');
-const customerZipCodeInput = document.getElementById('customerZipCode');
-const addressValidationMessage = document.getElementById('addressValidationMessage');
+let customerCountrySelect;
+let customerAddressInput;
+let customerCityInput;
+let customerStateSelect;
+let customerZipCodeInput;
+let addressValidationMessage;
 
-const individualIndustryGroup = document.getElementById('individualIndustryGroup');
-const customerIndustryInput = document.getElementById('customerIndustryInput');
-const companyIndustryGroup = document.getElementById('companyIndustryGroup');
-const customerIndustrySelect = document.getElementById('customerIndustrySelect');
+let individualIndustryGroup;
+let customerIndustryInput;
+let companyIndustryGroup;
+let customerIndustrySelect;
 
-const customerSinceInput = document.getElementById('customerSince');
-const customerDescriptionInput = document.getElementById('customerDescription');
-const submitCustomerButton = document.getElementById('submitCustomerButton');
-const customerList = document.getElementById('customerList'); // Reference to the div for customer rows
+let customerSinceInput;
+let customerDescriptionInput;
+let submitCustomerButton;
+let customerList; // Reference to the div for customer rows
 
 // Opportunity Section Elements (NEW - and now restructured)
-const opportunitiesSection = document.getElementById('opportunities-section');
-const opportunityViewContainer = document.getElementById('opportunity-view-container'); // NEW main flex container
-let opportunityLeftPanel; // Moved to be initialized after DOM load
-let opportunityRightPanel;   // Moved to be initialized after DOM load
-let opportunityFullFormView; // Moved to be initialized after DOM load
-let opportunityExistingListView; // Moved to be initialized after DOM load
-// REMOVED: opportunitySummaryCard, summaryOpportunityId, summaryOpportunityName, summaryOpportunityCustomer, summaryOpportunityStage, summaryOpportunityAmount
+let opportunitiesSection;
+let opportunityViewContainer; // NEW main flex container
+let opportunityLeftPanel;
+let opportunityRightPanel;
+let opportunityFullFormView;
+let opportunityExistingListView;
 
-const opportunityForm = document.getElementById('opportunityForm');
-const opportunityFormTitle = document.getElementById('opportunityFormTitle');
-const opportunityIdDisplayGroup = document.getElementById('opportunityIdDisplayGroup');
-const opportunityIdDisplay = document.getElementById('opportunityIdDisplay');
-const opportunityCustomerSelect = document.getElementById('opportunityCustomer');
-const opportunityNameInput = document.getElementById('opportunityName');
-const opportunityAmountInput = document.getElementById('opportunityAmount');
-let currencySymbolDisplay; // Declare with 'let', will be initialized in initializeFirebase
-const opportunityCurrencySelect = document.getElementById('opportunityCurrency');
-const opportunityStageSelect = document.getElementById('opportunityStage');
-const opportunityExpectedStartDateInput = document.getElementById('opportunityExpectedStartDate');
-const opportunityExpectedCloseDateInput = document.getElementById('opportunityExpectedCloseDate');
-const opportunityEventTypeSelect = document.getElementById('opportunityEventType');
-const opportunityEventLocationProposedInput = document.getElementById('opportunityEventLocationProposed');
-const opportunityServiceAddressInput = document.getElementById('opportunityServiceAddress'); // NEW Field
-const opportunityDescriptionInput = document.getElementById('opportunityDescription');
-const opportunityDataInput = document.getElementById('opportunityData');
-const submitOpportunityButton = document.getElementById('submitOpportunityButton');
-const opportunityList = document.getElementById('opportunityList'); // Reference to the div for opportunity rows
+let opportunityForm;
+let opportunityFormTitle;
+let opportunityIdDisplayGroup;
+let opportunityIdDisplay;
+let opportunityCustomerSelect;
+let opportunityNameInput;
+let opportunityAmountInput;
+let currencySymbolDisplay;
+let opportunityCurrencySelect;
+let opportunityStageSelect;
+let opportunityExpectedStartDateInput;
+let opportunityExpectedCloseDateInput;
+let opportunityEventTypeSelect;
+let opportunityEventLocationProposedInput;
+let opportunityServiceAddressInput; // NEW Field
+let opportunityDescriptionInput;
+let opportunityDataInput;
+let submitOpportunityButton;
+let opportunityList; // Reference to the div for opportunity rows
 
-let linkedObjectsAccordion; // Moved to be initialized after DOM load
-let contactsAccordionHeader; // Moved to be initialized after DOM load
-let contactsAccordionContent; // Moved to be initialized after DOM load
-let linesAccordionHeader; // Moved to be initialized after DOM load
-let linesAccordionContent; // Moved to be initialized after DOM load
-let quotesAccordionHeader; // Moved to be initialized after DOM load
-let quotesAccordionContent; // Moved to be initialized after DOM load
+let linkedObjectsAccordion;
+let contactsAccordionHeader;
+let contactsAccordionContent;
+let linesAccordionHeader;
+let linesAccordionContent;
+let quotesAccordionHeader;
+let quotesAccordionContent;
 
 
 // Opportunity Contact Elements (NEW)
-const opportunityContactForm = document.getElementById('opportunityContactForm');
-const contactIdDisplayGroup = document.getElementById('contactIdDisplayGroup');
-const contactIdDisplay = document.getElementById('contactIdDisplay');
-const contactFirstNameInput = document.getElementById('contactFirstName');
-const contactLastNameInput = document.getElementById('contactLastName');
-const contactEmailInput = document.getElementById('contactEmail');
-const contactPhoneInput = document.getElementById('contactPhone');
-const contactRoleInput = document.getElementById('contactRole');
-const submitOpportunityContactButton = document.getElementById('submitOpportunityContactButton');
-const opportunityContactList = document.getElementById('opportunityContactList');
+let opportunityContactForm;
+let contactIdDisplayGroup;
+let contactIdDisplay;
+let contactFirstNameInput;
+let contactLastNameInput;
+let contactEmailInput;
+let contactPhoneInput;
+let contactRoleInput;
+let submitOpportunityContactButton;
+let opportunityContactList;
 
 // Opportunity Line Elements (NEW - Stubs)
-const opportunityLineForm = document.getElementById('opportunityLineForm');
-const optyLineIdDisplayGroup = document.getElementById('optyLineIdDisplayGroup');
-const optyLineIdDisplay = document.getElementById('optyLineIdDisplay');
-const lineServiceDescriptionInput = document.getElementById('lineServiceDescription');
-const lineUnitPriceInput = document.getElementById('lineUnitPrice'); 
-const lineQuantityInput = document.getElementById('lineQuantity');
-const lineDiscountInput = document.getElementById('lineDiscount');
-const lineNetPriceInput = document.getElementById('lineNetPrice');
-const lineStatusSelect = document.getElementById('lineStatus');
-const submitOpportunityLineButton = document.getElementById('submitOpportunityLineButton');
-const opportunityLineList = document.getElementById('opportunityLineList');
+let opportunityLineForm;
+let optyLineIdDisplayGroup;
+let optyLineIdDisplay;
+let lineServiceDescriptionInput;
+let lineUnitPriceInput;
+let lineQuantityInput;
+let lineDiscountInput;
+let lineNetPriceInput;
+let lineStatusSelect;
+let submitOpportunityLineButton;
+let opportunityLineList;
 
 // Quote Elements (NEW - Stubs)
-const quoteForm = document.getElementById('quoteForm');
-const quoteIdDisplayGroup = document.getElementById('quoteIdDisplayGroup');
-const quoteIdDisplay = document.getElementById('quoteIdDisplay');
-const quoteNameInput = document.getElementById('quoteName');
-const quoteDescriptionInput = document.getElementById('quoteDescription');
-const quoteCustomerSelect = document.getElementById('quoteCustomer'); // Auto-filled from opportunity
-const quoteStartDateInput = document.getElementById('quoteStartDate');
-const quoteExpireDateInput = document.getElementById('quoteExpireDate');
-const quoteStatusSelect = document.getElementById('quoteStatus');
-const quoteNetListAmountInput = document.getElementById('quoteNetListAmount');
-const quoteNetDiscountInput = document.getElementById('quoteNetDiscount');
-const quoteNetAmountInput = document.getElementById('quoteNetAmount');
-const quoteCurrencySelect = document.getElementById('quoteCurrency');
-const quoteIsFinalCheckbox = document.getElementById('quoteIsFinal');
-const submitQuoteButton = document.getElementById('submitQuoteButton');
-const quoteList = document.getElementById('quoteList');
+let quoteForm;
+let quoteIdDisplayGroup;
+let quoteIdDisplay;
+let quoteNameInput;
+let quoteDescriptionInput;
+let quoteCustomerSelect; // Auto-filled from opportunity
+let quoteStartDateInput;
+let quoteExpireDateInput;
+let quoteStatusSelect;
+let quoteNetListAmountInput;
+let quoteNetDiscountInput;
+let quoteNetAmountInput;
+let quoteCurrencySelect;
+let quoteIsFinalCheckbox;
+let submitQuoteButton;
+let quoteList;
 
 
 // Admin Country Mapping Section elements
-const adminCountryMappingSection = document.getElementById('admin-country-mapping-section');
-const adminCountriesInput = document.getElementById('adminCountriesInput');
-const adminCountryStateMapInput = document.getElementById('adminCountryStateMapInput');
-const uploadAdminDataButton = document.getElementById('uploadAdminDataButton');
-const fullLoadRadio = document.getElementById('fullLoad');
-const incrementalLoadRadio = document.getElementById('incrementalLoad');
-const adminMessageDiv = document.getElementById('adminMessage');
+let adminCountryMappingSection;
+let adminCountriesInput;
+let adminCountryStateMapInput;
+let uploadAdminDataButton;
+let fullLoadRadio;
+let incrementalLoadRadio;
+let adminMessageDiv;
 
 // Admin Currency Management Section elements (NEW)
-const currencyManagementSection = document.getElementById('currency-management-section');
-const currencyForm = document.getElementById('currencyForm');
-const currencyFormTitle = document.getElementById('currencyFormTitle');
-const currencyCodeDisplayGroup = document.getElementById('currencyCodeDisplayGroup');
-const currencyCodeDisplay = document.getElementById('currencyCodeDisplay');
-const adminCurrenciesInput = document.getElementById('adminCurrenciesInput');
-const submitCurrencyButton = document.getElementById('submitCurrencyButton');
-const adminCurrencyMessageDiv = document.getElementById('adminCurrencyMessageDiv');
-const currencyList = document.getElementById('currencyList');
+let currencyManagementSection;
+let currencyForm;
+let currencyFormTitle;
+let currencyCodeDisplayGroup;
+let currencyCodeDisplay;
+let adminCurrenciesInput;
+let submitCurrencyButton;
+let adminCurrencyMessageDiv;
+let currencyList;
 
 
 // Users Management Section elements
-const usersManagementSection = document.getElementById('users-management-section');
-const userForm = document.getElementById('userForm');
-const userFormTitle = document.getElementById('userFormTitle');
-const userIdDisplayGroup = document.getElementById('userIdDisplayGroup');
-const userIdDisplayInput = document.getElementById('userIdDisplayInput'); // Changed to an input element
-const userNameInput = document.getElementById('userName');
-const userFirstNameInput = document.getElementById('userFirstName');
-const userLastNameInput = document.getElementById('userLastName');
-const userEmailInput = document.getElementById('userEmail');
-const userPhoneInput = document.getElementById('userPhone');
-const userRoleSelect = document.getElementById('userRole'); // Changed to select
-const userSkillsInput = document.getElementById('userSkills');
-const submitUserButton = document.getElementById('submitUserButton');
-const userList = document.getElementById('userList');
+let usersManagementSection;
+let userForm;
+let userFormTitle;
+let userIdDisplayGroup;
+let userIdDisplayInput; // Changed to an input element
+let userNameInput;
+let userFirstNameInput;
+let userLastNameInput;
+let userEmailInput;
+let userPhoneInput;
+let userRoleSelect; // Changed to select
+let userSkillsInput;
+let submitUserButton;
+let userList;
 
 // References to logout buttons and the new nav Google Login button
-const logoutButton = document.getElementById('logoutButton');
-const mobileLogoutButton = document.getElementById('mobileLogoutButton');
-const navGoogleLoginButton = document.getElementById('navGoogleLoginButton'); // Top right Google Sign In button
+let logoutButton;
+let mobileLogoutButton;
+let navGoogleLoginButton; // Top right Google Sign In button
 
 // Home section Google login button (for visual hint on home page)
-const googleLoginButtonHome = document.getElementById('googleLoginButton');
-const homeSignInMessage = document.getElementById('homeSignInMessage'); // NEW: For the sign-in prompt message
+let googleLoginButtonHome;
+let homeSignInMessage; // NEW: For the sign-in prompt message
+
+let userIdDisplay; // Global variable for desktop user ID display
+let mobileUserIdDisplay; // Global variable for mobile user ID display
 
 
 // Admin menu elements (added IDs in HTML)
-let desktopAdminMenu; // Moved to be initialized after DOM load
-let mobileAdminMenu; // Moved to be initialized after DOM load
+let desktopAdminMenu;
+let mobileAdminMenu;
 
 // NEW: Admin Menu Toggle elements
 let desktopAdminMenuToggle;
@@ -249,11 +232,11 @@ let mobileAdminSubMenu;
 
 
 // Reference to auth-section (for standard Google/email login) - This section is mostly decorative now
-const authSection = document.getElementById('auth-section');
+let authSection;
 
 // Mobile Menu Button and Container
-const mobileMenuButton = document.getElementById('mobileMenuButton');
-let mobileMenu; // Moved to be initialized after DOM load
+let mobileMenuButton;
+let mobileMenu;
 
 
 // Select all main content sections (Initialize these later or ensure they are found)
@@ -404,51 +387,51 @@ async function showSection(sectionId) {
         if (sectionId === 'customers-section') {
             listenForCustomers();
             resetCustomerForm(); // Reset form and apply initial validation state
-            submitCustomerButton.removeAttribute('disabled'); // Customers form always enabled for authenticated users
+            if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled'); // Customers form always enabled for authenticated users
         } else if (sectionId === 'opportunities-section') { // NEW
             await fetchCustomersForDropdown(); // Fetch customers to populate dropdown
             listenForOpportunities();
             resetOpportunityForm(); // This will also hide linked object sections initially and set layout
-            submitOpportunityButton.removeAttribute('disabled');
+            if (submitOpportunityButton) submitOpportunityButton.removeAttribute('disabled');
             populateCurrencySelect(); // Populate currency dropdown for opportunities form
             updateCurrencySymbolDisplay(); // Set initial currency symbol
         }
         else if (sectionId === 'admin-country-mapping-section') {
             if (isAdmin) { // Double check admin status for safety
                 loadAdminCountryData(); // Load existing data into admin textareas
-                uploadAdminDataButton.removeAttribute('disabled');
+                if (uploadAdminDataButton) uploadAdminDataButton.removeAttribute('disabled');
             } else {
-                uploadAdminDataButton.setAttribute('disabled', 'disabled');
+                if (uploadAdminDataButton) uploadAdminDataButton.setAttribute('disabled', 'disabled');
             }
         } else if (sectionId === 'currency-management-section') { // NEW
             if (isAdmin) {
                 listenForCurrencies(); // Start listening for currencies
                 resetCurrencyForm(); // Reset currency form
-                submitCurrencyButton.removeAttribute('disabled');
+                if (submitCurrencyButton) submitCurrencyButton.removeAttribute('disabled');
             } else {
-                submitCurrencyButton.setAttribute('disabled', 'disabled');
+                if (submitCurrencyButton) submitCurrencyButton.setAttribute('disabled', 'disabled');
             }
         }
         else if (sectionId === 'users-management-section') {
             if (isAdmin) { // Double check admin status for safety
                 listenForUsers(); // Start listening for users data
                 resetUserForm(); // Reset user form
-                submitUserButton.removeAttribute('disabled'); // Enable user form button for admin
+                if (submitUserButton) submitUserButton.removeAttribute('disabled'); // Enable user form button for admin
             } else {
-                submitUserButton.setAttribute('disabled', 'disabled');
+                if (submitUserButton) submitUserButton.setAttribute('disabled', 'disabled');
             }
         }
     } else {
         console.warn("Attempted to show section before Firebase Auth is ready:", sectionId);
         // Ensure buttons are disabled if auth is not ready
-        submitCustomerButton.setAttribute('disabled', 'disabled');
-        submitOpportunityButton.setAttribute('disabled', 'disabled'); // NEW
-        submitOpportunityContactButton.setAttribute('disabled', 'disabled'); // NEW
-        submitOpportunityLineButton.setAttribute('disabled', 'disabled'); // NEW
-        submitQuoteButton.setAttribute('disabled', 'disabled'); // NEW
-        uploadAdminDataButton.setAttribute('disabled', 'disabled');
-        submitUserButton.setAttribute('disabled', 'disabled');
-        submitCurrencyButton.setAttribute('disabled', 'disabled'); // NEW
+        if (submitCustomerButton) submitCustomerButton.setAttribute('disabled', 'disabled');
+        if (submitOpportunityButton) submitOpportunityButton.setAttribute('disabled', 'disabled'); // NEW
+        if (submitOpportunityContactButton) submitOpportunityContactButton.setAttribute('disabled', 'disabled'); // NEW
+        if (submitOpportunityLineButton) submitOpportunityLineButton.setAttribute('disabled', 'disabled'); // NEW
+        if (submitQuoteButton) submitQuoteButton.setAttribute('disabled', 'disabled'); // NEW
+        if (uploadAdminDataButton) uploadAdminDataButton.setAttribute('disabled', 'disabled');
+        if (submitUserButton) submitUserButton.setAttribute('disabled', 'disabled');
+        if (submitCurrencyButton) submitCurrencyButton.setAttribute('disabled', 'disabled'); // NEW
     }
 }
 
@@ -499,15 +482,15 @@ async function loadAdminCountryData() {
 
         // Convert appCountries array to NEWLINE-separated string for display
         const countriesString = appCountries.map(c => `${c.name},${c.code}`).join('\n');
-        adminCountriesInput.value = countriesString;
+        if (adminCountriesInput) adminCountriesInput.value = countriesString;
 
         // Convert appCountryStateMap object to NEWLINE-separated string for display
         const countryStateMapString = Object.entries(appCountryStateMap)
             .map(([code, states]) => `${code}:${states.join(',')}`)
             .join('\n'); // Changed join delimiter to newline
-        adminCountryStateMapInput.value = countryStateMapString;
+        if (adminCountryStateMapInput) adminCountryStateMapInput.value = countryStateMapString;
 
-        adminMessageDiv.classList.add('hidden'); // Clear any previous messages
+        if (adminMessageDiv) adminMessageDiv.classList.add('hidden'); // Clear any previous messages
         console.log("Admin country data loaded into textareas.");
     }
     catch (error) {
@@ -563,25 +546,67 @@ async function initializeFirebase() {
 
 
     // --- IMPORTANT: Initialize all DOM element references here AFTER app initialization ---
-    homeSection = document.getElementById('home');
-    eventsSection = document.getElementById('events-section');
-    mobileMenu = document.getElementById('mobileMenu');
-    desktopAdminMenu = document.getElementById('desktopAdminMenu');
-    mobileAdminMenu = document.getElementById('mobileAdminMenu');
+    customersSection = document.getElementById('customers-section');
+    customerForm = document.getElementById('customerForm');
+    customerFormTitle = document.getElementById('customerFormTitle');
+    customerIdDisplayGroup = document.getElementById('customerIdDisplayGroup');
+    customerIdDisplay = document.getElementById('customerIdDisplay');
 
-    desktopAdminMenuToggle = document.getElementById('desktopAdminMenuToggle');
-    desktopAdminSubMenu = document.getElementById('desktopAdminSubMenu');
-    mobileAdminMenuToggle = document.getElementById('mobileAdminMenuToggle');
-    mobileAdminSubMenu = document.getElementById('mobileAdminSubMenu');
+    customerTypeSelect = document.getElementById('customerType');
+    individualFieldsDiv = document.getElementById('individualFields');
+    customerFirstNameInput = document.getElementById('customerFirstName');
+    customerLastNameInput = document.getElementById('customerLastName');
+    companyNameFieldDiv = document.getElementById('companyNameField');
+    customerCompanyNameInput = document.getElementById('customerCompanyName');
 
-    homeSignInMessage = document.getElementById('homeSignInMessage'); // NEW: Get reference to home sign-in message
+    customerEmailInput = document.getElementById('customerEmail');
+    customerPhoneInput = document.getElementById('customerPhone');
 
+    // Address fields
+    customerCountrySelect = document.getElementById('customerCountry');
+    customerAddressInput = document.getElementById('customerAddress');
+    customerCityInput = document.getElementById('customerCity');
+    customerStateSelect = document.getElementById('customerState');
+    customerZipCodeInput = document.getElementById('customerZipCode');
+    addressValidationMessage = document.getElementById('addressValidationMessage');
 
+    individualIndustryGroup = document.getElementById('individualIndustryGroup');
+    customerIndustryInput = document.getElementById('customerIndustryInput');
+    companyIndustryGroup = document.getElementById('companyIndustryGroup');
+    customerIndustrySelect = document.getElementById('customerIndustrySelect');
+
+    customerSinceInput = document.getElementById('customerSince');
+    customerDescriptionInput = document.getElementById('customerDescription');
+    submitCustomerButton = document.getElementById('submitCustomerButton');
+    customerList = document.getElementById('customerList'); // Reference to the div for customer rows
+
+    // Opportunity Section Elements (NEW - and now restructured)
+    opportunitiesSection = document.getElementById('opportunities-section');
+    opportunityViewContainer = document.getElementById('opportunity-view-container'); // NEW main flex container
     opportunityLeftPanel = document.getElementById('opportunity-left-panel');
     opportunityRightPanel = document.getElementById('opportunity-right-panel');
     opportunityFullFormView = document.getElementById('opportunity-full-form-view');
     opportunityExistingListView = document.getElementById('opportunity-existing-list-view');
-    // REMOVED: opportunitySummaryCard, summaryOpportunityId, summaryOpportunityName, summaryOpportunityCustomer, summaryOpportunityStage, summaryOpportunityAmount
+
+    opportunityForm = document.getElementById('opportunityForm');
+    opportunityFormTitle = document.getElementById('opportunityFormTitle');
+    opportunityIdDisplayGroup = document.getElementById('opportunityIdDisplayGroup');
+    opportunityIdDisplay = document.getElementById('opportunityIdDisplay');
+    opportunityCustomerSelect = document.getElementById('opportunityCustomer');
+    opportunityNameInput = document.getElementById('opportunityName');
+    opportunityAmountInput = document.getElementById('opportunityAmount');
+    currencySymbolDisplay = document.getElementById('currencySymbolDisplay');
+    opportunityCurrencySelect = document.getElementById('opportunityCurrency');
+    opportunityStageSelect = document.getElementById('opportunityStage');
+    opportunityExpectedStartDateInput = document.getElementById('opportunityExpectedStartDate');
+    opportunityExpectedCloseDateInput = document.getElementById('opportunityExpectedCloseDate');
+    opportunityEventTypeSelect = document.getElementById('opportunityEventType');
+    opportunityEventLocationProposedInput = document.getElementById('opportunityEventLocationProposed');
+    opportunityServiceAddressInput = document.getElementById('opportunityServiceAddress'); // NEW Field
+    opportunityDescriptionInput = document.getElementById('opportunityDescription');
+    opportunityDataInput = document.getElementById('opportunityData');
+    submitOpportunityButton = document.getElementById('submitOpportunityButton');
+    opportunityList = document.getElementById('opportunityList'); // Reference to the div for opportunity rows
 
     linkedObjectsAccordion = document.getElementById('linkedObjectsAccordion');
     contactsAccordionHeader = document.getElementById('contactsAccordionHeader');
@@ -591,10 +616,118 @@ async function initializeFirebase() {
     quotesAccordionHeader = document.getElementById('quotesAccordionHeader');
     quotesAccordionContent = quotesAccordionHeader ? quotesAccordionHeader.nextElementSibling : null;
 
-    currencySymbolDisplay = document.getElementById('currencySymbolDisplay');
-    if (!currencySymbolDisplay) {
-        console.error("ERROR: currencySymbolDisplay element not found in the DOM! Currency symbol display may not work.");
-    }
+    // Opportunity Contact Elements (NEW)
+    opportunityContactForm = document.getElementById('opportunityContactForm');
+    contactIdDisplayGroup = document.getElementById('contactIdDisplayGroup');
+    contactIdDisplay = document.getElementById('contactIdDisplay');
+    contactFirstNameInput = document.getElementById('contactFirstName');
+    contactLastNameInput = document.getElementById('contactLastName');
+    contactEmailInput = document.getElementById('contactEmail');
+    contactPhoneInput = document.getElementById('contactPhone');
+    contactRoleInput = document.getElementById('contactRole');
+    submitOpportunityContactButton = document.getElementById('submitOpportunityContactButton');
+    opportunityContactList = document.getElementById('opportunityContactList');
+
+    // Opportunity Line Elements (NEW - Stubs)
+    opportunityLineForm = document.getElementById('opportunityLineForm');
+    optyLineIdDisplayGroup = document.getElementById('optyLineIdDisplayGroup');
+    optyLineIdDisplay = document.getElementById('optyLineIdDisplay');
+    lineServiceDescriptionInput = document.getElementById('lineServiceDescription');
+    lineUnitPriceInput = document.getElementById('lineUnitPrice');
+    lineQuantityInput = document.getElementById('lineQuantity');
+    lineDiscountInput = document.getElementById('lineDiscount');
+    lineNetPriceInput = document.getElementById('lineNetPrice');
+    lineStatusSelect = document.getElementById('lineStatus');
+    submitOpportunityLineButton = document.getElementById('submitOpportunityLineButton');
+    opportunityLineList = document.getElementById('opportunityLineList');
+
+    // Quote Elements (NEW - Stubs)
+    quoteForm = document.getElementById('quoteForm');
+    quoteIdDisplayGroup = document.getElementById('quoteIdDisplayGroup');
+    quoteIdDisplay = document.getElementById('quoteIdDisplay');
+    quoteNameInput = document.getElementById('quoteName');
+    quoteDescriptionInput = document.getElementById('quoteDescription');
+    quoteCustomerSelect = document.getElementById('quoteCustomer'); // Auto-filled from opportunity
+    quoteStartDateInput = document.getElementById('quoteStartDate');
+    quoteExpireDateInput = document.getElementById('quoteExpireDate');
+    quoteStatusSelect = document.getElementById('quoteStatus');
+    quoteNetListAmountInput = document.getElementById('quoteNetListAmount');
+    quoteNetDiscountInput = document.getElementById('quoteNetDiscount');
+    quoteNetAmountInput = document.getElementById('quoteNetAmount');
+    quoteCurrencySelect = document.getElementById('quoteCurrency');
+    quoteIsFinalCheckbox = document.getElementById('quoteIsFinal');
+    submitQuoteButton = document.getElementById('submitQuoteButton');
+    quoteList = document.getElementById('quoteList');
+
+
+    // Admin Country Mapping Section elements
+    adminCountryMappingSection = document.getElementById('admin-country-mapping-section');
+    adminCountriesInput = document.getElementById('adminCountriesInput');
+    adminCountryStateMapInput = document.getElementById('adminCountryStateMapInput');
+    uploadAdminDataButton = document.getElementById('uploadAdminDataButton');
+    fullLoadRadio = document.getElementById('fullLoad');
+    incrementalLoadRadio = document.getElementById('incrementalLoad');
+    adminMessageDiv = document.getElementById('adminMessage');
+
+    // Admin Currency Management Section elements (NEW)
+    currencyManagementSection = document.getElementById('currency-management-section');
+    currencyForm = document.getElementById('currencyForm');
+    currencyFormTitle = document.getElementById('currencyFormTitle');
+    currencyCodeDisplayGroup = document.getElementById('currencyCodeDisplayGroup');
+    currencyCodeDisplay = document.getElementById('currencyCodeDisplay');
+    adminCurrenciesInput = document.getElementById('adminCurrenciesInput');
+    submitCurrencyButton = document.getElementById('submitCurrencyButton');
+    adminCurrencyMessageDiv = document.getElementById('adminCurrencyMessageDiv');
+    currencyList = document.getElementById('currencyList');
+
+
+    // Users Management Section elements
+    usersManagementSection = document.getElementById('users-management-section');
+    userForm = document.getElementById('userForm');
+    userFormTitle = document.getElementById('userFormTitle');
+    userIdDisplayGroup = document.getElementById('userIdDisplayGroup');
+    userIdDisplayInput = document.getElementById('userIdDisplayInput'); // Changed to an input element
+    userNameInput = document.getElementById('userName');
+    userFirstNameInput = document.getElementById('userFirstName');
+    userLastNameInput = document.getElementById('userLastName');
+    userEmailInput = document.getElementById('userEmail');
+    userPhoneInput = document.getElementById('userPhone');
+    userRoleSelect = document.getElementById('userRole'); // Changed to select
+    userSkillsInput = document.getElementById('userSkills');
+    submitUserButton = document.getElementById('submitUserButton');
+    userList = document.getElementById('userList');
+
+    // References to logout buttons and the new nav Google Login button
+    logoutButton = document.getElementById('logoutButton');
+    mobileLogoutButton = document.getElementById('mobileLogoutButton');
+    navGoogleLoginButton = document.getElementById('navGoogleLoginButton'); // Top right Google Sign In button
+
+    // Home section Google login button (for visual hint on home page)
+    googleLoginButtonHome = document.getElementById('googleLoginButton');
+    homeSignInMessage = document.getElementById('homeSignInMessage'); // NEW: For the sign-in prompt message
+
+    // Explicitly define userIdDisplay and mobileUserIdDisplay here
+    userIdDisplay = document.getElementById('userIdDisplay');
+    mobileUserIdDisplay = document.getElementById('mobileUserIdDisplay');
+
+    // Admin menu elements (added IDs in HTML)
+    desktopAdminMenu = document.getElementById('desktopAdminMenu');
+    mobileAdminMenu = document.getElementById('mobileAdminMenu');
+
+    // NEW: Admin Menu Toggle elements
+    desktopAdminMenuToggle = document.getElementById('desktopAdminMenuToggle');
+    desktopAdminSubMenu = document.getElementById('desktopAdminSubMenu');
+    mobileAdminMenuToggle = document.getElementById('mobileAdminMenuToggle');
+    mobileAdminSubMenu = document.getElementById('mobileAdminSubMenu');
+
+
+    // Reference to auth-section (for standard Google/email login) - This section is mostly decorative now
+    authSection = document.getElementById('auth-section');
+
+    // Mobile Menu Button and Container
+    mobileMenuButton = document.getElementById('mobileMenuButton');
+    mobileMenu = document.getElementById('mobileMenu');
+
 
     // Re-populate allSections array now that elements are initialized
     allSections = [
@@ -648,16 +781,17 @@ async function initializeFirebase() {
 
         if (user) {
             currentUserId = user.uid;
-            userIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
-            mobileUserIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
+            // Ensure userIdDisplay and mobileUserIdDisplay are not null before setting textContent
+            if (userIdDisplay) userIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
+            if (mobileUserIdDisplay) mobileUserIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
 
             // Show User ID and Logout buttons, Hide Google login buttons
-            userIdDisplay.classList.remove('hidden');
-            mobileUserIdDisplay.classList.remove('hidden');
-            navGoogleLoginButton.classList.add('hidden');
-            googleLoginButtonHome.classList.add('hidden'); // Also hide the home page login button
-            logoutButton.classList.remove('hidden');
-            mobileLogoutButton.classList.remove('hidden');
+            if (userIdDisplay) userIdDisplay.classList.remove('hidden');
+            if (mobileUserIdDisplay) mobileUserIdDisplay.classList.remove('hidden');
+            if (navGoogleLoginButton) navGoogleLoginButton.classList.add('hidden');
+            if (googleLoginButtonHome) googleLoginButtonHome.classList.add('hidden'); // Also hide the home page login button
+            if (logoutButton) logoutButton.classList.remove('hidden');
+            if (mobileLogoutButton) mobileLogoutButton.classList.remove('hidden');
             if (homeSignInMessage) homeSignInMessage.classList.add('hidden'); // Hide sign-in message
 
             console.log("onAuthStateChanged: Current Firebase UID:", currentUserId);
@@ -733,12 +867,12 @@ async function initializeFirebase() {
             allCurrencies = [];
 
             // Hide admin menus and logout buttons
-            userIdDisplay.classList.add('hidden'); // Hide desktop user ID
-            mobileUserIdDisplay.classList.add('hidden'); // Hide mobile user ID
+            if (userIdDisplay) userIdDisplay.classList.add('hidden'); // Hide desktop user ID
+            if (mobileUserIdDisplay) mobileUserIdDisplay.classList.add('hidden'); // Hide mobile user ID
             if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
             if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
-            logoutButton.classList.add('hidden');
-            mobileLogoutButton.classList.add('hidden');
+            if (logoutButton) logoutButton.classList.add('hidden');
+            if (mobileLogoutButton) mobileLogoutButton.classList.add('hidden');
 
             // Hide admin submenus explicitly on logout
             if (desktopAdminSubMenu) desktopAdminMenu.classList.remove('active'); // Ensure desktop dropdown is closed
@@ -751,14 +885,14 @@ async function initializeFirebase() {
             if (homeSignInMessage) homeSignInMessage.classList.remove('hidden'); // Show sign-in message
 
             // Disable all form submit buttons by default when not logged in
-            submitCustomerButton.setAttribute('disabled', 'disabled');
-            submitOpportunityButton.setAttribute('disabled', 'disabled'); // NEW
-            submitOpportunityContactButton.setAttribute('disabled', 'disabled'); // NEW
-            submitOpportunityLineButton.setAttribute('disabled', 'disabled'); // NEW
-            submitQuoteButton.setAttribute('disabled', 'disabled'); // NEW
-            uploadAdminDataButton.setAttribute('disabled', 'disabled');
-            submitUserButton.setAttribute('disabled', 'disabled');
-            submitCurrencyButton.setAttribute('disabled', 'disabled'); // NEW
+            if (submitCustomerButton) submitCustomerButton.setAttribute('disabled', 'disabled');
+            if (submitOpportunityButton) submitOpportunityButton.setAttribute('disabled', 'disabled'); // NEW
+            if (submitOpportunityContactButton) submitOpportunityContactButton.setAttribute('disabled', 'disabled'); // NEW
+            if (submitOpportunityLineButton) submitOpportunityLineButton.setAttribute('disabled', 'disabled'); // NEW
+            if (submitQuoteButton) submitQuoteButton.setAttribute('disabled', 'disabled'); // NEW
+            if (uploadAdminDataButton) uploadAdminDataButton.setAttribute('disabled', 'disabled');
+            if (submitUserButton) submitUserButton.setAttribute('disabled', 'disabled');
+            if (submitCurrencyButton) submitCurrencyButton.setAttribute('disabled', 'disabled'); // NEW
 
             // Always show the home section initially
             showSection('home');
@@ -851,7 +985,7 @@ async function initializeFirebase() {
         });
     }
 
-    // Opportunity Line Form Event Listener (NEW - STUB)
+    // Opportunity Line Form Event Listener (NEW - Stubs)
     if (opportunityLineForm) {
         opportunityLineForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -868,7 +1002,7 @@ async function initializeFirebase() {
         });
     }
 
-    // Quote Form Event Listener (NEW - STUB)
+    // Quote Form Event Listener (NEW - Stubs)
     if (quoteForm) {
         quoteForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1160,6 +1294,10 @@ function getCollectionPath(type, dataArea = 'customers') {
 
 // Function to populate the country dropdown
 function populateCountries() {
+    if (!customerCountrySelect) {
+        console.warn("customerCountrySelect not found, cannot populate countries.");
+        return;
+    }
     customerCountrySelect.innerHTML = '<option value="">Select Country</option>'; // Clear existing and add default
     appCountries.forEach(country => { // Use appCountries
         const option = document.createElement('option');
@@ -1171,6 +1309,10 @@ function populateCountries() {
 
 // Function to populate the state/province dropdown based on selected country
 function populateStates(countryCode) {
+    if (!customerStateSelect) {
+        console.warn("customerStateSelect not found, cannot populate states.");
+        return;
+    }
     customerStateSelect.innerHTML = '<option value="">Select State/Province</option>'; // Clear existing and add default
     const states = appCountryStateMap[countryCode] || []; // Use appCountryStateMap
     states.forEach(state => {
@@ -1192,11 +1334,15 @@ function validateAddress(address, city, state, zipCode, country) {
     const isValid = address.trim() !== '' && city.trim() !== '' && state.trim() !== '' && zipCode.trim() !== '' && country.trim() !== '';
 
     if (!isValid) {
-        addressValidationMessage.classList.remove('hidden');
-        addressValidationMessage.textContent = "Please fill in all address fields.";
+        if (addressValidationMessage) {
+            addressValidationMessage.classList.remove('hidden');
+            addressValidationMessage.textContent = "Please fill in all address fields.";
+        }
     } else {
-        addressValidationMessage.classList.add('hidden');
-        addressValidationMessage.textContent = "";
+        if (addressValidationMessage) {
+            addressValidationMessage.classList.add('hidden');
+            addressValidationMessage.textContent = "";
+        }
     }
     return isValid;
 }
@@ -1204,46 +1350,49 @@ function validateAddress(address, city, state, zipCode, country) {
 
 // Function to apply validation rules based on customer type
 function applyCustomerTypeValidation() {
+    if (!customerTypeSelect) return; // Defensive check
+
     const customerType = customerTypeSelect.value;
 
     // Hide all conditional groups first
-    individualFieldsDiv.classList.add('hidden');
-    customerLastNameInput.closest('div').classList.add('hidden');
-    companyNameFieldDiv.classList.add('hidden');
-    individualIndustryGroup.classList.add('hidden');
-    companyIndustryGroup.classList.add('hidden');
+    if (individualFieldsDiv) individualFieldsDiv.classList.add('hidden');
+    if (customerLastNameInput && customerLastNameInput.closest('div')) customerLastNameInput.closest('div').classList.add('hidden');
+    if (companyNameFieldDiv) companyNameFieldDiv.classList.add('hidden');
+    if (individualIndustryGroup) individualIndustryGroup.classList.add('hidden');
+    if (companyIndustryGroup) companyIndustryGroup.classList.add('hidden');
 
     // Remove required attributes from all conditional inputs
-    customerFirstNameInput.removeAttribute('required');
-    customerLastNameInput.removeAttribute('required');
-    customerCompanyNameInput.removeAttribute('required');
-    customerIndustryInput.removeAttribute('required');
-    customerIndustrySelect.removeAttribute('required');
+    if (customerFirstNameInput) customerFirstNameInput.removeAttribute('required');
+    if (customerLastNameInput) customerLastNameInput.removeAttribute('required');
+    if (customerCompanyNameInput) customerCompanyNameInput.removeAttribute('required');
+    if (customerIndustryInput) customerIndustryInput.removeAttribute('required');
+    if (customerIndustrySelect) customerIndustrySelect.removeAttribute('required');
 
     if (customerType === 'Individual') {
-        individualFieldsDiv.classList.remove('hidden');
-        customerLastNameInput.closest('div').classList.remove('hidden');
-        customerFirstNameInput.setAttribute('required', 'required');
-        customerLastNameInput.setAttribute('required', 'required');
+        if (individualFieldsDiv) individualFieldsDiv.classList.remove('hidden');
+        if (customerLastNameInput && customerLastNameInput.closest('div')) customerLastNameInput.closest('div').classList.remove('hidden');
+        if (customerFirstNameInput) customerFirstNameInput.setAttribute('required', 'required');
+        if (customerLastNameInput) customerLastNameInput.setAttribute('required', 'required');
 
-        individualIndustryGroup.classList.remove('hidden');
-        customerIndustryInput.setAttribute('required', 'required');
+        if (individualIndustryGroup) individualIndustryGroup.classList.remove('hidden');
+        if (customerIndustryInput) customerIndustryInput.setAttribute('required', 'required');
     } else if (customerType === 'Company') {
-        companyNameFieldDiv.classList.remove('hidden');
-        customerCompanyNameInput.setAttribute('required', 'required');
+        if (companyNameFieldDiv) companyNameFieldDiv.classList.remove('hidden');
+        if (customerCompanyNameInput) customerCompanyNameInput.setAttribute('required', 'required');
 
-        companyIndustryGroup.classList.remove('hidden');
-        customerIndustrySelect.setAttribute('required', 'required');
+        if (companyIndustryGroup) companyIndustryGroup.classList.remove('hidden');
+        if (customerIndustrySelect) customerIndustrySelect.setAttribute('required', 'required');
     }
 }
 
 // Add event listener for customer type change
-customerTypeSelect.addEventListener('change', applyCustomerTypeValidation);
+// These event listeners should also be added inside initializeFirebase or after elements are surely present
+// customerTypeSelect.addEventListener('change', applyCustomerTypeValidation); // Moved to initializeFirebase
 
 // Add event listener for country change to populate states
-customerCountrySelect.addEventListener('change', (e) => {
-    populateStates(e.target.value);
-});
+// customerCountrySelect.addEventListener('change', (e) => { // Moved to initializeFirebase
+//     populateStates(e.target.value);
+// });
 
 
 // Add or update a customer in Firestore
@@ -1378,7 +1527,7 @@ function listenForCustomers() {
 
     if (!isAuthReady || !currentUserId) {
         console.error("User not authenticated or session not established. Cannot listen for customers.");
-        customerList.innerHTML = '<p class="text-gray-500 text-center col-span-full">Authentication required to load customers.</p>';
+        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center col-span-full">Authentication required to load customers.</p>';
         return;
     }
 
@@ -1389,9 +1538,9 @@ function listenForCustomers() {
     const q = collection(db, collectionPath);
 
     unsubscribeCustomers = onSnapshot(q, (snapshot) => {
-        customerList.innerHTML = ''; // Clear current list
+        if (customerList) customerList.innerHTML = ''; // Clear current list
         if (snapshot.empty) {
-            customerList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No customers found. Add one above!</p>';
+            if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No customers found. Add one above!</p>';
             return;
         }
         snapshot.forEach((doc) => {
@@ -1400,12 +1549,13 @@ function listenForCustomers() {
         });
     }, (error) => {
         console.error("Error listening to customers:", error);
-        customerList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading customers: ${error.message}</p>`;
+        if (customerList) customerList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading customers: ${error.message}</p>`;
     });
 }
 
 // Display a single customer in the UI as a grid row
 function displayCustomer(customer) {
+    if (!customerList) return; // Defensive check
     const customerRow = document.createElement('div');
     // Use data-grid-row class
     customerRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
@@ -1446,33 +1596,33 @@ function editCustomer(customer) {
         return;
     }
     // No isAdmin check here, as customer data is public access for all authenticated users
-    customerFormTitle.textContent = 'Edit Customer';
-    submitCustomerButton.textContent = 'Update Customer';
+    if (customerFormTitle) customerFormTitle.textContent = 'Edit Customer';
+    if (submitCustomerButton) submitCustomerButton.textContent = 'Update Customer';
 
     // Display the system-generated Customer ID
-    customerIdDisplayGroup.classList.remove('hidden');
-    customerIdDisplay.textContent = customer.customerId || 'N/A';
+    if (customerIdDisplayGroup) customerIdDisplayGroup.classList.remove('hidden');
+    if (customerIdDisplay) customerIdDisplay.textContent = customer.customerId || 'N/A';
 
     // Populate common fields
-    customerTypeSelect.value = customer.customerType || '';
-    customerEmailInput.value = customer.email || '';
-    customerPhoneInput.value = customer.phone || '';
-    customerSinceInput.value = customer.customerSince || '';
-    customerDescriptionInput.value = customer.description || '';
-    customerForm.dataset.editingId = customer.id;
+    if (customerTypeSelect) customerTypeSelect.value = customer.customerType || '';
+    if (customerEmailInput) customerEmailInput.value = customer.email || '';
+    if (customerPhoneInput) customerPhoneInput.value = customer.phone || '';
+    if (customerSinceInput) customerSinceInput.value = customer.customerSince || '';
+    if (customerDescriptionInput) customerDescriptionInput.value = customer.description || '';
+    if (customerForm) customerForm.dataset.editingId = customer.id;
 
     // Populate Address fields
-    customerCountrySelect.value = customer.country || ''; // NEW
+    if (customerCountrySelect) customerCountrySelect.value = customer.country || ''; // NEW
     populateStates(customer.country); // Populate states based on loaded country
-    customerAddressInput.value = customer.address || '';
-    customerCityInput.value = customer.city || '';
+    if (customerAddressInput) customerAddressInput.value = customer.address || '';
+    if (customerCityInput) customerCityInput.value = customer.city || '';
     // Set state value after population, ensuring it exists in the new options
-    if (customer.state && Array.from(customerStateSelect.options).some(option => option.value === customer.state)) {
+    if (customer.state && customerStateSelect && Array.from(customerStateSelect.options).some(option => option.value === customer.state)) {
         customerStateSelect.value = customer.state;
     } else {
-        customerStateSelect.value = ''; // Reset if not found
+        if (customerStateSelect) customerStateSelect.value = ''; // Reset if not found
     }
-    customerZipCodeInput.value = customer.zipCode || '';
+    if (customerZipCodeInput) customerZipCodeInput.value = customer.zipCode || '';
 
 
     // Call applyCustomerTypeValidation BEFORE populating conditional fields
@@ -1481,39 +1631,39 @@ function editCustomer(customer) {
     applyCustomerTypeValidation(); // This will show/hide fields based on typeSelect.value
 
     // Populate conditional fields AFTER applyCustomerTypeValidation has set visibility
-    customerFirstNameInput.value = customer.firstName || '';
-    customerLastNameInput.value = customer.lastName || '';
-    customerCompanyNameInput.value = customer.companyName || '';
+    if (customerFirstNameInput) customerFirstNameInput.value = customer.firstName || '';
+    if (customerLastNameInput) customerLastNameInput.value = customer.lastName || '';
+    if (customerCompanyNameInput) customerCompanyNameInput.value = customer.companyName || '';
 
     // Set correct industry field value
     if (customer.customerType === 'Individual') {
-        customerIndustryInput.value = customer.industry || '';
+        if (customerIndustryInput) customerIndustryInput.value = customer.industry || '';
     } else if (customer.customerType === 'Company') {
-        customerIndustrySelect.value = customer.industry || '';
+        if (customerIndustrySelect) customerIndustrySelect.value = customer.industry || '';
     }
 
-    addressValidationMessage.classList.add('hidden'); // Hide validation message on edit start
+    if (addressValidationMessage) addressValidationMessage.classList.add('hidden'); // Hide validation message on edit start
 
-    customerForm.scrollIntoView({ behavior: 'smooth' });
+    if (customerForm) customerForm.scrollIntoView({ behavior: 'smooth' });
 }
 
 // Reset Customer form function
 function resetCustomerForm() {
-    customerForm.reset();
-    customerForm.dataset.editingId = '';
-    customerFormTitle.textContent = 'Add New Customer';
-    submitCustomerButton.textContent = 'Add Customer';
-    customerIdDisplayGroup.classList.add('hidden'); // Hide ID display group
-    customerIdDisplay.textContent = ''; // Clear displayed ID
+    if (customerForm) customerForm.reset();
+    if (customerForm) customerForm.dataset.editingId = '';
+    if (customerFormTitle) customerFormTitle.textContent = 'Add New Customer';
+    if (submitCustomerButton) submitCustomerButton.textContent = 'Add Customer';
+    if (customerIdDisplayGroup) customerIdDisplayGroup.classList.add('hidden'); // Hide ID display group
+    if (customerIdDisplay) customerIdDisplay.textContent = ''; // Clear displayed ID
 
     // Reset address fields and states
-    customerCountrySelect.value = '';
+    if (customerCountrySelect) customerCountrySelect.value = '';
     populateStates(''); // Clear states
-    addressValidationMessage.classList.add('hidden'); // Hide validation message
+    if (addressValidationMessage) addressValidationMessage.classList.add('hidden'); // Hide validation message
 
 
     // Set customer type to Individual by default and apply validation
-    customerTypeSelect.value = 'Individual';
+    if (customerTypeSelect) customerTypeSelect.value = 'Individual';
     applyCustomerTypeValidation(); // Re-apply validation to hide/show fields correctly for a new entry
 }
 
@@ -1521,6 +1671,10 @@ function resetCustomerForm() {
 
 // NEW: Function to populate the currency select dropdown for opportunities
 function populateCurrencySelect() {
+    if (!opportunityCurrencySelect) {
+        console.warn("opportunityCurrencySelect not found, cannot populate currencies.");
+        return;
+    }
     opportunityCurrencySelect.innerHTML = '<option value="">Select Currency</option>'; // Clear existing options and add default
 
     // Sort currencies by currencyCode (id) for consistent display
@@ -1574,6 +1728,11 @@ async function fetchCustomersForDropdown() {
             ...doc.data()
         }));
 
+        if (!opportunityCustomerSelect) {
+            console.warn("opportunityCustomerSelect not found, skipping customer dropdown population.");
+            return;
+        }
+
         opportunityCustomerSelect.innerHTML = '<option value="">Select Customer</option>'; // Clear existing and add default
         allCustomers.forEach(customer => {
             const option = document.createElement('option');
@@ -1591,22 +1750,23 @@ async function fetchCustomersForDropdown() {
 }
 
 // Event listener for customer selection to auto-populate service address
-opportunityCustomerSelect.addEventListener('change', (e) => {
-    // Only auto-fill if the service address is currently empty OR if a new opportunity is being created (no editingId)
-    // This prevents overwriting user-edited address when an opportunity is loaded for editing.
-    const isEditing = opportunityForm.dataset.editingId;
-    if (!isEditing || opportunityServiceAddressInput.value.trim() === '') {
-        const selectedCustomerId = e.target.value;
-        const selectedCustomer = allCustomers.find(c => c.id === selectedCustomerId);
+// This needs to be moved inside initializeFirebase
+// opportunityCustomerSelect.addEventListener('change', (e) => {
+//     // Only auto-fill if the service address is currently empty OR if a new opportunity is being created (no editingId)
+//     // This prevents overwriting user-edited address when an opportunity is loaded for editing.
+//     const isEditing = opportunityForm.dataset.editingId;
+//     if (!isEditing || opportunityServiceAddressInput.value.trim() === '') {
+//         const selectedCustomerId = e.target.value;
+//         const selectedCustomer = allCustomers.find(c => c.id === selectedCustomerId);
 
-        if (selectedCustomer) {
-            const customerAddress = `${selectedCustomer.address || ''}, ${selectedCustomer.city || ''}, ${selectedCustomer.state || ''}, ${selectedCustomer.zipCode || ''}, ${selectedCustomer.country || ''}`.trim();
-            opportunityServiceAddressInput.value = customerAddress.replace(/,(\s*,){1,}/g, ',').replace(/^,|,$/g, '').trim(); // Clean up multiple commas
-        } else {
-            opportunityServiceAddressInput.value = '';
-        }
-    }
-});
+//         if (selectedCustomer) {
+//             const customerAddress = `${selectedCustomer.address || '', ${selectedCustomer.city || ''}, ${selectedCustomer.state || ''}, ${selectedCustomer.zipCode || ''}, ${selectedCustomer.country || ''}`.trim();
+//             opportunityServiceAddressInput.value = customerAddress.replace(/,(\s*,){1,}/g, ',').replace(/^,|,$/g, '').trim(); // Clean up multiple commas
+//         } else {
+//             opportunityServiceAddressInput.value = '';
+//         }
+//     }
+// });
 
 
 // Save (Add/Update) an Opportunity
@@ -1649,7 +1809,7 @@ async function saveOpportunity(opportunityData, existingOpportunityDocId = null)
     opportunityData.amount = parseFloat(opportunityData.amount);
 
     // Parse opportunityDataInput if it's meant to be a JSON object
-    if (opportunityData.opportunityData.trim() !== '') {
+    if (opportunityDataInput && opportunityData.opportunityData.trim() !== '') {
         try {
             opportunityData.opportunityData = JSON.parse(opportunityData.opportunityData);
         } catch (e) {
@@ -1737,7 +1897,7 @@ function listenForOpportunities() {
 
     if (!isAuthReady || !currentUserId) {
         console.error("User not authenticated. Cannot listen for opportunities.");
-        opportunityList.innerHTML = '<p class="text-gray-500 text-center col-span-full">Authentication required to load opportunities.</p>';
+        if (opportunityList) opportunityList.innerHTML = '<p class="text-gray-500 text-center col-span-full">Authentication required to load opportunities.</p>';
         return;
     }
 
@@ -1747,9 +1907,9 @@ function listenForOpportunities() {
     const q = collection(db, collectionPath);
 
     unsubscribeOpportunities = onSnapshot(q, (snapshot) => {
-        opportunityList.innerHTML = ''; // Clear current list
+        if (opportunityList) opportunityList.innerHTML = ''; // Clear current list
         if (snapshot.empty) {
-            opportunityList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No opportunities found. Add one above!</p>';
+            if (opportunityList) opportunityList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No opportunities found. Add one above!</p>';
             return;
         }
         snapshot.forEach((doc) => {
@@ -1758,12 +1918,13 @@ function listenForOpportunities() {
         });
     }, (error) => {
         console.error("Error listening to opportunities:", error);
-        opportunityList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading opportunities: ${error.message}</p>`;
+        if (opportunityList) opportunityList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading opportunities: ${error.message}</p>`;
     });
 }
 
 // Display a single opportunity in the UI (UPDATED for currency symbol)
 function displayOpportunity(opportunity) {
+    if (!opportunityList) return; // Defensive check
     const opportunityRow = document.createElement('div');
     // Use data-grid-row class, and ensure its specific grid columns match the CSS
     opportunityRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
@@ -1810,28 +1971,28 @@ function editOpportunity(opportunity) {
     // Set layout to 70:30 split view initially
     setOpportunityLayout('edit_split_70_30');
 
-    opportunityFormTitle.textContent = 'Edit Opportunity';
-    submitOpportunityButton.textContent = 'Update Opportunity';
+    if (opportunityFormTitle) opportunityFormTitle.textContent = 'Edit Opportunity';
+    if (submitOpportunityButton) submitOpportunityButton.textContent = 'Update Opportunity';
 
-    opportunityIdDisplayGroup.classList.remove('hidden');
-    opportunityIdDisplay.textContent = opportunity.opportunityId || 'N/A';
-    opportunityForm.dataset.editingId = opportunity.id; // Store Firestore document ID
+    if (opportunityIdDisplayGroup) opportunityIdDisplayGroup.classList.remove('hidden');
+    if (opportunityIdDisplay) opportunityIdDisplay.textContent = opportunity.opportunityId || 'N/A';
+    if (opportunityForm) opportunityForm.dataset.editingId = opportunity.id; // Store Firestore document ID
     currentOpportunityId = opportunity.id; // Set the globally tracked current opportunity ID
 
     // Populate fields
-    opportunityCustomerSelect.value = opportunity.customer || ''; // customerId (Firestore doc ID)
-    opportunityNameInput.value = opportunity.opportunityName || '';
-    opportunityAmountInput.value = opportunity.amount || '';
-    opportunityCurrencySelect.value = opportunity.currency || '';
-    opportunityStageSelect.value = opportunity.stage || '';
-    opportunityExpectedStartDateInput.value = opportunity.expectedStartDate || '';
-    opportunityExpectedCloseDateInput.value = opportunity.expectedCloseDate || '';
-    opportunityEventTypeSelect.value = opportunity.eventType || '';
-    opportunityEventLocationProposedInput.value = opportunity.eventLocationProposed || '';
-    opportunityServiceAddressInput.value = opportunity.serviceAddress || '';
-    opportunityDescriptionInput.value = opportunity.description || '';
+    if (opportunityCustomerSelect) opportunityCustomerSelect.value = opportunity.customer || ''; // customerId (Firestore doc ID)
+    if (opportunityNameInput) opportunityNameInput.value = opportunity.opportunityName || '';
+    if (opportunityAmountInput) opportunityAmountInput.value = opportunity.amount || '';
+    if (opportunityCurrencySelect) opportunityCurrencySelect.value = opportunity.currency || '';
+    if (opportunityStageSelect) opportunityStageSelect.value = opportunity.stage || '';
+    if (opportunityExpectedStartDateInput) opportunityExpectedStartDateInput.value = opportunity.expectedStartDate || '';
+    if (opportunityExpectedCloseDateInput) opportunityExpectedCloseDateInput.value = opportunity.expectedCloseDate || '';
+    if (opportunityEventTypeSelect) opportunityEventTypeSelect.value = opportunity.eventType || '';
+    if (opportunityEventLocationProposedInput) opportunityEventLocationProposedInput.value = opportunity.eventLocationProposed || '';
+    if (opportunityServiceAddressInput) opportunityServiceAddressInput.value = opportunity.serviceAddress || '';
+    if (opportunityDescriptionInput) opportunityDescriptionInput.value = opportunity.description || '';
     // Handle JSON or plain text for additional data
-    opportunityDataInput.value = opportunity.opportunityData ? (typeof opportunity.opportunityData === 'object' ? JSON.stringify(opportunity.opportunityData, null, 2) : opportunity.opportunityData) : '';
+    if (opportunityDataInput) opportunityDataInput.value = opportunity.opportunityData ? (typeof opportunity.opportunityData === 'object' ? JSON.stringify(opportunity.opportunityData, null, 2) : opportunity.opportunityData) : '';
 
     updateCurrencySymbolDisplay(); // Update symbol for the input field
 
@@ -2007,6 +2168,7 @@ function listenForOpportunityContacts(opportunityId) {
 }
 
 function displayOpportunityContact(contact) {
+    if (!opportunityContactList) return; // Defensive check
     const contactRow = document.createElement('div');
     // Use data-grid-row class, and ensure its specific grid columns match the CSS
     contactRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
@@ -2023,7 +2185,7 @@ function displayOpportunityContact(contact) {
             <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${contact.id}">Delete</button>
         </div>
     `;
-    if (opportunityContactList) opportunityContactList.appendChild(contactRow);
+    opportunityContactList.appendChild(contactRow);
 
     contactRow.querySelector('.edit-btn').addEventListener('click', () => editOpportunityContact(contact));
     contactRow.querySelector('.delete-btn').addEventListener('click', () => deleteOpportunityContact(contact.id));
@@ -2181,6 +2343,7 @@ function listenForOpportunityLines(opportunityId) {
 }
 
 function displayOpportunityLine(line) {
+    if (!opportunityLineList) return; // Defensive check
     const lineRow = document.createElement('div');
     // Use data-grid-row class, and ensure its specific grid columns match the CSS
     lineRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
@@ -2198,7 +2361,7 @@ function displayOpportunityLine(line) {
             <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${line.id}">Delete</button>
         </div>
     `;
-    if (opportunityLineList) opportunityLineList.appendChild(lineRow);
+    opportunityLineList.appendChild(lineRow);
 
     lineRow.querySelector('.edit-btn').addEventListener('click', () => editOpportunityLine(line));
     lineRow.querySelector('.delete-btn').addEventListener('click', () => deleteOpportunityLine(line.id));
@@ -2355,6 +2518,7 @@ function listenForQuotes(opportunityId) {
 }
 
 function displayQuote(quote) {
+    if (!quoteList) return; // Defensive check
     const quoteRow = document.createElement('div');
     // Use data-grid-row class, and ensure its specific grid columns match the CSS
     quoteRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
@@ -2373,7 +2537,7 @@ function displayQuote(quote) {
             <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${quote.id}">Delete</button>
         </div>
     `;
-    if (quoteList) quoteList.appendChild(quoteRow);
+    quoteList.appendChild(quoteRow);
 
     quoteRow.querySelector('.edit-btn').addEventListener('click', () => editQuote(quote));
     quoteRow.querySelector('.delete-btn').addEventListener('click', () => deleteQuote(quote.id));
@@ -2510,7 +2674,12 @@ async function saveUser(userData, existingFirestoreDocId = null) {
             // CASE 2: ADDING A NEW USER PROFILE
             // For new user profiles, the admin MUST provide the Firebase Auth UID.
             // This assumes the user has been created in Firebase Auth already.
+            if (!userIdDisplayInput) {
+                 showModal("Internal Error", "User ID input field not found for new user creation.", () => {});
+                 return;
+            }
             targetUid = userIdDisplayInput.value.trim();
+
 
             if (!targetUid) {
                 showModal("Validation Error", "For new user profiles, you must provide the Firebase User ID (UID). This user should first be created in Firebase Authentication.", () => {});
@@ -2597,6 +2766,7 @@ function listenForUsers() {
 
 // Display a single user in the UI as a grid row
 function displayUser(user) {
+    if (!userList) return; // Defensive check
     const userRow = document.createElement('div');
     userRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
     userRow.dataset.id = user.id; // Store Firestore document ID for edit/delete actions
@@ -2614,7 +2784,7 @@ function displayUser(user) {
             <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${user.id}">Delete</button>
         </div>
     `;
-    if (userList) userList.appendChild(userRow);
+    userList.appendChild(userRow);
 
     // Add event listeners for edit and delete buttons
     userRow.querySelector('.edit-btn').addEventListener('click', () => editUser(user));
@@ -2891,6 +3061,7 @@ function listenForCurrencies() {
 }
 
 function displayCurrency(currency) {
+    if (!currencyList) return; // Defensive check
     const currencyRow = document.createElement('div');
     currencyRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
     currencyRow.dataset.id = currency.id; // currency code is the Firestore doc ID
@@ -2905,7 +3076,7 @@ function displayCurrency(currency) {
             <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${currency.id}">Delete</button>
         </div>
     `;
-    if (currencyList) currencyList.appendChild(currencyRow);
+    currencyList.appendChild(currencyRow);
 
     currencyRow.querySelector('.edit-btn').addEventListener('click', () => editCurrency(currency));
     currencyRow.querySelector('.delete-btn').addEventListener('click', () => deleteCurrency(currency.id));
