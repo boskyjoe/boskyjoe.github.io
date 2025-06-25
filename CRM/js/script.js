@@ -741,6 +741,373 @@ async function initializeFirebase() {
             }
         });
 
+        // --- Event Listeners ---
+        // Customer Form Event Listener (Renamed and Updated for validation)
+        if (customerForm) {
+            customerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                // Collect data from all fields, regardless of visibility, as values will be empty if hidden/optional
+                const customerData = {
+                    customerType: customerTypeSelect.value.trim(),
+                    firstName: customerFirstNameInput.value.trim(),
+                    lastName: customerLastNameInput.value.trim(),
+                    companyName: customerCompanyNameInput.value.trim(), // Use .value.trim() for company name
+                    email: customerEmailInput.value.trim(),
+                    phone: customerPhoneInput.value.trim(),
+                    // Address fields are now explicitly collected from their respective inputs
+                    country: customerCountrySelect.value.trim(),
+                    address: customerAddressInput.value.trim(),
+                    city: customerCityInput.value.trim(),
+                    state: customerStateSelect.value.trim(),
+                    zipCode: customerZipCodeInput.value.trim(),
+                    industry: '', // Will be set conditionally below
+                    customerSince: customerSinceInput.value, // Date input value is already string inYYYY-MM-DD
+                    description: customerDescriptionInput.value.trim()
+                    // customerId field will be added/updated by saveCustomer function
+                };
+
+                // Set the correct industry value based on customer type
+                if (customerTypeSelect.value === 'Individual') {
+                    customerData.industry = customerIndustryInput.value.trim();
+                } else if (customerTypeSelect.value === 'Company') {
+                    customerData.industry = customerIndustrySelect.value.trim();
+                }
+
+                const editingId = customerForm.dataset.editingId; // This is the Firestore auto-generated doc ID
+
+                await saveCustomer(customerData, editingId || null);
+            });
+        }
+        // Opportunity Form Event Listener (NEW and UPDATED for currency symbol)
+        if (opportunityForm) {
+            opportunityForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const opportunityData = {
+                    customer: opportunityCustomerSelect.value, // This is the Firestore customer document ID
+                    opportunityName: opportunityNameInput.value,
+                    amount: opportunityAmountInput.value, // Will be parsed to float in saveOpportunity
+                    currency: opportunityCurrencySelect.value,
+                    stage: opportunityStageSelect.value,
+                    expectedStartDate: opportunityExpectedStartDateInput.value,
+                    expectedCloseDate: opportunityExpectedCloseDateInput.value,
+                    eventType: opportunityEventTypeSelect.value,
+                    eventLocationProposed: opportunityEventLocationProposedInput.value,
+                    serviceAddress: opportunityServiceAddressInput.value, // NEW Field
+                    description: opportunityDescriptionInput.value,
+                    opportunityData: opportunityDataInput.value, // Can be JSON string or plain text, will be parsed if possible
+                };
+
+                const editingId = opportunityForm.dataset.editingId;
+                await saveOpportunity(opportunityData, editingId || null);
+            });
+        }
+
+        // Event listener for currency select change to update the symbol display
+        if (opportunityCurrencySelect) {
+            opportunityCurrencySelect.addEventListener('change', updateCurrencySymbolDisplay);
+        }
+
+
+        // Opportunity Contact Form Event Listener (NEW)
+        if (opportunityContactForm) {
+            opportunityContactForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const contactData = {
+                    firstName: contactFirstNameInput.value,
+                    lastName: contactLastNameInput.value,
+                    email: contactEmailInput.value,
+                    phone: contactPhoneInput.value,
+                    role: contactRoleInput.value
+                };
+                const editingId = opportunityContactForm.dataset.editingId;
+                await saveOpportunityContact(contactData, editingId || null);
+            });
+        }
+
+        // Opportunity Line Form Event Listener (NEW - STUB)
+        if (opportunityLineForm) {
+            opportunityLineForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const lineData = {
+                    serviceDescription: lineServiceDescriptionInput.value,
+                    unitPrice: lineUnitPriceInput.value,
+                    quantity: lineQuantityInput.value,
+                    discount: lineDiscountInput.value,
+                    netPrice: lineNetPriceInput.value, // This will be calculated in saveOpportunityLine
+                    status: lineStatusSelect.value
+                };
+                const editingId = opportunityLineForm.dataset.editingId;
+                await saveOpportunityLine(lineData, editingId || null);
+            });
+        }
+
+        // Quote Form Event Listener (NEW - STUB)
+        if (quoteForm) {
+            quoteForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const quoteData = {
+                    quoteName: quoteNameInput.value,
+                    quoteDescription: quoteDescriptionInput.value,
+                    customer: quoteCustomerSelect.value, // This is linked to the opportunity's customer
+                    startDate: quoteStartDateInput.value,
+                    expireDate: quoteExpireDateInput.value,
+                    quoteStatus: quoteStatusSelect.value,
+                    quoteNetListAmount: quoteNetListAmountInput.value,
+                    quoteNetDiscount: quoteNetDiscountInput.value,
+                    quoteNetAmount: quoteNetAmountInput.value, // This will be calculated in saveQuote
+                    quoteCurrency: quoteCurrencySelect.value,
+                    isFinal: quoteIsFinalCheckbox.checked
+                };
+                const editingId = quoteForm.dataset.editingId;
+                await saveQuote(quoteData, editingId || null);
+            });
+        }
+
+
+        // Mobile Menu Button Event Listener
+        if (mobileMenuButton) {
+            mobileMenuButton.addEventListener('click', () => {
+                if (mobileMenu) mobileMenu.classList.toggle('open'); // Toggle 'open' class for max-height transition
+                // Close admin submenus if mobile menu is closed or being opened/closed
+                if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden');
+            });
+        }
+
+
+        // Navigation Links Event Listeners
+        document.querySelectorAll('nav a').forEach(link => {
+            // Only add listener if the link has a data-section attribute
+            if (link.dataset.section) {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault(); // Prevent default link behavior
+                    showSection(link.dataset.section); // Call showSection with the target section ID
+                });
+            }
+        });
+
+
+        // Event listener for the Google Login Button in the header (nav bar)
+        if (navGoogleLoginButton) {
+            navGoogleLoginButton.addEventListener('click', handleGoogleLogin);
+        }
+
+        // Event listener for the Google Login button on the Home section
+        if (googleLoginButtonHome) {
+            googleLoginButtonHome.addEventListener('click', handleGoogleLogin);
+        }
+
+        // Add event listeners for logout buttons
+        if (logoutButton) {
+            logoutButton.addEventListener('click', async () => {
+                try {
+                    await signOut(auth);
+                    console.log("User signed out.");
+                    // onAuthStateChanged will handle UI updates
+                } catch (error) {
+                    console.error("Error signing out:", error);
+                    showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
+                }
+            });
+        }
+
+        if (mobileLogoutButton) {
+            mobileLogoutButton.addEventListener('click', async () => {
+                try {
+                    await signOut(auth);
+                    console.log("User signed out.");
+                    // onAuthStateChanged will handle UI updates
+                }
+                catch (error) {
+                    console.error("Error signing out:", error);
+                    showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
+                }
+            });
+        }
+
+        // Admin Country Mapping Form Event Listener
+        if (document.getElementById('countryMappingForm')) {
+            document.getElementById('countryMappingForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (adminMessageDiv) adminMessageDiv.classList.add('hidden'); // Clear previous messages
+                if (uploadAdminDataButton) {
+                    uploadAdminDataButton.disabled = true;
+                    uploadAdminDataButton.textContent = 'Uploading...';
+                }
+
+
+                const countriesString = adminCountriesInput.value;
+                const countryStateMapString = adminCountryStateMapInput.value;
+                const isFullLoad = fullLoadRadio.checked;
+
+                // Parse countries string into array of objects (newline-separated, filter unique codes)
+                function parseCountries(countriesString) {
+                    const uniqueCodes = new Set();
+                    const parsedCountries = [];
+                    const duplicatesFound = [];
+
+                    if (!countriesString.trim()) return [];
+
+                    countriesString.split('\n').forEach(line => {
+                        const parts = line.split(',');
+                        if (parts.length === 2) {
+                            const name = parts[0].trim();
+                            const code = parts[1].trim();
+                            if (name !== '' && code !== '') {
+                                if (uniqueCodes.has(code)) {
+                                    duplicatesFound.push(code);
+                                } else {
+                                    uniqueCodes.add(code);
+                                    parsedCountries.push({ name, code });
+                                }
+                            }
+                        }
+                    });
+
+                    if (duplicatesFound.length > 0) {
+                        const msg = `Warning: Duplicate country codes found and ignored: ${duplicatesFound.join(', ')}. Only the first occurrence was used.`;
+                        if (adminMessageDiv) {
+                            adminMessageDiv.textContent = msg;
+                            adminMessageDiv.className = 'message error'; // Use error styling for warnings too
+                            adminMessageDiv.classList.remove('hidden');
+                        }
+                        console.warn(msg);
+                    }
+                    return parsedCountries;
+                }
+
+                // Parse countryStateMap string into an object (newline-separated)
+                function parseCountryStateMap(mapString) {
+                    const map = {};
+                    if (!mapString.trim()) return map;
+                    mapString.split('\n').forEach(line => { // Changed split delimiter to newline
+                        const parts = line.split(':');
+                        if (parts.length === 2) {
+                            const countryCode = parts[0].trim();
+                            const states = parts[1].split(',').map(s => s.trim()).filter(s => s !== ''); // Filter empty states
+                            if (countryCode !== '') { // Only add if country code is not empty
+                                map[countryCode] = states;
+                            }
+                        }
+                    });
+                    return map;
+                }
+
+                const dataToUpload = {};
+                let hasValidDataForUpload = false;
+
+                // Process countries data
+                const parsedCountries = parseCountries(countriesString);
+                if (parsedCountries.length > 0) {
+                    dataToUpload.countries = parsedCountries;
+                    hasValidDataForUpload = true;
+                }
+
+                // Process countryStateMap data
+                const parsedCountryStateMap = parseCountryStateMap(countryStateMapString);
+                if (Object.keys(parsedCountryStateMap).length > 0) {
+                    dataToUpload.countryStateMap = parsedCountryStateMap;
+                    hasValidDataForUpload = true;
+                }
+
+                // Special case: If full load is selected and BOTH textareas are empty, this means clearing the document.
+                // Otherwise, if a textarea is empty, its corresponding field will not be included in dataToUpload
+                // and thus not affected by merge:true.
+                if (!hasValidDataForUpload && isFullLoad) {
+                    // If full load is selected AND no valid data was parsed from EITHER textarea,
+                    // it implies the user wants to completely clear both fields.
+                    dataToUpload.countries = [];
+                    dataToUpload.countryStateMap = {};
+                    hasValidDataForUpload = true; // Mark as having intent to update (with empty data)
+                } else if (!hasValidDataForUpload && !isFullLoad) {
+                    // If incremental load is selected AND no valid data was parsed,
+                    // there's nothing to update.
+                    if (adminMessageDiv) {
+                        adminMessageDiv.textContent = 'No valid data provided for update.';
+                        adminMessageDiv.className = 'message error';
+                        adminMessageDiv.classList.remove('hidden');
+                    }
+                    if (uploadAdminDataButton) {
+                        uploadAdminDataButton.disabled = false;
+                        uploadAdminDataButton.textContent = 'Upload Data to Firestore';
+                    }
+                    return;
+                }
+
+                try {
+                    const docRef = doc(db, "app_metadata", "countries_states");
+                    // Always use merge: true to avoid deleting unspecified fields.
+                    // If the user wants to empty a field, they have to ensure the parsed array/object is empty.
+                    await setDoc(docRef, dataToUpload, { merge: true });
+
+                    if (adminMessageDiv) {
+                        adminMessageDiv.textContent = `Data uploaded successfully (${isFullLoad ? 'Full Load (Merge)' : 'Incremental Load'})!`;
+                        adminMessageDiv.className = 'message success';
+                        adminMessageDiv.classList.remove('hidden');
+                    }
+                    console.log("Admin data upload successful:", dataToUpload);
+
+                    // Re-fetch data for CRM forms and populate dropdowns after successful admin update
+                    await fetchCountryData();
+                    populateCountries();
+
+                } catch (error) {
+                    console.error("Error uploading admin data:", error);
+                    if (adminMessageDiv) {
+                        adminMessageDiv.textContent = `Error uploading data: ${error.message}`;
+                        adminMessageDiv.className = 'message error';
+                        adminMessageDiv.classList.remove('hidden');
+                    }
+                } finally {
+                    if (uploadAdminDataButton) {
+                        uploadAdminDataButton.disabled = false;
+                        uploadAdminDataButton.textContent = 'Upload Data to Firestore';
+                    }
+                }
+            });
+        }
+
+        // Admin Currency Form Event Listener (NEW)
+        if (currencyForm) {
+            currencyForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const editingId = currencyForm.dataset.editingId;
+                // For CSV, currencyData parameter is not directly used, as the function reads from the textarea.
+                await saveCurrency(null, editingId || null);
+            });
+        }
+
+
+        // User Form Event Listener
+        if (userForm) {
+            userForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const userData = {
+                    userName: userNameInput.value.trim(),
+                    firstName: userFirstNameInput.value.trim(),
+                    lastName: userLastNameInput.value.trim(),
+                    email: userEmailInput.value.trim(),
+                    phone: userPhoneInput.value.trim(),
+                    role: userRoleSelect.value.trim(), // Get value from select
+                    skills: userSkillsInput.value.trim(), // Will be parsed to array in saveUser
+                };
+                const editingId = userForm.dataset.editingId; // This is the Firestore document ID if editing
+                await saveUser(userData, editingId || null);
+            });
+        }
+
+
+        // Reset Form Buttons - add event listeners
+        document.getElementById('resetCustomerFormButton')?.addEventListener('click', resetCustomerForm);
+        document.getElementById('resetOpportunityFormButton')?.addEventListener('click', resetOpportunityForm);
+        document.getElementById('resetOpportunityContactFormButton')?.addEventListener('click', resetOpportunityContactForm);
+        document.getElementById('resetOpportunityLineFormButton')?.addEventListener('click', resetOpportunityLineForm);
+        document.getElementById('resetQuoteFormButton')?.addEventListener('click', resetQuoteForm);
+        document.getElementById('resetUserFormButton')?.addEventListener('click', resetUserForm);
+        document.getElementById('resetCurrencyFormButton')?.addEventListener('click', resetCurrencyForm); // NEW
+
+
     } catch (error) {
         console.error("Error initializing Firebase application:", error);
         showModal("Firebase Initialization Error", `Initialization failed: ${error.message}`, () => {});
@@ -2073,372 +2440,503 @@ function resetQuoteForm() {
 }
 
 
-// --- Event Listeners ---
+/* --- USERS CRUD OPERATIONS --- */
 
-// Customer Form Event Listener (Renamed and Updated for validation)
-if (customerForm) {
-    customerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        // Collect data from all fields, regardless of visibility, as values will be empty if hidden/optional
-        const customerData = {
-            customerType: customerTypeSelect.value.trim(),
-            firstName: customerFirstNameInput.value.trim(),
-            lastName: customerLastNameInput.value.trim(),
-            companyName: customerCompanyNameInput.value.trim(), // Use .value.trim() for company name
-            email: customerEmailInput.value.trim(),
-            phone: customerPhoneInput.value.trim(),
-            // Address fields are now explicitly collected from their respective inputs
-            country: customerCountrySelect.value.trim(),
-            address: customerAddressInput.value.trim(),
-            city: customerCityInput.value.trim(),
-            state: customerStateSelect.value.trim(),
-            zipCode: customerZipCodeInput.value.trim(),
-            industry: '', // Will be set conditionally below
-            customerSince: customerSinceInput.value, // Date input value is already string inYYYY-MM-DD
-            description: customerDescriptionInput.value.trim()
-            // customerId field will be added/updated by saveCustomer function
-        };
-
-        // Set the correct industry value based on customer type
-        if (customerTypeSelect.value === 'Individual') {
-            customerData.industry = customerIndustryInput.value.trim();
-        } else if (customerTypeSelect.value === 'Company') {
-            customerData.industry = customerIndustrySelect.value.trim();
-        }
-
-        const editingId = customerForm.dataset.editingId; // This is the Firestore auto-generated doc ID
-
-        await saveCustomer(customerData, editingId || null);
-    });
-}
-// Opportunity Form Event Listener (NEW and UPDATED for currency symbol)
-if (opportunityForm) {
-    opportunityForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const opportunityData = {
-            customer: opportunityCustomerSelect.value, // This is the Firestore customer document ID
-            opportunityName: opportunityNameInput.value,
-            amount: opportunityAmountInput.value, // Will be parsed to float in saveOpportunity
-            currency: opportunityCurrencySelect.value,
-            stage: opportunityStageSelect.value,
-            expectedStartDate: opportunityExpectedStartDateInput.value,
-            expectedCloseDate: opportunityExpectedCloseDateInput.value,
-            eventType: opportunityEventTypeSelect.value,
-            eventLocationProposed: opportunityEventLocationProposedInput.value,
-            serviceAddress: opportunityServiceAddressInput.value, // NEW Field
-            description: opportunityDescriptionInput.value,
-            opportunityData: opportunityDataInput.value, // Can be JSON string or plain text, will be parsed if possible
-        };
-
-        const editingId = opportunityForm.dataset.editingId;
-        await saveOpportunity(opportunityData, editingId || null);
-    });
-}
-
-// Event listener for currency select change to update the symbol display
-if (opportunityCurrencySelect) {
-    opportunityCurrencySelect.addEventListener('change', updateCurrencySymbolDisplay);
-}
-
-
-// Opportunity Contact Form Event Listener (NEW)
-if (opportunityContactForm) {
-    opportunityContactForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const contactData = {
-            firstName: contactFirstNameInput.value,
-            lastName: contactLastNameInput.value,
-            email: contactEmailInput.value,
-            phone: contactPhoneInput.value,
-            role: contactRoleInput.value
-        };
-        const editingId = opportunityContactForm.dataset.editingId;
-        await saveOpportunityContact(contactData, editingId || null);
-    });
-}
-
-// Opportunity Line Form Event Listener (NEW - STUB)
-if (opportunityLineForm) {
-    opportunityLineForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const lineData = {
-            serviceDescription: lineServiceDescriptionInput.value,
-            unitPrice: lineUnitPriceInput.value,
-            quantity: lineQuantityInput.value,
-            discount: lineDiscountInput.value,
-            netPrice: lineNetPriceInput.value, // This will be calculated in saveOpportunityLine
-            status: lineStatusSelect.value
-        };
-        const editingId = opportunityLineForm.dataset.editingId;
-        await saveOpportunityLine(lineData, editingId || null);
-    });
-}
-
-// Quote Form Event Listener (NEW - STUB)
-if (quoteForm) {
-    quoteForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const quoteData = {
-            quoteName: quoteNameInput.value,
-            quoteDescription: quoteDescriptionInput.value,
-            customer: quoteCustomerSelect.value, // This is linked to the opportunity's customer
-            startDate: quoteStartDateInput.value,
-            expireDate: quoteExpireDateInput.value,
-            quoteStatus: quoteStatusSelect.value,
-            quoteNetListAmount: quoteNetListAmountInput.value,
-            quoteNetDiscount: quoteNetDiscountInput.value,
-            quoteNetAmount: quoteNetAmountInput.value, // This will be calculated in saveQuote
-            quoteCurrency: quoteCurrencySelect.value,
-            isFinal: quoteIsFinalCheckbox.checked
-        };
-        const editingId = quoteForm.dataset.editingId;
-        await saveQuote(quoteData, editingId || null);
-    });
-}
-
-
-// Mobile Menu Button Event Listener
-if (mobileMenuButton) {
-    mobileMenuButton.addEventListener('click', () => {
-        if (mobileMenu) mobileMenu.classList.toggle('open'); // Toggle 'open' class for max-height transition
-        // Close admin submenus if mobile menu is closed or being opened/closed
-        if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden');
-    });
-}
-
-
-// Navigation Links Event Listeners
-document.querySelectorAll('nav a').forEach(link => {
-    // Only add listener if the link has a data-section attribute
-    if (link.dataset.section) {
-        link.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent default link behavior
-            showSection(link.dataset.section); // Call showSection with the target section ID
-        });
+// Save (Add/Update) a User
+// This function now enforces Firestore document IDs to match Firebase Auth UIDs for user profiles.
+async function saveUser(userData, existingFirestoreDocId = null) {
+    if (!isAuthReady || !currentUserId || !isAdmin) {
+        showModal("Permission Denied", "Only administrators can manage users.", () => {});
+        return;
     }
-});
 
+    // Gmail email validation for userName (which is the email they log in with)
+    const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+    if (!gmailRegex.test(userData.userName)) {
+        showModal("Validation Error", "User Name (Email) must be a valid Gmail email address.", () => {});
+        return;
+    }
 
-// Event listener for the Google Login Button in the header (nav bar)
-if (navGoogleLoginButton) {
-    navGoogleLoginButton.addEventListener('click', handleGoogleLogin);
-}
+    // Explicit validation for all mandatory fields
+    const mandatoryFields = [
+        { field: userData.firstName.trim(), name: "First Name" },
+        { field: userData.lastName.trim(), name: "Last Name" },
+        { field: userData.email.trim(), name: "Contact Email" },
+        { field: userData.phone.trim(), name: "Phone" },
+        { field: userData.role.trim(), name: "Role" }
+    ];
 
-// Event listener for the Google Login button on the Home section
-if (googleLoginButtonHome) {
-    googleLoginButtonHome.addEventListener('click', handleGoogleLogin);
-}
-
-// Add event listeners for logout buttons
-if (logoutButton) {
-    logoutButton.addEventListener('click', async () => {
-        try {
-            await signOut(auth);
-            console.log("User signed out.");
-            // onAuthStateChanged will handle UI updates
-        } catch (error) {
-            console.error("Error signing out:", error);
-            showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
+    let missingFields = [];
+    mandatoryFields.forEach(item => {
+        if (!item.field) {
+            missingFields.push(item.name);
         }
     });
+
+    // Skills field check (after trimming and filtering empty strings from comma-separated input)
+    // The skills input value is `userData.skills` (a string), which is converted to an array inside this function.
+    // So, we need to check if the *resultant array* has any valid skills.
+    const processedSkills = userData.skills.split(',').map(s => s.trim()).filter(s => s !== '');
+    if (processedSkills.length === 0) {
+        missingFields.push("Skills");
+    }
+    userData.skills = processedSkills; // Update userData.skills to the processed array for saving
+
+
+    if (missingFields.length > 0) {
+        const message = `Please fill in all mandatory fields: ${[...new Set(missingFields)].join(', ')}.`; // Use Set to remove duplicates
+        showModal("Validation Error", message, () => {});
+        return;
+    }
+
+    // --- NEW LOGIC FOR profileAccess BASED ON ROLE ---
+    userData.profileAccess = (userData.role === 'Admin'); // Set to true if Admin, false otherwise
+
+    const collectionPath = `users_data`; // Dedicated collection for users
+
+    try {
+        let targetDocRef;
+        let targetUid;
+
+        if (existingFirestoreDocId) {
+            // CASE 1: EDITING AN EXISTING USER
+            // The Firestore document ID is already known and provided (it should be the user's UID).
+            targetDocRef = doc(db, collectionPath, existingFirestoreDocId);
+            await updateDoc(targetDocRef, userData);
+            console.log("User updated:", existingFirestoreDocId);
+            showModal("Success", "User profile updated successfully!", () => {});
+        } else {
+            // CASE 2: ADDING A NEW USER PROFILE
+            // For new user profiles, the admin MUST provide the Firebase Auth UID.
+            // This assumes the user has been created in Firebase Auth already.
+            targetUid = userIdDisplayInput.value.trim();
+
+            if (!targetUid) {
+                showModal("Validation Error", "For new user profiles, you must provide the Firebase User ID (UID). This user should first be created in Firebase Authentication.", () => {});
+                if (userIdDisplayInput) userIdDisplayInput.focus();
+                return;
+            }
+
+            // Check if a user profile with this UID already exists
+            const existingProfileSnap = await getDoc(doc(db, collectionPath, targetUid));
+            if (existingProfileSnap.exists()) {
+                showModal("Creation Error", "A user profile with this UID already exists. Please edit the existing profile or provide a unique UID for a new user.", () => {});
+                return;
+            }
+
+            // You might want to add more robust UID format validation here if needed
+            // e.g., if (targetUid.length < 28 || !/^[a-zA-Z0-9]+$/.test(targetUid)) { ... }
+
+            targetDocRef = doc(db, collectionPath, targetUid); // Use the provided UID as the document ID
+            await setDoc(targetDocRef, { ...userData, userId: targetUid }); // Store UID also as userId field
+            console.log("New user profile created. Doc ID is provided UID:", targetUid);
+            showModal("Success", "New user profile created successfully!", () => {});
+        }
+
+        resetUserForm(); // Reset form after successful operation
+    } catch (error) {
+        console.error("Error saving user:", error);
+        showModal("Error", `Failed to save user: ${error.message}`, () => {});
+    }
 }
 
-if (mobileLogoutButton) {
-    mobileLogoutButton.addEventListener('click', async () => {
-        try {
-            await signOut(auth);
-            console.log("User signed out.");
-            // onAuthStateChanged will handle UI updates
+// Delete a User
+async function deleteUser(firestoreDocId) {
+    if (!isAuthReady || !currentUserId || !isAdmin) {
+        showModal("Permission Denied", "Only administrators can manage users.", () => {});
+        return;
+    }
+
+    const collectionPath = `users_data`;
+    showModal(
+        "Confirm Deletion",
+        "Are you sure you want to delete this user? This action cannot be undone.",
+        async () => {
+            try {
+                await deleteDoc(doc(db, collectionPath, firestoreDocId));
+                console.log("User deleted Firestore Doc ID:", firestoreDocId);
+                showModal("Success", "User profile deleted successfully!", () => {});
+            } catch (error) {
+                console.error("Error deleting user:", error);
+                showModal("Error", `Failed to delete user: ${error.message}`, () => {});
+            }
         }
-        catch (error) {
-            console.error("Error signing out:", error);
-            showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
-        }
-    });
+    );
 }
 
-// Admin Country Mapping Form Event Listener
-if (document.getElementById('countryMappingForm')) {
-    document.getElementById('countryMappingForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (adminMessageDiv) adminMessageDiv.classList.add('hidden'); // Clear previous messages
-        if (uploadAdminDataButton) {
-            uploadAdminDataButton.disabled = true;
-            uploadAdminDataButton.textContent = 'Uploading...';
-        }
+// Listen for real-time updates to Users
+function listenForUsers() {
+    if (!isAuthReady || !currentUserId || !isAdmin) {
+        if (userList) userList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Access Denied: Only administrators can view users.</p>';
+        return;
+    }
 
+    if (unsubscribeUsers) {
+        unsubscribeUsers(); // Unsubscribe from previous listener
+    }
 
-        const countriesString = adminCountriesInput.value;
-        const countryStateMapString = adminCountryStateMapInput.value;
-        const isFullLoad = fullLoadRadio.checked;
+    const collectionPath = `users_data`;
+    const q = collection(db, collectionPath);
 
-        // Parse countries string into array of objects (newline-separated, filter unique codes)
-        function parseCountries(countriesString) {
-            const uniqueCodes = new Set();
-            const parsedCountries = [];
-            const duplicatesFound = [];
-
-            if (!countriesString.trim()) return [];
-
-            countriesString.split('\n').forEach(line => {
-                const parts = line.split(',');
-                if (parts.length === 2) {
-                    const name = parts[0].trim();
-                    const code = parts[1].trim();
-                    if (name !== '' && code !== '') {
-                        if (uniqueCodes.has(code)) {
-                            duplicatesFound.push(code);
-                        } else {
-                            uniqueCodes.add(code);
-                            parsedCountries.push({ name, code });
-                        }
-                    }
-                }
-            });
-
-            if (duplicatesFound.length > 0) {
-                const msg = `Warning: Duplicate country codes found and ignored: ${duplicatesFound.join(', ')}. Only the first occurrence was used.`;
-                if (adminMessageDiv) {
-                    adminMessageDiv.textContent = msg;
-                    adminMessageDiv.className = 'message error'; // Use error styling for warnings too
-                    adminMessageDiv.classList.remove('hidden');
-                }
-                console.warn(msg);
-            }
-            return parsedCountries;
-        }
-
-        // Parse countryStateMap string into an object (newline-separated)
-        function parseCountryStateMap(mapString) {
-            const map = {};
-            if (!mapString.trim()) return map;
-            mapString.split('\n').forEach(line => { // Changed split delimiter to newline
-                const parts = line.split(':');
-                if (parts.length === 2) {
-                    const countryCode = parts[0].trim();
-                    const states = parts[1].split(',').map(s => s.trim()).filter(s => s !== ''); // Filter empty states
-                    if (countryCode !== '') { // Only add if country code is not empty
-                        map[countryCode] = states;
-                    }
-                }
-            });
-            return map;
-        }
-
-        const dataToUpload = {};
-        let hasValidDataForUpload = false;
-
-        // Process countries data
-        const parsedCountries = parseCountries(countriesString);
-        if (parsedCountries.length > 0) {
-            dataToUpload.countries = parsedCountries;
-            hasValidDataForUpload = true;
-        }
-
-        // Process countryStateMap data
-        const parsedCountryStateMap = parseCountryStateMap(countryStateMapString);
-        if (Object.keys(parsedCountryStateMap).length > 0) {
-            dataToUpload.countryStateMap = parsedCountryStateMap;
-            hasValidDataForUpload = true;
-        }
-
-        // Special case: If full load is selected and BOTH textareas are empty, this means clearing the document.
-        // Otherwise, if a textarea is empty, its corresponding field will not be included in dataToUpload
-        // and thus not affected by merge:true.
-        if (!hasValidDataForUpload && isFullLoad) {
-            // If full load is selected AND no valid data was parsed from EITHER textarea,
-            // it implies the user wants to completely clear both fields.
-            dataToUpload.countries = [];
-            dataToUpload.countryStateMap = {};
-            hasValidDataForUpload = true; // Mark as having intent to update (with empty data)
-        } else if (!hasValidDataForUpload && !isFullLoad) {
-            // If incremental load is selected AND no valid data was parsed,
-            // there's nothing to update.
-            if (adminMessageDiv) {
-                adminMessageDiv.textContent = 'No valid data provided for update.';
-                adminMessageDiv.className = 'message error';
-                adminMessageDiv.classList.remove('hidden');
-            }
-            if (uploadAdminDataButton) {
-                uploadAdminDataButton.disabled = false;
-                uploadAdminDataButton.textContent = 'Upload Data to Firestore';
-            }
+    unsubscribeUsers = onSnapshot(q, (snapshot) => {
+        if (userList) userList.innerHTML = ''; // Clear current list
+        if (snapshot.empty) {
+            if (userList) userList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No users found. Add one above by providing their Firebase UID after creating them in Firebase Authentication!</p>';
             return;
         }
+        snapshot.forEach((doc) => {
+            const user = { id: doc.id, ...doc.data() }; // doc.id is Firestore's internal ID
+            displayUser(user);
+        });
+    }, (error) => {
+        console.error("Error listening to users:", error);
+        if (userList) userList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading users: ${error.message}</p>`;
+    });
+}
 
-        try {
-            const docRef = doc(db, "app_metadata", "countries_states");
-            // Always use merge: true to avoid deleting unspecified fields.
-            // If the user wants to empty a field, they have to ensure the parsed array/object is empty.
-            await setDoc(docRef, dataToUpload, { merge: true });
+// Display a single user in the UI as a grid row
+function displayUser(user) {
+    const userRow = document.createElement('div');
+    userRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
+    userRow.dataset.id = user.id; // Store Firestore document ID for edit/delete actions
 
-            if (adminMessageDiv) {
-                adminMessageDiv.textContent = `Data uploaded successfully (${isFullLoad ? 'Full Load (Merge)' : 'Incremental Load'})!`;
-                adminMessageDiv.className = 'message success';
-                adminMessageDiv.classList.remove('hidden');
-            }
-            console.log("Admin data upload successful:", dataToUpload);
+    const displayUid = user.id || 'N/A'; // Use Firestore doc ID for display, which should be the UID
 
-            // Re-fetch data for CRM forms and populate dropdowns after successful admin update
-            await fetchCountryData();
-            populateCountries();
+    userRow.innerHTML = `
+        <div class="px-2 py-1 truncate font-medium text-gray-800">${displayUid}</div>
+        <div class="px-2 py-1 truncate">${user.userName || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${user.email || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden sm:block">${user.role || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden md:block">${Array.isArray(user.skills) ? user.skills.join(', ') : user.skills || 'N/A'}</div>
+        <div class="px-2 py-1 flex justify-end space-x-2">
+            <button class="edit-btn text-blue-600 hover:text-blue-800 font-semibold text-xs" data-id="${user.id}">Edit</button>
+            <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${user.id}">Delete</button>
+        </div>
+    `;
+    if (userList) userList.appendChild(userRow);
 
-        } catch (error) {
-            console.error("Error uploading admin data:", error);
-            if (adminMessageDiv) {
-                adminMessageDiv.textContent = `Error uploading data: ${error.message}`;
-                adminMessageDiv.className = 'message error';
-                adminMessageDiv.classList.remove('hidden');
-            }
-        } finally {
-            if (uploadAdminDataButton) {
-                uploadAdminDataButton.disabled = false;
-                uploadAdminDataButton.textContent = 'Upload Data to Firestore';
-            }
+    // Add event listeners for edit and delete buttons
+    userRow.querySelector('.edit-btn').addEventListener('click', () => editUser(user));
+    userRow.querySelector('.delete-btn').addEventListener('click', () => deleteUser(user.id));
+}
+
+// Populate form for editing a user
+function editUser(user) {
+    if (!isAdmin) {
+        showModal("Permission Denied", "Only administrators can edit users.", () => {});
+        return;
+    }
+    if (userFormTitle) userFormTitle.textContent = 'Edit User Profile'; // Clarified title
+    if (submitUserButton) submitUserButton.textContent = 'Update User Profile'; // Clarified button text
+
+    if (userIdDisplayGroup) userIdDisplayGroup.classList.remove('hidden'); // Show UID group
+    if (userIdDisplayInput) {
+        userIdDisplayInput.value = user.id || 'N/A'; // Display the Firestore Doc ID (which is the UID)
+        userIdDisplayInput.setAttribute('readonly', 'readonly'); // Make it read-only when editing
+        userIdDisplayInput.classList.add('bg-gray-100'); // Add a class for visual indication of readonly
+    }
+
+    if (userNameInput) userNameInput.value = user.userName || '';
+    if (userFirstNameInput) userFirstNameInput.value = user.firstName || '';
+    if (userLastNameInput) userLastNameInput.value = user.lastName || '';
+    if (userEmailInput) userEmailInput.value = user.email || '';
+    if (userPhoneInput) userPhoneInput.value = user.phone || '';
+    if (userRoleSelect) userRoleSelect.value = user.role || ''; // Set value for select
+    if (userSkillsInput) userSkillsInput.value = Array.isArray(user.skills) ? user.skills.join(', ') : user.skills || ''; // Convert array back to string
+
+    if (userForm) userForm.dataset.editingId = user.id; // Store Firestore document ID for update
+    if (userForm) userForm.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Reset User form function
+function resetUserForm() {
+    if (userForm) userForm.reset();
+    if (userForm) userForm.dataset.editingId = '';
+    if (userFormTitle) userFormTitle.textContent = 'Add New User Profile';
+    if (submitUserButton) submitUserButton.textContent = 'Create User Profile';
+
+    if (userIdDisplayGroup) userIdDisplayGroup.classList.remove('hidden'); // Show UID group when adding new
+    if (userIdDisplayInput) {
+        userIdDisplayInput.value = ''; // Clear UID input
+        userIdDisplayInput.removeAttribute('readonly'); // Make it editable for new user profile
+        userIdDisplayInput.classList.remove('bg-gray-100'); // Remove readonly visual class
+        userIdDisplayInput.focus(); // Focus on the UID input for new user profile
+    }
+    if (userRoleSelect) userRoleSelect.value = 'User'; // Default role for new user profiles
+}
+
+// --- Accordion Logic (UPDATED for dynamic panel sizing) ---
+function areAllAccordionsClosed() {
+    // Select all accordion content elements within the linkedObjectsAccordion
+    const accordionContents = document.querySelectorAll('#linkedObjectsAccordion .accordion-content');
+    for (const content of accordionContents) {
+        if (content.classList.contains('open')) {
+            return false; // Found an open accordion
+        }
+    }
+    return true; // All accordions are closed
+}
+
+function toggleAccordion(header, content) {
+    if (!content || !header) return; // Defensive check
+
+    // If the clicked accordion is already open, close it
+    if (content.classList.contains('open')) {
+        content.classList.remove('open');
+        content.style.maxHeight = null;
+        header.classList.remove('active');
+
+        // After closing, check if ALL accordions are now closed. If so, revert layout.
+        if (areAllAccordionsClosed() && currentOpportunityId) { // Only revert if an opportunity is being edited
+            setOpportunityLayout('edit_split_70_30');
+        }
+    } else {
+        // Close all other accordions first
+        closeAllAccordions();
+
+        // Open the clicked accordion
+        content.classList.add('open');
+        // Set maxHeight dynamically to content's scrollHeight for smooth transition
+        content.style.maxHeight = content.scrollHeight + "px";
+        header.classList.add('active');
+
+        // When any accordion opens, set the layout to shrink the left panel and expand the right
+        if (currentOpportunityId && window.innerWidth >= 768) { // Only change layout on desktop and if editing
+            setOpportunityLayout('edit_split_30_70');
+        }
+        // Scroll the accordion header into view, considering the new layout
+        header.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function closeAllAccordions() {
+    document.querySelectorAll('.accordion-header').forEach(header => {
+        header.classList.remove('active');
+        const content = header.nextElementSibling;
+        if (content) {
+            content.classList.remove('open');
+            content.style.maxHeight = null;
         }
     });
 }
 
-// Admin Currency Form Event Listener (NEW)
-if (currencyForm) {
-    currencyForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const editingId = currencyForm.dataset.editingId;
-        // For CSV, currencyData parameter is not directly used, as the function reads from the textarea.
-        await saveCurrency(null, editingId || null);
-    });
+/* --- ADMIN CURRENCY MANAGEMENT (NEW) --- */
+
+async function saveCurrency(currencyData, existingCurrencyCode = null) {
+    if (!isAuthReady || !currentUserId || !isAdmin) {
+        showModal("Permission Denied", "Only administrators can manage currencies.", () => {});
+        return;
+    }
+
+    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden'); // Hide previous messages
+    if (submitCurrencyButton) {
+        submitCurrencyButton.disabled = true;
+        submitCurrencyButton.textContent = 'Uploading...';
+    }
+
+
+    const inputCsv = adminCurrenciesInput.value.trim();
+    const currencyLines = inputCsv.split('\n').filter(line => line.trim() !== ''); // Filter out empty lines
+
+    if (currencyLines.length === 0) {
+        if (adminCurrencyMessageDiv) {
+            adminCurrencyMessageDiv.textContent = "Please enter currency data in the specified CSV format.";
+            adminCurrencyMessageDiv.className = 'message error';
+            adminCurrencyMessageDiv.classList.remove('hidden');
+        }
+        if (submitCurrencyButton) {
+            submitCurrencyButton.disabled = false;
+            submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+        }
+        return;
+    }
+
+    // Corrected collection reference for currencies data
+    const currenciesCollectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
+
+    try {
+        let updatesPerformed = 0;
+        let errorsOccurred = 0;
+        let totalProcessed = 0;
+
+        for (const line of currencyLines) {
+            totalProcessed++;
+            const parts = line.split(',');
+
+            // Explicitly get each part and ensure it's a string, defaulting to empty if not present.
+            // This prevents `undefined` values from reaching Firestore functions expecting strings.
+            const code = parts[0] ? parts[0].trim() : '';
+            const currencyName = parts[1] ? parts[1].trim() : '';
+            const symbol = parts[2] ? parts[2].trim() : '';
+            const symbol_native = parts[3] ? parts[3].trim() : '';
+
+            // Now, check for mandatory fields being empty after trimming
+            if (code === '' || currencyName === '' || symbol === '' || symbol_native === '') {
+                console.error(`Skipping invalid line (missing data for essential fields): '${line}'`);
+                errorsOccurred++;
+                continue;
+            }
+
+            // If editing a specific currency, ensure the code matches
+            if (existingCurrencyCode && code !== existingCurrencyCode) {
+                showModal("Validation Error", `When editing, the currency code in the input CSV (${code}) must match the currency being edited (${existingCurrencyCode}). Please provide only one line for the edited currency.`, () => {});
+                if (submitCurrencyButton) {
+                    submitCurrencyButton.disabled = false;
+                    submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+                }
+                return; // Stop processing and exit
+            }
+
+
+            const currencyDataToSave = {
+                currencyCode: code, // Storing code inside the document too, though doc ID is also the code
+                currencyName: currencyName,
+                symbol: symbol,
+                symbol_native: symbol_native
+            };
+
+            // CORRECTED: Use doc(collectionRef, documentId)
+            const currencyDocRef = doc(currenciesCollectionRef, code); // Pass the collection reference directly
+
+            await setDoc(currencyDocRef, currencyDataToSave, { merge: true }); // Use setDoc with merge to create or update
+            updatesPerformed++;
+        }
+
+        let message = `Upload complete. Total lines processed: ${totalProcessed}. Updated/Added currencies: ${updatesPerformed}. Errors/Skipped lines: ${errorsOccurred}.`;
+        if (errorsOccurred > 0) {
+            if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.className = 'message error';
+            message += " Please check console for details on skipped lines.";
+        } else {
+            if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.className = 'message success';
+        }
+        if (adminCurrencyMessageDiv) {
+            adminCurrencyMessageDiv.textContent = message;
+            adminCurrencyMessageDiv.classList.remove('hidden');
+        }
+        console.log("Admin currency data upload process finished.");
+
+        await fetchCurrencies(); // Re-fetch all currencies to update the global array
+        resetCurrencyForm();
+    } catch (error) {
+        console.error("Error uploading currency data (caught in try-catch):", error);
+        if (adminCurrencyMessageDiv) {
+            adminCurrencyMessageDiv.textContent = `Error uploading currency data: ${error.message}`;
+            adminCurrencyMessageDiv.className = 'message error';
+            adminCurrencyMessageDiv.classList.remove('hidden');
+        }
+    } finally {
+        if (submitCurrencyButton) {
+            submitCurrencyButton.disabled = false;
+            submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+        }
+    }
 }
 
 
-// User Form Event Listener
-if (userForm) {
-    userForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const userData = {
-            userName: userNameInput.value.trim(),
-            firstName: userFirstNameInput.value.trim(),
-            lastName: userLastNameInput.value.trim(),
-            email: userEmailInput.value.trim(),
-            phone: userPhoneInput.value.trim(),
-            role: userRoleSelect.value.trim(), // Get value from select
-            skills: userSkillsInput.value.trim(), // Will be parsed to array in saveUser
-        };
-        const editingId = userForm.dataset.editingId; // This is the Firestore document ID if editing
-        await saveUser(userData, editingId || null);
+async function deleteCurrency(currencyCode) {
+    if (!isAuthReady || !currentUserId || !isAdmin) {
+        showModal("Permission Denied", "Only administrators can manage currencies.", () => {});
+        return;
+    }
+
+    showModal(
+        "Confirm Deletion",
+        `Are you sure you want to delete the currency '${currencyCode}'? This action cannot be undone.`,
+        async () => {
+            try {
+                // Corrected doc reference for `app_settings`
+                const currencyDocRef = doc(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data", currencyCode);
+                await deleteDoc(currencyDocRef);
+                console.log("Currency deleted:", currencyCode);
+                showModal("Success", `Currency '${currencyCode}' deleted successfully!`, () => {});
+                await fetchCurrencies(); // Re-fetch to update allCurrencies array
+                populateCurrencySelect(); // Update opportunity form dropdown
+            } catch (error) {
+                console.error("Error deleting currency:", error);
+                showModal("Error", `Failed to delete currency: ${error.message}`, () => {});
+            }
+        }
+    );
+}
+
+function listenForCurrencies() {
+    if (unsubscribeCurrencies) {
+        unsubscribeCurrencies(); // Unsubscribe from previous listener
+    }
+
+    if (!isAuthReady || !currentUserId || !isAdmin) {
+        if (currencyList) currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Access Denied: Only administrators can view currencies.</p>';
+        return;
+    }
+
+    // Corrected collection reference to include a document ID for `app_settings`
+    const q = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
+
+    unsubscribeCurrencies = onSnapshot(q, (snapshot) => {
+        if (currencyList) currencyList.innerHTML = ''; // Clear current list
+        if (snapshot.empty) {
+            if (currencyList) currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No currencies found. Add them above!</p>';
+            return;
+        }
+        snapshot.forEach((doc) => {
+            const currency = { id: doc.id, ...doc.data() }; // doc.id is the currencyCode
+            displayCurrency(currency);
+        });
+    }, (error) => {
+        console.error("Error listening to currencies:", error);
+        if (currencyList) currencyList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading currencies: ${error.message}</p>`;
     });
 }
 
+function displayCurrency(currency) {
+    const currencyRow = document.createElement('div');
+    currencyRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
+    currencyRow.dataset.id = currency.id; // currency code is the Firestore doc ID
 
-// Reset Form Buttons - add event listeners
-document.getElementById('resetCustomerFormButton')?.addEventListener('click', resetCustomerForm);
-document.getElementById('resetOpportunityFormButton')?.addEventListener('click', resetOpportunityForm);
-document.getElementById('resetOpportunityContactFormButton')?.addEventListener('click', resetOpportunityContactForm);
-document.getElementById('resetOpportunityLineFormButton')?.addEventListener('click', resetOpportunityLineForm);
-document.getElementById('resetQuoteFormButton')?.addEventListener('click', resetQuoteForm);
-document.getElementById('resetUserFormButton')?.addEventListener('click', resetUserForm);
-document.getElementById('resetCurrencyFormButton')?.addEventListener('click', resetCurrencyForm); // NEW
+    currencyRow.innerHTML = `
+        <div class="px-2 py-1 truncate font-medium text-gray-800">${currency.id || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${currency.currencyName || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${currency.symbol || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${currency.symbol_native || 'N/A'}</div>
+        <div class="px-2 py-1 flex justify-end space-x-2">
+            <button class="edit-btn text-blue-600 hover:text-blue-800 font-semibold text-xs" data-id="${currency.id}">Edit</button>
+            <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${currency.id}">Delete</button>
+        </div>
+    `;
+    if (currencyList) currencyList.appendChild(currencyRow);
+
+    currencyRow.querySelector('.edit-btn').addEventListener('click', () => editCurrency(currency));
+    currencyRow.querySelector('.delete-btn').addEventListener('click', () => deleteCurrency(currency.id));
+}
+
+function editCurrency(currency) {
+    if (!isAdmin) {
+        showModal("Permission Denied", "Only administrators can edit currencies.", () => {});
+        return;
+    }
+    if (currencyFormTitle) currencyFormTitle.textContent = `Edit Currency: ${currency.id}`;
+    if (submitCurrencyButton) submitCurrencyButton.textContent = 'Update Currency';
+
+    if (currencyCodeDisplayGroup) currencyCodeDisplayGroup.classList.remove('hidden');
+    if (currencyCodeDisplay) currencyCodeDisplay.textContent = currency.id; // Display the code
+
+    // Pre-fill the textarea with the CSV for this specific currency
+    if (adminCurrenciesInput) adminCurrenciesInput.value = `${currency.id},${currency.currencyName || ''},${currency.symbol || ''},${currency.symbol_native || ''}`;
+
+    if (currencyForm) currencyForm.dataset.editingId = currency.id; // Store the currency code for updating
+    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden'); // Clear any previous messages
+    if (currencyForm) currencyForm.scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetCurrencyForm() {
+    if (currencyForm) currencyForm.reset();
+    if (currencyForm) currencyForm.dataset.editingId = '';
+    if (currencyFormTitle) currencyFormTitle.textContent = 'Add New Currency';
+    if (submitCurrencyButton) submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+    if (currencyCodeDisplayGroup) currencyCodeDisplayGroup.classList.add('hidden');
+    if (currencyCodeDisplay) currencyCodeDisplay.textContent = '';
+    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden'); // Clear messages
+}
 
 
 // Initialize Firebase on window load
