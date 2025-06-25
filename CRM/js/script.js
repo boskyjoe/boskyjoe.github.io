@@ -87,16 +87,16 @@ const customerList = document.getElementById('customerList'); // Reference to th
 // Opportunity Section Elements (NEW - and now restructured)
 const opportunitiesSection = document.getElementById('opportunities-section');
 const opportunityViewContainer = document.getElementById('opportunity-view-container'); // NEW main flex container
-const opportunityLeftPanel = document.getElementById('opportunity-left-panel');     // NEW left panel
-const opportunityRightPanel = document.getElementById('opportunity-right-panel');   // NEW right panel
-const opportunityFullFormView = document.getElementById('opportunity-full-form-view'); // NEW: The full form card
-const opportunityExistingListView = document.getElementById('opportunity-existing-list-view'); // NEW: The existing opportunities list card
-const opportunitySummaryCard = document.getElementById('opportunity-summary-card'); // NEW summary card
-const summaryOpportunityId = document.getElementById('summaryOpportunityId');       // NEW summary elements
-const summaryOpportunityName = document.getElementById('summaryOpportunityName');
-const summaryOpportunityCustomer = document.getElementById('summaryOpportunityCustomer');
-const summaryOpportunityStage = document.getElementById('summaryOpportunityStage');
-const summaryOpportunityAmount = document.getElementById('summaryOpportunityAmount');
+let opportunityLeftPanel; // Moved to be initialized after DOM load
+let opportunityRightPanel;   // Moved to be initialized after DOM load
+let opportunityFullFormView; // Moved to be initialized after DOM load
+let opportunityExistingListView; // Moved to be initialized after DOM load
+let opportunitySummaryCard; // Moved to be initialized after DOM load
+let summaryOpportunityId;       // Moved to be initialized after DOM load
+let summaryOpportunityName;
+let summaryOpportunityCustomer;
+let summaryOpportunityStage;
+let summaryOpportunityAmount;
 
 
 const opportunityForm = document.getElementById('opportunityForm');
@@ -106,7 +106,7 @@ const opportunityIdDisplay = document.getElementById('opportunityIdDisplay');
 const opportunityCustomerSelect = document.getElementById('opportunityCustomer');
 const opportunityNameInput = document.getElementById('opportunityName');
 const opportunityAmountInput = document.getElementById('opportunityAmount');
-let currencySymbolDisplay; // CHANGED: Declare with 'let', will be initialized in initializeFirebase
+let currencySymbolDisplay; // Declare with 'let', will be initialized in initializeFirebase
 const opportunityCurrencySelect = document.getElementById('opportunityCurrency');
 const opportunityStageSelect = document.getElementById('opportunityStage');
 const opportunityExpectedStartDateInput = document.getElementById('opportunityExpectedStartDate');
@@ -119,13 +119,13 @@ const opportunityDataInput = document.getElementById('opportunityData');
 const submitOpportunityButton = document.getElementById('submitOpportunityButton');
 const opportunityList = document.getElementById('opportunityList'); // Reference to the div for opportunity rows
 
-const linkedObjectsAccordion = document.getElementById('linkedObjectsAccordion'); // Main accordion container
-const contactsAccordionHeader = document.getElementById('contactsAccordionHeader'); // Contacts accordion header
-const contactsAccordionContent = contactsAccordionHeader.nextElementSibling; // Contacts accordion content
-const linesAccordionHeader = document.getElementById('linesAccordionHeader'); // Lines accordion header
-const linesAccordionContent = linesAccordionHeader.nextElementSibling; // Lines accordion content
-const quotesAccordionHeader = document.getElementById('quotesAccordionHeader'); // Quotes accordion header
-const quotesAccordionContent = quotesAccordionHeader.nextElementSibling; // Quotes accordion content
+let linkedObjectsAccordion; // Moved to be initialized after DOM load
+let contactsAccordionHeader; // Moved to be initialized after DOM load
+let contactsAccordionContent; // Moved to be initialized after DOM load
+let linesAccordionHeader; // Moved to be initialized after DOM load
+let linesAccordionContent; // Moved to be initialized after DOM load
+let quotesAccordionHeader; // Moved to be initialized after DOM load
+let quotesAccordionContent; // Moved to be initialized after DOM load
 
 
 // Opportunity Contact Elements (NEW)
@@ -218,34 +218,31 @@ const navGoogleLoginButton = document.getElementById('navGoogleLoginButton'); //
 const googleLoginButtonHome = document.getElementById('googleLoginButton');
 
 // Admin menu elements (added IDs in HTML)
-const desktopAdminMenu = document.getElementById('desktopAdminMenu');
-const mobileAdminMenu = document.getElementById('mobileAdminMenu');
+let desktopAdminMenu; // Moved to be initialized after DOM load
+let mobileAdminMenu; // Moved to be initialized after DOM load
 
 // Reference to auth-section (for standard Google/email login) - This section is mostly decorative now
 const authSection = document.getElementById('auth-section');
 
 // Mobile Menu Button and Container
 const mobileMenuButton = document.getElementById('mobileMenuButton');
-const mobileMenu = document.getElementById('mobileMenu');
+let mobileMenu; // Moved to be initialized after DOM load
 
 
-// Select all main content sections
-const homeSection = document.getElementById('home');
-const eventsSection = document.getElementById('events-section');
-const allSections = [
-    homeSection,
-    customersSection,
-    opportunitiesSection,
-    eventsSection,
-    adminCountryMappingSection,
-    usersManagementSection,
-    authSection,
-    currencyManagementSection // NEW
-];
+// Select all main content sections (Initialize these later or ensure they are found)
+let homeSection;
+let eventsSection;
+let allSections = []; // Will be populated in initializeFirebase
 
 
 // Function to show a custom confirmation modal
 function showModal(title, message, onConfirm, onCancel) {
+    const modalContainer = document.getElementById('modalContainer'); // Ensure this is also initialized when used
+    if (!modalContainer) {
+        console.error("Modal container not found!");
+        alert(`${title}\n${message}`); // Fallback to alert if modal container doesn't exist
+        return;
+    }
     modalContainer.innerHTML = `
         <div class="modal-overlay">
             <div class="modal-content">
@@ -274,30 +271,30 @@ function showModal(title, message, onConfirm, onCancel) {
 // Function to control the layout of the opportunity section
 function setOpportunityLayout(layoutType) {
     // Hide all internal opportunity views first
-    opportunityFullFormView.classList.add('hidden');
-    opportunityExistingListView.classList.add('hidden');
-    opportunitySummaryCard.classList.add('hidden');
+    if (opportunityFullFormView) opportunityFullFormView.classList.add('hidden');
+    if (opportunityExistingListView) opportunityExistingListView.classList.add('hidden');
+    if (opportunitySummaryCard) opportunitySummaryCard.classList.add('hidden');
 
     // Reset panel classes
-    opportunityLeftPanel.classList.remove('shrink', 'stretch');
-    opportunityRightPanel.classList.remove('expand', 'hidden-panel');
+    if (opportunityLeftPanel) opportunityLeftPanel.classList.remove('shrink', 'stretch');
+    if (opportunityRightPanel) opportunityRightPanel.classList.remove('expand', 'hidden-panel');
 
     switch (layoutType) {
         case 'full_form_and_list': // Default view for adding new, or after resetting edit form
-            opportunityFullFormView.classList.remove('hidden');
-            opportunityExistingListView.classList.remove('hidden');
-            opportunityLeftPanel.classList.add('stretch'); // Take full width
-            opportunityRightPanel.classList.add('hidden-panel'); // Hide right panel completely
+            if (opportunityFullFormView) opportunityFullFormView.classList.remove('hidden');
+            if (opportunityExistingListView) opportunityExistingListView.classList.remove('hidden');
+            if (opportunityLeftPanel) opportunityLeftPanel.classList.add('stretch'); // Take full width
+            if (opportunityRightPanel) opportunityRightPanel.classList.add('hidden-panel'); // Hide right panel completely
             break;
         case 'edit_split_70_30': // Initial edit view: form + list (70) and accordions (30)
-            opportunityFullFormView.classList.remove('hidden');
-            opportunityExistingListView.classList.remove('hidden');
+            if (opportunityFullFormView) opportunityFullFormView.classList.remove('hidden');
+            if (opportunityExistingListView) opportunityExistingListView.classList.remove('hidden');
             // Classes for width are handled by CSS directly on md: screen size
             break;
         case 'edit_split_30_70': // Accordion expanded view: summary card (30) and accordions (70)
-            opportunitySummaryCard.classList.remove('hidden');
-            opportunityLeftPanel.classList.add('shrink');
-            opportunityRightPanel.classList.add('expand');
+            if (opportunitySummaryCard) opportunitySummaryCard.classList.remove('hidden');
+            if (opportunityLeftPanel) opportunityLeftPanel.classList.add('shrink');
+            if (opportunityRightPanel) opportunityRightPanel.classList.add('expand');
             break;
         default:
             console.error("Unknown opportunity layout type:", layoutType);
@@ -339,7 +336,7 @@ async function showSection(sectionId) {
         targetSection.classList.remove('hidden');
         targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    mobileMenu.classList.remove('open'); // Close mobile menu when navigating (if open)
+    if (mobileMenu) mobileMenu.classList.remove('open'); // Close mobile menu when navigating (if open)
 
     // Stop all listeners first to prevent redundant updates
     if (unsubscribeCustomers) { unsubscribeCustomers(); }
@@ -355,7 +352,7 @@ async function showSection(sectionId) {
     if (sectionId !== 'opportunities-section') {
         currentOpportunityId = null;
         currentEditedOpportunity = null; // Clear the edited opportunity
-        linkedObjectsAccordion.classList.add('hidden'); // Hide linked objects if not in opportunity section
+        if (linkedObjectsAccordion) linkedObjectsAccordion.classList.add('hidden'); // Hide linked objects if not in opportunity section
     }
 
     // Start specific listener for the active section, but only if auth is ready
@@ -512,12 +509,65 @@ async function initializeFirebase() {
         db = getFirestore(app);
         auth = getAuth(app);
 
-        // NEW: Initialize currencySymbolDisplay here, AFTER the DOM is fully loaded
+        // --- IMPORTANT: Initialize all DOM element references here AFTER app initialization ---
+        homeSection = document.getElementById('home');
+        eventsSection = document.getElementById('events-section');
+        mobileMenu = document.getElementById('mobileMenu');
+        desktopAdminMenu = document.getElementById('desktopAdminMenu');
+        mobileAdminMenu = document.getElementById('mobileAdminMenu');
+
+        opportunityLeftPanel = document.getElementById('opportunity-left-panel');
+        opportunityRightPanel = document.getElementById('opportunity-right-panel');
+        opportunityFullFormView = document.getElementById('opportunity-full-form-view');
+        opportunityExistingListView = document.getElementById('opportunity-existing-list-view');
+        opportunitySummaryCard = document.getElementById('opportunity-summary-card');
+        summaryOpportunityId = document.getElementById('summaryOpportunityId');
+        summaryOpportunityName = document.getElementById('summaryOpportunityName');
+        summaryOpportunityCustomer = document.getElementById('summaryOpportunityCustomer');
+        summaryOpportunityStage = document.getElementById('summaryOpportunityStage');
+        summaryOpportunityAmount = document.getElementById('summaryOpportunityAmount');
+
+        linkedObjectsAccordion = document.getElementById('linkedObjectsAccordion');
+        contactsAccordionHeader = document.getElementById('contactsAccordionHeader');
+        contactsAccordionContent = contactsAccordionHeader ? contactsAccordionHeader.nextElementSibling : null;
+        linesAccordionHeader = document.getElementById('linesAccordionHeader');
+        linesAccordionContent = linesAccordionHeader ? linesAccordionHeader.nextElementSibling : null;
+        quotesAccordionHeader = document.getElementById('quotesAccordionHeader');
+        quotesAccordionContent = quotesAccordionHeader ? quotesAccordionHeader.nextElementSibling : null;
+
         currencySymbolDisplay = document.getElementById('currencySymbolDisplay');
         if (!currencySymbolDisplay) {
             console.error("ERROR: currencySymbolDisplay element not found in the DOM! Currency symbol display may not work.");
-            // You might want to display a user-facing error message or a fallback
         }
+
+        // Re-populate allSections array now that elements are initialized
+        allSections = [
+            homeSection,
+            customersSection,
+            opportunitiesSection,
+            eventsSection,
+            adminCountryMappingSection,
+            usersManagementSection,
+            authSection,
+            currencyManagementSection
+        ].filter(section => section !== null); // Filter out any that might still be null if HTML is malformed
+
+
+        // Add Event Listeners for accordions AFTER they are initialized
+        if (contactsAccordionHeader) contactsAccordionHeader.addEventListener('click', () => toggleAccordion(contactsAccordionHeader, contactsAccordionContent));
+        if (linesAccordionHeader) linesAccordionHeader.addEventListener('click', () => toggleAccordion(linesAccordionHeader, linesAccordionContent));
+        if (quotesAccordionHeader) quotesAccordionHeader.addEventListener('click', () => toggleAccordion(quotesAccordionHeader, quotesAccordionContent));
+        // Event listener for the summary card to expand the left panel
+        if (opportunitySummaryCard) {
+            opportunitySummaryCard.addEventListener('click', () => {
+                if (window.innerWidth >= 768) { // Only apply on desktop
+                    setOpportunityLayout('edit_split_70_30'); // Expand left, shrink right
+                    closeAllAccordions(); // Close any open accordions on the right
+                    if (opportunityForm) opportunityForm.scrollIntoView({ behavior: 'smooth', block: 'start' }); // Scroll form into view
+                }
+            });
+        }
+
 
         // Load currency data and country data initially (can be done before auth state is fully known as they are public app_metadata)
         await Promise.all([
@@ -569,7 +619,6 @@ async function initializeFirebase() {
                             email: user.email || 'N/A',
                             phone: '', // Default empty
                             role: 'User', // Default role for all new users on first login
-                            skills: [], // Default empty array
                             profileAccess: true // Default access for all new users
                         });
                         console.log("Basic user profile created for:", user.uid);
@@ -586,11 +635,11 @@ async function initializeFirebase() {
 
                 // Show/Hide Admin menus based on isAdmin flag
                 if (isAdmin) {
-                    desktopAdminMenu.classList.remove('hidden');
-                    mobileAdminMenu.classList.remove('hidden');
+                    if (desktopAdminMenu) desktopAdminMenu.classList.remove('hidden');
+                    if (mobileAdminMenu) mobileAdminMenu.classList.remove('hidden');
                 } else {
-                    desktopAdminMenu.classList.add('hidden');
-                    mobileAdminMenu.classList.add('hidden');
+                    if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
+                    if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
                 }
 
                 // Populate dropdowns for customer form (always needed)
@@ -608,14 +657,14 @@ async function initializeFirebase() {
                 // Hide admin menus and logout buttons
                 userIdDisplay.classList.add('hidden'); // Hide desktop user ID
                 mobileUserIdDisplay.classList.add('hidden'); // Hide mobile user ID
-                desktopAdminMenu.classList.add('hidden');
-                mobileAdminMenu.classList.add('hidden');
+                if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
+                if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
                 logoutButton.classList.add('hidden');
                 mobileLogoutButton.classList.add('hidden');
 
                 // Show Google Login buttons
-                navGoogleLoginButton.classList.remove('hidden');
-                googleLoginButtonHome.classList.remove('hidden'); // Show home page login button
+                if (navGoogleLoginButton) navGoogleLoginButton.classList.remove('hidden');
+                if (googleLoginButtonHome) googleLoginButtonHome.classList.remove('hidden'); // Show home page login button
 
                 // Disable all form submit buttons by default when not logged in
                 submitCustomerButton.setAttribute('disabled', 'disabled');
@@ -1052,20 +1101,12 @@ function updateCurrencySymbolDisplay() {
     }
 
     const selectedCurrencyCode = opportunityCurrencySelect.value;
-    console.log("DEBUG: Selected Currency Code:", selectedCurrencyCode);
-    console.log("DEBUG: currencySymbolDisplay element:", currencySymbolDisplay);
-    console.log("DEBUG: Current textContent of currencySymbolDisplay:", currencySymbolDisplay.textContent);
-
     const symbolToAssign = getCurrencySymbol(selectedCurrencyCode);
-    console.log("DEBUG: Symbol to assign:", symbolToAssign);
 
     try {
         currencySymbolDisplay.textContent = symbolToAssign;
-        console.log("DEBUG: Successfully updated currency symbol to:", symbolToAssign);
     } catch (error) {
         console.error("ERROR: Failed to set currency symbol textContent:", error);
-        console.error("ERROR: currencySymbolDisplay object:", currencySymbolDisplay);
-        console.error("ERROR: Value attempted to set:", symbolToAssign);
     }
 }
 
@@ -1346,7 +1387,7 @@ function editOpportunity(opportunity) {
 
     updateCurrencySymbolDisplay(); // Update symbol for the input field
 
-    linkedObjectsAccordion.classList.remove('hidden'); // Show linked objects accordion
+    if (linkedObjectsAccordion) linkedObjectsAccordion.classList.remove('hidden'); // Show linked objects accordion
 
     // Always reset and then listen for sub-collections when editing an opportunity
     resetOpportunityContactForm(); // Clear contact form for new entry
@@ -1362,23 +1403,23 @@ function editOpportunity(opportunity) {
     closeAllAccordions();
 
 
-    opportunityForm.scrollIntoView({ behavior: 'smooth' });
+    if (opportunityForm) opportunityForm.scrollIntoView({ behavior: 'smooth' });
 }
 
 // Reset Opportunity form function (UPDATED FOR NEW UI AND CURRENCY SYMBOLS)
 function resetOpportunityForm() {
-    opportunityForm.reset();
-    opportunityForm.dataset.editingId = '';
-    opportunityFormTitle.textContent = 'Add New Opportunity';
-    submitOpportunityButton.textContent = 'Add Opportunity';
-    opportunityIdDisplayGroup.classList.add('hidden');
-    opportunityIdDisplay.textContent = '';
-    opportunityDataInput.value = ''; // Ensure additional data is cleared
-    opportunityServiceAddressInput.value = ''; // NEW: Clear service address
+    if (opportunityForm) opportunityForm.reset();
+    if (opportunityForm) opportunityForm.dataset.editingId = '';
+    if (opportunityFormTitle) opportunityFormTitle.textContent = 'Add New Opportunity';
+    if (submitOpportunityButton) submitOpportunityButton.textContent = 'Add Opportunity';
+    if (opportunityIdDisplayGroup) opportunityIdDisplayGroup.classList.add('hidden');
+    if (opportunityIdDisplay) opportunityIdDisplay.textContent = '';
+    if (opportunityDataInput) opportunityDataInput.value = ''; // Ensure additional data is cleared
+    if (opportunityServiceAddressInput) opportunityServiceAddressInput.value = ''; // NEW: Clear service address
     currentOpportunityId = null; // Clear the globally tracked current opportunity ID
     currentEditedOpportunity = null; // Clear the edited opportunity
 
-    linkedObjectsAccordion.classList.add('hidden'); // Hide linked objects accordion again
+    if (linkedObjectsAccordion) linkedObjectsAccordion.classList.add('hidden'); // Hide linked objects accordion again
     closeAllAccordions(); // Ensure all accordions are closed
 
     // Re-populate customers dropdown to ensure it's fresh
@@ -1386,9 +1427,9 @@ function resetOpportunityForm() {
     populateCurrencySelect(); // Reset currency dropdown to default and update symbol display
 
     // Clear any existing sub-document lists
-    opportunityContactList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No contacts added for this opportunity.</p>';
-    opportunityLineList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No opportunity lines added for this opportunity.</p>';
-    quoteList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No quotes added for this opportunity.</p>';
+    if (opportunityContactList) opportunityContactList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No contacts added for this opportunity.</p>';
+    if (opportunityLineList) opportunityLineList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No opportunity lines added for this opportunity.</p>';
+    if (quoteList) quoteList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No quotes added for this opportunity.</p>';
 
     // Unsubscribe from any previous sub-collection listeners
     if (unsubscribeOpportunityContacts) { unsubscribeOpportunityContacts(); }
@@ -1396,13 +1437,15 @@ function resetOpportunityForm() {
     if (unsubscribeQuotes) { unsubscribeQuotes(); }
 
     // Re-enable all sub-form buttons if they were disabled
-    submitOpportunityContactButton.removeAttribute('disabled');
-    submitOpportunityLineButton.removeAttribute('disabled');
-    submitQuoteButton.removeAttribute('disabled');
+    if (submitOpportunityContactButton) submitOpportunityContactButton.removeAttribute('disabled');
+    if (submitOpportunityLineButton) submitOpportunityLineButton.removeAttribute('disabled');
+    if (submitQuoteButton) submitQuoteButton.removeAttribute('disabled');
 
     // Ensure initial state for quote customer dropdown
-    quoteCustomerSelect.innerHTML = '<option value="">Auto-filled from Opportunity</option>';
-    quoteCustomerSelect.setAttribute('disabled', 'disabled');
+    if (quoteCustomerSelect) {
+        quoteCustomerSelect.innerHTML = '<option value="">Auto-filled from Opportunity</option>';
+        quoteCustomerSelect.setAttribute('disabled', 'disabled');
+    }
 
     // Revert layout to full form and list view for new opportunity creation
     setOpportunityLayout('full_form_and_list');
@@ -1410,7 +1453,7 @@ function resetOpportunityForm() {
 
 // Function to update the summary card content (UPDATED for currency symbol)
 function updateOpportunitySummaryCard() {
-    if (currentEditedOpportunity) {
+    if (currentEditedOpportunity && summaryOpportunityId && summaryOpportunityName && summaryOpportunityCustomer && summaryOpportunityStage && summaryOpportunityAmount) {
         const customer = allCustomers.find(c => c.id === currentEditedOpportunity.customer);
         const customerDisplayName = customer ? (customer.companyName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim()) : 'N/A';
         const currencySymbol = getCurrencySymbol(currentEditedOpportunity.currency);
@@ -1421,11 +1464,11 @@ function updateOpportunitySummaryCard() {
         summaryOpportunityStage.textContent = currentEditedOpportunity.stage || 'N/A';
         summaryOpportunityAmount.textContent = currentEditedOpportunity.amount ? `${currencySymbol}${parseFloat(currentEditedOpportunity.amount).toFixed(2)}` : 'N/A';
     } else {
-        summaryOpportunityId.textContent = '';
-        summaryOpportunityName.textContent = 'No Opportunity Selected';
-        summaryOpportunityCustomer.textContent = '';
-        summaryOpportunityStage.textContent = '';
-        summaryOpportunityAmount.textContent = '';
+        if (summaryOpportunityId) summaryOpportunityId.textContent = '';
+        if (summaryOpportunityName) summaryOpportunityName.textContent = 'No Opportunity Selected';
+        if (summaryOpportunityCustomer) summaryOpportunityCustomer.textContent = '';
+        if (summaryOpportunityStage) summaryOpportunityStage.textContent = '';
+        if (summaryOpportunityAmount) summaryOpportunityAmount.textContent = '';
     }
 }
 
@@ -1513,7 +1556,7 @@ function listenForOpportunityContacts(opportunityId) {
         unsubscribeOpportunityContacts();
     }
     if (!opportunityId) {
-        opportunityContactList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Select an Opportunity to view contacts.</p>';
+        if (opportunityContactList) opportunityContactList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Select an Opportunity to view contacts.</p>';
         return;
     }
 
@@ -1521,9 +1564,9 @@ function listenForOpportunityContacts(opportunityId) {
     const q = collection(db, collectionPath);
 
     unsubscribeOpportunityContacts = onSnapshot(q, (snapshot) => {
-        opportunityContactList.innerHTML = '';
+        if (opportunityContactList) opportunityContactList.innerHTML = '';
         if (snapshot.empty) {
-            opportunityContactList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No contacts added for this opportunity.</p>';
+            if (opportunityContactList) opportunityContactList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No contacts added for this opportunity.</p>';
             return;
         }
         snapshot.forEach((doc) => {
@@ -1532,7 +1575,7 @@ function listenForOpportunityContacts(opportunityId) {
         });
     }, (error) => {
         console.error("Error listening to opportunity contacts:", error);
-        opportunityContactList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading contacts: ${error.message}</p>`;
+        if (opportunityContactList) opportunityContactList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading contacts: ${error.message}</p>`;
     });
 }
 
@@ -1553,7 +1596,7 @@ function displayOpportunityContact(contact) {
             <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${contact.id}">Delete</button>
         </div>
     `;
-    opportunityContactList.appendChild(contactRow);
+    if (opportunityContactList) opportunityContactList.appendChild(contactRow);
 
     contactRow.querySelector('.edit-btn').addEventListener('click', () => editOpportunityContact(contact));
     contactRow.querySelector('.delete-btn').addEventListener('click', () => deleteOpportunityContact(contact.id));
@@ -1564,32 +1607,32 @@ function editOpportunityContact(contact) {
         showModal("Permission Denied", "Not authenticated or no opportunity selected.", () => {});
         return;
     }
-    opportunityContactForm.dataset.editingId = contact.id;
-    submitOpportunityContactButton.textContent = 'Update Contact';
+    if (opportunityContactForm) opportunityContactForm.dataset.editingId = contact.id;
+    if (submitOpportunityContactButton) submitOpportunityContactButton.textContent = 'Update Contact';
 
-    contactIdDisplayGroup.classList.remove('hidden');
-    contactIdDisplay.textContent = contact.contactId || 'N/A';
+    if (contactIdDisplayGroup) contactIdDisplayGroup.classList.remove('hidden');
+    if (contactIdDisplay) contactIdDisplay.textContent = contact.contactId || 'N/A';
 
-    contactFirstNameInput.value = contact.firstName || '';
-    contactLastNameInput.value = contact.lastName || '';
-    contactEmailInput.value = contact.email || '';
-    contactPhoneInput.value = contact.phone || '';
-    contactRoleInput.value = contact.role || '';
+    if (contactFirstNameInput) contactFirstNameInput.value = contact.firstName || '';
+    if (contactLastNameInput) contactLastNameInput.value = contact.lastName || '';
+    if (contactEmailInput) contactEmailInput.value = contact.email || '';
+    if (contactPhoneInput) contactPhoneInput.value = contact.phone || '';
+    if (contactRoleInput) contactRoleInput.value = contact.role || '';
 
     // Ensure the related section expands and this accordion opens
     setOpportunityLayout('edit_split_30_70'); // Shrink left, expand right
     closeAllAccordions(); // Close others first
-    toggleAccordion(contactsAccordionHeader, contactsAccordionContent); // Open this one
+    if (contactsAccordionHeader && contactsAccordionContent) toggleAccordion(contactsAccordionHeader, contactsAccordionContent); // Open this one
 
-    contactsAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
+    if (contactsAccordionHeader) contactsAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
 }
 
 function resetOpportunityContactForm() {
-    opportunityContactForm.reset();
-    opportunityContactForm.dataset.editingId = '';
-    submitOpportunityContactButton.textContent = 'Add Contact';
-    contactIdDisplayGroup.classList.add('hidden');
-    contactIdDisplay.textContent = '';
+    if (opportunityContactForm) opportunityContactForm.reset();
+    if (opportunityContactForm) opportunityContactForm.dataset.editingId = '';
+    if (submitOpportunityContactButton) submitOpportunityContactButton.textContent = 'Add Contact';
+    if (contactIdDisplayGroup) contactIdDisplayGroup.classList.add('hidden');
+    if (contactIdDisplay) contactIdDisplay.textContent = '';
 }
 
 
@@ -1686,7 +1729,7 @@ function listenForOpportunityLines(opportunityId) {
         unsubscribeOpportunityLines();
     }
     if (!opportunityId) {
-        opportunityLineList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Select an Opportunity to view lines.</p>';
+        if (opportunityLineList) opportunityLineList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Select an Opportunity to view lines.</p>';
         return;
     }
 
@@ -1695,9 +1738,9 @@ function listenForOpportunityLines(opportunityId) {
 
     // This is a basic listener for demonstration, replace with full CRUD display
     unsubscribeOpportunityLines = onSnapshot(q, (snapshot) => {
-        opportunityLineList.innerHTML = '';
+        if (opportunityLineList) opportunityLineList.innerHTML = '';
         if (snapshot.empty) {
-            opportunityLineList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No opportunity lines added for this opportunity.</p>';
+            if (opportunityLineList) opportunityLineList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No opportunity lines added for this opportunity.</p>';
         } else {
             snapshot.forEach((doc) => {
                 const line = { id: doc.id, ...doc.data() };
@@ -1706,7 +1749,7 @@ function listenForOpportunityLines(opportunityId) {
         }
     }, (error) => {
         console.error("Error listening to opportunity lines:", error);
-        opportunityLineList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading lines: ${error.message}</p>`;
+        if (opportunityLineList) opportunityLineList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading lines: ${error.message}</p>`;
     });
 
 }
@@ -1729,7 +1772,7 @@ function displayOpportunityLine(line) {
             <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${line.id}">Delete</button>
         </div>
     `;
-    opportunityLineList.appendChild(lineRow);
+    if (opportunityLineList) opportunityLineList.appendChild(lineRow);
 
     lineRow.querySelector('.edit-btn').addEventListener('click', () => editOpportunityLine(line));
     lineRow.querySelector('.delete-btn').addEventListener('click', () => deleteOpportunityLine(line.id));
@@ -1741,34 +1784,34 @@ function editOpportunityLine(line) {
         showModal("Permission Denied", "Not authenticated or no opportunity selected.", () => {});
         return;
     }
-    opportunityLineForm.dataset.editingId = line.id;
-    submitOpportunityLineButton.textContent = 'Update Line';
+    if (opportunityLineForm) opportunityLineForm.dataset.editingId = line.id;
+    if (submitOpportunityLineButton) submitOpportunityLineButton.textContent = 'Update Line';
 
-    optyLineIdDisplayGroup.classList.remove('hidden');
-    optyLineIdDisplay.textContent = line.optyLineId || 'N/A';
+    if (optyLineIdDisplayGroup) optyLineIdDisplayGroup.classList.remove('hidden');
+    if (optyLineIdDisplay) optyLineIdDisplay.textContent = line.optyLineId || 'N/A';
 
-    lineServiceDescriptionInput.value = line.serviceDescription || '';
-    lineUnitPriceInput.value = line.unitPrice || '';
-    lineQuantityInput.value = line.quantity || '';
-    lineDiscountInput.value = line.discount || '';
-    lineNetPriceInput.value = line.netPrice || '';
-    lineStatusSelect.value = line.status || '';
+    if (lineServiceDescriptionInput) lineServiceDescriptionInput.value = line.serviceDescription || '';
+    if (lineUnitPriceInput) lineUnitPriceInput.value = line.unitPrice || '';
+    if (lineQuantityInput) lineQuantityInput.value = line.quantity || '';
+    if (lineDiscountInput) lineDiscountInput.value = line.discount || '';
+    if (lineNetPriceInput) lineNetPriceInput.value = line.netPrice || '';
+    if (lineStatusSelect) lineStatusSelect.value = line.status || '';
 
     // Ensure the related section expands and this accordion opens
     setOpportunityLayout('edit_split_30_70'); // Shrink left, expand right
     closeAllAccordions(); // Close others first
-    toggleAccordion(linesAccordionHeader, linesAccordionContent); // Open this one
+    if (linesAccordionHeader && linesAccordionContent) toggleAccordion(linesAccordionHeader, linesAccordionContent); // Open this one
 
-    linesAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
+    if (linesAccordionHeader) linesAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
 }
 
 function resetOpportunityLineForm() {
-    opportunityLineForm.reset();
-    opportunityLineForm.dataset.editingId = '';
-    submitOpportunityLineButton.textContent = 'Add Line';
-    optyLineIdDisplayGroup.classList.add('hidden');
-    optyLineIdDisplay.textContent = '';
-    lineNetPriceInput.value = ''; // Clear calculated net price
+    if (opportunityLineForm) opportunityLineForm.reset();
+    if (opportunityLineForm) opportunityLineForm.dataset.editingId = '';
+    if (submitOpportunityLineButton) submitOpportunityLineButton.textContent = 'Add Line';
+    if (optyLineIdDisplayGroup) optyLineIdDisplayGroup.classList.add('hidden');
+    if (optyLineIdDisplay) optyLineIdDisplay.textContent = '';
+    if (lineNetPriceInput) lineNetPriceInput.value = ''; // Clear calculated net price
 }
 
 
@@ -1863,7 +1906,7 @@ function listenForQuotes(opportunityId) {
         unsubscribeQuotes();
     }
     if (!opportunityId) {
-        quoteList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Select an Opportunity to view quotes.</p>';
+        if (quoteList) quoteList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Select an Opportunity to view quotes.</p>';
         return;
     }
 
@@ -1871,9 +1914,9 @@ function listenForQuotes(opportunityId) {
     const q = collection(db, collectionPath);
 
     unsubscribeQuotes = onSnapshot(q, (snapshot) => {
-        quoteList.innerHTML = '';
+        if (quoteList) quoteList.innerHTML = '';
         if (snapshot.empty) {
-            quoteList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No quotes added for this opportunity.</p>';
+            if (quoteList) quoteList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No quotes added for this opportunity.</p>';
         } else {
             snapshot.forEach((doc) => {
                 const quote = { id: doc.id, ...doc.data() };
@@ -1882,7 +1925,7 @@ function listenForQuotes(opportunityId) {
         }
     }, (error) => {
         console.error("Error listening to quotes:", error);
-        quoteList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading quotes: ${error.message}</p>`;
+        if (quoteList) quoteList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading quotes: ${error.message}</p>`;
     });
 }
 
@@ -1905,7 +1948,7 @@ function displayQuote(quote) {
             <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${quote.id}">Delete</button>
         </div>
     `;
-    quoteList.appendChild(quoteRow);
+    if (quoteList) quoteList.appendChild(quoteRow);
 
     quoteRow.querySelector('.edit-btn').addEventListener('click', () => editQuote(quote));
     quoteRow.querySelector('.delete-btn').addEventListener('click', () => deleteQuote(quote.id));
@@ -1916,55 +1959,61 @@ function editQuote(quote) {
         showModal("Permission Denied", "Not authenticated or no opportunity selected.", () => {});
         return;
     }
-    quoteForm.dataset.editingId = quote.id;
-    submitQuoteButton.textContent = 'Update Quote';
+    if (quoteForm) quoteForm.dataset.editingId = quote.id;
+    if (submitQuoteButton) submitQuoteButton.textContent = 'Update Quote';
 
-    quoteIdDisplayGroup.classList.remove('hidden');
-    quoteIdDisplay.textContent = quote.quoteId || 'N/A';
+    if (quoteIdDisplayGroup) quoteIdDisplayGroup.classList.remove('hidden');
+    if (quoteIdDisplay) quoteIdDisplay.textContent = quote.quoteId || 'N/A';
 
-    quoteNameInput.value = quote.quoteName || '';
-    quoteDescriptionInput.value = quote.quoteDescription || '';
+    if (quoteNameInput) quoteNameInput.value = quote.quoteName || '';
+    if (quoteDescriptionInput) quoteDescriptionInput.value = quote.quoteDescription || '';
 
     // Auto-fill customer from current opportunity
-    const currentCustomer = allCustomers.find(c => c.id === opportunityCustomerSelect.value);
+    const currentCustomer = allCustomers.find(c => c.id === (opportunityCustomerSelect ? opportunityCustomerSelect.value : null));
     if (currentCustomer) {
-        quoteCustomerSelect.innerHTML = `<option value="${currentCustomer.id}">${currentCustomer.companyName || `${currentCustomer.firstName} ${currentCustomer.lastName}`.trim() || currentCustomer.email}</option>`;
-        quoteCustomerSelect.value = currentCustomer.id;
+        if (quoteCustomerSelect) {
+            quoteCustomerSelect.innerHTML = `<option value="${currentCustomer.id}">${currentCustomer.companyName || `${currentCustomer.firstName} ${currentCustomer.lastName}`.trim() || currentCustomer.email}</option>`;
+            quoteCustomerSelect.value = currentCustomer.id;
+        }
     } else {
-        quoteCustomerSelect.innerHTML = '<option value="">Customer Not Found</option>';
-        quoteCustomerSelect.value = '';
+        if (quoteCustomerSelect) {
+            quoteCustomerSelect.innerHTML = '<option value="">Customer Not Found</option>';
+            quoteCustomerSelect.value = '';
+        }
     }
-    quoteCustomerSelect.setAttribute('disabled', 'disabled'); // Always disabled as it's linked to opportunity
+    if (quoteCustomerSelect) quoteCustomerSelect.setAttribute('disabled', 'disabled'); // Always disabled as it's linked to opportunity
 
-    quoteStartDateInput.value = quote.startDate || '';
-    quoteExpireDateInput.value = quote.expireDate || '';
-    quoteStatusSelect.value = quote.quoteStatus || '';
-    quoteNetListAmountInput.value = quote.quoteNetListAmount || '';
-    quoteNetDiscountInput.value = quote.quoteNetDiscount || '';
-    quoteNetAmountInput.value = quote.quoteNetAmount || ''; // This is calculated
-    quoteCurrencySelect.value = quote.quoteCurrency || '';
-    quoteIsFinalCheckbox.checked = quote.isFinal === true;
+    if (quoteStartDateInput) quoteStartDateInput.value = quote.startDate || '';
+    if (quoteExpireDateInput) quoteExpireDateInput.value = quote.expireDate || '';
+    if (quoteStatusSelect) quoteStatusSelect.value = quote.quoteStatus || '';
+    if (quoteNetListAmountInput) quoteNetListAmountInput.value = quote.quoteNetListAmount || '';
+    if (quoteNetDiscountInput) quoteNetDiscountInput.value = quote.quoteNetDiscount || '';
+    if (quoteNetAmountInput) quoteNetAmountInput.value = quote.quoteNetAmount || ''; // This is calculated
+    if (quoteCurrencySelect) quoteCurrencySelect.value = quote.quoteCurrency || '';
+    if (quoteIsFinalCheckbox) quoteIsFinalCheckbox.checked = quote.isFinal === true;
 
     // Ensure the related section expands and this accordion opens
     setOpportunityLayout('edit_split_30_70'); // Shrink left, expand right
     closeAllAccordions(); // Close others first
-    toggleAccordion(quotesAccordionHeader, quotesAccordionContent); // Open this one
+    if (quotesAccordionHeader && quotesAccordionContent) toggleAccordion(quotesAccordionHeader, quotesAccordionContent); // Open this one
 
-    quotesAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
+    if (quotesAccordionHeader) quotesAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
 }
 
 function resetQuoteForm() {
-    quoteForm.reset();
-    quoteForm.dataset.editingId = '';
-    submitQuoteButton.textContent = 'Add Quote';
-    quoteIdDisplayGroup.classList.add('hidden');
-    quoteIdDisplay.textContent = '';
-    quoteNetAmountInput.value = ''; // Clear calculated net amount
-    quoteIsFinalCheckbox.checked = false;
+    if (quoteForm) quoteForm.reset();
+    if (quoteForm) quoteForm.dataset.editingId = '';
+    if (submitQuoteButton) submitQuoteButton.textContent = 'Add Quote';
+    if (quoteIdDisplayGroup) quoteIdDisplayGroup.classList.add('hidden');
+    if (quoteIdDisplay) quoteIdDisplay.textContent = '';
+    if (quoteNetAmountInput) quoteNetAmountInput.value = ''; // Clear calculated net amount
+    if (quoteIsFinalCheckbox) quoteIsFinalCheckbox.checked = false;
 
     // Reset customer dropdown for quote form (auto-filled from opportunity, so just show placeholder)
-    quoteCustomerSelect.innerHTML = '<option value="">Auto-filled from Opportunity</option>';
-    quoteCustomerSelect.setAttribute('disabled', 'disabled');
+    if (quoteCustomerSelect) {
+        quoteCustomerSelect.innerHTML = '<option value="">Auto-filled from Opportunity</option>';
+        quoteCustomerSelect.setAttribute('disabled', 'disabled');
+    }
 }
 
 
@@ -2039,7 +2088,7 @@ async function saveUser(userData, existingFirestoreDocId = null) {
 
             if (!targetUid) {
                 showModal("Validation Error", "For new user profiles, you must provide the Firebase User ID (UID). This user should first be created in Firebase Authentication.", () => {});
-                userIdDisplayInput.focus();
+                if (userIdDisplayInput) userIdDisplayInput.focus();
                 return;
             }
 
@@ -2093,7 +2142,7 @@ async function deleteUser(firestoreDocId) {
 // Listen for real-time updates to Users
 function listenForUsers() {
     if (!isAuthReady || !currentUserId || !isAdmin) {
-        userList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Access Denied: Only administrators can view users.</p>';
+        if (userList) userList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Access Denied: Only administrators can view users.</p>';
         return;
     }
 
@@ -2105,9 +2154,9 @@ function listenForUsers() {
     const q = collection(db, collectionPath);
 
     unsubscribeUsers = onSnapshot(q, (snapshot) => {
-        userList.innerHTML = ''; // Clear current list
+        if (userList) userList.innerHTML = ''; // Clear current list
         if (snapshot.empty) {
-            userList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No users found. Add one above by providing their Firebase UID after creating them in Firebase Authentication!</p>';
+            if (userList) userList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No users found. Add one above by providing their Firebase UID after creating them in Firebase Authentication!</p>';
             return;
         }
         snapshot.forEach((doc) => {
@@ -2116,7 +2165,7 @@ function listenForUsers() {
         });
     }, (error) => {
         console.error("Error listening to users:", error);
-        userList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading users: ${error.message}</p>`;
+        if (userList) userList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading users: ${error.message}</p>`;
     });
 }
 
@@ -2139,7 +2188,7 @@ function displayUser(user) {
             <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${user.id}">Delete</button>
         </div>
     `;
-    userList.appendChild(userRow);
+    if (userList) userList.appendChild(userRow);
 
     // Add event listeners for edit and delete buttons
     userRow.querySelector('.edit-btn').addEventListener('click', () => editUser(user));
@@ -2152,58 +2201,64 @@ function editUser(user) {
         showModal("Permission Denied", "Only administrators can edit users.", () => {});
         return;
     }
-    userFormTitle.textContent = 'Edit User Profile'; // Clarified title
-    submitUserButton.textContent = 'Update User Profile'; // Clarified button text
+    if (userFormTitle) userFormTitle.textContent = 'Edit User Profile'; // Clarified title
+    if (submitUserButton) submitUserButton.textContent = 'Update User Profile'; // Clarified button text
 
-    userIdDisplayGroup.classList.remove('hidden'); // Show UID group
-    userIdDisplayInput.value = user.id || 'N/A'; // Display the Firestore Doc ID (which is the UID)
-    userIdDisplayInput.setAttribute('readonly', 'readonly'); // Make it read-only when editing
-    userIdDisplayInput.classList.add('bg-gray-100'); // Add a class for visual indication of readonly
+    if (userIdDisplayGroup) userIdDisplayGroup.classList.remove('hidden'); // Show UID group
+    if (userIdDisplayInput) {
+        userIdDisplayInput.value = user.id || 'N/A'; // Display the Firestore Doc ID (which is the UID)
+        userIdDisplayInput.setAttribute('readonly', 'readonly'); // Make it read-only when editing
+        userIdDisplayInput.classList.add('bg-gray-100'); // Add a class for visual indication of readonly
+    }
 
-    userNameInput.value = user.userName || '';
-    userFirstNameInput.value = user.firstName || '';
-    userLastNameInput.value = user.lastName || '';
-    userEmailInput.value = user.email || '';
-    userPhoneInput.value = user.phone || '';
-    userRoleSelect.value = user.role || ''; // Set value for select
-    userSkillsInput.value = Array.isArray(user.skills) ? user.skills.join(', ') : user.skills || ''; // Convert array back to string
+    if (userNameInput) userNameInput.value = user.userName || '';
+    if (userFirstNameInput) userFirstNameInput.value = user.firstName || '';
+    if (userLastNameInput) userLastNameInput.value = user.lastName || '';
+    if (userEmailInput) userEmailInput.value = user.email || '';
+    if (userPhoneInput) userPhoneInput.value = user.phone || '';
+    if (userRoleSelect) userRoleSelect.value = user.role || ''; // Set value for select
+    if (userSkillsInput) userSkillsInput.value = Array.isArray(user.skills) ? user.skills.join(', ') : user.skills || ''; // Convert array back to string
 
-    userForm.dataset.editingId = user.id; // Store Firestore document ID for update
-    userForm.scrollIntoView({ behavior: 'smooth' });
+    if (userForm) userForm.dataset.editingId = user.id; // Store Firestore document ID for update
+    if (userForm) userForm.scrollIntoView({ behavior: 'smooth' });
 }
 
 // Reset User form function
 function resetUserForm() {
-    userForm.reset();
-    userForm.dataset.editingId = '';
-    userFormTitle.textContent = 'Add New User Profile';
-    submitUserButton.textContent = 'Create User Profile';
+    if (userForm) userForm.reset();
+    if (userForm) userForm.dataset.editingId = '';
+    if (userFormTitle) userFormTitle.textContent = 'Add New User Profile';
+    if (submitUserButton) submitUserButton.textContent = 'Create User Profile';
 
-    userIdDisplayGroup.classList.remove('hidden'); // Show UID group when adding new
-    userIdDisplayInput.value = ''; // Clear UID input
-    userIdDisplayInput.removeAttribute('readonly'); // Make it editable for new user profile
-    userIdDisplayInput.classList.remove('bg-gray-100'); // Remove readonly visual class
-    userIdDisplayInput.focus(); // Focus on the UID input for new user profile
-    userRoleSelect.value = 'User'; // Default role for new user profiles
+    if (userIdDisplayGroup) userIdDisplayGroup.classList.remove('hidden'); // Show UID group when adding new
+    if (userIdDisplayInput) {
+        userIdDisplayInput.value = ''; // Clear UID input
+        userIdDisplayInput.removeAttribute('readonly'); // Make it editable for new user profile
+        userIdDisplayInput.classList.remove('bg-gray-100'); // Remove readonly visual class
+        userIdDisplayInput.focus(); // Focus on the UID input for new user profile
+    }
+    if (userRoleSelect) userRoleSelect.value = 'User'; // Default role for new user profiles
 }
 
 // --- Accordion Logic (UPDATED for dynamic panel sizing) ---
 function toggleAccordion(header, content) {
     // If the clicked accordion is already open, close it and revert to 70:30
-    if (content.classList.contains('open') && window.innerWidth >= 768) { // Only shrink/expand on desktop
+    if (content && content.classList.contains('open') && window.innerWidth >= 768) { // Only shrink/expand on desktop
         content.classList.remove('open');
         content.style.maxHeight = null;
-        header.classList.remove('active');
+        if (header) header.classList.remove('active');
         setOpportunityLayout('edit_split_70_30'); // Revert to 70:30 layout
-        opportunityForm.scrollIntoView({ behavior: 'smooth', block: 'start' }); // Scroll form into view
+        if (opportunityForm) opportunityForm.scrollIntoView({ behavior: 'smooth', block: 'start' }); // Scroll form into view
     } else {
         // Close all other accordions first
         closeAllAccordions();
 
         // Open the clicked accordion
-        content.classList.add('open');
-        content.style.maxHeight = content.scrollHeight + "px";
-        header.classList.add('active');
+        if (content) {
+            content.classList.add('open');
+            content.style.maxHeight = content.scrollHeight + "px";
+        }
+        if (header) header.classList.add('active');
 
         // Only shrink left panel if on desktop and an opportunity is being edited
         if (currentOpportunityId && window.innerWidth >= 768) {
@@ -2211,7 +2266,7 @@ function toggleAccordion(header, content) {
             updateOpportunitySummaryCard(); // Update the summary card
         }
         // Scroll the accordion header into view
-        header.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (header) header.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 }
 
@@ -2234,19 +2289,26 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
         return;
     }
 
-    adminCurrencyMessageDiv.classList.add('hidden'); // Hide previous messages
-    submitCurrencyButton.disabled = true;
-    submitCurrencyButton.textContent = 'Uploading...';
+    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden'); // Hide previous messages
+    if (submitCurrencyButton) {
+        submitCurrencyButton.disabled = true;
+        submitCurrencyButton.textContent = 'Uploading...';
+    }
+
 
     const inputCsv = adminCurrenciesInput.value.trim();
     const currencyLines = inputCsv.split('\n').filter(line => line.trim() !== ''); // Filter out empty lines
 
     if (currencyLines.length === 0) {
-        adminCurrencyMessageDiv.textContent = "Please enter currency data in the specified CSV format.";
-        adminCurrencyMessageDiv.className = 'message error';
-        adminCurrencyMessageDiv.classList.remove('hidden');
-        submitCurrencyButton.disabled = false;
-        submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+        if (adminCurrencyMessageDiv) {
+            adminCurrencyMessageDiv.textContent = "Please enter currency data in the specified CSV format.";
+            adminCurrencyMessageDiv.className = 'message error';
+            adminCurrencyMessageDiv.classList.remove('hidden');
+        }
+        if (submitCurrencyButton) {
+            submitCurrencyButton.disabled = false;
+            submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+        }
         return;
     }
 
@@ -2278,8 +2340,10 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
             // If editing a specific currency, ensure the code matches
             if (existingCurrencyCode && code !== existingCurrencyCode) {
                 showModal("Validation Error", `When editing, the currency code in the input CSV (${code}) must match the currency being edited (${existingCurrencyCode}). Please provide only one line for the edited currency.`, () => {});
-                submitCurrencyButton.disabled = false;
-                submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+                if (submitCurrencyButton) {
+                    submitCurrencyButton.disabled = false;
+                    submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+                }
                 return; // Stop processing and exit
             }
 
@@ -2298,25 +2362,31 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
 
         let message = `Upload complete. Total lines processed: ${totalProcessed}. Updated/Added currencies: ${updatesPerformed}. Errors/Skipped lines: ${errorsOccurred}.`;
         if (errorsOccurred > 0) {
-            adminCurrencyMessageDiv.className = 'message error';
+            if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.className = 'message error';
             message += " Please check console for details on skipped lines.";
         } else {
-            adminCurrencyMessageDiv.className = 'message success';
+            if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.className = 'message success';
         }
-        adminCurrencyMessageDiv.textContent = message;
-        adminCurrencyMessageDiv.classList.remove('hidden');
+        if (adminCurrencyMessageDiv) {
+            adminCurrencyMessageDiv.textContent = message;
+            adminCurrencyMessageDiv.classList.remove('hidden');
+        }
         console.log("Admin currency data upload process finished.");
 
         await fetchCurrencies(); // Re-fetch all currencies to update the global array
         resetCurrencyForm();
     } catch (error) {
         console.error("Error uploading currency data (caught in try-catch):", error);
-        adminCurrencyMessageDiv.textContent = `Error uploading currency data: ${error.message}`;
-        adminCurrencyMessageDiv.className = 'message error';
-        adminCurrencyMessageDiv.classList.remove('hidden');
+        if (adminCurrencyMessageDiv) {
+            adminCurrencyMessageDiv.textContent = `Error uploading currency data: ${error.message}`;
+            adminCurrencyMessageDiv.className = 'message error';
+            adminCurrencyMessageDiv.classList.remove('hidden');
+        }
     } finally {
-        submitCurrencyButton.disabled = false;
-        submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+        if (submitCurrencyButton) {
+            submitCurrencyButton.disabled = false;
+            submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+        }
     }
 }
 
@@ -2353,7 +2423,7 @@ function listenForCurrencies() {
     }
 
     if (!isAuthReady || !currentUserId || !isAdmin) {
-        currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Access Denied: Only administrators can view currencies.</p>';
+        if (currencyList) currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Access Denied: Only administrators can view currencies.</p>';
         return;
     }
 
@@ -2361,9 +2431,9 @@ function listenForCurrencies() {
     const q = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
 
     unsubscribeCurrencies = onSnapshot(q, (snapshot) => {
-        currencyList.innerHTML = ''; // Clear current list
+        if (currencyList) currencyList.innerHTML = ''; // Clear current list
         if (snapshot.empty) {
-            currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No currencies found. Add them above!</p>';
+            if (currencyList) currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No currencies found. Add them above!</p>';
             return;
         }
         snapshot.forEach((doc) => {
@@ -2372,7 +2442,7 @@ function listenForCurrencies() {
         });
     }, (error) => {
         console.error("Error listening to currencies:", error);
-        currencyList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading currencies: ${error.message}</p>`;
+        if (currencyList) currencyList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading currencies: ${error.message}</p>`;
     });
 }
 
@@ -2391,7 +2461,7 @@ function displayCurrency(currency) {
             <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${currency.id}">Delete</button>
         </div>
     `;
-    currencyList.appendChild(currencyRow);
+    if (currencyList) currencyList.appendChild(currencyRow);
 
     currencyRow.querySelector('.edit-btn').addEventListener('click', () => editCurrency(currency));
     currencyRow.querySelector('.delete-btn').addEventListener('click', () => deleteCurrency(currency.id));
@@ -2402,150 +2472,164 @@ function editCurrency(currency) {
         showModal("Permission Denied", "Only administrators can edit currencies.", () => {});
         return;
     }
-    currencyFormTitle.textContent = `Edit Currency: ${currency.id}`;
-    submitCurrencyButton.textContent = 'Update Currency';
+    if (currencyFormTitle) currencyFormTitle.textContent = `Edit Currency: ${currency.id}`;
+    if (submitCurrencyButton) submitCurrencyButton.textContent = 'Update Currency';
 
-    currencyCodeDisplayGroup.classList.remove('hidden');
-    currencyCodeDisplay.textContent = currency.id; // Display the code
+    if (currencyCodeDisplayGroup) currencyCodeDisplayGroup.classList.remove('hidden');
+    if (currencyCodeDisplay) currencyCodeDisplay.textContent = currency.id; // Display the code
 
     // Pre-fill the textarea with the CSV for this specific currency
-    adminCurrenciesInput.value = `${currency.id},${currency.currencyName || ''},${currency.symbol || ''},${currency.symbol_native || ''}`;
+    if (adminCurrenciesInput) adminCurrenciesInput.value = `${currency.id},${currency.currencyName || ''},${currency.symbol || ''},${currency.symbol_native || ''}`;
 
-    currencyForm.dataset.editingId = currency.id; // Store the currency code for updating
-    adminCurrencyMessageDiv.classList.add('hidden'); // Clear any previous messages
-    currencyForm.scrollIntoView({ behavior: 'smooth' });
+    if (currencyForm) currencyForm.dataset.editingId = currency.id; // Store the currency code for updating
+    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden'); // Clear any previous messages
+    if (currencyForm) currencyForm.scrollIntoView({ behavior: 'smooth' });
 }
 
 function resetCurrencyForm() {
-    currencyForm.reset();
-    currencyForm.dataset.editingId = '';
-    currencyFormTitle.textContent = 'Add New Currency';
-    submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
-    currencyCodeDisplayGroup.classList.add('hidden');
-    currencyCodeDisplay.textContent = '';
-    adminCurrencyMessageDiv.classList.add('hidden'); // Clear messages
+    if (currencyForm) currencyForm.reset();
+    if (currencyForm) currencyForm.dataset.editingId = '';
+    if (currencyFormTitle) currencyFormTitle.textContent = 'Add New Currency';
+    if (submitCurrencyButton) submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
+    if (currencyCodeDisplayGroup) currencyCodeDisplayGroup.classList.add('hidden');
+    if (currencyCodeDisplay) currencyCodeDisplay.textContent = '';
+    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden'); // Clear messages
 }
 
 
 // --- Event Listeners ---
 
 // Customer Form Event Listener (Renamed and Updated for validation)
-customerForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+if (customerForm) {
+    customerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-    // Collect data from all fields, regardless of visibility, as values will be empty if hidden/optional
-    const customerData = {
-        customerType: customerTypeSelect.value.trim(),
-        firstName: customerFirstNameInput.value.trim(),
-        lastName: customerLastNameInput.value.trim(),
-        companyName: customerCompanyNameInput.value.trim(), // Use .value.trim() for company name
-        email: customerEmailInput.value.trim(),
-        phone: customerPhoneInput.value.trim(),
-        // Address fields are now explicitly collected from their respective inputs
-        country: customerCountrySelect.value.trim(),
-        address: customerAddressInput.value.trim(),
-        city: customerCityInput.value.trim(),
-        state: customerStateSelect.value.trim(),
-        zipCode: customerZipCodeInput.value.trim(),
-        industry: '', // Will be set conditionally below
-        customerSince: customerSinceInput.value, // Date input value is already string inYYYY-MM-DD
-        description: customerDescriptionInput.value.trim()
-        // customerId field will be added/updated by saveCustomer function
-    };
+        // Collect data from all fields, regardless of visibility, as values will be empty if hidden/optional
+        const customerData = {
+            customerType: customerTypeSelect.value.trim(),
+            firstName: customerFirstNameInput.value.trim(),
+            lastName: customerLastNameInput.value.trim(),
+            companyName: customerCompanyNameInput.value.trim(), // Use .value.trim() for company name
+            email: customerEmailInput.value.trim(),
+            phone: customerPhoneInput.value.trim(),
+            // Address fields are now explicitly collected from their respective inputs
+            country: customerCountrySelect.value.trim(),
+            address: customerAddressInput.value.trim(),
+            city: customerCityInput.value.trim(),
+            state: customerStateSelect.value.trim(),
+            zipCode: customerZipCodeInput.value.trim(),
+            industry: '', // Will be set conditionally below
+            customerSince: customerSinceInput.value, // Date input value is already string inYYYY-MM-DD
+            description: customerDescriptionInput.value.trim()
+            // customerId field will be added/updated by saveCustomer function
+        };
 
-    // Set the correct industry value based on customer type
-    if (customerTypeSelect.value === 'Individual') {
-        customerData.industry = customerIndustryInput.value.trim();
-    } else if (customerTypeSelect.value === 'Company') {
-        customerData.industry = customerIndustrySelect.value.trim();
-    }
+        // Set the correct industry value based on customer type
+        if (customerTypeSelect.value === 'Individual') {
+            customerData.industry = customerIndustryInput.value.trim();
+        } else if (customerTypeSelect.value === 'Company') {
+            customerData.industry = customerIndustrySelect.value.trim();
+        }
 
-    const editingId = customerForm.dataset.editingId; // This is the Firestore auto-generated doc ID
+        const editingId = customerForm.dataset.editingId; // This is the Firestore auto-generated doc ID
 
-    await saveCustomer(customerData, editingId || null);
-});
-
+        await saveCustomer(customerData, editingId || null);
+    });
+}
 // Opportunity Form Event Listener (NEW and UPDATED for currency symbol)
-opportunityForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+if (opportunityForm) {
+    opportunityForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-    const opportunityData = {
-        customer: opportunityCustomerSelect.value, // This is the Firestore customer document ID
-        opportunityName: opportunityNameInput.value,
-        amount: opportunityAmountInput.value, // Will be parsed to float in saveOpportunity
-        currency: opportunityCurrencySelect.value,
-        stage: opportunityStageSelect.value,
-        expectedStartDate: opportunityExpectedStartDateInput.value,
-        expectedCloseDate: opportunityExpectedCloseDateInput.value,
-        eventType: opportunityEventTypeSelect.value,
-        eventLocationProposed: opportunityEventLocationProposedInput.value,
-        serviceAddress: opportunityServiceAddressInput.value, // NEW Field
-        description: opportunityDescriptionInput.value,
-        opportunityData: opportunityDataInput.value, // Can be JSON string or plain text, will be parsed if possible
-    };
+        const opportunityData = {
+            customer: opportunityCustomerSelect.value, // This is the Firestore customer document ID
+            opportunityName: opportunityNameInput.value,
+            amount: opportunityAmountInput.value, // Will be parsed to float in saveOpportunity
+            currency: opportunityCurrencySelect.value,
+            stage: opportunityStageSelect.value,
+            expectedStartDate: opportunityExpectedStartDateInput.value,
+            expectedCloseDate: opportunityExpectedCloseDateInput.value,
+            eventType: opportunityEventTypeSelect.value,
+            eventLocationProposed: opportunityEventLocationProposedInput.value,
+            serviceAddress: opportunityServiceAddressInput.value, // NEW Field
+            description: opportunityDescriptionInput.value,
+            opportunityData: opportunityDataInput.value, // Can be JSON string or plain text, will be parsed if possible
+        };
 
-    const editingId = opportunityForm.dataset.editingId;
-    await saveOpportunity(opportunityData, editingId || null);
-});
+        const editingId = opportunityForm.dataset.editingId;
+        await saveOpportunity(opportunityData, editingId || null);
+    });
+}
 
 // Event listener for currency select change to update the symbol display
-opportunityCurrencySelect.addEventListener('change', updateCurrencySymbolDisplay);
+if (opportunityCurrencySelect) {
+    opportunityCurrencySelect.addEventListener('change', updateCurrencySymbolDisplay);
+}
 
 
 // Opportunity Contact Form Event Listener (NEW)
-opportunityContactForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const contactData = {
-        firstName: contactFirstNameInput.value,
-        lastName: contactLastNameInput.value,
-        email: contactEmailInput.value,
-        phone: contactPhoneInput.value,
-        role: contactRoleInput.value
-    };
-    const editingId = opportunityContactForm.dataset.editingId;
-    await saveOpportunityContact(contactData, editingId || null);
-});
+if (opportunityContactForm) {
+    opportunityContactForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const contactData = {
+            firstName: contactFirstNameInput.value,
+            lastName: contactLastNameInput.value,
+            email: contactEmailInput.value,
+            phone: contactPhoneInput.value,
+            role: contactRoleInput.value
+        };
+        const editingId = opportunityContactForm.dataset.editingId;
+        await saveOpportunityContact(contactData, editingId || null);
+    });
+}
 
 // Opportunity Line Form Event Listener (NEW - STUB)
-opportunityLineForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const lineData = {
-        serviceDescription: lineServiceDescriptionInput.value,
-        unitPrice: lineUnitPriceInput.value,
-        quantity: lineQuantityInput.value,
-        discount: lineDiscountInput.value,
-        netPrice: lineNetPriceInput.value, // This will be calculated in saveOpportunityLine
-        status: lineStatusSelect.value
-    };
-    const editingId = opportunityLineForm.dataset.editingId;
-    await saveOpportunityLine(lineData, editingId || null);
-});
+if (opportunityLineForm) {
+    opportunityLineForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const lineData = {
+            serviceDescription: lineServiceDescriptionInput.value,
+            unitPrice: lineUnitPriceInput.value,
+            quantity: lineQuantityInput.value,
+            discount: lineDiscountInput.value,
+            netPrice: lineNetPriceInput.value, // This will be calculated in saveOpportunityLine
+            status: lineStatusSelect.value
+        };
+        const editingId = opportunityLineForm.dataset.editingId;
+        await saveOpportunityLine(lineData, editingId || null);
+    });
+}
 
 // Quote Form Event Listener (NEW - STUB)
-quoteForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const quoteData = {
-        quoteName: quoteNameInput.value,
-        quoteDescription: quoteDescriptionInput.value,
-        customer: quoteCustomerSelect.value, // This is linked to the opportunity's customer
-        startDate: quoteStartDateInput.value,
-        expireDate: quoteExpireDateInput.value,
-        quoteStatus: quoteStatusSelect.value,
-        quoteNetListAmount: quoteNetListAmountInput.value,
-        quoteNetDiscount: quoteNetDiscountInput.value,
-        quoteNetAmount: quoteNetAmountInput.value, // This will be calculated in saveQuote
-        quoteCurrency: quoteCurrencySelect.value,
-        isFinal: quoteIsFinalCheckbox.checked
-    };
-    const editingId = quoteForm.dataset.editingId;
-    await saveQuote(quoteData, editingId || null);
-});
+if (quoteForm) {
+    quoteForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const quoteData = {
+            quoteName: quoteNameInput.value,
+            quoteDescription: quoteDescriptionInput.value,
+            customer: quoteCustomerSelect.value, // This is linked to the opportunity's customer
+            startDate: quoteStartDateInput.value,
+            expireDate: quoteExpireDateInput.value,
+            quoteStatus: quoteStatusSelect.value,
+            quoteNetListAmount: quoteNetListAmountInput.value,
+            quoteNetDiscount: quoteNetDiscountInput.value,
+            quoteNetAmount: quoteNetAmountInput.value, // This will be calculated in saveQuote
+            quoteCurrency: quoteCurrencySelect.value,
+            isFinal: quoteIsFinalCheckbox.checked
+        };
+        const editingId = quoteForm.dataset.editingId;
+        await saveQuote(quoteData, editingId || null);
+    });
+}
 
 
 // Mobile Menu Button Event Listener
-mobileMenuButton.addEventListener('click', () => {
-    mobileMenu.classList.toggle('open'); // Toggle 'open' class for max-height transition
-});
+if (mobileMenuButton) {
+    mobileMenuButton.addEventListener('click', () => {
+        if (mobileMenu) mobileMenu.classList.toggle('open'); // Toggle 'open' class for max-height transition
+    });
+}
+
 
 // Navigation Links Event Listeners
 document.querySelectorAll('nav a').forEach(link => {
@@ -2570,193 +2654,212 @@ if (googleLoginButtonHome) {
 }
 
 // Add event listeners for logout buttons
-logoutButton.addEventListener('click', async () => {
-    try {
-        await signOut(auth);
-        console.log("User signed out.");
-        // onAuthStateChanged will handle UI updates
-    } catch (error) {
-        console.error("Error signing out:", error);
-        showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
-    }
-});
+if (logoutButton) {
+    logoutButton.addEventListener('click', async () => {
+        try {
+            await signOut(auth);
+            console.log("User signed out.");
+            // onAuthStateChanged will handle UI updates
+        } catch (error) {
+            console.error("Error signing out:", error);
+            showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
+        }
+    });
+}
 
-mobileLogoutButton.addEventListener('click', async () => {
-    try {
-        await signOut(auth);
-        console.log("User signed out.");
-        // onAuthStateChanged will handle UI updates
-    }
-    catch (error) {
-        console.error("Error signing out:", error);
-        showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
-    }
-});
+if (mobileLogoutButton) {
+    mobileLogoutButton.addEventListener('click', async () => {
+        try {
+            await signOut(auth);
+            console.log("User signed out.");
+            // onAuthStateChanged will handle UI updates
+        }
+        catch (error) {
+            console.error("Error signing out:", error);
+            showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
+        }
+    });
+}
 
 // Admin Country Mapping Form Event Listener
-document.getElementById('countryMappingForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    adminMessageDiv.classList.add('hidden'); // Clear previous messages
-    uploadAdminDataButton.disabled = true;
-    uploadAdminDataButton.textContent = 'Uploading...';
+if (document.getElementById('countryMappingForm')) {
+    document.getElementById('countryMappingForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (adminMessageDiv) adminMessageDiv.classList.add('hidden'); // Clear previous messages
+        if (uploadAdminDataButton) {
+            uploadAdminDataButton.disabled = true;
+            uploadAdminDataButton.textContent = 'Uploading...';
+        }
 
-    const countriesString = adminCountriesInput.value;
-    const countryStateMapString = adminCountryStateMapInput.value;
-    const isFullLoad = fullLoadRadio.checked;
 
-    // Parse countries string into array of objects (newline-separated, filter unique codes)
-    function parseCountries(countriesString) {
-        const uniqueCodes = new Set();
-        const parsedCountries = [];
-        const duplicatesFound = [];
+        const countriesString = adminCountriesInput.value;
+        const countryStateMapString = adminCountryStateMapInput.value;
+        const isFullLoad = fullLoadRadio.checked;
 
-        if (!countriesString.trim()) return [];
+        // Parse countries string into array of objects (newline-separated, filter unique codes)
+        function parseCountries(countriesString) {
+            const uniqueCodes = new Set();
+            const parsedCountries = [];
+            const duplicatesFound = [];
 
-        countriesString.split('\n').forEach(line => {
-            const parts = line.split(',');
-            if (parts.length === 2) {
-                const name = parts[0].trim();
-                const code = parts[1].trim();
-                if (name !== '' && code !== '') {
-                    if (uniqueCodes.has(code)) {
-                        duplicatesFound.push(code);
-                    } else {
-                        uniqueCodes.add(code);
-                        parsedCountries.push({ name, code });
+            if (!countriesString.trim()) return [];
+
+            countriesString.split('\n').forEach(line => {
+                const parts = line.split(',');
+                if (parts.length === 2) {
+                    const name = parts[0].trim();
+                    const code = parts[1].trim();
+                    if (name !== '' && code !== '') {
+                        if (uniqueCodes.has(code)) {
+                            duplicatesFound.push(code);
+                        } else {
+                            uniqueCodes.add(code);
+                            parsedCountries.push({ name, code });
+                        }
                     }
                 }
-            }
-        });
+            });
 
-        if (duplicatesFound.length > 0) {
-            const msg = `Warning: Duplicate country codes found and ignored: ${duplicatesFound.join(', ')}. Only the first occurrence was used.`;
-            adminMessageDiv.textContent = msg;
-            adminMessageDiv.className = 'message error'; // Use error styling for warnings too
-            adminMessageDiv.classList.remove('hidden');
-            console.warn(msg);
-        }
-        return parsedCountries;
-    }
-
-    // Parse countryStateMap string into an object (newline-separated)
-    function parseCountryStateMap(mapString) {
-        const map = {};
-        if (!mapString.trim()) return map;
-        mapString.split('\n').forEach(line => { // Changed split delimiter to newline
-            const parts = line.split(':');
-            if (parts.length === 2) {
-                const countryCode = parts[0].trim();
-                const states = parts[1].split(',').map(s => s.trim()).filter(s => s !== ''); // Filter empty states
-                if (countryCode !== '') { // Only add if country code is not empty
-                    map[countryCode] = states;
+            if (duplicatesFound.length > 0) {
+                const msg = `Warning: Duplicate country codes found and ignored: ${duplicatesFound.join(', ')}. Only the first occurrence was used.`;
+                if (adminMessageDiv) {
+                    adminMessageDiv.textContent = msg;
+                    adminMessageDiv.className = 'message error'; // Use error styling for warnings too
+                    adminMessageDiv.classList.remove('hidden');
                 }
+                console.warn(msg);
             }
-        });
-        return map;
-    }
+            return parsedCountries;
+        }
 
-    const dataToUpload = {};
-    let hasValidDataForUpload = false;
+        // Parse countryStateMap string into an object (newline-separated)
+        function parseCountryStateMap(mapString) {
+            const map = {};
+            if (!mapString.trim()) return map;
+            mapString.split('\n').forEach(line => { // Changed split delimiter to newline
+                const parts = line.split(':');
+                if (parts.length === 2) {
+                    const countryCode = parts[0].trim();
+                    const states = parts[1].split(',').map(s => s.trim()).filter(s => s !== ''); // Filter empty states
+                    if (countryCode !== '') { // Only add if country code is not empty
+                        map[countryCode] = states;
+                    }
+                }
+            });
+            return map;
+        }
 
-    // Process countries data
-    const parsedCountries = parseCountries(countriesString);
-    if (parsedCountries.length > 0) {
-        dataToUpload.countries = parsedCountries;
-        hasValidDataForUpload = true;
-    }
+        const dataToUpload = {};
+        let hasValidDataForUpload = false;
 
-    // Process countryStateMap data
-    const parsedCountryStateMap = parseCountryStateMap(countryStateMapString);
-    if (Object.keys(parsedCountryStateMap).length > 0) {
-        dataToUpload.countryStateMap = parsedCountryStateMap;
-        hasValidDataForUpload = true;
-    }
+        // Process countries data
+        const parsedCountries = parseCountries(countriesString);
+        if (parsedCountries.length > 0) {
+            dataToUpload.countries = parsedCountries;
+            hasValidDataForUpload = true;
+        }
 
-    // Special case: If full load is selected and BOTH textareas are empty, this means clearing the document.
-    // Otherwise, if a textarea is empty, its corresponding field will not be included in dataToUpload
-    // and thus not affected by merge:true.
-    if (!hasValidDataForUpload && isFullLoad) {
-        // If full load is selected AND no valid data was parsed from EITHER textarea,
-        // it implies the user wants to completely clear both fields.
-        dataToUpload.countries = [];
-        dataToUpload.countryStateMap = {};
-        hasValidDataForUpload = true; // Mark as having intent to update (with empty data)
-    } else if (!hasValidDataForUpload && !isFullLoad) {
-        // If incremental load is selected AND no valid data was parsed,
-        // there's nothing to update.
-        adminMessageDiv.textContent = 'No valid data provided for update.';
-        adminMessageDiv.className = 'message error';
-        adminMessageDiv.classList.remove('hidden');
-        uploadAdminDataButton.disabled = false;
-        uploadAdminDataButton.textContent = 'Upload Data to Firestore';
-        return;
-    }
+        // Process countryStateMap data
+        const parsedCountryStateMap = parseCountryStateMap(countryStateMapString);
+        if (Object.keys(parsedCountryStateMap).length > 0) {
+            dataToUpload.countryStateMap = parsedCountryStateMap;
+            hasValidDataForUpload = true;
+        }
 
-    try {
-        const docRef = doc(db, "app_metadata", "countries_states");
-        // Always use merge: true to avoid deleting unspecified fields.
-        // If the user wants to empty a field, they have to ensure the parsed array/object is empty.
-        await setDoc(docRef, dataToUpload, { merge: true });
+        // Special case: If full load is selected and BOTH textareas are empty, this means clearing the document.
+        // Otherwise, if a textarea is empty, its corresponding field will not be included in dataToUpload
+        // and thus not affected by merge:true.
+        if (!hasValidDataForUpload && isFullLoad) {
+            // If full load is selected AND no valid data was parsed from EITHER textarea,
+            // it implies the user wants to completely clear both fields.
+            dataToUpload.countries = [];
+            dataToUpload.countryStateMap = {};
+            hasValidDataForUpload = true; // Mark as having intent to update (with empty data)
+        } else if (!hasValidDataForUpload && !isFullLoad) {
+            // If incremental load is selected AND no valid data was parsed,
+            // there's nothing to update.
+            if (adminMessageDiv) {
+                adminMessageDiv.textContent = 'No valid data provided for update.';
+                adminMessageDiv.className = 'message error';
+                adminMessageDiv.classList.remove('hidden');
+            }
+            if (uploadAdminDataButton) {
+                uploadAdminDataButton.disabled = false;
+                uploadAdminDataButton.textContent = 'Upload Data to Firestore';
+            }
+            return;
+        }
 
-        adminMessageDiv.textContent = `Data uploaded successfully (${isFullLoad ? 'Full Load (Merge)' : 'Incremental Load'})!`;
-        adminMessageDiv.className = 'message success';
-        adminMessageDiv.classList.remove('hidden');
-        console.log("Admin data upload successful:", dataToUpload);
+        try {
+            const docRef = doc(db, "app_metadata", "countries_states");
+            // Always use merge: true to avoid deleting unspecified fields.
+            // If the user wants to empty a field, they have to ensure the parsed array/object is empty.
+            await setDoc(docRef, dataToUpload, { merge: true });
 
-        // Re-fetch data for CRM forms and populate dropdowns after successful admin update
-        await fetchCountryData();
-        populateCountries();
+            if (adminMessageDiv) {
+                adminMessageDiv.textContent = `Data uploaded successfully (${isFullLoad ? 'Full Load (Merge)' : 'Incremental Load'})!`;
+                adminMessageDiv.className = 'message success';
+                adminMessageDiv.classList.remove('hidden');
+            }
+            console.log("Admin data upload successful:", dataToUpload);
 
-    } catch (error) {
-        console.error("Error uploading admin data:", error);
-        adminMessageDiv.textContent = `Error uploading data: ${error.message}`;
-        adminMessageDiv.className = 'message error';
-        adminMessageDiv.classList.remove('hidden');
-    } finally {
-        uploadAdminDataButton.disabled = false;
-        uploadAdminDataButton.textContent = 'Upload Data to Firestore';
-    }
-});
+            // Re-fetch data for CRM forms and populate dropdowns after successful admin update
+            await fetchCountryData();
+            populateCountries();
+
+        } catch (error) {
+            console.error("Error uploading admin data:", error);
+            if (adminMessageDiv) {
+                adminMessageDiv.textContent = `Error uploading data: ${error.message}`;
+                adminMessageDiv.className = 'message error';
+                adminMessageDiv.classList.remove('hidden');
+            }
+        } finally {
+            if (uploadAdminDataButton) {
+                uploadAdminDataButton.disabled = false;
+                uploadAdminDataButton.textContent = 'Upload Data to Firestore';
+            }
+        }
+    });
+}
 
 // Admin Currency Form Event Listener (NEW)
-currencyForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const editingId = currencyForm.dataset.editingId;
-    // For CSV, currencyData parameter is not directly used, as the function reads from the textarea.
-    await saveCurrency(null, editingId || null);
-});
+if (currencyForm) {
+    currencyForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const editingId = currencyForm.dataset.editingId;
+        // For CSV, currencyData parameter is not directly used, as the function reads from the textarea.
+        await saveCurrency(null, editingId || null);
+    });
+}
 
 
 // User Form Event Listener
-userForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const userData = {
-        userName: userNameInput.value.trim(),
-        firstName: userFirstNameInput.value.trim(),
-        lastName: userLastNameInput.value.trim(),
-        email: userEmailInput.value.trim(),
-        phone: userPhoneInput.value.trim(),
-        role: userRoleSelect.value.trim(), // Get value from select
-        skills: userSkillsInput.value.trim(), // Will be parsed to array in saveUser
-    };
-    const editingId = userForm.dataset.editingId; // This is the Firestore document ID if editing
-    await saveUser(userData, editingId || null);
-});
+if (userForm) {
+    userForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const userData = {
+            userName: userNameInput.value.trim(),
+            firstName: userFirstNameInput.value.trim(),
+            lastName: userLastNameInput.value.trim(),
+            email: userEmailInput.value.trim(),
+            phone: userPhoneInput.value.trim(),
+            role: userRoleSelect.value.trim(), // Get value from select
+            skills: userSkillsInput.value.trim(), // Will be parsed to array in saveUser
+        };
+        const editingId = userForm.dataset.editingId; // This is the Firestore document ID if editing
+        await saveUser(userData, editingId || null);
+    });
+}
 
 
-// Accordion Event Listeners (UPDATED for dynamic panel sizing)
-contactsAccordionHeader.addEventListener('click', () => toggleAccordion(contactsAccordionHeader, contactsAccordionContent));
-linesAccordionHeader.addEventListener('click', () => toggleAccordion(linesAccordionHeader, linesAccordionContent));
-quotesAccordionHeader.addEventListener('click', () => toggleAccordion(quotesAccordionHeader, quotesAccordionContent));
-
-// Event listener for the summary card to expand the left panel
-opportunitySummaryCard.addEventListener('click', () => {
-    if (window.innerWidth >= 768) { // Only apply on desktop
-        setOpportunityLayout('edit_split_70_30'); // Expand left, shrink right
-        closeAllAccordions(); // Close any open accordions on the right
-        opportunityForm.scrollIntoView({ behavior: 'smooth', block: 'start' }); // Scroll form into view
-    }
-});
+// Reset Form Buttons - add event listeners
+document.getElementById('resetCustomerFormButton')?.addEventListener('click', resetCustomerForm);
+document.getElementById('resetOpportunityFormButton')?.addEventListener('click', resetOpportunityForm);
+document.getElementById('resetOpportunityContactFormButton')?.addEventListener('click', resetOpportunityContactForm);
+document.getElementById('resetOpportunityLineFormButton')?.addEventListener('click', resetOpportunityLineForm);
+document.getElementById('resetQuoteFormButton')?.addEventListener('click', resetQuoteForm);
+document.getElementById('resetUserFormButton')?.addEventListener('click', resetUserForm);
 
 
 // Initialize Firebase on window load
