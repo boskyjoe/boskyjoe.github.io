@@ -3,7 +3,15 @@ body {
     font-family: 'Inter', sans-serif;
     background-color: #f0f2f5; /* Lighter background for more contrast */
     color: #333;
+    min-height: 100vh; /* Ensure body takes full viewport height */
+    display: flex;
+    flex-direction: column;
 }
+
+main {
+    flex: 1; /* Allows main content to grow and push footer down */
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -196,20 +204,63 @@ body {
 }
 
 /* Mobile Menu specific styles */
+/* Mobile Menu Container */
 #mobileMenu {
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.3s ease-out; /* Smooth slide-down/up */
+    /* Adjust width to be full width within its container (if it's not already) */
+    width: 100%;
 }
 #mobileMenu.open {
     max-height: 500px; /* Adjust based on content height, needs to be large enough */
     transition: max-height 0.5s ease-in;
+    /* Add padding to the mobile menu itself for internal spacing */
+    padding-bottom: 1rem;
 }
 #mobileMenu .nav-link {
     width: 100%; /* Full width for mobile links */
+    padding-left: 1.5rem; /* Indent main mobile nav links */
+    padding-right: 1.5rem;
 }
-#mobileMenu .mobile-submenu {
-    padding-left: 1.5rem; /* Indent sub-items */
+
+/* Mobile Submenu for Admin */
+#mobileAdminSubMenu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-in-out;
+    background-color: #f3f4f6; /* Slightly different background for submenu */
+    border-top: 1px solid #e5e7eb;
+}
+
+#mobileAdminSubMenu.hidden { /* Re-using hidden class from JS toggle */
+    max-height: 0; /* Ensures it collapses completely */
+}
+
+#mobileAdminSubMenu .nav-link {
+    padding-left: 3rem; /* Further indent for submenu items */
+    font-size: 0.95rem; /* Smaller font for submenu */
+}
+
+/* Desktop Admin Submenu */
+#desktopAdminSubMenu {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
+}
+
+/* When desktopAdminMenu (parent li) has 'active' class (set by JS), show submenu */
+#desktopAdminMenu.active #desktopAdminSubMenu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+
+/* Hamburger Icon transition (optional, if you want animated lines) */
+#mobileMenuButton svg {
+    display: block; /* Ensure SVG fills its container */
 }
 
 /* Tooltip styles */
