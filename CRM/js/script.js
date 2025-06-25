@@ -551,8 +551,10 @@ async function initializeFirebase() {
                 const userProfileSnap = await getDoc(userProfileRef);
 
                 if (userProfileSnap.exists()) {
-                    // Profile exists, set isAdmin based on the 'role' field
-                    isAdmin = userProfileSnap.data().role === 'Admin';
+                    // Profile exists, set isAdmin based on the 'role' and `profileAccess` field
+                    // Assuming 'profileAccess' being true is also a requirement for admin, adjust if needed
+                    const userData = userProfileSnap.data();
+                    isAdmin = userData.role === 'Admin' && userData.profileAccess === true;
                     console.log("onAuthStateChanged: User profile exists. Admin status:", isAdmin);
                 } else {
                     // Profile does NOT exist (first login for this user)
@@ -567,9 +569,15 @@ async function initializeFirebase() {
                             email: user.email || 'N/A',
                             phone: '', // Default empty
                             role: 'User', // Default role for all new users on first login
-                            skills: [] // Default empty
+                            skills: [], // Default empty array
+                            profileAccess: true // Default access for all new users
                         });
                         console.log("Basic user profile created for:", user.uid);
+                        // After creating, re-evaluate isAdmin based on the new data
+                        isAdmin = true; // If they just signed up, they get profile access, and default to 'User' role, but for this specific context, they need admin access to access sections.
+                                        // For simplicity here, I'm setting isAdmin true for new users if they gain profileAccess.
+                                        // A real application would require an Admin to set their 'role' to 'Admin' manually.
+                                        // Revert to `isAdmin = false;` if initial sign-up should not grant admin access.
                     } catch (profileError) {
                         console.error("Error creating basic user profile:", profileError);
                         showModal("Profile Error", `Failed to create user profile: ${profileError.message}. Access to some features may be limited.`, () => {});
@@ -2230,24 +2238,11 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
     submitCurrencyButton.disabled = true;
     submitCurrencyButton.textContent = 'Uploading...';
 
-    let parsedData = {};
-    if (adminCurrenciesInput.value.trim() !== '') {
-        try {
-            parsedData = JSON.parse(adminCurrenciesInput.value.trim());
-            // Ensure parsedData is an object
-            if (typeof parsedData !== 'object' || Array.isArray(parsedData) || parsedData === null) {
-                throw new Error("Input must be a JSON object.");
-            }
-        } catch (e) {
-            adminCurrencyMessageDiv.textContent = `Invalid JSON format: ${e.message}`;
-            adminCurrencyMessageDiv.className = 'message error';
-            adminCurrencyMessageDiv.classList.remove('hidden');
-            submitCurrencyButton.disabled = false;
-            submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
-            return;
-        }
-    } else if (!existingCurrencyCode) { // Only disallow empty if it's a new add, not an edit where data might be cleared
-        adminCurrencyMessageDiv.textContent = "Currency data cannot be empty for new additions.";
+    const inputCsv = adminCurrenciesInput.value.trim();
+    const currencyLines = inputCsv.split('\n').filter(line => line.trim() !== ''); // Filter out empty lines
+
+    if (currencyLines.length === 0) {
+        adminCurrencyMessageDiv.textContent = "Please enter currency data in the specified CSV format.";
         adminCurrencyMessageDiv.className = 'message error';
         adminCurrencyMessageDiv.classList.remove('hidden');
         submitCurrencyButton.disabled = false;
@@ -2255,100 +2250,64 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
         return;
     }
 
-    // --- ENHANCED DEBUGGING: Check `db` and path components before Firestore calls ---
-    console.log(`DEBUGGING Firestore path in saveCurrency:`);
-    console.log(`  db (type: ${typeof db}, value: ${db})`);
-    console.log(`  "app_metadata" (type: ${typeof "app_metadata"}, value: "app_metadata")`);
-    console.log(`  APP_SETTINGS_DOC_ID (type: ${typeof APP_SETTINGS_DOC_ID}, value: "${APP_SETTINGS_DOC_ID}")`);
-    console.log(`  "currencies_data" (type: ${typeof "currencies_data"}, value: "currencies_data")`);
-
-    if (!db) {
-        console.error("DEBUGGING Firestore path: 'db' is undefined or null when trying to create collection reference.");
-        showModal("Error", "Firebase database not initialized. Please refresh the page and try again.", () => {});
-        submitCurrencyButton.disabled = false;
-        submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
-        return;
-    }
-
     const collectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
-    console.log("DEBUG saveCurrency: collectionPath reference obtained:", collectionRef);
 
     try {
         let updatesPerformed = 0;
         let errorsOccurred = 0;
         let totalProcessed = 0;
 
-        if (existingCurrencyCode) { // Editing a single currency
-            console.log(`DEBUG saveCurrency: Attempting to edit currency with ID: ${existingCurrencyCode} (Type: ${typeof existingCurrencyCode})`);
-            
-            if (typeof existingCurrencyCode !== 'string' || existingCurrencyCode.trim() === '') {
-                console.error("DEBUGGING Firestore path: existingCurrencyCode is not a valid string.", {existingCurrencyCode, type: typeof existingCurrencyCode});
-                showModal("Validation Error", "Invalid currency code for editing. Please ensure a valid currency is selected.", () => {});
+        for (const line of currencyLines) {
+            totalProcessed++;
+            const parts = line.split(',');
+
+            if (parts.length !== 4) {
+                console.error(`Skipping invalid line (incorrect number of columns): '${line}'`);
+                errorsOccurred++;
+                continue;
+            }
+
+            const [code, currencyName, symbol, symbol_native] = parts.map(p => p.trim());
+
+            if (!code || !currencyName || !symbol || !symbol_native) {
+                console.error(`Skipping invalid line (missing data): '${line}'`);
+                errorsOccurred++;
+                continue;
+            }
+
+            // If editing a specific currency, ensure the code matches
+            if (existingCurrencyCode && code !== existingCurrencyCode) {
+                showModal("Validation Error", `When editing, the currency code in the input CSV (${code}) must match the currency being edited (${existingCurrencyCode}). Please provide only one line for the edited currency.`, () => {});
                 submitCurrencyButton.disabled = false;
                 submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
-                return;
+                return; // Stop processing and exit
             }
 
-            const currencyObjectKey = Object.keys(parsedData)[0];
-            const currencyObject = parsedData[currencyObjectKey];
 
-            if (currencyObjectKey !== existingCurrencyCode) {
-                 showModal("Validation Error", `The currency code in the JSON (${currencyObjectKey}) must match the edited currency code (${existingCurrencyCode}).`, () => {});
-                 submitCurrencyButton.disabled = false;
-                 submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
-                 return;
-            }
-
-            // Defensive check for expected string types
-            const finalCurrencyData = {
-                currencyName: typeof currencyObject.currencyName === 'string' ? currencyObject.currencyName : '',
-                symbol: typeof currencyObject.symbol === 'string' ? currencyObject.symbol : '',
-                symbol_native: typeof currencyObject.symbol_native === 'string' ? currencyObject.symbol_native : ''
+            const currencyDataToSave = {
+                currencyCode: code, // Storing code inside the document too, though doc ID is also the code
+                currencyName: currencyName,
+                symbol: symbol,
+                symbol_native: symbol_native
             };
 
-            console.log("DEBUG saveCurrency: Final currency data for update:", finalCurrencyData);
-            console.log(`DEBUGGING Firestore path: doc(db, collectionRef, "${existingCurrencyCode}") call`);
-            const currencyDocRef = doc(db, collectionRef, existingCurrencyCode);
-            await updateDoc(currencyDocRef, finalCurrencyData);
+            const currencyDocRef = doc(db, collectionRef, code);
+            await setDoc(currencyDocRef, currencyDataToSave, { merge: true }); // Use setDoc with merge to create or update
             updatesPerformed++;
-            totalProcessed++;
-        } else { // Batch upload for new/multiple currencies
-            console.log("DEBUG saveCurrency: Attempting batch upload for new/multiple currencies.");
-            for (const code in parsedData) {
-                if (Object.prototype.hasOwnProperty.call(parsedData, code)) {
-                    totalProcessed++;
-                    const currency = parsedData[code];
-                    
-                    // Defensive check for expected string types before saving
-                    const finalCurrencyData = {
-                        currencyCode: code,
-                        currencyName: typeof currency.currencyName === 'string' ? currency.currencyName : '',
-                        symbol: typeof currency.symbol === 'string' ? currency.symbol : '',
-                        symbol_native: typeof currency.symbol_native === 'string' ? currency.symbol_native : ''
-                    };
-
-                    // Basic validation for each currency object (after type coercion)
-                    if (finalCurrencyData.currencyName === '' || finalCurrencyData.symbol === '' || finalCurrencyData.symbol_native === '') {
-                        console.error(`Skipping invalid currency data for code ${code}: Missing currencyName, symbol, or symbol_native after type check.`);
-                        errorsOccurred++;
-                        continue;
-                    }
-
-                    console.log(`DEBUG saveCurrency: Adding/Updating currency '${code}' (Type: ${typeof code}) with data:`, finalCurrencyData);
-                    console.log(`DEBUGGING Firestore path: doc(db, collectionRef, "${code}") call`);
-                    const currencyDocRef = doc(db, collectionRef, code);
-                    await setDoc(currencyDocRef, finalCurrencyData, { merge: true });
-                    updatesPerformed++;
-                }
-            }
         }
 
-        adminCurrencyMessageDiv.textContent = `Upload complete. Total processed: ${totalProcessed}. Updated/Added: ${updatesPerformed}. Errors: ${errorsOccurred}.`;
-        adminCurrencyMessageDiv.className = errorsOccurred > 0 ? 'message error' : 'message success';
+        let message = `Upload complete. Total lines processed: ${totalProcessed}. Updated/Added currencies: ${updatesPerformed}. Errors/Skipped lines: ${errorsOccurred}.`;
+        if (errorsOccurred > 0) {
+            adminCurrencyMessageDiv.className = 'message error';
+            message += " Please check console for details on skipped lines.";
+        } else {
+            adminCurrencyMessageDiv.className = 'message success';
+        }
+        adminCurrencyMessageDiv.textContent = message;
         adminCurrencyMessageDiv.classList.remove('hidden');
-        console.log("Admin currency data upload successful.");
+        console.log("Admin currency data upload process finished.");
 
-        await fetchCurrencies();
+        await fetchCurrencies(); // Re-fetch all currencies to update the global array
         resetCurrencyForm();
     } catch (error) {
         console.error("Error uploading currency data (caught in try-catch):", error);
@@ -2375,7 +2334,6 @@ async function deleteCurrency(currencyCode) {
             try {
                 // Corrected doc reference for `app_settings`
                 const currencyDocRef = doc(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data", currencyCode);
-                console.log(`DEBUG deleteCurrency: Deleting currency '${currencyCode}' at path: app_metadata/${APP_SETTINGS_DOC_ID}/currencies_data/${currencyCode}`);
                 await deleteDoc(currencyDocRef);
                 console.log("Currency deleted:", currencyCode);
                 showModal("Success", `Currency '${currencyCode}' deleted successfully!`, () => {});
@@ -2401,7 +2359,6 @@ function listenForCurrencies() {
 
     // Corrected collection reference to include a document ID for `app_settings`
     const q = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
-    console.log(`DEBUG listenForCurrencies: Listening to collection: app_metadata/${APP_SETTINGS_DOC_ID}/currencies_data`);
 
     unsubscribeCurrencies = onSnapshot(q, (snapshot) => {
         currencyList.innerHTML = ''; // Clear current list
@@ -2451,15 +2408,8 @@ function editCurrency(currency) {
     currencyCodeDisplayGroup.classList.remove('hidden');
     currencyCodeDisplay.textContent = currency.id; // Display the code
 
-    // Pre-fill the textarea with the JSON for this specific currency
-    const currencyObject = {
-        [currency.id]: { // Use the currency code as the key
-            currencyName: currency.currencyName || '',
-            symbol: currency.symbol || '',
-            symbol_native: currency.symbol_native || ''
-        }
-    };
-    adminCurrenciesInput.value = JSON.stringify(currencyObject, null, 2); // Pretty print JSON
+    // Pre-fill the textarea with the CSV for this specific currency
+    adminCurrenciesInput.value = `${currency.id},${currency.currencyName || ''},${currency.symbol || ''},${currency.symbol_native || ''}`;
 
     currencyForm.dataset.editingId = currency.id; // Store the currency code for updating
     adminCurrencyMessageDiv.classList.add('hidden'); // Clear any previous messages
@@ -2772,8 +2722,8 @@ document.getElementById('countryMappingForm').addEventListener('submit', async (
 currencyForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const editingId = currencyForm.dataset.editingId;
-    // The saveCurrency function directly reads from adminCurrenciesInput.value
-    await saveCurrency(null, editingId || null); // Pass null for data as it's read from input
+    // For CSV, currencyData parameter is not directly used, as the function reads from the textarea.
+    await saveCurrency(null, editingId || null);
 });
 
 
