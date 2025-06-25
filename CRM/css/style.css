@@ -344,12 +344,16 @@ body {
 }
 
 /* DHTML-like Grid Styling for Existing Opportunities (NEW) */
-.data-grid-header {
+/* Generic styles for all data grid headers and rows */
+.data-grid-header, .data-grid-row {
     display: grid;
-    /* This grid template should match the JS displayOpportunity function's grid-cols for consistency */
-    grid-template-columns: 100px minmax(120px, 1.5fr) 1fr 0.8fr 1fr 1.2fr 1.5fr 1.5fr 1fr;
-    gap: 1rem; /* More prominent gap */
-    padding: 0.75rem 1rem; /* Padding for headers */
+    gap: 1rem; /* Consistent gap */
+    padding: 0.75rem 1rem; /* Consistent padding */
+    font-size: 0.875rem; /* text-sm */
+    color: #4a5568; /* Gray-700 */
+}
+
+.data-grid-header {
     background-color: #e0e7ff; /* Light blue header background */
     color: #3f51b5; /* Deeper blue text */
     font-weight: 700; /* Bold headers */
@@ -359,39 +363,18 @@ body {
     box-shadow: inset 0 -2px 0 rgba(0,0,0,0.05); /* Subtle shadow line */
 }
 
-/* For contact/line/quote headers, adjust grid template if needed */
-.accordion-content .data-grid-header {
-    /* Contacts grid */
-    grid-template-columns: 100px 1fr 1fr 1fr 1.2fr 1fr;
-}
-.accordion-content .data-grid-header:nth-of-type(1) { /* Specific to contact/line/quote header */
-    border-radius: 0.375rem 0.375rem 0 0; /* Match inner card rounding */
-}
-
-
 .data-grid-body {
-    /* No direct styles, acts as container for data-grid-rows */
-    overflow-x: auto; /* Enable horizontal scrolling for grids on small screens if necessary */
+    background-color: white; /* bg-white */
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+    overflow-x: auto; /* For horizontal scrolling on small screens */
 }
 
 .data-grid-row {
-    display: grid;
-    /* This grid template should match the JS displayOpportunity function's grid-cols for consistency */
-    grid-template-columns: 100px minmax(120px, 1.5fr) 1fr 0.8fr 1fr 1.2fr 1.5fr 1.5fr 1fr;
-    gap: 1rem; /* Consistent gap with header */
-    padding: 0.75rem 1rem; /* Padding for rows */
     background-color: #ffffff;
     border-bottom: 1px solid #f0f2f5; /* Lighter row separator */
-    font-size: 0.875rem; /* text-sm */
-    color: #4a5568; /* Gray-700 */
     transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
 }
-/* For contact/line/quote rows, adjust grid template if needed */
-.accordion-content .data-grid-row {
-    /* Contacts grid */
-    grid-template-columns: 100px 1fr 1fr 1fr 1.2fr 1fr;
-}
-
 
 /* Alternating row colors for better readability */
 .data-grid-row:nth-child(even) {
@@ -408,12 +391,52 @@ body {
     border-bottom: none; /* No border for the last row */
     border-radius: 0 0 0.75rem 0.75rem; /* Rounded bottom corners */
 }
-.accordion-content .data-grid-row:last-child { /* Inner grid rows */
-    border-radius: 0 0 0.375rem 0.375rem;
+
+/* Specific grid column definitions */
+#customers-section .data-grid-header,
+#customers-section .data-grid-row {
+    grid-template-columns: 0.8fr 1.5fr 1.5fr 1fr 2fr 1fr 0.8fr 0.8fr;
+}
+
+#opportunities-section .data-grid-header,
+#opportunities-section .data-grid-row {
+    grid-template-columns: 0.8fr 1.5fr 1.5fr 1fr 1fr 0.8fr 0.8fr 1fr 0.8fr;
+}
+
+#users-management-section .data-grid-header,
+#users-management-section .data-grid-row {
+    grid-template-columns: 1fr 1.5fr 1.5fr 0.8fr 1.5fr 0.8fr;
+}
+
+#currency-management-section .data-grid-header,
+#currency-management-section .data-grid-row {
+    grid-template-columns: 1fr 1.5fr 1fr 1fr 0.8fr;
+}
+
+/* Specific to lists within accordions (e.g., Contacts, Lines, Quotes) */
+#contactsAccordionContent .data-grid-header,
+#contactsAccordionContent .data-grid-row,
+#linesAccordionContent .data-grid-header,
+#linesAccordionContent .data-grid-row,
+#quotesAccordionContent .data-grid-header,
+#quotesAccordionContent .data-grid-row {
+    grid-template-columns: 100px 1fr 1fr 1fr 1.2fr 1fr; /* Example for contacts/lines/quotes */
+}
+
+#contactsAccordionContent .data-grid-header,
+#linesAccordionContent .data-grid-header,
+#quotesAccordionContent .data-grid-header {
+    border-radius: 0.375rem 0.375rem 0 0; /* Match inner card rounding */
+}
+
+#contactsAccordionContent .data-grid-row:last-child,
+#linesAccordionContent .data-grid-row:last-child,
+#quotesAccordionContent .data-grid-row:last-child {
+    border-radius: 0 0 0.375rem 0.375rem; /* Inner grid rows */
 }
 
 
-/* Hide columns on smaller screens */
+/* Hide columns on smaller screens using Tailwind-like classes */
 .data-grid-row .hidden { display: none; } /* Default hidden */
 @media (min-width: 640px) { /* sm breakpoint */
     .data-grid-row .hidden.sm\:block { display: block; }
@@ -454,69 +477,35 @@ body {
         height: auto; /* Allow height to adjust to content */
     }
     #opportunity-left-panel {
-        width: 70%;
+        width: 70%; /* Default 70% width */
         transition: width 0.3s ease-in-out; /* Smooth width transition */
     }
     #opportunity-right-panel {
-        width: 30%;
+        width: 30%; /* Default 30% width */
         margin-top: 0; /* Remove top margin inherited from mobile */
         transition: width 0.3s ease-in-out, opacity 0.3s ease-in-out; /* Smooth width/opacity transition */
     }
 
-    /* States for dynamic resizing */
-    #opportunity-left-panel.shrink {
-        width: 30%;
+    /* States for dynamic resizing controlled by JS classes */
+    #opportunity-left-panel.shrink-left {
+        width: 30% !important; /* Use !important to ensure override */
     }
-    #opportunity-right-panel.expand {
-        width: 70%;
+    #opportunity-right-panel.expand-right {
+        width: 70% !important; /* Use !important to ensure override */
     }
-    #opportunity-left-panel.stretch {
-        width: 100%; /* For full view when not in split mode */
+    #opportunity-left-panel.md\:w-full { /* For the full view when not in split mode */
+        width: 100%;
     }
     #opportunity-right-panel.hidden-panel {
-        width: 0;
-        min-width: 0; /* Ensure it truly collapses */
+        display: none; /* Hide entirely */
+        width: 0 !important; /* Ensure width collapses */
+        min-width: 0 !important;
         opacity: 0;
         overflow: hidden; /* Hide overflow content */
     }
 }
 
-/* Styles for the summary card when left panel shrinks (UPDATED for clickable feedback) */
-#opportunity-summary-card {
-    height: auto; /* Allow height to fit content */
-    min-height: 150px; /* A minimum height for the summary card */
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 1.5rem;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.08); /* Initial distinct shadow */
-    border: 1px solid #e0e7ff; /* Light blue border */
-    background-color: #f8faff; /* Lighter background */
-    cursor: pointer; /* Explicitly show pointer on hover */
-    transition: all 0.2s ease-in-out; /* Smooth transitions for visual effects */
-}
-#opportunity-summary-card:hover {
-    box-shadow: 0 8px 16px rgba(0,0,0,0.15); /* Stronger shadow on hover */
-    transform: translateY(-2px); /* Lift effect on hover */
-}
-#opportunity-summary-card:active {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Subtle shadow on click for "pressed" effect */
-    transform: translateY(0); /* "Press down" effect */
-    background-color: #eef1f5; /* Slightly darker background on active */
-}
-
-
-/* Hide full form and existing list when summary card is active */
-#opportunity-left-panel.shrink #opportunity-full-form-view,
-#opportunity-left-panel.shrink #opportunity-existing-list-view {
-    display: none;
-}
-/* Show summary card when left panel shrinks */
-#opportunity-left-panel.shrink #opportunity-summary-card {
-    display: block; /* Overrides default hidden for summary card */
-}
-
-/* Hide summary card when left panel is full width */
-#opportunity-left-panel:not(.shrink) #opportunity-summary-card {
-    display: none;
+/* Height for home section */
+.min-h-screen-minus-header {
+    min-height: calc(100vh - 4rem - 3rem); /* Screen height - header height - footer height */
 }
