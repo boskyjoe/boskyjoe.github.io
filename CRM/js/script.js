@@ -221,6 +221,13 @@ const googleLoginButtonHome = document.getElementById('googleLoginButton');
 let desktopAdminMenu; // Moved to be initialized after DOM load
 let mobileAdminMenu; // Moved to be initialized after DOM load
 
+// NEW: Admin Menu Toggle elements
+let desktopAdminMenuToggle;
+let desktopAdminSubMenu;
+let mobileAdminMenuToggle;
+let mobileAdminSubMenu;
+
+
 // Reference to auth-section (for standard Google/email login) - This section is mostly decorative now
 const authSection = document.getElementById('auth-section');
 
@@ -336,7 +343,10 @@ async function showSection(sectionId) {
         targetSection.classList.remove('hidden');
         targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    if (mobileMenu) mobileMenu.classList.remove('open'); // Close mobile menu when navigating (if open)
+    // Close mobile menu AND admin submenus when navigating (if open)
+    if (mobileMenu) mobileMenu.classList.remove('open');
+    if (desktopAdminSubMenu) desktopAdminSubMenu.classList.add('hidden');
+    if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden');
 
     // Stop all listeners first to prevent redundant updates
     if (unsubscribeCustomers) { unsubscribeCustomers(); }
@@ -516,6 +526,12 @@ async function initializeFirebase() {
         desktopAdminMenu = document.getElementById('desktopAdminMenu');
         mobileAdminMenu = document.getElementById('mobileAdminMenu');
 
+        desktopAdminMenuToggle = document.getElementById('desktopAdminMenuToggle');
+        desktopAdminSubMenu = document.getElementById('desktopAdminSubMenu');
+        mobileAdminMenuToggle = document.getElementById('mobileAdminMenuToggle');
+        mobileAdminSubMenu = document.getElementById('mobileAdminSubMenu');
+
+
         opportunityLeftPanel = document.getElementById('opportunity-left-panel');
         opportunityRightPanel = document.getElementById('opportunity-right-panel');
         opportunityFullFormView = document.getElementById('opportunity-full-form-view');
@@ -567,6 +583,21 @@ async function initializeFirebase() {
                 }
             });
         }
+
+        // --- NEW: Admin Submenu Toggle Listeners ---
+        if (desktopAdminMenuToggle && desktopAdminSubMenu) {
+            desktopAdminMenuToggle.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                desktopAdminSubMenu.classList.toggle('hidden'); // Toggle visibility
+            });
+        }
+        if (mobileAdminMenuToggle && mobileAdminSubMenu) {
+            mobileAdminMenuToggle.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                mobileAdminSubMenu.classList.toggle('hidden'); // Toggle visibility
+            });
+        }
+
 
         // Listen for auth state changes
         onAuthStateChanged(auth, async (user) => {
@@ -667,6 +698,11 @@ async function initializeFirebase() {
                 if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
                 logoutButton.classList.add('hidden');
                 mobileLogoutButton.classList.add('hidden');
+
+                // Hide admin submenus explicitly on logout
+                if (desktopAdminSubMenu) desktopAdminSubMenu.classList.add('hidden');
+                if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden');
+
 
                 // Show Google Login buttons
                 if (navGoogleLoginButton) navGoogleLoginButton.classList.remove('hidden');
@@ -2636,6 +2672,8 @@ if (quoteForm) {
 if (mobileMenuButton) {
     mobileMenuButton.addEventListener('click', () => {
         if (mobileMenu) mobileMenu.classList.toggle('open'); // Toggle 'open' class for max-height transition
+        // Close admin submenus if mobile menu is closed or being opened/closed
+        if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden');
     });
 }
 
