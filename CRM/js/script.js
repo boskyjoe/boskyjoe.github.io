@@ -189,7 +189,7 @@ const currencyCodeDisplayGroup = document.getElementById('currencyCodeDisplayGro
 const currencyCodeDisplay = document.getElementById('currencyCodeDisplay');
 const adminCurrenciesInput = document.getElementById('adminCurrenciesInput');
 const submitCurrencyButton = document.getElementById('submitCurrencyButton');
-const adminCurrencyMessageDiv = document.getElementById('adminCurrencyMessage');
+const adminCurrencyMessageDiv = document.getElementById('adminCurrencyMessageDiv'); // Corrected ID
 const currencyList = document.getElementById('currencyList');
 
 
@@ -1003,7 +1003,7 @@ function listenForCustomers() {
 function displayCustomer(customer) {
     const customerRow = document.createElement('div');
     // Use data-grid-row class
-    customerRow.className = 'data-grid-row grid-cols-[100px_minmax(150px,_1.5fr)_1.5fr_1fr_1.5fr_1fr_0.8fr_1.5fr]';
+    customerRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
     customerRow.dataset.id = customer.id; // Store Firestore document ID for edit/delete actions
 
     // Determine the main display name based on customer type
@@ -1361,7 +1361,7 @@ function listenForOpportunities() {
 function displayOpportunity(opportunity) {
     const opportunityRow = document.createElement('div');
     // Use data-grid-row class, and ensure its specific grid columns match the CSS
-    opportunityRow.className = 'data-grid-row grid-cols-[100px_minmax(120px,_1.5fr)_1fr_0.8fr_1fr_1.2fr_1.5fr_1.5fr_1fr]';
+    opportunityRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
     opportunityRow.dataset.id = opportunity.id; // Store Firestore document ID
 
     // Find customer name using customerId
@@ -1625,7 +1625,7 @@ function listenForOpportunityContacts(opportunityId) {
 function displayOpportunityContact(contact) {
     const contactRow = document.createElement('div');
     // Use data-grid-row class, and ensure its specific grid columns match the CSS
-    contactRow.className = 'data-grid-row grid-cols-[100px_1fr_1fr_1fr_1.2fr_1fr]';
+    contactRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
     contactRow.dataset.id = contact.id;
 
     contactRow.innerHTML = `
@@ -1800,7 +1800,7 @@ function listenForOpportunityLines(opportunityId) {
 function displayOpportunityLine(line) {
     const lineRow = document.createElement('div');
     // Use data-grid-row class, and ensure its specific grid columns match the CSS
-    lineRow.className = 'data-grid-row grid-cols-[100px_1.5fr_0.8fr_0.5fr_0.8fr_0.8fr_1fr]';
+    lineRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
     lineRow.dataset.id = line.id; // Firestore doc ID
 
     lineRow.innerHTML = `
@@ -1975,7 +1975,7 @@ function listenForQuotes(opportunityId) {
 function displayQuote(quote) {
     const quoteRow = document.createElement('div');
     // Use data-grid-row class, and ensure its specific grid columns match the CSS
-    quoteRow.className = 'data-grid-row grid-cols-[100px_1.5fr_1fr_0.8fr_0.8fr_1fr]';
+    quoteRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
     quoteRow.dataset.id = quote.id; // Firestore doc ID
 
     const currencySymbol = getCurrencySymbol(quote.quoteCurrency);
@@ -2217,7 +2217,7 @@ function listenForUsers() {
 // Display a single user in the UI as a grid row
 function displayUser(user) {
     const userRow = document.createElement('div');
-    userRow.className = 'grid grid-cols-[100px_minmax(120px,_1.2fr)_1.5fr_1fr_1fr_1.5fr] gap-x-4 py-3 items-center text-sm border-b border-gray-100 last:border-b-0 hover:bg-gray-50';
+    userRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
     userRow.dataset.id = user.id; // Store Firestore document ID for edit/delete actions
 
     const displayUid = user.id || 'N/A'; // Use Firestore doc ID for display, which should be the UID
@@ -2368,16 +2368,15 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
             totalProcessed++;
             const parts = line.split(',');
 
-            if (parts.length !== 4) {
-                console.error(`Skipping invalid line (incorrect number of columns): '${line}'`);
-                errorsOccurred++;
-                continue;
-            }
+            // Explicitly get each part and ensure it's a string, defaulting to empty if not present.
+            const code = parts[0] ? parts[0].trim() : '';
+            const currencyName = parts[1] ? parts[1].trim() : '';
+            const symbol = parts[2] ? parts[2].trim() : '';
+            const symbol_native = parts[3] ? parts[3].trim() : '';
 
-            const [code, currencyName, symbol, symbol_native] = parts.map(p => p.trim());
-
-            if (!code || !currencyName || !symbol || !symbol_native) {
-                console.error(`Skipping invalid line (missing data): '${line}'`);
+            // Now, check for mandatory fields being empty after trimming
+            if (code === '' || currencyName === '' || symbol === '' || symbol_native === '') {
+                console.error(`Skipping invalid line (missing data for essential fields): '${line}'`);
                 errorsOccurred++;
                 continue;
             }
@@ -2493,7 +2492,7 @@ function listenForCurrencies() {
 
 function displayCurrency(currency) {
     const currencyRow = document.createElement('div');
-    currencyRow.className = 'data-grid-row grid-cols-[0.8fr_1.5fr_0.8fr_0.8fr_1fr]'; // Adjust grid columns as needed
+    currencyRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
     currencyRow.dataset.id = currency.id; // currency code is the Firestore doc ID
 
     currencyRow.innerHTML = `
@@ -2907,6 +2906,7 @@ document.getElementById('resetOpportunityContactFormButton')?.addEventListener('
 document.getElementById('resetOpportunityLineFormButton')?.addEventListener('click', resetOpportunityLineForm);
 document.getElementById('resetQuoteFormButton')?.addEventListener('click', resetQuoteForm);
 document.getElementById('resetUserFormButton')?.addEventListener('click', resetUserForm);
+document.getElementById('resetCurrencyFormButton')?.addEventListener('click', resetCurrencyForm); // NEW
 
 
 // Initialize Firebase on window load
