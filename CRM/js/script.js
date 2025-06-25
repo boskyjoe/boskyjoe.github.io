@@ -603,7 +603,13 @@ async function initializeFirebase() {
                 if (userProfileSnap.exists()) {
                     // Profile exists, set isAdmin based on the 'role' and `profileAccess` field
                     const userData = userProfileSnap.data();
-                    isAdmin = userData.role === 'Admin' && userData.profileAccess === true;
+
+                    // --- ADDED DEBUG LOGGING HERE ---
+                    console.log("DEBUG: User data from Firestore - Role:", userData.role, " (Type:", typeof userData.role, ")");
+                    console.log("DEBUG: User data from Firestore - Profile Access:", userData.profileAccess, " (Type:", typeof userData.profileAccess, ")");
+
+                    // Ensure profileAccess is strictly boolean true
+                    isAdmin = (userData.role === 'Admin' && userData.profileAccess === true);
                     console.log("onAuthStateChanged: User profile exists. Admin status:", isAdmin);
                 } else {
                     // Profile does NOT exist (first login for this user)
@@ -621,7 +627,6 @@ async function initializeFirebase() {
                             profileAccess: true // Default access for all new users
                         });
                         console.log("Basic user profile created for:", user.uid);
-                        // After creating, isAdmin will be correctly evaluated from the newly set role.
                         // A new user with role 'User' should NOT be an admin initially.
                         isAdmin = false; // Explicitly set to false for newly created default 'User' profile.
                     } catch (profileError) {
@@ -915,6 +920,7 @@ async function deleteCustomer(firestoreDocId) {
                 console.error("Error deleting customer:", error);
                 showModal("Error", "Failed to delete customer. Please try again. " + error.message, () => {});
             }
+        
         }
     );
 }
@@ -1403,7 +1409,7 @@ function editOpportunity(opportunity) {
     if (opportunityForm) opportunityForm.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Reset Opportunity form function (UPDATED FOR NEW UI AND CURRENCY SYMBOL)
+// Reset Opportunity form function (UPDATED FOR NEW UI AND CURRENCY SYMBOLS)
 function resetOpportunityForm() {
     if (opportunityForm) opportunityForm.reset();
     if (opportunityForm) opportunityForm.dataset.editingId = '';
@@ -1452,7 +1458,7 @@ function resetOpportunityForm() {
 function updateOpportunitySummaryCard() {
     if (currentEditedOpportunity && summaryOpportunityId && summaryOpportunityName && summaryOpportunityCustomer && summaryOpportunityStage && summaryOpportunityAmount) {
         const customer = allCustomers.find(c => c.id === currentEditedOpportunity.customer);
-        const customerDisplayName = customer ? (customer.companyName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim()) : 'N/A';
+        const customerDisplayName = customer ? (customer.companyName || `${currentEditedOpportunity.firstName || ''} ${currentEditedOpportunity.lastName || ''}`.trim()) : 'N/A';
         const currencySymbol = getCurrencySymbol(currentEditedOpportunity.currency);
 
         summaryOpportunityId.textContent = currentEditedOpportunity.opportunityId || 'N/A';
