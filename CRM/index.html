@@ -22,28 +22,28 @@
 
             <!-- Desktop Navigation -->
             <nav class="hidden md:flex items-center space-x-6">
-                <a href="#" data-section="home" class="hover:text-blue-200 transition duration-300">Home</a>
-                <a href="#" data-section="customers-section" class="hover:text-blue-200 transition duration-300">Customers</a>
-                <a href="#" data-section="opportunities-section" class="hover:text-blue-200 transition duration-300">Opportunities</a>
-                <a href="#" data-section="events-section" class="hover:text-blue-200 transition duration-300">Events</a>
+                <a href="#" data-section="home" class="nav-link">Home</a>
+                <a href="#" data-section="customers-section" class="nav-link">Customers</a>
+                <a href="#" data-section="opportunities-section" class="nav-link">Opportunities</a>
+                <a href="#" data-section="events-section" class="nav-link">Events</a>
 
                 <!-- Desktop Admin Dropdown Menu -->
                 <div id="desktopAdminMenu" class="relative group hidden">
-                    <a href="#" id="desktopAdminMenuToggle" class="hover:text-blue-200 transition duration-300 flex items-center">
+                    <a href="#" id="desktopAdminMenuToggle" class="nav-link flex items-center">
                         Admin <i class="fas fa-chevron-down ml-1 text-xs"></i>
                     </a>
                     <ul id="desktopAdminSubMenu" class="absolute left-0 mt-2 w-48 bg-white text-gray-800 rounded-md shadow-lg py-2 z-20 hidden">
-                        <li><a href="#" data-section="admin-country-mapping-section" class="block px-4 py-2 hover:bg-gray-100">Country Mapping</a></li>
-                        <li><a href="#" data-section="currency-management-section" class="block px-4 py-2 hover:bg-gray-100">Currency Management</a></li>
-                        <li><a href="#" data-section="users-management-section" class="block px-4 py-2 hover:bg-gray-100">User Management</a></li>
+                        <li><a href="#" data-section="admin-country-mapping-section" class="nav-link">Country Mapping</a></li>
+                        <li><a href="#" data-section="currency-management-section" class="nav-link">Currency Management</a></li>
+                        <li><a href="#" data-section="users-management-section" class="nav-link">User Management</a></li>
                     </ul>
                 </div>
 
                 <!-- Google Login/User ID/Logout for Desktop -->
                 <div class="flex items-center space-x-4">
                     <span id="userIdDisplay" class="text-sm font-medium hidden"></span>
-                    <button id="navGoogleLoginButton" class="bg-white text-blue-600 px-4 py-2 rounded-md hover:bg-blue-100 transition duration-300 shadow">Sign in with Google</button>
-                    <button id="logoutButton" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-300 shadow hidden">Logout</button>
+                    <button id="navGoogleLoginButton" class="btn-primary">Sign in with Google</button>
+                    <button id="logoutButton" class="btn-primary hidden">Logout</button>
                 </div>
             </nav>
 
@@ -60,36 +60,36 @@
     <!-- Mobile Navigation (hidden by default, toggled by JS) -->
     <div id="mobileMenu" class="md:hidden bg-blue-700 text-white overflow-hidden shadow-md">
         <nav class="px-2 pt-2 pb-4 space-y-1 sm:px-3">
-            <a href="#" data-section="home" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-600">Home</a>
-            <a href="#" data-section="customers-section" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-600">Customers</a>
-            <a href="#" data-section="opportunities-section" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-600">Opportunities</a>
-            <a href="#" data-section="events-section" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-600">Events</a>
+            <a href="#" data-section="home" class="nav-link">Home</a>
+            <a href="#" data-section="customers-section" class="nav-link">Customers</a>
+            <a href="#" data-section="opportunities-section" class="nav-link">Opportunities</a>
+            <a href="#" data-section="events-section" class="nav-link">Events</a>
 
             <!-- Mobile Admin Dropdown Menu -->
             <div id="mobileAdminMenu" class="relative group hidden">
-                <a href="#" id="mobileAdminMenuToggle" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-600 flex items-center justify-between">
+                <a href="#" id="mobileAdminMenuToggle" class="nav-link flex items-center justify-between">
                     Admin <i class="fas fa-chevron-down ml-1 text-xs"></i>
                 </a>
-                <ul id="mobileAdminSubMenu" class="pl-6 py-1 space-y-1 hidden">
-                    <li><a href="#" data-section="admin-country-mapping-section" class="block px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-600">Country Mapping</a></li>
-                    <li><a href="#" data-section="currency-management-section" class="block px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-600">Currency Management</a></li>
-                    <li><a href="#" data-section="users-management-section" class="block px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-600">User Management</a></li>
+                <ul id="mobileAdminSubMenu" class="mobile-submenu pl-6 py-1 space-y-1 hidden">
+                    <li><a href="#" data-section="admin-country-mapping-section" class="nav-link">Country Mapping</a></li>
+                    <li><a href="#" data-section="currency-management-section" class="nav-link">Currency Management</a></li>
+                    <li><a href="#" data-section="users-management-section" class="nav-link">User Management</a></li>
                 </ul>
             </div>
 
             <!-- Mobile Logout Button -->
-            <button id="mobileLogoutButton" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium bg-blue-600 hover:bg-blue-500 transition duration-300 shadow hidden">Logout</button>
+            <button id="mobileLogoutButton" class="btn-primary block w-full text-left">Logout</button>
         </nav>
     </div>
 
     <!-- Main Content Area -->
     <main class="container mx-auto p-6">
         <!-- Home Section -->
-        <section id="home" class="flex flex-col items-center justify-center min-h-screen-minus-header text-center space-y-6">
-            <h2 class="text-5xl font-extrabold text-blue-700 leading-tight">Welcome to ShutterSync CRM</h2>
+        <section id="home" class="flex flex-col items-center justify-center min-h-screen-minus-header text-center space-y-6 card">
+            <h2 class="section-title text-blue-700">Welcome to ShutterSync CRM</h2>
             <p class="text-xl text-gray-600 max-w-2xl">Your all-in-one solution for managing customers, opportunities, and events with ease.</p>
             <div id="auth-section">
-                <button id="googleLoginButton" class="bg-blue-600 text-white px-8 py-3 rounded-lg shadow-lg hover:bg-blue-700 transition duration-300 text-lg font-semibold">
+                <button id="googleLoginButton" class="btn-primary">
                     <i class="fab fa-google mr-2"></i> Sign in with Google
                 </button>
             </div>
@@ -97,8 +97,8 @@
         </section>
 
         <!-- Customers Section -->
-        <section id="customers-section" class="hidden bg-white p-6 rounded-lg shadow-md mb-8">
-            <h2 class="text-3xl font-bold text-blue-700 mb-6">Customer Management</h2>
+        <section id="customers-section" class="hidden card">
+            <h2 class="section-title">Customer Management</h2>
 
             <!-- Customer Form -->
             <form id="customerForm" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 p-6 bg-gray-50 rounded-lg shadow-inner">
@@ -111,7 +111,7 @@
 
                 <div class="mb-4">
                     <label for="customerType" class="block text-sm font-medium text-gray-700 mb-1">Customer Type <span class="text-red-500">*</span></label>
-                    <select id="customerType" name="customerType" required class="form-input-style">
+                    <select id="customerType" name="customerType" required class="form-select">
                         <option value="Individual">Individual</option>
                         <option value="Company">Company</option>
                     </select>
@@ -121,49 +121,49 @@
                 <div id="individualFields" class="grid grid-cols-1 sm:grid-cols-2 gap-6 md:col-span-2">
                     <div class="mb-4">
                         <label for="customerFirstName" class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
-                        <input type="text" id="customerFirstName" name="firstName" class="form-input-style">
+                        <input type="text" id="customerFirstName" name="firstName" class="form-input">
                     </div>
                     <div class="mb-4">
                         <label for="customerLastName" class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
-                        <input type="text" id="customerLastName" name="lastName" class="form-input-style">
+                        <input type="text" id="customerLastName" name="lastName" class="form-input">
                     </div>
                 </div>
 
                 <!-- Fields for Company Customer Type -->
                 <div id="companyNameField" class="mb-4 md:col-span-2 hidden">
                     <label for="customerCompanyName" class="block text-sm font-medium text-gray-700 mb-1">Company Name <span class="text-red-500">*</span></label>
-                    <input type="text" id="customerCompanyName" name="companyName" class="form-input-style">
+                    <input type="text" id="customerCompanyName" name="companyName" class="form-input">
                 </div>
 
                 <div class="mb-4">
                     <label for="customerEmail" class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
-                    <input type="email" id="customerEmail" name="email" required class="form-input-style">
+                    <input type="email" id="customerEmail" name="email" required class="form-input">
                 </div>
                 <div class="mb-4">
                     <label for="customerPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone <span class="text-red-500">*</span></label>
-                    <input type="tel" id="customerPhone" name="phone" required class="form-input-style">
+                    <input type="tel" id="customerPhone" name="phone" required class="form-input">
                 </div>
 
                 <!-- Address Fields -->
                 <div class="mb-4 md:col-span-2">
                     <label for="customerAddress" class="block text-sm font-medium text-gray-700 mb-1">Address <span class="text-red-500">*</span></label>
-                    <input type="text" id="customerAddress" name="address" required class="form-input-style">
+                    <input type="text" id="customerAddress" name="address" required class="form-input">
                 </div>
                 <div class="mb-4">
                     <label for="customerCity" class="block text-sm font-medium text-gray-700 mb-1">City <span class="text-red-500">*</span></label>
-                    <input type="text" id="customerCity" name="city" required class="form-input-style">
+                    <input type="text" id="customerCity" name="city" required class="form-input">
                 </div>
                 <div class="mb-4">
                     <label for="customerCountry" class="block text-sm font-medium text-gray-700 mb-1">Country <span class="text-red-500">*</span></label>
-                    <select id="customerCountry" name="country" required class="form-input-style"></select>
+                    <select id="customerCountry" name="country" required class="form-select"></select>
                 </div>
                 <div class="mb-4">
                     <label for="customerState" class="block text-sm font-medium text-gray-700 mb-1">State/Province <span class="text-red-500">*</span></label>
-                    <select id="customerState" name="state" required class="form-input-style"></select>
+                    <select id="customerState" name="state" required class="form-select"></select>
                 </div>
                 <div class="mb-4">
                     <label for="customerZipCode" class="block text-sm font-medium text-gray-700 mb-1">Zip Code <span class="text-red-500">*</span></label>
-                    <input type="text" id="customerZipCode" name="zipCode" required class="form-input-style">
+                    <input type="text" id="customerZipCode" name="zipCode" required class="form-input">
                 </div>
                 <div id="addressValidationMessage" class="md:col-span-2 text-red-600 text-sm hidden"></div>
 
@@ -171,11 +171,11 @@
                 <!-- Conditional Industry Fields -->
                 <div id="individualIndustryGroup" class="mb-4">
                     <label for="customerIndustryInput" class="block text-sm font-medium text-gray-700 mb-1">Industry (Individual) <span class="text-red-500">*</span></label>
-                    <input type="text" id="customerIndustryInput" name="industry" class="form-input-style">
+                    <input type="text" id="customerIndustryInput" name="industry" class="form-input">
                 </div>
                 <div id="companyIndustryGroup" class="mb-4 hidden">
                     <label for="customerIndustrySelect" class="block text-sm font-medium text-gray-700 mb-1">Industry (Company) <span class="text-red-500">*</span></label>
-                    <select id="customerIndustrySelect" name="industry" class="form-input-style">
+                    <select id="customerIndustrySelect" name="industry" class="form-select">
                         <option value="">Select Industry</option>
                         <option value="Technology">Technology</option>
                         <option value="Healthcare">Healthcare</option>
@@ -189,27 +189,27 @@
 
                 <div class="mb-4">
                     <label for="customerSince" class="block text-sm font-medium text-gray-700 mb-1">Customer Since <span class="text-red-500">*</span></label>
-                    <input type="date" id="customerSince" name="customerSince" required class="form-input-style">
+                    <input type="date" id="customerSince" name="customerSince" required class="form-input">
                 </div>
                 <div class="mb-4 md:col-span-2">
                     <label for="customerDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea id="customerDescription" name="description" rows="3" class="form-input-style"></textarea>
+                    <textarea id="customerDescription" name="description" rows="3" class="form-textarea"></textarea>
                 </div>
 
                 <div class="md:col-span-2 flex justify-end space-x-3">
-                    <button type="button" id="resetCustomerFormButton" class="px-5 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <button type="button" id="resetCustomerFormButton" class="btn-secondary">
                         Reset
                     </button>
-                    <button type="submit" id="submitCustomerButton" class="px-5 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <button type="submit" id="submitCustomerButton" class="btn-primary">
                         Add Customer
                     </button>
                 </div>
             </form>
 
             <!-- Customer List -->
-            <div class="mt-8 bg-white p-6 rounded-lg shadow-md overflow-x-auto">
+            <div class="mt-8 bg-white p-6 rounded-lg shadow-md overflow-x-auto card">
                 <h3 class="text-2xl font-semibold text-gray-800 mb-4">Existing Customers</h3>
-                <div class="data-grid-header grid grid-cols-[100px_minmax(150px,_1.5fr)_1.5fr_1fr_1.5fr_1fr_0.8fr_1.5fr]">
+                <div class="data-grid-header">
                     <div class="px-2 py-1">ID</div>
                     <div class="px-2 py-1">Name</div>
                     <div class="px-2 py-1">Email</div>
@@ -219,7 +219,7 @@
                     <div class="px-2 py-1 hidden sm:block">Since</div>
                     <div class="px-2 py-1 text-right">Actions</div>
                 </div>
-                <div id="customerList" class="divide-y divide-gray-100">
+                <div id="customerList" class="divide-y divide-gray-100 data-grid-body">
                     <!-- Customer rows will be dynamically inserted here -->
                     <p class="text-gray-500 text-center col-span-full py-4">Loading customers...</p>
                 </div>
@@ -227,14 +227,14 @@
         </section>
 
         <!-- Opportunities Section -->
-        <section id="opportunities-section" class="hidden bg-white p-6 rounded-lg shadow-md mb-8">
-            <h2 class="text-3xl font-bold text-blue-700 mb-6">Opportunity Management</h2>
+        <section id="opportunities-section" class="hidden card">
+            <h2 class="section-title">Opportunity Management</h2>
 
             <div id="opportunity-view-container" class="flex flex-col md:flex-row gap-6">
                 <!-- Left Panel: Opportunity Form & List -->
                 <div id="opportunity-left-panel" class="opportunity-panel w-full md:w-7/10">
                     <!-- Opportunity Form -->
-                    <form id="opportunityForm" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 p-6 bg-gray-50 rounded-lg shadow-inner">
+                    <form id="opportunityForm" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 p-6 bg-gray-50 rounded-lg shadow-inner card">
                         <h3 id="opportunityFormTitle" class="text-2xl font-semibold text-gray-800 mb-4 md:col-span-2">Add New Opportunity</h3>
 
                         <div id="opportunityIdDisplayGroup" class="mb-4 md:col-span-2 hidden">
@@ -244,30 +244,30 @@
 
                         <div class="mb-4">
                             <label for="opportunityCustomer" class="block text-sm font-medium text-gray-700 mb-1">Customer <span class="text-red-500">*</span></label>
-                            <select id="opportunityCustomer" name="customer" required class="form-input-style"></select>
+                            <select id="opportunityCustomer" name="customer" required class="form-select"></select>
                         </div>
 
                         <div class="mb-4">
                             <label for="opportunityName" class="block text-sm font-medium text-gray-700 mb-1">Opportunity Name <span class="text-red-500">*</span></label>
-                            <input type="text" id="opportunityName" name="opportunityName" required class="form-input-style">
+                            <input type="text" id="opportunityName" name="opportunityName" required class="form-input">
                         </div>
 
                         <div class="mb-4 flex items-end">
                             <div class="flex-grow">
                                 <label for="opportunityAmount" class="block text-sm font-medium text-gray-700 mb-1">Amount <span class="text-red-500">*</span></label>
-                                <input type="number" id="opportunityAmount" name="amount" required min="0" step="0.01" class="form-input-style rounded-r-none">
+                                <input type="number" id="opportunityAmount" name="amount" required min="0" step="0.01" class="form-input rounded-r-none">
                             </div>
                             <span id="currencySymbolDisplay" class="bg-gray-200 p-2 border border-gray-300 border-l-0 rounded-r-md text-gray-600 py-2 sm:text-sm flex items-center"></span>
                         </div>
 
                         <div class="mb-4">
                             <label for="opportunityCurrency" class="block text-sm font-medium text-gray-700 mb-1">Currency <span class="text-red-500">*</span></label>
-                            <select id="opportunityCurrency" name="currency" required class="form-input-style"></select>
+                            <select id="opportunityCurrency" name="currency" required class="form-select"></select>
                         </div>
 
                         <div class="mb-4">
                             <label for="opportunityStage" class="block text-sm font-medium text-gray-700 mb-1">Stage <span class="text-red-500">*</span></label>
-                            <select id="opportunityStage" name="stage" required class="form-input-style">
+                            <select id="opportunityStage" name="stage" required class="form-select">
                                 <option value="">Select Stage</option>
                                 <option value="New Lead">New Lead</option>
                                 <option value="Qualification">Qualification</option>
@@ -280,17 +280,17 @@
 
                         <div class="mb-4">
                             <label for="opportunityExpectedStartDate" class="block text-sm font-medium text-gray-700 mb-1">Expected Start Date <span class="text-red-500">*</span></label>
-                            <input type="date" id="opportunityExpectedStartDate" name="expectedStartDate" required class="form-input-style">
+                            <input type="date" id="opportunityExpectedStartDate" name="expectedStartDate" required class="form-input">
                         </div>
 
                         <div class="mb-4">
                             <label for="opportunityExpectedCloseDate" class="block text-sm font-medium text-gray-700 mb-1">Expected Close Date <span class="text-red-500">*</span></label>
-                            <input type="date" id="opportunityExpectedCloseDate" name="expectedCloseDate" required class="form-input-style">
+                            <input type="date" id="opportunityExpectedCloseDate" name="expectedCloseDate" required class="form-input">
                         </div>
 
                         <div class="mb-4">
                             <label for="opportunityEventType" class="block text-sm font-medium text-gray-700 mb-1">Event Type <span class="text-red-500">*</span></label>
-                            <select id="opportunityEventType" name="eventType" required class="form-input-style">
+                            <select id="opportunityEventType" name="eventType" required class="form-select">
                                 <option value="">Select Type</option>
                                 <option value="Wedding">Wedding</option>
                                 <option value="Corporate Event">Corporate Event</option>
@@ -301,39 +301,39 @@
 
                         <div class="mb-4">
                             <label for="opportunityEventLocationProposed" class="block text-sm font-medium text-gray-700 mb-1">Proposed Event Location <span class="text-red-500">*</span></label>
-                            <input type="text" id="opportunityEventLocationProposed" name="eventLocationProposed" required class="form-input-style">
+                            <input type="text" id="opportunityEventLocationProposed" name="eventLocationProposed" required class="form-input">
                         </div>
 
                         <div class="mb-4 md:col-span-2">
                             <label for="opportunityServiceAddress" class="block text-sm font-medium text-gray-700 mb-1">Service Address <span class="text-red-500">*</span></label>
-                            <input type="text" id="opportunityServiceAddress" name="serviceAddress" required class="form-input-style" placeholder="Auto-filled from customer, or enter manually">
+                            <input type="text" id="opportunityServiceAddress" name="serviceAddress" required class="form-input" placeholder="Auto-filled from customer, or enter manually">
                         </div>
 
                         <div class="mb-4 md:col-span-2">
                             <label for="opportunityDescription" class="block text-sm font-medium text-gray-700 mb-1">Description <span class="text-red-500">*</span></label>
-                            <textarea id="opportunityDescription" name="description" rows="3" required class="form-input-style"></textarea>
+                            <textarea id="opportunityDescription" name="description" rows="3" required class="form-textarea"></textarea>
                         </div>
 
                         <div class="mb-4 md:col-span-2">
                             <label for="opportunityData" class="block text-sm font-medium text-gray-700 mb-1">Additional Opportunity Data (JSON)</label>
-                            <textarea id="opportunityData" name="opportunityData" rows="3" class="form-input-style" placeholder='{"key": "value"}'></textarea>
+                            <textarea id="opportunityData" name="opportunityData" rows="3" class="form-textarea" placeholder='{"key": "value"}'></textarea>
                             <p class="text-xs text-gray-500 mt-1">Optional: Enter valid JSON data.</p>
                         </div>
 
                         <div class="md:col-span-2 flex justify-end space-x-3">
-                            <button type="button" id="resetOpportunityFormButton" class="px-5 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <button type="button" id="resetOpportunityFormButton" class="btn-secondary">
                                 Reset
                             </button>
-                            <button type="submit" id="submitOpportunityButton" class="px-5 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <button type="submit" id="submitOpportunityButton" class="btn-primary">
                                 Add Opportunity
                             </button>
                         </div>
                     </form>
 
                     <!-- Opportunity List -->
-                    <div id="opportunityExistingListView" class="mt-8 bg-white p-6 rounded-lg shadow-md overflow-x-auto">
+                    <div id="opportunityExistingListView" class="mt-8 overflow-x-auto card">
                         <h3 class="text-2xl font-semibold text-gray-800 mb-4">Existing Opportunities</h3>
-                        <div class="data-grid-header grid grid-cols-[100px_minmax(120px,_1.5fr)_1fr_0.8fr_1fr_1.2fr_1.5fr_1.5fr_1fr]">
+                        <div class="data-grid-header">
                             <div class="px-2 py-1">ID</div>
                             <div class="px-2 py-1">Name</div>
                             <div class="px-2 py-1">Customer</div>
@@ -344,7 +344,7 @@
                             <div class="px-2 py-1 hidden lg:block">Event Type</div>
                             <div class="px-2 py-1 text-right">Actions</div>
                         </div>
-                        <div id="opportunityList" class="divide-y divide-gray-100">
+                        <div id="opportunityList" class="divide-y divide-gray-100 data-grid-body">
                             <!-- Opportunity rows will be dynamically inserted here -->
                             <p class="text-gray-500 text-center col-span-full py-4">Loading opportunities...</p>
                         </div>
@@ -353,7 +353,7 @@
 
                 <!-- Right Panel: Opportunity Summary & Linked Objects (Hidden by default, shown on edit) -->
                 <div id="opportunity-right-panel" class="opportunity-panel w-full md:w-3/10 hidden-panel">
-                    <div id="opportunitySummaryCard" class="bg-blue-100 p-6 rounded-lg shadow-md mb-6 cursor-pointer hover:shadow-lg transition-shadow duration-200">
+                    <div id="opportunitySummaryCard" class="card mb-6">
                         <h3 class="text-xl font-bold text-blue-800 mb-2">Opportunity Summary</h3>
                         <p class="text-gray-700 text-sm"><strong class="text-blue-600">ID:</strong> <span id="summaryOpportunityId" class="font-mono"></span></p>
                         <p class="text-gray-700 text-sm"><strong class="text-blue-600">Name:</strong> <span id="summaryOpportunityName"></span></p>
@@ -366,10 +366,10 @@
                     <!-- Linked Objects Accordion Container -->
                     <div id="linkedObjectsAccordion" class="hidden">
                         <!-- Contacts Accordion -->
-                        <div class="mb-4 rounded-lg shadow-md bg-white">
+                        <div class="accordion-item">
                             <div id="contactsAccordionHeader" class="accordion-header">
                                 Contacts
-                                <i class="fas fa-chevron-down transform transition-transform duration-300"></i>
+                                <i class="fas fa-chevron-down accordion-icon"></i>
                             </div>
                             <div class="accordion-content">
                                 <form id="opportunityContactForm" class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -380,32 +380,32 @@
                                     </div>
                                     <div>
                                         <label for="contactFirstName" class="block text-sm font-medium text-gray-700">First Name <span class="text-red-500">*</span></label>
-                                        <input type="text" id="contactFirstName" required class="form-input-style">
+                                        <input type="text" id="contactFirstName" required class="form-input">
                                     </div>
                                     <div>
                                         <label for="contactLastName" class="block text-sm font-medium text-gray-700">Last Name <span class="text-red-500">*</span></label>
-                                        <input type="text" id="contactLastName" required class="form-input-style">
+                                        <input type="text" id="contactLastName" required class="form-input">
                                     </div>
                                     <div>
                                         <label for="contactEmail" class="block text-sm font-medium text-gray-700">Email <span class="text-red-500">*</span></label>
-                                        <input type="email" id="contactEmail" required class="form-input-style">
+                                        <input type="email" id="contactEmail" required class="form-input">
                                     </div>
                                     <div>
                                         <label for="contactPhone" class="block text-sm font-medium text-gray-700">Phone <span class="text-red-500">*</span></label>
-                                        <input type="tel" id="contactPhone" required class="form-input-style">
+                                        <input type="tel" id="contactPhone" required class="form-input">
                                     </div>
                                     <div class="sm:col-span-2">
                                         <label for="contactRole" class="block text-sm font-medium text-gray-700">Role <span class="text-red-500">*</span></label>
-                                        <input type="text" id="contactRole" required class="form-input-style">
+                                        <input type="text" id="contactRole" required class="form-input">
                                     </div>
                                     <div class="sm:col-span-2 flex justify-end space-x-2">
-                                        <button type="button" id="resetOpportunityContactFormButton" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">Reset</button>
-                                        <button type="submit" id="submitOpportunityContactButton" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">Add Contact</button>
+                                        <button type="button" id="resetOpportunityContactFormButton" class="btn-secondary">Reset</button>
+                                        <button type="submit" id="submitOpportunityContactButton" class="btn-primary">Add Contact</button>
                                     </div>
                                 </form>
                                 <div class="p-4 bg-gray-50 rounded-b-lg mt-4">
                                     <h4 class="text-lg font-semibold text-gray-800 mb-3">Linked Contacts</h4>
-                                    <div class="data-grid-header grid grid-cols-[100px_1fr_1fr_1fr_1.2fr_1fr]">
+                                    <div class="data-grid-header">
                                         <div class="px-2 py-1">ID</div>
                                         <div class="px-2 py-1">Name</div>
                                         <div class="px-2 py-1">Email</div>
@@ -413,18 +413,18 @@
                                         <div class="px-2 py-1 hidden md:block">Role</div>
                                         <div class="px-2 py-1 text-right">Actions</div>
                                     </div>
-                                    <div id="opportunityContactList" class="divide-y divide-gray-100">
+                                    <div id="opportunityContactList" class="divide-y divide-gray-100 data-grid-body">
                                         <p class="text-gray-500 text-center col-span-full py-4">No contacts added for this opportunity.</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Lines Accordion (Stub) -->
-                        <div class="mb-4 rounded-lg shadow-md bg-white">
+                        <!-- Lines Accordion -->
+                        <div class="accordion-item">
                             <div id="linesAccordionHeader" class="accordion-header">
                                 Lines
-                                <i class="fas fa-chevron-down transform transition-transform duration-300"></i>
+                                <i class="fas fa-chevron-down accordion-icon"></i>
                             </div>
                             <div class="accordion-content">
                                 <form id="opportunityLineForm" class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -435,27 +435,27 @@
                                     </div>
                                     <div class="sm:col-span-2">
                                         <label for="lineServiceDescription" class="block text-sm font-medium text-gray-700">Service Description <span class="text-red-500">*</span></label>
-                                        <input type="text" id="lineServiceDescription" required class="form-input-style">
+                                        <input type="text" id="lineServiceDescription" required class="form-input">
                                     </div>
                                     <div>
                                         <label for="lineUnitPrice" class="block text-sm font-medium text-gray-700">Unit Price <span class="text-red-500">*</span></label>
-                                        <input type="number" id="lineUnitPrice" required min="0" step="0.01" class="form-input-style">
+                                        <input type="number" id="lineUnitPrice" required min="0" step="0.01" class="form-input">
                                     </div>
                                     <div>
                                         <label for="lineQuantity" class="block text-sm font-medium text-gray-700">Quantity <span class="text-red-500">*</span></label>
-                                        <input type="number" id="lineQuantity" required min="1" step="1" class="form-input-style">
+                                        <input type="number" id="lineQuantity" required min="1" step="1" class="form-input">
                                     </div>
                                     <div>
                                         <label for="lineDiscount" class="block text-sm font-medium text-gray-700">Discount (%)</label>
-                                        <input type="number" id="lineDiscount" min="0" max="100" step="0.01" class="form-input-style">
+                                        <input type="number" id="lineDiscount" min="0" max="100" step="0.01" class="form-input">
                                     </div>
                                     <div>
                                         <label for="lineNetPrice" class="block text-sm font-medium text-gray-700">Net Price</label>
-                                        <input type="text" id="lineNetPrice" readonly class="form-input-style bg-gray-100">
+                                        <input type="text" id="lineNetPrice" readonly class="form-input bg-gray-100">
                                     </div>
                                     <div class="sm:col-span-2">
                                         <label for="lineStatus" class="block text-sm font-medium text-gray-700">Status <span class="text-red-500">*</span></label>
-                                        <select id="lineStatus" required class="form-input-style">
+                                        <select id="lineStatus" required class="form-select">
                                             <option value="">Select Status</option>
                                             <option value="Active">Active</option>
                                             <option value="Cancelled">Cancelled</option>
@@ -463,13 +463,13 @@
                                         </select>
                                     </div>
                                     <div class="sm:col-span-2 flex justify-end space-x-2">
-                                        <button type="button" id="resetOpportunityLineFormButton" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">Reset</button>
-                                        <button type="submit" id="submitOpportunityLineButton" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">Add Line</button>
+                                        <button type="button" id="resetOpportunityLineFormButton" class="btn-secondary">Reset</button>
+                                        <button type="submit" id="submitOpportunityLineButton" class="btn-primary">Add Line</button>
                                     </div>
                                 </form>
                                 <div class="p-4 bg-gray-50 rounded-b-lg mt-4">
                                     <h4 class="text-lg font-semibold text-gray-800 mb-3">Linked Lines</h4>
-                                    <div class="data-grid-header grid grid-cols-[100px_1.5fr_0.8fr_0.5fr_0.8fr_0.8fr_1fr]">
+                                    <div class="data-grid-header">
                                         <div class="px-2 py-1">ID</div>
                                         <div class="px-2 py-1">Description</div>
                                         <div class="px-2 py-1">Unit Price</div>
@@ -478,18 +478,18 @@
                                         <div class="px-2 py-1">Net Price</div>
                                         <div class="px-2 py-1 text-right">Actions</div>
                                     </div>
-                                    <div id="opportunityLineList" class="divide-y divide-gray-100">
+                                    <div id="opportunityLineList" class="divide-y divide-gray-100 data-grid-body">
                                         <p class="text-gray-500 text-center col-span-full py-4">No opportunity lines added for this opportunity.</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Quotes Accordion (Stub) -->
-                        <div class="mb-4 rounded-lg shadow-md bg-white">
+                        <!-- Quotes Accordion -->
+                        <div class="accordion-item">
                             <div id="quotesAccordionHeader" class="accordion-header">
                                 Quotes
-                                <i class="fas fa-chevron-down transform transition-transform duration-300"></i>
+                                <i class="fas fa-chevron-down accordion-icon"></i>
                             </div>
                             <div class="accordion-content">
                                 <form id="quoteForm" class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -500,29 +500,29 @@
                                     </div>
                                     <div class="sm:col-span-2">
                                         <label for="quoteName" class="block text-sm font-medium text-gray-700">Quote Name <span class="text-red-500">*</span></label>
-                                        <input type="text" id="quoteName" required class="form-input-style">
+                                        <input type="text" id="quoteName" required class="form-input">
                                     </div>
                                     <div class="sm:col-span-2">
                                         <label for="quoteDescription" class="block text-sm font-medium text-gray-700">Description</label>
-                                        <textarea id="quoteDescription" rows="2" class="form-input-style"></textarea>
+                                        <textarea id="quoteDescription" rows="2" class="form-textarea"></textarea>
                                     </div>
                                     <div>
                                         <label for="quoteCustomer" class="block text-sm font-medium text-gray-700">Customer</label>
-                                        <select id="quoteCustomer" disabled class="form-input-style bg-gray-100">
+                                        <select id="quoteCustomer" disabled class="form-select bg-gray-100">
                                             <option value="">Auto-filled from Opportunity</option>
                                         </select>
                                     </div>
                                     <div>
                                         <label for="quoteStartDate" class="block text-sm font-medium text-gray-700">Start Date <span class="text-red-500">*</span></label>
-                                        <input type="date" id="quoteStartDate" required class="form-input-style">
+                                        <input type="date" id="quoteStartDate" required class="form-input">
                                     </div>
                                     <div>
                                         <label for="quoteExpireDate" class="block text-sm font-medium text-gray-700">Expire Date <span class="text-red-500">*</span></label>
-                                        <input type="date" id="quoteExpireDate" required class="form-input-style">
+                                        <input type="date" id="quoteExpireDate" required class="form-input">
                                     </div>
                                     <div>
                                         <label for="quoteStatus" class="block text-sm font-medium text-gray-700">Status <span class="text-red-500">*</span></label>
-                                        <select id="quoteStatus" required class="form-input-style">
+                                        <select id="quoteStatus" required class="form-select">
                                             <option value="">Select Status</option>
                                             <option value="Draft">Draft</option>
                                             <option value="Sent">Sent</option>
@@ -532,19 +532,19 @@
                                     </div>
                                     <div>
                                         <label for="quoteNetListAmount" class="block text-sm font-medium text-gray-700">Net List Amount</label>
-                                        <input type="number" id="quoteNetListAmount" min="0" step="0.01" class="form-input-style">
+                                        <input type="number" id="quoteNetListAmount" min="0" step="0.01" class="form-input">
                                     </div>
                                     <div>
                                         <label for="quoteNetDiscount" class="block text-sm font-medium text-gray-700">Net Discount</label>
-                                        <input type="number" id="quoteNetDiscount" min="0" step="0.01" class="form-input-style">
+                                        <input type="number" id="quoteNetDiscount" min="0" step="0.01" class="form-input">
                                     </div>
                                     <div>
                                         <label for="quoteNetAmount" class="block text-sm font-medium text-gray-700">Net Amount</label>
-                                        <input type="text" id="quoteNetAmount" readonly class="form-input-style bg-gray-100">
+                                        <input type="text" id="quoteNetAmount" readonly class="form-input bg-gray-100">
                                     </div>
                                     <div>
                                         <label for="quoteCurrency" class="block text-sm font-medium text-gray-700">Currency <span class="text-red-500">*</span></label>
-                                        <select id="quoteCurrency" required class="form-input-style">
+                                        <select id="quoteCurrency" required class="form-select">
                                             <option value="">Select Currency</option>
                                             <!-- Currencies will be populated by JS -->
                                         </select>
@@ -554,13 +554,13 @@
                                         <label for="quoteIsFinal" class="ml-2 block text-sm font-medium text-gray-700">Is Final?</label>
                                     </div>
                                     <div class="sm:col-span-2 flex justify-end space-x-2">
-                                        <button type="button" id="resetQuoteFormButton" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">Reset</button>
-                                        <button type="submit" id="submitQuoteButton" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">Add Quote</button>
+                                        <button type="button" id="resetQuoteFormButton" class="btn-secondary">Reset</button>
+                                        <button type="submit" id="submitQuoteButton" class="btn-primary">Add Quote</button>
                                     </div>
                                 </form>
                                 <div class="p-4 bg-gray-50 rounded-b-lg mt-4">
                                     <h4 class="text-lg font-semibold text-gray-800 mb-3">Linked Quotes</h4>
-                                    <div class="data-grid-header grid grid-cols-[100px_1.5fr_1fr_0.8fr_0.8fr_1fr]">
+                                    <div class="data-grid-header">
                                         <div class="px-2 py-1">ID</div>
                                         <div class="px-2 py-1">Name</div>
                                         <div class="px-2 py-1">Status</div>
@@ -568,7 +568,7 @@
                                         <div class="px-2 py-1 hidden sm:block">Expire Date</div>
                                         <div class="px-2 py-1 text-right">Actions</div>
                                     </div>
-                                    <div id="quoteList" class="divide-y divide-gray-100">
+                                    <div id="quoteList" class="divide-y divide-gray-100 data-grid-body">
                                         <p class="text-gray-500 text-center col-span-full py-4">No quotes added for this opportunity.</p>
                                     </div>
                                 </div>
@@ -581,8 +581,8 @@
 
 
         <!-- Events Section -->
-        <section id="events-section" class="hidden bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-3xl font-bold text-blue-700 mb-6">Event Calendar</h2>
+        <section id="events-section" class="hidden card">
+            <h2 class="section-title">Event Calendar</h2>
             <p class="text-gray-600">Upcoming events will be displayed here.</p>
             <div class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Placeholder for events -->
@@ -605,8 +605,8 @@
         </section>
 
         <!-- Admin Country Mapping Section -->
-        <section id="admin-country-mapping-section" class="hidden bg-white p-6 rounded-lg shadow-md mb-8">
-            <h2 class="text-3xl font-bold text-blue-700 mb-6">Admin: Country and State Mapping</h2>
+        <section id="admin-country-mapping-section" class="hidden card">
+            <h2 class="section-title">Admin: Country and State Mapping</h2>
             <p class="text-gray-600 mb-4">Upload or update country and state data for dropdowns. Use the specified CSV formats.</p>
 
             <form id="countryMappingForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -626,7 +626,7 @@
                     <textarea id="adminCountriesInput" rows="10" placeholder="e.g.,
 United States,US
 Canada,CA
-Mexico,MX" class="form-input-style font-mono"></textarea>
+Mexico,MX" class="form-textarea font-mono"></textarea>
                     <p class="text-xs text-gray-500 mt-1">Provide country Name and 2-letter Code. Each country on a new line.</p>
                 </div>
 
@@ -635,23 +635,23 @@ Mexico,MX" class="form-input-style font-mono"></textarea>
                     <textarea id="adminCountryStateMapInput" rows="10" placeholder="e.g.,
 US:AL,AK,AZ,AR
 CA:AB,BC,MB
-MX:AGU,BCN,BJS" class="form-input-style font-mono"></textarea>
+MX:AGU,BCN,BJS" class="form-textarea font-mono"></textarea>
                     <p class="text-xs text-gray-500 mt-1">Provide Country Code followed by a colon and comma-separated states/provinces. Each country's states on a new line.</p>
                 </div>
 
-                <div id="adminMessage" class="md:col-span-2 message hidden"></div>
+                <div id="adminMessage" class="message hidden"></div>
 
                 <div class="md:col-span-2 flex justify-end">
-                    <button type="submit" id="uploadAdminDataButton" class="px-5 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <button type="submit" id="uploadAdminDataButton" class="btn-primary">
                         Upload Data to Firestore
                     </button>
                 </div>
             </form>
         </section>
 
-        <!-- Admin Currency Management Section (NEW) -->
-        <section id="currency-management-section" class="hidden bg-white p-6 rounded-lg shadow-md mb-8">
-            <h2 class="text-3xl font-bold text-blue-700 mb-6">Admin: Currency Management</h2>
+        <!-- Admin Currency Management Section -->
+        <section id="currency-management-section" class="hidden card">
+            <h2 class="section-title">Admin: Currency Management</h2>
             <p class="text-gray-600 mb-4">Add, edit, or delete currencies used in the application. Provide data in the specified CSV format.</p>
 
             <!-- Currency Form -->
@@ -668,33 +668,33 @@ MX:AGU,BCN,BJS" class="form-input-style font-mono"></textarea>
                     <textarea id="adminCurrenciesInput" rows="5" placeholder="e.g.,
 USD,United States Dollar,$,$
 EUR,Euro,€,€
-GBP,British Pound,£,£" class="form-input-style font-mono"></textarea>
+GBP,British Pound,£,£" class="form-textarea font-mono"></textarea>
                     <p class="text-xs text-gray-500 mt-1">Provide ISO 4217 Code (e.g., USD), Currency Name, Symbol, and Native Symbol. Each currency on a new line. For editing, provide only one line matching the currency's code.</p>
                 </div>
 
                 <div id="adminCurrencyMessageDiv" class="message hidden"></div>
 
                 <div class="flex justify-end space-x-3">
-                    <button type="button" id="resetCurrencyFormButton" class="px-5 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <button type="button" id="resetCurrencyFormButton" class="btn-secondary">
                         Reset
                     </button>
-                    <button type="submit" id="submitCurrencyButton" class="px-5 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <button type="submit" id="submitCurrencyButton" class="btn-primary">
                         Upload Currencies to Firestore
                     </button>
                 </div>
             </form>
 
             <!-- Currency List -->
-            <div class="mt-8 bg-white p-6 rounded-lg shadow-md overflow-x-auto">
+            <div class="mt-8 bg-white p-6 rounded-lg shadow-md overflow-x-auto card">
                 <h3 class="text-2xl font-semibold text-gray-800 mb-4">Existing Currencies</h3>
-                <div class="data-grid-header grid grid-cols-[0.8fr_1.5fr_0.8fr_0.8fr_1fr]">
+                <div class="data-grid-header">
                     <div class="px-2 py-1">Code</div>
                     <div class="px-2 py-1">Name</div>
                     <div class="px-2 py-1">Symbol</div>
                     <div class="px-2 py-1">Native Symbol</div>
                     <div class="px-2 py-1 text-right">Actions</div>
                 </div>
-                <div id="currencyList" class="divide-y divide-gray-100">
+                <div id="currencyList" class="divide-y divide-gray-100 data-grid-body">
                     <!-- Currency rows will be dynamically inserted here -->
                     <p class="text-gray-500 text-center col-span-full py-4">Loading currencies...</p>
                 </div>
@@ -703,8 +703,8 @@ GBP,British Pound,£,£" class="form-input-style font-mono"></textarea>
 
 
         <!-- Admin Users Management Section -->
-        <section id="users-management-section" class="hidden bg-white p-6 rounded-lg shadow-md mb-8">
-            <h2 class="text-3xl font-bold text-blue-700 mb-6">Admin: User Management</h2>
+        <section id="users-management-section" class="hidden card">
+            <h2 class="section-title">Admin: User Management</h2>
             <p class="text-gray-600 mb-4">Create or update user profiles. For new users, ensure they are first created in Firebase Authentication, then provide their Firebase User ID (UID) here.</p>
 
             <!-- User Form -->
@@ -713,34 +713,34 @@ GBP,British Pound,£,£" class="form-input-style font-mono"></textarea>
 
                 <div id="userIdDisplayGroup" class="mb-4 md:col-span-2">
                     <label for="userIdDisplayInput" class="block text-sm font-medium text-gray-700 mb-1">Firebase User ID (UID) <span class="text-red-500">*</span></label>
-                    <input type="text" id="userIdDisplayInput" name="userId" required placeholder="Enter Firebase User UID (e.g., aBcDeFg123xyz)" class="form-input-style font-mono">
+                    <input type="text" id="userIdDisplayInput" name="userId" required placeholder="Enter Firebase User UID (e.g., aBcDeFg123xyz)" class="form-input font-mono">
                     <p class="text-xs text-gray-500 mt-1">This is the unique ID from Firebase Authentication.</p>
                 </div>
 
                 <div class="mb-4">
                     <label for="userName" class="block text-sm font-medium text-gray-700 mb-1">User Name (Gmail Email) <span class="text-red-500">*</span></label>
-                    <input type="email" id="userName" name="userName" required placeholder="user@gmail.com" class="form-input-style">
+                    <input type="email" id="userName" name="userName" required placeholder="user@gmail.com" class="form-input">
                     <p class="text-xs text-gray-500 mt-1">Must be a valid Gmail address.</p>
                 </div>
                 <div class="mb-4">
                     <label for="userFirstName" class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
-                    <input type="text" id="userFirstName" name="firstName" required class="form-input-style">
+                    <input type="text" id="userFirstName" name="firstName" required class="form-input">
                 </div>
                 <div class="mb-4">
                     <label for="userLastName" class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
-                    <input type="text" id="userLastName" name="lastName" required class="form-input-style">
+                    <input type="text" id="userLastName" name="lastName" required class="form-input">
                 </div>
                 <div class="mb-4">
                     <label for="userEmail" class="block text-sm font-medium text-gray-700 mb-1">Contact Email <span class="text-red-500">*</span></label>
-                    <input type="email" id="userEmail" name="email" required class="form-input-style">
+                    <input type="email" id="userEmail" name="email" required class="form-input">
                 </div>
                 <div class="mb-4">
                     <label for="userPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone <span class="text-red-500">*</span></label>
-                    <input type="tel" id="userPhone" name="phone" required class="form-input-style">
+                    <input type="tel" id="userPhone" name="phone" required class="form-input">
                 </div>
                 <div class="mb-4">
                     <label for="userRole" class="block text-sm font-medium text-gray-700 mb-1">Role <span class="text-red-500">*</span></label>
-                    <select id="userRole" name="role" required class="form-input-style">
+                    <select id="userRole" name="role" required class="form-select">
                         <option value="User">User</option>
                         <option value="Admin">Admin</option>
                     </select>
@@ -748,25 +748,25 @@ GBP,British Pound,£,£" class="form-input-style font-mono"></textarea>
                 </div>
                 <div class="mb-4 md:col-span-2">
                     <label for="userSkills" class="block text-sm font-medium text-gray-700 mb-1">Skills (comma-separated) <span class="text-red-500">*</span></label>
-                    <input type="text" id="userSkills" name="skills" required placeholder="e.g., Photography, Editing, Marketing" class="form-input-style">
+                    <input type="text" id="userSkills" name="skills" required placeholder="e.g., Photography, Editing, Marketing" class="form-input">
                     <p class="text-xs text-gray-500 mt-1">Enter skills separated by commas.</p>
                 </div>
 
 
                 <div class="md:col-span-2 flex justify-end space-x-3">
-                    <button type="button" id="resetUserFormButton" class="px-5 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <button type="button" id="resetUserFormButton" class="btn-secondary">
                         Reset
                     </button>
-                    <button type="submit" id="submitUserButton" class="px-5 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <button type="submit" id="submitUserButton" class="btn-primary">
                         Create User Profile
                     </button>
                 </div>
             </form>
 
             <!-- User List -->
-            <div class="mt-8 bg-white p-6 rounded-lg shadow-md overflow-x-auto">
+            <div class="mt-8 bg-white p-6 rounded-lg shadow-md overflow-x-auto card">
                 <h3 class="text-2xl font-semibold text-gray-800 mb-4">Existing User Profiles</h3>
-                <div class="data-grid-header grid grid-cols-[100px_minmax(120px,_1.2fr)_1.5fr_1fr_1fr_1.5fr]">
+                <div class="data-grid-header">
                     <div class="px-2 py-1">UID</div>
                     <div class="px-2 py-1">User Name</div>
                     <div class="px-2 py-1">Contact Email</div>
@@ -774,7 +774,7 @@ GBP,British Pound,£,£" class="form-input-style font-mono"></textarea>
                     <div class="px-2 py-1 hidden md:block">Skills</div>
                     <div class="px-2 py-1 text-right">Actions</div>
                 </div>
-                <div id="userList" class="divide-y divide-gray-100">
+                <div id="userList" class="divide-y divide-gray-100 data-grid-body">
                     <!-- User rows will be dynamically inserted here -->
                     <p class="text-gray-500 text-center col-span-full py-4">Loading users...</p>
                 </div>
