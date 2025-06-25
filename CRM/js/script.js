@@ -148,7 +148,7 @@ const lineServiceDescriptionInput = document.getElementById('lineServiceDescript
 const lineUnitPriceInput = document.getElementById('lineUnitPrice');
 const lineQuantityInput = document.getElementById('lineQuantity');
 const lineDiscountInput = document.getElementById('lineDiscount');
-const lineNetPriceInput = document = document.getElementById('lineNetPrice');
+const lineNetPriceInput = document.getElementById('lineNetPrice'); // CORRECTED LINE
 const lineStatusSelect = document.getElementById('lineStatus');
 const submitOpportunityLineButton = document.getElementById('submitOpportunityLineButton');
 const opportunityLineList = document.getElementById('opportunityLineList');
@@ -1698,7 +1698,7 @@ function listenForOpportunityLines(opportunityId) {
         }
     }, (error) => {
         console.error("Error listening to opportunity lines:", error);
-        opportunityLineList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading lines: ${error.message}</p>`;
+        opportunityLineList.innerHTML = `<p class="text-red-5-00 text-center col-span-full py-4">Error loading lines: ${error.message}</p>`;
     });
 
 }
