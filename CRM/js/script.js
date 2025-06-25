@@ -145,7 +145,7 @@ const opportunityLineForm = document.getElementById('opportunityLineForm');
 const optyLineIdDisplayGroup = document.getElementById('optyLineIdDisplayGroup');
 const optyLineIdDisplay = document.getElementById('optyLineIdDisplay');
 const lineServiceDescriptionInput = document.getElementById('lineServiceDescription');
-const lineUnitPriceInput = document.getElementById('lineUnitPrice');
+const lineUnitPriceInput = document = document.getElementById('lineUnitPrice');
 const lineQuantityInput = document.getElementById('lineQuantity');
 const lineDiscountInput = document.getElementById('lineDiscount');
 const lineNetPriceInput = document.getElementById('lineNetPrice'); // CORRECTED LINE
@@ -1698,7 +1698,7 @@ function listenForOpportunityLines(opportunityId) {
         }
     }, (error) => {
         console.error("Error listening to opportunity lines:", error);
-        opportunityLineList.innerHTML = `<p class="text-red-5-00 text-center col-span-full py-4">Error loading lines: ${error.message}</p>`;
+        opportunityLineList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading lines: ${error.message}</p>`;
     });
 
 }
@@ -2247,7 +2247,7 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
             return;
         }
     } else if (!existingCurrencyCode) { // Only disallow empty if it's a new add, not an edit where data might be cleared
-        adminCurrencyMessageDiv.textContent = "Currency data cannot be empty.";
+        adminCurrencyMessageDiv.textContent = "Currency data cannot be empty for new additions.";
         adminCurrencyMessageDiv.className = 'message error';
         adminCurrencyMessageDiv.classList.remove('hidden');
         submitCurrencyButton.disabled = false;
@@ -2255,8 +2255,8 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
         return;
     }
 
-    // Corrected collection reference to include a document ID for `app_settings`
     const collectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
+    console.log("DEBUG saveCurrency: collectionPath reference obtained.");
 
     try {
         let updatesPerformed = 0;
@@ -2264,12 +2264,15 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
         let totalProcessed = 0;
 
         if (existingCurrencyCode) { // Editing a single currency
+            console.log(`DEBUG saveCurrency: Attempting to edit currency with ID: ${existingCurrencyCode} (Type: ${typeof existingCurrencyCode})`);
             const currencyDocRef = doc(db, collectionRef, existingCurrencyCode);
             const currencyObjectKey = Object.keys(parsedData)[0];
             const currencyObject = parsedData[currencyObjectKey];
 
             if (currencyObjectKey !== existingCurrencyCode) {
                  showModal("Validation Error", `The currency code in the JSON (${currencyObjectKey}) must match the edited currency code (${existingCurrencyCode}).`, () => {});
+                 submitCurrencyButton.disabled = false;
+                 submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
                  return;
             }
 
@@ -2280,10 +2283,12 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
                 symbol_native: typeof currencyObject.symbol_native === 'string' ? currencyObject.symbol_native : ''
             };
 
+            console.log("DEBUG saveCurrency: Final currency data for update:", finalCurrencyData);
             await updateDoc(currencyDocRef, finalCurrencyData);
             updatesPerformed++;
             totalProcessed++;
         } else { // Batch upload for new/multiple currencies
+            console.log("DEBUG saveCurrency: Attempting batch upload for new/multiple currencies.");
             for (const code in parsedData) {
                 if (Object.prototype.hasOwnProperty.call(parsedData, code)) {
                     totalProcessed++;
@@ -2291,7 +2296,7 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
                     
                     // Defensive check for expected string types before saving
                     const finalCurrencyData = {
-                        currencyCode: code, // Also store code as a field for easier querying if needed
+                        currencyCode: code,
                         currencyName: typeof currency.currencyName === 'string' ? currency.currencyName : '',
                         symbol: typeof currency.symbol === 'string' ? currency.symbol : '',
                         symbol_native: typeof currency.symbol_native === 'string' ? currency.symbol_native : ''
@@ -2304,8 +2309,9 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
                         continue;
                     }
 
-                    const currencyDocRef = doc(db, collectionRef, code); // Use currency code as document ID
-                    await setDoc(currencyDocRef, finalCurrencyData, { merge: true }); // Use merge: true for batch uploads
+                    console.log(`DEBUG saveCurrency: Adding/Updating currency '${code}' (Type: ${typeof code}) with data:`, finalCurrencyData);
+                    const currencyDocRef = doc(db, collectionRef, code);
+                    await setDoc(currencyDocRef, finalCurrencyData, { merge: true });
                     updatesPerformed++;
                 }
             }
@@ -2316,12 +2322,10 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
         adminCurrencyMessageDiv.classList.remove('hidden');
         console.log("Admin currency data upload successful.");
 
-        // Re-fetch currency data into `allCurrencies` after successful update
         await fetchCurrencies();
-
-        resetCurrencyForm(); // Reset form after successful save
+        resetCurrencyForm();
     } catch (error) {
-        console.error("Error uploading currency data:", error);
+        console.error("Error uploading currency data (caught in try-catch):", error);
         adminCurrencyMessageDiv.textContent = `Error uploading currency data: ${error.message}`;
         adminCurrencyMessageDiv.className = 'message error';
         adminCurrencyMessageDiv.classList.remove('hidden');
@@ -2345,6 +2349,7 @@ async function deleteCurrency(currencyCode) {
             try {
                 // Corrected doc reference for `app_settings`
                 const currencyDocRef = doc(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data", currencyCode);
+                console.log(`DEBUG deleteCurrency: Deleting currency '${currencyCode}' at path: app_metadata/${APP_SETTINGS_DOC_ID}/currencies_data/${currencyCode}`);
                 await deleteDoc(currencyDocRef);
                 console.log("Currency deleted:", currencyCode);
                 showModal("Success", `Currency '${currencyCode}' deleted successfully!`, () => {});
@@ -2370,6 +2375,7 @@ function listenForCurrencies() {
 
     // Corrected collection reference to include a document ID for `app_settings`
     const q = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
+    console.log(`DEBUG listenForCurrencies: Listening to collection: app_metadata/${APP_SETTINGS_DOC_ID}/currencies_data`);
 
     unsubscribeCurrencies = onSnapshot(q, (snapshot) => {
         currencyList.innerHTML = ''; // Clear current list
