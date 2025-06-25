@@ -148,7 +148,7 @@ const lineServiceDescriptionInput = document.getElementById('lineServiceDescript
 const lineUnitPriceInput = document.getElementById('lineUnitPrice');
 const lineQuantityInput = document.getElementById('lineQuantity');
 const lineDiscountInput = document.getElementById('lineDiscount');
-const lineNetPriceInput = document.getElementById('lineNetPrice');
+const lineNetPriceInput = document = document.getElementById('lineNetPrice');
 const lineStatusSelect = document.getElementById('lineStatus');
 const submitOpportunityLineButton = document.getElementById('submitOpportunityLineButton');
 const opportunityLineList = document.getElementById('opportunityLineList');
@@ -2255,7 +2255,7 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
         return;
     }
 
-    // CHANGED: Corrected collection reference to include a document ID for `app_settings`
+    // Corrected collection reference to include a document ID for `app_settings`
     const collectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
 
     try {
@@ -2264,27 +2264,23 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
         let totalProcessed = 0;
 
         if (existingCurrencyCode) { // Editing a single currency
-            const currencyDocRef = doc(db, collectionRef, existingCurrencyCode); // doc() needs a collection ref and ID
-            // When editing, the textarea should contain only the JSON for the currency being edited
-            // e.g., {"USD": {"currencyName": "US Dollar", "symbol": "$", "symbol_native": "$"}}
-            // So we need to extract the actual currency object value.
+            const currencyDocRef = doc(db, collectionRef, existingCurrencyCode);
             const currencyObjectKey = Object.keys(parsedData)[0];
             const currencyObject = parsedData[currencyObjectKey];
 
-
-            if (!currencyObject || typeof currencyObject.currencyName !== 'string' || typeof currencyObject.symbol !== 'string' || typeof currencyObject.symbol_native !== 'string') {
-                showModal("Validation Error", "Edited currency data must include currencyName, symbol, and symbol_native.", () => {});
-                return;
-            }
-
-            // Ensure the currency code in the JSON matches the editing ID
             if (currencyObjectKey !== existingCurrencyCode) {
                  showModal("Validation Error", `The currency code in the JSON (${currencyObjectKey}) must match the edited currency code (${existingCurrencyCode}).`, () => {});
                  return;
             }
 
+            // Defensive check for expected string types
+            const finalCurrencyData = {
+                currencyName: typeof currencyObject.currencyName === 'string' ? currencyObject.currencyName : '',
+                symbol: typeof currencyObject.symbol === 'string' ? currencyObject.symbol : '',
+                symbol_native: typeof currencyObject.symbol_native === 'string' ? currencyObject.symbol_native : ''
+            };
 
-            await updateDoc(currencyDocRef, currencyObject);
+            await updateDoc(currencyDocRef, finalCurrencyData);
             updatesPerformed++;
             totalProcessed++;
         } else { // Batch upload for new/multiple currencies
@@ -2292,20 +2288,24 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
                 if (Object.prototype.hasOwnProperty.call(parsedData, code)) {
                     totalProcessed++;
                     const currency = parsedData[code];
-                    // Basic validation for each currency object
-                    if (typeof currency.currencyName !== 'string' || typeof currency.symbol !== 'string' || typeof currency.symbol_native !== 'string') {
-                        console.error(`Skipping invalid currency data for code ${code}: Missing currencyName, symbol, or symbol_native.`);
+                    
+                    // Defensive check for expected string types before saving
+                    const finalCurrencyData = {
+                        currencyCode: code, // Also store code as a field for easier querying if needed
+                        currencyName: typeof currency.currencyName === 'string' ? currency.currencyName : '',
+                        symbol: typeof currency.symbol === 'string' ? currency.symbol : '',
+                        symbol_native: typeof currency.symbol_native === 'string' ? currency.symbol_native : ''
+                    };
+
+                    // Basic validation for each currency object (after type coercion)
+                    if (finalCurrencyData.currencyName === '' || finalCurrencyData.symbol === '' || finalCurrencyData.symbol_native === '') {
+                        console.error(`Skipping invalid currency data for code ${code}: Missing currencyName, symbol, or symbol_native after type check.`);
                         errorsOccurred++;
                         continue;
                     }
 
                     const currencyDocRef = doc(db, collectionRef, code); // Use currency code as document ID
-                    await setDoc(currencyDocRef, {
-                        currencyCode: code, // Also store code as a field for easier querying if needed
-                        currencyName: currency.currencyName,
-                        symbol: currency.symbol,
-                        symbol_native: currency.symbol_native
-                    }, { merge: true }); // Use merge: true for batch uploads
+                    await setDoc(currencyDocRef, finalCurrencyData, { merge: true }); // Use merge: true for batch uploads
                     updatesPerformed++;
                 }
             }
@@ -2343,7 +2343,7 @@ async function deleteCurrency(currencyCode) {
         `Are you sure you want to delete the currency '${currencyCode}'? This action cannot be undone.`,
         async () => {
             try {
-                // CHANGED: Corrected doc reference for `app_settings`
+                // Corrected doc reference for `app_settings`
                 const currencyDocRef = doc(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data", currencyCode);
                 await deleteDoc(currencyDocRef);
                 console.log("Currency deleted:", currencyCode);
@@ -2368,7 +2368,7 @@ function listenForCurrencies() {
         return;
     }
 
-    // CHANGED: Corrected collection reference to include a document ID for `app_settings`
+    // Corrected collection reference to include a document ID for `app_settings`
     const q = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
 
     unsubscribeCurrencies = onSnapshot(q, (snapshot) => {
