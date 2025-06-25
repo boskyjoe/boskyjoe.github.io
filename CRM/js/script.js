@@ -210,6 +210,8 @@ const navGoogleLoginButton = document.getElementById('navGoogleLoginButton'); //
 
 // Home section Google login button (for visual hint on home page)
 const googleLoginButtonHome = document.getElementById('googleLoginButton');
+const homeSignInMessage = document.getElementById('homeSignInMessage'); // NEW: For the sign-in prompt message
+
 
 // Admin menu elements (added IDs in HTML)
 let desktopAdminMenu; // Moved to be initialized after DOM load
@@ -353,8 +355,8 @@ async function showSection(sectionId) {
     }
     // Close mobile menu AND admin submenus when navigating (if open)
     if (mobileMenu) mobileMenu.classList.remove('open');
-    if (desktopAdminSubMenu) desktopAdminSubMenu.classList.add('hidden');
-    if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden');
+    if (desktopAdminSubMenu) desktopAdminMenu.classList.remove('active'); // Close desktop admin dropdown
+    if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden'); // Close mobile admin dropdown
 
     // Stop all listeners first to prevent redundant updates
     if (unsubscribeCustomers) { unsubscribeCustomers(); }
@@ -539,6 +541,8 @@ async function initializeFirebase() {
         mobileAdminMenuToggle = document.getElementById('mobileAdminMenuToggle');
         mobileAdminSubMenu = document.getElementById('mobileAdminSubMenu');
 
+        homeSignInMessage = document.getElementById('homeSignInMessage'); // NEW: Get reference to home sign-in message
+
 
         opportunityLeftPanel = document.getElementById('opportunity-left-panel');
         opportunityRightPanel = document.getElementById('opportunity-right-panel');
@@ -579,11 +583,11 @@ async function initializeFirebase() {
         // REMOVED: Event listener for the summary card
 
         // --- NEW: Admin Submenu Toggle Listeners ---
-        if (desktopAdminMenuToggle && desktopAdminSubMenu) {
+        if (desktopAdminMenuToggle && desktopAdminMenu) { // Ensure desktopAdminMenu is parent of toggle
             desktopAdminMenuToggle.addEventListener('click', (e) => {
                 e.preventDefault(); // Prevent default link behavior
-                // Toggle 'active' class on parent li to control submenu visibility via CSS
-                desktopAdminMenuToggle.closest('li').classList.toggle('active');
+                // Toggle 'active' class on desktopAdminMenu (the <li> parent)
+                desktopAdminMenu.classList.toggle('active');
             });
         }
         // Listener for clicks *outside* the desktop admin menu to close it
@@ -621,6 +625,7 @@ async function initializeFirebase() {
                 googleLoginButtonHome.classList.add('hidden'); // Also hide the home page login button
                 logoutButton.classList.remove('hidden');
                 mobileLogoutButton.classList.remove('hidden');
+                if (homeSignInMessage) homeSignInMessage.classList.add('hidden'); // Hide sign-in message
 
                 console.log("onAuthStateChanged: Current Firebase UID:", currentUserId);
 
@@ -703,13 +708,14 @@ async function initializeFirebase() {
                 mobileLogoutButton.classList.add('hidden');
 
                 // Hide admin submenus explicitly on logout
-                if (desktopAdminSubMenu) desktopAdminSubMenu.classList.add('hidden');
-                if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden');
+                if (desktopAdminSubMenu) desktopAdminMenu.classList.remove('active'); // Ensure desktop dropdown is closed
+                if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden'); // Ensure mobile dropdown is closed
 
 
                 // Show Google Login buttons
                 if (navGoogleLoginButton) navGoogleLoginButton.classList.remove('hidden');
                 if (googleLoginButtonHome) googleLoginButtonHome.classList.remove('hidden'); // Show home page login button
+                if (homeSignInMessage) homeSignInMessage.classList.remove('hidden'); // Show sign-in message
 
                 // Disable all form submit buttons by default when not logged in
                 submitCustomerButton.setAttribute('disabled', 'disabled');
