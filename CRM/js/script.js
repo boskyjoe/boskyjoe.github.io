@@ -145,10 +145,10 @@ const opportunityLineForm = document.getElementById('opportunityLineForm');
 const optyLineIdDisplayGroup = document.getElementById('optyLineIdDisplayGroup');
 const optyLineIdDisplay = document.getElementById('optyLineIdDisplay');
 const lineServiceDescriptionInput = document.getElementById('lineServiceDescription');
-const lineUnitPriceInput = document = document.getElementById('lineUnitPrice');
+const lineUnitPriceInput = document.getElementById('lineUnitPrice'); // CORRECTED THIS LINE
 const lineQuantityInput = document.getElementById('lineQuantity');
 const lineDiscountInput = document.getElementById('lineDiscount');
-const lineNetPriceInput = document.getElementById('lineNetPrice'); // CORRECTED LINE
+const lineNetPriceInput = document.getElementById('lineNetPrice');
 const lineStatusSelect = document.getElementById('lineStatus');
 const submitOpportunityLineButton = document.getElementById('submitOpportunityLineButton');
 const opportunityLineList = document.getElementById('opportunityLineList');
