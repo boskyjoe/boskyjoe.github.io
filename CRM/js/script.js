@@ -2358,26 +2358,6 @@ function displayQuote(quote) {
     quoteRow.querySelector('.delete-btn').addEventListener('click', () => deleteQuote(quote.id));
 }
 
-function editCurrency(currency) {
-    if (!isAdmin) {
-        showModal("Permission Denied", "Only administrators can edit currencies.", () => {});
-        return;
-    }
-    if (currencyFormTitle) currencyFormTitle.textContent = `Edit Currency: ${currency.id}`;
-    if (submitCurrencyButton) submitCurrencyButton.textContent = 'Update Currency';
-
-    if (currencyCodeDisplayGroup) currencyCodeDisplayGroup.classList.remove('hidden');
-    if (currencyCodeDisplay) currencyCodeDisplay.textContent = currency.id; // Display the code
-
-    // Pre-fill the textarea with the CSV for this specific currency
-    if (adminCurrenciesInput) adminCurrenciesInput.value = `${currency.id},${currency.currencyName || ''},${currency.symbol || ''},${currency.symbol_native || ''}`;
-
-    if (currencyForm) currencyForm.dataset.editingId = currency.id; // Store the currency code for updating
-    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden'); // Clear any previous messages
-    if (currencyForm) currencyForm.scrollIntoView({ behavior: 'smooth' });
-}
-
-
 function editQuote(quote) {
     if (!isAuthReady || !currentUserId || !currentOpportunityId) {
         showModal("Permission Denied", "Not authenticated or no opportunity selected.", () => {});
