@@ -237,6 +237,10 @@ main {
     max-height: 0; /* Ensures it collapses completely */
 }
 
+#mobileAdminSubMenu:not(.hidden) { /* NEW: Define max-height when not hidden */
+    max-height: 500px; /* Adjust as needed */
+}
+
 #mobileAdminSubMenu .nav-link {
     padding-left: 3rem; /* Further indent for submenu items */
     font-size: 0.95rem; /* Smaller font for submenu */
