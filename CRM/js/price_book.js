@@ -1,4 +1,4 @@
-import { db, auth, currentUserId, isAdmin, addUnsubscribe, removeUnsubscribe } from './main.js';
+import { db, auth, currentUserId, isAdmin, addUnsubscribe, removeUnsubscribe, isAuthReady } from './main.js'; // Ensure isAuthReady is explicitly imported
 import { showModal, getCollectionPath, APP_SETTINGS_DOC_ID } from './utils.js';
 import { fetchCurrencies, allCurrencies, getCurrencySymbol } from './admin_data.js'; // Import currency data and functions
 
@@ -19,9 +19,16 @@ let priceBookList;
 // Global data for Price Books (fetched from Firestore)
 export let allPriceBooks = [];
 
+// --- Debugging Logs (Added) ---
+console.log("price_book.js: Module loaded.");
+console.log("price_book.js: Initial imported state - db:", db, "isAuthReady:", isAuthReady, "currentUserId:", currentUserId, "isAdmin:", isAdmin);
+// --- End Debugging Logs ---
+
 // Initialize Price Book module elements and event listeners
 export async function initPriceBookModule() {
     console.log("price_book.js: initPriceBookModule called.");
+    console.log("price_book.js: initPriceBookModule current state - db:", db, "isAuthReady:", isAuthReady, "currentUserId:", currentUserId, "isAdmin:", isAdmin);
+
     // Ensure DOM elements are initialized only once
     if (!priceBookManagementSection) {
         priceBookManagementSection = document.getElementById('price-book-management-section');
@@ -82,8 +89,11 @@ function populateCurrencySelect() {
 
 // Save (Add/Update) a Price Book
 async function savePriceBook(priceBookData, existingPriceBookDocId = null) {
+    console.log("price_book.js: savePriceBook called.");
+    console.log("price_book.js: savePriceBook current state - db:", db, "isAuthReady:", isAuthReady, "currentUserId:", currentUserId, "isAdmin:", isAdmin);
+
     if (!isAuthReady || !currentUserId || !isAdmin) {
-        showModal("Permission Denied", "Only administrators can manage price books.", () => {});
+        showModal("Permission Denied", "Only administrators can manage price books. Please ensure you are logged in as an Admin.", () => {});
         return;
     }
     if (!db) {
@@ -135,8 +145,11 @@ async function savePriceBook(priceBookData, existingPriceBookDocId = null) {
 
 // Delete a Price Book
 async function deletePriceBook(firestoreDocId) {
+    console.log("price_book.js: deletePriceBook called.");
+    console.log("price_book.js: deletePriceBook current state - db:", db, "isAuthReady:", isAuthReady, "currentUserId:", currentUserId, "isAdmin:", isAdmin);
+
     if (!isAuthReady || !currentUserId || !isAdmin) {
-        showModal("Permission Denied", "Only administrators can manage price books.", () => {});
+        showModal("Permission Denied", "Only administrators can manage price books. Please ensure you are logged in as an Admin.", () => {});
         return;
     }
     if (!db) {
@@ -167,6 +180,8 @@ async function deletePriceBook(firestoreDocId) {
 // Listen for real-time updates to Price Books
 function listenForPriceBooks() {
     console.log("price_book.js: listenForPriceBooks called.");
+    console.log("price_book.js: listenForPriceBooks current state - db:", db, "isAuthReady:", isAuthReady, "currentUserId:", currentUserId, "isAdmin:", isAdmin);
+
     if (!isAuthReady || !currentUserId || !isAdmin) {
         if (priceBookList) priceBookList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Access Denied: Only administrators can view price books.</p>';
         return;
@@ -202,9 +217,10 @@ function listenForPriceBooks() {
 function displayPriceBook(priceBook) {
     if (!priceBookList) return;
     const priceBookRow = document.createElement('div');
-    priceBookRow.className = 'data-grid-row';
+    priceBookRow.className = 'data-grid-row'; // Applies data grid styling
     priceBookRow.dataset.id = priceBook.id;
 
+    // Use the getCurrencySymbol from admin_data.js to display the correct symbol
     const currencySymbol = getCurrencySymbol(priceBook.currencyCode);
 
     priceBookRow.innerHTML = `
@@ -222,6 +238,7 @@ function displayPriceBook(priceBook) {
     `;
     priceBookList.appendChild(priceBookRow);
 
+    // Attach event listeners to the new buttons
     priceBookRow.querySelector('.edit-btn').addEventListener('click', () => editPriceBook(priceBook));
     priceBookRow.querySelector('.delete-btn').addEventListener('click', () => deletePriceBook(priceBook.id));
 }
