@@ -1,58 +1,3 @@
-/* Update the .data-grid-body rule */
-.data-grid-body {
-    background-color: white; /* bg-white */
-    border-bottom-left-radius: 0.5rem;
-    border-bottom-right-radius: 0.5rem;
-    overflow-x: auto; /* For horizontal scrolling on small screens */
-
-    /* NEW: For vertical scrolling after 10 rows */
-    max-height: 460px; /* Approximately 10 rows (assuming ~46px per row including padding) */
-    overflow-y: auto; /* Adds vertical scrollbar when content exceeds max-height */
-}
-
-/* NEW: Override for data grids inside open accordions */
-/* This ensures the data grid expands fully within an open accordion, */
-/* overriding its own 10-row scroll limit. */
-.accordion-content.open .data-grid-body {
-    max-height: none; /* Allow content to dictate height */
-    overflow-y: visible; /* Remove vertical scrollbar, let the accordion handle overall scroll if needed */
-}
-
-
-/* Update the .header rule */
-.header {
-    /* Using a subtle linear gradient for a professional look */
-    /* Adjusted colors to be slightly darker for better visibility on Safari */
-    background: linear-gradient(to right, #eaf2f8, #dbe9f5); /* Light blue-gray to a slightly deeper one */
-    border-bottom: 1px solid #cce0f0; /* Slightly darker, subtle blue border */
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08); /* Slightly more pronounced shadow */
-    z-index: 1000;
-    position: sticky;
-    top: 0;
-    width: 100%;
-}
-
-/* Update the .nav-link styles to ensure good contrast and a professional look */
-.nav-link {
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    transition: all 0.2s ease-in-out;
-    font-weight: 500;
-    color: #4a5568; /* Gray-700 for better contrast on light background */
-    text-decoration: none;
-    display: block;
-}
-.nav-link:hover {
-    background-color: #e0e7ff; /* Lighter indigo-100 on hover */
-    color: #312e81; /* Darker indigo for hover text */
-}
-/* Ensure the active state is prominent */
-.nav-link.active {
-    background-color: #4c51bf; /* Keep the existing indigo-700 for active */
-    color: #ffffff;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Add a subtle shadow for depth when active */
-}
-
 /* Base styles from previous version, adjusted for better integration */
 body {
     font-family: 'Inter', sans-serif;
@@ -162,7 +107,6 @@ main {
     min-height: 5rem; /* Minimum height for textareas, overrides fixed height */
     height: auto; /* Allow height to adjust based on rows/content for multi-line */
     resize: vertical; /* Allow vertical resizing only */
-    box-sizing: border-box;
 }
 
 .form-input:focus,
@@ -365,11 +309,11 @@ main {
     opacity: 1;
 }
 
-/* Accordion Styles (UPDATED for Instant Open and Fade/Slide Animation) */
+/* Accordion Styles (UPDATED FOR 3D EFFECT AND HIGHLIGHTS) */
 .accordion-item {
     border: 1px solid #e2e8f0; /* Gray-200 */
     border-radius: 0.75rem; /* Slightly more rounded */
-    overflow: hidden; /* Important for hiding content when closed */
+    overflow: hidden;
     background-color: #ffffff;
     box-shadow: 0 4px 8px rgba(0,0,0,0.05); /* Initial subtle shadow */
     transition: all 0.3s ease-in-out; /* Smooth transition for hover effects */
@@ -415,30 +359,20 @@ main {
     transform: rotate(180deg); /* Rotate icon when active */
 }
 
-/* UPDATED: Accordion Content for instant open and fade/slide */
 .accordion-content {
-    /* Initially hidden properties */
-    max-height: 0; /* Important for hiding content */
-    overflow: hidden; /* Crucial for hiding overflowing content */
-    opacity: 0; /* Start hidden */
-    transform: translateY(-10px); /* Start slightly above its final position */
-
-    /* Transitions for content appearance */
-    transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out, transform 0.4s ease-in-out, padding 0.4s ease-in-out;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out; /* Transition padding too */
     padding: 0 1.5rem; /* Padding only for sides when closed */
     background-color: #ffffff; /* Content background */
     border-top: 1px solid #f0f2f5; /* Subtle separation */
 }
 
-/* UPDATED: When open, allow full height and fade in/slide down */
 .accordion-content.open {
-    max-height: 5000px; /* Use a very large fixed value to ensure content is fully visible */
+    max-height: 1200px; /* Increased, adjust as needed to contain all content */
     padding-top: 1.5rem; /* Add top padding when open */
     padding-bottom: 1.5rem; /* Add bottom padding when open */
-    opacity: 1; /* Fade in */
-    transform: translateY(0); /* Slide down to normal position */
 }
-
 
 /* Additional styling for forms/lists within accordions */
 .accordion-content form {
@@ -489,10 +423,6 @@ main {
     border-bottom-left-radius: 0.5rem;
     border-bottom-right-radius: 0.5rem;
     overflow-x: auto; /* For horizontal scrolling on small screens */
-
-    /* NEW: For vertical scrolling after 10 rows */
-    max-height: 460px; /* Approximately 10 rows (assuming ~46px per row including padding) */
-    overflow-y: auto; /* Adds vertical scrollbar when content exceeds max-height */
 }
 
 .data-grid-row {
@@ -538,6 +468,13 @@ main {
     grid-template-columns: 1fr 1.5fr 1fr 1fr 0.8fr;
 }
 
+/* NEW: Price Book Management Grid Columns */
+#price-book-management-section .data-grid-header,
+#price-book-management-section .data-grid-row {
+    grid-template-columns: 0.8fr 2fr 1fr 0.8fr; /* ID, Name, Currency, Actions */
+}
+
+
 /* Specific to lists within accordions (e.g., Contacts, Lines, Quotes) */
 #contactsAccordionContent .data-grid-header,
 #contactsAccordionContent .data-grid-row,
@@ -576,8 +513,9 @@ main {
 /* Text alignment for grid cells */
 .data-grid-header > div,
 .data-grid-row > div {
-    /* Removed white-space: nowrap; and text-overflow: ellipsis; to allow text wrapping */
-    overflow: hidden; /* Keep overflow hidden to prevent content from breaking grid layout */
+    white-space: nowrap; /* Prevent wrapping for truncated text */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Add ellipsis for overflow */
     display: flex; /* Use flex to align content (especially for actions) */
     align-items: center; /* Vertically center content */
 }
