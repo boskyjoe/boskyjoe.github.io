@@ -17,16 +17,19 @@ main {
     margin: 0 auto;
     padding: 1.5rem; /* Increased padding */
 }
+/* Update the .header rule */
 .header {
     /* Using a subtle linear gradient for a professional look */
-    background: linear-gradient(to right, #f8fafc, #f0f4f8); /* Very light blue-gray to a slightly darker one */
-    border-bottom: 1px solid #dbeafe; /* Lighter, subtle blue border */
-    box-shadow: 0 4px 15px rgba(0,0,0,0.06); /* Slightly softer shadow */
+    /* Adjusted colors to be slightly darker for better visibility on Safari */
+    background: linear-gradient(to right, #eaf2f8, #dbe9f5); /* Light blue-gray to a slightly deeper one */
+    border-bottom: 1px solid #cce0f0; /* Slightly darker, subtle blue border */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08); /* Slightly more pronounced shadow */
     z-index: 1000;
     position: sticky;
     top: 0;
     width: 100%;
 }
+
 /* Update the .nav-link styles to ensure good contrast and a professional look */
 .nav-link {
     padding: 0.75rem 1rem;
