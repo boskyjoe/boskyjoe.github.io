@@ -425,11 +425,16 @@ main {
     box-shadow: inset 0 -2px 0 rgba(0,0,0,0.05); /* Subtle shadow line */
 }
 
+/* Update the .data-grid-body rule */
 .data-grid-body {
     background-color: white; /* bg-white */
     border-bottom-left-radius: 0.5rem;
     border-bottom-right-radius: 0.5rem;
     overflow-x: auto; /* For horizontal scrolling on small screens */
+
+    /* NEW: For vertical scrolling after 10 rows */
+    max-height: 460px; /* Approximately 10 rows (assuming ~46px per row including padding) */
+    overflow-y: auto; /* Adds vertical scrollbar when content exceeds max-height */
 }
 
 .data-grid-row {
