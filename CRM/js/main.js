@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, setDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Added 'collection' import
 
 // Import utility functions
 import { showModal } from './utils.js'; // Assuming utils.js is in the same directory
@@ -11,7 +11,7 @@ import { showModal } from './utils.js'; // Assuming utils.js is in the same dire
 import { initCustomersModule, resetCustomerForm } from './customers.js';
 import { initOpportunitiesModule, resetOpportunityForm, setOpportunityLayout, closeAllAccordions } from './opportunities.js';
 import { initUsersModule, resetUserForm } from './users.js';
-import { initAdminDataModule, resetCurrencyForm } from './admin_data.js'; // Corrected import for admin_data
+import { initAdminDataModule, resetCurrencyForm } from './admin_data.js';
 
 // YOUR Firebase Configuration
 const firebaseConfig = {
@@ -284,6 +284,7 @@ async function initializeFirebase() {
             if (mobileLogoutButton) mobileLogoutButton.classList.remove('hidden');
             if (homeSignInMessage) homeSignInMessage.classList.add('hidden');
 
+            // Use modular Firestore syntax: doc(db, 'collectionName', docId)
             const userProfileRef = doc(db, 'users_data', user.uid);
             const userProfileSnap = await getDoc(userProfileRef);
 
@@ -292,6 +293,7 @@ async function initializeFirebase() {
                 isAdmin = (userData.role === 'Admin' && userData.profileAccess === true);
             } else {
                 try {
+                    // Use modular Firestore syntax: setDoc(docRef, data)
                     await setDoc(userProfileRef, {
                         userId: user.uid,
                         userName: user.email || 'N/A',
@@ -315,6 +317,7 @@ async function initializeFirebase() {
                 if (mobileAdminMenu) mobileAdminMenu.classList.remove('hidden');
             } else {
                 if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
+                // Corrected typo: mobileAdminMenu was accidentally set to mobileMenu
                 if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
             }
 
@@ -329,7 +332,8 @@ async function initializeFirebase() {
             if (userIdDisplay) userIdDisplay.classList.add('hidden');
             if (mobileUserIdDisplay) mobileUserIdDisplay.classList.add('hidden');
             if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
-            if (mobileAdminMenu) mobileMenu.classList.add('hidden'); // Corrected typo here
+            // Corrected typo: mobileAdminMenu was accidentally set to mobileMenu
+            if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
             if (logoutButton) logoutButton.classList.add('hidden');
             if (mobileLogoutButton) mobileLogoutButton.classList.add('hidden');
 
