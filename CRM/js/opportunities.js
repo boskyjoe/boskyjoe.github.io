@@ -2,7 +2,7 @@ import { db, auth, currentUserId, isAuthReady, addUnsubscribe, removeUnsubscribe
 import { showModal, getCollectionPath } from './utils.js';
 import { fetchCurrencies, allCurrencies, getCurrencySymbol } from './admin_data.js'; // Import currency data and functions
 import { fetchCustomersForDropdown, allCustomers } from './customers.js'; // Import customer data for dropdown
-import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Import necessary Firestore functions
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Import necessary Firestore functions
 
 // Opportunity Module specific DOM elements
 let opportunitiesSection;
@@ -89,6 +89,7 @@ const currentOpportunityCollectionType = 'public'; // Fixed to public for opport
 
 // Initialize Opportunity module elements and event listeners
 export async function initOpportunitiesModule() {
+    console.log("opportunities.js: initOpportunitiesModule called.");
     // Ensure DOM elements are initialized only once
     if (!opportunitiesSection) {
         opportunitiesSection = document.getElementById('opportunities-section');
@@ -155,7 +156,7 @@ export async function initOpportunitiesModule() {
         quoteDescriptionInput = document.getElementById('quoteDescription');
         quoteCustomerSelect = document.getElementById('quoteCustomer');
         quoteStartDateInput = document.getElementById('quoteStartDate');
-        quoteExpireDateInput = document.getElementById('quoteExpireDate');
+        quoteExpireDateInput = document = document.getElementById('quoteExpireDate');
         quoteStatusSelect = document.getElementById('quoteStatus');
         quoteNetListAmountInput = document.getElementById('quoteNetListAmount');
         quoteNetDiscountInput = document.getElementById('quoteNetDiscount');
@@ -285,6 +286,12 @@ async function saveOpportunityHandler(e) {
         showModal("Error", "Could not save opportunity. Authentication required.", () => {});
         return;
     }
+    // Check if db is initialized
+    if (!db) {
+        console.error("opportunities.js: Firestore 'db' instance is not initialized. Cannot save opportunity.");
+        showModal("Error", "Firestore is not ready. Please try again.", () => {});
+        return;
+    }
 
     const opportunityData = {
         customer: opportunityCustomerSelect.value,
@@ -328,7 +335,10 @@ async function saveOpportunityHandler(e) {
     }
 
     const collectionPath = getCollectionPath(currentOpportunityCollectionType, 'opportunities');
-    if (!collectionPath) return;
+    if (!collectionPath) {
+        console.error("opportunities.js: Collection path is null. Cannot save opportunity.");
+        return;
+    }
 
     try {
         const editingId = opportunityForm.dataset.editingId;
@@ -360,9 +370,18 @@ async function deleteOpportunity(firestoreDocId) {
         showModal("Error", "Could not delete opportunity. Authentication required.", () => {});
         return;
     }
+    // Check if db is initialized
+    if (!db) {
+        console.error("opportunities.js: Firestore 'db' instance is not initialized. Cannot delete opportunity.");
+        showModal("Error", "Firestore is not ready. Please try again.", () => {});
+        return;
+    }
 
     const collectionPath = getCollectionPath(currentOpportunityCollectionType, 'opportunities');
-    if (!collectionPath) return;
+    if (!collectionPath) {
+        console.error("opportunities.js: Collection path is null. Cannot delete opportunity.");
+        return;
+    }
 
     showModal(
         "Confirm Deletion",
@@ -374,6 +393,11 @@ async function deleteOpportunity(firestoreDocId) {
 
                 const subCollections = ['contacts', 'lines', 'quotes'];
                 for (const subColl of subCollections) {
+                    // Check if db is initialized again before subcollection calls
+                    if (!db) {
+                        console.error("opportunities.js: Firestore 'db' instance is not initialized for subcollection. Skipping subcollection deletion.");
+                        continue; // Skip to next subcollection or main doc deletion
+                    }
                     // Use modular Firestore syntax: collection(opportunityDocRef, subColl) and getDocs()
                     const subCollRef = collection(opportunityDocRef, subColl);
                     const subDocsSnapshot = await getDocs(subCollRef);
@@ -397,14 +421,25 @@ async function deleteOpportunity(firestoreDocId) {
 
 // Listen for real-time updates to Opportunities
 function listenForOpportunities() {
+    console.log("opportunities.js: listenForOpportunities called.");
     if (!isAuthReady || !currentUserId) {
         if (opportunityList) opportunityList.innerHTML = '<p class="text-gray-500 text-center col-span-full">Authentication required to load opportunities.</p>';
         return;
     }
+    // Check if db is initialized
+    if (!db) {
+        console.error("opportunities.js: Firestore 'db' instance is not initialized. Cannot listen for opportunities.");
+        if (opportunityList) opportunityList.innerHTML = '<p class="text-red-500 text-center col-span-full py-4">Firestore not ready to load opportunities.</p>';
+        return;
+    }
 
     const collectionPath = getCollectionPath(currentOpportunityCollectionType, 'opportunities');
-    if (!collectionPath) return;
+    if (!collectionPath) {
+        console.error("opportunities.js: Collection path is null. Cannot listen for opportunities.");
+        return;
+    }
 
+    console.log("opportunities.js: Attempting to set up onSnapshot for path:", collectionPath);
     // Use modular Firestore syntax: collection(db, collectionPath)
     const q = collection(db, collectionPath);
 
@@ -419,8 +454,9 @@ function listenForOpportunities() {
             const opportunity = { id: doc.id, ...doc.data() };
             displayOpportunity(opportunity);
         });
+        console.log("opportunities.js: Opportunities data updated via onSnapshot. Total:", snapshot.size);
     }, (error) => {
-        console.error("Error listening to opportunities:", error);
+        console.error("opportunities.js: Error listening to opportunities:", error);
         if (opportunityList) opportunityList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading opportunities: ${error.message}</p>`;
     });
     addUnsubscribe('opportunities', unsubscribe);
@@ -559,6 +595,12 @@ async function saveOpportunityContactHandler(e) {
         showModal("Error", "Please select an Opportunity first to add/edit contacts.", () => {});
         return;
     }
+    // Check if db is initialized
+    if (!db) {
+        console.error("opportunities.js: Firestore 'db' instance is not initialized. Cannot save opportunity contact.");
+        showModal("Error", "Firestore is not ready. Please try again.", () => {});
+        return;
+    }
 
     const contactData = {
         firstName: contactFirstNameInput.value.trim(),
@@ -617,6 +659,12 @@ async function deleteOpportunityContact(firestoreDocId) {
         showModal("Permission Denied", "Not authenticated or no opportunity selected.", () => {});
         return;
     }
+    // Check if db is initialized
+    if (!db) {
+        console.error("opportunities.js: Firestore 'db' instance is not initialized. Cannot delete opportunity contact.");
+        showModal("Error", "Firestore is not ready. Please try again.", () => {});
+        return;
+    }
     const collectionPath = `${getCollectionPath(currentOpportunityCollectionType, 'opportunities')}/${currentOpportunityId}/contacts`;
 
     showModal(
@@ -637,11 +685,20 @@ async function deleteOpportunityContact(firestoreDocId) {
 }
 
 function listenForOpportunityContacts(opportunityId) {
+    console.log("opportunities.js: listenForOpportunityContacts called for opportunityId:", opportunityId);
     if (!opportunityId || !isAuthReady || !currentUserId) {
         if (opportunityContactList) opportunityContactList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Select an Opportunity to view contacts.</p>';
         return;
     }
+    // Check if db is initialized
+    if (!db) {
+        console.error("opportunities.js: Firestore 'db' instance is not initialized. Cannot listen for opportunity contacts.");
+        if (opportunityContactList) opportunityContactList.innerHTML = '<p class="text-red-500 text-center col-span-full py-4">Firestore not ready to load contacts.</p>';
+        return;
+    }
     const collectionPath = `${getCollectionPath(currentOpportunityCollectionType, 'opportunities')}/${opportunityId}/contacts`;
+
+    console.log("opportunities.js: Attempting to set up onSnapshot for contacts path:", collectionPath);
     // Use modular Firestore syntax: collection(db, collectionPath)
     const q = collection(db, collectionPath);
 
@@ -655,8 +712,9 @@ function listenForOpportunityContacts(opportunityId) {
             const contact = { id: doc.id, ...doc.data() };
             displayOpportunityContact(contact);
         });
+        console.log("opportunities.js: Opportunity contacts updated via onSnapshot. Total:", snapshot.size);
     }, (error) => {
-        console.error("Error listening to opportunity contacts:", error);
+        console.error("opportunities.js: Error listening to opportunity contacts:", error);
         if (opportunityContactList) opportunityContactList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading contacts: ${error.message}</p>`;
     });
     addUnsubscribe('opportunityContacts', unsubscribe);
@@ -727,6 +785,12 @@ async function saveOpportunityLineHandler(e) {
         showModal("Error", "Please select an Opportunity first to add/edit lines.", () => {});
         return;
     }
+    // Check if db is initialized
+    if (!db) {
+        console.error("opportunities.js: Firestore 'db' instance is not initialized. Cannot save opportunity line.");
+        showModal("Error", "Firestore is not ready. Please try again.", () => {});
+        return;
+    }
 
     const lineData = {
         serviceDescription: lineServiceDescriptionInput.value.trim(),
@@ -788,6 +852,12 @@ async function deleteOpportunityLine(firestoreDocId) {
         showModal("Permission Denied", "Not authenticated or no opportunity selected.", () => {});
         return;
     }
+    // Check if db is initialized
+    if (!db) {
+        console.error("opportunities.js: Firestore 'db' instance is not initialized. Cannot delete opportunity line.");
+        showModal("Error", "Firestore is not ready. Please try again.", () => {});
+        return;
+    }
     const collectionPath = `${getCollectionPath(currentOpportunityCollectionType, 'opportunities')}/${currentOpportunityId}/lines`;
 
     showModal(
@@ -799,7 +869,8 @@ async function deleteOpportunityLine(firestoreDocId) {
                 await deleteDoc(doc(db, collectionPath, firestoreDocId));
                 console.log("Opportunity Line deleted Firestore Doc ID:", firestoreDocId);
                 showModal("Success", "Opportunity line deleted successfully!", () => {});
-            } catch (error) {
+            }
+            catch (error) {
                 console.error("Error deleting opportunity line:", error);
                 showModal("Error", `Failed to delete opportunity line: ${error.message}`, () => {});
             }
@@ -808,12 +879,20 @@ async function deleteOpportunityLine(firestoreDocId) {
 }
 
 function listenForOpportunityLines(opportunityId) {
+    console.log("opportunities.js: listenForOpportunityLines called for opportunityId:", opportunityId);
     if (!opportunityId || !isAuthReady || !currentUserId) {
         if (opportunityLineList) opportunityLineList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Select an Opportunity to view lines.</p>';
         return;
     }
+    // Check if db is initialized
+    if (!db) {
+        console.error("opportunities.js: Firestore 'db' instance is not initialized. Cannot listen for opportunity lines.");
+        if (opportunityLineList) opportunityLineList.innerHTML = '<p class="text-red-500 text-center col-span-full py-4">Firestore not ready to load lines.</p>';
+        return;
+    }
 
     const collectionPath = `${getCollectionPath(currentOpportunityCollectionType, 'opportunities')}/${opportunityId}/lines`;
+    console.log("opportunities.js: Attempting to set up onSnapshot for lines path:", collectionPath);
     // Use modular Firestore syntax: collection(db, collectionPath)
     const q = collection(db, collectionPath);
 
@@ -827,8 +906,9 @@ function listenForOpportunityLines(opportunityId) {
                 displayOpportunityLine(line);
             });
         }
+        console.log("opportunities.js: Opportunity lines updated via onSnapshot. Total:", snapshot.size);
     }, (error) => {
-        console.error("Error listening to opportunity lines:", error);
+        console.error("opportunities.js: Error listening to opportunity lines:", error);
         if (opportunityLineList) opportunityLineList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading lines: ${error.message}</p>`;
     });
     addUnsubscribe('opportunityLines', unsubscribe);
@@ -902,6 +982,12 @@ async function saveQuoteHandler(e) {
         showModal("Error", "Please select an Opportunity first to add/edit quotes.", () => {});
         return;
     }
+    // Check if db is initialized
+    if (!db) {
+        console.error("opportunities.js: Firestore 'db' instance is not initialized. Cannot save quote.");
+        showModal("Error", "Firestore is not ready. Please try again.", () => {});
+        return;
+    }
 
     const quoteData = {
         quoteName: quoteNameInput.value.trim(),
@@ -968,6 +1054,12 @@ async function deleteQuote(firestoreDocId) {
         showModal("Permission Denied", "Not authenticated or no opportunity selected.", () => {});
         return;
     }
+    // Check if db is initialized
+    if (!db) {
+        console.error("opportunities.js: Firestore 'db' instance is not initialized. Cannot delete quote.");
+        showModal("Error", "Firestore is not ready. Please try again.", () => {});
+        return;
+    }
     const collectionPath = `${getCollectionPath(currentOpportunityCollectionType, 'opportunities')}/${currentOpportunityId}/quotes`;
 
     showModal(
@@ -988,12 +1080,20 @@ async function deleteQuote(firestoreDocId) {
 }
 
 function listenForQuotes(opportunityId) {
+    console.log("opportunities.js: listenForQuotes called for opportunityId:", opportunityId);
     if (!opportunityId || !isAuthReady || !currentUserId) {
         if (quoteList) quoteList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Select an Opportunity to view quotes.</p>';
         return;
     }
+    // Check if db is initialized
+    if (!db) {
+        console.error("opportunities.js: Firestore 'db' instance is not initialized. Cannot listen for quotes.");
+        if (quoteList) quoteList.innerHTML = '<p class="text-red-500 text-center col-span-full py-4">Firestore not ready to load quotes.</p>';
+        return;
+    }
 
     const collectionPath = `${getCollectionPath(currentOpportunityCollectionType, 'opportunities')}/${opportunityId}/quotes`;
+    console.log("opportunities.js: Attempting to set up onSnapshot for quotes path:", collectionPath);
     // Use modular Firestore syntax: collection(db, collectionPath)
     const q = collection(db, collectionPath);
 
@@ -1007,8 +1107,9 @@ function listenForQuotes(opportunityId) {
                 displayQuote(quote);
             });
         }
+        console.log("opportunities.js: Quotes data updated via onSnapshot. Total:", snapshot.size);
     }, (error) => {
-        console.error("Error listening to quotes:", error);
+        console.error("opportunities.js: Error listening to quotes:", error);
         if (quoteList) quoteList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading quotes: ${error.message}</p>`;
     });
     addUnsubscribe('quotes', unsubscribe);
