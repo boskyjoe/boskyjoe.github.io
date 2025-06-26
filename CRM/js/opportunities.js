@@ -2,6 +2,7 @@ import { db, auth, currentUserId, isAuthReady, addUnsubscribe, removeUnsubscribe
 import { showModal, getCollectionPath } from './utils.js';
 import { fetchCurrencies, allCurrencies, getCurrencySymbol } from './admin_data.js'; // Import currency data and functions
 import { fetchCustomersForDropdown, allCustomers } from './customers.js'; // Import customer data for dropdown
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Import necessary Firestore functions
 
 // Opportunity Module specific DOM elements
 let opportunitiesSection;
@@ -332,15 +333,17 @@ async function saveOpportunityHandler(e) {
     try {
         const editingId = opportunityForm.dataset.editingId;
         if (editingId) {
-            const opportunityDocRef = db.collection(collectionPath).doc(editingId);
-            await opportunityDocRef.set(opportunityData, { merge: true }); // Use set for consistency
+            // Use modular Firestore syntax: doc(db, collectionPath, editingId)
+            const opportunityDocRef = doc(db, collectionPath, editingId);
+            await setDoc(opportunityDocRef, opportunityData, { merge: true }); // Use setDoc for consistency
             console.log("Opportunity updated:", editingId);
             showModal("Success", "Opportunity updated successfully!", () => {});
         } else {
-            const newDocRef = db.collection(collectionPath).doc();
+            // Use modular Firestore syntax: doc(collection(db, collectionPath))
+            const newDocRef = doc(collection(db, collectionPath));
             const numericPart = Date.now().toString().slice(-8) + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
             const systemGeneratedOpportunityId = 'OPTY-' + numericPart;
-            await newDocRef.set({ ...opportunityData, opportunityId: systemGeneratedOpportunityId });
+            await setDoc(newDocRef, { ...opportunityData, opportunityId: systemGeneratedOpportunityId });
             console.log("Opportunity added with ID:", systemGeneratedOpportunityId);
             showModal("Success", "New opportunity created successfully!", () => {});
         }
@@ -366,18 +369,22 @@ async function deleteOpportunity(firestoreDocId) {
         "Are you sure you want to delete this opportunity? This action cannot be undone. All linked contacts, lines, and quotes will also be deleted.",
         async () => {
             try {
-                const opportunityDocRef = db.collection(collectionPath).doc(firestoreDocId);
+                // Use modular Firestore syntax: doc(db, collectionPath, firestoreDocId)
+                const opportunityDocRef = doc(db, collectionPath, firestoreDocId);
 
                 const subCollections = ['contacts', 'lines', 'quotes'];
                 for (const subColl of subCollections) {
-                    const subCollRef = opportunityDocRef.collection(subColl);
-                    const subDocsSnapshot = await subCollRef.get();
+                    // Use modular Firestore syntax: collection(opportunityDocRef, subColl) and getDocs()
+                    const subCollRef = collection(opportunityDocRef, subColl);
+                    const subDocsSnapshot = await getDocs(subCollRef);
                     subDocsSnapshot.forEach(async (subDoc) => {
-                        await subDoc.ref.delete();
+                        // Use modular Firestore syntax: deleteDoc(subDoc.ref)
+                        await deleteDoc(subDoc.ref);
                     });
                 }
 
-                await opportunityDocRef.delete();
+                // Use modular Firestore syntax: deleteDoc(opportunityDocRef)
+                await deleteDoc(opportunityDocRef);
                 console.log("Opportunity and its subcollections deleted Firestore Doc ID:", firestoreDocId);
                 showModal("Success", "Opportunity and its linked data deleted successfully!", () => {});
             } catch (error) {
@@ -398,9 +405,11 @@ function listenForOpportunities() {
     const collectionPath = getCollectionPath(currentOpportunityCollectionType, 'opportunities');
     if (!collectionPath) return;
 
-    const q = db.collection(collectionPath);
+    // Use modular Firestore syntax: collection(db, collectionPath)
+    const q = collection(db, collectionPath);
 
-    const unsubscribe = q.onSnapshot((snapshot) => {
+    // Use modular Firestore syntax: onSnapshot()
+    const unsubscribe = onSnapshot(q, (snapshot) => {
         if (opportunityList) opportunityList.innerHTML = '';
         if (snapshot.empty) {
             if (opportunityList) opportunityList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No opportunities found. Add one above!</p>';
@@ -582,15 +591,17 @@ async function saveOpportunityContactHandler(e) {
     try {
         const editingId = opportunityContactForm.dataset.editingId;
         if (editingId) {
-            const contactDocRef = db.collection(collectionPath).doc(editingId);
-            await contactDocRef.set(contactData, { merge: true });
+            // Use modular Firestore syntax: doc(db, collectionPath, editingId)
+            const contactDocRef = doc(db, collectionPath, editingId);
+            await setDoc(contactDocRef, contactData, { merge: true });
             console.log("Opportunity Contact updated:", editingId);
             showModal("Success", "Contact updated successfully!", () => {});
         } else {
-            const newDocRef = db.collection(collectionPath).doc();
+            // Use modular Firestore syntax: doc(collection(db, collectionPath))
+            const newDocRef = doc(collection(db, collectionPath));
             const numericPart = Date.now().toString().slice(-6) + Math.floor(Math.random() * 100).toString().padStart(2, '0');
             const systemGeneratedContactId = 'CTCT-' + numericPart;
-            await newDocRef.set({ ...contactData, contactId: systemGeneratedContactId, opportunityId: currentOpportunityId });
+            await setDoc(newDocRef, { ...contactData, contactId: systemGeneratedContactId, opportunityId: currentOpportunityId });
             console.log("Opportunity Contact added with ID:", systemGeneratedContactId);
             showModal("Success", "New contact added successfully!", () => {});
         }
@@ -613,7 +624,8 @@ async function deleteOpportunityContact(firestoreDocId) {
         "Are you sure you want to delete this contact?",
         async () => {
             try {
-                await db.collection(collectionPath).doc(firestoreDocId).delete();
+                // Use modular Firestore syntax: deleteDoc(doc(db, collectionPath, firestoreDocId))
+                await deleteDoc(doc(db, collectionPath, firestoreDocId));
                 console.log("Opportunity Contact deleted Firestore Doc ID:", firestoreDocId);
                 showModal("Success", "Contact deleted successfully!", () => {});
             } catch (error) {
@@ -630,9 +642,10 @@ function listenForOpportunityContacts(opportunityId) {
         return;
     }
     const collectionPath = `${getCollectionPath(currentOpportunityCollectionType, 'opportunities')}/${opportunityId}/contacts`;
-    const q = db.collection(collectionPath);
+    // Use modular Firestore syntax: collection(db, collectionPath)
+    const q = collection(db, collectionPath);
 
-    const unsubscribe = q.onSnapshot((snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
         if (opportunityContactList) opportunityContactList.innerHTML = '';
         if (snapshot.empty) {
             if (opportunityContactList) opportunityContactList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No contacts added for this opportunity.</p>';
@@ -749,15 +762,17 @@ async function saveOpportunityLineHandler(e) {
     try {
         const editingId = opportunityLineForm.dataset.editingId;
         if (editingId) {
-            const lineDocRef = db.collection(collectionPath).doc(editingId);
-            await lineDocRef.set(lineData, { merge: true });
+            // Use modular Firestore syntax: doc(db, collectionPath, editingId)
+            const lineDocRef = doc(db, collectionPath, editingId);
+            await setDoc(lineDocRef, lineData, { merge: true });
             console.log("Opportunity Line updated:", editingId);
             showModal("Success", "Opportunity line updated successfully!", () => {});
         } else {
-            const newDocRef = db.collection(collectionPath).doc();
+            // Use modular Firestore syntax: doc(collection(db, collectionPath))
+            const newDocRef = doc(collection(db, collectionPath));
             const numericPart = Date.now().toString().slice(-6) + Math.floor(Math.random() * 100).toString().padStart(2, '0');
             const systemGeneratedLineId = 'LINE-' + numericPart;
-            await newDocRef.set({ ...lineData, optyLineId: systemGeneratedLineId, opportunityId: currentOpportunityId });
+            await setDoc(newDocRef, { ...lineData, optyLineId: systemGeneratedLineId, opportunityId: currentOpportunityId });
             console.log("Opportunity Line added with ID:", systemGeneratedLineId);
             showModal("Success", "New opportunity line added successfully!", () => {});
         }
@@ -780,7 +795,8 @@ async function deleteOpportunityLine(firestoreDocId) {
         "Are you sure you want to delete this opportunity line?",
         async () => {
             try {
-                await db.collection(collectionPath).doc(firestoreDocId).delete();
+                // Use modular Firestore syntax: deleteDoc(doc(db, collectionPath, firestoreDocId))
+                await deleteDoc(doc(db, collectionPath, firestoreDocId));
                 console.log("Opportunity Line deleted Firestore Doc ID:", firestoreDocId);
                 showModal("Success", "Opportunity line deleted successfully!", () => {});
             } catch (error) {
@@ -798,9 +814,10 @@ function listenForOpportunityLines(opportunityId) {
     }
 
     const collectionPath = `${getCollectionPath(currentOpportunityCollectionType, 'opportunities')}/${opportunityId}/lines`;
-    const q = db.collection(collectionPath);
+    // Use modular Firestore syntax: collection(db, collectionPath)
+    const q = collection(db, collectionPath);
 
-    const unsubscribe = q.onSnapshot((snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
         if (opportunityLineList) opportunityLineList.innerHTML = '';
         if (snapshot.empty) {
             if (opportunityLineList) opportunityLineList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No opportunity lines added for this opportunity.</p>';
@@ -925,15 +942,17 @@ async function saveQuoteHandler(e) {
     try {
         const editingId = quoteForm.dataset.editingId;
         if (editingId) {
-            const quoteDocRef = db.collection(collectionPath).doc(editingId);
-            await quoteDocRef.set(quoteData, { merge: true });
+            // Use modular Firestore syntax: doc(db, collectionPath, editingId)
+            const quoteDocRef = doc(db, collectionPath, editingId);
+            await setDoc(quoteDocRef, quoteData, { merge: true });
             console.log("Quote updated:", editingId);
             showModal("Success", "Quote updated successfully!", () => {});
         } else {
-            const newDocRef = db.collection(collectionPath).doc();
+            // Use modular Firestore syntax: doc(collection(db, collectionPath))
+            const newDocRef = doc(collection(db, collectionPath));
             const numericPart = Date.now().toString().slice(-6) + Math.floor(Math.random() * 100).toString().padStart(2, '0');
             const systemGeneratedQuoteId = 'QTE-' + numericPart;
-            await newDocRef.set({ ...quoteData, quoteId: systemGeneratedQuoteId, opportunityId: currentOpportunityId });
+            await setDoc(newDocRef, { ...quoteData, quoteId: systemGeneratedQuoteId, opportunityId: currentOpportunityId });
             console.log("Quote added with ID:", systemGeneratedQuoteId);
             showModal("Success", "New quote added successfully!", () => {});
         }
@@ -956,7 +975,8 @@ async function deleteQuote(firestoreDocId) {
         "Are you sure you want to delete this quote?",
         async () => {
             try {
-                await db.collection(collectionPath).doc(firestoreDocId).delete();
+                // Use modular Firestore syntax: deleteDoc(doc(db, collectionPath, firestoreDocId))
+                await deleteDoc(doc(db, collectionPath, firestoreDocId));
                 console.log("Quote deleted Firestore Doc ID:", firestoreDocId);
                 showModal("Success", "Quote deleted successfully!", () => {});
             } catch (error) {
@@ -974,9 +994,10 @@ function listenForQuotes(opportunityId) {
     }
 
     const collectionPath = `${getCollectionPath(currentOpportunityCollectionType, 'opportunities')}/${opportunityId}/quotes`;
-    const q = db.collection(collectionPath);
+    // Use modular Firestore syntax: collection(db, collectionPath)
+    const q = collection(db, collectionPath);
 
-    const unsubscribe = q.onSnapshot((snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
         if (quoteList) quoteList.innerHTML = '';
         if (snapshot.empty) {
             if (quoteList) quoteList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No quotes added for this opportunity.</p>';
