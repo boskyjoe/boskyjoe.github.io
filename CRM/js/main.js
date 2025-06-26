@@ -1,7 +1,7 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, setDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Added 'collection' import
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"; // Updated version
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js"; // Updated version
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"; // Updated version
+import { getFirestore, doc, getDoc, collection, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Updated version, Added 'collection' import
 
 // Import utility functions
 import { showModal } from './utils.js'; // Assuming utils.js is in the same directory
@@ -317,7 +317,6 @@ async function initializeFirebase() {
                 if (mobileAdminMenu) mobileAdminMenu.classList.remove('hidden');
             } else {
                 if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
-                // Corrected typo: mobileAdminMenu was accidentally set to mobileMenu
                 if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
             }
 
@@ -332,7 +331,6 @@ async function initializeFirebase() {
             if (userIdDisplay) userIdDisplay.classList.add('hidden');
             if (mobileUserIdDisplay) mobileUserIdDisplay.classList.add('hidden');
             if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
-            // Corrected typo: mobileAdminMenu was accidentally set to mobileMenu
             if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
             if (logoutButton) logoutButton.classList.add('hidden');
             if (mobileLogoutButton) mobileLogoutButton.classList.add('hidden');
