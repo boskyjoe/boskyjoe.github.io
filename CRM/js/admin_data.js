@@ -1,5 +1,6 @@
 import { db, auth, currentUserId, isAdmin, addUnsubscribe, removeUnsubscribe } from './main.js';
 import { showModal, APP_SETTINGS_DOC_ID } from './utils.js'; // Import APP_SETTINGS_DOC_ID from utils
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Import necessary Firestore functions
 
 // Admin Data Management module specific DOM elements
 let adminCountryMappingSection;
@@ -146,8 +147,9 @@ export async function initAdminDataModule(type) {
                 }
 
                 try {
-                    const docRef = db.collection("app_metadata").doc("countries_states");
-                    await docRef.set(dataToUpload, { merge: true });
+                    // Use modular Firestore syntax: doc(db, collectionName, docId)
+                    const docRef = doc(db, "app_metadata", "countries_states");
+                    await setDoc(docRef, dataToUpload, { merge: true });
 
                     if (adminMessageDiv) {
                         adminMessageDiv.textContent = `Data uploaded successfully (${isFullLoad ? 'Full Load (Merge)' : 'Incremental Load'})!`;
@@ -225,10 +227,11 @@ export async function initAdminDataModule(type) {
 // Function to fetch country and state data from Firestore for the CRM forms (exported for customers module)
 export async function fetchCountryData() {
     try {
-        const docRef = db.collection("app_metadata").doc("countries_states");
-        const docSnap = await docRef.get();
+        // Use modular Firestore syntax: doc(db, collectionName, docId) and getDoc()
+        const docRef = doc(db, "app_metadata", "countries_states");
+        const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists) {
+        if (docSnap.exists()) {
             const data = docSnap.data();
             appCountries = data.countries || [];
             appCountryStateMap = data.countryStateMap || {};
@@ -269,8 +272,9 @@ async function loadAdminCountryData() {
 // Function to fetch currency data from Firestore (exported for opportunities module)
 export async function fetchCurrencies() {
     try {
-        const collectionRef = db.collection("app_metadata").doc(APP_SETTINGS_DOC_ID).collection("currencies_data");
-        const querySnapshot = await collectionRef.get();
+        // Use modular Firestore syntax: collection(db, collectionPath, subcollectionPath) and getDocs()
+        const collectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
+        const querySnapshot = await getDocs(collectionRef);
         allCurrencies = [];
         querySnapshot.forEach((docSnap) => {
             allCurrencies.push({ id: docSnap.id, ...docSnap.data() });
@@ -310,7 +314,8 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
         return;
     }
 
-    const currenciesCollectionRef = db.collection("app_metadata").doc(APP_SETTINGS_DOC_ID).collection("currencies_data");
+    // Use modular Firestore syntax: collection(db, collectionPath, subcollectionPath)
+    const currenciesCollectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
 
     try {
         let updatesPerformed = 0;
@@ -348,8 +353,9 @@ async function saveCurrency(currencyData, existingCurrencyCode = null) {
                 symbol_native: symbol_native
             };
 
-            const currencyDocRef = currenciesCollectionRef.doc(code);
-            await currencyDocRef.set(currencyDataToSave, { merge: true });
+            // Use modular Firestore syntax: doc(currenciesCollectionRef, code) and setDoc()
+            const currencyDocRef = doc(currenciesCollectionRef, code);
+            await setDoc(currencyDocRef, currencyDataToSave, { merge: true });
             updatesPerformed++;
         }
 
@@ -395,8 +401,9 @@ async function deleteCurrency(currencyCode) {
         `Are you sure you want to delete the currency '${currencyCode}'? This action cannot be undone.`,
         async () => {
             try {
-                const currencyDocRef = db.collection("app_metadata").doc(APP_SETTINGS_DOC_ID).collection("currencies_data").doc(currencyCode);
-                await currencyDocRef.delete();
+                // Use modular Firestore syntax: doc(db, collectionPath, subcollectionPath, docId)
+                const currencyDocRef = doc(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data", currencyCode);
+                await deleteDoc(currencyDocRef);
                 console.log("Currency deleted:", currencyCode);
                 showModal("Success", `Currency '${currencyCode}' deleted successfully!`, () => {});
                 await fetchCurrencies();
@@ -414,9 +421,10 @@ function listenForCurrencies() {
         return;
     }
 
-    const q = db.collection("app_metadata").doc(APP_SETTINGS_DOC_ID).collection("currencies_data");
+    // Use modular Firestore syntax: collection(db, collectionPath, subcollectionPath)
+    const q = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
 
-    const unsubscribe = q.onSnapshot((snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
         if (currencyList) currencyList.innerHTML = '';
         if (snapshot.empty) {
             if (currencyList) currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No currencies found. Add them above!</p>';
