@@ -1,22 +1,15 @@
-/* Base styles from previous version, adjusted for better integration */
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: #f0f2f5; /* Lighter background for more contrast */
-    color: #333;
-    min-height: 100vh; /* Ensure body takes full viewport height */
-    display: flex;
-    flex-direction: column;
+/* Update the .data-grid-body rule */
+.data-grid-body {
+    background-color: white; /* bg-white */
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+    overflow-x: auto; /* For horizontal scrolling on small screens */
+
+    /* NEW: For vertical scrolling after 10 rows */
+    max-height: 460px; /* Approximately 10 rows (assuming ~46px per row including padding) */
+    overflow-y: auto; /* Adds vertical scrollbar when content exceeds max-height */
 }
 
-main {
-    flex: 1; /* Allows main content to grow and push footer down */
-}
-
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 1.5rem; /* Increased padding */
-}
 /* Update the .header rule */
 .header {
     /* Using a subtle linear gradient for a professional look */
@@ -49,6 +42,52 @@ main {
     background-color: #4c51bf; /* Keep the existing indigo-700 for active */
     color: #ffffff;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Add a subtle shadow for depth when active */
+}
+
+/* Base styles from previous version, adjusted for better integration */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f0f2f5; /* Lighter background for more contrast */
+    color: #333;
+    min-height: 100vh; /* Ensure body takes full viewport height */
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1; /* Allows main content to grow and push footer down */
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem; /* Increased padding */
+}
+.header {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e0e7ff; /* Lighter blue border */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* More pronounced shadow for depth */
+    z-index: 1000; /* Ensure header is on top */
+    position: sticky;
+    top: 0;
+    width: 100%;
+}
+.nav-link {
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease-in-out;
+    font-weight: 500;
+    color: #4a5568; /* Gray-800 */
+    text-decoration: none; /* Ensure no underline */
+    display: block; /* For better click area in mobile, and block-level within dropdowns */
+}
+.nav-link:hover {
+    background-color: #edf2f7; /* Gray-100 */
+    color: #2d3748; /* Gray-900 */
+}
+.nav-link.active {
+    background-color: #4c51bf; /* Indigo-700 */
+    color: #ffffff;
 }
 .btn-primary {
     background-color: #4c51bf; /* Indigo-700 */
@@ -376,7 +415,7 @@ main {
 }
 
 .accordion-content.open {
-    max-height: 1200px; /* Increased, adjust as needed to contain all content */
+    max-height: 3000px; /* Increased to a very large value to ensure full content visibility */
     padding-top: 1.5rem; /* Add top padding when open */
     padding-bottom: 1.5rem; /* Add bottom padding when open */
 }
@@ -425,7 +464,6 @@ main {
     box-shadow: inset 0 -2px 0 rgba(0,0,0,0.05); /* Subtle shadow line */
 }
 
-/* Update the .data-grid-body rule */
 .data-grid-body {
     background-color: white; /* bg-white */
     border-bottom-left-radius: 0.5rem;
