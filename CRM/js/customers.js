@@ -1,7 +1,7 @@
 import { db, auth, currentUserId, isAuthReady, addUnsubscribe, removeUnsubscribe } from './main.js';
 import { showModal, getCollectionPath } from './utils.js';
 import { fetchCountryData, appCountries, appCountryStateMap } from './admin_data.js'; // Import data and fetch function
-import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Import necessary Firestore functions
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Import necessary Firestore functions
 
 // Customer module specific DOM elements
 let customersSection;
@@ -134,6 +134,14 @@ export async function fetchCustomersForDropdown() {
     }
 
     try {
+        // --- Debugging Logs ---
+        console.log("customers.js: Inside fetchCustomersForDropdown. Checking db and getDocs.");
+        console.log("customers.js: db object:", db);
+        console.log("customers.js: type of db:", typeof db);
+        console.log("customers.js: getDocs function:", getDocs);
+        console.log("customers.js: type of getDocs:", typeof getDocs);
+        // --- End Debugging Logs ---
+
         // Use modular Firestore syntax: collection(db, collectionPath) and getDocs()
         const querySnapshot = await getDocs(collection(db, collectionPath));
         allCustomers = [];
