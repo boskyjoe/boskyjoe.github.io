@@ -33,6 +33,9 @@ let customerList;
 
 const currentCustomerCollectionType = 'public'; // Fixed to public as per requirement
 
+// Global data for Customers (fetched from Firestore)
+export let allCustomers = [];
+
 // Initialize Customer module elements and event listeners
 export async function initCustomersModule() {
     // Ensure DOM elements are initialized only once
@@ -115,6 +118,45 @@ export async function initCustomersModule() {
     }
     listenForCustomers();
 }
+
+// Function to fetch customer data from Firestore for dropdowns in other modules (exported)
+export async function fetchCustomersForDropdown() {
+    if (!isAuthReady || !currentUserId) {
+        console.warn("Authentication required to fetch customers for dropdown.");
+        allCustomers = []; // Clear previous data
+        return;
+    }
+    const collectionPath = getCollectionPath(currentCustomerCollectionType, 'customers');
+    if (!collectionPath) {
+        allCustomers = []; // Clear previous data
+        return;
+    }
+
+    try {
+        const querySnapshot = await db.collection(collectionPath).get();
+        allCustomers = [];
+        querySnapshot.forEach(doc => {
+            allCustomers.push({ id: doc.id, ...doc.data() });
+        });
+        console.log("Customer data loaded for dropdowns.");
+
+        // Populate customer dropdown in Opportunities module if it exists
+        const opportunityCustomerSelect = document.getElementById('opportunityCustomer');
+        if (opportunityCustomerSelect) {
+            opportunityCustomerSelect.innerHTML = '<option value="">Select Customer</option>';
+            allCustomers.forEach(customer => {
+                const option = document.createElement('option');
+                option.value = customer.id;
+                option.textContent = customer.companyName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+                opportunityCustomerSelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error("Error fetching customers for dropdown:", error);
+        allCustomers = [];
+    }
+}
+
 
 // Function to populate the country dropdown
 function populateCountries() {
@@ -276,7 +318,7 @@ async function deleteCustomer(firestoreDocId) {
         "Are you sure you want to delete this customer? This action cannot be undone.",
         async () => {
             try {
-                await deleteDoc(doc(db, collectionPath, firestoreDocId));
+                await db.collection(collectionPath).doc(firestoreDocId).delete(); // Use db.collection().doc().delete() for consistency
                 console.log("Customer deleted Firestore Doc ID:", firestoreDocId);
             } catch (error) {
                 console.error("Error deleting customer:", error);
@@ -295,9 +337,9 @@ function listenForCustomers() {
     const collectionPath = getCollectionPath(currentCustomerCollectionType, 'customers');
     if (!collectionPath) return;
 
-    const q = collection(db, collectionPath);
+    const q = db.collection(collectionPath); // Use db.collection() for consistency with other Firestore operations
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = q.onSnapshot((snapshot) => {
         if (customerList) customerList.innerHTML = '';
         if (snapshot.empty) {
             if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No customers found. Add one above!</p>';
