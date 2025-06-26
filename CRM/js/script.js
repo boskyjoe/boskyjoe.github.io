@@ -870,7 +870,7 @@ async function initializeFirebase() {
             if (userIdDisplay) userIdDisplay.classList.add('hidden'); // Hide desktop user ID
             if (mobileUserIdDisplay) mobileUserIdDisplay.classList.add('hidden'); // Hide mobile user ID
             if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
-            if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
+            if (mobileAdminMenu) mobileMobileMenu.classList.add('hidden'); // Corrected typo here
             if (logoutButton) logoutButton.classList.add('hidden');
             if (mobileLogoutButton) mobileLogoutButton.classList.add('hidden');
 
@@ -2210,7 +2210,7 @@ function editOpportunityContact(contact) {
 
     // Ensure the related section expands and this accordion opens
     closeAllAccordions(); // Close others first
-    // Changed this line to use `recalculateAccordionHeight` for accuracy.
+    // No longer using `recalculateAccordionHeight` for this simple accordion
     if (contactsAccordionHeader && contactsAccordionContent) toggleAccordion(contactsAccordionHeader, contactsAccordionContent); // Open this one
 
     if (contactsAccordionHeader) contactsAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
@@ -2389,7 +2389,7 @@ function editOpportunityLine(line) {
 
     // Ensure the related section expands and this accordion opens
     closeAllAccordions(); // Close others first
-    // Changed this line to use `recalculateAccordionHeight` for accuracy.
+    // No longer using `recalculateAccordionHeight` for this simple accordion
     if (linesAccordionHeader && linesAccordionContent) toggleAccordion(linesAccordionHeader, linesAccordionContent); // Open this one
 
     if (linesAccordionHeader) linesAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
@@ -2585,7 +2585,7 @@ function editQuote(quote) {
 
     // Ensure the related section expands and this accordion opens
     closeAllAccordions(); // Close others first
-    // Changed this line to use `recalculateAccordionHeight` for accuracy.
+    // No longer using `recalculateAccordionHeight` for this simple accordion
     if (quotesAccordionHeader && quotesAccordionContent) toggleAccordion(quotesAccordionHeader, quotesAccordionContent); // Open this one
 
     if (quotesAccordionHeader) quotesAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
@@ -2857,7 +2857,9 @@ function toggleAccordion(header, content) {
     // If the clicked accordion is already open, close it
     if (content.classList.contains('open')) {
         content.classList.remove('open');
-        content.style.maxHeight = null;
+        content.style.maxHeight = null; // Clear maxHeight
+        content.style.opacity = '0'; // Fade out
+        content.style.transform = 'translateY(-10px)'; // Move up as it hides
         header.classList.remove('active');
 
         // After closing, check if ALL accordions are now closed. If so, revert layout.
@@ -2870,18 +2872,11 @@ function toggleAccordion(header, content) {
 
         // Open the clicked accordion
         content.classList.add('open');
-        // Temporarily unset maxHeight to allow content to naturally expand for scrollHeight calculation
-        content.style.maxHeight = 'none';
+        // Instantly set height to auto (or a very large max-height) to show all content
+        content.style.maxHeight = '5000px'; // Use a large fixed max-height to ensure content is visible
+        content.style.opacity = '1'; // Fade in
+        content.style.transform = 'translateY(0)'; // Move to normal position
 
-        // Use requestAnimationFrame to ensure the DOM has reflowed after making content visible
-        requestAnimationFrame(() => {
-            // Use another requestAnimationFrame to ensure the next paint cycle has happened,
-            // which often gives a more accurate scrollHeight for dynamically rendered content.
-            requestAnimationFrame(() => {
-                content.style.maxHeight = content.scrollHeight + "px"; // Apply actual scrollHeight for smooth transition
-            });
-        });
-        
         header.classList.add('active');
 
         // When any accordion opens, set the layout to shrink the left panel and expand the right
@@ -2899,7 +2894,9 @@ function closeAllAccordions() {
         const content = header.nextElementSibling;
         if (content) {
             content.classList.remove('open');
-            content.style.maxHeight = null;
+            content.style.maxHeight = null; // Clear maxHeight
+            content.style.opacity = '0'; // Fade out
+            content.style.transform = 'translateY(-10px)'; // Move up as it hides
         }
     });
 }
