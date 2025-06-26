@@ -1,6 +1,7 @@
 import { db, auth, currentUserId, isAuthReady, addUnsubscribe, removeUnsubscribe } from './main.js';
 import { showModal, getCollectionPath } from './utils.js';
 import { fetchCountryData, appCountries, appCountryStateMap } from './admin_data.js'; // Import data and fetch function
+import { collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Import necessary Firestore functions
 
 // Customer module specific DOM elements
 let customersSection;
@@ -133,7 +134,8 @@ export async function fetchCustomersForDropdown() {
     }
 
     try {
-        const querySnapshot = await db.collection(collectionPath).get();
+        // Use modular Firestore syntax: collection(db, collectionPath) and getDocs()
+        const querySnapshot = await getDocs(collection(db, collectionPath));
         allCustomers = [];
         querySnapshot.forEach(doc => {
             allCustomers.push({ id: doc.id, ...doc.data() });
@@ -287,10 +289,12 @@ async function saveCustomer(customerData, existingCustomerDocId = null) {
 
     try {
         if (existingCustomerDocId) {
+            // Use modular Firestore syntax: doc(db, collectionPath, existingCustomerDocId)
             const customerDocRef = doc(db, collectionPath, existingCustomerDocId);
             await setDoc(customerDocRef, customerData, { merge: true }); // Use setDoc with merge for consistency
             console.log("Customer updated:", existingCustomerDocId);
         } else {
+            // Use modular Firestore syntax: doc(collection(db, collectionPath))
             const newDocRef = doc(collection(db, collectionPath));
             const numericPart = Date.now().toString().slice(-8) + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
             const systemGeneratedCustomerId = 'COM-' + numericPart;
@@ -318,7 +322,8 @@ async function deleteCustomer(firestoreDocId) {
         "Are you sure you want to delete this customer? This action cannot be undone.",
         async () => {
             try {
-                await db.collection(collectionPath).doc(firestoreDocId).delete(); // Use db.collection().doc().delete() for consistency
+                // Use modular Firestore syntax: deleteDoc(doc(db, collectionPath, firestoreDocId))
+                await deleteDoc(doc(db, collectionPath, firestoreDocId));
                 console.log("Customer deleted Firestore Doc ID:", firestoreDocId);
             } catch (error) {
                 console.error("Error deleting customer:", error);
@@ -337,9 +342,10 @@ function listenForCustomers() {
     const collectionPath = getCollectionPath(currentCustomerCollectionType, 'customers');
     if (!collectionPath) return;
 
-    const q = db.collection(collectionPath); // Use db.collection() for consistency with other Firestore operations
+    // Use modular Firestore syntax: collection(db, collectionPath) and onSnapshot()
+    const q = collection(db, collectionPath);
 
-    const unsubscribe = q.onSnapshot((snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
         if (customerList) customerList.innerHTML = '';
         if (snapshot.empty) {
             if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No customers found. Add one above!</p>';
