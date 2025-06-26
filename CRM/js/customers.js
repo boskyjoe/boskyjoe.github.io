@@ -1,7 +1,7 @@
 import { db, auth, currentUserId, isAuthReady, addUnsubscribe, removeUnsubscribe } from './main.js';
 import { showModal, getCollectionPath } from './utils.js';
 import { fetchCountryData, appCountries, appCountryStateMap } from './admin_data.js'; // Import data and fetch function
-import { collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Import necessary Firestore functions
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Import necessary Firestore functions
 
 // Customer module specific DOM elements
 let customersSection;
