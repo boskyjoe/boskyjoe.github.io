@@ -415,7 +415,7 @@ main {
 }
 
 .accordion-content.open {
-    max-height: 3000px; /* Increased to a very large value to ensure full content visibility */
+    max-height: 5000px; /* Increased to a very large value to ensure full content visibility */
     padding-top: 1.5rem; /* Add top padding when open */
     padding-bottom: 1.5rem; /* Add bottom padding when open */
 }
