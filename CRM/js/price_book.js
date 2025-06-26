@@ -248,7 +248,8 @@ function editPriceBook(priceBook) {
     if (submitPriceBookButton) submitPriceBookButton.textContent = 'Update Price Book';
 
     if (priceBookIdDisplayGroup) priceBookIdDisplayGroup.classList.remove('hidden');
-    if (priceBookIdDisplay) priceBookIdDisplay.textContent = priceBook.priceBookId || 'N/A';
+    // CORRECTED: Use .value for input fields
+    if (priceBookIdDisplay) priceBookIdDisplay.value = priceBook.priceBookId || '';
     if (priceBookForm) priceBookForm.dataset.editingId = priceBook.id;
 
     if (priceBookNameInput) priceBookNameInput.value = priceBook.priceBookName || '';
@@ -265,7 +266,8 @@ export function resetPriceBookForm() {
     if (priceBookFormTitle) priceBookFormTitle.textContent = 'Add New Price Book';
     if (submitPriceBookButton) submitPriceBookButton.textContent = 'Add Price Book';
     if (priceBookIdDisplayGroup) priceBookIdDisplayGroup.classList.add('hidden');
-    if (priceBookIdDisplay) priceBookIdDisplay.textContent = '';
+    // CORRECTED: Ensure reset also uses .value
+    if (priceBookIdDisplay) priceBookIdDisplay.value = '';
     if (adminPriceBookMessageDiv) adminPriceBookMessageDiv.classList.add('hidden');
     populateCurrencySelect(); // Repopulate to ensure correct selection state
 }
