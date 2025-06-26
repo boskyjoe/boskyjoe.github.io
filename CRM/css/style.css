@@ -556,9 +556,8 @@ main {
 /* Text alignment for grid cells */
 .data-grid-header > div,
 .data-grid-row > div {
-    white-space: nowrap; /* Prevent wrapping for truncated text */
-    overflow: hidden;
-    text-overflow: ellipsis; /* Add ellipsis for overflow */
+    /* Removed white-space: nowrap; and text-overflow: ellipsis; to allow text wrapping */
+    overflow: hidden; /* Keep overflow hidden to prevent content from breaking grid layout */
     display: flex; /* Use flex to align content (especially for actions) */
     align-items: center; /* Vertically center content */
 }
