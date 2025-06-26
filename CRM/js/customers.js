@@ -39,6 +39,7 @@ export let allCustomers = [];
 
 // Initialize Customer module elements and event listeners
 export async function initCustomersModule() {
+    console.log("customers.js: initCustomersModule called.");
     // Ensure DOM elements are initialized only once
     if (!customersSection) { // Check if any key element is null
         customersSection = document.getElementById('customers-section');
@@ -122,33 +123,37 @@ export async function initCustomersModule() {
 
 // Function to fetch customer data from Firestore for dropdowns in other modules (exported)
 export async function fetchCustomersForDropdown() {
+    console.log("customers.js: fetchCustomersForDropdown called.");
     if (!isAuthReady || !currentUserId) {
-        console.warn("Authentication required to fetch customers for dropdown.");
+        console.warn("customers.js: Authentication required to fetch customers for dropdown.");
         allCustomers = []; // Clear previous data
         return;
     }
     const collectionPath = getCollectionPath(currentCustomerCollectionType, 'customers');
     if (!collectionPath) {
+        console.error("customers.js: Collection path is null. Cannot fetch customers for dropdown.");
         allCustomers = []; // Clear previous data
         return;
     }
 
-    try {
-        // --- Debugging Logs ---
-        console.log("customers.js: Inside fetchCustomersForDropdown. Checking db and getDocs.");
-        console.log("customers.js: db object:", db);
-        console.log("customers.js: type of db:", typeof db);
-        console.log("customers.js: getDocs function:", getDocs);
-        console.log("customers.js: type of getDocs:", typeof getDocs);
-        // --- End Debugging Logs ---
+    // Crucial check: Ensure db is initialized before using it
+    if (!db) {
+        console.error("customers.js: Firestore 'db' instance is not initialized. Cannot fetch customers for dropdown.");
+        allCustomers = []; // Clear previous data
+        // You might want to defer this call or show an error to the user
+        // For now, we'll just log and return.
+        return;
+    }
 
+    try {
+        console.log("customers.js: Attempting to get customers from path:", collectionPath);
         // Use modular Firestore syntax: collection(db, collectionPath) and getDocs()
         const querySnapshot = await getDocs(collection(db, collectionPath));
         allCustomers = [];
         querySnapshot.forEach(doc => {
             allCustomers.push({ id: doc.id, ...doc.data() });
         });
-        console.log("Customer data loaded for dropdowns.");
+        console.log("customers.js: Customer data loaded for dropdowns. Total customers:", allCustomers.length);
 
         // Populate customer dropdown in Opportunities module if it exists
         const opportunityCustomerSelect = document.getElementById('opportunityCustomer');
@@ -160,9 +165,10 @@ export async function fetchCustomersForDropdown() {
                 option.textContent = customer.companyName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
                 opportunityCustomerSelect.appendChild(option);
             });
+            console.log("customers.js: Populated opportunity customer select.");
         }
     } catch (error) {
-        console.error("Error fetching customers for dropdown:", error);
+        console.error("customers.js: Error fetching customers for dropdown:", error);
         allCustomers = [];
     }
 }
@@ -249,6 +255,11 @@ async function saveCustomer(customerData, existingCustomerDocId = null) {
         showModal("Error", "Could not save customer. Authentication required.", () => {});
         return;
     }
+    if (!db) {
+        console.error("customers.js: Firestore 'db' instance is not initialized. Cannot save customer.");
+        showModal("Error", "Firestore is not ready. Please try again.", () => {});
+        return;
+    }
 
     const customerType = customerTypeSelect.value;
     if (!customerType) {
@@ -322,6 +333,12 @@ async function deleteCustomer(firestoreDocId) {
         showModal("Error", "Could not delete customer. Authentication required.", () => {});
         return;
     }
+    if (!db) {
+        console.error("customers.js: Firestore 'db' instance is not initialized. Cannot delete customer.");
+        showModal("Error", "Firestore is not ready. Please try again.", () => {});
+        return;
+    }
+
     const collectionPath = getCollectionPath(currentCustomerCollectionType, 'customers');
     if (!collectionPath) return;
 
@@ -343,12 +360,21 @@ async function deleteCustomer(firestoreDocId) {
 
 // Listen for real-time updates to customers
 function listenForCustomers() {
+    console.log("customers.js: listenForCustomers called.");
     if (!isAuthReady || !currentUserId) {
         if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center col-span-full">Authentication required to load customers.</p>';
         return;
     }
+    if (!db) {
+        console.error("customers.js: Firestore 'db' instance is not initialized. Cannot listen for customers.");
+        if (customerList) customerList.innerHTML = '<p class="text-red-500 text-center col-span-full py-4">Firestore not ready to load customers.</p>';
+        return;
+    }
     const collectionPath = getCollectionPath(currentCustomerCollectionType, 'customers');
-    if (!collectionPath) return;
+    if (!collectionPath) {
+        console.error("customers.js: Collection path is null. Cannot listen for customers.");
+        return;
+    }
 
     // Use modular Firestore syntax: collection(db, collectionPath) and onSnapshot()
     const q = collection(db, collectionPath);
@@ -363,8 +389,9 @@ function listenForCustomers() {
             const customer = { id: doc.id, ...doc.data() };
             displayCustomer(customer);
         });
+        console.log("customers.js: Customers data updated via onSnapshot. Total:", snapshot.size);
     }, (error) => {
-        console.error("Error listening to customers:", error);
+        console.error("customers.js: Error listening to customers:", error);
         if (customerList) customerList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading customers: ${error.message}</p>`;
     });
     addUnsubscribe('customers', unsubscribe); // Store unsubscribe function
