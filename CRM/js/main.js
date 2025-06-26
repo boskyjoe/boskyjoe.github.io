@@ -11,7 +11,7 @@ import { showModal } from './utils.js'; // Assuming utils.js is in the same dire
 import { initCustomersModule, resetCustomerForm } from './customers.js';
 import { initOpportunitiesModule, resetOpportunityForm, setOpportunityLayout, closeAllAccordions } from './opportunities.js';
 import { initUsersModule, resetUserForm } from './users.js';
-import { initAdminDataModule, resetCurrencyForm } from './admin_data. // Corrected import for admin_data
+import { initAdminDataModule, resetCurrencyForm } from './admin_data.js'; // Corrected import for admin_data
 
 // YOUR Firebase Configuration
 const firebaseConfig = {
