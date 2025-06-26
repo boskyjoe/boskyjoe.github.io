@@ -1,5 +1,6 @@
 import { db, auth, currentUserId, isAuthReady, isAdmin, addUnsubscribe } from './main.js';
 import { showModal, getCollectionPath } from './utils.js';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Import necessary Firestore functions
 
 // Users Management module specific DOM elements
 let usersManagementSection;
@@ -116,8 +117,9 @@ async function saveUser(userData, existingFirestoreDocId = null) {
         let targetUid;
 
         if (existingFirestoreDocId) {
-            targetDocRef = db.collection(collectionPath).doc(existingFirestoreDocId);
-            await targetDocRef.set(userData, { merge: true }); // Use set with merge for consistency
+            // Use modular Firestore syntax: doc(db, collectionPath, existingFirestoreDocId)
+            targetDocRef = doc(db, collectionPath, existingFirestoreDocId);
+            await setDoc(targetDocRef, userData, { merge: true }); // Use set with merge for consistency
             console.log("User updated:", existingFirestoreDocId);
             showModal("Success", "User profile updated successfully!", () => {});
         } else {
@@ -133,14 +135,16 @@ async function saveUser(userData, existingFirestoreDocId = null) {
                 return;
             }
 
-            const existingProfileSnap = await db.collection(collectionPath).doc(targetUid).get();
-            if (existingProfileSnap.exists) {
+            // Use modular Firestore syntax: getDoc(doc(db, collectionPath, targetUid))
+            const existingProfileSnap = await getDoc(doc(db, collectionPath, targetUid));
+            if (existingProfileSnap.exists()) {
                 showModal("Creation Error", "A user profile with this UID already exists. Please edit the existing profile or provide a unique UID for a new user.", () => {});
                 return;
             }
 
-            targetDocRef = db.collection(collectionPath).doc(targetUid);
-            await targetDocRef.set({ ...userData, userId: targetUid });
+            // Use modular Firestore syntax: doc(db, collectionPath, targetUid)
+            targetDocRef = doc(db, collectionPath, targetUid);
+            await setDoc(targetDocRef, { ...userData, userId: targetUid });
             console.log("New user profile created. Doc ID is provided UID:", targetUid);
             showModal("Success", "New user profile created successfully!", () => {});
         }
@@ -165,7 +169,8 @@ async function deleteUser(firestoreDocId) {
         "Are you sure you want to delete this user? This action cannot be undone.",
         async () => {
             try {
-                await db.collection(collectionPath).doc(firestoreDocId).delete();
+                // Use modular Firestore syntax: deleteDoc(doc(db, collectionPath, firestoreDocId))
+                await deleteDoc(doc(db, collectionPath, firestoreDocId));
                 console.log("User deleted Firestore Doc ID:", firestoreDocId);
                 showModal("Success", "User profile deleted successfully!", () => {});
             } catch (error) {
@@ -184,9 +189,10 @@ function listenForUsers() {
     }
 
     const collectionPath = `users_data`;
-    const q = db.collection(collectionPath);
+    // Use modular Firestore syntax: collection(db, collectionPath)
+    const q = collection(db, collectionPath);
 
-    const unsubscribe = q.onSnapshot((snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
         if (userList) userList.innerHTML = '';
         if (snapshot.empty) {
             if (userList) userList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No users found. Add one above by providing their Firebase UID after creating them in Firebase Authentication!</p>';
