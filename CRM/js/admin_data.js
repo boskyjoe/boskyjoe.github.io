@@ -1,6 +1,6 @@
 import { db, auth, currentUserId, isAdmin, addUnsubscribe, removeUnsubscribe } from './main.js';
 import { showModal, APP_SETTINGS_DOC_ID } from './utils.js'; // Import APP_SETTINGS_DOC_ID from utils
-import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Import necessary Firestore functions
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Import necessary Firestore functions
 
 // Admin Data Management module specific DOM elements
 let adminCountryMappingSection;
@@ -37,6 +37,7 @@ export function getCurrencySymbol(code) {
 // Initialize Admin Data module elements and event listeners
 // The 'type' parameter will dictate which admin sub-section to initialize
 export async function initAdminDataModule(type) {
+    console.log("admin_data.js: initAdminDataModule called for type:", type);
     // Ensure DOM elements are initialized only once
     if (!adminCountryMappingSection && type === 'country_mapping') {
         adminCountryMappingSection = document.getElementById('admin-country-mapping-section');
@@ -51,6 +52,11 @@ export async function initAdminDataModule(type) {
         if (document.getElementById('countryMappingForm')) {
             document.getElementById('countryMappingForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
+                if (!db) {
+                    console.error("admin_data.js: Firestore 'db' instance is not initialized. Cannot upload country data.");
+                    showModal("Error", "Firestore is not ready. Please try again.", () => {});
+                    return;
+                }
                 if (adminMessageDiv) adminMessageDiv.classList.add('hidden');
                 if (uploadAdminDataButton) {
                     uploadAdminDataButton.disabled = true;
@@ -192,6 +198,11 @@ export async function initAdminDataModule(type) {
         if (currencyForm) {
             currencyForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
+                if (!db) {
+                    console.error("admin_data.js: Firestore 'db' instance is not initialized. Cannot save currency.");
+                    showModal("Error", "Firestore is not ready. Please try again.", () => {});
+                    return;
+                }
                 const editingId = currencyForm.dataset.editingId;
                 await saveCurrency(null, editingId || null); // Passes null as currencyData, reads from textarea
             });
@@ -226,6 +237,13 @@ export async function initAdminDataModule(type) {
 
 // Function to fetch country and state data from Firestore for the CRM forms (exported for customers module)
 export async function fetchCountryData() {
+    console.log("admin_data.js: fetchCountryData called.");
+    if (!db) {
+        console.error("admin_data.js: Firestore 'db' instance is not initialized. Cannot fetch country data.");
+        appCountries = [];
+        appCountryStateMap = {};
+        return;
+    }
     try {
         // Use modular Firestore syntax: doc(db, collectionName, docId) and getDoc()
         const docRef = doc(db, "app_metadata", "countries_states");
@@ -235,14 +253,14 @@ export async function fetchCountryData() {
             const data = docSnap.data();
             appCountries = data.countries || [];
             appCountryStateMap = data.countryStateMap || {};
-            console.log("Country and State data loaded from Firestore.");
+            console.log("admin_data.js: Country and State data loaded from Firestore.");
         } else {
-            console.warn("No 'countries_states' document found in 'app_metadata' collection.");
+            console.warn("admin_data.js: No 'countries_states' document found in 'app_metadata' collection.");
             appCountries = [];
             appCountryStateMap = {};
         }
     } catch (error) {
-        console.error("Error fetching country data from Firestore:", error);
+        console.error("admin_data.js: Error fetching country data from Firestore:", error);
         appCountries = [];
         appCountryStateMap = {};
     }
@@ -262,15 +280,21 @@ async function loadAdminCountryData() {
         if (adminCountryStateMapInput) adminCountryStateMapInput.value = countryStateMapString;
 
         if (adminMessageDiv) adminMessageDiv.classList.add('hidden');
-        console.log("Admin country data loaded into textareas.");
+        console.log("admin_data.js: Admin country data loaded into textareas.");
     }
     catch (error) {
-        console.error("Error in loadAdminCountryData:", error);
+        console.error("admin_data.js: Error in loadAdminCountryData:", error);
     }
 }
 
 // Function to fetch currency data from Firestore (exported for opportunities module)
 export async function fetchCurrencies() {
+    console.log("admin_data.js: fetchCurrencies called.");
+    if (!db) {
+        console.error("admin_data.js: Firestore 'db' instance is not initialized. Cannot fetch currency data.");
+        allCurrencies = [];
+        return;
+    }
     try {
         // Use modular Firestore syntax: collection(db, collectionPath, subcollectionPath) and getDocs()
         const collectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
@@ -279,9 +303,9 @@ export async function fetchCurrencies() {
         querySnapshot.forEach((docSnap) => {
             allCurrencies.push({ id: docSnap.id, ...docSnap.data() });
         });
-        console.log("Currency data loaded from Firestore.");
+        console.log("admin_data.js: Currency data loaded from Firestore.");
     } catch (error) {
-        console.error("Error fetching currency data from Firestore:", error);
+        console.error("admin_data.js: Error fetching currency data from Firestore:", error);
         allCurrencies = [];
     }
 }
@@ -289,6 +313,11 @@ export async function fetchCurrencies() {
 async function saveCurrency(currencyData, existingCurrencyCode = null) {
     if (!isAuthReady || !currentUserId || !isAdmin) {
         showModal("Permission Denied", "Only administrators can manage currencies.", () => {});
+        return;
+    }
+    if (!db) {
+        console.error("admin_data.js: Firestore 'db' instance is not initialized. Cannot save currency.");
+        showModal("Error", "Firestore is not ready. Please try again.", () => {});
         return;
     }
 
@@ -395,6 +424,11 @@ async function deleteCurrency(currencyCode) {
         showModal("Permission Denied", "Only administrators can manage currencies.", () => {});
         return;
     }
+    if (!db) {
+        console.error("admin_data.js: Firestore 'db' instance is not initialized. Cannot delete currency.");
+        showModal("Error", "Firestore is not ready. Please try again.", () => {});
+        return;
+    }
 
     showModal(
         "Confirm Deletion",
@@ -416,8 +450,14 @@ async function deleteCurrency(currencyCode) {
 }
 
 function listenForCurrencies() {
+    console.log("admin_data.js: listenForCurrencies called.");
     if (!isAuthReady || !currentUserId || !isAdmin) {
         if (currencyList) currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Access Denied: Only administrators can view currencies.</p>';
+        return;
+    }
+    if (!db) {
+        console.error("admin_data.js: Firestore 'db' instance is not initialized. Cannot listen for currencies.");
+        if (currencyList) currencyList.innerHTML = '<p class="text-red-500 text-center col-span-full py-4">Firestore not ready to load currencies.</p>';
         return;
     }
 
@@ -434,8 +474,9 @@ function listenForCurrencies() {
             const currency = { id: doc.id, ...doc.data() };
             displayCurrency(currency);
         });
+        console.log("admin_data.js: Currencies data updated via onSnapshot. Total:", snapshot.size);
     }, (error) => {
-        console.error("Error listening to currencies:", error);
+        console.error("admin_data.js: Error listening to currencies:", error);
         if (currencyList) currencyList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading currencies: ${error.message}</p>`;
     });
     addUnsubscribe('currencies', unsubscribe);
@@ -492,6 +533,5 @@ export function resetCurrencyForm() {
     if (submitCurrencyButton) submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
     if (currencyCodeDisplayGroup) currencyCodeDisplayGroup.classList.add('hidden');
     if (currencyCodeDisplay) currencyCodeDisplay.textContent = '';
-    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden');
     if (adminCurrenciesInput) adminCurrenciesInput.value = ''; // Ensure textarea is cleared
 }
