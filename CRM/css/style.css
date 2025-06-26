@@ -10,6 +10,15 @@
     overflow-y: auto; /* Adds vertical scrollbar when content exceeds max-height */
 }
 
+/* NEW: Override for data grids inside open accordions */
+/* This ensures the data grid expands fully within an open accordion, */
+/* overriding its own 10-row scroll limit. */
+.accordion-content.open .data-grid-body {
+    max-height: none; /* Allow content to dictate height */
+    overflow-y: visible; /* Remove vertical scrollbar, let the accordion handle overall scroll if needed */
+}
+
+
 /* Update the .header rule */
 .header {
     /* Using a subtle linear gradient for a professional look */
