@@ -72,7 +72,7 @@ let quoteNameInput;
 let quoteDescriptionInput;
 let quoteCustomerSelect;
 let quoteStartDateInput;
-let quoteExpireDateInput;
+let quoteExpireDateInput; // Corrected: Removed extra 'document ='
 let quoteStatusSelect;
 let quoteNetListAmountInput;
 let quoteNetDiscountInput;
@@ -156,7 +156,7 @@ export async function initOpportunitiesModule() {
         quoteDescriptionInput = document.getElementById('quoteDescription');
         quoteCustomerSelect = document.getElementById('quoteCustomer');
         quoteStartDateInput = document.getElementById('quoteStartDate');
-        quoteExpireDateInput = document = document.getElementById('quoteExpireDate');
+        quoteExpireDateInput = document.getElementById('quoteExpireDate'); // Corrected line
         quoteStatusSelect = document.getElementById('quoteStatus');
         quoteNetListAmountInput = document.getElementById('quoteNetListAmount');
         quoteNetDiscountInput = document.getElementById('quoteNetDiscount');
@@ -200,7 +200,9 @@ export async function initOpportunitiesModule() {
     }
 
     // Ensure initial state and load data
+    console.log("opportunities.js: Calling fetchCustomersForDropdown...");
     await fetchCustomersForDropdown();
+    console.log("opportunities.js: Calling fetchCurrencies...");
     await fetchCurrencies();
     populateCurrencySelect();
     resetOpportunityForm();
@@ -211,6 +213,7 @@ export async function initOpportunitiesModule() {
             submitOpportunityButton.setAttribute('disabled', 'disabled');
         }
     }
+    console.log("opportunities.js: Calling listenForOpportunities...");
     listenForOpportunities();
 }
 
