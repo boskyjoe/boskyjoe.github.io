@@ -162,6 +162,7 @@ main {
     min-height: 5rem; /* Minimum height for textareas, overrides fixed height */
     height: auto; /* Allow height to adjust based on rows/content for multi-line */
     resize: vertical; /* Allow vertical resizing only */
+    box-sizing: border-box;
 }
 
 .form-input:focus,
@@ -364,11 +365,11 @@ main {
     opacity: 1;
 }
 
-/* Accordion Styles (UPDATED FOR 3D EFFECT AND HIGHLIGHTS) */
+/* Accordion Styles (UPDATED for Instant Open and Fade/Slide Animation) */
 .accordion-item {
     border: 1px solid #e2e8f0; /* Gray-200 */
     border-radius: 0.75rem; /* Slightly more rounded */
-    overflow: hidden;
+    overflow: hidden; /* Important for hiding content when closed */
     background-color: #ffffff;
     box-shadow: 0 4px 8px rgba(0,0,0,0.05); /* Initial subtle shadow */
     transition: all 0.3s ease-in-out; /* Smooth transition for hover effects */
@@ -414,20 +415,30 @@ main {
     transform: rotate(180deg); /* Rotate icon when active */
 }
 
+/* UPDATED: Accordion Content for instant open and fade/slide */
 .accordion-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out; /* Transition padding too */
+    /* Initially hidden properties */
+    max-height: 0; /* Important for hiding content */
+    overflow: hidden; /* Crucial for hiding overflowing content */
+    opacity: 0; /* Start hidden */
+    transform: translateY(-10px); /* Start slightly above its final position */
+
+    /* Transitions for content appearance */
+    transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out, transform 0.4s ease-in-out, padding 0.4s ease-in-out;
     padding: 0 1.5rem; /* Padding only for sides when closed */
     background-color: #ffffff; /* Content background */
     border-top: 1px solid #f0f2f5; /* Subtle separation */
 }
 
+/* UPDATED: When open, allow full height and fade in/slide down */
 .accordion-content.open {
-    max-height: 5000px; /* Increased to a very large value to ensure full content visibility */
+    max-height: 5000px; /* Use a very large fixed value to ensure content is fully visible */
     padding-top: 1.5rem; /* Add top padding when open */
     padding-bottom: 1.5rem; /* Add bottom padding when open */
+    opacity: 1; /* Fade in */
+    transform: translateY(0); /* Slide down to normal position */
 }
+
 
 /* Additional styling for forms/lists within accordions */
 .accordion-content form {
