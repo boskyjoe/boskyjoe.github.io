@@ -19,11 +19,6 @@ let priceBookList;
 // Global data for Price Books (fetched from Firestore)
 export let allPriceBooks = [];
 
-// --- Debugging Logs (Added) ---
-console.log("price_book.js: Module loaded.");
-console.log("price_book.js: Initial imported state - db:", db, "isAuthReady:", isAuthReady, "currentUserId:", currentUserId, "isAdmin:", isAdmin);
-// --- End Debugging Logs ---
-
 // Initialize Price Book module elements and event listeners
 export async function initPriceBookModule() {
     console.log("price_book.js: initPriceBookModule called.");
