@@ -1,7 +1,7 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"; // Updated version
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js"; // Updated version
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"; // Updated version
-import { getFirestore, doc, getDoc, collection, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Updated version, Added 'collection' import
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, collection, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Import utility functions
 import { showModal } from './utils.js'; // Assuming utils.js is in the same directory
@@ -74,16 +74,18 @@ async function handleGoogleLogin() {
 
 // Function to control section visibility and initialize modules
 export async function showSection(sectionId) {
+    console.log(`main.js: showSection called with sectionId: "${sectionId}"`);
+
     // Check for admin section access
     if (['admin-country-mapping-section', 'users-management-section', 'currency-management-section'].includes(sectionId)) {
         if (!currentUserId) {
-            console.log(`Access to ${sectionId} denied. No user logged in. Prompting Google login.`);
+            console.log(`main.js: Access to ${sectionId} denied. No user logged in. Prompting Google login.`);
             await handleGoogleLogin();
             return;
         }
         if (!isAdmin) {
             showModal("Unauthorized Access", "You do not have administrative privileges to access this section.", () => {
-                showSection('home');
+                showSection('home-section'); // Redirect to home if unauthorized
             });
             return;
         }
@@ -99,7 +101,11 @@ export async function showSection(sectionId) {
     if (targetSection) {
         targetSection.classList.remove('hidden');
         targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        console.log(`main.js: Section "${sectionId}" found and displayed.`);
+    } else {
+        console.warn(`main.js: Target section with ID "${sectionId}" not found in the DOM.`);
     }
+
 
     // Close mobile menu and admin submenus when navigating
     if (mobileMenu) mobileMenu.classList.remove('open');
@@ -113,53 +119,55 @@ export async function showSection(sectionId) {
     currentUnsubscribeFunctions = {}; // Clear the map
 
     // Reset forms and module-specific state when navigating away from them
-    if (sectionId !== 'customers-section') resetCustomerForm();
-    if (sectionId !== 'opportunities-section') resetOpportunityForm();
-    if (sectionId !== 'users-management-section') resetUserForm();
-    if (sectionId !== 'currency-management-section') resetCurrencyForm();
+    // Ensure these functions exist in the imported modules
+    if (sectionId !== 'customers-section' && typeof resetCustomerForm === 'function') resetCustomerForm();
+    if (sectionId !== 'opportunities-section' && typeof resetOpportunityForm === 'function') resetOpportunityForm();
+    if (sectionId !== 'users-management-section' && typeof resetUserForm === 'function') resetUserForm();
+    if (sectionId !== 'currency-management-section' && typeof resetCurrencyForm === 'function') resetCurrencyForm();
 
 
     // Dynamically initialize modules and start their listeners
     if (isAuthReady) {
         switch (sectionId) {
             case 'customers-section':
-                initCustomersModule(); // This will call listenForCustomers internally
+                if (typeof initCustomersModule === 'function') initCustomersModule();
                 break;
             case 'opportunities-section':
-                initOpportunitiesModule(); // This will handle its own listeners
+                if (typeof initOpportunitiesModule === 'function') initOpportunitiesModule();
                 break;
             case 'users-management-section':
-                if (isAdmin) initUsersModule();
+                if (isAdmin && typeof initUsersModule === 'function') initUsersModule();
                 break;
             case 'admin-country-mapping-section':
-                if (isAdmin) {
-                    // Specific admin data loading is handled by initAdminDataModule
+                if (isAdmin && typeof initAdminDataModule === 'function') {
                     initAdminDataModule('country_mapping');
                 }
                 break;
             case 'currency-management-section':
-                if (isAdmin) {
+                if (isAdmin && typeof initAdminDataModule === 'function') {
                     initAdminDataModule('currency_management');
                 }
                 break;
-            // No action needed for 'home' or 'events' as they are static or simpler
-            case 'home':
+            case 'home-section': // Corrected case to match HTML ID
             case 'events-section':
+                // No specific module init needed for these static sections, or they will be added later
                 break;
             default:
-                console.warn("Unknown section navigated to:", sectionId);
+                console.warn(`main.js: No specific initialization logic for section: "${sectionId}"`);
         }
     } else {
-        console.warn("Attempted to show section before Firebase Auth is ready:", sectionId);
+        console.warn("main.js: Attempted to show section before Firebase Auth is ready:", sectionId);
         // Ensure form buttons are disabled if auth is not ready
-        // These checks should ideally be handled within each module's init or form logic
-        // For now, leaving this as a general warning.
+        document.querySelectorAll('button[type="submit"]').forEach(btn => {
+            btn.setAttribute('disabled', 'disabled');
+        });
     }
 }
 
 
 // Initialize Firebase and set up authentication listener
 async function initializeFirebase() {
+    console.log("main.js: initializeFirebase called.");
     // Only initialize Firebase app and services if they haven't been initialized already
     if (!app) {
         try {
@@ -167,8 +175,9 @@ async function initializeFirebase() {
             getAnalytics(app); // Initialize Analytics
             db = getFirestore(app);
             auth = getAuth(app);
+            console.log("main.js: Firebase app and services initialized.");
         } catch (error) {
-            console.error("Error initializing Firebase services:", error);
+            console.error("main.js: Error initializing Firebase services:", error);
             showModal("Firebase Service Error", `Failed to initialize Firebase services: ${error.message}`, () => {});
             return;
         }
@@ -199,9 +208,10 @@ async function initializeFirebase() {
         document.getElementById('events-section'),
         document.getElementById('admin-country-mapping-section'),
         document.getElementById('users-management-section'),
-        document.getElementById('auth-section'), // This section is mostly decorative now
+        document.getElementById('auth-section'),
         document.getElementById('currency-management-section')
     ].filter(section => section !== null); // Filter out any that might still be null if HTML is malformed
+    console.log("main.js: allSections populated. Found:", allSections.map(s => s.id));
 
 
     // Add Event Listeners for main navigation
@@ -270,7 +280,7 @@ async function initializeFirebase() {
     // Firebase Auth State Listener
     onAuthStateChanged(auth, async (user) => {
         isAuthReady = true;
-        console.log("onAuthStateChanged: Auth state changed. User:", user ? user.email || user.uid : "null");
+        console.log("main.js: onAuthStateChanged: Auth state changed. User:", user ? user.email || user.uid : "null");
 
         if (user) {
             currentUserId = user.uid;
@@ -284,7 +294,6 @@ async function initializeFirebase() {
             if (mobileLogoutButton) mobileLogoutButton.classList.remove('hidden');
             if (homeSignInMessage) homeSignInMessage.classList.add('hidden');
 
-            // Use modular Firestore syntax: doc(db, 'collectionName', docId)
             const userProfileRef = doc(db, 'users_data', user.uid);
             const userProfileSnap = await getDoc(userProfileRef);
 
@@ -293,7 +302,6 @@ async function initializeFirebase() {
                 isAdmin = (userData.role === 'Admin' && userData.profileAccess === true);
             } else {
                 try {
-                    // Use modular Firestore syntax: setDoc(docRef, data)
                     await setDoc(userProfileRef, {
                         userId: user.uid,
                         userName: user.email || 'N/A',
@@ -321,12 +329,12 @@ async function initializeFirebase() {
             }
 
             // After auth is ready and admin status is known, show the home section
-            showSection('home');
+            showSection('home-section'); // CORRECTED: Use 'home-section' to match HTML ID
 
         } else { // No user is signed in.
             currentUserId = null;
             isAdmin = false;
-            console.log("onAuthStateChanged: No user signed in. Showing home section by default.");
+            console.log("main.js: onAuthStateChanged: No user signed in. Showing home section by default.");
 
             if (userIdDisplay) userIdDisplay.classList.add('hidden');
             if (mobileUserIdDisplay) mobileUserIdDisplay.classList.add('hidden');
@@ -348,7 +356,7 @@ async function initializeFirebase() {
                 btn.setAttribute('disabled', 'disabled');
             });
 
-            showSection('home'); // Always show home section initially
+            showSection('home-section'); // CORRECTED: Use 'home-section' to match HTML ID
         }
     });
 }
