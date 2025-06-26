@@ -7,11 +7,11 @@ import { getFirestore, doc, getDoc, collection, setDoc } from "https://www.gstat
 import { showModal } from './utils.js'; // Assuming utils.js is in the same directory
 
 // Import module initialization functions
-// These will be defined in separate files we'll create next
 import { initCustomersModule, resetCustomerForm } from './customers.js';
 import { initOpportunitiesModule, resetOpportunityForm, setOpportunityLayout, closeAllAccordions } from './opportunities.js';
 import { initUsersModule, resetUserForm } from './users.js';
 import { initAdminDataModule, resetCurrencyForm } from './admin_data.js';
+import { initPriceBookModule, resetPriceBookForm } from './price_book.js'; // NEW: Import PriceBook module
 
 // YOUR Firebase Configuration
 const firebaseConfig = {
@@ -77,7 +77,7 @@ export async function showSection(sectionId) {
     console.log(`main.js: showSection called with sectionId: "${sectionId}"`);
 
     // Check for admin section access
-    if (['admin-country-mapping-section', 'users-management-section', 'currency-management-section'].includes(sectionId)) {
+    if (['admin-country-mapping-section', 'users-management-section', 'currency-management-section', 'price-book-management-section'].includes(sectionId)) { // UPDATED: Added price-book-management-section
         if (!currentUserId) {
             console.log(`main.js: Access to ${sectionId} denied. No user logged in. Prompting Google login.`);
             await handleGoogleLogin();
@@ -119,11 +119,11 @@ export async function showSection(sectionId) {
     currentUnsubscribeFunctions = {}; // Clear the map
 
     // Reset forms and module-specific state when navigating away from them
-    // Ensure these functions exist in the imported modules
     if (sectionId !== 'customers-section' && typeof resetCustomerForm === 'function') resetCustomerForm();
     if (sectionId !== 'opportunities-section' && typeof resetOpportunityForm === 'function') resetOpportunityForm();
     if (sectionId !== 'users-management-section' && typeof resetUserForm === 'function') resetUserForm();
     if (sectionId !== 'currency-management-section' && typeof resetCurrencyForm === 'function') resetCurrencyForm();
+    if (sectionId !== 'price-book-management-section' && typeof resetPriceBookForm === 'function') resetPriceBookForm(); // NEW: Reset PriceBook form
 
 
     // Dynamically initialize modules and start their listeners
@@ -148,7 +148,12 @@ export async function showSection(sectionId) {
                     initAdminDataModule('currency_management');
                 }
                 break;
-            case 'home-section': // Corrected case to match HTML ID
+            case 'price-book-management-section': // NEW: Case for PriceBook module
+                if (isAdmin && typeof initPriceBookModule === 'function') {
+                    initPriceBookModule();
+                }
+                break;
+            case 'home-section':
             case 'events-section':
                 // No specific module init needed for these static sections, or they will be added later
                 break;
@@ -209,7 +214,8 @@ async function initializeFirebase() {
         document.getElementById('admin-country-mapping-section'),
         document.getElementById('users-management-section'),
         document.getElementById('auth-section'),
-        document.getElementById('currency-management-section')
+        document.getElementById('currency-management-section'),
+        document.getElementById('price-book-management-section') // NEW: Added price book section
     ].filter(section => section !== null); // Filter out any that might still be null if HTML is malformed
     console.log("main.js: allSections populated. Found:", allSections.map(s => s.id));
 
@@ -329,7 +335,7 @@ async function initializeFirebase() {
             }
 
             // After auth is ready and admin status is known, show the home section
-            showSection('home-section'); // CORRECTED: Use 'home-section' to match HTML ID
+            showSection('home-section');
 
         } else { // No user is signed in.
             currentUserId = null;
@@ -356,7 +362,7 @@ async function initializeFirebase() {
                 btn.setAttribute('disabled', 'disabled');
             });
 
-            showSection('home-section'); // CORRECTED: Use 'home-section' to match HTML ID
+            showSection('home-section');
         }
     });
 }
