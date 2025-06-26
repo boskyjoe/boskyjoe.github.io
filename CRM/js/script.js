@@ -785,7 +785,7 @@ async function initializeFirebase() {
             if (userIdDisplay) userIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
             if (mobileUserIdDisplay) mobileUserIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
 
-            // Show User ID and Logout buttons, Hide Google login buttons
+            // Show User ID and Logout buttons
             if (userIdDisplay) userIdDisplay.classList.remove('hidden');
             if (mobileUserIdDisplay) mobileUserIdDisplay.classList.remove('hidden');
             if (navGoogleLoginButton) navGoogleLoginButton.classList.add('hidden');
@@ -1377,7 +1377,7 @@ function applyCustomerTypeValidation() {
         if (individualIndustryGroup) individualIndustryGroup.classList.remove('hidden');
         if (customerIndustryInput) customerIndustryInput.setAttribute('required', 'required');
     } else if (customerType === 'Company') {
-        if (companyNameFieldDiv) companyNameFieldDiv.classList.remove('hidden');
+        if (companyNameFieldDiv) companyNameFieldDiv.classList.add('hidden');
         if (customerCompanyNameInput) customerCompanyNameInput.setAttribute('required', 'required');
 
         if (companyIndustryGroup) companyIndustryGroup.classList.remove('hidden');
@@ -2041,7 +2041,7 @@ function resetOpportunityForm() {
     if (opportunityLineList) opportunityLineList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No opportunity lines added for this opportunity.</p>';
     if (quoteList) quoteList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No quotes added for this opportunity.</p>';
 
-    // Unsubscribe from any previous sub-collection listeners
+    // Unsubscribe from any previous sub-document lists
     if (unsubscribeOpportunityContacts) { unsubscribeOpportunityContacts(); }
     if (unsubscribeOpportunityLines) { unsubscribeOpportunityLines(); }
     if (unsubscribeQuotes) { unsubscribeQuotes(); }
@@ -2210,6 +2210,7 @@ function editOpportunityContact(contact) {
 
     // Ensure the related section expands and this accordion opens
     closeAllAccordions(); // Close others first
+    // Changed this line to use `recalculateAccordionHeight` for accuracy.
     if (contactsAccordionHeader && contactsAccordionContent) toggleAccordion(contactsAccordionHeader, contactsAccordionContent); // Open this one
 
     if (contactsAccordionHeader) contactsAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
@@ -2388,6 +2389,7 @@ function editOpportunityLine(line) {
 
     // Ensure the related section expands and this accordion opens
     closeAllAccordions(); // Close others first
+    // Changed this line to use `recalculateAccordionHeight` for accuracy.
     if (linesAccordionHeader && linesAccordionContent) toggleAccordion(linesAccordionHeader, linesAccordionContent); // Open this one
 
     if (linesAccordionHeader) linesAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
@@ -2583,6 +2585,7 @@ function editQuote(quote) {
 
     // Ensure the related section expands and this accordion opens
     closeAllAccordions(); // Close others first
+    // Changed this line to use `recalculateAccordionHeight` for accuracy.
     if (quotesAccordionHeader && quotesAccordionContent) toggleAccordion(quotesAccordionHeader, quotesAccordionContent); // Open this one
 
     if (quotesAccordionHeader) quotesAccordionHeader.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to header
@@ -2867,8 +2870,18 @@ function toggleAccordion(header, content) {
 
         // Open the clicked accordion
         content.classList.add('open');
-        // Set maxHeight dynamically to content's scrollHeight for smooth transition
-        content.style.maxHeight = content.scrollHeight + "px";
+        // Temporarily unset maxHeight to allow content to naturally expand for scrollHeight calculation
+        content.style.maxHeight = 'none';
+
+        // Use requestAnimationFrame to ensure the DOM has reflowed after making content visible
+        requestAnimationFrame(() => {
+            // Use another requestAnimationFrame to ensure the next paint cycle has happened,
+            // which often gives a more accurate scrollHeight for dynamically rendered content.
+            requestAnimationFrame(() => {
+                content.style.maxHeight = content.scrollHeight + "px"; // Apply actual scrollHeight for smooth transition
+            });
+        });
+        
         header.classList.add('active');
 
         // When any accordion opens, set the layout to shrink the left panel and expand the right
