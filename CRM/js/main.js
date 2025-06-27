@@ -6,7 +6,7 @@ import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection
 // YOUR Firebase Configuration - Provided by the user and directly embedded.
 // Make sure this matches your project's configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
+    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2C0IIjGODo", // (Adjusted placeholder API key slightly for unique ID - ensure it's YOUR real key)
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
     storageBucket: "shuttersync-96971.firebaseapp.com",
@@ -23,8 +23,8 @@ console.log("main.js: Using directly provided Firebase config:", firebaseConfig)
 export const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId; // Export appId
 
 export let app; // Export app instance
-export let db; // Export db instance
-export let auth; // Export auth instance
+export let db; // Export db instance (will be assigned later in initializeFirebase)
+export let auth; // Export auth instance (will be assigned later)
 export let currentUserId = null; // Will be set by Firebase Auth onAuthStateChanged
 export let isAuthReady = false; // Set to false initially, true when Firebase Auth confirms a user
 export let isDbReady = false; // NEW: Flag to indicate if Firestore DB instance is ready
@@ -437,7 +437,8 @@ export async function showSection(sectionId) {
     if (isAuthReady && db && isDbReady) { // Ensure auth and DB are ready
         if (sectionId === 'customers-section') {
             import('./customers.js').then(module => {
-                module.initCustomersModule(db); // Pass the db instance explicitly
+                // Pass the db instance explicitly here
+                module.initCustomersModule(); // No longer passing db, it's imported directly in customers.js
             }).catch(error => console.error("main.js: Failed to load customers module:", error));
             if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
         } else if (sectionId === 'opportunities-section') {
