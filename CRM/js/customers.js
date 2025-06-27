@@ -1,4 +1,5 @@
-import * as main from './main.js'; // Import main.js as a whole module
+// Change: Import specific exports directly from main.js instead of importing 'main' as a namespace
+import { db, isAuthReady, currentUserId, isAdmin, addUnsubscribe, removeUnsubscribe, fetchCountryData, appCountries, appCountryStateMap, allCustomers } from './main.js'; // Import main.js exports directly
 import { showModal, getCollectionPath, formatDate } from './utils.js'; // Import utility functions
 
 import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -40,7 +41,8 @@ let customerList; // Reference to the div for customer rows
 let customerSourceSelect; // NEW: Customer Source
 let customerActiveSelect; // NEW: Customer Active
 
-export let allCustomers = []; // Exported to be used by other modules like opportunities.js
+// allCustomers is now directly imported from main.js, so no local export required
+// export let allCustomers = []; // Removed: Now directly imported from main.js
 
 /**
  * Initializes the Customers module, setting up DOM references, event listeners,
@@ -48,8 +50,8 @@ export let allCustomers = []; // Exported to be used by other modules like oppor
  */
 export async function initCustomersModule() {
     console.log("customers.js: initCustomersModule called.");
-    // Now access main's properties via the 'main' object
-    console.log("customers.js: initCustomersModule current state - main.db:", main.db, "main.isAuthReady:", main.isAuthReady, "main.isDbReady:", main.isDbReady, "main.currentUserId:", main.currentUserId); // Added main.isDbReady
+    // Now access imported properties directly
+    console.log("customers.js: initCustomersModule current state - db:", db, "isAuthReady:", isAuthReady, "isDbReady:", isDbReady, "currentUserId:", currentUserId);
 
 
     // Initialize DOM elements if they haven't been already. This helps prevent null references.
@@ -117,10 +119,10 @@ export async function initCustomersModule() {
     }
 
     // Load data specific to this module ONLY if auth and DB are ready
-    if (main.isAuthReady && main.currentUserId && main.db && main.isDbReady) { // Added main.isDbReady check
+    if (isAuthReady && currentUserId && db && isDbReady) { // Used directly imported variables
         console.log("customers.js: Auth, User, and DB are ready. Initializing customer data.");
         if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
-        await main.fetchCountryData(); // Use main.fetchCountryData
+        await fetchCountryData(); // Used directly imported function
         populateCountries();
         listenForCustomers();
         resetCustomerForm(); // Ensure the form is cleared and ready for new input
@@ -149,7 +151,7 @@ function getCustomerCollectionPath() {
 function populateCountries() {
     if (!customerCountrySelect) return;
     customerCountrySelect.innerHTML = '<option value="">Select Country</option>';
-    main.appCountries.forEach(country => { // Use main.appCountries
+    appCountries.forEach(country => { // Used directly imported array
         const option = document.createElement('option');
         option.value = country.code;
         option.textContent = country.name;
@@ -165,7 +167,7 @@ function populateCountries() {
 function populateStates(countryCode) {
     if (!customerStateSelect) return;
     customerStateSelect.innerHTML = '<option value="">Select State/Province</option>';
-    const states = main.appCountryStateMap[countryCode] || []; // Use main.appCountryStateMap
+    const states = appCountryStateMap[countryCode] || []; // Used directly imported map
     states.forEach(state => {
         const option = document.createElement('option');
         option.value = state;
@@ -241,7 +243,7 @@ function applyCustomerTypeValidation() {
  * Data is read from the form fields.
  */
 async function saveCustomer() {
-    if (!main.isAuthReady || !main.currentUserId || !main.db || !main.isDbReady) { // Added main.isDbReady
+    if (!isAuthReady || !currentUserId || !db || !isDbReady) { // Used directly imported variables
         showModal("Permission Denied", "Please sign in to manage customers, or Firestore is not ready.", () => {});
         return;
     }
@@ -314,7 +316,7 @@ async function saveCustomer() {
         description,
         source: customerSource, // NEW
         active: customerActive, // NEW
-        ownerId: main.currentUserId, // Link customer to the current logged-in user
+        ownerId: currentUserId, // Link customer to the current logged-in user (directly imported)
         updatedAt: new Date()
     };
 
@@ -324,14 +326,14 @@ async function saveCustomer() {
     try {
         if (existingCustomerDocId) {
             // Update existing customer
-            const customerDocRef = doc(main.db, collectionPath, existingCustomerDocId); // Use main.db
+            const customerDocRef = doc(db, collectionPath, existingCustomerDocId); // Used directly imported db
             await setDoc(customerDocRef, { ...customerToSave, updatedAt: new Date() }, { merge: true }); // Ensure updatedAt is updated
             showModal("Success", "Customer updated successfully!", () => { });
             console.log("customers.js: Customer updated:", existingCustomerDocId);
         } else {
             // Add new customer
             // Let Firestore generate the document ID, and then add a human-readable customerId field
-            const newDocRef = doc(collection(main.db, collectionPath)); // Use main.db
+            const newDocRef = doc(collection(db, collectionPath)); // Used directly imported db
             const newCustomerId = `CUST-${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
             await setDoc(newDocRef, { ...customerToSave, customerId: newCustomerId, createdAt: new Date() });
             showModal("Success", `New Customer added successfully! ID: ${newCustomerId}`, () => { });
@@ -350,7 +352,7 @@ async function saveCustomer() {
  * @param {string} firestoreDocId - The Firestore document ID of the customer to delete.
  */
 async function deleteCustomer(firestoreDocId) {
-    if (!main.isAuthReady || !main.currentUserId || !main.db || !main.isDbReady) { // Added main.isDbReady
+    if (!isAuthReady || !currentUserId || !db || !isDbReady) { // Used directly imported variables
         showModal("Permission Denied", "Please sign in to delete customers, or Firestore is not ready.", () => {});
         return;
     }
@@ -362,7 +364,7 @@ async function deleteCustomer(firestoreDocId) {
         "Are you sure you want to delete this customer? This action cannot be undone.",
         async () => {
             try {
-                const customerDocRef = doc(main.db, collectionPath, firestoreDocId); // Use main.db
+                const customerDocRef = doc(db, collectionPath, firestoreDocId); // Used directly imported db
                 await deleteDoc(customerDocRef);
                 showModal("Success", "Customer deleted successfully!", () => {});
                 console.log("customers.js: Customer deleted Firestore Doc ID:", firestoreDocId);
@@ -380,13 +382,13 @@ async function deleteCustomer(firestoreDocId) {
  * Updates the UI and the `allCustomers` array whenever there are changes.
  */
 export function listenForCustomers() {
-    main.removeUnsubscribe('customers'); // Ensure any existing listener is removed (using main.removeUnsubscribe)
+    removeUnsubscribe('customers'); // Used directly imported function
 
     console.log("customers.js: listenForCustomers called.");
-    console.log("customers.js: Current state for listener - main.isAuthReady:", main.isAuthReady, "main.currentUserId:", main.currentUserId, "main.db:", main.db, "main.isDbReady:", main.isDbReady);
+    console.log("customers.js: Current state for listener - isAuthReady:", isAuthReady, "currentUserId:", currentUserId, "db:", db, "isDbReady:", isDbReady);
 
 
-    if (!main.isAuthReady || !main.currentUserId || !main.db || !main.isDbReady) { // Added main.isDbReady
+    if (!isAuthReady || !currentUserId || !db || !isDbReady) { // Used directly imported variables
         if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Initializing customers. Please wait or sign in...</p>';
         console.warn("customers.js: Customer listener skipped: Auth/DB not ready.");
         return;
@@ -401,16 +403,16 @@ export function listenForCustomers() {
         return;
     }
 
-    // Add logging for collectionPath and main.db right before the collection() call
+    // Add logging for collectionPath and db right before the collection() call
     console.log("customers.js: DEBUG - collectionPath before collection():", collectionPath);
-    console.log("customers.js: DEBUG - main.db before collection():", main.db);
+    console.log("customers.js: DEBUG - db before collection():", db);
 
-    const q = collection(main.db, collectionPath); // Use main.db here
+    const q = collection(db, collectionPath); // Used directly imported db
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
         if (customerList) customerList.innerHTML = ''; // Clear current list
-        allCustomers = []; // Clear local array
-        main.allCustomers.length = 0; // Clear main's allCustomers array
+        // allCustomers = []; // Removed: Not needed since we directly manipulate main.allCustomers
+        allCustomers.length = 0; // Clear main's allCustomers array directly (imported reference)
 
         if (snapshot.empty) {
             if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">No customers found. Add one above!</p>';
@@ -418,8 +420,8 @@ export function listenForCustomers() {
         }
         snapshot.forEach((doc) => {
             const customer = { id: doc.id, ...doc.data() };
-            allCustomers.push(customer); // Populate local array
-            main.allCustomers.push(customer); // Populate main's array as well for other modules
+            // allCustomers.push(customer); // Removed: Not needed since we directly manipulate main.allCustomers
+            allCustomers.push(customer); // Populate main's array as well for other modules (directly imported reference)
             displayCustomer(customer);
         });
         console.log("customers.js: Customers data updated via onSnapshot. Total:", snapshot.size);
@@ -428,7 +430,7 @@ export function listenForCustomers() {
         if (customerList) customerList.innerHTML = `<p class="text-red-500 text-center py-4 col-span-full">Error loading customers: ${error.message}</p>`;
     });
 
-    main.addUnsubscribe('customers', unsubscribe); // Register with main.js's central tracker
+    addUnsubscribe('customers', unsubscribe); // Used directly imported function
 }
 
 /**
@@ -496,7 +498,7 @@ function displayCustomer(customer) {
  */
 function editCustomer(customer) {
     // Permission check: Only owner or admin can edit
-    if (!main.isAdmin && customer.ownerId !== main.currentUserId) {
+    if (!isAdmin && customer.ownerId !== currentUserId) { // Used directly imported variables
         showModal("Permission Denied", "You do not have permission to edit this customer.", () => {});
         return;
     }
@@ -571,7 +573,7 @@ export function resetCustomerForm() {
     if (addressValidationMessage) addressValidationMessage.classList.add('hidden');
 
     // Enable submit button if auth is ready
-    if (main.isAuthReady && main.currentUserId && main.isDbReady) { // Added main.isDbReady
+    if (isAuthReady && currentUserId && db && isDbReady) { // Used directly imported variables
         if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
     } else {
         if (submitCustomerButton) submitCustomerButton.setAttribute('disabled', 'disabled');
