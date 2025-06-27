@@ -1,5 +1,5 @@
-// Change: Import specific exports directly from main.js instead of importing 'main' as a namespace
-import { db, isAuthReady, currentUserId, isAdmin, addUnsubscribe, removeUnsubscribe, fetchCountryData, appCountries, appCountryStateMap, allCustomers } from './main.js'; // Import main.js exports directly
+// Change: Import specific exports directly from main.js, including 'isDbReady'
+import { db, isAuthReady, currentUserId, isAdmin, addUnsubscribe, removeUnsubscribe, fetchCountryData, appCountries, appCountryStateMap, allCustomers, isDbReady } from './main.js'; // Added isDbReady to the import list
 import { showModal, getCollectionPath, formatDate } from './utils.js'; // Import utility functions
 
 import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
