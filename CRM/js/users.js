@@ -1,8 +1,10 @@
-import { db, auth, currentUserId, isAuthReady, isAdmin, addUnsubscribe } from './main.js';
-import { showModal, getCollectionPath } from './utils.js';
-import { collection, doc, setDoc, deleteDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Import necessary Firestore functions
+// users.js
+import { db, auth, currentUserId, isAdmin, isAuthReady, addUnsubscribe, removeUnsubscribe } from './main.js';
+import { showModal } from './utils.js';
 
-// Users Management module specific DOM elements
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// DOM elements for Users Management Section
 let usersManagementSection;
 let userForm;
 let userFormTitle;
@@ -18,10 +20,15 @@ let userSkillsInput;
 let submitUserButton;
 let userList;
 
-// Initialize Users module elements and event listeners
-export function initUsersModule() {
-    // Ensure DOM elements are initialized only once
-    if (!usersManagementSection) {
+let unsubscribeUsers = null; // To store the onSnapshot unsubscribe function for users
+
+// Initialize Users Module elements and event listeners
+export async function initUsersModule() {
+    console.log("users.js: initUsersModule called.");
+    console.log("users.js: initUsersModule current state - db:", db, "isAuthReady:", isAuthReady, "currentUserId:", currentUserId, "isAdmin:", isAdmin);
+
+    // Initialize DOM elements if they haven't been already
+    if (!usersManagementSection) { // Check if elements are already initialized
         usersManagementSection = document.getElementById('users-management-section');
         userForm = document.getElementById('userForm');
         userFormTitle = document.getElementById('userFormTitle');
@@ -37,7 +44,7 @@ export function initUsersModule() {
         submitUserButton = document.getElementById('submitUserButton');
         userList = document.getElementById('userList');
 
-        // Add event listeners specific to users module
+        // Add event listener for user form
         if (userForm) {
             userForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -48,7 +55,7 @@ export function initUsersModule() {
                     email: userEmailInput.value.trim(),
                     phone: userPhoneInput.value.trim(),
                     role: userRoleSelect.value.trim(),
-                    skills: userSkillsInput.value.trim(),
+                    skills: userSkillsInput.value.trim(), // Will be parsed to array in saveUser
                 };
                 const editingId = userForm.dataset.editingId;
                 await saveUser(userData, editingId || null);
@@ -57,17 +64,25 @@ export function initUsersModule() {
         document.getElementById('resetUserFormButton')?.addEventListener('click', resetUserForm);
     }
 
-    // Ensure initial state and load data
-    resetUserForm();
-    if (submitUserButton) {
-        if (isAuthReady && currentUserId && isAdmin) {
-            submitUserButton.removeAttribute('disabled');
-        } else {
-            submitUserButton.setAttribute('disabled', 'disabled');
-        }
+    // Load data specific to this module
+    if (isAuthReady && isAdmin) {
+        listenForUsers(); // Start listening for users data
+        resetUserForm(); // Reset user form
+        if (submitUserButton) submitUserButton.removeAttribute('disabled');
+    } else {
+        if (submitUserButton) submitUserButton.setAttribute('disabled', 'disabled');
+        if (userList) userList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Access Denied: Only administrators can view users.</p>';
     }
-    listenForUsers();
 }
+
+// Determine the Firestore collection path for users
+function getUsersCollectionPath() {
+    // Users data is not part of 'artifacts/{appId}/public/data' or 'artifacts/{appId}/users/{userId}'
+    // It's a top-level collection for admin management of all user profiles.
+    return `users_data`;
+}
+
+/* --- USERS CRUD OPERATIONS --- */
 
 // Save (Add/Update) a User
 async function saveUser(userData, existingFirestoreDocId = null) {
@@ -76,18 +91,20 @@ async function saveUser(userData, existingFirestoreDocId = null) {
         return;
     }
 
+    // Gmail email validation for userName (which is the email they log in with)
     const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
     if (!gmailRegex.test(userData.userName)) {
         showModal("Validation Error", "User Name (Email) must be a valid Gmail email address.", () => {});
         return;
     }
 
+    // Explicit validation for all mandatory fields
     const mandatoryFields = [
-        { field: userData.firstName, name: "First Name" },
-        { field: userData.lastName, name: "Last Name" },
-        { field: userData.email, name: "Contact Email" },
-        { field: userData.phone, name: "Phone" },
-        { field: userData.role, name: "Role" }
+        { field: userData.firstName.trim(), name: "First Name" },
+        { field: userData.lastName.trim(), name: "Last Name" },
+        { field: userData.email.trim(), name: "Contact Email" },
+        { field: userData.phone.trim(), name: "Phone" },
+        { field: userData.role.trim(), name: "Role" }
     ];
 
     let missingFields = [];
@@ -97,59 +114,57 @@ async function saveUser(userData, existingFirestoreDocId = null) {
         }
     });
 
+    // Skills field check (after trimming and filtering empty strings from comma-separated input)
     const processedSkills = userData.skills.split(',').map(s => s.trim()).filter(s => s !== '');
     if (processedSkills.length === 0) {
         missingFields.push("Skills");
     }
-    userData.skills = processedSkills;
+    userData.skills = processedSkills; // Update userData.skills to the processed array for saving
+
 
     if (missingFields.length > 0) {
-        showModal("Validation Error", `Please fill in all mandatory fields: ${[...new Set(missingFields)].join(', ')}.`, () => {});
+        const message = `Please fill in all mandatory fields: ${[...new Set(missingFields)].join(', ')}.`;
+        showModal("Validation Error", message, () => {});
         return;
     }
 
+    // Set profileAccess based on role
     userData.profileAccess = (userData.role === 'Admin');
 
-    const collectionPath = `users_data`;
+    const collectionPath = getUsersCollectionPath();
 
     try {
         let targetDocRef;
         let targetUid;
 
         if (existingFirestoreDocId) {
-            // Use modular Firestore syntax: doc(db, collectionPath, existingFirestoreDocId)
+            // EDITING AN EXISTING USER
             targetDocRef = doc(db, collectionPath, existingFirestoreDocId);
-            await setDoc(targetDocRef, userData, { merge: true }); // Use set with merge for consistency
+            await setDoc(targetDocRef, userData, { merge: true }); // Use setDoc with merge for update
             console.log("User updated:", existingFirestoreDocId);
             showModal("Success", "User profile updated successfully!", () => {});
         } else {
-            if (!userIdDisplayInput) {
-                 showModal("Internal Error", "User ID input field not found for new user creation.", () => {});
+            // ADDING A NEW USER PROFILE
+            if (!userIdDisplayInput.value.trim()) {
+                 showModal("Validation Error", "For new user profiles, you must provide the Firebase User ID (UID). This user should first be created in Firebase Authentication.", () => {});
                  return;
             }
             targetUid = userIdDisplayInput.value.trim();
 
-            if (!targetUid) {
-                showModal("Validation Error", "For new user profiles, you must provide the Firebase User ID (UID). This user should first be created in Firebase Authentication.", () => {});
-                if (userIdDisplayInput) userIdDisplayInput.focus();
-                return;
-            }
-
-            // Use modular Firestore syntax: getDoc(doc(db, collectionPath, targetUid))
+            // Check if a user profile with this UID already exists
             const existingProfileSnap = await getDoc(doc(db, collectionPath, targetUid));
             if (existingProfileSnap.exists()) {
                 showModal("Creation Error", "A user profile with this UID already exists. Please edit the existing profile or provide a unique UID for a new user.", () => {});
                 return;
             }
 
-            // Use modular Firestore syntax: doc(db, collectionPath, targetUid)
-            targetDocRef = doc(db, collectionPath, targetUid);
-            await setDoc(targetDocRef, { ...userData, userId: targetUid });
+            targetDocRef = doc(db, collectionPath, targetUid); // Use the provided UID as the document ID
+            await setDoc(targetDocRef, { ...userData, userId: targetUid }); // Store UID also as userId field
             console.log("New user profile created. Doc ID is provided UID:", targetUid);
             showModal("Success", "New user profile created successfully!", () => {});
         }
 
-        resetUserForm();
+        resetUserForm(); // Reset form after successful operation
     } catch (error) {
         console.error("Error saving user:", error);
         showModal("Error", `Failed to save user: ${error.message}`, () => {});
@@ -163,13 +178,12 @@ async function deleteUser(firestoreDocId) {
         return;
     }
 
-    const collectionPath = `users_data`;
+    const collectionPath = getUsersCollectionPath();
     showModal(
         "Confirm Deletion",
         "Are you sure you want to delete this user? This action cannot be undone.",
         async () => {
             try {
-                // Use modular Firestore syntax: deleteDoc(doc(db, collectionPath, firestoreDocId))
                 await deleteDoc(doc(db, collectionPath, firestoreDocId));
                 console.log("User deleted Firestore Doc ID:", firestoreDocId);
                 showModal("Success", "User profile deleted successfully!", () => {});
@@ -182,41 +196,47 @@ async function deleteUser(firestoreDocId) {
 }
 
 // Listen for real-time updates to Users
-function listenForUsers() {
-    if (!isAuthReady || !currentUserId || !isAdmin) {
+export function listenForUsers() {
+    if (unsubscribeUsers) {
+        unsubscribeUsers(); // Unsubscribe from previous listener
+    }
+
+    // Crucial check: ensure db is not null/undefined before creating collection reference
+    if (!db || !isAuthReady || !currentUserId || !isAdmin) {
         if (userList) userList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Access Denied: Only administrators can view users.</p>';
+        console.warn("users.js: Cannot listen for users. DB not ready or user not authenticated/admin.");
         return;
     }
 
-    const collectionPath = `users_data`;
-    // Use modular Firestore syntax: collection(db, collectionPath)
-    const q = collection(db, collectionPath);
+    const collectionPath = getUsersCollectionPath();
+    const q = collection(db, collectionPath); // This is the line that was causing the error if db was not ready
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        if (userList) userList.innerHTML = '';
+    unsubscribeUsers = onSnapshot(q, (snapshot) => {
+        if (userList) userList.innerHTML = ''; // Clear current list
         if (snapshot.empty) {
             if (userList) userList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No users found. Add one above by providing their Firebase UID after creating them in Firebase Authentication!</p>';
             return;
         }
         snapshot.forEach((doc) => {
-            const user = { id: doc.id, ...doc.data() };
+            const user = { id: doc.id, ...doc.data() }; // doc.id is Firestore's internal ID (which should be the UID for users_data)
             displayUser(user);
         });
     }, (error) => {
         console.error("Error listening to users:", error);
         if (userList) userList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading users: ${error.message}</p>`;
     });
-    addUnsubscribe('users', unsubscribe);
+
+    addUnsubscribe('users', unsubscribeUsers); // Register with main.js's central tracker
 }
 
 // Display a single user in the UI as a grid row
 function displayUser(user) {
-    if (!userList) return;
+    if (!userList) return; // Defensive check
     const userRow = document.createElement('div');
     userRow.className = 'data-grid-row';
-    userRow.dataset.id = user.id;
+    userRow.dataset.id = user.id; // Store Firestore document ID for edit/delete actions
 
-    const displayUid = user.id || 'N/A';
+    const displayUid = user.id || 'N/A'; // Use Firestore doc ID for display, which should be the UID
 
     userRow.innerHTML = `
         <div class="px-2 py-1 truncate font-medium text-gray-800">${displayUid}</div>
@@ -224,7 +244,7 @@ function displayUser(user) {
         <div class="px-2 py-1 truncate">${user.email || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden sm:block">${user.role || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden md:block">${Array.isArray(user.skills) ? user.skills.join(', ') : user.skills || 'N/A'}</div>
-        <div class="px-2 py-1 flex justify-center items-center space-x-2">
+        <div class="px-2 py-1 flex justify-end space-x-2">
             <button class="edit-btn text-blue-600 hover:text-blue-800 font-semibold text-xs" data-id="${user.id}" title="Edit">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
@@ -267,8 +287,8 @@ function editUser(user) {
     if (userForm) userForm.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Reset User form function (exported for main.js to use)
-export function resetUserForm() {
+// Reset User form function
+export function resetUserForm() { // Exported for main.js to use
     if (userForm) userForm.reset();
     if (userForm) userForm.dataset.editingId = '';
     if (userFormTitle) userFormTitle.textContent = 'Add New User Profile';
@@ -283,3 +303,4 @@ export function resetUserForm() {
     }
     if (userRoleSelect) userRoleSelect.value = 'User';
 }
+
