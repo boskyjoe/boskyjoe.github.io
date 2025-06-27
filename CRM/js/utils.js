@@ -1,5 +1,5 @@
-// Import main.js as a whole module for consistent access to its exports
-import * as main from './main.js'; // Imported main as a namespace
+// Change: Use named imports for specific global states and the Firestore DB instance
+import { appId, auth, currentUserId, isAuthReady, isDbReady } from './main.js'; // Added isDbReady, and specific imports
 import { collection, doc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Import necessary Firestore functions
 
 /**
@@ -118,8 +118,8 @@ export function debounce(func, delay) {
  * Determines the Firestore collection path based on authentication status and data area.
  * This is crucial for adhering to Firebase Security Rules.
  *
- * For 'public' data: artifacts/{main.appId}/public/data/{dataArea}
- * For 'private' data: artifacts/{main.appId}/users/{main.currentUserId}/{dataArea}
+ * For 'public' data: artifacts/{appId}/public/data/{dataArea}
+ * For 'private' data: artifacts/{appId}/users/{userId}/{dataArea}
  * For top-level shared collections (like 'opportunities_data', 'users_data'): just the collection name
  *
  * @param {string} dataArea - The specific data collection name (e.g., 'customers', 'opportunities_data', 'users_data').
@@ -127,11 +127,11 @@ export function debounce(func, delay) {
  * @returns {string|null} The full Firestore collection path, or null if authentication is required for private data but not available.
  */
 export function getCollectionPath(dataArea, type = 'private') {
-    // Debugging: Log main.appId visible within utils.js
-    console.log("utils.js: DEBUG - main.appId visible in getCollectionPath:", main.appId);
+    // Debugging: Log appId visible within utils.js
+    console.log("utils.js: DEBUG - appId visible in getCollectionPath:", appId);
 
-    if (!main.appId) { // Access appId via main.appId
-        console.error("utils.js: main.appId is not defined. Cannot construct collection path.");
+    if (!appId) { // Access appId directly as it's imported
+        console.error("utils.js: appId is not defined. Cannot construct collection path.");
         showMessage('error', 'Application ID missing. CRM features may not function correctly.', 'modalContainer');
         return null;
     }
@@ -141,14 +141,14 @@ export function getCollectionPath(dataArea, type = 'private') {
     if (dataArea === 'opportunities_data' || dataArea === 'users_data') {
         path = dataArea; // Return just the collection name for top-level collections
     } else if (type === 'public') {
-        path = `artifacts/${main.appId}/public/data/${dataArea}`; // Access appId via main.appId
+        path = `artifacts/${appId}/public/data/${dataArea}`; // Access appId directly
     } else { // 'private'
         // isAuthReady, currentUserId, and isDbReady are imported from main.js
-        if (!main.isAuthReady || !main.currentUserId || !main.isDbReady) { // Access via main.isAuthReady, main.currentUserId, main.isDbReady
+        if (!isAuthReady || !currentUserId || !isDbReady) { // Access directly
             console.warn(`utils.js: Attempted to access private data area '${dataArea}' before authentication/DB is ready or without a logged-in user.`);
             return null; // Critical: Do not return a path if auth/DB is missing for private data
         }
-        path = `artifacts/${main.appId}/users/${main.currentUserId}/${dataArea}`; // Access via main.appId, main.currentUserId
+        path = `artifacts/${appId}/users/${currentUserId}/${dataArea}`; // Access directly
     }
 
     console.log(`utils.js: DEBUG - getCollectionPath returning: ${path} for dataArea: ${dataArea}, type: ${type}`);
