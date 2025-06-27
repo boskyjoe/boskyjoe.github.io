@@ -195,6 +195,28 @@
                         </select>
                     </div>
 
+                    <!-- NEW: Customer Source Field -->
+                    <div>
+                        <label for="customerSource" class="block text-sm font-medium text-gray-700 mb-1">Customer Source</label>
+                        <select id="customerSource" class="form-select">
+                            <option value="">Select Source</option>
+                            <option value="Website">Website</option>
+                            <option value="Referral">Referral</option>
+                            <option value="Social Media">Social Media</option>
+                            <option value="Advertisement">Advertisement</option>
+                            <option value="Event">Event</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <!-- NEW: Active (Y/N) Field -->
+                    <div>
+                        <label for="customerActive" class="block text-sm font-medium text-gray-700 mb-1">Active</label>
+                        <select id="customerActive" class="form-select">
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
 
                     <div class="md:col-span-2">
                         <label for="customerSince" class="block text-sm font-medium text-gray-700 mb-1">Customer Since</label>
@@ -227,6 +249,8 @@
                     <div class="hidden lg:block">Address</div>
                     <div class="hidden lg:block">Industry</div>
                     <div class="hidden sm:block">Since</div>
+                    <div class="hidden md:block">Source</div> <!-- NEW HEADER -->
+                    <div class="hidden md:block">Active</div> <!-- NEW HEADER -->
                     <div class="text-right">Actions</div>
                 </div>
                 <div id="customerList" class="data-grid-body">
