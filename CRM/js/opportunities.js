@@ -233,7 +233,9 @@ function toggleAccordion(event) {
 
 // Determines the Firestore collection path for opportunities
 function getOpportunitiesCollectionPath() {
-    return getCollectionPath('private', 'opportunities'); // Opportunities are private to the owner
+    // Opportunities are now in a top-level collection called 'opportunities_data'
+    // This removes them from the '/artifacts/{appId}/public/data/' path.
+    return 'opportunities_data';
 }
 
 // Determines the Firestore sub-collection path for related objects
@@ -244,7 +246,7 @@ function getOpportunitySubCollectionPath(subCollectionName) {
         console.error(`opportunities.js: Cannot get subcollection path for ${subCollectionName}: no currentOpportunityId set.`);
         return null;
     }
-    // Subcollections are private to the opportunity owner
+    // Subcollections now also live under the new top-level opportunities_data
     return `${getOpportunitiesCollectionPath()}/${idToUse}/${subCollectionName}`;
 }
 
@@ -415,7 +417,7 @@ async function saveOpportunity() {
         serviceAddress: opportunityServiceAddressInput.value.trim(),
         description: opportunityDescriptionInput.value.trim(),
         additionalData: additionalData,
-        ownerId: main.currentUserId, // Use main.currentUserId
+        ownerId: main.currentUserId, // Link opportunity to the current logged-in user
         createdAt: new Date(),
         updatedAt: new Date()
     };
@@ -1131,8 +1133,6 @@ function resetQuoteForm() {
     if (quoteIdDisplayGroup) quoteIdDisplayGroup.classList.add('hidden');
     if (quoteIdDisplay) quoteIdDisplay.textContent = '';
     if (quoteNetAmountInput) quoteNetAmountInput.value = '0.00';
-    // CORRECTED LINE: This was the source of the SyntaxError
-    // It was trying to assign to submitOpportunityButton.textContent
     if (submitQuoteButton) submitQuoteButton.textContent = 'Add Quote';
     if (quoteIsFinalCheckbox) quoteIsFinalCheckbox.checked = false;
 
