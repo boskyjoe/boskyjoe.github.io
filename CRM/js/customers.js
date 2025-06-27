@@ -224,7 +224,7 @@ function applyCustomerTypeValidation() {
         individualFieldsDiv.classList.add('hidden');
         companyNameFieldDiv.classList.remove('hidden');
         individualIndustryGroup.classList.add('hidden');
-        companyIndustryGroup.classList.add('hidden');
+        companyIndustryGroup.classList.remove('hidden');
 
         customerCompanyNameInput.setAttribute('required', 'required');
     } else { // "Select Type" or other invalid selection
@@ -398,6 +398,10 @@ export function listenForCustomers() {
         if (customerList) customerList.innerHTML = '<p class="text-red-500 text-center py-4 col-span-full">Error: Could not determine customer data path.</p>';
         return;
     }
+
+    // Add logging for collectionPath and main.db right before the collection() call
+    console.log("customers.js: DEBUG - collectionPath before collection():", collectionPath);
+    console.log("customers.js: DEBUG - main.db before collection():", main.db);
 
     const q = collection(main.db, collectionPath); // Use main.db here
 
