@@ -224,7 +224,7 @@ function applyCustomerTypeValidation() {
         individualFieldsDiv.classList.add('hidden');
         companyNameFieldDiv.classList.remove('hidden');
         individualIndustryGroup.classList.add('hidden');
-        companyIndustryGroup.classList.remove('hidden');
+        companyIndustryGroup.classList.add('hidden');
 
         customerCompanyNameInput.setAttribute('required', 'required');
     } else { // "Select Type" or other invalid selection
@@ -338,7 +338,8 @@ async function saveCustomer() {
             console.log("customers.js: New Customer added with ID:", newCustomerId);
         }
         resetCustomerForm();
-    } catch (error) {
+    }
+    catch (error) {
         console.error("customers.js: Error saving customer:", error);
         showModal("Error", `Failed to save customer: ${error.message}`, () => { });
     }
@@ -365,7 +366,8 @@ async function deleteCustomer(firestoreDocId) {
                 await deleteDoc(customerDocRef);
                 showModal("Success", "Customer deleted successfully!", () => {});
                 console.log("customers.js: Customer deleted Firestore Doc ID:", firestoreDocId);
-            } catch (error) {
+            }
+            catch (error) {
                 console.error("customers.js: Error deleting customer:", error);
                 showModal("Error", `Failed to delete customer: ${error.message}`, () => {});
             }
@@ -393,8 +395,8 @@ export function listenForCustomers() {
     const collectionPath = getCustomerCollectionPath();
     
     // Defensive check to ensure collectionPath is valid
-    if (!collectionPath) {
-        console.error("customers.js: Collection path for customers is null. Cannot set up listener.");
+    if (typeof collectionPath !== 'string' || !collectionPath) { // Ensure it's a non-empty string
+        console.error("customers.js: Collection path for customers is invalid (not a string or empty). Cannot set up listener. Path received:", collectionPath);
         if (customerList) customerList.innerHTML = '<p class="text-red-500 text-center py-4 col-span-full">Error: Could not determine customer data path.</p>';
         return;
     }
