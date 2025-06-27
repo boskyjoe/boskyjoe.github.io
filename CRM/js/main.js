@@ -91,8 +91,6 @@ let customerSinceInput;
 let customerDescriptionInput;
 let submitCustomerButton;
 let customerList; // Reference to the div for customer rows
-let customerSourceSelect; // NEW: Customer Source
-let customerActiveSelect; // NEW: Customer Active
 
 // Opportunity Section Elements (NEW - and now restructured)
 let opportunitiesSection;
@@ -459,12 +457,12 @@ export async function showSection(sectionId) {
     }
 
     // Start specific listener for the active section, only if auth and DB are ready
-    // (This check is redundant if we're already past the initial `if (!db || !isDbReady)` block,
-    // but good for explicit clarity of intent.)
     if (isAuthReady && db && isDbReady) {
         if (sectionId === 'customers-section') {
             import('./customers.js').then(module => {
-                module.initCustomersModule(); // `db` is directly imported by customers.js now
+                // Explicitly set the db instance within the customers module
+                module.setDbInstance(db); // Call the new setter
+                module.initCustomersModule();
             }).catch(error => console.error("main.js: Failed to load customers module:", error));
         } else if (sectionId === 'opportunities-section') {
             import('./opportunities.js').then(module => {
