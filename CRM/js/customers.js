@@ -2,7 +2,8 @@ import { db, auth, currentUserId, isAdmin, isAuthReady, addUnsubscribe, removeUn
 import { showModal, getCollectionPath } from './utils.js';
 import { appCountries, appCountryStateMap, fetchCountryData } from './admin_data.js'; // Import appCountries, appCountryStateMap, and fetchCountryData
 
-import { collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// IMPORTANT: Added getDocs to the import list
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
 // DOM elements for Customer Management Section - Declared globally but assigned in init
@@ -46,13 +47,13 @@ export async function initCustomersModule() {
     console.log("customers.js: initCustomersModule called.");
     console.log("customers.js: initCustomersModule current state - db:", db, "isAuthReady:", isAuthReady, "currentUserId:", currentUserId);
 
-    // --- IMPORTANT: Assign DOM elements here within the init function ---
+    // --- IMPORTANT: Assign ALL DOM elements here within the init function ---
     // This ensures they are retrieved when the section is actually being initialized
     // and the HTML elements should be present in the DOM.
     customerManagementSection = document.getElementById('customers-section');
     customerForm = document.getElementById('customerForm');
     customerFormTitle = document.getElementById('customerFormTitle');
-    customerTypeSelect = document.getElementById('customerType');
+    customerTypeSelect = document.getElementById('customerType'); // This is the element causing issues
     individualFieldsDiv = document.getElementById('individualFields');
     customerFirstNameInput = document.getElementById('customerFirstName');
     customerLastNameInput = document.getElementById('customerLastName');
@@ -82,11 +83,11 @@ export async function initCustomersModule() {
     // --- IMMEDIATE DEBUGGING LOG ---
     console.log("customers.js: Value of customerTypeSelect immediately after getElementById:", customerTypeSelect);
 
-    // Add event listeners - with null checks
+    // Add event listeners - with null checks for robustness
     if (customerTypeSelect) {
         customerTypeSelect.addEventListener('change', toggleCustomerTypeFields);
     } else {
-        console.error("customers.js: ERROR: customerTypeSelect is null. Cannot attach change listener. Check index.html for ID 'customerType'.");
+        console.error("customers.js: ERROR: customerTypeSelect is null. Cannot attach change listener. Check index.html for ID 'customerType' within 'customers-section'.");
     }
     if (customerCountrySelect) {
         customerCountrySelect.addEventListener('change', populateStates);
@@ -371,6 +372,7 @@ export async function fetchCustomersForDropdown() {
     try {
         const collectionPath = getCustomersCollectionPath(); // Get the path again here
         console.log("customers.js: fetchCustomersForDropdown is querying path:", collectionPath);
+        // Corrected: getDocs is now imported.
         const querySnapshot = await getDocs(collection(db, collectionPath));
         const customers = [];
         querySnapshot.forEach((doc) => {
