@@ -4,14 +4,15 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, doc, getDoc, collection, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Import utility functions
-import { showModal } from './utils.js'; // Assuming utils.js is in the same directory
+import { showModal } from './utils.js';
 
 // Import module initialization functions
 import { initCustomersModule, resetCustomerForm } from './customers.js';
 import { initOpportunitiesModule, resetOpportunityForm, setOpportunityLayout, closeAllAccordions } from './opportunities.js';
 import { initUsersModule, resetUserForm } from './users.js';
-import { initAdminDataModule, resetCurrencyForm } from './admin_data.js';
-import { initPriceBookModule, resetPriceBookForm } from './price_book.js'; // NEW: Import PriceBook module
+// Corrected import: admin_data.js should export these directly.
+import { initAdminDataModule, resetCurrencyForm, fetchCurrencies as fetchAllCurrencies, allCurrencies as globalAllCurrencies, getCurrencySymbol, getCurrencyName } from './admin_data.js'; // Renamed imports to avoid conflict
+import { initPriceBookModule, resetPriceBookForm } from './price_book.js';
 
 // YOUR Firebase Configuration
 const firebaseConfig = {
@@ -77,12 +78,12 @@ export async function showSection(sectionId) {
     console.log(`main.js: showSection called with sectionId: "${sectionId}"`);
 
     // Check for admin section access
-    if (['admin-country-mapping-section', 'users-management-section', 'currency-management-section', 'price-book-management-section'].includes(sectionId)) { // UPDATED: Added price-book-management-section
+    if (['admin-country-mapping-section', 'users-management-section', 'currency-management-section', 'price-book-management-section'].includes(sectionId)) {
         console.log(`main.js: Accessing admin section: ${sectionId}. Current user ID: ${currentUserId}, isAdmin: ${isAdmin}`);
         if (!currentUserId) {
             console.log(`main.js: Access to ${sectionId} denied. No user logged in. Prompting Google login.`);
-            await handleGoogleLogin();
-            return;
+            showModal("Login Required", "Please sign in to access this admin section.", () => {});
+            return; // Stop here, user needs to login
         }
         if (!isAdmin) {
             console.log(`main.js: Access to ${sectionId} denied. User is not admin.`);
@@ -108,6 +109,8 @@ export async function showSection(sectionId) {
         console.warn(`main.js: Target section with ID "${sectionId}" not found in the DOM.`);
     }
 
+    // Update URL hash to reflect current section for direct linking/refresh
+    window.location.hash = sectionId;
 
     // Close mobile menu and admin submenus when navigating
     if (mobileMenu) mobileMenu.classList.remove('open');
@@ -121,11 +124,12 @@ export async function showSection(sectionId) {
     currentUnsubscribeFunctions = {}; // Clear the map
 
     // Reset forms and module-specific state when navigating away from them
+    // Ensure these functions exist before calling (safe calls with typeof)
     if (sectionId !== 'customers-section' && typeof resetCustomerForm === 'function') resetCustomerForm();
     if (sectionId !== 'opportunities-section' && typeof resetOpportunityForm === 'function') resetOpportunityForm();
     if (sectionId !== 'users-management-section' && typeof resetUserForm === 'function') resetUserForm();
     if (sectionId !== 'currency-management-section' && typeof resetCurrencyForm === 'function') resetCurrencyForm();
-    if (sectionId !== 'price-book-management-section' && typeof resetPriceBookForm === 'function') resetPriceBookForm(); // NEW: Reset PriceBook form
+    if (sectionId !== 'price-book-management-section' && typeof resetPriceBookForm === 'function') resetPriceBookForm();
 
 
     // Dynamically initialize modules and start their listeners
@@ -168,7 +172,7 @@ export async function showSection(sectionId) {
                     console.log('main.js: Not calling initAdminDataModule() for currency_management because user is not admin.');
                 }
                 break;
-            case 'price-book-management-section': // NEW: Case for PriceBook module
+            case 'price-book-management-section':
                 if (isAdmin && typeof initPriceBookModule === 'function') {
                     console.log('main.js: Calling initPriceBookModule().');
                     initPriceBookModule();
@@ -238,8 +242,8 @@ async function initializeFirebase() {
         document.getElementById('users-management-section'),
         document.getElementById('auth-section'),
         document.getElementById('currency-management-section'),
-        document.getElementById('price-book-management-section') // NEW: Added price book section
-    ].filter(section => section !== null); // Filter out any that might still be null if HTML is malformed
+        document.getElementById('price-book-management-section')
+    ].filter(section => section !== null);
     console.log("main.js: allSections populated. Found:", allSections.map(s => s.id));
 
 
@@ -357,9 +361,11 @@ async function initializeFirebase() {
                 if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
             }
 
-            // After auth is ready and admin status is known, show the home section
-            console.log("main.js: Calling showSection('home-section') after authentication setup.");
-            showSection('home-section');
+            // Only show home section if no other section is specified in the URL hash,
+            // or if it's the very first load and no hash is present.
+            const initialSectionId = window.location.hash ? window.location.hash.substring(1) : 'home-section';
+            console.log(`main.js: Initial section to show based on hash or default: "${initialSectionId}"`);
+            showSection(initialSectionId); // This is the change: use initialSectionId
 
         } else { // No user is signed in.
             currentUserId = null;
@@ -386,6 +392,7 @@ async function initializeFirebase() {
                 btn.setAttribute('disabled', 'disabled');
             });
 
+            // For unauthenticated users, always show the home section initially
             console.log("main.js: Calling showSection('home-section') for unauthenticated user.");
             showSection('home-section');
         }
