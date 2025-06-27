@@ -3,13 +3,12 @@ import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc, getDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
-// YOUR Firebase Configuration - Provided by the user and directly embedded.
-// Make sure this matches your project's configuration
+// YOUR Firebase Configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2C0IIjGODo", // (Adjusted placeholder API key slightly for unique ID - ensure it's YOUR real key)
+    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo", // Your actual API key
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
-    storageBucket: "shuttersync-96971.firebaseapp.com",
+    storageBucket: "shuttersync-96971.firebasestorage.app", // Updated storage bucket
     messagingSenderId: "10782416018",
     appId: "1:10782416018:web:361db5572882a62f291a4b",
     measurementId: "G-T0W9CES4D3"
@@ -347,8 +346,8 @@ function setOpportunityLayout(layoutType) {
 
     switch (layoutType) {
         case 'full_form_and_list': // Default view for adding new, or after resetting edit form
-            if (opportunityFullFormView) opportunityFullFormView.classList.remove('hidden');
-            if (opportunityExistingListView) opportunityExistingListView.classList.remove('hidden');
+            if (opportunityFullFormView) opportunityFullFormView.classList.add('hidden');
+            if (opportunityExistingListView) opportunityExistingListView.classList.add('hidden');
             if (opportunityLeftPanel) opportunityLeftPanel.classList.add('md:w-full'); // Take full width
             if (opportunityRightPanel) opportunityRightPanel.classList.add('hidden-panel'); // Hide right panel completely
             break;
@@ -437,7 +436,6 @@ export async function showSection(sectionId) {
     if (isAuthReady && db && isDbReady) { // Ensure auth and DB are ready
         if (sectionId === 'customers-section') {
             import('./customers.js').then(module => {
-                // Pass the db instance explicitly here
                 module.initCustomersModule(); // No longer passing db, it's imported directly in customers.js
             }).catch(error => console.error("main.js: Failed to load customers module:", error));
             if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
