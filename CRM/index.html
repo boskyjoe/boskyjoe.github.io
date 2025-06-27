@@ -21,7 +21,7 @@
 
             <!-- Desktop Navigation -->
             <nav class="hidden md:flex items-center space-x-4">
-                <a href="#" class="nav-link" data-section="home">Home</a>
+                <a href="#" class="nav-link" data-section="home-section">Home</a>
                 <a href="#" class="nav-link" data-section="customers-section">Customers</a>
                 <a href="#" class="nav-link" data-section="opportunities-section">Opportunities</a>
                 <a href="#" class="nav-link" data-section="events-section">Events</a>
@@ -63,7 +63,7 @@
         <!-- Mobile Navigation (hidden by default) -->
         <nav id="mobileMenu" class="md:hidden bg-white shadow-lg pb-4">
             <div class="flex flex-col items-start px-2 pt-2 pb-3 space-y-1">
-                <a href="#" class="nav-link" data-section="home">Home</a>
+                <a href="#" class="nav-link" data-section="home-section">Home</a>
                 <a href="#" class="nav-link" data-section="customers-section">Customers</a>
                 <a href="#" class="nav-link" data-section="opportunities-section">Opportunities</a>
                 <a href="#" class="nav-link" data-section="events-section">Events</a>
@@ -92,7 +92,7 @@
 
     <main class="flex-1">
         <!-- Home Section -->
-        <section id="home" class="container mx-auto p-6 hidden">
+        <section id="home-section" class="container mx-auto p-6 hidden">
             <div class="text-center py-20 bg-white rounded-lg shadow-md">
                 <h1 class="text-5xl font-extrabold text-gray-900 mb-4">Welcome to ShutterSync CRM</h1>
                 <p class="text-xl text-gray-600 mb-8">Your all-in-one solution for managing customers, opportunities, and events with ease.</p>
@@ -427,7 +427,7 @@
                                     <div id="optyLineIdDisplayGroup" class="md:col-span-2 bg-gray-50 p-2 rounded-md text-sm text-gray-600 hidden">
                                         <strong>Line ID:</strong> <span id="optyLineIdDisplay"></span>
                                     </div>
-                                    <div class="md:col-span-2">
+                                    <div>
                                         <label for="lineServiceDescription" class="block text-sm font-medium text-gray-700 mb-1">Service Description</label>
                                         <input type="text" id="lineServiceDescription" class="form-input" required>
                                     </div>
