@@ -23,8 +23,8 @@ console.log("main.js: Using directly provided Firebase config:", firebaseConfig)
 export const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId; // Export appId
 
 export let app; // Export app instance
-export let db; // Export db instance
-export let auth; // Export auth instance
+export let db; // Export db instance (will be assigned later in initializeFirebase)
+export let auth; // Export auth instance (will be assigned later)
 export let currentUserId = null; // Will be set by Firebase Auth onAuthStateChanged
 export let isAuthReady = false; // Set to false initially, true when Firebase Auth confirms a user
 export let isDbReady = false; // NEW: Flag to indicate if Firestore DB instance is ready
@@ -437,6 +437,7 @@ export async function showSection(sectionId) {
     if (isAuthReady && db && isDbReady) { // Ensure auth and DB are ready
         if (sectionId === 'customers-section') {
             import('./customers.js').then(module => {
+                // Pass the db instance explicitly here
                 module.initCustomersModule();
             }).catch(error => console.error("main.js: Failed to load customers module:", error));
             if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
@@ -607,9 +608,9 @@ async function initializeFirebase() {
         try {
             app = initializeApp(firebaseConfig);
             getAnalytics(app);
-            db = getFirestore(app);
+            db = getFirestore(app); // Assign db here
             isDbReady = true; // Set to true immediately after db is assigned
-            auth = getAuth(app);
+            auth = getAuth(app); // Assign auth here
             console.log("main.js: Firebase app and services initialized. DB Ready:", isDbReady);
         } catch (error) {
             console.error("main.js: Error initializing Firebase services:", error);
@@ -744,6 +745,7 @@ async function initializeFirebase() {
     submitCurrencyButton = document.getElementById('submitCurrencyButton');
     adminCurrencyMessageDiv = document.getElementById('adminCurrencyMessageDiv');
     currencyList = document.getElementById('currencyList');
+
 
     usersManagementSection = document.getElementById('users-management-section');
     userForm = document.getElementById('userForm');
