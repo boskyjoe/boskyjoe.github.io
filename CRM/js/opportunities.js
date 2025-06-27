@@ -1,4 +1,5 @@
-import { db, auth, currentUserId, isAdmin, isAuthReady, addUnsubscribe, removeUnsubscribe, allCurrencies, fetchCurrencies, getCurrencySymbol } from './main.js'; // UPDATED: Import allCurrencies, fetchCurrencies, getCurrencySymbol from main.js
+// UPDATED IMPORT: Import main.js as a whole module
+import * as main from './main.js';
 import { showModal, getCollectionPath } from './utils.js';
 import { fetchCustomersForDropdown, allCustomers } from './customers.js'; // Keep importing from customers.js for customer list logic
 
@@ -77,12 +78,14 @@ let unsubscribeContacts = null;
 let unsubscribeLines = null;
 let unsubscribeQuotes = null;
 
-let currentOpportunityId = null; // Store the ID of the opportunity currently being edited
+// Use main.currentOpportunityId from the imported main module
+let currentOpportunityId = null; // Still use local variable here and assign from main.js if needed.
 
 // Initialize Opportunities Module
 export async function initOpportunitiesModule() {
     console.log("opportunities.js: initOpportunitiesModule called.");
-    console.log("opportunities.js: initOpportunitiesModule current state - db:", db, "isAuthReady:", isAuthReady, "currentUserId:", currentUserId);
+    // Now access main's properties via the 'main' object
+    console.log("opportunities.js: initOpportunitiesModule current state - db:", main.db, "isAuthReady:", main.isAuthReady, "currentUserId:", main.currentUserId);
 
     // Initialize DOM elements if they haven't been already
     if (!opportunitiesManagementSection) {
@@ -190,16 +193,16 @@ export async function initOpportunitiesModule() {
     }
 
     // Load data specific to this module
-    if (isAuthReady && currentUserId) {
+    if (main.isAuthReady && main.currentUserId) { // Use main.isAuthReady, main.currentUserId
         if (submitOpportunityButton) submitOpportunityButton.removeAttribute('disabled');
         // Populate dropdowns and start listeners
         await populateCustomersForOpportunityDropdown(); // NEW: Populate customer dropdown
         
         // --- ADDED DEBUG LOGS FOR CURRENCY FETCHING/POPULATION ---
-        console.log("opportunities.js: Before fetching currencies. allCurrencies (initial):", allCurrencies);
-        await fetchCurrencies(); // Ensure currencies are loaded (from main.js)
-        console.log("opportunities.js: After fetching currencies. allCurrencies (after fetch):", allCurrencies);
-        console.log("opportunities.js: getCurrencySymbol reference:", getCurrencySymbol); // Debug getCurrencySymbol reference
+        console.log("opportunities.js: Before fetching currencies. main.allCurrencies (initial):", main.allCurrencies);
+        await main.fetchCurrencies(); // Ensure currencies are loaded (from main.js)
+        console.log("opportunities.js: After fetching currencies. main.allCurrencies (after fetch):", main.allCurrencies);
+        console.log("opportunities.js: main.getCurrencySymbol reference:", main.getCurrencySymbol); // Debug main.getCurrencySymbol reference
         
         populateCurrenciesForOpportunityAndQuoteForms(); // Populate currency dropdowns
         listenForOpportunities();
@@ -230,12 +233,14 @@ function getOpportunitiesCollectionPath() {
 
 // Determines the Firestore sub-collection path for related objects
 function getOpportunitySubCollectionPath(subCollectionName) {
-    if (!currentOpportunityId) {
+    // Access currentOpportunityId from the main module if it's there, otherwise local
+    const idToUse = main.currentOpportunityId || currentOpportunityId;
+    if (!idToUse) {
         console.error(`opportunities.js: Cannot get subcollection path for ${subCollectionName}: no currentOpportunityId set.`);
         return null;
     }
     // Subcollections are private to the opportunity owner
-    return `${getOpportunitiesCollectionPath()}/${currentOpportunityId}/${subCollectionName}`;
+    return `${getOpportunitiesCollectionPath()}/${idToUse}/${subCollectionName}`;
 }
 
 
@@ -283,11 +288,11 @@ function populateCurrenciesForOpportunityAndQuoteForms() {
     quoteCurrencySelect.innerHTML = '<option value="">Select Currency</option>';
 
     // --- ADDED DEBUG LOGS ---
-    console.log("opportunities.js: populateCurrenciesForOpportunityAndQuoteForms called. allCurrencies:", allCurrencies);
+    console.log("opportunities.js: populateCurrenciesForOpportunityAndQuoteForms called. main.allCurrencies:", main.allCurrencies);
 
 
-    if (allCurrencies && allCurrencies.length > 0) {
-        allCurrencies.forEach(currency => {
+    if (main.allCurrencies && main.allCurrencies.length > 0) { // Use main.allCurrencies
+        main.allCurrencies.forEach(currency => { // Use main.allCurrencies
             const optionOpty = document.createElement('option');
             optionOpty.value = currency.id; // Use currency.id (which is the code)
             optionOpty.textContent = `${currency.id} - ${currency.currencyName} (${currency.symbol})`; // Use currency.currencyName
@@ -327,9 +332,10 @@ function updateCurrencySymbol() {
 
     // --- ADDED DEBUG LOG ---
     console.log("opportunities.js: updateCurrencySymbol called. selectedCurrencyCode:", selectedCurrencyCode);
-    console.log("opportunities.js: getCurrencySymbol in updateCurrencySymbol is:", getCurrencySymbol);
+    console.log("opportunities.js: main.getCurrencySymbol in updateCurrencySymbol is:", main.getCurrencySymbol);
 
-    const symbolToAssign = getCurrencySymbol(selectedCurrencyCode); // Use the imported helper
+    // Call the function via the imported 'main' object
+    const symbolToAssign = main.getCurrencySymbol(selectedCurrencyCode);
     
     if (currencySymbolDisplay) { // Defensive check
         currencySymbolDisplay.textContent = symbolToAssign;
@@ -340,11 +346,12 @@ function updateCurrencySymbol() {
 /* --- OPPORTUNITY CRUD OPERATIONS --- */
 
 async function saveOpportunity() {
-    if (!isAuthReady || !currentUserId) {
+    // Use main.isAuthReady, main.currentUserId, main.db
+    if (!main.isAuthReady || !main.currentUserId) {
         showModal("Permission Denied", "Please sign in to manage opportunities.", () => {});
         return;
     }
-    if (!db) {
+    if (!main.db) {
         console.error("opportunities.js: Firestore 'db' instance is not initialized. Cannot save opportunity.");
         showModal("Error", "Firestore is not ready. Please try again.", () => {});
         return;
@@ -403,7 +410,7 @@ async function saveOpportunity() {
         serviceAddress: opportunityServiceAddressInput.value.trim(),
         description: opportunityDescriptionInput.value.trim(),
         additionalData: additionalData,
-        ownerId: currentUserId,
+        ownerId: main.currentUserId, // Use main.currentUserId
         createdAt: new Date(),
         updatedAt: new Date()
     };
@@ -414,13 +421,13 @@ async function saveOpportunity() {
     try {
         if (editingId) {
             // Update existing opportunity
-            const opportunityDocRef = doc(db, collectionPath, editingId);
+            const opportunityDocRef = doc(main.db, collectionPath, editingId); // Use main.db
             await setDoc(opportunityDocRef, opportunityData, { merge: true });
             showModal("Success", "Opportunity updated successfully!", () => {});
             console.log("opportunities.js: Opportunity updated:", editingId);
         } else {
             // Add new opportunity
-            const newDocRef = doc(collection(db, collectionPath)); // Let Firestore generate ID
+            const newDocRef = doc(collection(main.db, collectionPath)); // Use main.db
             const systemGeneratedId = `OPP-${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
             await setDoc(newDocRef, { ...opportunityData, opportunityId: systemGeneratedId });
             showModal("Success", "New Opportunity added successfully!", () => {});
@@ -435,11 +442,12 @@ async function saveOpportunity() {
 
 // Delete an Opportunity
 async function deleteOpportunity(firestoreDocId) {
-    if (!isAuthReady || !currentUserId) {
+    // Use main.isAuthReady, main.currentUserId, main.db
+    if (!main.isAuthReady || !main.currentUserId) {
         showModal("Permission Denied", "Please sign in to manage opportunities.", () => {});
         return;
     }
-    if (!db) {
+    if (!main.db) {
         console.error("opportunities.js: Firestore 'db' instance is not initialized. Cannot delete opportunity.");
         showModal("Error", "Firestore is not ready. Please try again.", () => {});
         return;
@@ -453,14 +461,14 @@ async function deleteOpportunity(firestoreDocId) {
         async () => {
             try {
                 // Delete the main opportunity document
-                await deleteDoc(doc(db, collectionPath, firestoreDocId));
+                await deleteDoc(doc(main.db, collectionPath, firestoreDocId)); // Use main.db
 
                 // --- IMPORTANT: Delete subcollections (contacts, lines, quotes) ---
                 // Firestore does not automatically delete subcollections when a document is deleted.
                 // You must manually delete documents within subcollections.
                 const subCollections = ['contacts', 'lines', 'quotes'];
                 for (const subColName of subCollections) {
-                    const subColRef = collection(db, `${collectionPath}/${firestoreDocId}/${subColName}`);
+                    const subColRef = collection(main.db, `${collectionPath}/${firestoreDocId}/${subColName}`); // Use main.db
                     const subColSnapshot = await getDocs(subColRef);
                     const deletePromises = [];
                     subColSnapshot.forEach((subDoc) => {
@@ -486,18 +494,19 @@ export function listenForOpportunities() {
         unsubscribeOpportunities(); // Unsubscribe from previous listener
     }
 
-    if (!isAuthReady || !currentUserId) {
+    // Use main.isAuthReady, main.currentUserId, main.db
+    if (!main.isAuthReady || !main.currentUserId) {
         if (opportunityList) opportunityList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Please sign in to view opportunities.</p>';
         return;
     }
-    if (!db) {
+    if (!main.db) {
         console.error("opportunities.js: Firestore 'db' instance is not initialized. Cannot listen for opportunities.");
         if (opportunityList) opportunityList.innerHTML = '<p class="text-red-500 text-center py-4 col-span-full">Firestore not ready to load opportunities.</p>';
         return;
     }
 
     const collectionPath = getOpportunitiesCollectionPath();
-    const q = collection(db, collectionPath);
+    const q = collection(main.db, collectionPath); // Use main.db
 
     unsubscribeOpportunities = onSnapshot(q, (snapshot) => {
         if (opportunityList) opportunityList.innerHTML = ''; // Clear current list
@@ -515,7 +524,7 @@ export function listenForOpportunities() {
         if (opportunityList) opportunityList.innerHTML = `<p class="text-red-500 text-center py-4 col-span-full">Error loading opportunities: ${error.message}</p>`;
     });
 
-    addUnsubscribe('opportunities', unsubscribeOpportunities); // Register with main.js's central tracker
+    main.addUnsubscribe('opportunities', unsubscribeOpportunities); // Register with main.js's central tracker
 }
 
 // Display a single opportunity in the UI as a grid row
@@ -556,11 +565,13 @@ function displayOpportunity(opportunity) {
 
 // Populate form for editing an opportunity
 async function editOpportunity(opportunity) {
-    if (!isAuthReady || !currentUserId) {
+    // Use main.isAuthReady, main.currentUserId
+    if (!main.isAuthReady || !main.currentUserId) {
         showModal("Permission Denied", "Please sign in to edit opportunities.", () => {});
         return;
     }
-    currentOpportunityId = opportunity.id; // Set the current opportunity ID for subcollections
+    currentOpportunityId = opportunity.id; // Set the local current opportunity ID
+    main.currentOpportunityId = opportunity.id; // Also update the main module's variable
 
     if (opportunityFormTitle) opportunityFormTitle.textContent = 'Edit Opportunity';
     if (submitOpportunityButton) submitOpportunityButton.textContent = 'Update Opportunity';
@@ -628,12 +639,13 @@ export function resetOpportunityForm() {
     // Reset currency to default (USD if available)
     if (opportunityCurrencySelect) {
         // --- ADDED DEBUG LOG ---
-        console.log("opportunities.js: resetOpportunityForm. allCurrencies:", allCurrencies);
-        opportunityCurrencySelect.value = allCurrencies.find(c => c.id === 'USD') ? 'USD' : ''; // Use c.id for currency code
+        console.log("opportunities.js: resetOpportunityForm. main.allCurrencies:", main.allCurrencies); // Use main.allCurrencies
+        opportunityCurrencySelect.value = main.allCurrencies.find(c => c.id === 'USD') ? 'USD' : ''; // Use main.allCurrencies, c.id for currency code
         updateCurrencySymbol();
     }
 
-    currentOpportunityId = null; // Clear current opportunity ID
+    currentOpportunityId = null; // Clear local current opportunity ID
+    main.currentOpportunityId = null; // Also clear the main module's variable
 
     // Reset and hide linked object forms and lists
     resetOpportunityContactForm();
@@ -650,12 +662,12 @@ export function resetOpportunityForm() {
     if (unsubscribeContacts) unsubscribeContacts();
     if (unsubscribeLines) unsubscribeLines();
     if (unsubscribeQuotes) unsubscribeQuotes();
-    removeUnsubscribe('opportunityContacts');
-    removeUnsubscribe('opportunityLines');
-    removeUnsubscribe('opportunityQuotes');
+    main.removeUnsubscribe('opportunityContacts'); // Use main.removeUnsubscribe
+    main.removeUnsubscribe('opportunityLines'); // Use main.removeUnsubscribe
+    main.removeUnsubscribe('opportunityQuotes'); // Use main.removeUnsubscribe
 
     // Ensure submit button is enabled if auth is ready
-    if (isAuthReady && currentUserId) {
+    if (main.isAuthReady && main.currentUserId) { // Use main.isAuthReady, main.currentUserId
         if (submitOpportunityButton) submitOpportunityButton.removeAttribute('disabled');
     } else {
         if (submitOpportunityButton) submitOpportunityButton.setAttribute('disabled', 'disabled');
@@ -679,7 +691,7 @@ function hideLinkedObjectsPanel() {
 /* --- OPPORTUNITY CONTACTS CRUD --- */
 async function handleContactFormSubmit(e) {
     e.preventDefault();
-    if (!currentOpportunityId) {
+    if (!main.currentOpportunityId) { // Use main.currentOpportunityId
         showModal("Error", "Please select or create an opportunity first.", () => {});
         return;
     }
@@ -692,7 +704,7 @@ async function handleContactFormSubmit(e) {
         role: contactRoleInput.value.trim(),
         createdAt: new Date(),
         updatedAt: new Date(),
-        ownerId: currentUserId
+        ownerId: main.currentUserId // Use main.currentUserId
     };
 
     const editingId = opportunityContactForm.dataset.editingId;
@@ -702,10 +714,10 @@ async function handleContactFormSubmit(e) {
 
     try {
         if (editingId) {
-            await setDoc(doc(db, collectionPath, editingId), contactData, { merge: true });
+            await setDoc(doc(main.db, collectionPath, editingId), contactData, { merge: true }); // Use main.db
             showModal("Success", "Contact updated successfully!", () => {});
         } else {
-            await setDoc(doc(collection(db, collectionPath)), contactData); // Let Firestore generate ID
+            await setDoc(doc(collection(main.db, collectionPath)), contactData); // Use main.db
             showModal("Success", "Contact added successfully!", () => {});
         }
         resetOpportunityContactForm();
@@ -716,13 +728,13 @@ async function handleContactFormSubmit(e) {
 }
 
 async function deleteOpportunityContact(contactDocId) {
-    if (!currentOpportunityId) return;
+    if (!main.currentOpportunityId) return; // Use main.currentOpportunityId
     const collectionPath = getOpportunitySubCollectionPath('contacts');
     if (!collectionPath) return;
 
     showModal("Confirm Deletion", "Are you sure you want to delete this contact?", async () => {
         try {
-            await deleteDoc(doc(db, collectionPath, contactDocId));
+            await deleteDoc(doc(main.db, collectionPath, contactDocId)); // Use main.db
             showModal("Success", "Contact deleted successfully!", () => {});
         } catch (error) {
             console.error("opportunities.js: Error deleting contact:", error);
@@ -733,7 +745,7 @@ async function deleteOpportunityContact(contactDocId) {
 
 function listenForOpportunityContacts() {
     if (unsubscribeContacts) unsubscribeContacts();
-    if (!currentOpportunityId || !db) {
+    if (!main.currentOpportunityId || !main.db) { // Use main.currentOpportunityId, main.db
         if (opportunityContactList) opportunityContactList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Select an opportunity to view contacts.</p>';
         return;
     }
@@ -741,7 +753,7 @@ function listenForOpportunityContacts() {
     const collectionPath = getOpportunitySubCollectionPath('contacts');
     if (!collectionPath) return;
 
-    const q = collection(db, collectionPath);
+    const q = collection(main.db, collectionPath); // Use main.db
     unsubscribeContacts = onSnapshot(q, (snapshot) => {
         if (opportunityContactList) opportunityContactList.innerHTML = '';
         if (snapshot.empty) {
@@ -753,7 +765,7 @@ function listenForOpportunityContacts() {
         console.error("opportunities.js: Error listening to contacts:", error);
         if (opportunityContactList) opportunityContactList.innerHTML = `<p class="text-red-500 text-center py-4 col-span-full">Error loading contacts: ${error.message}</p>`;
     });
-    addUnsubscribe('opportunityContacts', unsubscribeContacts);
+    main.addUnsubscribe('opportunityContacts', unsubscribeContacts); // Use main.addUnsubscribe
 }
 
 function displayOpportunityContact(contact) {
@@ -821,7 +833,7 @@ function calculateNetPrice() {
 
 async function handleLineFormSubmit(e) {
     e.preventDefault();
-    if (!currentOpportunityId) {
+    if (!main.currentOpportunityId) { // Use main.currentOpportunityId
         showModal("Error", "Please select or create an opportunity first.", () => {});
         return;
     }
@@ -835,7 +847,7 @@ async function handleLineFormSubmit(e) {
         status: lineStatusSelect.value,
         createdAt: new Date(),
         updatedAt: new Date(),
-        ownerId: currentUserId
+        ownerId: main.currentUserId // Use main.currentUserId
     };
 
     const editingId = opportunityLineForm.dataset.editingId;
@@ -844,10 +856,10 @@ async function handleLineFormSubmit(e) {
 
     try {
         if (editingId) {
-            await setDoc(doc(db, collectionPath, editingId), lineData, { merge: true });
+            await setDoc(doc(main.db, collectionPath, editingId), lineData, { merge: true }); // Use main.db
             showModal("Success", "Line item updated successfully!", () => {});
         } else {
-            await setDoc(doc(collection(db, collectionPath)), lineData); // Let Firestore generate ID
+            await setDoc(doc(collection(main.db, collectionPath)), lineData); // Use main.db
             showModal("Success", "Line item added successfully!", () => {});
         }
         resetOpportunityLineForm();
@@ -858,13 +870,13 @@ async function handleLineFormSubmit(e) {
 }
 
 async function deleteOpportunityLine(lineDocId) {
-    if (!currentOpportunityId) return;
+    if (!main.currentOpportunityId) return; // Use main.currentOpportunityId
     const collectionPath = getOpportunitySubCollectionPath('lines');
     if (!collectionPath) return;
 
     showModal("Confirm Deletion", "Are you sure you want to delete this line item?", async () => {
         try {
-            await deleteDoc(doc(db, collectionPath, lineDocId));
+            await deleteDoc(doc(main.db, collectionPath, lineDocId)); // Use main.db
             showModal("Success", "Line item deleted successfully!", () => {});
         } catch (error) {
             console.error("opportunities.js: Error deleting line item:", error);
@@ -875,7 +887,7 @@ async function deleteOpportunityLine(lineDocId) {
 
 function listenForOpportunityLines() {
     if (unsubscribeLines) unsubscribeLines();
-    if (!currentOpportunityId || !db) {
+    if (!main.currentOpportunityId || !main.db) { // Use main.currentOpportunityId, main.db
         if (opportunityLineList) opportunityLineList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Select an opportunity to view lines.</p>';
         return;
     }
@@ -883,7 +895,7 @@ function listenForOpportunityLines() {
     const collectionPath = getOpportunitySubCollectionPath('lines');
     if (!collectionPath) return;
 
-    const q = collection(db, collectionPath);
+    const q = collection(main.db, collectionPath); // Use main.db
     unsubscribeLines = onSnapshot(q, (snapshot) => {
         if (opportunityLineList) opportunityLineList.innerHTML = '';
         if (snapshot.empty) {
@@ -895,7 +907,7 @@ function listenForOpportunityLines() {
         console.error("opportunities.js: Error listening to lines:", error);
         if (opportunityLineList) opportunityLineList.innerHTML = `<p class="text-red-500 text-center py-4 col-span-full">Error loading lines: ${error.message}</p>`;
     });
-    addUnsubscribe('opportunityLines', unsubscribeLines);
+    main.addUnsubscribe('opportunityLines', unsubscribeLines); // Use main.addUnsubscribe
 }
 
 function displayOpportunityLine(line) {
@@ -962,7 +974,7 @@ function calculateQuoteNetAmount() {
 
 async function handleQuoteFormSubmit(e) {
     e.preventDefault();
-    if (!currentOpportunityId) {
+    if (!main.currentOpportunityId) { // Use main.currentOpportunityId
         showModal("Error", "Please select or create an opportunity first.", () => {});
         return;
     }
@@ -970,7 +982,7 @@ async function handleQuoteFormSubmit(e) {
     const quoteData = {
         name: quoteNameInput.value.trim(),
         customerId: opportunityCustomerSelect.value, // Link to the same customer as the opportunity
-        opportunityId: currentOpportunityId, // Link to the current opportunity
+        opportunityId: main.currentOpportunityId, // Link to the current opportunity (from main)
         description: quoteDescriptionInput.value.trim(),
         startDate: quoteStartDateInput.value,
         expireDate: quoteExpireDateInput.value,
@@ -982,7 +994,7 @@ async function handleQuoteFormSubmit(e) {
         isFinal: quoteIsFinalCheckbox.checked,
         createdAt: new Date(),
         updatedAt: new Date(),
-        ownerId: currentUserId
+        ownerId: main.currentUserId // Use main.currentUserId
     };
 
     const editingId = quoteForm.dataset.editingId;
@@ -991,10 +1003,10 @@ async function handleQuoteFormSubmit(e) {
 
     try {
         if (editingId) {
-            await setDoc(doc(db, collectionPath, editingId), quoteData, { merge: true });
+            await setDoc(doc(main.db, collectionPath, editingId), quoteData, { merge: true }); // Use main.db
             showModal("Success", "Quote updated successfully!", () => {});
         } else {
-            await setDoc(doc(collection(db, collectionPath)), quoteData); // Let Firestore generate ID
+            await setDoc(doc(collection(main.db, collectionPath)), quoteData); // Use main.db
             showModal("Success", "Quote added successfully!", () => {});
         }
         resetQuoteForm();
@@ -1005,13 +1017,13 @@ async function handleQuoteFormSubmit(e) {
 }
 
 async function deleteQuote(quoteDocId) {
-    if (!currentOpportunityId) return;
+    if (!main.currentOpportunityId) return; // Use main.currentOpportunityId
     const collectionPath = getOpportunitySubCollectionPath('quotes');
     if (!collectionPath) return;
 
     showModal("Confirm Deletion", "Are you sure you want to delete this quote?", async () => {
         try {
-            await deleteDoc(doc(db, collectionPath, quoteDocId));
+            await deleteDoc(doc(main.db, collectionPath, quoteDocId)); // Use main.db
             showModal("Success", "Quote deleted successfully!", () => {});
         } catch (error) {
             console.error("opportunities.js: Error deleting quote:", error);
@@ -1022,7 +1034,7 @@ async function deleteQuote(quoteDocId) {
 
 function listenForQuotes() {
     if (unsubscribeQuotes) unsubscribeQuotes();
-    if (!currentOpportunityId || !db) {
+    if (!main.currentOpportunityId || !main.db) { // Use main.currentOpportunityId, main.db
         if (quoteList) quoteList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Select an opportunity to view quotes.</p>';
         return;
     }
@@ -1030,7 +1042,7 @@ function listenForQuotes() {
     const collectionPath = getOpportunitySubCollectionPath('quotes');
     if (!collectionPath) return;
 
-    const q = collection(db, collectionPath);
+    const q = collection(main.db, collectionPath); // Use main.db
     unsubscribeQuotes = onSnapshot(q, (snapshot) => {
         if (quoteList) quoteList.innerHTML = '';
         if (snapshot.empty) {
@@ -1042,7 +1054,7 @@ function listenForQuotes() {
         console.error("opportunities.js: Error listening to quotes:", error);
         if (quoteList) quoteList.innerHTML = `<p class="text-red-500 text-center py-4 col-span-full">Error loading quotes: ${error.message}</p>`;
     });
-    addUnsubscribe('opportunityQuotes', unsubscribeQuotes);
+    main.addUnsubscribe('opportunityQuotes', unsubscribeQuotes); // Use main.addUnsubscribe
 }
 
 function displayQuote(quote) {
@@ -1054,10 +1066,10 @@ function displayQuote(quote) {
     // Find the currency symbol using the imported helper
     // --- ADDED DEBUG LOGS ---
     console.log("opportunities.js: displayQuote called. quote.currency:", quote.currency);
-    console.log("opportunities.js: getCurrencySymbol in displayQuote is:", getCurrencySymbol);
+    console.log("opportunities.js: main.getCurrencySymbol in displayQuote is:", main.getCurrencySymbol);
 
     // This is the line that was reported to have the error (or similar assignment)
-    const currencySymbol = getCurrencySymbol(quote.currency);
+    const currencySymbol = main.getCurrencySymbol(quote.currency); // Use main.getCurrencySymbol
 
     quoteRow.innerHTML = `
         <div class="px-2 py-1 truncate">${quote.id}</div>
@@ -1114,11 +1126,11 @@ function resetQuoteForm() {
     if (quoteIdDisplayGroup) quoteIdDisplayGroup.classList.add('hidden');
     if (quoteIdDisplay) quoteIdDisplay.textContent = '';
     if (quoteNetAmountInput) quoteNetAmountInput.value = '0.00';
-    if (submitQuoteButton) submitQuoteButton.textContent = 'Add Quote'; // Corrected assignment
+    if (submitQuoteButton) submitQuoteButton.textContent = 'Add Quote';
     if (quoteIsFinalCheckbox) quoteIsFinalCheckbox.checked = false;
 
     // Reset customer dropdown for quote to match the current opportunity's customer
-    if (quoteCustomerSelect && currentOpportunityId) {
+    if (quoteCustomerSelect && main.currentOpportunityId) { // Use main.currentOpportunityId
         const currentOpportunityCustomer = allCustomers.find(c => c.id === opportunityCustomerSelect.value);
         if (currentOpportunityCustomer) {
             quoteCustomerSelect.innerHTML = `<option value="${currentOpportunityCustomer.id}">${currentOpportunityCustomer.customerType === 'Individual' ? `${currentOpportunityCustomer.firstName || ''} ${currentOpportunityCustomer.lastName || ''}`.trim() : currentOpportunityCustomer.companyName || 'N/A'}</option>`;
