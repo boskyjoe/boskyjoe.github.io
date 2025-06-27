@@ -2,10 +2,10 @@ import { db, auth, currentUserId, isAdmin, isAuthReady, addUnsubscribe, removeUn
 import { showModal, getCollectionPath } from './utils.js';
 import { appCountries, appCountryStateMap, fetchCountryData } from './admin_data.js'; // Import appCountries, appCountryStateMap, and fetchCountryData
 
-import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
-// DOM elements for Customer Management Section
+// DOM elements for Customer Management Section - Declared globally but assigned in init
 let customerManagementSection;
 let customerForm;
 let customerFormTitle;
@@ -27,8 +27,8 @@ let individualIndustryGroupDiv;
 let customerIndustryInput;
 let companyIndustryGroupDiv;
 let customerIndustrySelect;
-let customerSourceSelect; // NEW: Customer Source Select
-let customerActiveSelect; // NEW: Customer Active Select
+let customerSourceSelect;
+let customerActiveSelect;
 let customerSinceInput;
 let customerDescriptionInput;
 let customerIdDisplayGroup;
@@ -46,59 +46,72 @@ export async function initCustomersModule() {
     console.log("customers.js: initCustomersModule called.");
     console.log("customers.js: initCustomersModule current state - db:", db, "isAuthReady:", isAuthReady, "currentUserId:", currentUserId);
 
-    // Initialize DOM elements if they haven't been already
-    if (!customerManagementSection) {
-        customerManagementSection = document.getElementById('customers-section');
-        customerForm = document.getElementById('customerForm');
-        customerFormTitle = document.getElementById('customerFormTitle');
-        customerTypeSelect = document.getElementById('customerType');
-        individualFieldsDiv = document.getElementById('individualFields');
-        customerFirstNameInput = document.getElementById('customerFirstName');
-        customerLastNameInput = document.getElementById('customerLastName');
-        companyNameFieldDiv = document.getElementById('companyNameField');
-        customerCompanyNameInput = document.getElementById('customerCompanyName');
-        customerEmailInput = document.getElementById('customerEmail');
-        customerPhoneInput = document.getElementById('customerPhone');
-        customerCountrySelect = document.getElementById('customerCountry');
-        customerAddressInput = document.getElementById('customerAddress');
-        customerCityInput = document.getElementById('customerCity');
-        customerStateSelect = document.getElementById('customerState');
-        customerZipCodeInput = document.getElementById('customerZipCode');
-        addressValidationMessageDiv = document.getElementById('addressValidationMessage');
-        individualIndustryGroupDiv = document.getElementById('individualIndustryGroup');
-        customerIndustryInput = document.getElementById('customerIndustryInput');
-        companyIndustryGroupDiv = document.getElementById('companyIndustryGroup');
-        customerIndustrySelect = document.getElementById('customerIndustrySelect');
-        customerSourceSelect = document.getElementById('customerSource'); // NEW
-        customerActiveSelect = document.getElementById('customerActive'); // NEW
-        customerSinceInput = document.getElementById('customerSince');
-        customerDescriptionInput = document.getElementById('customerDescription');
-        customerIdDisplayGroup = document.getElementById('customerIdDisplayGroup');
-        customerIdDisplay = document.getElementById('customerIdDisplay');
-        submitCustomerButton = document.getElementById('submitCustomerButton');
-        customerList = document.getElementById('customerList');
+    // --- IMPORTANT: Assign DOM elements here within the init function ---
+    // This ensures they are retrieved when the section is actually being initialized
+    // and the HTML elements should be present in the DOM.
+    customerManagementSection = document.getElementById('customers-section');
+    customerForm = document.getElementById('customerForm');
+    customerFormTitle = document.getElementById('customerFormTitle');
+    customerTypeSelect = document.getElementById('customerType');
+    individualFieldsDiv = document.getElementById('individualFields');
+    customerFirstNameInput = document.getElementById('customerFirstName');
+    customerLastNameInput = document.getElementById('customerLastName');
+    companyNameFieldDiv = document.getElementById('companyNameField');
+    customerCompanyNameInput = document.getElementById('customerCompanyName');
+    customerEmailInput = document.getElementById('customerEmail');
+    customerPhoneInput = document.getElementById('customerPhone');
+    customerCountrySelect = document.getElementById('customerCountry');
+    customerAddressInput = document.getElementById('customerAddress');
+    customerCityInput = document.getElementById('customerCity');
+    customerStateSelect = document.getElementById('customerState');
+    customerZipCodeInput = document.getElementById('customerZipCode');
+    addressValidationMessageDiv = document.getElementById('addressValidationMessage');
+    individualIndustryGroupDiv = document.getElementById('individualIndustryGroup');
+    customerIndustryInput = document.getElementById('customerIndustryInput');
+    companyIndustryGroupDiv = document.getElementById('companyIndustryGroup');
+    customerIndustrySelect = document.getElementById('customerIndustrySelect');
+    customerSourceSelect = document.getElementById('customerSource');
+    customerActiveSelect = document.getElementById('customerActive');
+    customerSinceInput = document.getElementById('customerSince');
+    customerDescriptionInput = document.getElementById('customerDescription');
+    customerIdDisplayGroup = document.getElementById('customerIdDisplayGroup');
+    customerIdDisplay = document.getElementById('customerIdDisplay');
+    submitCustomerButton = document.getElementById('submitCustomerButton');
+    customerList = document.getElementById('customerList');
 
-        // Add event listeners
-        if (customerTypeSelect) {
-            customerTypeSelect.addEventListener('change', toggleCustomerTypeFields);
-        }
-        if (customerCountrySelect) {
-            customerCountrySelect.addEventListener('change', populateStates);
-        }
-        if (customerForm) {
-            customerForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await saveCustomer();
-            });
-        }
-        document.getElementById('resetCustomerFormButton')?.addEventListener('click', resetCustomerForm);
+    // --- IMMEDIATE DEBUGGING LOG ---
+    console.log("customers.js: Value of customerTypeSelect immediately after getElementById:", customerTypeSelect);
+
+    // Add event listeners - with null checks
+    if (customerTypeSelect) {
+        customerTypeSelect.addEventListener('change', toggleCustomerTypeFields);
+    } else {
+        console.error("customers.js: ERROR: customerTypeSelect is null. Cannot attach change listener. Check index.html for ID 'customerType'.");
     }
+    if (customerCountrySelect) {
+        customerCountrySelect.addEventListener('change', populateStates);
+    }
+    if (customerForm) {
+        customerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await saveCustomer();
+        });
+    }
+    document.getElementById('resetCustomerFormButton')?.addEventListener('click', resetCustomerForm);
+
 
     // Ensure initial state and load data
     await fetchCountryData(); // Load country and state data first
     populateCountries();
-    toggleCustomerTypeFields(); // Set initial visibility based on default customer type
-    resetCustomerForm();
+    
+    // Call toggleCustomerTypeFields only if customerTypeSelect is available
+    if (customerTypeSelect) { 
+        toggleCustomerTypeFields(); // Set initial visibility based on default customer type
+    } else {
+        console.warn("customers.js: Skipping initial toggleCustomerTypeFields call as customerTypeSelect is null.");
+    }
+    
+    resetCustomerForm(); // This will call toggleCustomerTypeFields again, so null check is important inside it
 
     // Enable/disable submit button based on auth state
     if (isAuthReady && currentUserId) {
@@ -113,7 +126,7 @@ export async function initCustomersModule() {
 // Determine the Firestore collection path for customers
 function getCustomersCollectionPath() {
     const path = getCollectionPath('private', 'customers');
-    console.log("customers.js: getCustomersCollectionPath returning:", path); // NEW LOG
+    console.log("customers.js: getCustomersCollectionPath returning:", path);
     return path;
 }
 
@@ -121,6 +134,11 @@ function getCustomersCollectionPath() {
 
 // Toggles visibility of individual vs. company fields
 function toggleCustomerTypeFields() {
+    // Defensive check
+    if (!customerTypeSelect) {
+        console.error("customers.js: toggleCustomerTypeFields called but customerTypeSelect is null. Cannot proceed.");
+        return;
+    }
     const isIndividual = customerTypeSelect.value === 'Individual';
     if (individualFieldsDiv) individualFieldsDiv.classList.toggle('hidden', !isIndividual);
     if (companyNameFieldDiv) companyNameFieldDiv.classList.toggle('hidden', isIndividual);
@@ -177,6 +195,13 @@ async function saveCustomer() {
     if (!db) {
         console.error("customers.js: Firestore 'db' instance is not initialized. Cannot save customer.");
         showModal("Error", "Firestore is not ready. Please try again.", () => {});
+        return;
+    }
+
+    // Defensive check for customerTypeSelect before use
+    if (!customerTypeSelect) {
+        console.error("customers.js: saveCustomer called but customerTypeSelect is null. Cannot save.");
+        showModal("Error", "Customer form is not fully loaded. Please refresh the page.", () => {});
         return;
     }
 
@@ -345,7 +370,7 @@ export async function fetchCustomersForDropdown() {
     }
     try {
         const collectionPath = getCustomersCollectionPath(); // Get the path again here
-        console.log("customers.js: fetchCustomersForDropdown is querying path:", collectionPath); // NEW LOG
+        console.log("customers.js: fetchCustomersForDropdown is querying path:", collectionPath);
         const querySnapshot = await getDocs(collection(db, collectionPath));
         const customers = [];
         querySnapshot.forEach((doc) => {
@@ -439,7 +464,7 @@ function editCustomer(customer) {
         if (customerIndustrySelect) customerIndustrySelect.value = customer.industry || '';
     }
 
-    // NEW: Populate Customer Source and Active
+    // Populate Customer Source and Active
     if (customerSourceSelect) customerSourceSelect.value = customer.customerSource || '';
     // isActive is a boolean, convert to 'Yes'/'No' for dropdown
     if (customerActiveSelect) customerActiveSelect.value = customer.isActive ? 'Yes' : 'No';
@@ -462,6 +487,7 @@ export function resetCustomerForm() {
     if (customerIdDisplayGroup) customerIdDisplayGroup.classList.add('hidden'); // Hide ID display
     if (customerIdDisplay) customerIdDisplay.textContent = '';
 
+    // Defensive check before setting value
     if (customerTypeSelect) customerTypeSelect.value = 'Individual'; // Reset to default
     toggleCustomerTypeFields(); // Update field visibility
 
@@ -470,7 +496,7 @@ export function resetCustomerForm() {
     populateStates(); // Clear states and disable select
     if (customerStateSelect) customerStateSelect.value = '';
 
-    // NEW: Reset Customer Source and Active
+    // Reset Customer Source and Active
     if (customerSourceSelect) customerSourceSelect.value = ''; // Or a default like 'Website'
     if (customerActiveSelect) customerActiveSelect.value = 'Yes'; // Default to 'Yes'
 
