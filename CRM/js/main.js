@@ -78,12 +78,14 @@ export async function showSection(sectionId) {
 
     // Check for admin section access
     if (['admin-country-mapping-section', 'users-management-section', 'currency-management-section', 'price-book-management-section'].includes(sectionId)) { // UPDATED: Added price-book-management-section
+        console.log(`main.js: Accessing admin section: ${sectionId}. Current user ID: ${currentUserId}, isAdmin: ${isAdmin}`);
         if (!currentUserId) {
             console.log(`main.js: Access to ${sectionId} denied. No user logged in. Prompting Google login.`);
             await handleGoogleLogin();
             return;
         }
         if (!isAdmin) {
+            console.log(`main.js: Access to ${sectionId} denied. User is not admin.`);
             showModal("Unauthorized Access", "You do not have administrative privileges to access this section.", () => {
                 showSection('home-section'); // Redirect to home if unauthorized
             });
@@ -128,34 +130,55 @@ export async function showSection(sectionId) {
 
     // Dynamically initialize modules and start their listeners
     if (isAuthReady) {
+        console.log(`main.js: isAuthReady is true. Attempting to initialize module for ${sectionId}.`);
         switch (sectionId) {
             case 'customers-section':
-                if (typeof initCustomersModule === 'function') initCustomersModule();
+                if (typeof initCustomersModule === 'function') {
+                    console.log('main.js: Calling initCustomersModule().');
+                    initCustomersModule();
+                }
                 break;
             case 'opportunities-section':
-                if (typeof initOpportunitiesModule === 'function') initOpportunitiesModule();
+                if (typeof initOpportunitiesModule === 'function') {
+                    console.log('main.js: Calling initOpportunitiesModule().');
+                    initOpportunitiesModule();
+                }
                 break;
             case 'users-management-section':
-                if (isAdmin && typeof initUsersModule === 'function') initUsersModule();
+                if (isAdmin && typeof initUsersModule === 'function') {
+                    console.log('main.js: Calling initUsersModule().');
+                    initUsersModule();
+                } else if (!isAdmin) {
+                    console.log('main.js: Not calling initUsersModule() because user is not admin.');
+                }
                 break;
             case 'admin-country-mapping-section':
                 if (isAdmin && typeof initAdminDataModule === 'function') {
+                    console.log('main.js: Calling initAdminDataModule() for country_mapping.');
                     initAdminDataModule('country_mapping');
+                } else if (!isAdmin) {
+                    console.log('main.js: Not calling initAdminDataModule() for country_mapping because user is not admin.');
                 }
                 break;
             case 'currency-management-section':
                 if (isAdmin && typeof initAdminDataModule === 'function') {
+                    console.log('main.js: Calling initAdminDataModule() for currency_management.');
                     initAdminDataModule('currency_management');
+                } else if (!isAdmin) {
+                    console.log('main.js: Not calling initAdminDataModule() for currency_management because user is not admin.');
                 }
                 break;
             case 'price-book-management-section': // NEW: Case for PriceBook module
                 if (isAdmin && typeof initPriceBookModule === 'function') {
+                    console.log('main.js: Calling initPriceBookModule().');
                     initPriceBookModule();
+                } else if (!isAdmin) {
+                    console.log('main.js: Not calling initPriceBookModule() because user is not admin.');
                 }
                 break;
             case 'home-section':
             case 'events-section':
-                // No specific module init needed for these static sections, or they will be added later
+                console.log(`main.js: No specific module init needed for ${sectionId}.`);
                 break;
             default:
                 console.warn(`main.js: No specific initialization logic for section: "${sectionId}"`);
@@ -335,6 +358,7 @@ async function initializeFirebase() {
             }
 
             // After auth is ready and admin status is known, show the home section
+            console.log("main.js: Calling showSection('home-section') after authentication setup.");
             showSection('home-section');
 
         } else { // No user is signed in.
@@ -362,6 +386,7 @@ async function initializeFirebase() {
                 btn.setAttribute('disabled', 'disabled');
             });
 
+            console.log("main.js: Calling showSection('home-section') for unauthenticated user.");
             showSection('home-section');
         }
     });
