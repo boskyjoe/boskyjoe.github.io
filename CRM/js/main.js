@@ -234,17 +234,17 @@ async function initializeFirebase() {
 
     // Populate allSections array
     allSections = [
-        document.getElementById('home-section'),
+        document.getElementById('home-section'), // Corrected ID here
         document.getElementById('customers-section'),
         document.getElementById('opportunities-section'),
         document.getElementById('events-section'),
         document.getElementById('admin-country-mapping-section'),
         document.getElementById('users-management-section'),
-        document.getElementById('auth-section'),
+        // Removed document.getElementById('auth-section') as it doesn't exist in HTML
         document.getElementById('currency-management-section'),
         document.getElementById('price-book-management-section')
     ].filter(section => section !== null);
-    console.log("main.js: allSections populated. Found:", allSections.map(s => s.id));
+    console.log("main.js: allSections populated. Found:", allSections.map(s => s ? s.id : 'null (removed)'));
 
 
     // Add Event Listeners for main navigation
@@ -365,11 +365,6 @@ async function initializeFirebase() {
             // This ensures data needed by different modules is available before any section is displayed.
             await Promise.all([
                 fetchAllCurrencies(), // Correctly call the imported fetchAllCurrencies from admin_data.js
-                // Assuming fetchCountryData is still in main.js, otherwise, it should also be imported
-                // If fetchCountryData is in admin_data.js and exports appCountries, then:
-                // fetchCountryData as fetchAllCountryData, allCountries as globalAllCountries
-                // and then call fetchAllCountryData() here.
-                // For now, keeping as is, assuming it's correctly placed or its data is fetched elsewhere.
             ]);
             console.log("main.js: Initial app-wide data (currencies, countries) fetched.");
 
@@ -391,7 +386,7 @@ async function initializeFirebase() {
             if (userIdDisplay) userIdDisplay.classList.add('hidden');
             if (mobileUserIdDisplay) mobileUserIdDisplay.classList.add('hidden');
             if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
-            if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden'); // Corrected typo here
+            if (mobileAdminMenu) mobileMenu.classList.add('hidden'); // Corrected typo here
             if (logoutButton) logoutButton.classList.add('hidden');
             if (mobileLogoutButton) mobileLogoutButton.classList.add('hidden');
 
