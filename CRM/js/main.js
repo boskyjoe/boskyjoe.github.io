@@ -4,6 +4,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc, getDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 // YOUR Firebase Configuration - Provided by the user and directly embedded.
+// Make sure this matches your project's configuration
 const firebaseConfig = {
     apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
     authDomain: "shuttersync-96971.firebaseapp.com",
@@ -14,7 +15,7 @@ const firebaseConfig = {
     measurementId: "G-T0W9CES4D3"
 };
 
-console.log("Using directly provided Firebase config:", firebaseConfig);
+console.log("main.js: Using directly provided Firebase config:", firebaseConfig);
 
 
 // Use __app_id for Firestore collection paths as per mandatory instructions.
@@ -55,6 +56,7 @@ export const APP_SETTINGS_DOC_ID = "app_settings"; // Export APP_SETTINGS_DOC_ID
 
 // Declare DOM element variables at a higher scope (or globally with 'let')
 // but assign them only once inside initializeFirebase to avoid issues.
+// These are not exported as they are internal to main.js's DOM handling
 let customersSection;
 let customerForm;
 let customerFormTitle;
@@ -254,7 +256,7 @@ const activeUnsubscribes = {};
  */
 export function addUnsubscribe(key, unsubscribeFn) {
     activeUnsubscribes[key] = unsubscribeFn;
-    console.log(`Unsubscribe function added for key: ${key}`);
+    console.log(`main.js: Unsubscribe function added for key: ${key}`);
 }
 
 /**
@@ -265,7 +267,7 @@ export function removeUnsubscribe(key) {
     if (activeUnsubscribes[key]) {
         activeUnsubscribes[key](); // Call the unsubscribe function
         delete activeUnsubscribes[key]; // Remove it from the tracker
-        console.log(`Unsubscribe function called and removed for key: ${key}`);
+        console.log(`main.js: Unsubscribe function called and removed for key: ${key}`);
     }
 }
 
@@ -279,7 +281,7 @@ function unsubscribeAll() {
             delete activeUnsubscribes[key];
         }
     }
-    console.log("All Firestore listeners unsubscribed.");
+    console.log("main.js: All Firestore listeners unsubscribed.");
 }
 
 
@@ -287,7 +289,7 @@ function unsubscribeAll() {
 export function showModal(title, message, onConfirm, onCancel) {
     const modalContainer = document.getElementById('modalContainer'); // Ensure this is also initialized when used
     if (!modalContainer) {
-        console.error("Modal container not found!");
+        console.error("main.js: Modal container not found!");
         alert(`${title}\n${message}`); // Fallback to alert if modal container doesn't exist
         return;
     }
@@ -359,7 +361,7 @@ function setOpportunityLayout(layoutType) {
             if (opportunityRightPanel) opportunityRightPanel.classList.add('expand-right'); // Custom class for expanding
             break;
         default:
-            console.error("Unknown opportunity layout type:", layoutType);
+            console.error("main.js: Unknown opportunity layout type:", layoutType);
             break;
     }
 }
@@ -370,7 +372,7 @@ export async function showSection(sectionId) {
     // Check for admin section access only if the section is admin-specific
     if (['admin-country-mapping-section', 'users-management-section', 'currency-management-section', 'price-book-management-section'].includes(sectionId)) { // UPDATED for currency and price book section
         if (!currentUserId) { // If not logged in at all
-            console.log(`Access to ${sectionId} denied. No user logged in. Prompting Google login.`);
+            console.log(`main.js: Access to ${sectionId} denied. No user logged in. Prompting Google login.`);
             await handleGoogleLogin(); // Force Google login if not authenticated
             // After handleGoogleLogin, onAuthStateChanged will fire and re-evaluate isAdmin.
             // We'll rely on the onAuthStateChanged to call showSection again if successful.
@@ -419,12 +421,12 @@ export async function showSection(sectionId) {
             // Import and call initCustomersModule only when needed
             import('./customers.js').then(module => {
                 module.initCustomersModule();
-            }).catch(error => console.error("Failed to load customers module:", error));
+            }).catch(error => console.error("main.js: Failed to load customers module:", error));
             if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled'); // Customers form always enabled for authenticated users
         } else if (sectionId === 'opportunities-section') { // NEW
             import('./opportunities.js').then(module => {
                 module.initOpportunitiesModule();
-            }).catch(error => console.error("Failed to load opportunities module:", error));
+            }).catch(error => console.error("main.js: Failed to load opportunities module:", error));
             if (submitOpportunityButton) submitOpportunityButton.removeAttribute('disabled');
         }
         else if (sectionId === 'admin-country-mapping-section') {
@@ -449,7 +451,7 @@ export async function showSection(sectionId) {
                 // Import and call initUsersModule
                 import('./users.js').then(module => {
                     module.initUsersModule();
-                }).catch(error => console.error("Failed to load users module:", error));
+                }).catch(error => console.error("main.js: Failed to load users module:", error));
                 if (submitUserButton) submitUserButton.removeAttribute('disabled'); // Enable user form button for admin
             } else {
                 if (submitUserButton) submitUserButton.setAttribute('disabled', 'disabled');
@@ -460,13 +462,13 @@ export async function showSection(sectionId) {
                 // Import and call initPriceBookModule
                 import('./price_book_management.js').then(module => {
                     module.initPriceBookModule();
-                }).catch(error => console.error("Failed to load price book module:", error));
+                }).catch(error => console.error("main.js: Failed to load price book module:", error));
             } else {
                 // Disable if not admin
             }
         }
     } else {
-        console.warn("Attempted to show section before Firebase Auth is ready:", sectionId);
+        console.warn("main.js: Attempted to show section before Firebase Auth is ready:", sectionId);
         // Ensure buttons are disabled if auth is not ready
         if (submitCustomerButton) submitCustomerButton.setAttribute('disabled', 'disabled');
         if (submitOpportunityButton) submitOpportunityButton.setAttribute('disabled', 'disabled'); // NEW
@@ -487,7 +489,7 @@ async function handleGoogleLogin() {
         await signInWithPopup(auth, provider);
         // onAuthStateChanged listener will handle the rest (role check, redirect)
     } catch (error) {
-        console.error("Error during Google login:", error);
+        console.error("main.js: Error during Google login:", error);
         showModal("Login Error", `Failed to sign in with Google: ${error.message}`, () => {
             showSection('home-section'); // Redirect to home if Google login fails
         });
@@ -504,15 +506,15 @@ export async function fetchCountryData() { // Export this for admin_data.js
             const data = docSnap.data();
             appCountries = data.countries || [];
             appCountryStateMap = data.countryStateMap || {};
-            console.log("Country and State data loaded from Firestore.");
+            console.log("main.js: Country and State data loaded from Firestore.");
         } else {
-            console.warn("No 'countries_states' document found in 'app_metadata' collection.");
+            console.warn("main.js: No 'countries_states' document found in 'app_metadata' collection.");
             // No modal here, as it might be first load and admin can upload it.
             appCountries = [];
             appCountryStateMap = {};
         }
     } catch (error) {
-        console.error("Error fetching country data from Firestore:", error);
+        console.error("main.js: Error fetching country data from Firestore:", error);
         // No modal here.
         appCountries = [];
         appCountryStateMap = {};
@@ -535,34 +537,50 @@ async function loadAdminCountryData() {
         if (adminCountryStateMapInput) adminCountryStateMapInput.value = countryStateMapString;
 
         if (adminMessageDiv) adminMessageDiv.classList.add('hidden'); // Clear any previous messages
-        console.log("Admin country data loaded into textareas.");
+        console.log("main.js: Admin country data loaded into textareas.");
     }
     catch (error) {
-        console.error("Error in loadAdminCountryData:", error); // Log for debugging
+        console.error("main.js: Error in loadAdminCountryData:", error); // Log for debugging
     }
 }
 
 // NEW: Function to fetch currency data from Firestore
 export async function fetchCurrencies() { // Export this
+    console.log("main.js: fetchCurrencies called. Current db:", db); // Added debug log
     try {
-        // CHANGED: Corrected collection reference to include a document ID for `app_settings`
+        if (!db) {
+            console.error("main.js: Firestore 'db' instance is not initialized in fetchCurrencies.");
+            allCurrencies = [];
+            return;
+        }
+        // Corrected collection reference to include a document ID for `app_settings`
         const collectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
-        const querySnapshot = await getDocs(collectionRef);
+        const querySnapshot = await getDocs(query(collectionRef)); // Use query to ensure it's a valid Query object
         allCurrencies = []; // Clear existing data
         querySnapshot.forEach((docSnap) => {
             allCurrencies.push({ id: docSnap.id, ...docSnap.data() });
         });
-        console.log("Currency data loaded from Firestore. Total:", allCurrencies.length);
+        console.log("main.js: Currency data loaded from Firestore. Total:", allCurrencies.length, "allCurrencies array:", allCurrencies); // Added debug log
     } catch (error) {
-        console.error("Error fetching currency data from Firestore:", error);
+        console.error("main.js: Error fetching currency data from Firestore:", error);
         allCurrencies = []; // Ensure it's empty on error
     }
 }
 
 // NEW: Helper function to get currency symbol by code
 export function getCurrencySymbol(code) { // Export this
+    // ADDED DEBUG LOGS
+    console.log("main.js: getCurrencySymbol called for code:", code);
+    console.log("main.js: allCurrencies state inside getCurrencySymbol:", allCurrencies);
+
     const currency = allCurrencies.find(c => c.id === code); // Find by doc.id (which is currencyCode)
-    return currency ? currency.symbol : code; // Fallback to code if symbol not found
+    if (currency) {
+        console.log("main.js: Found currency:", currency.symbol);
+        return currency.symbol;
+    } else {
+        console.warn(`main.js: Currency symbol not found for code: ${code}. Returning code as fallback.`);
+        return code; // Fallback to code if symbol not found
+    }
 }
 
 // NEW: Helper function to get currency name by code
@@ -581,8 +599,9 @@ async function initializeFirebase() {
             getAnalytics(app); // Initialize Analytics
             db = getFirestore(app);
             auth = getAuth(app);
+            console.log("main.js: Firebase app and services initialized.");
         } catch (error) {
-            console.error("Error initializing Firebase services:", error);
+            console.error("main.js: Error initializing Firebase services:", error);
             showModal("Firebase Service Error", `Failed to initialize Firebase services: ${error.message}`, () => {});
             return; // Exit if core services fail to initialize
         }
@@ -590,6 +609,7 @@ async function initializeFirebase() {
 
 
     // --- IMPORTANT: Initialize all DOM element references here AFTER app initialization ---
+    // Ensure all these elements are present in index.html with the correct IDs
     customersSection = document.getElementById('customers-section');
     customerForm = document.getElementById('customerForm');
     customerFormTitle = document.getElementById('customerFormTitle');
@@ -624,9 +644,9 @@ async function initializeFirebase() {
     submitCustomerButton = document.getElementById('submitCustomerButton');
     customerList = document.getElementById('customerList'); // Reference to the div for customer rows
 
-    // Opportunity Section Elements (NEW - and now restructured)
+    // Opportunity Section Elements
     opportunitiesSection = document.getElementById('opportunities-section');
-    opportunityViewContainer = document.getElementById('opportunity-view-container'); // NEW main flex container
+    opportunityViewContainer = document.getElementById('opportunity-view-container');
     opportunityLeftPanel = document.getElementById('opportunity-left-panel');
     opportunityRightPanel = document.getElementById('opportunity-right-panel');
     opportunityFullFormView = document.getElementById('opportunity-full-form-view');
@@ -646,11 +666,11 @@ async function initializeFirebase() {
     opportunityExpectedCloseDateInput = document.getElementById('opportunityExpectedCloseDate');
     opportunityEventTypeSelect = document.getElementById('opportunityEventType');
     opportunityEventLocationProposedInput = document.getElementById('opportunityEventLocationProposed');
-    opportunityServiceAddressInput = document.getElementById('opportunityServiceAddress'); // NEW Field
+    opportunityServiceAddressInput = document.getElementById('opportunityServiceAddress');
     opportunityDescriptionInput = document.getElementById('opportunityDescription');
     opportunityDataInput = document.getElementById('opportunityData');
     submitOpportunityButton = document.getElementById('submitOpportunityButton');
-    opportunityList = document.getElementById('opportunityList'); // Reference to the div for opportunity rows
+    opportunityList = document.getElementById('opportunityList');
 
     linkedObjectsAccordion = document.getElementById('linkedObjectsAccordion');
     contactsAccordionHeader = document.getElementById('contactsAccordionHeader');
@@ -660,7 +680,7 @@ async function initializeFirebase() {
     quotesAccordionHeader = document.getElementById('quotesAccordionHeader');
     quotesAccordionContent = quotesAccordionHeader ? quotesAccordionHeader.nextElementSibling : null;
 
-    // Opportunity Contact Elements (NEW)
+    // Opportunity Contact Elements
     opportunityContactForm = document.getElementById('opportunityContactForm');
     contactIdDisplayGroup = document.getElementById('contactIdDisplayGroup');
     contactIdDisplay = document.getElementById('contactIdDisplay');
@@ -672,7 +692,7 @@ async function initializeFirebase() {
     submitOpportunityContactButton = document.getElementById('submitOpportunityContactButton');
     opportunityContactList = document.getElementById('opportunityContactList');
 
-    // Opportunity Line Elements (NEW - Stubs)
+    // Opportunity Line Elements
     opportunityLineForm = document.getElementById('opportunityLineForm');
     optyLineIdDisplayGroup = document.getElementById('optyLineIdDisplayGroup');
     optyLineIdDisplay = document.getElementById('optyLineIdDisplay');
@@ -685,13 +705,13 @@ async function initializeFirebase() {
     submitOpportunityLineButton = document.getElementById('submitOpportunityLineButton');
     opportunityLineList = document.getElementById('opportunityLineList');
 
-    // Quote Elements (NEW - Stubs)
+    // Quote Elements
     quoteForm = document.getElementById('quoteForm');
     quoteIdDisplayGroup = document.getElementById('quoteIdDisplayGroup');
     quoteIdDisplay = document.getElementById('quoteIdDisplay');
     quoteNameInput = document.getElementById('quoteName');
     quoteDescriptionInput = document.getElementById('quoteDescription');
-    quoteCustomerSelect = document.getElementById('quoteCustomer'); // Auto-filled from opportunity
+    quoteCustomerSelect = document.getElementById('quoteCustomer');
     quoteStartDateInput = document.getElementById('quoteStartDate');
     quoteExpireDateInput = document.getElementById('quoteExpireDate');
     quoteStatusSelect = document.getElementById('quoteStatus');
@@ -703,7 +723,6 @@ async function initializeFirebase() {
     submitQuoteButton = document.getElementById('submitQuoteButton');
     quoteList = document.getElementById('quoteList');
 
-
     // Admin Country Mapping Section elements
     adminCountryMappingSection = document.getElementById('admin-country-mapping-section');
     adminCountriesInput = document.getElementById('adminCountriesInput');
@@ -713,7 +732,7 @@ async function initializeFirebase() {
     incrementalLoadRadio = document.getElementById('incrementalLoad');
     adminMessageDiv = document.getElementById('adminMessage');
 
-    // Admin Currency Management Section elements (NEW)
+    // Admin Currency Management Section elements
     currencyManagementSection = document.getElementById('currency-management-section');
     currencyForm = document.getElementById('currencyForm');
     currencyFormTitle = document.getElementById('currencyFormTitle');
@@ -724,19 +743,18 @@ async function initializeFirebase() {
     adminCurrencyMessageDiv = document.getElementById('adminCurrencyMessageDiv');
     currencyList = document.getElementById('currencyList');
 
-
     // Users Management Section elements
     usersManagementSection = document.getElementById('users-management-section');
     userForm = document.getElementById('userForm');
     userFormTitle = document.getElementById('userFormTitle');
     userIdDisplayGroup = document.getElementById('userIdDisplayGroup');
-    userIdDisplayInput = document.getElementById('userIdDisplayInput'); // Changed to an input element
+    userIdDisplayInput = document.getElementById('userIdDisplayInput');
     userNameInput = document.getElementById('userName');
     userFirstNameInput = document.getElementById('userFirstName');
     userLastNameInput = document.getElementById('userLastName');
     userEmailInput = document.getElementById('userEmail');
     userPhoneInput = document.getElementById('userPhone');
-    userRoleSelect = document.getElementById('userRole'); // Changed to select
+    userRoleSelect = document.getElementById('userRole');
     userSkillsInput = document.getElementById('userSkills');
     submitUserButton = document.getElementById('submitUserButton');
     userList = document.getElementById('userList');
@@ -744,34 +762,32 @@ async function initializeFirebase() {
     // References to logout buttons and the new nav Google Login button
     logoutButton = document.getElementById('logoutButton');
     mobileLogoutButton = document.getElementById('mobileLogoutButton');
-    navGoogleLoginButton = document.getElementById('navGoogleLoginButton'); // Top right Google Sign In button
+    navGoogleLoginButton = document.getElementById('navGoogleLoginButton');
 
-    // Home section Google login button (for visual hint on home page)
+    // Home section Google login button
     googleLoginButtonHome = document.getElementById('googleLoginButton');
-    homeSignInMessage = document.getElementById('homeSignInMessage'); // NEW: For the sign-in prompt message
+    homeSignInMessage = document.getElementById('homeSignInMessage');
 
     // Explicitly define userIdDisplay and mobileUserIdDisplay here
     userIdDisplay = document.getElementById('userIdDisplay');
     mobileUserIdDisplay = document.getElementById('mobileUserIdDisplay');
 
-    // Admin menu elements (added IDs in HTML)
+    // Admin menu elements
     desktopAdminMenu = document.getElementById('desktopAdminMenu');
     mobileAdminMenu = document.getElementById('mobileAdminMenu');
 
-    // NEW: Admin Menu Toggle elements
+    // Admin Menu Toggle elements
     desktopAdminMenuToggle = document.getElementById('desktopAdminMenuToggle');
     desktopAdminSubMenu = document.getElementById('desktopAdminSubMenu');
     mobileAdminMenuToggle = document.getElementById('mobileAdminMenuToggle');
     mobileAdminSubMenu = document.getElementById('mobileAdminSubMenu');
 
-
-    // Reference to auth-section (for standard Google/email login) - This section is mostly decorative now
+    // Reference to auth-section
     authSection = document.getElementById('auth-section');
 
     // Mobile Menu Button and Container
     mobileMenuButton = document.getElementById('mobileMenuButton');
     mobileMenu = document.getElementById('mobileMenu');
-
 
     // Re-populate allSections array now that elements are initialized
     homeSection = document.getElementById('home-section');
@@ -785,109 +801,91 @@ async function initializeFirebase() {
         usersManagementSection,
         authSection,
         currencyManagementSection,
-        document.getElementById('price-book-management-section') // Add price book section
-    ].filter(section => section !== null); // Filter out any that might still be null if HTML is malformed
-
+        document.getElementById('price-book-management-section')
+    ].filter(section => section !== null);
 
     // Add Event Listeners for accordions AFTER they are initialized
     if (contactsAccordionHeader) contactsAccordionHeader.addEventListener('click', () => toggleAccordion(contactsAccordionHeader, contactsAccordionContent));
     if (linesAccordionHeader) linesAccordionHeader.addEventListener('click', () => toggleAccordion(linesAccordionHeader, linesAccordionContent));
     if (quotesAccordionHeader) quotesAccordionHeader.addEventListener('click', () => toggleAccordion(quotesAccordionHeader, quotesAccordionContent));
-    // REMOVED: Event listener for the summary card
 
     // --- NEW: Admin Submenu Toggle Listeners ---
-    if (desktopAdminMenuToggle && desktopAdminMenu) { // Ensure desktopAdminMenu is parent of toggle
+    if (desktopAdminMenuToggle && desktopAdminMenu) {
         desktopAdminMenuToggle.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent default link behavior
-            // Toggle 'active' class on desktopAdminMenu (the <li> parent)
+            e.preventDefault();
             desktopAdminMenu.classList.toggle('active');
         });
     }
-    // Listener for clicks *outside* the desktop admin menu to close it
     document.addEventListener('click', (e) => {
         if (desktopAdminMenu && !desktopAdminMenu.contains(e.target)) {
-            // If the click is outside the desktop admin menu, close it
             desktopAdminMenu.classList.remove('active');
         }
     });
 
-
     if (mobileAdminMenuToggle && mobileAdminSubMenu) {
         mobileAdminMenuToggle.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent default link behavior
-            // Toggle 'hidden' class on the submenu directly, as per CSS for mobile submenu
+            e.preventDefault();
             mobileAdminSubMenu.classList.toggle('hidden');
         });
     }
 
-
     // Listen for auth state changes
     onAuthStateChanged(auth, async (user) => {
-        isAuthReady = true; // Mark auth as ready as soon as state is known
-        console.log("onAuthStateChanged: Auth state changed. User:", user ? user.email || user.uid : "null");
+        isAuthReady = true;
+        console.log("main.js: onAuthStateChanged: Auth state changed. User:", user ? user.email || user.uid : "null");
 
         if (user) {
             currentUserId = user.uid;
-            // Ensure userIdDisplay and mobileUserIdDisplay are not null before setting textContent
             if (userIdDisplay) userIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
             if (mobileUserIdDisplay) mobileUserIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
 
-            // Show User ID and Logout buttons
             if (userIdDisplay) userIdDisplay.classList.remove('hidden');
             if (mobileUserIdDisplay) mobileUserIdDisplay.classList.remove('hidden');
             if (navGoogleLoginButton) navGoogleLoginButton.classList.add('hidden');
-            if (googleLoginButtonHome) googleLoginButtonHome.classList.add('hidden'); // Also hide the home page login button
+            if (googleLoginButtonHome) googleLoginButtonHome.classList.add('hidden');
             if (logoutButton) logoutButton.classList.remove('hidden');
             if (mobileLogoutButton) mobileLogoutButton.classList.remove('hidden');
-            if (homeSignInMessage) homeSignInMessage.classList.add('hidden'); // Hide sign-in message
+            if (homeSignInMessage) homeSignInMessage.classList.add('hidden');
 
-            console.log("onAuthStateChanged: Current Firebase UID:", currentUserId);
+            console.log("main.js: onAuthStateChanged: Current Firebase UID:", currentUserId);
 
-            // Fetch the user's profile document from Firestore
             const userProfileRef = doc(db, 'users_data', user.uid);
             const userProfileSnap = await getDoc(userProfileRef);
 
-            // MOVED THESE FETCHES HERE - AFTER AUTH STATE IS CONFIRMED
+            // Fetch currencies and country data early after auth, so they are available
             await Promise.all([
-                fetchCurrencies(),
+                fetchCurrencies(), // Ensure currencies are fetched BEFORE modules that use them are initialized
                 fetchCountryData()
             ]);
 
 
             if (userProfileSnap.exists()) {
-                // Profile exists, set isAdmin based on the 'role' and `profileAccess` field
                 const userData = userProfileSnap.data();
+                console.log("main.js: DEBUG: User data from Firestore - Role:", userData.role, " (Type:", typeof userData.role, ")");
+                console.log("main.js: DEBUG: User data from Firestore - Profile Access:", userData.profileAccess, " (Type:", typeof userData.profileAccess, ")");
 
-                // --- ADDED DEBUG LOGGING HERE ---
-                console.log("DEBUG: User data from Firestore - Role:", userData.role, " (Type:", typeof userData.role, ")");
-                console.log("DEBUG: User data from Firestore - Profile Access:", userData.profileAccess, " (Type:", typeof userData.profileAccess, ")");
-
-                // Ensure profileAccess is strictly boolean true
                 isAdmin = (userData.role === 'Admin' && userData.profileAccess === true);
-                console.log("onAuthStateChanged: User profile exists. Admin status:", isAdmin);
+                console.log("main.js: onAuthStateChanged: User profile exists. Admin status:", isAdmin);
             } else {
-                // Profile does NOT exist (first login for this user)
-                // Create a basic profile with default 'User' role
                 try {
                     await setDoc(userProfileRef, {
-                        userId: user.uid, // Store the Firebase Auth UID as the userId field
+                        userId: user.uid,
                         userName: user.email || 'N/A',
                         firstName: user.displayName ? user.displayName.split(' ')[0] : '',
                         lastName: user.displayName ? user.displayName.split(' ').slice(1).join(' ') : '',
                         email: user.email || 'N/A',
-                        phone: '', // Default empty
-                        role: 'User', // Default role for all new users on first login
-                        profileAccess: true // For a new user profile created on first login, allow access by default.
+                        phone: '',
+                        role: 'User',
+                        profileAccess: true
                     });
-                    console.log("Basic user profile created for:", user.uid);
-                    isAdmin = false; // Explicitly set to false for newly created default 'User' profile.
+                    console.log("main.js: Basic user profile created for:", user.uid);
+                    isAdmin = false;
                 } catch (profileError) {
-                    console.error("Error creating basic user profile:", profileError);
+                    console.error("main.js: Error creating basic user profile:", profileError);
                     showModal("Profile Error", `Failed to create user profile: ${profileError.message}. Access to some features may be limited.`, () => {});
                 }
             }
 
-            // Show/Hide Admin menus based on isAdmin flag
             if (isAdmin) {
                 if (desktopAdminMenu) desktopAdminMenu.classList.remove('hidden');
                 if (mobileAdminMenu) mobileAdminMenu.classList.remove('hidden');
@@ -896,126 +894,75 @@ async function initializeFirebase() {
                 if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
             }
 
-            // Populate dropdowns for customer form (always needed)
-            // This is handled by customers.js init module.
-            // populateCountries(); // Removed as it's part of customers.js init
+            showSection('home-section'); // Initially show home, modules will be initialized on navigation
 
-            // Always redirect to home after successful authentication
-            showSection('home-section');
-
-
-        } else { // No user is signed in.
+        } else {
             currentUserId = null;
-            isAdmin = false; // Ensure isAdmin is false when no user
-            console.log("onAuthStateChanged: No user signed in. Showing home section by default.");
+            isAdmin = false;
+            console.log("main.js: onAuthStateChanged: No user signed in. Showing home section by default.");
 
-            // Clear loaded app-wide data when logged out
             appCountries = [];
             appCountryStateMap = {};
-            allCurrencies = [];
+            allCurrencies = []; // Clear currencies when logged out
 
-            // Hide admin menus and logout buttons
-            if (userIdDisplay) userIdDisplay.classList.add('hidden'); // Hide desktop user ID
-            if (mobileUserIdDisplay) mobileUserIdDisplay.classList.add('hidden'); // Hide mobile user ID
+            if (userIdDisplay) userIdDisplay.classList.add('hidden');
+            if (mobileUserIdDisplay) mobileUserIdDisplay.classList.add('hidden');
             if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
-            if (mobileAdminMenu) mobileMobileMenu.classList.add('hidden'); // Corrected typo here
+            if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
             if (logoutButton) logoutButton.classList.add('hidden');
             if (mobileLogoutButton) mobileLogoutButton.classList.add('hidden');
 
-            // Hide admin submenus explicitly on logout
-            if (desktopAdminSubMenu) desktopAdminMenu.classList.remove('active'); // Ensure desktop dropdown is closed
-            if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden'); // Ensure mobile dropdown is closed
+            if (desktopAdminSubMenu) desktopAdminMenu.classList.remove('active');
+            if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden');
 
-
-            // Show Google Login buttons
             if (navGoogleLoginButton) navGoogleLoginButton.classList.remove('hidden');
-            if (googleLoginButtonHome) googleLoginButtonHome.classList.remove('hidden'); // Show home page login button
-            if (homeSignInMessage) homeSignInMessage.classList.remove('hidden'); // Show sign-in message
+            if (googleLoginButtonHome) googleLoginButtonHome.classList.remove('hidden');
+            if (homeSignInMessage) homeSignInMessage.classList.remove('hidden');
 
-            // Disable all form submit buttons by default when not logged in
             if (submitCustomerButton) submitCustomerButton.setAttribute('disabled', 'disabled');
-            if (submitOpportunityButton) submitOpportunityButton.setAttribute('disabled', 'disabled'); // NEW
-            if (submitOpportunityContactButton) submitOpportunityContactButton.setAttribute('disabled', 'disabled'); // NEW
-            if (submitOpportunityLineButton) submitOpportunityLineButton.setAttribute('disabled', 'disabled'); // NEW
-            if (submitQuoteButton) submitQuoteButton.setAttribute('disabled', 'disabled'); // NEW
+            if (submitOpportunityButton) submitOpportunityButton.setAttribute('disabled', 'disabled');
+            if (submitOpportunityContactButton) submitOpportunityContactButton.setAttribute('disabled', 'disabled');
+            if (submitOpportunityLineButton) submitOpportunityLineButton.setAttribute('disabled', 'disabled');
+            if (submitQuoteButton) submitQuoteButton.setAttribute('disabled', 'disabled');
             if (uploadAdminDataButton) uploadAdminDataButton.setAttribute('disabled', 'disabled');
             if (submitUserButton) submitUserButton.setAttribute('disabled', 'disabled');
-            if (submitCurrencyButton) submitCurrencyButton.setAttribute('disabled', 'disabled'); // NEW
+            if (submitCurrencyButton) submitCurrencyButton.setAttribute('disabled', 'disabled');
 
-            // Always show the home section initially
             showSection('home-section');
-            // The auth-section itself is hidden, login happens via header button
         }
     });
 
-    // --- Event Listeners ---
-    // Customer Form Event Listener (Renamed and Updated for validation)
-    // This is now handled within customers.js init module
-    // if (customerForm) { ... }
-
-    // Opportunity Form Event Listener (NEW and UPDATED for currency symbol)
-    // This is now handled within opportunities.js init module
-    // if (opportunityForm) { ... }
-
-    // Event listener for currency select change to update the symbol display
-    // This is now handled within opportunities.js init module
-    // if (opportunityCurrencySelect) { ... }
-
-
-    // Opportunity Contact Form Event Listener (NEW)
-    // This is now handled within opportunities.js init module
-    // if (opportunityContactForm) { ... }
-
-    // Opportunity Line Form Event Listener (NEW - Stubs)
-    // This is now handled within opportunities.js init module
-    // if (opportunityLineForm) { ... }
-
-    // Quote Form Event Listener (NEW - Stubs)
-    // This is now handled within opportunities.js init module
-    // if (quoteForm) { ... }
-
-
-    // Mobile Menu Button Event Listener
     if (mobileMenuButton) {
         mobileMenuButton.addEventListener('click', () => {
-            if (mobileMenu) mobileMenu.classList.toggle('open'); // Toggle 'open' class for max-height transition
-            // Close admin submenus if mobile menu is closed or being opened/closed
+            if (mobileMenu) mobileMenu.classList.toggle('open');
             if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden');
         });
     }
 
-
-    // Navigation Links Event Listeners
     document.querySelectorAll('nav a').forEach(link => {
-        // Only add listener if the link has a data-section attribute
         if (link.dataset.section) {
             link.addEventListener('click', (e) => {
-                e.preventDefault(); // Prevent default link behavior
-                showSection(link.dataset.section); // Call showSection with the target section ID
+                e.preventDefault();
+                showSection(link.dataset.section);
             });
         }
     });
 
-
-    // Event listener for the Google Login Button in the header (nav bar)
     if (navGoogleLoginButton) {
         navGoogleLoginButton.addEventListener('click', handleGoogleLogin);
     }
 
-    // Event listener for the Google Login button on the Home section
     if (googleLoginButtonHome) {
         googleLoginButtonHome.addEventListener('click', handleGoogleLogin);
     }
 
-    // Add event listeners for logout buttons
     if (logoutButton) {
         logoutButton.addEventListener('click', async () => {
             try {
                 await signOut(auth);
-                console.log("User signed out.");
-                // onAuthStateChanged will handle UI updates
+                console.log("main.js: User signed out.");
             } catch (error) {
-                console.error("Error signing out:", error);
+                console.error("main.js: Error signing out:", error);
                 showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
             }
         });
@@ -1025,21 +972,19 @@ async function initializeFirebase() {
         mobileLogoutButton.addEventListener('click', async () => {
             try {
                 await signOut(auth);
-                console.log("User signed out.");
-                // onAuthStateChanged will handle UI updates
+                console.log("main.js: User signed out.");
             }
             catch (error) {
-                console.error("Error signing out:", error);
+                console.error("main.js: Error signing out:", error);
                 showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
             }
         });
     }
 
-    // Admin Country Mapping Form Event Listener
     if (document.getElementById('countryMappingForm')) {
         document.getElementById('countryMappingForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (adminMessageDiv) adminMessageDiv.classList.add('hidden'); // Clear previous messages
+            if (adminMessageDiv) adminMessageDiv.classList.add('hidden');
             if (uploadAdminDataButton) {
                 uploadAdminDataButton.disabled = true;
                 uploadAdminDataButton.textContent = 'Uploading...';
@@ -1050,7 +995,6 @@ async function initializeFirebase() {
             const countryStateMapString = adminCountryStateMapInput.value;
             const isFullLoad = fullLoadRadio.checked;
 
-            // Parse countries string into array of objects (newline-separated, filter unique codes)
             function parseCountries(countriesString) {
                 const uniqueCodes = new Set();
                 const parsedCountries = [];
@@ -1078,7 +1022,7 @@ async function initializeFirebase() {
                     const msg = `Warning: Duplicate country codes found and ignored: ${duplicatesFound.join(', ')}. Only the first occurrence was used.`;
                     if (adminMessageDiv) {
                         adminMessageDiv.textContent = msg;
-                        adminMessageDiv.className = 'message error'; // Use error styling for warnings too
+                        adminMessageDiv.className = 'message error';
                         adminMessageDiv.classList.remove('hidden');
                     }
                     console.warn(msg);
@@ -1086,16 +1030,15 @@ async function initializeFirebase() {
                 return parsedCountries;
             }
 
-            // Parse countryStateMap string into an object (newline-separated)
             function parseCountryStateMap(mapString) {
                 const map = {};
                 if (!mapString.trim()) return map;
-                mapString.split('\n').forEach(line => { // Changed split delimiter to newline
+                mapString.split('\n').forEach(line => {
                     const parts = line.split(':');
                     if (parts.length === 2) {
                         const countryCode = parts[0].trim();
-                        const states = parts[1].split(',').map(s => s.trim()).filter(s => s !== ''); // Filter empty states
-                        if (countryCode !== '') { // Only add if country code is not empty
+                        const states = parts[1].split(',').map(s => s.trim()).filter(s => s !== '');
+                        if (countryCode !== '') {
                             map[countryCode] = states;
                         }
                     }
@@ -1106,32 +1049,23 @@ async function initializeFirebase() {
             const dataToUpload = {};
             let hasValidDataForUpload = false;
 
-            // Process countries data
             const parsedCountries = parseCountries(countriesString);
             if (parsedCountries.length > 0) {
                 dataToUpload.countries = parsedCountries;
                 hasValidDataForUpload = true;
             }
 
-            // Process countryStateMap data
             const parsedCountryStateMap = parseCountryStateMap(countryStateMapString);
             if (Object.keys(parsedCountryStateMap).length > 0) {
                 dataToUpload.countryStateMap = parsedCountryStateMap;
                 hasValidDataForUpload = true;
             }
 
-            // Special case: If full load is selected and BOTH textareas are empty, this means clearing the document.
-            // Otherwise, if a textarea is empty, its corresponding field will not be included in dataToUpload
-            // and thus not affected by merge:true.
             if (!hasValidDataForUpload && isFullLoad) {
-                // If full load is selected AND no valid data was parsed from EITHER textarea,
-                // it implies the user wants to completely clear both fields.
                 dataToUpload.countries = [];
                 dataToUpload.countryStateMap = {};
-                hasValidDataForUpload = true; // Mark as having intent to update (with empty data)
+                hasValidDataForUpload = true;
             } else if (!hasValidDataForUpload && !isFullLoad) {
-                // If incremental load is selected AND no valid data was parsed,
-                // there's nothing to update.
                 if (adminMessageDiv) {
                     adminMessageDiv.textContent = 'No valid data provided for update.';
                     adminMessageDiv.className = 'message error';
@@ -1146,8 +1080,6 @@ async function initializeFirebase() {
 
             try {
                 const docRef = doc(db, "app_metadata", "countries_states");
-                // Always use merge: true to avoid deleting unspecified fields.
-                // If the user wants to empty a field, they have to ensure the parsed array/object is empty.
                 await setDoc(docRef, dataToUpload, { merge: true });
 
                 if (adminMessageDiv) {
@@ -1155,14 +1087,12 @@ async function initializeFirebase() {
                     adminMessageDiv.className = 'message success';
                     adminMessageDiv.classList.remove('hidden');
                 }
-                console.log("Admin data upload successful:", dataToUpload);
+                console.log("main.js: Admin data upload successful:", dataToUpload);
 
-                // Re-fetch data for CRM forms and populate dropdowns after successful admin update
                 await fetchCountryData();
-                // populateCountries(); // Removed as it's part of customers.js init
 
             } catch (error) {
-                console.error("Error uploading admin data:", error);
+                console.error("main.js: Error uploading admin data:", error);
                 if (adminMessageDiv) {
                     adminMessageDiv.textContent = `Error uploading data: ${error.message}`;
                     adminMessageDiv.className = 'message error';
@@ -1177,170 +1107,23 @@ async function initializeFirebase() {
         });
     }
 
-    // Admin Currency Form Event Listener (NEW)
+    // Admin Currency Form Event Listener
     if (currencyForm) {
         currencyForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const editingId = currencyForm.dataset.editingId;
-            // For CSV, currencyData parameter is not directly used, as the function reads from the textarea.
-            await saveCurrency(null, editingId || null);
+            await saveCurrency(null, editingId || null); // Pass null for currencyData to indicate reading from textarea
         });
     }
-
-
-    // User Form Event Listener
-    // This is now handled within users.js init module
-    // if (userForm) { ... }
-
-
-    // Reset Form Buttons - add event listeners
-    // All reset buttons are now handled by their respective modules
-    // document.getElementById('resetCustomerFormButton')?.addEventListener('click', resetCustomerForm);
-    // document.getElementById('resetOpportunityFormButton')?.addEventListener('click', resetOpportunityForm);
-    // document.getElementById('resetOpportunityContactFormButton')?.addEventListener('click', resetOpportunityContactForm);
-    // document.getElementById('resetOpportunityLineFormButton')?.addEventListener('click', resetOpportunityLineForm);
-    // document.getElementById('resetQuoteFormButton')?.addEventListener('click', resetQuoteForm);
-    // document.getElementById('resetUserFormButton')?.addEventListener('click', resetUserForm);
-    // document.getElementById('resetCurrencyFormButton')?.addEventListener('click', resetCurrencyForm);
-
-
 }
 
-// Determine the Firestore collection path based on type and user ID
-export function getCollectionPath(type, dataArea = 'customers') { // Export getCollectionPath
-    if (!auth.currentUser) { // Use auth.currentUser to determine actual user state
-        console.warn("No authenticated user, cannot determine collection path securely.");
-        // For public data, still provide the public path even if not logged in
-        if (type === 'public') {
-            return `artifacts/${appId}/public/data/${dataArea}`;
-        }
-        // For private data, if no user is authenticated, it's an error scenario for data operations
-        showModal("Authentication Error", "You must be logged in to access private data.", () => {});
-        return null; // Return null to indicate path is not available
-    }
-    const userId = auth.currentUser.uid;
-    if (type === 'public') {
-        return `artifacts/${appId}/public/data/${dataArea}`;
-    } else { // 'private'
-        return `artifacts/${appId}/users/${userId}/${dataArea}`;
-    }
-}
-
-
-/* --- CUSTOMERS CRUD OPERATIONS --- */
-// These functions are now part of customers.js and should be imported/called from there
-
-// Function to populate the country dropdown
-// function populateCountries() { ... } // Removed from here, moved to customers.js
-
-// Function to populate the state/province dropdown based on selected country
-// function populateStates(countryCode) { ... } // Removed from here, moved to customers.js
-
-// Placeholder for address validation (requires external API for real validation)
-// function validateAddress(address, city, state, zipCode, country) { ... } // Removed from here, moved to customers.js
-
-
-// Function to apply validation rules based on customer type
-// function applyCustomerTypeValidation() { ... } // Removed from here, moved to customers.js
-
-// Add or update a customer in Firestore
-// async function saveCustomer(customerData, existingCustomerDocId = null) { ... } // Removed from here, moved to customers.js
-
-// Delete a customer from Firestore
-// async function deleteCustomer(firestoreDocId) { ... } // Removed from here, moved to customers.js
-
-// Listen for real-time updates to customers
-// function listenForCustomers() { ... } // Removed from here, moved to customers.js
-
-// Display a single customer in the UI as a grid row
-// function displayCustomer(customer) { ... } // Removed from here, moved to customers.js
-
-
-// Populate form for editing a customer
-// function editCustomer(customer) { ... } // Removed from here, moved to customers.js
-
-// Reset Customer form function
-// export function resetCustomerForm() { ... } // Removed from here, moved to customers.js
-
-
-/* --- OPPORTUNITY CRUD OPERATIONS (UPDATED FOR NEW UI AND CURRENCY SYMBOLS) --- */
-// These functions are now part of opportunities.js and should be imported/called from there
-
-// NEW: Function to populate the currency select dropdown for opportunities
-// function populateCurrencySelect() { ... } // Removed from here, moved to opportunities.js
-
-// NEW: Function to update the currency symbol next to the amount input
-// function updateCurrencySymbolDisplay() { ... } // Removed from here, moved to opportunities.js
-
-// Function to fetch customers and populate the dropdown for opportunities
-// async function fetchCustomersForDropdown() { ... } // Removed from here, moved to opportunities.js
-
-// Save (Add/Update) an Opportunity
-// async function saveOpportunity(opportunityData, existingOpportunityDocId = null) { ... } // Removed from here, moved to opportunities.js
-
-// Delete an Opportunity
-// async function deleteOpportunity(firestoreDocId) { ... } // Removed from here, moved to opportunities.js
-
-// Listen for real-time updates to Opportunities
-// function listenForOpportunities() { ... } // Removed from here, moved to opportunities.js
-
-// Display a single opportunity in the UI (UPDATED for currency symbol)
-// function displayOpportunity(opportunity) { ... } // Removed from here, moved to opportunities.js
-
-// Populate form for editing an opportunity (UPDATED FOR NEW UI AND CURRENCY SYMBOLS)
-// function editOpportunity(opportunity) { ... } // Removed from here, moved to opportunities.js
-
-// Reset Opportunity form function (UPDATED FOR NEW UI AND CURRENCY SYMBOLS)
-// export function resetOpportunityForm() { ... } // Removed from here, moved to opportunities.js
-
-
-/* --- OPPORTUNITY CONTACTS CRUD (Fully Implemented Example) --- */
-// These functions are now part of opportunities.js and should be imported/called from there
-
-
-/* --- OPPORTUNITY LINES CRUD (STUBS) --- */
-// These functions are now part of opportunities.js and should be imported/called from there
-
-
-/* --- QUOTES CRUD (STUBS) --- */
-// These functions are now part of opportunities.js and should be imported/called from there
-
-
-/* --- USERS CRUD OPERATIONS --- */
-// These functions are now part of users.js and should be imported/called from there
-
-// Save (Add/Update) a User
-// async function saveUser(userData, existingFirestoreDocId = null) { ... } // Removed from here, moved to users.js
-
-// Delete a User
-// async function deleteUser(firestoreDocId) { ... } // Removed from here, moved to users.js
-
-// Listen for real-time updates to Users
-// function listenForUsers() { ... } // Removed from here, moved to users.js
-
-// Display a single user in the UI as a grid row
-// function displayUser(user) { ... } // Removed from here, moved to users.js
-
-// Populate form for editing a user
-// function editUser(user) { ... } // Removed from here, moved to users.js
-
-// Reset User form function
-// export function resetUserForm() { ... } // Removed from here, moved to users.js
-
-// --- Accordion Logic (UPDATED for dynamic panel sizing) ---
-// These functions are now part of opportunities.js and should be imported/called from there
-
-
-/* --- ADMIN CURRENCY MANAGEMENT (NEW) --- */
-// These functions are now directly in main.js and exported for other modules to use
-
-export async function saveCurrency(currencyData, existingCurrencyCode = null) { // Export this
+export async function saveCurrency(currencyData, existingCurrencyCode = null) {
     if (!isAuthReady || !currentUserId || !isAdmin) {
         showModal("Permission Denied", "Only administrators can manage currencies.", () => {});
         return;
     }
 
-    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden'); // Hide previous messages
+    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden');
     if (submitCurrencyButton) {
         submitCurrencyButton.disabled = true;
         submitCurrencyButton.textContent = 'Uploading...';
@@ -1348,7 +1131,7 @@ export async function saveCurrency(currencyData, existingCurrencyCode = null) { 
 
 
     const inputCsv = adminCurrenciesInput.value.trim();
-    const currencyLines = inputCsv.split('\n').filter(line => line.trim() !== ''); // Filter out empty lines
+    const currencyLines = inputCsv.split('\n').filter(line => line.trim() !== '');
 
     if (currencyLines.length === 0) {
         if (adminCurrencyMessageDiv) {
@@ -1363,7 +1146,6 @@ export async function saveCurrency(currencyData, existingCurrencyCode = null) { 
         return;
     }
 
-    // Corrected collection reference for currencies data
     const currenciesCollectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
 
     try {
@@ -1375,42 +1157,37 @@ export async function saveCurrency(currencyData, existingCurrencyCode = null) { 
             totalProcessed++;
             const parts = line.split(',');
 
-            // Explicitly get each part and ensure it's a string, defaulting to empty if not present.
-            // This prevents `undefined` values from reaching Firestore functions expecting strings.
             const code = parts[0] ? parts[0].trim() : '';
             const currencyName = parts[1] ? parts[1].trim() : '';
             const symbol = parts[2] ? parts[2].trim() : '';
             const symbol_native = parts[3] ? parts[3].trim() : '';
 
-            // Now, check for mandatory fields being empty after trimming
             if (code === '' || currencyName === '' || symbol === '' || symbol_native === '') {
-                console.error(`Skipping invalid line (missing data for essential fields): '${line}'`);
+                console.error(`main.js: Skipping invalid line (missing data for essential fields): '${line}'`);
                 errorsOccurred++;
                 continue;
             }
 
-            // If editing a specific currency, ensure the code matches
             if (existingCurrencyCode && code !== existingCurrencyCode) {
                 showModal("Validation Error", `When editing, the currency code in the input CSV (${code}) must match the currency being edited (${existingCurrencyCode}). Please provide only one line for the edited currency.`, () => {});
                 if (submitCurrencyButton) {
                     submitCurrencyButton.disabled = false;
                     submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
                 }
-                return; // Stop processing and exit
+                return;
             }
 
 
             const currencyDataToSave = {
-                currencyCode: code, // Storing code inside the document too, though doc ID is also the code
+                currencyCode: code,
                 currencyName: currencyName,
                 symbol: symbol,
                 symbol_native: symbol_native
             };
 
-            // CORRECTED: Use doc(collectionRef, documentId)
-            const currencyDocRef = doc(currenciesCollectionRef, code); // Pass the collection reference directly
+            const currencyDocRef = doc(currenciesCollectionRef, code);
 
-            await setDoc(currencyDocRef, currencyDataToSave, { merge: true }); // Use setDoc with merge to create or update
+            await setDoc(currencyDocRef, currencyDataToSave, { merge: true });
             updatesPerformed++;
         }
 
@@ -1425,13 +1202,12 @@ export async function saveCurrency(currencyData, existingCurrencyCode = null) { 
             adminCurrencyMessageDiv.textContent = message;
             adminCurrencyMessageDiv.classList.remove('hidden');
         }
-        console.log("Admin currency data upload process finished.");
+        console.log("main.js: Admin currency data upload process finished.");
 
-        await fetchCurrencies(); // Re-fetch all currencies to update the global array
-        // populateCurrencySelect(); // No longer called directly from main, opportunities.js handles its own dropdown update
+        await fetchCurrencies();
         resetCurrencyForm();
     } catch (error) {
-        console.error("Error uploading currency data (caught in try-catch):", error);
+        console.error("main.js: Error uploading currency data (caught in try-catch):", error);
         if (adminCurrencyMessageDiv) {
             adminCurrencyMessageDiv.textContent = `Error uploading currency data: ${error.message}`;
             adminCurrencyMessageDiv.className = 'message error';
@@ -1446,7 +1222,7 @@ export async function saveCurrency(currencyData, existingCurrencyCode = null) { 
 }
 
 
-export async function deleteCurrency(currencyCode) { // Export this
+export async function deleteCurrency(currencyCode) {
     if (!isAuthReady || !currentUserId || !isAdmin) {
         showModal("Permission Denied", "Only administrators can manage currencies.", () => {});
         return;
@@ -1457,24 +1233,22 @@ export async function deleteCurrency(currencyCode) { // Export this
         `Are you sure you want to delete the currency '${currencyCode}'? This action cannot be undone.`,
         async () => {
             try {
-                // Corrected doc reference for `app_settings`
                 const currencyDocRef = doc(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data", currencyCode);
                 await deleteDoc(currencyDocRef);
-                console.log("Currency deleted:", currencyCode);
+                console.log("main.js: Currency deleted:", currencyCode);
                 showModal("Success", `Currency '${currencyCode}' deleted successfully!`, () => {});
-                await fetchCurrencies(); // Re-fetch to update allCurrencies array
-                // populateCurrencySelect(); // No longer called directly from main, opportunities.js handles its own dropdown update
+                await fetchCurrencies();
             } catch (error) {
-                console.error("Error deleting currency:", error);
+                console.error("main.js: Error deleting currency:", error);
                 showModal("Error", `Failed to delete currency: ${error.message}`, () => {});
             }
         }
     );
 }
 
-export function listenForCurrencies() { // Export this
+export function listenForCurrencies() {
     if (unsubscribeCurrencies) {
-        removeUnsubscribe('currencies'); // Use centralized remove
+        removeUnsubscribe('currencies');
     }
 
     if (!isAuthReady || !currentUserId || !isAdmin) {
@@ -1482,31 +1256,31 @@ export function listenForCurrencies() { // Export this
         return;
     }
 
-    // Corrected collection reference to include a document ID for `app_settings`
     const q = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
 
     unsubscribeCurrencies = onSnapshot(q, (snapshot) => {
-        if (currencyList) currencyList.innerHTML = ''; // Clear current list
+        if (currencyList) currencyList.innerHTML = '';
         if (snapshot.empty) {
             if (currencyList) currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No currencies found. Add them above!</p>';
             return;
         }
         snapshot.forEach((doc) => {
-            const currency = { id: doc.id, ...doc.data() }; // doc.id is the currencyCode
+            const currency = { id: doc.id, ...doc.data() };
             displayCurrency(currency);
         });
+        console.log("main.js: Currencies data updated via onSnapshot. Total:", snapshot.size);
     }, (error) => {
-        console.error("Error listening to currencies:", error);
+        console.error("main.js: Error listening to currencies:", error);
         if (currencyList) currencyList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading currencies: ${error.message}</p>`;
     });
     addUnsubscribe('currencies', unsubscribeCurrencies);
 }
 
-export function displayCurrency(currency) { // Export this
-    if (!currencyList) return; // Defensive check
+export function displayCurrency(currency) {
+    if (!currencyList) return;
     const currencyRow = document.createElement('div');
-    currencyRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
-    currencyRow.dataset.id = currency.id; // currency code is the Firestore doc ID
+    currencyRow.className = 'data-grid-row';
+    currencyRow.dataset.id = currency.id;
 
     currencyRow.innerHTML = `
         <div class="px-2 py-1 truncate font-medium text-gray-800">${currency.id || 'N/A'}</div>
@@ -1528,7 +1302,7 @@ export function displayCurrency(currency) { // Export this
     currencyRow.querySelector('.delete-btn').addEventListener('click', () => deleteCurrency(currency.id));
 }
 
-export function editCurrency(currency) { // Export this
+export function editCurrency(currency) {
     if (!isAdmin) {
         showModal("Permission Denied", "Only administrators can edit currencies.", () => {});
         return;
@@ -1537,24 +1311,23 @@ export function editCurrency(currency) { // Export this
     if (submitCurrencyButton) submitCurrencyButton.textContent = 'Update Currency';
 
     if (currencyCodeDisplayGroup) currencyCodeDisplayGroup.classList.remove('hidden');
-    if (currencyCodeDisplay) currencyCodeDisplay.textContent = currency.id; // Display the code
+    if (currencyCodeDisplay) currencyCodeDisplay.textContent = currency.id;
 
-    // Pre-fill the textarea with the CSV for this specific currency
     if (adminCurrenciesInput) adminCurrenciesInput.value = `${currency.id},${currency.currencyName || ''},${currency.symbol || ''},${currency.symbol_native || ''}`;
 
-    if (currencyForm) currencyForm.dataset.editingId = currency.id; // Store the currency code for updating
-    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden'); // Clear any previous messages
+    if (currencyForm) currencyForm.dataset.editingId = currency.id;
+    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden');
     if (currencyForm) currencyForm.scrollIntoView({ behavior: 'smooth' });
 }
 
-export function resetCurrencyForm() { // Export this
+export function resetCurrencyForm() {
     if (currencyForm) currencyForm.reset();
     if (currencyForm) currencyForm.dataset.editingId = '';
     if (currencyFormTitle) currencyFormTitle.textContent = 'Add New Currency';
     if (submitCurrencyButton) submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
     if (currencyCodeDisplayGroup) currencyCodeDisplayGroup.classList.add('hidden');
     if (currencyCodeDisplay) currencyCodeDisplay.textContent = '';
-    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden'); // Clear messages
+    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden');
 }
 
 
