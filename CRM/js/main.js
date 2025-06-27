@@ -433,7 +433,7 @@ export async function showSection(sectionId) {
         if (linkedObjectsAccordion) linkedObjectsAccordion.classList.add('hidden');
     }
 
-    // Start specific listener for the active section, but only if auth is ready
+    // Start specific listener for the active section, but only if auth and DB are ready
     if (isAuthReady && db && isDbReady) { // Ensure auth and DB are ready
         if (sectionId === 'customers-section') {
             import('./customers.js').then(module => {
@@ -506,7 +506,11 @@ async function handleGoogleLogin() {
 // Function to fetch country and state data from Firestore for the CRM forms
 export async function fetchCountryData() {
     try {
-        if (!db || !isDbReady) { // Add defensive check here too
+        // Ensure db and isDbReady are accessible via 'this' if this function is called as a method,
+        // or via the 'main' namespace if called after 'import * as main'.
+        // Given this is an exported function, it assumes 'db' and 'isDbReady' are globally accessible
+        // or part of the imported 'main' namespace in other modules.
+        if (!db || !isDbReady) {
             console.warn("main.js: Firestore DB not ready. Skipping fetchCountryData.");
             appCountries = [];
             appCountryStateMap = {};
@@ -535,7 +539,7 @@ export async function fetchCountryData() {
 // Function to load existing data into the admin textareas (this is called from admin_data.js now)
 async function loadAdminCountryData() {
     try {
-        await fetchCountryData(); // Ensure global appCountries and appCountryStateMap are updated
+        await fetchCountryData(); // Use the local (exported) fetchCountryData
 
         const countriesString = appCountries.map(c => `${c.name},${c.code}`).join('\n');
         if (adminCountriesInput) adminCountriesInput.value = countriesString;
