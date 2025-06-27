@@ -454,10 +454,7 @@ export async function deleteCurrency(currencyCode) { // Export this function
 
 
 export function listenForCurrencies() { // Export this function
-    console.log("admin_data.js: listenForCurrencies called.");
-    if (unsubscribeCurrencies) {
-        unsubscribeCurrencies(); // Unsubscribe from previous listener
-    }
+    // No local unsubscribeCurrencies needed here. main.js manages it via addUnsubscribe.
 
     if (!isAuthReady || !currentUserId || !isAdmin) {
         if (currencyList) currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Access Denied: Only administrators can view currencies.</p>';
@@ -466,14 +463,15 @@ export function listenForCurrencies() { // Export this function
 
     const q = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
 
-    unsubscribeCurrencies = onSnapshot(q, (snapshot) => {
+    // Store the unsubscribe function directly in a variable local to this call, then register it
+    const unsubscribe = onSnapshot(q, (snapshot) => {
         if (currencyList) currencyList.innerHTML = '';
         if (snapshot.empty) {
             if (currencyList) currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No currencies found. Add them above!</p>';
             return;
         }
         snapshot.forEach((doc) => {
-            const currency = { id: doc.id, ...doc.data() };
+            const currency = { id: doc.id, ...doc.data() }; // doc.id is the currencyCode
             displayCurrency(currency);
         });
         console.log("admin_data.js: Currencies data updated via onSnapshot. Total:", snapshot.size);
@@ -481,15 +479,16 @@ export function listenForCurrencies() { // Export this function
         console.error("admin_data.js: Error listening to currencies:", error);
         if (currencyList) currencyList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading currencies: ${error.message}</p>`;
     });
-    addUnsubscribe('currencies', unsubscribeCurrencies); // Add to main.js's unsubscribe tracker
+    // Register the unsubscribe function with main.js's global tracker
+    addUnsubscribe('currencies', unsubscribe);
 }
 
 
 function displayCurrency(currency) {
     if (!currencyList) return; // Defensive check
     const currencyRow = document.createElement('div');
-    currencyRow.className = 'data-grid-row';
-    currencyRow.dataset.id = currency.id;
+    currencyRow.className = 'data-grid-row'; // Removed grid-cols, CSS handles this now
+    currencyRow.dataset.id = currency.id; // currency code is the Firestore doc ID
 
     currencyRow.innerHTML = `
         <div class="px-2 py-1 truncate font-medium text-gray-800">${currency.id || 'N/A'}</div>
@@ -520,21 +519,22 @@ function editCurrency(currency) {
     if (submitCurrencyButton) submitCurrencyButton.textContent = 'Update Currency';
 
     if (currencyCodeDisplayGroup) currencyCodeDisplayGroup.classList.remove('hidden');
-    if (currencyCodeDisplay) currencyCodeDisplay.textContent = currency.id;
+    if (currencyCodeDisplay) currencyCodeDisplay.textContent = currency.id; // Display the code
 
+    // Pre-fill the textarea with the CSV for this specific currency
     if (adminCurrenciesInput) adminCurrenciesInput.value = `${currency.id},${currency.currencyName || ''},${currency.symbol || ''},${currency.symbol_native || ''}`;
 
-    if (currencyForm) currencyForm.dataset.editingId = currency.id;
-    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden');
+    if (currencyForm) currencyForm.dataset.editingId = currency.id; // Store the currency code for updating
+    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden'); // Clear any previous messages
     if (currencyForm) currencyForm.scrollIntoView({ behavior: 'smooth' });
 }
 
-export function resetCurrencyForm() { // Export this function
+export function resetCurrencyForm() {
     if (currencyForm) currencyForm.reset();
     if (currencyForm) currencyForm.dataset.editingId = '';
     if (currencyFormTitle) currencyFormTitle.textContent = 'Add New Currency';
     if (submitCurrencyButton) submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
     if (currencyCodeDisplayGroup) currencyCodeDisplayGroup.classList.add('hidden');
     if (currencyCodeDisplay) currencyCodeDisplay.textContent = '';
-    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden');
+    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden'); // Clear messages
 }
