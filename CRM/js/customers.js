@@ -1,9 +1,23 @@
-// Change: Use named imports for specific global states and the Firestore DB instance
-// This is the most direct way to get the 'db' instance.
-import { db, isAuthReady, currentUserId, isAdmin, addUnsubscribe, removeUnsubscribe, fetchCountryData, appCountries, appCountryStateMap, allCustomers, isDbReady } from './main.js';
+// Use named imports for specific global states (excluding 'db' here)
+import { isAuthReady, currentUserId, isAdmin, addUnsubscribe, removeUnsubscribe, fetchCountryData, appCountries, appCountryStateMap, allCustomers, isDbReady } from './main.js';
 import { showModal, getCollectionPath, formatDate } from './utils.js'; // Import utility functions
 
-import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Updated Firebase JS SDK version to match main.js
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+
+// Global variable to hold the Firestore DB instance, explicitly set by main.js
+let firestoreDb = null;
+
+// EXPORTED: Setter function for the Firestore DB instance
+export function setDbInstance(instance) {
+    if (instance && typeof instance.collection === 'function' && instance.type === 'firestore') {
+        firestoreDb = instance;
+        console.log("customers.js: Firestore DB instance successfully set via setDbInstance.");
+    } else {
+        console.error("customers.js: Attempted to set an invalid Firestore DB instance.");
+        firestoreDb = null; // Ensure it's null if invalid
+    }
+}
 
 
 // DOM elements for Customer Management Section
@@ -28,7 +42,7 @@ let customerCountrySelect;
 let customerAddressInput;
 let customerCityInput;
 let customerStateSelect;
-let customerZipCodeInput; // This refers to the DOM element, correctly
+let customerZipCodeInput;
 let addressValidationMessage;
 
 let individualIndustryGroup;
@@ -51,7 +65,7 @@ let customerActiveSelect; // NEW: Customer Active
 export async function initCustomersModule() {
     console.log("customers.js: initCustomersModule called.");
     // Access imported properties directly
-    console.log("customers.js: initCustomersModule current state - db:", db, "isAuthReady:", isAuthReady, "isDbReady:", isDbReady, "currentUserId:", currentUserId);
+    console.log("customers.js: initCustomersModule current state - firestoreDb:", firestoreDb, "isAuthReady:", isAuthReady, "isDbReady:", isDbReady, "currentUserId:", currentUserId);
 
 
     // Initialize DOM elements if they haven't been already. This helps prevent null references.
@@ -118,16 +132,16 @@ export async function initCustomersModule() {
         }
     }
 
-    // Load data specific to this module ONLY if auth and DB are ready
-    if (isAuthReady && currentUserId && db && isDbReady) { // Use directly imported variables
+    // Load data specific to this module ONLY if auth and DB are ready AND firestoreDb is set
+    if (isAuthReady && currentUserId && firestoreDb && isDbReady) {
         console.log("customers.js: Auth, User, and DB are ready. Initializing customer data.");
         if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
-        await fetchCountryData(); // Used directly imported function
+        await fetchCountryData(); // Used directly imported function from main
         populateCountries();
-        listenForCustomers();
+        listenForCustomers(); // This will use the firestoreDb
         resetCustomerForm(); // Ensure the form is cleared and ready for new input
     } else {
-        console.warn("customers.js: Authentication, User, or Firestore DB not ready. Customers module not fully initialized for data operations.");
+        console.warn("customers.js: Authentication, User, or Firestore DB not ready (or firestoreDb not set). Customers module not fully initialized for data operations.");
         if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Initializing customers. Please wait or sign in...</p>'; // Updated message
         if (submitCustomerButton) submitCustomerButton.setAttribute('disabled', 'disabled');
     }
@@ -263,7 +277,7 @@ function applyCustomerTypeValidation() {
  * Data is read from the form fields.
  */
 async function saveCustomer() {
-    if (!isAuthReady || !currentUserId || !db || !isDbReady) { // Used directly imported variables
+    if (!isAuthReady || !currentUserId || !firestoreDb || !isDbReady) { // Use firestoreDb
         showModal("Permission Denied", "Please sign in to manage customers, or Firestore is not ready.", () => {});
         return;
     }
@@ -347,14 +361,14 @@ async function saveCustomer() {
     try {
         if (existingCustomerDocId) {
             // Update existing customer
-            const customerDocRef = doc(db, collectionPath, existingCustomerDocId); // Use imported db
+            const customerDocRef = doc(firestoreDb, collectionPath, existingCustomerDocId); // Use firestoreDb
             await setDoc(customerDocRef, { ...customerToSave, updatedAt: new Date() }, { merge: true }); // Ensure updatedAt is updated
             showModal("Success", "Customer updated successfully!", () => { });
             console.log("customers.js: Customer updated:", existingCustomerDocId);
         } else {
             // Add new customer
             // Let Firestore generate the document ID, and then add a human-readable customerId field
-            const newDocRef = doc(collection(db, collectionPath)); // Use imported db
+            const newDocRef = doc(collection(firestoreDb, collectionPath)); // Use firestoreDb
             const newCustomerId = `CUST-${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
             await setDoc(newDocRef, { ...customerToSave, customerId: newCustomerId, createdAt: new Date() });
             showModal("Success", `New Customer added successfully! ID: ${newCustomerId}`, () => { });
@@ -373,7 +387,7 @@ async function saveCustomer() {
  * @param {string} firestoreDocId - The Firestore document ID of the customer to delete.
  */
 async function deleteCustomer(firestoreDocId) {
-    if (!isAuthReady || !currentUserId || !db || !isDbReady) { // Used directly imported variables
+    if (!isAuthReady || !currentUserId || !firestoreDb || !isDbReady) { // Use firestoreDb
         showModal("Permission Denied", "Please sign in to delete customers, or Firestore is not ready.", () => {});
         return;
     }
@@ -385,7 +399,7 @@ async function deleteCustomer(firestoreDocId) {
         "Are you sure you want to delete this customer? This action cannot be undone.",
         async () => {
             try {
-                const customerDocRef = doc(db, collectionPath, firestoreDocId); // Use imported db
+                const customerDocRef = doc(firestoreDb, collectionPath, firestoreDocId); // Use firestoreDb
                 await deleteDoc(customerDocRef);
                 showModal("Success", "Customer deleted successfully!", () => {});
                 console.log("customers.js: Customer deleted Firestore Doc ID:", firestoreDocId);
@@ -406,18 +420,18 @@ export function listenForCustomers() {
     removeUnsubscribe('customers'); // Used directly imported function
 
     console.log("customers.js: listenForCustomers called.");
-    console.log("customers.js: Current state for listener - isAuthReady:", isAuthReady, "currentUserId:", currentUserId, "db:", db, "isDbReady:", isDbReady);
+    console.log("customers.js: Current state for listener - isAuthReady:", isAuthReady, "currentUserId:", currentUserId, "firestoreDb:", firestoreDb, "isDbReady:", isDbReady);
 
     // --- IMPORTANT DEBUGGING CHECK ---
-    // This is the line that was failing. Let's make absolutely sure db is a Firestore object here.
-    if (!db || typeof db.collection !== 'function' || db.type !== 'firestore') {
-        console.error("customers.js: CRITICAL ERROR - 'db' is NOT a valid Firestore instance at the point of calling collection(). Current db value:", db);
+    // This check now uses the internal 'firestoreDb' variable
+    if (!firestoreDb || typeof firestoreDb.collection !== 'function' || firestoreDb.type !== 'firestore') {
+        console.error("customers.js: CRITICAL ERROR - 'firestoreDb' is NOT a valid Firestore instance at the point of calling collection(). Current firestoreDb value:", firestoreDb);
         if (customerList) customerList.innerHTML = '<p class="text-red-500 text-center py-4 col-span-full">Error: Firestore connection not ready. Please try refreshing.</p>';
         return;
     }
     // --- END IMPORTANT DEBUGGING CHECK ---
 
-    if (!isAuthReady || !currentUserId || !db || !isDbReady) { // Used directly imported variables
+    if (!isAuthReady || !currentUserId || !firestoreDb || !isDbReady) { // Use firestoreDb
         if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Initializing customers. Please wait or sign in...</p>';
         console.warn("customers.js: Customer listener skipped: Auth/DB not ready.");
         return;
@@ -432,11 +446,11 @@ export function listenForCustomers() {
         return;
     }
 
-    // Add logging for collectionPath and db right before the collection() call
+    // Add logging for collectionPath and firestoreDb right before the collection() call
     console.log("customers.js: DEBUG - collectionPath before collection():", collectionPath);
-    console.log("customers.js: DEBUG - db before collection():", db);
+    console.log("customers.js: DEBUG - firestoreDb before collection():", firestoreDb);
 
-    const q = collection(db, collectionPath); // Use imported db here
+    const q = collection(firestoreDb, collectionPath); // Use firestoreDb here
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
         if (customerList) customerList.innerHTML = ''; // Clear current list
@@ -601,7 +615,7 @@ export function resetCustomerForm() {
     if (addressValidationMessage) addressValidationMessage.classList.add('hidden');
 
     // Enable submit button if auth is ready
-    if (isAuthReady && currentUserId && db && isDbReady) { // Used directly imported variables
+    if (isAuthReady && currentUserId && firestoreDb && isDbReady) { // Use firestoreDb
         if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
     } else {
         if (submitCustomerButton) submitCustomerButton.setAttribute('disabled', 'disabled');
