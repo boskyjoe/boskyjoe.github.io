@@ -2,7 +2,7 @@ import { db, auth, currentUserId, isAdmin, isAuthReady, addUnsubscribe, removeUn
 import { showModal, getCollectionPath } from './utils.js';
 import { appCountries, appCountryStateMap, fetchCountryData } from './admin_data.js'; // Import appCountries, appCountryStateMap, and fetchCountryData
 
-import { collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
 // DOM elements for Customer Management Section
@@ -37,6 +37,9 @@ let submitCustomerButton;
 let customerList;
 
 let unsubscribeCustomers = null; // To store the onSnapshot unsubscribe function
+
+// Export allCustomers for use in other modules like opportunities.js
+export let allCustomers = [];
 
 // Initialize Customers module elements and event listeners
 export async function initCustomersModule() {
@@ -311,12 +314,14 @@ export function listenForCustomers() {
 
     unsubscribeCustomers = onSnapshot(q, (snapshot) => {
         if (customerList) customerList.innerHTML = ''; // Clear current list
+        allCustomers = []; // Clear and repopulate allCustomers array
         if (snapshot.empty) {
             if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">No customers found. Add one above!</p>';
             return;
         }
         snapshot.forEach((doc) => {
             const customer = { id: doc.id, ...doc.data() };
+            allCustomers.push(customer); // Populate global allCustomers array
             displayCustomer(customer);
         });
         console.log("Customers data updated via onSnapshot. Total:", snapshot.size);
@@ -327,6 +332,30 @@ export function listenForCustomers() {
 
     addUnsubscribe('customers', unsubscribeCustomers); // Register with main.js's central tracker
 }
+
+// Exported function to fetch customers for dropdowns (e.g., in opportunities)
+export async function fetchCustomersForDropdown() {
+    // This function can be used by other modules to get a snapshot of customer data
+    // It's not a real-time listener, just a one-time fetch.
+    if (!db || !currentUserId) {
+        console.warn("customers.js: Firestore 'db' instance or currentUserId not available for fetchCustomersForDropdown.");
+        return [];
+    }
+    try {
+        const collectionPath = getCustomersCollectionPath();
+        const querySnapshot = await getDocs(collection(db, collectionPath));
+        const customers = [];
+        querySnapshot.forEach((doc) => {
+            customers.push({ id: doc.id, ...doc.data() });
+        });
+        console.log("customers.js: Fetched customers for dropdown. Total:", customers.length);
+        return customers;
+    } catch (error) {
+        console.error("customers.js: Error fetching customers for dropdown:", error);
+        return [];
+    }
+}
+
 
 // Display a single customer in the UI as a grid row
 function displayCustomer(customer) {
