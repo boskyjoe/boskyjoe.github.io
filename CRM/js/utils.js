@@ -142,7 +142,8 @@ export function getCollectionPath(dataArea, type = 'private') {
     } else if (type === 'public') {
         path = `artifacts/${appId}/public/data/${dataArea}`;
     } else { // 'private'
-        if (!isAuthReady || !currentUserId) { // isAuthReady and currentUserId are imported from main.js
+        // isAuthReady and currentUserId are imported from main.js
+        if (!isAuthReady || !currentUserId) { 
             console.warn(`utils.js: Attempted to access private data area '${dataArea}' before authentication is ready or without a logged-in user.`);
             return null; // Critical: Do not return a path if auth is missing for private data
         }
