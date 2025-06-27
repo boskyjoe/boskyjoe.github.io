@@ -1,14 +1,14 @@
-import { db, auth, currentUserId, isAuthReady, addUnsubscribe, removeUnsubscribe } from './main.js';
+import { db, auth, currentUserId, isAdmin, isAuthReady, addUnsubscribe, removeUnsubscribe } from './main.js';
 import { showModal, getCollectionPath } from './utils.js';
-import { fetchCountryData, appCountries, appCountryStateMap } from './admin_data.js'; // Import data and fetch function
-import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Import necessary Firestore functions
+import { appCountries, appCountryStateMap, fetchCountryData } from './admin_data.js'; // Import appCountries, appCountryStateMap, and fetchCountryData
 
-// Customer module specific DOM elements
-let customersSection;
+import { collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+
+// DOM elements for Customer Management Section
+let customerManagementSection;
 let customerForm;
 let customerFormTitle;
-let customerIdDisplayGroup;
-let customerIdDisplay;
 let customerTypeSelect;
 let individualFieldsDiv;
 let customerFirstNameInput;
@@ -22,31 +22,32 @@ let customerAddressInput;
 let customerCityInput;
 let customerStateSelect;
 let customerZipCodeInput;
-let addressValidationMessage;
-let individualIndustryGroup;
+let addressValidationMessageDiv;
+let individualIndustryGroupDiv;
 let customerIndustryInput;
-let companyIndustryGroup;
+let companyIndustryGroupDiv;
 let customerIndustrySelect;
+let customerSourceSelect; // NEW: Customer Source Select
+let customerActiveSelect; // NEW: Customer Active Select
 let customerSinceInput;
 let customerDescriptionInput;
+let customerIdDisplayGroup;
+let customerIdDisplay;
 let submitCustomerButton;
 let customerList;
 
-const currentCustomerCollectionType = 'public'; // Fixed to public as per requirement
+let unsubscribeCustomers = null; // To store the onSnapshot unsubscribe function
 
-// Global data for Customers (fetched from Firestore)
-export let allCustomers = [];
-
-// Initialize Customer module elements and event listeners
+// Initialize Customers module elements and event listeners
 export async function initCustomersModule() {
     console.log("customers.js: initCustomersModule called.");
-    // Ensure DOM elements are initialized only once
-    if (!customersSection) { // Check if any key element is null
-        customersSection = document.getElementById('customers-section');
+    console.log("customers.js: initCustomersModule current state - db:", db, "isAuthReady:", isAuthReady, "currentUserId:", currentUserId);
+
+    // Initialize DOM elements if they haven't been already
+    if (!customerManagementSection) {
+        customerManagementSection = document.getElementById('customers-section');
         customerForm = document.getElementById('customerForm');
         customerFormTitle = document.getElementById('customerFormTitle');
-        customerIdDisplayGroup = document.getElementById('customerIdDisplayGroup');
-        customerIdDisplay = document.getElementById('customerIdDisplay');
         customerTypeSelect = document.getElementById('customerType');
         individualFieldsDiv = document.getElementById('individualFields');
         customerFirstNameInput = document.getElementById('customerFirstName');
@@ -60,121 +61,74 @@ export async function initCustomersModule() {
         customerCityInput = document.getElementById('customerCity');
         customerStateSelect = document.getElementById('customerState');
         customerZipCodeInput = document.getElementById('customerZipCode');
-        addressValidationMessage = document.getElementById('addressValidationMessage');
-        individualIndustryGroup = document.getElementById('individualIndustryGroup');
+        addressValidationMessageDiv = document.getElementById('addressValidationMessage');
+        individualIndustryGroupDiv = document.getElementById('individualIndustryGroup');
         customerIndustryInput = document.getElementById('customerIndustryInput');
-        companyIndustryGroup = document.getElementById('companyIndustryGroup');
+        companyIndustryGroupDiv = document.getElementById('companyIndustryGroup');
         customerIndustrySelect = document.getElementById('customerIndustrySelect');
+        customerSourceSelect = document.getElementById('customerSource'); // NEW
+        customerActiveSelect = document.getElementById('customerActive'); // NEW
         customerSinceInput = document.getElementById('customerSince');
         customerDescriptionInput = document.getElementById('customerDescription');
+        customerIdDisplayGroup = document.getElementById('customerIdDisplayGroup');
+        customerIdDisplay = document.getElementById('customerIdDisplay');
         submitCustomerButton = document.getElementById('submitCustomerButton');
         customerList = document.getElementById('customerList');
 
-        // Add event listeners specific to customers module
+        // Add event listeners
+        if (customerTypeSelect) {
+            customerTypeSelect.addEventListener('change', toggleCustomerTypeFields);
+        }
+        if (customerCountrySelect) {
+            customerCountrySelect.addEventListener('change', populateStates);
+        }
         if (customerForm) {
             customerForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const customerData = {
-                    customerType: customerTypeSelect.value.trim(),
-                    firstName: customerFirstNameInput.value.trim(),
-                    lastName: customerLastNameInput.value.trim(),
-                    companyName: customerCompanyNameInput.value.trim(),
-                    email: customerEmailInput.value.trim(),
-                    phone: customerPhoneInput.value.trim(),
-                    country: customerCountrySelect.value.trim(),
-                    address: customerAddressInput.value.trim(),
-                    city: customerCityInput.value.trim(),
-                    state: customerStateSelect.value.trim(),
-                    zipCode: customerZipCodeInput.value.trim(),
-                    industry: '',
-                    customerSince: customerSinceInput.value,
-                    description: customerDescriptionInput.value.trim()
-                };
-
-                if (customerTypeSelect.value === 'Individual') {
-                    customerData.industry = customerIndustryInput.value.trim();
-                } else if (customerTypeSelect.value === 'Company') {
-                    customerData.industry = customerIndustrySelect.value.trim();
-                }
-
-                const editingId = customerForm.dataset.editingId;
-                await saveCustomer(customerData, editingId || null);
+                await saveCustomer();
             });
         }
-
-        if (customerTypeSelect) customerTypeSelect.addEventListener('change', applyCustomerTypeValidation);
-        if (customerCountrySelect) customerCountrySelect.addEventListener('change', (e) => populateStates(e.target.value));
         document.getElementById('resetCustomerFormButton')?.addEventListener('click', resetCustomerForm);
     }
 
     // Ensure initial state and load data
-    await fetchCountryData(); // Ensure country data is loaded before populating dropdowns
+    await fetchCountryData(); // Load country and state data first
     populateCountries();
-    resetCustomerForm(); // Reset form and apply initial validation state
-    if (submitCustomerButton) {
-        if (isAuthReady && currentUserId) {
-            submitCustomerButton.removeAttribute('disabled');
-        } else {
-            submitCustomerButton.setAttribute('disabled', 'disabled');
-        }
-    }
-    listenForCustomers();
-}
+    toggleCustomerTypeFields(); // Set initial visibility based on default customer type
+    resetCustomerForm();
 
-// Function to fetch customer data from Firestore for dropdowns in other modules (exported)
-export async function fetchCustomersForDropdown() {
-    console.log("customers.js: fetchCustomersForDropdown called.");
-    if (!isAuthReady || !currentUserId) {
-        console.warn("customers.js: Authentication required to fetch customers for dropdown.");
-        allCustomers = []; // Clear previous data
-        return;
-    }
-    const collectionPath = getCollectionPath(currentCustomerCollectionType, 'customers');
-    if (!collectionPath) {
-        console.error("customers.js: Collection path is null. Cannot fetch customers for dropdown.");
-        allCustomers = []; // Clear previous data
-        return;
-    }
-
-    // Crucial check: Ensure db is initialized before using it
-    if (!db) {
-        console.error("customers.js: Firestore 'db' instance is not initialized. Cannot fetch customers for dropdown.");
-        allCustomers = []; // Clear previous data
-        // You might want to defer this call or show an error to the user
-        // For now, we'll just log and return.
-        return;
-    }
-
-    try {
-        console.log("customers.js: Attempting to get customers from path:", collectionPath);
-        // Use modular Firestore syntax: collection(db, collectionPath) and getDocs()
-        const querySnapshot = await getDocs(collection(db, collectionPath));
-        allCustomers = [];
-        querySnapshot.forEach(doc => {
-            allCustomers.push({ id: doc.id, ...doc.data() });
-        });
-        console.log("customers.js: Customer data loaded for dropdowns. Total customers:", allCustomers.length);
-
-        // Populate customer dropdown in Opportunities module if it exists
-        const opportunityCustomerSelect = document.getElementById('opportunityCustomer');
-        if (opportunityCustomerSelect) {
-            opportunityCustomerSelect.innerHTML = '<option value="">Select Customer</option>';
-            allCustomers.forEach(customer => {
-                const option = document.createElement('option');
-                option.value = customer.id;
-                option.textContent = customer.companyName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
-                opportunityCustomerSelect.appendChild(option);
-            });
-            console.log("customers.js: Populated opportunity customer select.");
-        }
-    } catch (error) {
-        console.error("customers.js: Error fetching customers for dropdown:", error);
-        allCustomers = [];
+    // Enable/disable submit button based on auth state
+    if (isAuthReady && currentUserId) {
+        if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
+        listenForCustomers(); // Start listening for customer data
+    } else {
+        if (submitCustomerButton) submitCustomerButton.setAttribute('disabled', 'disabled');
+        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Please sign in to view customers.</p>';
     }
 }
 
+// Determine the Firestore collection path for customers
+function getCustomersCollectionPath() {
+    return getCollectionPath('private', 'customers');
+}
 
-// Function to populate the country dropdown
+/* --- CUSTOMER FORM LOGIC --- */
+
+// Toggles visibility of individual vs. company fields
+function toggleCustomerTypeFields() {
+    const isIndividual = customerTypeSelect.value === 'Individual';
+    if (individualFieldsDiv) individualFieldsDiv.classList.toggle('hidden', !isIndividual);
+    if (companyNameFieldDiv) companyNameFieldDiv.classList.toggle('hidden', isIndividual);
+    if (individualIndustryGroupDiv) individualIndustryGroupDiv.classList.toggle('hidden', !isIndividual);
+    if (companyIndustryGroupDiv) companyIndustryGroupDiv.classList.toggle('hidden', isIndividual);
+
+    // Set required attributes based on visibility
+    if (customerFirstNameInput) customerFirstNameInput.required = isIndividual;
+    if (customerLastNameInput) customerLastNameInput.required = isIndividual;
+    if (customerCompanyNameInput) customerCompanyNameInput.required = !isIndividual;
+}
+
+// Populates the country dropdown
 function populateCountries() {
     if (!customerCountrySelect) return;
     customerCountrySelect.innerHTML = '<option value="">Select Country</option>';
@@ -184,75 +138,35 @@ function populateCountries() {
         option.textContent = country.name;
         customerCountrySelect.appendChild(option);
     });
+    populateStates(); // Also populate states when countries are loaded
 }
 
-// Function to populate the state/province dropdown based on selected country
-function populateStates(countryCode) {
-    if (!customerStateSelect) return;
+// Populates the state/province dropdown based on selected country
+function populateStates() {
+    if (!customerStateSelect || !customerCountrySelect) return;
+    const selectedCountryCode = customerCountrySelect.value;
+    const states = appCountryStateMap[selectedCountryCode] || [];
+
     customerStateSelect.innerHTML = '<option value="">Select State/Province</option>';
-    const states = appCountryStateMap[countryCode] || [];
-    states.forEach(state => {
-        const option = document.createElement('option');
-        option.value = state;
-        option.textContent = state;
-        customerStateSelect.appendChild(option);
-    });
-    customerStateSelect.disabled = states.length === 0;
-}
-
-// Placeholder for address validation
-function validateAddress(address, city, state, zipCode, country) {
-    const isValid = address.trim() !== '' && city.trim() !== '' && state.trim() !== '' && zipCode.trim() !== '' && country.trim() !== '';
-    if (!isValid) {
-        if (addressValidationMessage) {
-            addressValidationMessage.classList.remove('hidden');
-            addressValidationMessage.textContent = "Please fill in all address fields.";
-        }
+    if (states.length > 0) {
+        customerStateSelect.removeAttribute('disabled');
+        states.forEach(state => {
+            const option = document.createElement('option');
+            option.value = state;
+            option.textContent = state;
+            customerStateSelect.appendChild(option);
+        });
     } else {
-        if (addressValidationMessage) {
-            addressValidationMessage.classList.add('hidden');
-            addressValidationMessage.textContent = "";
-        }
-    }
-    return isValid;
-}
-
-// Function to apply validation rules based on customer type
-function applyCustomerTypeValidation() {
-    if (!customerTypeSelect) return;
-    const customerType = customerTypeSelect.value;
-
-    if (individualFieldsDiv) individualFieldsDiv.classList.add('hidden');
-    if (customerLastNameInput && customerLastNameInput.closest('div')) customerLastNameInput.closest('div').classList.add('hidden');
-    if (companyNameFieldDiv) companyNameFieldDiv.classList.add('hidden');
-    if (individualIndustryGroup) individualIndustryGroup.classList.add('hidden');
-    if (companyIndustryGroup) companyIndustryGroup.classList.add('hidden');
-
-    if (customerFirstNameInput) customerFirstNameInput.removeAttribute('required');
-    if (customerLastNameInput) customerLastNameInput.removeAttribute('required');
-    if (customerCompanyNameInput) customerCompanyNameInput.removeAttribute('required');
-    if (customerIndustryInput) customerIndustryInput.removeAttribute('required');
-    if (customerIndustrySelect) customerIndustrySelect.removeAttribute('required');
-
-    if (customerType === 'Individual') {
-        if (individualFieldsDiv) individualFieldsDiv.classList.remove('hidden');
-        if (customerLastNameInput && customerLastNameInput.closest('div')) customerLastNameInput.closest('div').classList.remove('hidden');
-        if (customerFirstNameInput) customerFirstNameInput.setAttribute('required', 'required');
-        if (customerLastNameInput) customerLastNameInput.setAttribute('required', 'required');
-        if (individualIndustryGroup) individualIndustryGroup.classList.remove('hidden');
-        if (customerIndustryInput) customerIndustryInput.setAttribute('required', 'required');
-    } else if (customerType === 'Company') {
-        if (companyNameFieldDiv) companyNameFieldDiv.classList.remove('hidden'); // Should be remove, not add
-        if (customerCompanyNameInput) customerCompanyNameInput.setAttribute('required', 'required');
-        if (companyIndustryGroup) companyIndustryGroup.classList.remove('hidden');
-        if (customerIndustrySelect) customerIndustrySelect.setAttribute('required', 'required');
+        customerStateSelect.setAttribute('disabled', 'disabled');
     }
 }
 
-// Add or update a customer in Firestore
-async function saveCustomer(customerData, existingCustomerDocId = null) {
+/* --- CUSTOMER CRUD OPERATIONS --- */
+
+// Save (Add/Update) a Customer
+async function saveCustomer() {
     if (!isAuthReady || !currentUserId) {
-        showModal("Error", "Could not save customer. Authentication required.", () => {});
+        showModal("Permission Denied", "Please sign in to manage customers.", () => {});
         return;
     }
     if (!db) {
@@ -262,75 +176,94 @@ async function saveCustomer(customerData, existingCustomerDocId = null) {
     }
 
     const customerType = customerTypeSelect.value;
-    if (!customerType) {
-        showModal("Validation Error", "Please select a Customer Type.", () => {});
-        return;
+    const isIndividual = customerType === 'Individual';
+
+    // Basic validation
+    const mandatoryFields = [
+        { field: customerEmailInput.value.trim(), name: "Email" },
+        { field: customerPhoneInput.value.trim(), name: "Phone" },
+        { field: customerCountrySelect.value, name: "Country" },
+        { field: customerAddressInput.value.trim(), name: "Address" },
+        { field: customerCityInput.value.trim(), name: "City" },
+        { field: customerStateSelect.value, name: "State/Province" },
+        { field: customerZipCodeInput.value.trim(), name: "Zip Code" },
+        { field: customerSinceInput.value.trim(), name: "Customer Since Date" },
+    ];
+
+    if (isIndividual) {
+        mandatoryFields.push(
+            { field: customerFirstNameInput.value.trim(), name: "First Name" },
+            { field: customerLastNameInput.value.trim(), name: "Last Name" }
+        );
+    } else {
+        mandatoryFields.push(
+            { field: customerCompanyNameInput.value.trim(), name: "Company Name" }
+        );
     }
 
-    if (customerType === 'Individual') {
-        if (!customerFirstNameInput.value.trim() || !customerLastNameInput.value.trim()) {
-            showModal("Validation Error", "For Individual customers, First Name and Last Name are mandatory.", () => {});
-            return;
+    let missingFields = [];
+    mandatoryFields.forEach(item => {
+        if (!item.field) {
+            missingFields.push(item.name);
         }
-        customerData.companyName = "";
-    } else if (customerType === 'Company') {
-        if (!customerCompanyNameInput.value.trim()) {
-            showModal("Validation Error", "For Company customers, Company Name is mandatory.", () => {});
-            return;
-        }
-        customerData.firstName = "";
-        customerData.lastName = "";
-    }
+    });
 
-    customerData.industry = customerType === 'Individual' ? customerIndustryInput.value.trim() : customerIndustrySelect.value.trim();
-
-    if (!customerEmailInput.value.trim() || !customerPhoneInput.value.trim() ||
-        !customerData.industry || !customerSinceInput.value.trim()) {
-        showModal("Validation Error", "Please fill in all mandatory fields.", () => {});
+    if (missingFields.length > 0) {
+        showModal("Validation Error", `Please fill in all mandatory fields: ${[...new Set(missingFields)].join(', ')}.`, () => {});
         return;
     }
 
-    const addressValid = validateAddress(
-        customerAddressInput.value,
-        customerCityInput.value,
-        customerStateSelect.value,
-        customerZipCodeInput.value,
-        customerCountrySelect.value
-    );
+    const customerData = {
+        customerType: customerType,
+        firstName: isIndividual ? customerFirstNameInput.value.trim() : '',
+        lastName: isIndividual ? customerLastNameInput.value.trim() : '',
+        companyName: isIndividual ? '' : customerCompanyNameInput.value.trim(),
+        email: customerEmailInput.value.trim(),
+        phone: customerPhoneInput.value.trim(),
+        country: customerCountrySelect.value,
+        address: customerAddressInput.value.trim(),
+        city: customerCityInput.value.trim(),
+        state: customerStateSelect.value,
+        zipCode: customerZipCodeInput.value.trim(),
+        industry: isIndividual ? customerIndustryInput.value.trim() : customerIndustrySelect.value.trim(),
+        customerSource: customerSourceSelect.value, // NEW: Get Customer Source
+        isActive: customerActiveSelect.value === 'Yes', // NEW: Get Active status as boolean
+        customerSince: customerSinceInput.value, // YYYY-MM-DD
+        description: customerDescriptionInput.value.trim(),
+        ownerId: currentUserId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+    };
 
-    if (!addressValid) {
-        showModal("Validation Error", "Please provide a complete and valid address.", () => {});
-        return;
-    }
-
-    const collectionPath = getCollectionPath(currentCustomerCollectionType, 'customers');
-    if (!collectionPath) return;
+    const editingId = customerForm.dataset.editingId;
+    const collectionPath = getCustomersCollectionPath();
 
     try {
-        if (existingCustomerDocId) {
-            // Use modular Firestore syntax: doc(db, collectionPath, existingCustomerDocId)
-            const customerDocRef = doc(db, collectionPath, existingCustomerDocId);
-            await setDoc(customerDocRef, customerData, { merge: true }); // Use setDoc with merge for consistency
-            console.log("Customer updated:", existingCustomerDocId);
+        if (editingId) {
+            // Update existing customer
+            const customerDocRef = doc(db, collectionPath, editingId);
+            await setDoc(customerDocRef, customerData, { merge: true });
+            showModal("Success", "Customer updated successfully!", () => {});
+            console.log("Customer updated:", editingId);
         } else {
-            // Use modular Firestore syntax: doc(collection(db, collectionPath))
-            const newDocRef = doc(collection(db, collectionPath));
-            const numericPart = Date.now().toString().slice(-8) + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-            const systemGeneratedCustomerId = 'COM-' + numericPart;
-            await setDoc(newDocRef, { ...customerData, customerId: systemGeneratedCustomerId });
-            console.log("Customer added with system-generated ID:", systemGeneratedCustomerId);
+            // Add new customer
+            const newDocRef = doc(collection(db, collectionPath)); // Let Firestore generate ID
+            const systemGeneratedId = `CUST-${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+            await setDoc(newDocRef, { ...customerData, customerId: systemGeneratedId });
+            showModal("Success", "New Customer added successfully!", () => {});
+            console.log("New Customer added with system-generated ID:", systemGeneratedId);
         }
         resetCustomerForm();
     } catch (error) {
         console.error("Error saving customer:", error);
-        showModal("Error", "Failed to save customer. Please try again. " + error.message, () => {});
+        showModal("Error", `Failed to save customer: ${error.message}`, () => {});
     }
 }
 
-// Delete a customer from Firestore
+// Delete a Customer
 async function deleteCustomer(firestoreDocId) {
     if (!isAuthReady || !currentUserId) {
-        showModal("Error", "Could not delete customer. Authentication required.", () => {});
+        showModal("Permission Denied", "Please sign in to manage customers.", () => {});
         return;
     }
     if (!db) {
@@ -339,87 +272,90 @@ async function deleteCustomer(firestoreDocId) {
         return;
     }
 
-    const collectionPath = getCollectionPath(currentCustomerCollectionType, 'customers');
-    if (!collectionPath) return;
+    const collectionPath = getCustomersCollectionPath();
 
     showModal(
         "Confirm Deletion",
         "Are you sure you want to delete this customer? This action cannot be undone.",
         async () => {
             try {
-                // Use modular Firestore syntax: deleteDoc(doc(db, collectionPath, firestoreDocId))
                 await deleteDoc(doc(db, collectionPath, firestoreDocId));
+                showModal("Success", "Customer deleted successfully!", () => {});
                 console.log("Customer deleted Firestore Doc ID:", firestoreDocId);
             } catch (error) {
                 console.error("Error deleting customer:", error);
-                showModal("Error", "Failed to delete customer. Please try again. " + error.message, () => {});
+                showModal("Error", `Failed to delete customer: ${error.message}`, () => {});
             }
         }
     );
 }
 
-// Listen for real-time updates to customers
-function listenForCustomers() {
-    console.log("customers.js: listenForCustomers called.");
+// Listen for real-time updates to Customers
+export function listenForCustomers() {
+    if (unsubscribeCustomers) {
+        unsubscribeCustomers(); // Unsubscribe from previous listener
+    }
+
     if (!isAuthReady || !currentUserId) {
-        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center col-span-full">Authentication required to load customers.</p>';
+        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Please sign in to view customers.</p>';
         return;
     }
     if (!db) {
         console.error("customers.js: Firestore 'db' instance is not initialized. Cannot listen for customers.");
-        if (customerList) customerList.innerHTML = '<p class="text-red-500 text-center col-span-full py-4">Firestore not ready to load customers.</p>';
-        return;
-    }
-    const collectionPath = getCollectionPath(currentCustomerCollectionType, 'customers');
-    if (!collectionPath) {
-        console.error("customers.js: Collection path is null. Cannot listen for customers.");
+        if (customerList) customerList.innerHTML = '<p class="text-red-500 text-center py-4 col-span-full">Firestore not ready to load customers.</p>';
         return;
     }
 
-    // Use modular Firestore syntax: collection(db, collectionPath) and onSnapshot()
+    const collectionPath = getCustomersCollectionPath();
     const q = collection(db, collectionPath);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        if (customerList) customerList.innerHTML = '';
+    unsubscribeCustomers = onSnapshot(q, (snapshot) => {
+        if (customerList) customerList.innerHTML = ''; // Clear current list
         if (snapshot.empty) {
-            if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No customers found. Add one above!</p>';
+            if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">No customers found. Add one above!</p>';
             return;
         }
         snapshot.forEach((doc) => {
             const customer = { id: doc.id, ...doc.data() };
             displayCustomer(customer);
         });
-        console.log("customers.js: Customers data updated via onSnapshot. Total:", snapshot.size);
+        console.log("Customers data updated via onSnapshot. Total:", snapshot.size);
     }, (error) => {
-        console.error("customers.js: Error listening to customers:", error);
-        if (customerList) customerList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading customers: ${error.message}</p>`;
+        console.error("Error listening to customers:", error);
+        if (customerList) customerList.innerHTML = `<p class="text-red-500 text-center py-4 col-span-full">Error loading customers: ${error.message}</p>`;
     });
-    addUnsubscribe('customers', unsubscribe); // Store unsubscribe function
+
+    addUnsubscribe('customers', unsubscribeCustomers); // Register with main.js's central tracker
 }
 
 // Display a single customer in the UI as a grid row
 function displayCustomer(customer) {
-    if (!customerList) return;
+    if (!customerList) return; // Defensive check
+
     const customerRow = document.createElement('div');
     customerRow.className = 'data-grid-row';
     customerRow.dataset.id = customer.id;
 
-    let displayName = 'N/A';
-    if (customer.customerType === 'Company' && customer.companyName) {
-        displayName = customer.companyName;
-    } else if (customer.customerType === 'Individual' && (customer.firstName || customer.lastName)) {
-        displayName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
-    }
+    // Determine name to display based on customer type
+    const displayName = customer.customerType === 'Individual'
+        ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim()
+        : customer.companyName || 'N/A';
+
+    // Construct full address for display
+    const fullAddress = `${customer.address || ''}, ${customer.city || ''}, ${customer.state || ''}, ${customer.zipCode || ''}, ${customer.country || ''}`.replace(/,(\s*,)+/g, ', ').trim();
+
 
     customerRow.innerHTML = `
         <div class="px-2 py-1 truncate font-medium text-gray-800">${customer.customerId || 'N/A'}</div>
-        <div class="px-2 py-1 truncate">${displayName}</div>
+        <div class="px-2 py-1 truncate">${displayName || 'N/A'}</div>
         <div class="px-2 py-1 truncate">${customer.email || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden md:block">${customer.phone || 'N/A'}</div>
-        <div class="px-2 py-1 truncate hidden lg:block">${customer.address || 'N/A'}, ${customer.city || 'N/A'}, ${customer.state || 'N/A'}, ${customer.zipCode || 'N/A'}, ${customer.country || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden lg:block">${fullAddress || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden lg:block">${customer.industry || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden sm:block">${customer.customerSince || 'N/A'}</div>
-        <div class="px-2 py-1 flex justify-center items-center space-x-2">
+        <div class="px-2 py-1 truncate hidden md:block">${customer.customerSource || 'N/A'}</div> <!-- NEW: Source Display -->
+        <div class="px-2 py-1 truncate hidden md:block">${customer.isActive ? 'Yes' : 'No'}</div> <!-- NEW: Active Display -->
+        <div class="px-2 py-1 flex justify-end space-x-2">
             <button class="edit-btn text-blue-600 hover:text-blue-800 font-semibold text-xs" data-id="${customer.id}" title="Edit">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
@@ -437,62 +373,85 @@ function displayCustomer(customer) {
 // Populate form for editing a customer
 function editCustomer(customer) {
     if (!isAuthReady || !currentUserId) {
-        showModal("Permission Denied", "Authentication required to edit customers.", () => {});
+        showModal("Permission Denied", "Please sign in to edit customers.", () => {});
         return;
     }
+
     if (customerFormTitle) customerFormTitle.textContent = 'Edit Customer';
     if (submitCustomerButton) submitCustomerButton.textContent = 'Update Customer';
 
-    if (customerIdDisplayGroup) customerIdDisplayGroup.classList.remove('hidden');
-    if (customerIdDisplay) customerIdDisplay.textContent = customer.customerId || 'N/A';
+    // Set dataset.editingId to Firestore document ID
     if (customerForm) customerForm.dataset.editingId = customer.id;
 
-    if (customerTypeSelect) customerTypeSelect.value = customer.customerType || '';
-    if (customerEmailInput) customerEmailInput.value = customer.email || '';
-    if (customerPhoneInput) customerPhoneInput.value = customer.phone || '';
-    if (customerSinceInput) customerSinceInput.value = customer.customerSince || '';
-    if (customerDescriptionInput) customerDescriptionInput.value = customer.description || '';
-    
-    if (customerCountrySelect) customerCountrySelect.value = customer.country || '';
-    populateStates(customer.country);
-    if (customerAddressInput) customerAddressInput.value = customer.address || '';
-    if (customerCityInput) customerCityInput.value = customer.city || '';
-    if (customer.state && customerStateSelect && Array.from(customerStateSelect.options).some(option => option.value === customer.state)) {
-        customerStateSelect.value = customer.state;
-    } else {
-        if (customerStateSelect) customerStateSelect.value = '';
-    }
-    if (customerZipCodeInput) customerZipCodeInput.value = customer.zipCode || '';
+    if (customerIdDisplayGroup) customerIdDisplayGroup.classList.remove('hidden');
+    if (customerIdDisplay) customerIdDisplay.textContent = customer.customerId || 'N/A'; // Use customerId field
 
-    applyCustomerTypeValidation();
+    if (customerTypeSelect) customerTypeSelect.value = customer.customerType || 'Individual';
+    toggleCustomerTypeFields(); // Adjust fields based on type
 
     if (customerFirstNameInput) customerFirstNameInput.value = customer.firstName || '';
     if (customerLastNameInput) customerLastNameInput.value = customer.lastName || '';
     if (customerCompanyNameInput) customerCompanyNameInput.value = customer.companyName || '';
+    if (customerEmailInput) customerEmailInput.value = customer.email || '';
+    if (customerPhoneInput) customerPhoneInput.value = customer.phone || '';
+    if (customerAddressInput) customerAddressInput.value = customer.address || '';
+    if (customerCityInput) customerCityInput.value = customer.city || '';
+    if (customerZipCodeInput) customerZipCodeInput.value = customer.zipCode || '';
+    if (customerSinceInput) customerSinceInput.value = customer.customerSince || '';
+    if (customerDescriptionInput) customerDescriptionInput.value = customer.description || '';
 
+    // Industry fields
     if (customer.customerType === 'Individual') {
         if (customerIndustryInput) customerIndustryInput.value = customer.industry || '';
-    } else if (customer.customerType === 'Company') {
+    } else {
         if (customerIndustrySelect) customerIndustrySelect.value = customer.industry || '';
     }
 
-    if (addressValidationMessage) addressValidationMessage.classList.add('hidden');
+    // NEW: Populate Customer Source and Active
+    if (customerSourceSelect) customerSourceSelect.value = customer.customerSource || '';
+    // isActive is a boolean, convert to 'Yes'/'No' for dropdown
+    if (customerActiveSelect) customerActiveSelect.value = customer.isActive ? 'Yes' : 'No';
+
+    // Populate country and state dropdowns
+    if (customerCountrySelect) customerCountrySelect.value = customer.country || '';
+    populateStates(); // This will enable/disable state select and fill options
+    if (customerStateSelect) customerStateSelect.value = customer.state || '';
+
     if (customerForm) customerForm.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Reset Customer form function (exported for main.js to use)
+// Reset Customer form function
 export function resetCustomerForm() {
     if (customerForm) customerForm.reset();
-    if (customerForm) customerForm.dataset.editingId = '';
+    if (customerForm) customerForm.dataset.editingId = ''; // Clear editing ID
     if (customerFormTitle) customerFormTitle.textContent = 'Add New Customer';
     if (submitCustomerButton) submitCustomerButton.textContent = 'Add Customer';
-    if (customerIdDisplayGroup) customerIdDisplayGroup.classList.add('hidden');
+
+    if (customerIdDisplayGroup) customerIdDisplayGroup.classList.add('hidden'); // Hide ID display
     if (customerIdDisplay) customerIdDisplay.textContent = '';
 
-    if (customerCountrySelect) customerCountrySelect.value = '';
-    populateStates('');
-    if (addressValidationMessage) addressValidationMessage.classList.add('hidden');
+    if (customerTypeSelect) customerTypeSelect.value = 'Individual'; // Reset to default
+    toggleCustomerTypeFields(); // Update field visibility
 
-    if (customerTypeSelect) customerTypeSelect.value = 'Individual';
-    applyCustomerTypeValidation();
+    // Reset specific fields to default or empty
+    if (customerCountrySelect) customerCountrySelect.value = '';
+    populateStates(); // Clear states and disable select
+    if (customerStateSelect) customerStateSelect.value = '';
+
+    // NEW: Reset Customer Source and Active
+    if (customerSourceSelect) customerSourceSelect.value = ''; // Or a default like 'Website'
+    if (customerActiveSelect) customerActiveSelect.value = 'Yes'; // Default to 'Yes'
+
+    // Reset industry selects
+    if (customerIndustryInput) customerIndustryInput.value = '';
+    if (customerIndustrySelect) customerIndustrySelect.value = '';
+
+    if (addressValidationMessageDiv) addressValidationMessageDiv.classList.add('hidden');
+
+    // Ensure submit button is enabled if auth is ready (assuming it's checked in initCustomersModule)
+    if (isAuthReady && currentUserId) {
+        if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
+    } else {
+        if (submitCustomerButton) submitCustomerButton.setAttribute('disabled', 'disabled');
+    }
 }
