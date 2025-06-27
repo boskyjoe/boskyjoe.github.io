@@ -1,64 +1,28 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, setDoc, getDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+// Use named imports for specific global states (excluding 'db' here)
+import { isAuthReady, currentUserId, isAdmin, addUnsubscribe, removeUnsubscribe, fetchCountryData, appCountries, appCountryStateMap, allCustomers, isDbReady } from './main.js';
+import { showModal, getCollectionPath, formatDate } from './utils.js'; // Import utility functions
 
-// YOUR Firebase Configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
-    authDomain: "shuttersync-96971.firebaseapp.com",
-    projectId: "shuttersync-96971",
-    storageBucket: "shuttersync-96971.firebasestorage.app",
-    messagingSenderId: "10782416018",
-    appId: "1:10782416018:web:361db5572882a62f291a4b",
-    measurementId: "G-T0W9CES4D3"
-};
-
-console.log("main.js: Using directly provided Firebase config:", firebaseConfig);
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 
-// Use __app_id for Firestore collection paths as per mandatory instructions.
-// Fallback to projectId from firebaseConfig if __app_id is somehow not defined.
-export const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId; // Export appId
+// Global variable to hold the Firestore DB instance, explicitly set by main.js
+let firestoreDb = null;
 
-export let app; // Export app instance
-export let db; // Export db instance (will be assigned later in initializeFirebase)
-export let auth; // Export auth instance (will be assigned later)
-export let currentUserId = null; // Will be set by Firebase Auth onAuthStateChanged
-export let isAuthReady = false; // Set to false initially, true when Firebase Auth confirms a user
-export let isDbReady = false; // NEW: Flag to indicate if Firestore DB instance is ready
-
-export const currentCustomerCollectionType = 'public'; // Fixed to public as per requirement
-export let unsubscribeCustomers = null; // To store the onSnapshot unsubscribe function for customers
-export let unsubscribeUsers = null; // To store the onSnapshot unsubscribe function for users
-export let unsubscribeOpportunities = null; // NEW
-export let unsubscribeOpportunityContacts = null; // NEW
-export let unsubscribeOpportunityLines = null; // NEW
-export let unsubscribeQuotes = null; // NEW
-export let unsubscribeCurrencies = null; // NEW: For currency listener
-
-export let isAdmin = false; // Flag to control admin specific UI/features
-export let currentOpportunityId = null; // NEW: Stores the ID of the opportunity currently being edited
-export let currentEditedOpportunity = null; // Stores the full opportunity object currently being edited
-
-// Data for Countries and States (Now fetched from Firestore)
-export let appCountries = []; // Export appCountries
-export let appCountryStateMap = {}; // Export appCountryStateMap
-
-// Data for Currencies (NEW: Now fetched from Firestore)
-export let allCurrencies = []; // Will store currency data from Firestore
-
-// Data for Customers (to populate Opportunity Customer dropdown)
-export let allCustomers = []; // Export allCustomers (populated by customers.js and used here)
-
-// NEW: Constant for the global app settings document ID
-export const APP_SETTINGS_DOC_ID = "app_settings"; // Export APP_SETTINGS_DOC_ID
+// EXPORTED: Setter function for the Firestore DB instance
+export function setDbInstance(instance) {
+    console.log("customers.js: setDbInstance received:", instance); // NEW: Crucial debug log
+    if (instance && instance.type === 'firestore' && typeof instance.collection === 'function') { // Added typeof check for collection
+        firestoreDb = instance;
+        console.log("customers.js: Firestore DB instance successfully set via setDbInstance.");
+    } else {
+        console.error("customers.js: Attempted to set an invalid Firestore DB instance. Received:", instance);
+        firestoreDb = null; // Ensure it's null if invalid
+    }
+}
 
 
-// Declare DOM element variables at a higher scope (or globally with 'let')
-// but assign them only once inside initializeFirebase to avoid issues.
-// These are not exported as they are internal to main.js's DOM handling
-let customersSection;
+// DOM elements for Customer Management Section
+let customersManagementSection;
 let customerForm;
 let customerFormTitle;
 let customerIdDisplayGroup;
@@ -91,1032 +55,570 @@ let customerSinceInput;
 let customerDescriptionInput;
 let submitCustomerButton;
 let customerList; // Reference to the div for customer rows
-
-// Opportunity Section Elements (NEW - and now restructured)
-let opportunitiesSection;
-let opportunityViewContainer; // NEW main flex container
-let opportunityLeftPanel;
-let opportunityRightPanel;
-let opportunityFullFormView;
-let opportunityExistingListView;
-
-let opportunityForm;
-let opportunityFormTitle;
-let opportunityIdDisplayGroup;
-let opportunityIdDisplay;
-let opportunityCustomerSelect;
-let opportunityNameInput;
-let opportunityAmountInput;
-let currencySymbolDisplay;
-let opportunityCurrencySelect;
-let opportunityStageSelect;
-let opportunityExpectedStartDateInput;
-let opportunityExpectedCloseDateInput;
-let opportunityEventTypeSelect;
-let opportunityEventLocationProposedInput;
-let opportunityServiceAddressInput; // NEW Field
-let opportunityDescriptionInput;
-let opportunityDataInput;
-let submitOpportunityButton;
-let opportunityList; // Reference to the div for opportunity rows
-
-let linkedObjectsAccordion;
-let contactsAccordionHeader;
-let contactsAccordionContent;
-let linesAccordionHeader;
-let linesAccordionContent;
-let quotesAccordionHeader;
-let quotesAccordionContent;
-
-
-// Opportunity Contact Elements (NEW)
-let opportunityContactForm;
-let contactIdDisplayGroup;
-let contactIdDisplay;
-let contactFirstNameInput;
-let contactLastNameInput;
-let contactEmailInput;
-let contactPhoneInput;
-let contactRoleInput;
-let submitOpportunityContactButton;
-let opportunityContactList;
-
-// Opportunity Line Elements (NEW - Stubs)
-let opportunityLineForm;
-let optyLineIdDisplayGroup;
-let optyLineIdDisplay;
-let lineServiceDescriptionInput;
-let lineUnitPriceInput;
-let lineQuantityInput;
-let lineDiscountInput;
-let lineNetPriceInput;
-let lineStatusSelect;
-let submitOpportunityLineButton;
-let opportunityLineList;
-
-// Quote Elements (NEW - Stubs)
-let quoteForm;
-let quoteIdDisplayGroup;
-let quoteIdDisplay;
-let quoteNameInput;
-let quoteDescriptionInput;
-let quoteCustomerSelect; // Auto-filled from opportunity
-let quoteStartDateInput;
-let quoteExpireDateInput;
-let quoteStatusSelect;
-let quoteNetListAmountInput;
-let quoteNetDiscountInput;
-let quoteNetAmountInput;
-let quoteCurrencySelect;
-let quoteIsFinalCheckbox;
-let submitQuoteButton;
-let quoteList;
-
-
-// Admin Country Mapping Section elements
-let adminCountryMappingSection;
-let adminCountriesInput;
-let adminCountryStateMapInput;
-let uploadAdminDataButton;
-let fullLoadRadio;
-let incrementalLoadRadio;
-let adminMessageDiv;
-
-// Admin Currency Management Section elements (NEW)
-let currencyManagementSection;
-let currencyForm;
-let currencyFormTitle;
-let currencyCodeDisplayGroup;
-let currencyCodeDisplay;
-let adminCurrenciesInput;
-let submitCurrencyButton;
-let adminCurrencyMessageDiv;
-let currencyList;
-
-
-// Users Management Section elements
-let usersManagementSection;
-let userForm;
-let userFormTitle;
-let userIdDisplayGroup;
-let userIdDisplayInput; // Changed to an input element
-let userNameInput;
-let userFirstNameInput;
-let userLastNameInput;
-let userEmailInput;
-let userPhoneInput;
-let userRoleSelect; // Changed to select
-let userSkillsInput;
-let submitUserButton;
-let userList;
-
-// References to logout buttons and the new nav Google Login button
-let logoutButton;
-let mobileLogoutButton;
-let navGoogleLoginButton; // Top right Google Sign In button
-
-// Home section Google login button (for visual hint on home page)
-let googleLoginButtonHome;
-let homeSignInMessage; // NEW: For the sign-in prompt message
-
-let userIdDisplay; // Global variable for desktop user ID display
-let mobileUserIdDisplay; // Global variable for mobile user ID display
-
-
-// Admin menu elements (added IDs in HTML)
-let desktopAdminMenu;
-let mobileAdminMenu;
-
-// NEW: Admin Menu Toggle elements
-let desktopAdminMenuToggle;
-let desktopAdminSubMenu;
-let mobileAdminMenuToggle;
-let mobileAdminSubMenu;
-
-
-// Reference to auth-section (for standard Google/email login) - This section is mostly decorative now
-let authSection;
-
-// Mobile Menu Button and Container
-let mobileMenuButton;
-let mobileMenu;
-
-
-// Select all main content sections (Initialize these later or ensure they are found)
-let homeSection;
-let eventsSection;
-let allSections = []; // Will be populated in initializeFirebase
-
-// Centralized unsubscribe array for all Firestore listeners
-const activeUnsubscribes = {};
+let customerSourceSelect; // NEW: Customer Source
+let customerActiveSelect; // NEW: Customer Active
 
 /**
- * Adds an unsubscribe function to the central tracker.
- * @param {string} key - A unique key for the listener (e.g., 'customers', 'opportunities').
- * @param {function} unsubscribeFn - The function returned by onSnapshot.
+ * Initializes the Customers module, setting up DOM references, event listeners,
+ * and starting data listeners if authentication is ready.
+ * No longer accepts dbInstance as it directly imports 'db'.
  */
-export function addUnsubscribe(key, unsubscribeFn) {
-    activeUnsubscribes[key] = unsubscribeFn;
-    console.log(`main.js: Unsubscribe function added for key: ${key}`);
-}
-
-/**
- * Removes and calls an unsubscribe function from the central tracker.
- * @param {string} key - The unique key of the listener.
- */
-export function removeUnsubscribe(key) {
-    if (activeUnsubscribes[key]) {
-        activeUnsubscribes[key](); // Call the unsubscribe function
-        delete activeUnsubscribes[key]; // Remove it from the tracker
-        console.log(`main.js: Unsubscribe function called and removed for key: ${key}`);
-    }
-}
-
-/**
- * Calls all active unsubscribe functions.
- */
-function unsubscribeAll() {
-    for (const key in activeUnsubscribes) {
-        if (activeUnsubscribes.hasOwnProperty(key)) {
-            activeUnsubscribes[key]();
-            delete activeUnsubscribes[key];
-        }
-    }
-    console.log("main.js: All Firestore listeners unsubscribed.");
-}
+export async function initCustomersModule() {
+    console.log("customers.js: initCustomersModule called.");
+    // Access imported properties directly, and use the internally managed firestoreDb
+    console.log("customers.js: initCustomersModule current state - firestoreDb:", firestoreDb, "isAuthReady:", isAuthReady, "isDbReady:", isDbReady, "currentUserId:", currentUserId);
 
 
-/**
- * Shows a custom confirmation modal.
- * This is duplicated in utils.js, but also kept here for direct use within main.js if needed.
- * It's recommended to import showModal from utils.js where possible.
- */
-export function showModal(title, message, onConfirm, onCancel) {
-    const modalContainer = document.getElementById('modalContainer'); // Ensure this is also initialized when used
-    if (!modalContainer) {
-        console.error("main.js: Modal container not found!");
-        return;
-    }
-    modalContainer.innerHTML = `
-        <div class="modal-overlay">
-            <div class="modal-content">
-                <h3>${title}</h3>
-                <p>${message}</p>
-                <div class="modal-actions">
-                    <button id="modalConfirmBtn" class="primary">Confirm</button>
-                    <button id="modalCancelBtn" class="secondary">Cancel</button>
-                </div>
-            </div>
-        </div>
-    `;
-    const modalConfirmBtn = document.getElementById('modalConfirmBtn');
-    const modalCancelBtn = document.getElementById('modalCancelBtn');
+    // Initialize DOM elements if they haven't been already. This helps prevent null references.
+    if (!customersManagementSection) { // Check for a key element to prevent re-initialization
+        customersManagementSection = document.getElementById('customers-section');
+        customerForm = document.getElementById('customerForm');
+        customerFormTitle = document.getElementById('customerFormTitle');
+        customerIdDisplayGroup = document.getElementById('customerIdDisplayGroup');
+        customerIdDisplay = document.getElementById('customerIdDisplay');
 
-    modalConfirmBtn.onclick = () => {
-        onConfirm();
-        modalContainer.innerHTML = ''; // Close modal
-    };
-    modalCancelBtn.onclick = () => {
-        if (onCancel) onCancel();
-        modalContainer.innerHTML = ''; // Close modal
-    };
-}
+        customerTypeSelect = document.getElementById('customerType');
+        individualFieldsDiv = document.getElementById('individualFields');
+        customerFirstNameInput = document.getElementById('customerFirstName');
+        customerLastNameInput = document.getElementById('customerLastName');
+        companyNameFieldDiv = document.getElementById('companyNameField');
+        customerCompanyNameInput = document.getElementById('customerCompanyName');
 
+        customerEmailInput = document.getElementById('customerEmail');
+        customerPhoneInput = document.getElementById('customerPhone');
 
-// Function to control the layout of the opportunity section
-function setOpportunityLayout(layoutType) {
-    // Hide all internal opportunity views first
-    if (opportunityFullFormView) opportunityFullFormView.classList.add('hidden');
-    if (opportunityExistingListView) opportunityExistingListView.classList.add('hidden');
+        customerCountrySelect = document.getElementById('customerCountry');
+        customerAddressInput = document.getElementById('customerAddress');
+        customerCityInput = document.getElementById('customerCity');
+        customerStateSelect = document.getElementById('customerState');
+        customerZipCodeInput = document.getElementById('customerZipCode'); // Correctly referencing the DOM element
+        addressValidationMessage = document.getElementById('addressValidationMessage');
 
-    // Remove all dynamic width classes from panels first
-    if (opportunityLeftPanel) {
-        // Remove Tailwind's default md:w-X/10 classes
-        opportunityLeftPanel.classList.remove('md:w-full', 'md:w-7/10', 'md:w-3/10');
-        // Remove custom dynamic classes
-        opportunityLeftPanel.classList.remove('shrink-left');
-    }
-    if (opportunityRightPanel) {
-        opportunityRightPanel.classList.remove('hidden-panel');
-        // Remove Tailwind's default md:w-X/10 classes
-        opportunityRightPanel.classList.remove('md:w-full', 'md:w-7/10', 'md:w-3/10');
-        // Remove custom dynamic classes
-        opportunityRightPanel.classList.remove('expand-right');
-    }
+        individualIndustryGroup = document.getElementById('individualIndustryGroup');
+        customerIndustryInput = document.getElementById('customerIndustryInput');
+        companyIndustryGroup = document.getElementById('companyIndustryGroup');
+        customerIndustrySelect = document.getElementById('customerIndustrySelect');
 
-    switch (layoutType) {
-        case 'full_form_and_list': // Default view for adding new, or after resetting edit form
-            if (opportunityFullFormView) opportunityFullFormView.classList.add('hidden');
-            if (opportunityExistingListView) opportunityExistingListView.classList.add('hidden');
-            if (opportunityLeftPanel) opportunityLeftPanel.classList.add('md:w-full'); // Take full width
-            if (opportunityRightPanel) opportunityRightPanel.classList.add('hidden-panel'); // Hide right panel completely
-            break;
-        case 'edit_split_70_30': // Initial edit view: form + list (70) and accordions (30)
-            if (opportunityFullFormView) opportunityFullFormView.classList.remove('hidden');
-            if (opportunityExistingListView) opportunityExistingListView.classList.remove('hidden');
-            if (opportunityLeftPanel) opportunityLeftPanel.classList.add('md:w-7/10');
-            if (opportunityRightPanel) opportunityRightPanel.classList.remove('hidden-panel');
-            if (opportunityRightPanel) opportunityRightPanel.classList.add('md:w-3/10');
-            break;
-        case 'edit_split_30_70': // Accordion open view: form + list (30) and accordions (70)
-            if (opportunityFullFormView) opportunityFullFormView.classList.remove('hidden');
-            if (opportunityExistingListView) opportunityExistingListView.classList.remove('hidden');
-            if (opportunityLeftPanel) opportunityLeftPanel.classList.add('shrink-left'); // Custom class for shrinking
-            if (opportunityRightPanel) opportunityRightPanel.classList.remove('hidden-panel');
-            if (opportunityRightPanel) opportunityRightPanel.classList.add('expand-right'); // Custom class for expanding
-            break;
-        default:
-            console.error("main.js: Unknown opportunity layout type:", layoutType);
-            break;
-    }
-}
+        customerSinceInput = document.getElementById('customerSince');
+        customerDescriptionInput = document.getElementById('customerDescription');
+        submitCustomerButton = document.getElementById('submitCustomerButton');
+        customerList = document.getElementById('customerList');
 
+        customerSourceSelect = document.getElementById('customerSource'); // NEW
+        customerActiveSelect = document.getElementById('customerActive'); // NEW
 
-// Helper to toggle disabled state for all relevant buttons
-function toggleButtonsDisabled(disabled) {
-    const buttons = [
-        submitCustomerButton, submitOpportunityButton, submitOpportunityContactButton,
-        submitOpportunityLineButton, submitQuoteButton, uploadAdminDataButton,
-        submitUserButton, submitCurrencyButton
-    ];
-    buttons.forEach(btn => {
-        if (btn) {
-            if (disabled) {
-                btn.setAttribute('disabled', 'disabled');
-                btn.classList.add('opacity-50', 'cursor-not-allowed');
-            } else {
-                btn.removeAttribute('disabled');
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
-        }
-    });
-    console.log(`main.js: All relevant buttons ${disabled ? 'disabled' : 'enabled'}.`);
-}
-
-
-// Function to show a specific section and hide others
-export async function showSection(sectionId) {
-    // Check for admin section access only if the section is admin-specific
-    if (['admin-country-mapping-section', 'users-management-section', 'currency-management-section', 'price-book-management-section'].includes(sectionId)) {
-        if (!currentUserId) {
-            console.log(`main.js: Access to ${sectionId} denied. No user logged in. Prompting Google login.`);
-            await handleGoogleLogin();
-            return;
-        }
-
-        if (!isAdmin) {
-            showModal("Unauthorized Access", "You do not have administrative privileges to access this section.", () => {
-                showSection('home-section');
+        // Add event listeners once, using `dataset.listenerAdded` to prevent duplicates
+        if (customerForm && !customerForm.dataset.listenerAdded) {
+            customerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await saveCustomer();
             });
-            return;
+            customerForm.dataset.listenerAdded = 'true';
+        }
+        const resetBtn = document.getElementById('resetCustomerFormButton');
+        if (resetBtn && !resetBtn.dataset.listenerAdded) {
+            resetBtn.addEventListener('click', resetCustomerForm);
+            resetBtn.dataset.listenerAdded = 'true';
+        }
+
+        if (customerTypeSelect && !customerTypeSelect.dataset.listenerAdded) {
+            customerTypeSelect.addEventListener('change', applyCustomerTypeValidation);
+            customerTypeSelect.dataset.listenerAdded = 'true';
+            applyCustomerTypeValidation(); // Initial call
+        }
+
+        if (customerCountrySelect && !customerCountrySelect.dataset.listenerAdded) {
+            customerCountrySelect.addEventListener('change', (e) => populateStates(e.target.value));
+            customerCountrySelect.dataset.listenerAdded = 'true';
         }
     }
 
-    // Hide all sections first
-    allSections.forEach(section => {
-        if (section) {
-            section.classList.add('hidden');
+    // Load data specific to this module ONLY if auth and DB are ready AND firestoreDb is set
+    if (isAuthReady && currentUserId && firestoreDb && isDbReady) {
+        console.log("customers.js: Auth, User, and DB are ready. Initializing customer data.");
+        if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
+        await fetchCountryData(); // Used directly imported function from main
+        populateCountries();
+        listenForCustomers(); // This will use the firestoreDb
+        resetCustomerForm(); // Ensure the form is cleared and ready for new input
+    } else {
+        console.warn("customers.js: Authentication, User, or Firestore DB not ready (or firestoreDb not set). Customers module not fully initialized for data operations.");
+        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Initializing customers. Please wait or sign in...</p>'; // Updated message
+        if (submitCustomerButton) submitCustomerButton.setAttribute('disabled', 'disabled');
+    }
+}
+
+/**
+ * Gets the Firestore collection path for customers.
+ * Customers are stored in a 'public' collection.
+ * @returns {string} The full Firestore collection path.
+ */
+function getCustomerCollectionPath() {
+    return getCollectionPath('customers', 'public'); // Data area 'customers', type 'public'
+}
+
+
+/* --- CUSTOMERS CRUD OPERATIONS --- */
+
+/**
+ * Populates the country dropdown select element from the globally available `appCountries` array.
+ */
+function populateCountries() {
+    if (!customerCountrySelect) return;
+    customerCountrySelect.innerHTML = '<option value="">Select Country</option>';
+    appCountries.forEach(country => { // Used directly imported array
+        const option = document.createElement('option');
+        option.value = country.code;
+        option.textContent = country.name;
+        customerCountrySelect.appendChild(option);
+    });
+    console.log("customers.js: Country dropdown populated.");
+}
+
+/**
+ * Populates the state/province dropdown based on the selected country code.
+ * @param {string} countryCode - The two-letter code of the selected country.
+ */
+function populateStates(countryCode) {
+    if (!customerStateSelect) return;
+    customerStateSelect.innerHTML = '<option value="">Select State/Province</option>';
+    const states = appCountryStateMap[countryCode] || []; // Used directly imported map
+    states.forEach(state => {
+        const option = document.createElement('option');
+        option.value = state;
+        option.textContent = state;
+        customerStateSelect.appendChild(option);
+    });
+    customerStateSelect.disabled = states.length === 0; // Disable if no states
+    console.log(`customers.js: States populated for ${countryCode}.`);
+}
+
+/**
+ * Placeholder for address validation. In a real app, this would call an external API.
+ * For now, it performs basic checks for required address fields.
+ * @param {string} address
+ * @param {string} city
+ * @param {string} country
+ * @param {string} zipCode (now passed for specific validation)
+ * @param {string} countryCode (now passed for specific validation)
+ * @returns {boolean} True if address is considered valid based on non-empty values and basic zip.
+ */
+function validateAddress(address, city, country, zipCode, countryCode) {
+    let isValid = true;
+    let message = '';
+
+    // Basic required fields check
+    if (address.trim() === '' || city.trim() === '' || country.trim() === '') {
+        message += 'Please enter a valid address, city, and select a country. ';
+        isValid = false;
+    }
+
+    // Country-specific zip code validation
+    if (zipCode && countryCode) {
+        if (countryCode === 'US' && !/^\d{5}(-\d{4})?$/.test(zipCode)) {
+            message += 'US zip code must be 5 digits (e.g., 90210) or 5+4 (e.g., 90210-1234). ';
+            isValid = false;
+        } else if (countryCode === 'CA' && !/^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/.test(zipCode)) {
+            message += 'Canadian postal code must be in A1A 1A1 format. ';
+            isValid = false;
+        }
+        // Add more country-specific regex patterns here as needed
+    }
+
+    if (!isValid && addressValidationMessage) {
+        addressValidationMessage.textContent = message.trim();
+        addressValidationMessage.classList.remove('hidden');
+    } else if (addressValidationMessage) {
+        addressValidationMessage.classList.add('hidden');
+    }
+    return isValid;
+}
+
+
+/**
+ * Applies validation rules and shows/hides fields based on the selected customer type.
+ */
+function applyCustomerTypeValidation() {
+    if (!customerTypeSelect || !individualFieldsDiv || !companyNameFieldDiv || !individualIndustryGroup || !companyIndustryGroup) return;
+
+    const customerType = customerTypeSelect.value;
+
+    // Reset required attributes first to avoid conflicts
+    customerFirstNameInput.removeAttribute('required');
+    customerLastNameInput.removeAttribute('required');
+    customerCompanyNameInput.removeAttribute('required');
+
+    if (customerType === 'Individual') {
+        individualFieldsDiv.classList.remove('hidden');
+        companyNameFieldDiv.classList.add('hidden');
+        individualIndustryGroup.classList.remove('hidden');
+        companyIndustryGroup.classList.add('hidden');
+
+        customerFirstNameInput.setAttribute('required', 'required');
+        customerLastNameInput.setAttribute('required', 'required');
+
+    } else if (customerType === 'Company') {
+        individualFieldsDiv.classList.add('hidden');
+        companyNameFieldDiv.classList.remove('hidden');
+        individualIndustryGroup.classList.add('hidden');
+        companyIndustryGroup.classList.add('hidden');
+
+        customerCompanyNameInput.setAttribute('required', 'required');
+    } else { // "Select Type" or other invalid selection
+        individualFieldsDiv.classList.add('hidden');
+        companyNameFieldDiv.classList.add('hidden');
+        individualIndustryGroup.classList.add('hidden');
+        companyIndustryGroup.classList.add('hidden');
+    }
+    console.log(`customers.js: Customer type validation applied for: ${customerType}.`);
+}
+
+/**
+ * Saves (adds or updates) a customer record in Firestore.
+ * Data is read from the form fields.
+ */
+async function saveCustomer() {
+    if (!isAuthReady || !currentUserId || !firestoreDb || !isDbReady) { // Use firestoreDb
+        showModal("Permission Denied", "Please sign in to manage customers, or Firestore is not ready.", () => {});
+        return;
+    }
+
+    const customerType = customerTypeSelect.value;
+    const firstName = customerFirstNameInput.value.trim();
+    const lastName = customerLastNameInput.value.trim();
+    const companyName = customerCompanyNameInput.value.trim();
+    const email = customerEmailInput.value.trim();
+    const phone = customerPhoneInput.value.trim();
+    const country = customerCountrySelect.value;
+    const address = customerAddressInput.value.trim();
+    const city = customerCityInput.value.trim();
+    const state = customerStateSelect.value;
+    const zipCode = customerZipCodeInput.value.trim(); // Ensure this value is captured
+    const industry = customerType === 'Individual' ? customerIndustryInput.value.trim() : customerIndustrySelect.value;
+    const customerSince = customerSinceInput.value;
+    const description = customerDescriptionInput.value.trim();
+    const customerSource = customerSourceSelect.value; // NEW
+    const customerActive = customerActiveSelect.value === 'Yes'; // NEW: Boolean
+
+    // Basic client-side validation for mandatory fields
+    const mandatoryFields = [
+        { field: customerType, name: "Customer Type" },
+        { field: email, name: "Email" },
+        { field: phone, name: "Phone" },
+        { field: customerSince, name: "Customer Since Date" }
+    ];
+
+    if (customerType === 'Individual') {
+        mandatoryFields.push({ field: firstName, name: "First Name" });
+        mandatoryFields.push({ field: lastName, name: "Last Name" });
+    } else if (customerType === 'Company') {
+        mandatoryFields.push({ field: companyName, name: "Company Name" });
+    } else {
+        showModal("Validation Error", "Please select a valid customer type.", () => {});
+        return;
+    }
+
+    let missingFields = [];
+    mandatoryFields.forEach(item => {
+        if (!item.field) {
+            missingFields.push(item.name);
         }
     });
 
-    // Then show the target section
-    const targetSection = document.getElementById(sectionId);
-    if (targetSection) {
-        targetSection.classList.remove('hidden');
-        targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    // Close mobile menu AND admin submenus when navigating (if open)
-    if (mobileMenu) mobileMenu.classList.remove('open');
-    if (desktopAdminSubMenu) desktopAdminMenu.classList.remove('active');
-    if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden');
-
-    // Stop all listeners first to prevent redundant updates
-    unsubscribeAll();
-
-    // Reset currentOpportunityId and layout when navigating away from opportunities
-    if (sectionId !== 'opportunities-section') {
-        currentOpportunityId = null;
-        currentEditedOpportunity = null;
-        if (linkedObjectsAccordion) linkedObjectsAccordion.classList.add('hidden');
-    }
-
-    // IMPORTANT: Wait for DB to be ready before calling module-specific init functions
-    if (!db || !isDbReady) {
-        console.warn(`main.js: Attempted to show section ${sectionId} but Firestore DB is not ready. Waiting for DB initialization.`);
-        toggleButtonsDisabled(true); // Disable all buttons
-        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Initializing application. Please wait...</p>';
-        
-        // Polling or a more sophisticated ready-event system could be used here.
-        // For simplicity, we will re-attempt after a short delay if not ready.
-        // The onAuthStateChanged listener handles re-calling showSection('home-section')
-        // once auth and db are ready. For other sections, user must click again.
-        // Or, we can just return and let user retry.
+    if (missingFields.length > 0) {
+        showModal("Validation Error", `Please fill in all mandatory fields: ${[...new Set(missingFields)].join(', ')}.`, () => {});
         return;
-    } else {
-        toggleButtonsDisabled(false); // Enable buttons once DB is ready
     }
 
-    // Start specific listener for the active section, only if auth and DB are ready
-    if (isAuthReady && db && isDbReady) {
-        if (sectionId === 'customers-section') {
-            // Use Promise.resolve().then to push the execution to the next microtask queue,
-            // giving the 'db' object a tiny bit more time to fully stabilize after assignment.
-            await Promise.resolve().then(async () => {
-                const customersModule = await import('./customers.js');
-                customersModule.setDbInstance(db); // Call the new setter
-                customersModule.initCustomersModule();
-            }).catch(error => console.error("main.js: Failed to load customers module or set DB instance:", error));
-        } else if (sectionId === 'opportunities-section') {
-            import('./opportunities.js').then(module => {
-                module.initOpportunitiesModule();
-            }).catch(error => console.error("main.js: Failed to load opportunities module:", error));
-        } else if (sectionId === 'admin-country-mapping-section') {
-            if (isAdmin) {
-                import('./admin_data.js').then(module => {
-                    module.initAdminDataModule('country_mapping');
-                }).catch(error => console.error("main.js: Failed to load admin_data module for country mapping:", error));
-            }
-        } else if (sectionId === 'currency-management-section') {
-            if (isAdmin) {
-                import('./admin_data.js').then(module => {
-                    module.initAdminDataModule('currency_management');
-                }).catch(error => console.error("main.js: Failed to load admin_data module for currency management:", error));
-            }
-        } else if (sectionId === 'users-management-section') {
-            if (isAdmin) {
-                import('./users.js').then(module => {
-                    module.initUsersModule();
-                }).catch(error => console.error("main.js: Failed to load users module:", error));
-            }
-        } else if (sectionId === 'price-book-management-section') {
-            if (isAdmin) {
-                import('./price_book.js').then(module => {
-                    module.initPriceBookModule();
-                }).catch(error => console.error("main.js: Failed to load price book module:", error));
-            }
-        }
-    } else {
-        console.warn("main.js: Auth state or DB not fully ready for section initialization, even after initial check. This should not happen consistently.");
-        toggleButtonsDisabled(true); // Re-disable if somehow state changed negatively
+    // Call validateAddress with new zipCode and country parameters
+    if (!validateAddress(address, city, country, zipCode, country)) {
+        return; // Validation message already shown by validateAddress
     }
-}
 
+    const customerToSave = {
+        customerType,
+        firstName: customerType === 'Individual' ? firstName : '',
+        lastName: customerType === 'Individual' ? lastName : '',
+        companyName: customerType === 'Company' ? companyName : '',
+        email,
+        phone,
+        address,
+        city,
+        state,
+        zipCode,
+        country,
+        industry,
+        customerSince, // Stored asYYYY-MM-DD string from input type="date"
+        description,
+        source: customerSource, // NEW
+        active: customerActive, // NEW
+        ownerId: currentUserId, // Link customer to the current logged-in user (directly imported)
+        updatedAt: new Date()
+    };
 
-// Handle Google Login
-async function handleGoogleLogin() {
-    const provider = new GoogleAuthProvider();
+    const existingCustomerDocId = customerForm.dataset.editingId;
+    const collectionPath = getCustomerCollectionPath();
+
     try {
-        await signInWithPopup(auth, provider);
-    } catch (error) {
-        console.error("main.js: Error during Google login:", error);
-        showModal("Login Error", `Failed to sign in with Google: ${error.message}`, () => {
-            showSection('home-section');
-        });
-    }
-}
-
-// Function to fetch country and state data from Firestore for the CRM forms
-export async function fetchCountryData() {
-    try {
-        // Ensure db and isDbReady are accessible
-        if (!db || !isDbReady) {
-            console.warn("main.js: Firestore DB not ready. Skipping fetchCountryData.");
-            appCountries = [];
-            appCountryStateMap = {};
-            return;
-        }
-        const docRef = doc(db, "app_metadata", "countries_states");
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            appCountries = data.countries || [];
-            appCountryStateMap = data.countryStateMap || {};
-            console.log("main.js: Country and State data loaded from Firestore.");
+        if (existingCustomerDocId) {
+            // Update existing customer
+            const customerDocRef = doc(firestoreDb, collectionPath, existingCustomerDocId); // Use firestoreDb
+            await setDoc(customerDocRef, { ...customerToSave, updatedAt: new Date() }, { merge: true }); // Ensure updatedAt is updated
+            showModal("Success", "Customer updated successfully!", () => { });
+            console.log("customers.js: Customer updated:", existingCustomerDocId);
         } else {
-            console.warn("main.js: No 'countries_states' document found in 'app_metadata' collection.");
-            appCountries = [];
-            appCountryStateMap = {};
+            // Add new customer
+            // Let Firestore generate the document ID, and then add a human-readable customerId field
+            const newDocRef = doc(collection(firestoreDb, collectionPath)); // Use firestoreDb
+            const newCustomerId = `CUST-${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+            await setDoc(newDocRef, { ...customerToSave, customerId: newCustomerId, createdAt: new Date() });
+            showModal("Success", `New Customer added successfully! ID: ${newCustomerId}`, () => { });
+            console.log("customers.js: New Customer added with ID:", newCustomerId);
         }
-    } catch (error) {
-        console.error("main.js: Error fetching country data from Firestore:", error);
-        appCountries = [];
-        appCountryStateMap = {};
-    }
-}
-
-// Function to load existing data into the admin textareas (this is called from admin_data.js now)
-async function loadAdminCountryData() {
-    try {
-        await fetchCountryData(); // Use the local (exported) fetchCountryData
-
-        const countriesString = appCountries.map(c => `${c.name},${c.code}`).join('\n');
-        if (adminCountriesInput) adminCountriesInput.value = countriesString;
-
-        const countryStateMapString = Object.entries(appCountryStateMap)
-            .map(([code, states]) => `${code}:${states.join(',')}`)
-            .join('\n');
-        if (adminCountryStateMapInput) adminCountryStateMapInput.value = countryStateMapString;
-
-        if (adminMessageDiv) adminMessageDiv.classList.add('hidden');
-        console.log("main.js: Admin country data loaded into textareas.");
+        resetCustomerForm();
     }
     catch (error) {
-        console.error("main.js: Error in loadAdminCountryData:", error);
+        console.error("customers.js: Error saving customer:", error);
+        showModal("Error", `Failed to save customer: ${error.message}`, () => { });
     }
 }
 
-// NEW: Function to fetch currency data from Firestore
-export async function fetchCurrencies() {
-    console.log("main.js: fetchCurrencies called. Current db:", db);
-    try {
-        if (!db || !isDbReady) { // Add defensive check here too
-            console.warn("main.js: Firestore DB not ready. Skipping fetchCurrencies.");
-            allCurrencies = [];
-            return;
-        }
-        const currenciesCollectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
-        const querySnapshot = await getDocs(query(currenciesCollectionRef));
-        allCurrencies = [];
-        querySnapshot.forEach((docSnap) => {
-            allCurrencies.push({ id: docSnap.id, ...docSnap.data() });
-        });
-        console.log("main.js: Currency data loaded from Firestore. Total:", allCurrencies.length, "allCurrencies array:", allCurrencies);
-    } catch (error) {
-        console.error("main.js: Error fetching currency data from Firestore:", error);
-        allCurrencies = [];
-    }
-}
-
-// NEW: Helper function to get currency symbol by code
-export function getCurrencySymbol(code) {
-    console.log("main.js: getCurrencySymbol called for code:", code);
-    console.log("main.js: allCurrencies state inside getCurrencySymbol:", allCurrencies);
-
-    const currency = allCurrencies.find(c => c.id === code);
-    if (currency) {
-        console.log("main.js: Found currency:", currency.symbol);
-        return currency.symbol;
-    } else {
-        console.warn(`main.js: Currency symbol not found for code: ${code}. Returning code as fallback.`);
-        return code;
-    }
-}
-
-// NEW: Helper function to get currency name by code
-export function getCurrencyName(code) {
-    const currency = allCurrencies.find(c => c.id === code);
-    return currency ? currency.currencyName : code;
-}
-
-
-// Initialize Firebase and set up authentication listener
-async function initializeFirebase() {
-    if (!app) {
-        try {
-            app = initializeApp(firebaseConfig);
-            getAnalytics(app);
-            db = getFirestore(app); // Assign db here
-            isDbReady = true; // Set to true immediately after db is assigned
-            auth = getAuth(app); // Assign auth here
-            console.log("main.js: Firebase app and services initialized. DB Ready:", isDbReady);
-        } catch (error) {
-            console.error("main.js: Error initializing Firebase services:", error);
-            showModal("Firebase Service Error", `Failed to initialize Firebase services: ${error.message}`, () => {});
-            return;
-        }
+/**
+ * Deletes a customer record from Firestore.
+ * @param {string} firestoreDocId - The Firestore document ID of the customer to delete.
+ */
+async function deleteCustomer(firestoreDocId) {
+    if (!isAuthReady || !currentUserId || !firestoreDb || !isDbReady) { // Use firestoreDb
+        showModal("Permission Denied", "Please sign in to delete customers, or Firestore is not ready.", () => {});
+        return;
     }
 
-    // --- IMPORTANT: Initialize all DOM element references here AFTER app initialization ---
-    customersSection = document.getElementById('customers-section');
-    customerForm = document.getElementById('customerForm');
-    customerFormTitle = document.getElementById('customerFormTitle');
-    customerIdDisplayGroup = document.getElementById('customerIdDisplayGroup');
-    customerIdDisplay = document.getElementById('customerIdDisplay');
+    const collectionPath = getCustomerCollectionPath();
 
-    customerTypeSelect = document.getElementById('customerType');
-    individualFieldsDiv = document.getElementById('individualFields');
-    customerFirstNameInput = document.getElementById('customerFirstName');
-    customerLastNameInput = document.getElementById('customerLastName');
-    companyNameFieldDiv = document.getElementById('companyNameField');
-    customerCompanyNameInput = document.getElementById('customerCompanyName');
-
-    customerEmailInput = document.getElementById('customerEmail');
-    customerPhoneInput = document.getElementById('customerPhone');
-
-    customerCountrySelect = document.getElementById('customerCountry');
-    customerAddressInput = document.getElementById('customerAddress');
-    customerCityInput = document.getElementById('customerCity');
-    customerStateSelect = document.getElementById('customerState');
-    customerZipCodeInput = document.getElementById('customerZipCode');
-    addressValidationMessage = document.getElementById('addressValidationMessage');
-
-    individualIndustryGroup = document.getElementById('individualIndustryGroup');
-    customerIndustryInput = document.getElementById('customerIndustryInput');
-    companyIndustryGroup = document.getElementById('companyIndustryGroup');
-    customerIndustrySelect = document.getElementById('customerIndustrySelect');
-
-    customerSinceInput = document.getElementById('customerSince');
-    customerDescriptionInput = document.getElementById('customerDescription');
-    submitCustomerButton = document.getElementById('submitCustomerButton');
-    customerList = document.getElementById('customerList');
-
-    opportunitiesSection = document.getElementById('opportunities-section');
-    opportunityViewContainer = document.getElementById('opportunity-view-container');
-    opportunityLeftPanel = document.getElementById('opportunity-left-panel');
-    opportunityRightPanel = document.getElementById('opportunity-right-panel');
-    opportunityFullFormView = document.getElementById('opportunity-full-form-view');
-    opportunityExistingListView = document.getElementById('opportunity-existing-list-view');
-
-    opportunityForm = document.getElementById('opportunityForm');
-    opportunityFormTitle = document.getElementById('opportunityFormTitle');
-    opportunityIdDisplayGroup = document.getElementById('opportunityIdDisplayGroup');
-    opportunityIdDisplay = document.getElementById('opportunityIdDisplay');
-    opportunityCustomerSelect = document.getElementById('opportunityCustomer');
-    opportunityNameInput = document.getElementById('opportunityName');
-    opportunityAmountInput = document.getElementById('opportunityAmount');
-    currencySymbolDisplay = document.getElementById('currencySymbolDisplay');
-    opportunityCurrencySelect = document.getElementById('opportunityCurrency');
-    opportunityStageSelect = document.getElementById('opportunityStage');
-    opportunityExpectedStartDateInput = document.getElementById('opportunityExpectedStartDate');
-    opportunityExpectedCloseDateInput = document.getElementById('opportunityExpectedCloseDate');
-    opportunityEventTypeSelect = document.getElementById('opportunityEventType');
-    opportunityEventLocationProposedInput = document.getElementById('opportunityEventLocationProposed');
-    opportunityServiceAddressInput = document.getElementById('opportunityServiceAddress');
-    opportunityDescriptionInput = document.getElementById('opportunityDescription');
-    opportunityDataInput = document.getElementById('opportunityData');
-    submitOpportunityButton = document.getElementById('submitOpportunityButton');
-    opportunityList = document.getElementById('opportunityList');
-
-    linkedObjectsAccordion = document.getElementById('linkedObjectsAccordion');
-    contactsAccordionHeader = document.getElementById('contactsAccordionHeader');
-    contactsAccordionContent = contactsAccordionHeader ? contactsAccordionHeader.nextElementSibling : null;
-    linesAccordionHeader = document.getElementById('linesAccordionHeader');
-    linesAccordionContent = linesAccordionHeader ? linesAccordionHeader.nextElementSibling : null;
-    quotesAccordionHeader = document.getElementById('quotesAccordionHeader');
-    quotesAccordionContent = quotesAccordionHeader ? quotesAccordionHeader.nextElementSibling : null;
-
-    opportunityContactForm = document.getElementById('opportunityContactForm');
-    contactIdDisplayGroup = document.getElementById('contactIdDisplayGroup');
-    contactIdDisplay = document.getElementById('contactIdDisplay');
-    contactFirstNameInput = document.getElementById('contactFirstName');
-    contactLastNameInput = document.getElementById('contactLastName');
-    contactEmailInput = document.getElementById('contactEmail');
-    contactPhoneInput = document.getElementById('contactPhone');
-    contactRoleInput = document.getElementById('contactRole');
-    submitOpportunityContactButton = document.getElementById('submitOpportunityContactButton');
-    opportunityContactList = document.getElementById('opportunityContactList');
-
-    opportunityLineForm = document.getElementById('opportunityLineForm');
-    optyLineIdDisplayGroup = document.getElementById('optyLineIdDisplayGroup');
-    optyLineIdDisplay = document.getElementById('optyLineIdDisplay');
-    lineServiceDescriptionInput = document.getElementById('lineServiceDescription');
-    lineUnitPriceInput = document.getElementById('lineUnitPrice');
-    lineQuantityInput = document.getElementById('lineQuantity');
-    lineDiscountInput = document.getElementById('lineDiscount');
-    lineNetPriceInput = document.getElementById('lineNetPrice');
-    lineStatusSelect = document.getElementById('lineStatus');
-    submitOpportunityLineButton = document.getElementById('submitOpportunityLineButton');
-    opportunityLineList = document.getElementById('opportunityLineList');
-
-    quoteForm = document.getElementById('quoteForm');
-    quoteIdDisplayGroup = document.getElementById('quoteIdDisplayGroup');
-    quoteIdDisplay = document.getElementById('quoteIdDisplay');
-    quoteNameInput = document.getElementById('quoteName');
-    quoteDescriptionInput = document.getElementById('quoteDescription');
-    quoteCustomerSelect = document.getElementById('quoteCustomer');
-    quoteStartDateInput = document.getElementById('quoteStartDate');
-    quoteExpireDateInput = document.getElementById('quoteExpireDate');
-    quoteStatusSelect = document.getElementById('quoteStatus');
-    quoteNetListAmountInput = document.getElementById('quoteNetListAmount');
-    quoteNetDiscountInput = document.getElementById('quoteNetDiscount');
-    quoteNetAmountInput = document.getElementById('quoteNetAmount');
-    quoteCurrencySelect = document.getElementById('quoteCurrency');
-    quoteIsFinalCheckbox = document.getElementById('quoteIsFinal');
-    submitQuoteButton = document.getElementById('submitQuoteButton');
-    quoteList = document.getElementById('quoteList');
-
-    adminCountryMappingSection = document.getElementById('admin-country-mapping-section');
-    adminCountriesInput = document.getElementById('adminCountriesInput');
-    adminCountryStateMapInput = document.getElementById('adminCountryStateMapInput');
-    uploadAdminDataButton = document.getElementById('uploadAdminDataButton');
-    fullLoadRadio = document.getElementById('fullLoad');
-    incrementalLoadRadio = document.getElementById('incrementalLoad');
-    adminMessageDiv = document.getElementById('adminMessage');
-
-    currencyManagementSection = document.getElementById('currency-management-section');
-    currencyForm = document.getElementById('currencyForm');
-    currencyFormTitle = document.getElementById('currencyFormTitle');
-    currencyCodeDisplayGroup = document.getElementById('currencyCodeDisplayGroup');
-    currencyCodeDisplay = document.getElementById('currencyCodeDisplay');
-    adminCurrenciesInput = document.getElementById('adminCurrenciesInput');
-    submitCurrencyButton = document.getElementById('submitCurrencyButton');
-    adminCurrencyMessageDiv = document.getElementById('adminCurrencyMessageDiv');
-    currencyList = document.getElementById('currencyList');
-
-
-    usersManagementSection = document.getElementById('users-management-section');
-    userForm = document.getElementById('userForm');
-    userFormTitle = document.getElementById('userFormTitle');
-    userIdDisplayGroup = document.getElementById('userIdDisplayGroup');
-    userIdDisplayInput = document.getElementById('userIdDisplayInput');
-    userNameInput = document.getElementById('userName');
-    userFirstNameInput = document.getElementById('userFirstName');
-    userLastNameInput = document.getElementById('userLastName');
-    userEmailInput = document.getElementById('userEmail');
-    userPhoneInput = document.getElementById('userPhone');
-    userRoleSelect = document.getElementById('userRole');
-    userSkillsInput = document.getElementById('userSkills');
-    submitUserButton = document.getElementById('submitUserButton');
-    userList = document.getElementById('userList');
-
-    logoutButton = document.getElementById('logoutButton');
-    mobileLogoutButton = document.getElementById('mobileLogoutButton');
-    navGoogleLoginButton = document.getElementById('navGoogleLoginButton');
-
-    googleLoginButtonHome = document.getElementById('googleLoginButton');
-    homeSignInMessage = document.getElementById('homeSignInMessage');
-
-    userIdDisplay = document.getElementById('userIdDisplay');
-    mobileUserIdDisplay = document.getElementById('mobileUserIdDisplay');
-
-    desktopAdminMenu = document.getElementById('desktopAdminMenu');
-    mobileAdminMenu = document.getElementById('mobileAdminMenu');
-
-    desktopAdminMenuToggle = document.getElementById('desktopAdminMenuToggle');
-    desktopAdminSubMenu = document.getElementById('desktopAdminSubMenu');
-    mobileAdminMenuToggle = document.getElementById('mobileAdminMenuToggle');
-    mobileAdminSubMenu = document.getElementById('mobileAdminSubMenu');
-
-    authSection = document.getElementById('auth-section');
-
-    mobileMenuButton = document.getElementById('mobileMenuButton');
-    mobileMenu = document.getElementById('mobileMenu');
-
-    homeSection = document.getElementById('home-section');
-    eventsSection = document.getElementById('events-section');
-    allSections = [
-        homeSection,
-        customersSection,
-        opportunitiesSection,
-        eventsSection,
-        adminCountryMappingSection,
-        usersManagementSection,
-        authSection,
-        currencyManagementSection,
-        document.getElementById('price-book-management-section')
-    ].filter(section => section !== null);
-
-    if (contactsAccordionHeader) contactsAccordionHeader.addEventListener('click', () => toggleAccordion(contactsAccordionHeader, contactsAccordionContent));
-    if (linesAccordionHeader) linesAccordionHeader.addEventListener('click', () => toggleAccordion(linesAccordionHeader, linesAccordionContent));
-    if (quotesAccordionHeader) quotesAccordionHeader.addEventListener('click', () => toggleAccordion(quotesAccordionHeader, quotesAccordionContent));
-
-    if (desktopAdminMenuToggle && desktopAdminMenu) {
-        desktopAdminMenuToggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            desktopAdminMenu.classList.toggle('active');
-        });
-    }
-    document.addEventListener('click', (e) => {
-        if (desktopAdminMenu && !desktopAdminMenu.contains(e.target)) {
-            desktopAdminMenu.classList.remove('active');
-        }
-    });
-
-    if (mobileAdminMenuToggle && mobileAdminSubMenu) {
-        mobileAdminMenuToggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            mobileAdminSubMenu.classList.toggle('hidden');
-        });
-    }
-
-    // Listen for auth state changes
-    onAuthStateChanged(auth, async (user) => {
-        isAuthReady = true;
-        console.log("main.js: onAuthStateChanged: Auth state changed. User:", user ? user.email || user.uid : "null");
-
-        // Now, perform actions only if both Auth and DB are confirmed ready
-        if (!isDbReady) {
-            console.warn("main.js: DB is not yet ready in onAuthStateChanged. Retrying auth-dependent initializations shortly.");
-            // A small delay to allow DB init to complete, then re-trigger
-            setTimeout(() => onAuthStateChanged(auth, user), 100); // Re-run this same callback
-            return;
-        }
-
-        if (user) {
-            currentUserId = user.uid;
-            if (userIdDisplay) userIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
-            if (mobileUserIdDisplay) mobileUserIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
-
-            if (userIdDisplay) userIdDisplay.classList.remove('hidden');
-            if (mobileUserIdDisplay) mobileUserIdDisplay.classList.remove('hidden');
-            if (navGoogleLoginButton) navGoogleLoginButton.classList.add('hidden');
-            if (googleLoginButtonHome) googleLoginButtonHome.classList.add('hidden');
-            if (logoutButton) logoutButton.classList.remove('hidden');
-            if (mobileLogoutButton) mobileLogoutButton.classList.remove('hidden');
-            if (homeSignInMessage) homeSignInMessage.classList.add('hidden');
-
-            console.log("main.js: onAuthStateChanged: Current Firebase UID:", currentUserId);
-
-            const userProfileRef = doc(db, 'users_data', user.uid);
-            const userProfileSnap = await getDoc(userProfileRef);
-
-            await Promise.all([
-                fetchCurrencies(),
-                fetchCountryData()
-            ]);
-
-
-            if (userProfileSnap.exists()) {
-                const userData = userProfileSnap.data();
-                console.log("main.js: DEBUG: User data from Firestore - Role:", userData.role, " (Type:", typeof userData.role, ")");
-                console.log("main.js: DEBUG: User data from Firestore - Profile Access:", userData.profileAccess, " (Type:", typeof userData.profileAccess, ")");
-
-                isAdmin = (userData.role === 'Admin' && userData.profileAccess === true);
-                console.log("main.js: onAuthStateChanged: User profile exists. Admin status:", isAdmin);
-            } else {
-                try {
-                    await setDoc(userProfileRef, {
-                        userId: user.uid,
-                        userName: user.email || 'N/A',
-                        firstName: user.displayName ? user.displayName.split(' ')[0] : '',
-                        lastName: user.displayName ? user.displayName.split(' ').slice(1).join(' ') : '',
-                        email: user.email || 'N/A',
-                        phone: '',
-                        role: 'User',
-                        profileAccess: true
-                    }, { merge: true });
-                    console.log("main.js: Basic user profile created for:", user.uid);
-                    isAdmin = false;
-                } catch (profileError) {
-                    console.error("main.js: Error creating basic user profile:", profileError);
-                    showModal("Profile Error", `Failed to create user profile: ${profileError.message}. Access to some features may be limited.`, () => {});
-                }
-            }
-
-            if (isAdmin) {
-                if (desktopAdminMenu) desktopAdminMenu.classList.remove('hidden');
-                if (mobileAdminMenu) mobileAdminMenu.classList.remove('hidden');
-            } else {
-                if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
-                if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
-            }
-
-            showSection('home-section');
-
-        } else {
-            currentUserId = null;
-            isAdmin = false;
-            console.log("main.js: onAuthStateChanged: No user signed in. Showing home section by default.");
-
-            appCountries = [];
-            appCountryStateMap = {};
-            allCurrencies = [];
-
-            if (userIdDisplay) userIdDisplay.classList.add('hidden');
-            if (mobileUserIdDisplay) mobileUserIdDisplay.classList.add('hidden');
-            if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
-            if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
-            if (logoutButton) logoutButton.classList.add('hidden');
-            if (mobileLogoutButton) mobileLogoutButton.classList.add('hidden');
-
-            if (desktopAdminSubMenu) desktopAdminMenu.classList.remove('active');
-            if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden');
-
-            if (navGoogleLoginButton) navGoogleLoginButton.classList.remove('hidden');
-            if (googleLoginButtonHome) googleLoginButtonHome.classList.remove('hidden');
-            if (homeSignInMessage) homeSignInMessage.classList.remove('hidden');
-
-            toggleButtonsDisabled(true); // Ensure buttons are disabled if not signed in
-
-            showSection('home-section');
-        }
-    });
-
-    if (mobileMenuButton) {
-        mobileMenuButton.addEventListener('click', () => {
-            if (mobileMenu) mobileMenu.classList.toggle('open');
-            if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden');
-        });
-    }
-
-    document.querySelectorAll('nav a').forEach(link => {
-        if (link.dataset.section) {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                showSection(link.dataset.section);
-            });
-        }
-    });
-
-    if (navGoogleLoginButton) {
-        navGoogleLoginButton.addEventListener('click', handleGoogleLogin);
-    }
-
-    if (googleLoginButtonHome) {
-        googleLoginButtonHome.addEventListener('click', handleGoogleLogin);
-    }
-
-    if (logoutButton) {
-        logoutButton.addEventListener('click', async () => {
+    showModal(
+        "Confirm Deletion",
+        "Are you sure you want to delete this customer? This action cannot be undone.",
+        async () => {
             try {
-                await signOut(auth);
-                console.log("main.js: User signed out.");
-            } catch (error) {
-                console.error("main.js: Error signing out:", error);
-                showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
-            }
-        });
-    }
-
-    if (mobileLogoutButton) {
-        mobileLogoutButton.addEventListener('click', async () => {
-            try {
-                await signOut(auth);
-                console.log("main.js: User signed out.");
+                const customerDocRef = doc(firestoreDb, collectionPath, firestoreDocId); // Use firestoreDb
+                await deleteDoc(customerDocRef);
+                showModal("Success", "Customer deleted successfully!", () => {});
+                console.log("customers.js: Customer deleted Firestore Doc ID:", firestoreDocId);
             }
             catch (error) {
-                console.error("main.js: Error signing out:", error);
-                showModal("Logout Error", `Failed to log out: ${error.message}`, () => {});
+                console.error("customers.js: Error deleting customer:", error);
+                showModal("Error", `Failed to delete customer: ${error.message}`, () => {});
             }
-        });
-    }
-
-    if (document.getElementById('countryMappingForm')) {
-        document.getElementById('countryMappingForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (adminMessageDiv) adminMessageDiv.classList.add('hidden');
-            if (uploadAdminDataButton) {
-                uploadAdminDataButton.disabled = true;
-                uploadAdminDataButton.textContent = 'Uploading...';
-            }
-
-
-            const countriesString = adminCountriesInput.value;
-            const countryStateMapString = adminCountryStateMapInput.value;
-            const isFullLoad = fullLoadRadio.checked;
-
-            function parseCountries(countriesString) {
-                const uniqueCodes = new Set();
-                const parsedCountries = [];
-                const duplicatesFound = [];
-
-                if (!countriesString.trim()) return [];
-
-                countriesString.split('\n').forEach(line => {
-                    const parts = line.split(',');
-                    if (parts.length === 2) {
-                        const name = parts[0].trim();
-                        const code = parts[1].trim();
-                        if (name !== '' && code !== '') {
-                            if (uniqueCodes.has(code)) {
-                                duplicatesFound.push(code);
-                            } else {
-                                uniqueCodes.add(code);
-                                parsedCountries.push({ name, code });
-                            }
-                        }
-                    }
-                });
-
-                if (duplicatesFound.length > 0) {
-                    const msg = `Warning: Duplicate country codes found and ignored: ${duplicatesFound.join(', ')}. Only the first occurrence was used.`;
-                    if (adminMessageDiv) {
-                        adminMessageDiv.textContent = msg;
-                        adminMessageDiv.className = 'message error';
-                        adminMessageDiv.classList.remove('hidden');
-                    }
-                    console.warn(msg);
-                }
-                return parsedCountries;
-            }
-
-            function parseCountryStateMap(mapString) {
-                const map = {};
-                if (!mapString.trim()) return map;
-                mapString.split('\n').forEach(line => {
-                    const parts = line.split(':');
-                    if (parts.length === 2) {
-                        const countryCode = parts[0].trim();
-                        const states = parts[1].split(',').map(s => s.trim()).filter(s => s !== '');
-                        if (countryCode !== '') {
-                            map[countryCode] = states;
-                        }
-                    }
-                });
-                return map;
-            }
-
-            const dataToUpload = {};
-            let hasValidDataForUpload = false;
-
-            const parsedCountries = parseCountries(countriesString);
-            if (parsedCountries.length > 0) {
-                dataToUpload.countries = parsedCountries;
-                hasValidDataForUpload = true;
-            }
-
-            const parsedCountryStateMap = parseCountryStateMap(countryStateMapString);
-            if (Object.keys(parsedCountryStateMap).length > 0) {
-                dataToUpload.countryStateMap = parsedCountryStateMap;
-                hasValidDataForUpload = true;
-            }
-
-            if (!hasValidDataForUpload && isFullLoad) {
-                dataToUpload.countries = [];
-                dataToUpload.countryStateMap = {};
-                hasValidDataForUpload = true;
-            } else if (!hasValidDataForUpload && !isFullLoad) {
-                if (adminMessageDiv) {
-                    adminMessageDiv.textContent = 'No valid data provided for update.';
-                    adminMessageDiv.className = 'message error';
-                    adminMessageDiv.classList.remove('hidden');
-                }
-                if (uploadAdminDataButton) {
-                    uploadAdminDataButton.disabled = false;
-                    uploadAdminDataButton.textContent = 'Upload Data to Firestore';
-                }
-                return;
-            }
-
-            try {
-                const docRef = doc(db, "app_metadata", "countries_states");
-                await setDoc(docRef, dataToUpload, { merge: true });
-
-                if (adminMessageDiv) {
-                    adminMessageDiv.textContent = `Data uploaded successfully (${isFullLoad ? 'Full Load (Merge)' : 'Incremental Load'})!`;
-                    adminMessageDiv.className = 'message success';
-                    adminMessageDiv.classList.remove('hidden');
-                }
-                console.log("main.js: Admin data upload successful:", dataToUpload);
-
-                await fetchCountryData();
-
-            } catch (error) {
-                console.error("main.js: Error uploading admin data:", error);
-                if (adminMessageDiv) {
-                    adminMessageDiv.textContent = `Error uploading data: ${error.message}`;
-                    adminMessageDiv.className = 'message error';
-                    adminMessageDiv.classList.remove('hidden');
-                }
-            } finally {
-                if (uploadAdminDataButton) {
-                    uploadAdminDataButton.disabled = false;
-                    uploadAdminDataButton.textContent = 'Upload Data to Firestore';
-                }
-            }
-        });
-    }
-
-    if (currencyForm) {
-        currencyForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const editingId = currencyForm.dataset.editingId;
-            import('./admin_data.js').then(module => {
-                module.saveCurrency(null, editingId || null);
-            }).catch(error => console.error("main.js: Failed to call saveCurrency from admin_data module:", error));
-        });
-    }
+        }
+    );
 }
 
-window.onload = initializeFirebase;
+/**
+ * Sets up a real-time listener for customer data from Firestore.
+ * Updates the UI and the `allCustomers` array whenever there are changes.
+ */
+export function listenForCustomers() {
+    removeUnsubscribe('customers'); // Used directly imported function
+
+    console.log("customers.js: listenForCustomers called.");
+    console.log("customers.js: Current state for listener - isAuthReady:", isAuthReady, "currentUserId:", currentUserId, "firestoreDb:", firestoreDb, "isDbReady:", isDbReady);
+
+    // --- IMPORTANT DEBUGGING CHECK ---
+    // This check now uses the internal 'firestoreDb' variable
+    if (!firestoreDb || typeof firestoreDb.collection !== 'function' || firestoreDb.type !== 'firestore') {
+        console.error("customers.js: CRITICAL ERROR - 'firestoreDb' is NOT a valid Firestore instance at the point of calling collection(). Current firestoreDb value:", firestoreDb);
+        if (customerList) customerList.innerHTML = '<p class="text-red-500 text-center py-4 col-span-full">Error: Firestore connection not ready. Please try refreshing.</p>';
+        return;
+    }
+    // --- END IMPORTANT DEBUGGING CHECK ---
+
+    if (!isAuthReady || !currentUserId || !firestoreDb || !isDbReady) { // Use firestoreDb
+        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Initializing customers. Please wait or sign in...</p>';
+        console.warn("customers.js: Customer listener skipped: Auth/DB not ready.");
+        return;
+    }
+
+    const collectionPath = getCollectionPath('customers', 'public'); // Get path via utils.js
+    
+    // Defensive check to ensure collectionPath is valid
+    if (typeof collectionPath !== 'string' || !collectionPath) { // Ensure it's a non-empty string
+        console.error("customers.js: Collection path for customers is invalid (not a string or empty). Cannot set up listener. Path received:", collectionPath);
+        if (customerList) customerList.innerHTML = '<p class="text-red-500 text-center py-4 col-span-full">Error: Could not determine customer data path.</p>';
+        return;
+    }
+
+    // Add logging for collectionPath and firestoreDb right before the collection() call
+    console.log("customers.js: DEBUG - collectionPath before collection():", collectionPath);
+    console.log("customers.js: DEBUG - firestoreDb before collection():", firestoreDb);
+
+    const q = collection(firestoreDb, collectionPath); // Use firestoreDb here
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        if (customerList) customerList.innerHTML = ''; // Clear current list
+        // allCustomers is imported as a direct reference, so we push directly to it.
+        allCustomers.length = 0; // Clear allCustomers array directly
+
+        if (snapshot.empty) {
+            if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">No customers found. Add one above!</p>';
+            return;
+        }
+        snapshot.forEach((doc) => {
+            const customer = { id: doc.id, ...doc.data() };
+            allCustomers.push(customer); // Populate the array for other modules
+            displayCustomer(customer);
+        });
+        console.log("customers.js: Customers data updated via onSnapshot. Total:", snapshot.size);
+    }, (error) => {
+        console.error("customers.js: Error listening to customers:", error);
+        if (customerList) customerList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading customers: ${error.message}</p>`;
+    });
+
+    addUnsubscribe('customers', unsubscribe); // Use directly imported function
+}
+
+/**
+ * Fetches all customer data once. Used for populating dropdowns in other modules (e.g., opportunities).
+ * This function is redundant if `listenForCustomers` is always active and populates `allCustomers`.
+ * However, it's good to keep if a one-time fetch is needed without a listener.
+ * In this setup, `allCustomers` is already kept up-to-date by the listener.
+ * Re-directing to use the `allCustomers` array which is updated by the listener.
+ */
+export async function fetchCustomersForDropdown() {
+    console.log("customers.js: fetchCustomersForDropdown called. Returning current allCustomers array.");
+    return allCustomers; // Use allCustomers
+}
+
+
+/**
+ * Displays a single customer record as a row in the UI grid.
+ * @param {Object} customer - The customer object to display.
+ */
+function displayCustomer(customer) {
+    if (!customerList) return;
+
+    const customerRow = document.createElement('div');
+    customerRow.className = 'data-grid-row';
+    customerRow.dataset.id = customer.id;
+
+    let displayName;
+    if (customer.customerType === 'Individual') {
+        displayName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+    } else if (customer.customerType === 'Company') {
+        displayName = customer.companyName || '';
+    } else {
+        displayName = 'N/A';
+    }
+    if (!displayName) displayName = customer.customerId;
+
+    customerRow.innerHTML = `
+        <div class="px-2 py-1 truncate font-medium text-gray-800">${customer.customerId || 'N/A'}</div>
+        <div class="px-2 py-1 truncate">${displayName}</div>
+        <div class="px-2 py-1 truncate">${customer.email || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden md:block">${customer.phone || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden lg:block">${customer.address || ''}, ${customer.city || ''}, ${customer.country || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden lg:block">${customer.industry || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden sm:block">${formatDate(customer.customerSince) || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden md:block">${customer.source || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden md:block">${customer.active ? 'Yes' : 'No'}</div>
+        <div class="px-2 py-1 flex justify-end space-x-2">
+            <button class="edit-btn text-blue-600 hover:text-blue-800 font-semibold text-xs" data-id="${customer.id}" title="Edit">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+            <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${customer.id}" title="Delete">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+            </button>
+        </div>
+    `;
+    customerList.appendChild(customerRow);
+
+    customerRow.querySelector('.edit-btn').addEventListener('click', () => editCustomer(customer));
+    customerRow.querySelector('.delete-btn').addEventListener('click', () => deleteCustomer(customer.id));
+}
+
+/**
+ * Populates the customer form with data from an existing customer object for editing.
+ * @param {Object} customer - The customer object to load into the form.
+ */
+function editCustomer(customer) {
+    // Permission check: Only owner or isAdmin can edit
+    if (!isAdmin && customer.ownerId !== currentUserId) { // Used directly imported variables
+        showModal("Permission Denied", "You do not have permission to edit this customer.", () => {});
+        return;
+    }
+
+    if (customerFormTitle) customerFormTitle.textContent = `Edit Customer: ${customer.customerId}`;
+    if (submitCustomerButton) submitCustomerButton.textContent = 'Update Customer';
+
+    if (customerForm) customerForm.dataset.editingId = customer.id;
+
+    if (customerIdDisplayGroup) customerIdDisplayGroup.classList.remove('hidden');
+    if (customerIdDisplay) customerIdDisplay.textContent = customer.customerId || 'N/A';
+
+    if (customerTypeSelect) customerTypeSelect.value = customer.customerType || '';
+    applyCustomerTypeValidation();
+
+    if (customer.customerType === 'Individual') {
+        if (customerFirstNameInput) customerFirstNameInput.value = customer.firstName || '';
+        if (customerLastNameInput) customerLastNameInput.value = customer.lastName || '';
+        if (customerIndustryInput) customerIndustryInput.value = customer.industry || '';
+    } else if (customer.customerType === 'Company') {
+        if (customerCompanyNameInput) customerCompanyNameInput.value = customer.companyName || '';
+        if (customerIndustrySelect) customerIndustrySelect.value = customer.industry || '';
+    }
+
+    if (customerEmailInput) customerEmailInput.value = customer.email || '';
+    if (customerPhoneInput) customerPhoneInput.value = customer.phone || '';
+    if (customerAddressInput) customerAddressInput.value = customer.address || '';
+    if (customerCityInput) customerCityInput.value = customer.city || '';
+    if (customerZipCodeInput) customerZipCodeInput.value = customer.zipCode || '';
+    if (customerDescriptionInput) customerDescriptionInput.value = customer.description || '';
+    if (customerSinceInput) customerSinceInput.value = formatDate(customer.customerSince); // Format date for input type="date"
+
+    if (customerSourceSelect) customerSourceSelect.value = customer.source || ''; // NEW
+    if (customerActiveSelect) customerActiveSelect.value = customer.active ? 'Yes' : 'No'; // NEW
+
+    // For country and state
+    if (customerCountrySelect) {
+        customerCountrySelect.value = customer.country || '';
+        const event = new Event('change'); // Trigger change to populate states
+        customerCountrySelect.dispatchEvent(event);
+    }
+    // Set state after states are populated by the above change event
+    // Using a setTimeout to ensure states have time to populate (though usually not necessary with sync populateStates)
+    setTimeout(() => {
+        if (customerStateSelect) customerStateSelect.value = customer.state || '';
+    }, 0);
+
+
+    if (customerForm) customerForm.scrollIntoView({ behavior: 'smooth' });
+}
+
+/**
+ * Resets the customer form to its initial state (for adding a new customer).
+ */
+export function resetCustomerForm() {
+    if (customerForm) customerForm.reset();
+    if (customerForm) customerForm.dataset.editingId = '';
+
+    if (customerFormTitle) customerFormTitle.textContent = 'Add New Customer';
+    if (submitCustomerButton) submitCustomerButton.textContent = 'Add Customer';
+
+    if (customerIdDisplayGroup) customerIdDisplayGroup.classList.add('hidden');
+    if (customerIdDisplay) customerIdDisplay.textContent = '';
+
+    if (customerTypeSelect) customerTypeSelect.value = 'Individual'; // Default to Individual
+    applyCustomerTypeValidation(); // Apply validation based on default type
+
+    if (customerCountrySelect) customerCountrySelect.value = '';
+    if (customerStateSelect) customerStateSelect.innerHTML = '<option value="">Select State/Province</option>';
+    if (customerStateSelect) customerStateSelect.disabled = true;
+
+    if (addressValidationMessage) addressValidationMessage.classList.add('hidden');
+
+    // Enable submit button if auth is ready
+    if (isAuthReady && currentUserId && firestoreDb && isDbReady) { // Use firestoreDb
+        if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
+    } else {
+        if (submitCustomerButton) submitCustomerButton.setAttribute('disabled', 'disabled');
+    }
+}
