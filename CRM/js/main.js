@@ -459,8 +459,6 @@ export async function showSection(sectionId) {
     // Start specific listener for the active section, only if auth and DB are ready
     if (isAuthReady && db && isDbReady) {
         if (sectionId === 'customers-section') {
-            // Use Promise.resolve().then to push the execution to the next microtask queue,
-            // giving the 'db' object a tiny bit more time to fully stabilize after assignment.
             await Promise.resolve().then(async () => {
                 const customersModule = await import('./customers.js');
                 customersModule.setDbInstance(db); // Call the new setter
@@ -472,15 +470,19 @@ export async function showSection(sectionId) {
             }).catch(error => console.error("main.js: Failed to load opportunities module:", error));
         } else if (sectionId === 'admin-country-mapping-section') {
             if (isAdmin) {
-                import('./admin_data.js').then(module => {
-                    module.initAdminDataModule('country_mapping');
-                }).catch(error => console.error("main.js: Failed to load admin_data module for country mapping:", error));
+                await Promise.resolve().then(async () => {
+                    const adminDataModule = await import('./admin_data.js');
+                    adminDataModule.setDbInstance(db); // Set DB instance for admin_data
+                    adminDataModule.initAdminDataModule('country_mapping');
+                }).catch(error => console.error("main.js: Failed to load admin_data module for country mapping or set DB instance:", error));
             }
         } else if (sectionId === 'currency-management-section') {
             if (isAdmin) {
-                import('./admin_data.js').then(module => {
-                    module.initAdminDataModule('currency_management');
-                }).catch(error => console.error("main.js: Failed to load admin_data module for currency management:", error));
+                await Promise.resolve().then(async () => {
+                    const adminDataModule = await import('./admin_data.js');
+                    adminDataModule.setDbInstance(db); // Set DB instance for admin_data
+                    adminDataModule.initAdminDataModule('currency_management');
+                }).catch(error => console.error("main.js: Failed to load admin_data module for currency management or set DB instance:", error));
             }
         } else if (sectionId === 'users-management-section') {
             if (isAdmin) {
@@ -517,14 +519,16 @@ async function handleGoogleLogin() {
 
 // Function to fetch country and state data from Firestore for the CRM forms
 export async function fetchCountryData() {
+    console.log("main.js: fetchCountryData called. Current db:", db, "isDbReady:", isDbReady);
+    // Explicitly check db instance here as well
+    if (!db || !isDbReady || typeof db.collection !== 'function' || db.type !== 'firestore') {
+        console.error("main.js: CRITICAL ERROR in fetchCountryData - 'db' is NOT a valid Firestore instance. Current db value:", db);
+        appCountries = [];
+        appCountryStateMap = {};
+        return;
+    }
+
     try {
-        // Ensure db and isDbReady are accessible
-        if (!db || !isDbReady) {
-            console.warn("main.js: Firestore DB not ready. Skipping fetchCountryData.");
-            appCountries = [];
-            appCountryStateMap = {};
-            return;
-        }
         const docRef = doc(db, "app_metadata", "countries_states");
         const docSnap = await getDoc(docRef);
 
@@ -536,7 +540,7 @@ export async function fetchCountryData() {
         } else {
             console.warn("main.js: No 'countries_states' document found in 'app_metadata' collection.");
             appCountries = [];
-            appCountryStateMap = {};
+                            appCountryStateMap = {};
         }
     } catch (error) {
         console.error("main.js: Error fetching country data from Firestore:", error);
@@ -568,13 +572,15 @@ async function loadAdminCountryData() {
 
 // NEW: Function to fetch currency data from Firestore
 export async function fetchCurrencies() {
-    console.log("main.js: fetchCurrencies called. Current db:", db);
+    console.log("main.js: fetchCurrencies called. Current db:", db, "isDbReady:", isDbReady);
+    // Explicitly check db instance here as well
+    if (!db || !isDbReady || typeof db.collection !== 'function' || db.type !== 'firestore') {
+        console.error("main.js: CRITICAL ERROR in fetchCurrencies - 'db' is NOT a valid Firestore instance. Current db value:", db);
+        allCurrencies = [];
+        return;
+    }
+
     try {
-        if (!db || !isDbReady) { // Add defensive check here too
-            console.warn("main.js: Firestore DB not ready. Skipping fetchCurrencies.");
-            allCurrencies = [];
-            return;
-        }
         const currenciesCollectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
         const querySnapshot = await getDocs(query(currenciesCollectionRef));
         allCurrencies = [];
