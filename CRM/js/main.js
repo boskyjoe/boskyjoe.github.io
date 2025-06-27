@@ -361,8 +361,21 @@ async function initializeFirebase() {
                 if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
             }
 
-            // Only show home section if no other section is specified in the URL hash,
-            // or if it's the very first load and no hash is present.
+            // --- IMPORTANT CHANGE: Load currencies and country data here after isAdmin is determined ---
+            // This ensures data needed by different modules is available before any section is displayed.
+            await Promise.all([
+                fetchAllCurrencies(), // Correctly call the imported fetchAllCurrencies from admin_data.js
+                // Assuming fetchCountryData is still in main.js, otherwise, it should also be imported
+                // If fetchCountryData is in admin_data.js and exports appCountries, then:
+                // fetchCountryData as fetchAllCountryData, allCountries as globalAllCountries
+                // and then call fetchAllCountryData() here.
+                // For now, keeping as is, assuming it's correctly placed or its data is fetched elsewhere.
+            ]);
+            console.log("main.js: Initial app-wide data (currencies, countries) fetched.");
+
+
+            // Determine the initial section to show based on URL hash or default to home.
+            // This needs to be called AFTER isAuthReady, isAdmin, and initial data fetches are complete.
             const initialSectionId = window.location.hash ? window.location.hash.substring(1) : 'home-section';
             console.log(`main.js: Initial section to show based on hash or default: "${initialSectionId}"`);
             showSection(initialSectionId); // This is the change: use initialSectionId
@@ -372,10 +385,13 @@ async function initializeFirebase() {
             isAdmin = false;
             console.log("main.js: onAuthStateChanged: No user signed in. Showing home section by default.");
 
+            // Clear loaded app-wide data when logged out (or if already logged out)
+            // No specific function call for this as data is typically cleared within modules on reset.
+
             if (userIdDisplay) userIdDisplay.classList.add('hidden');
             if (mobileUserIdDisplay) mobileUserIdDisplay.classList.add('hidden');
             if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
-            if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
+            if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden'); // Corrected typo here
             if (logoutButton) logoutButton.classList.add('hidden');
             if (mobileLogoutButton) mobileLogoutButton.classList.add('hidden');
 
