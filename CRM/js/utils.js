@@ -1,4 +1,5 @@
-import { appId, auth, currentUserId, isAuthReady, showSection } from './main.js'; // Import global state and Firebase instances from main.js, and showSection
+// Import specific global states and Firebase instances from main.js
+import { appId, auth, currentUserId, isAuthReady, isDbReady, showSection } from './main.js'; // Added isDbReady
 import { collection, doc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Import necessary Firestore functions
 
 /**
@@ -142,10 +143,10 @@ export function getCollectionPath(dataArea, type = 'private') {
     } else if (type === 'public') {
         path = `artifacts/${appId}/public/data/${dataArea}`;
     } else { // 'private'
-        // isAuthReady and currentUserId are imported from main.js
-        if (!isAuthReady || !currentUserId) { 
-            console.warn(`utils.js: Attempted to access private data area '${dataArea}' before authentication is ready or without a logged-in user.`);
-            return null; // Critical: Do not return a path if auth is missing for private data
+        // isAuthReady, currentUserId, and isDbReady are imported from main.js
+        if (!isAuthReady || !currentUserId || !isDbReady) { // Added isDbReady check
+            console.warn(`utils.js: Attempted to access private data area '${dataArea}' before authentication/DB is ready or without a logged-in user.`);
+            return null; // Critical: Do not return a path if auth/DB is missing for private data
         }
         path = `artifacts/${appId}/users/${currentUserId}/${dataArea}`;
     }
