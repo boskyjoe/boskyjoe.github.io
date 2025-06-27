@@ -126,26 +126,31 @@ export function debounce(func, delay) {
  * @returns {string|null} The full Firestore collection path, or null if authentication is required for private data but not available.
  */
 export function getCollectionPath(dataArea, type = 'private') {
+    // Debugging: Log appId visible within utils.js
+    console.log("utils.js: DEBUG - appId visible in getCollectionPath:", appId);
+
     if (!appId) {
         console.error("utils.js: appId is not defined. Cannot construct collection path.");
         showMessage('error', 'Application ID missing. CRM features may not function correctly.', 'modalContainer');
         return null;
     }
 
+    let path = null;
     // Handle new top-level collections explicitly
     if (dataArea === 'opportunities_data' || dataArea === 'users_data') {
-        return dataArea; // Return just the collection name for top-level collections
-    }
-
-    if (type === 'public') {
-        return `artifacts/${appId}/public/data/${dataArea}`;
+        path = dataArea; // Return just the collection name for top-level collections
+    } else if (type === 'public') {
+        path = `artifacts/${appId}/public/data/${dataArea}`;
     } else { // 'private'
-        if (!isAuthReady || !currentUserId) {
+        if (!isAuthReady || !currentUserId) { // isAuthReady and currentUserId are imported from main.js
             console.warn(`utils.js: Attempted to access private data area '${dataArea}' before authentication is ready or without a logged-in user.`);
             return null; // Critical: Do not return a path if auth is missing for private data
         }
-        return `artifacts/${appId}/users/${currentUserId}/${dataArea}`;
+        path = `artifacts/${appId}/users/${currentUserId}/${dataArea}`;
     }
+
+    console.log(`utils.js: DEBUG - getCollectionPath returning: ${path} for dataArea: ${dataArea}, type: ${type}`);
+    return path;
 }
 
 // Ensure the APP_SETTINGS_DOC_ID is consistent. It's better to manage it centrally in main.js.
