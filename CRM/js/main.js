@@ -5,10 +5,10 @@ import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection
 
 // YOUR Firebase Configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo", // Your actual API key
+    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
-    storageBucket: "shuttersync-96971.firebasestorage.app", // Updated storage bucket
+    storageBucket: "shuttersync-96971.firebasestorage.app",
     messagingSenderId: "10782416018",
     appId: "1:10782416018:web:361db5572882a62f291a4b",
     measurementId: "G-T0W9CES4D3"
@@ -91,6 +91,8 @@ let customerSinceInput;
 let customerDescriptionInput;
 let submitCustomerButton;
 let customerList; // Reference to the div for customer rows
+let customerSourceSelect; // NEW: Customer Source
+let customerActiveSelect; // NEW: Customer Active
 
 // Opportunity Section Elements (NEW - and now restructured)
 let opportunitiesSection;
@@ -372,6 +374,28 @@ function setOpportunityLayout(layoutType) {
 }
 
 
+// Helper to toggle disabled state for all relevant buttons
+function toggleButtonsDisabled(disabled) {
+    const buttons = [
+        submitCustomerButton, submitOpportunityButton, submitOpportunityContactButton,
+        submitOpportunityLineButton, submitQuoteButton, uploadAdminDataButton,
+        submitUserButton, submitCurrencyButton
+    ];
+    buttons.forEach(btn => {
+        if (btn) {
+            if (disabled) {
+                btn.setAttribute('disabled', 'disabled');
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                btn.removeAttribute('disabled');
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+    });
+    console.log(`main.js: All relevant buttons ${disabled ? 'disabled' : 'enabled'}.`);
+}
+
+
 // Function to show a specific section and hide others
 export async function showSection(sectionId) {
     // Check for admin section access only if the section is admin-specific
@@ -388,20 +412,6 @@ export async function showSection(sectionId) {
             });
             return;
         }
-    }
-
-    // IMPORTANT: Ensure DB is ready before trying to load module-specific data/listeners
-    if (!db || !isDbReady) {
-        console.warn(`main.js: Attempted to show section ${sectionId} but Firestore DB is not ready. Waiting for DB initialization.`);
-        // Temporarily disable buttons until DB is ready
-        [submitCustomerButton, submitOpportunityButton, submitOpportunityContactButton, submitOpportunityLineButton,
-         submitQuoteButton, uploadAdminDataButton, submitUserButton, submitCurrencyButton]
-            .filter(btn => btn !== null) // Filter out null buttons if elements not found
-            .forEach(btn => btn.setAttribute('disabled', 'disabled'));
-
-        // Provide a clearer message to the user
-        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Initializing application. Please wait...</p>';
-        return; // Exit if DB not ready
     }
 
     // Hide all sections first
@@ -432,59 +442,62 @@ export async function showSection(sectionId) {
         if (linkedObjectsAccordion) linkedObjectsAccordion.classList.add('hidden');
     }
 
-    // Start specific listener for the active section, but only if auth and DB are ready
-    if (isAuthReady && db && isDbReady) { // Ensure auth and DB are ready
+    // IMPORTANT: Wait for DB to be ready before calling module-specific init functions
+    if (!db || !isDbReady) {
+        console.warn(`main.js: Attempted to show section ${sectionId} but Firestore DB is not ready. Waiting for DB initialization.`);
+        toggleButtonsDisabled(true); // Disable all buttons
+        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Initializing application. Please wait...</p>';
+        
+        // Polling or a more sophisticated ready-event system could be used here.
+        // For simplicity, we will re-attempt after a short delay if not ready.
+        // The onAuthStateChanged listener handles re-calling showSection('home-section')
+        // once auth and db are ready. For other sections, user must click again.
+        // Or, we can just return and let user retry.
+        return;
+    } else {
+        toggleButtonsDisabled(false); // Enable buttons once DB is ready
+    }
+
+    // Start specific listener for the active section, only if auth and DB are ready
+    // (This check is redundant if we're already past the initial `if (!db || !isDbReady)` block,
+    // but good for explicit clarity of intent.)
+    if (isAuthReady && db && isDbReady) {
         if (sectionId === 'customers-section') {
             import('./customers.js').then(module => {
-                module.initCustomersModule(); // No longer passing db, it's imported directly in customers.js
+                module.initCustomersModule(); // `db` is directly imported by customers.js now
             }).catch(error => console.error("main.js: Failed to load customers module:", error));
-            if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
         } else if (sectionId === 'opportunities-section') {
             import('./opportunities.js').then(module => {
                 module.initOpportunitiesModule();
             }).catch(error => console.error("main.js: Failed to load opportunities module:", error));
-            if (submitOpportunityButton) submitOpportunityButton.removeAttribute('disabled');
         } else if (sectionId === 'admin-country-mapping-section') {
             if (isAdmin) {
                 import('./admin_data.js').then(module => {
                     module.initAdminDataModule('country_mapping');
                 }).catch(error => console.error("main.js: Failed to load admin_data module for country mapping:", error));
-                if (uploadAdminDataButton) uploadAdminDataButton.removeAttribute('disabled');
-            } else {
-                if (uploadAdminDataButton) uploadAdminDataButton.setAttribute('disabled', 'disabled');
             }
         } else if (sectionId === 'currency-management-section') {
             if (isAdmin) {
                 import('./admin_data.js').then(module => {
                     module.initAdminDataModule('currency_management');
                 }).catch(error => console.error("main.js: Failed to load admin_data module for currency management:", error));
-                if (submitCurrencyButton) submitCurrencyButton.removeAttribute('disabled');
-            } else {
-                if (submitCurrencyButton) submitCurrencyButton.setAttribute('disabled', 'disabled');
             }
         } else if (sectionId === 'users-management-section') {
             if (isAdmin) {
                 import('./users.js').then(module => {
                     module.initUsersModule();
                 }).catch(error => console.error("main.js: Failed to load users module:", error));
-                if (submitUserButton) submitUserButton.removeAttribute('disabled');
-            } else {
-                if (submitUserButton) submitUserButton.setAttribute('disabled', 'disabled');
             }
         } else if (sectionId === 'price-book-management-section') {
             if (isAdmin) {
                 import('./price_book.js').then(module => {
                     module.initPriceBookModule();
                 }).catch(error => console.error("main.js: Failed to load price book module:", error));
-            } else {
-                if (document.getElementById('submitPriceBookButton')) {
-                     document.getElementById('submitPriceBookButton').setAttribute('disabled', 'disabled');
-                }
             }
         }
     } else {
-        console.warn("main.js: Auth state or DB not fully ready for section initialization:", sectionId);
-        // Buttons should already be disabled by the initial `if (!db || !isDbReady)` block.
+        console.warn("main.js: Auth state or DB not fully ready for section initialization, even after initial check. This should not happen consistently.");
+        toggleButtonsDisabled(true); // Re-disable if somehow state changed negatively
     }
 }
 
@@ -505,10 +518,7 @@ async function handleGoogleLogin() {
 // Function to fetch country and state data from Firestore for the CRM forms
 export async function fetchCountryData() {
     try {
-        // Ensure db and isDbReady are accessible via 'this' if this function is called as a method,
-        // or via the 'main' namespace if called after 'import * as main'.
-        // Given this is an exported function, it assumes 'db' and 'isDbReady' are globally accessible
-        // or part of the imported 'main' namespace in other modules.
+        // Ensure db and isDbReady are accessible
         if (!db || !isDbReady) {
             console.warn("main.js: Firestore DB not ready. Skipping fetchCountryData.");
             appCountries = [];
@@ -917,14 +927,7 @@ async function initializeFirebase() {
             if (googleLoginButtonHome) googleLoginButtonHome.classList.remove('hidden');
             if (homeSignInMessage) homeSignInMessage.classList.remove('hidden');
 
-            if (submitCustomerButton) submitCustomerButton.setAttribute('disabled', 'disabled');
-            if (submitOpportunityButton) submitOpportunityButton.setAttribute('disabled', 'disabled');
-            if (submitOpportunityContactButton) submitOpportunityContactButton.setAttribute('disabled', 'disabled');
-            if (submitOpportunityLineButton) submitOpportunityLineButton.setAttribute('disabled', 'disabled');
-            if (submitQuoteButton) submitQuoteButton.setAttribute('disabled', 'disabled');
-            if (uploadAdminDataButton) uploadAdminDataButton.setAttribute('disabled', 'disabled');
-            if (submitUserButton) submitUserButton.setAttribute('disabled', 'disabled');
-            if (submitCurrencyButton) submitCurrencyButton.setAttribute('disabled', 'disabled');
+            toggleButtonsDisabled(true); // Ensure buttons are disabled if not signed in
 
             showSection('home-section');
         }
