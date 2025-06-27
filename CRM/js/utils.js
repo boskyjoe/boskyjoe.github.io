@@ -1,13 +1,18 @@
-import { appId, auth, currentUserId, isAuthReady } from './main.js'; // Import global state and Firebase instances from main.js
+import { appId, auth, currentUserId, isAuthReady, showSection } from './main.js'; // Import global state and Firebase instances from main.js, and showSection
 import { collection, doc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Import necessary Firestore functions
 
-// Function to show a custom confirmation modal
+/**
+ * Displays a custom modal for confirmations or important messages.
+ * @param {string} title - The title of the modal.
+ * @param {string} message - The message content of the modal.
+ * @param {function} onConfirm - Callback function to execute when 'Confirm' is clicked.
+ * @param {function} [onCancel] - Optional callback function to execute when 'Cancel' is clicked.
+ */
 export function showModal(title, message, onConfirm, onCancel) {
     const modalContainer = document.getElementById('modalContainer');
     if (!modalContainer) {
-        console.error("Modal container not found!");
-        // Fallback to alert if modal container doesn't exist, though it should always be present in the HTML.
-        alert(`${title}\n${message}`); 
+        console.error("utils.js: Modal container not found!");
+        // As per instructions, avoid alert(). Log error and return.
         return;
     }
     modalContainer.innerHTML = `
@@ -35,33 +40,117 @@ export function showModal(title, message, onConfirm, onCancel) {
     };
 }
 
-// Determine the Firestore collection path based on type and data area
-// Exported so other modules can use it
-export function getCollectionPath(type, dataArea) {
-    // Note: The `auth` object might not be fully ready immediately on module load.
-    // Ensure `currentUserId` is properly populated via `onAuthStateChanged` in main.js
-    // before attempting Firestore operations that depend on `userId`.
-    // The main.js `showSection` function already has checks for `isAuthReady` and `currentUserId`.
-    if (!isAuthReady || !auth || !auth.currentUser) {
-        console.warn("Authentication not ready or no user logged in. Cannot determine collection path securely for private data.");
-        if (type === 'public') {
-            // For public data, we can still provide the path even if user is not logged in.
-            // This assumes public data does not require a `userId` in its path.
-            return `artifacts/${appId}/public/data/${dataArea}`;
-        }
-        showModal("Authentication Required", "You must be logged in to access or modify this data.", () => {});
-        return null; // Return null to indicate path is not available for private data without auth
-    }
-
-    const userId = auth.currentUser.uid;
-    if (type === 'public') {
-        return `artifacts/${appId}/public/data/${dataArea}`;
-    } else { // 'private'
-        return `artifacts/${appId}/users/${userId}/${dataArea}`;
+/**
+ * Displays a message in a designated message container within a section.
+ * @param {string} type - Type of message ('success', 'error', 'info').
+ * @param {string} message - The message text.
+ * @param {string} containerId - The ID of the HTML element where the message should be displayed.
+ * This element should have classes for message styling (e.g., 'message', 'success', 'error', 'info').
+ */
+export function showMessage(type, message, containerId) {
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.textContent = message;
+        container.className = `message ${type} mt-4 mb-4`; // Reset classes and apply new ones
+        container.classList.remove('hidden'); // Ensure it's visible
+    } else {
+        console.warn(`utils.js: Message container with ID '${containerId}' not found.`);
     }
 }
 
-// Placeholder for APP_SETTINGS_DOC_ID as it's a global constant
-// It's better to manage these central constants in main.js or a dedicated config.js
+/**
+ * Generates a simple unique ID (for client-side use before Firestore ID is available).
+ * @returns {string} A unique ID string.
+ */
+export function generateUniqueId() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+/**
+ * Formats a Firebase Timestamp object or a Date object into a 'YYYY-MM-DD' string.
+ * @param {firebase.firestore.Timestamp|Date} timestamp - The timestamp or Date object to format.
+ * @returns {string} The formatted date string (YYYY-MM-DD).
+ */
+export function formatDate(timestamp) {
+    let date;
+    if (timestamp && typeof timestamp.toDate === 'function') {
+        // It's a Firebase Timestamp
+        date = timestamp.toDate();
+    } else if (timestamp instanceof Date) {
+        // It's a JavaScript Date object
+        date = timestamp;
+    } else if (typeof timestamp === 'string' && !isNaN(new Date(timestamp))) {
+        // It's a date string that can be parsed
+        date = new Date(timestamp);
+    }
+    else {
+        return ''; // Return empty if invalid input
+    }
+
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+/**
+ * Implements a debounce function to limit how often a function can be called.
+ * Useful for events that fire rapidly (e.g., input, resize).
+ * @param {function} func - The function to debounce.
+ * @param {number} delay - The delay in milliseconds.
+ * @returns {function} The debounced function.
+ */
+export function debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), delay);
+    };
+}
+
+
+/**
+ * Determines the Firestore collection path based on authentication status and data area.
+ * This is crucial for adhering to Firebase Security Rules.
+ *
+ * For 'public' data: artifacts/{appId}/public/data/{dataArea}
+ * For 'private' data: artifacts/{appId}/users/{userId}/{dataArea}
+ * For top-level shared collections (like 'opportunities_data', 'users_data'): just the collection name
+ *
+ * @param {string} dataArea - The specific data collection name (e.g., 'customers', 'opportunities_data', 'users_data').
+ * @param {string} [type='private'] - The type of data: 'public', 'private', or 'top_level_shared'. Defaults to 'private'.
+ * @returns {string|null} The full Firestore collection path, or null if authentication is required for private data but not available.
+ */
+export function getCollectionPath(dataArea, type = 'private') {
+    if (!appId) {
+        console.error("utils.js: appId is not defined. Cannot construct collection path.");
+        showMessage('error', 'Application ID missing. CRM features may not function correctly.', 'modalContainer');
+        return null;
+    }
+
+    // Handle new top-level collections explicitly
+    if (dataArea === 'opportunities_data' || dataArea === 'users_data') {
+        return dataArea; // Return just the collection name for top-level collections
+    }
+
+    if (type === 'public') {
+        return `artifacts/${appId}/public/data/${dataArea}`;
+    } else { // 'private'
+        if (!isAuthReady || !currentUserId) {
+            console.warn(`utils.js: Attempted to access private data area '${dataArea}' before authentication is ready or without a logged-in user.`);
+            return null; // Critical: Do not return a path if auth is missing for private data
+        }
+        return `artifacts/${appId}/users/${currentUserId}/${dataArea}`;
+    }
+}
+
+// Ensure the APP_SETTINGS_DOC_ID is consistent. It's better to manage it centrally in main.js.
 // For now, mirroring it here as it was directly used in the original script.
+// If it's used in main.js, it should be imported from main.js if needed.
+// If it's used only here, then it can be defined here. Given its usage, it's global and should be in main.js.
+// For now, keeping this local export to satisfy the current module's needs.
 export const APP_SETTINGS_DOC_ID = "app_settings";
