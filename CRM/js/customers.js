@@ -112,7 +112,9 @@ export async function initCustomersModule() {
 
 // Determine the Firestore collection path for customers
 function getCustomersCollectionPath() {
-    return getCollectionPath('private', 'customers');
+    const path = getCollectionPath('private', 'customers');
+    console.log("customers.js: getCustomersCollectionPath returning:", path); // NEW LOG
+    return path;
 }
 
 /* --- CUSTOMER FORM LOGIC --- */
@@ -231,7 +233,7 @@ async function saveCustomer() {
         industry: isIndividual ? customerIndustryInput.value.trim() : customerIndustrySelect.value.trim(),
         customerSource: customerSourceSelect.value, // NEW: Get Customer Source
         isActive: customerActiveSelect.value === 'Yes', // NEW: Get Active status as boolean
-        customerSince: customerSinceInput.value, // YYYY-MM-DD
+        customerSince: customerSinceInput.value, // ISO-MM-DD
         description: customerDescriptionInput.value.trim(),
         ownerId: currentUserId,
         createdAt: new Date(),
@@ -342,7 +344,8 @@ export async function fetchCustomersForDropdown() {
         return [];
     }
     try {
-        const collectionPath = getCustomersCollectionPath();
+        const collectionPath = getCustomersCollectionPath(); // Get the path again here
+        console.log("customers.js: fetchCustomersForDropdown is querying path:", collectionPath); // NEW LOG
         const querySnapshot = await getDocs(collection(db, collectionPath));
         const customers = [];
         querySnapshot.forEach((doc) => {
