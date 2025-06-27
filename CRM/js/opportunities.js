@@ -1,7 +1,6 @@
-import { db, auth, currentUserId, isAdmin, isAuthReady, addUnsubscribe, removeUnsubscribe } from './main.js';
+import { db, auth, currentUserId, isAdmin, isAuthReady, addUnsubscribe, removeUnsubscribe, allCurrencies, fetchCurrencies, getCurrencySymbol } from './main.js'; // UPDATED: Import allCurrencies, fetchCurrencies, getCurrencySymbol from main.js
 import { showModal, getCollectionPath } from './utils.js';
-import { fetchCurrencies, allCurrencies } from './currency_management.js'; // Assuming you have these
-import { fetchCustomersForDropdown, allCustomers } from './customers.js'; // NEW: Import customer data
+import { fetchCustomersForDropdown, allCustomers } from './customers.js'; // Keep importing from customers.js for customer list logic
 
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -195,7 +194,13 @@ export async function initOpportunitiesModule() {
         if (submitOpportunityButton) submitOpportunityButton.removeAttribute('disabled');
         // Populate dropdowns and start listeners
         await populateCustomersForOpportunityDropdown(); // NEW: Populate customer dropdown
-        await fetchCurrencies(); // Ensure currencies are loaded
+        
+        // --- ADDED DEBUG LOGS FOR CURRENCY FETCHING/POPULATION ---
+        console.log("opportunities.js: Before fetching currencies. allCurrencies (initial):", allCurrencies);
+        await fetchCurrencies(); // Ensure currencies are loaded (from main.js)
+        console.log("opportunities.js: After fetching currencies. allCurrencies (after fetch):", allCurrencies);
+        console.log("opportunities.js: getCurrencySymbol reference:", getCurrencySymbol); // Debug getCurrencySymbol reference
+        
         populateCurrenciesForOpportunityAndQuoteForms(); // Populate currency dropdowns
         listenForOpportunities();
         resetOpportunityForm();
@@ -226,7 +231,7 @@ function getOpportunitiesCollectionPath() {
 // Determines the Firestore sub-collection path for related objects
 function getOpportunitySubCollectionPath(subCollectionName) {
     if (!currentOpportunityId) {
-        console.error(`Cannot get subcollection path for ${subCollectionName}: no currentOpportunityId set.`);
+        console.error(`opportunities.js: Cannot get subcollection path for ${subCollectionName}: no currentOpportunityId set.`);
         return null;
     }
     // Subcollections are private to the opportunity owner
@@ -277,16 +282,20 @@ function populateCurrenciesForOpportunityAndQuoteForms() {
     opportunityCurrencySelect.innerHTML = '<option value="">Select Currency</option>';
     quoteCurrencySelect.innerHTML = '<option value="">Select Currency</option>';
 
+    // --- ADDED DEBUG LOGS ---
+    console.log("opportunities.js: populateCurrenciesForOpportunityAndQuoteForms called. allCurrencies:", allCurrencies);
+
+
     if (allCurrencies && allCurrencies.length > 0) {
         allCurrencies.forEach(currency => {
             const optionOpty = document.createElement('option');
-            optionOpty.value = currency.code;
-            optionOpty.textContent = `${currency.code} - ${currency.name} (${currency.symbol})`;
+            optionOpty.value = currency.id; // Use currency.id (which is the code)
+            optionOpty.textContent = `${currency.id} - ${currency.currencyName} (${currency.symbol})`; // Use currency.currencyName
             opportunityCurrencySelect.appendChild(optionOpty);
 
             const optionQuote = document.createElement('option');
-            optionQuote.value = currency.code;
-            optionQuote.textContent = `${currency.code} - ${currency.name} (${currency.symbol})`;
+            optionQuote.value = currency.id; // Use currency.id (which is the code)
+            optionQuote.textContent = `${currency.id} - ${currency.currencyName} (${currency.symbol})`; // Use currency.currencyName
             quoteCurrencySelect.appendChild(optionQuote);
         });
         // Set default currency if USD exists
@@ -296,7 +305,7 @@ function populateCurrenciesForOpportunityAndQuoteForms() {
             updateCurrencySymbol(); // Update symbol for default USD
         }
     } else {
-        console.warn("No currencies available to populate dropdowns.");
+        console.warn("opportunities.js: No currencies available to populate dropdowns.");
         const optionOpty = document.createElement('option');
         optionOpty.value = '';
         optionOpty.textContent = 'No currencies available';
@@ -315,11 +324,15 @@ function populateCurrenciesForOpportunityAndQuoteForms() {
 function updateCurrencySymbol() {
     if (!currencySymbolDisplay || !opportunityCurrencySelect) return;
     const selectedCurrencyCode = opportunityCurrencySelect.value;
-    const selectedCurrency = allCurrencies.find(c => c.code === selectedCurrencyCode);
-    if (selectedCurrency) {
-        currencySymbolDisplay.textContent = selectedCurrency.symbol;
-    } else {
-        currencySymbolDisplay.textContent = '$'; // Default to dollar sign
+
+    // --- ADDED DEBUG LOG ---
+    console.log("opportunities.js: updateCurrencySymbol called. selectedCurrencyCode:", selectedCurrencyCode);
+    console.log("opportunities.js: getCurrencySymbol in updateCurrencySymbol is:", getCurrencySymbol);
+
+    const symbolToAssign = getCurrencySymbol(selectedCurrencyCode); // Use the imported helper
+    
+    if (currencySymbolDisplay) { // Defensive check
+        currencySymbolDisplay.textContent = symbolToAssign;
     }
 }
 
@@ -372,7 +385,7 @@ async function saveOpportunity() {
             additionalData = {}; // Default to empty object if empty
         }
     } catch (e) {
-        console.warn("Additional Opportunity Data is not valid JSON, saving as plain text.");
+        console.warn("opportunities.js: Additional Opportunity Data is not valid JSON, saving as plain text.");
         // Keep additionalData as string if invalid JSON
     }
 
@@ -404,18 +417,18 @@ async function saveOpportunity() {
             const opportunityDocRef = doc(db, collectionPath, editingId);
             await setDoc(opportunityDocRef, opportunityData, { merge: true });
             showModal("Success", "Opportunity updated successfully!", () => {});
-            console.log("Opportunity updated:", editingId);
+            console.log("opportunities.js: Opportunity updated:", editingId);
         } else {
             // Add new opportunity
             const newDocRef = doc(collection(db, collectionPath)); // Let Firestore generate ID
             const systemGeneratedId = `OPP-${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
             await setDoc(newDocRef, { ...opportunityData, opportunityId: systemGeneratedId });
             showModal("Success", "New Opportunity added successfully!", () => {});
-            console.log("New Opportunity added with system-generated ID:", systemGeneratedId);
+            console.log("opportunities.js: New Opportunity added with system-generated ID:", systemGeneratedId);
         }
         resetOpportunityForm();
     } catch (error) {
-        console.error("Error saving opportunity:", error);
+        console.error("opportunities.js: Error saving opportunity:", error);
         showModal("Error", `Failed to save opportunity: ${error.message}`, () => {});
     }
 }
@@ -454,13 +467,13 @@ async function deleteOpportunity(firestoreDocId) {
                         deletePromises.push(deleteDoc(doc(subColRef, subDoc.id)));
                     });
                     await Promise.all(deletePromises);
-                    console.log(`Deleted all documents in ${subColName} subcollection for opportunity ${firestoreDocId}.`);
+                    console.log(`opportunities.js: Deleted all documents in ${subColName} subcollection for opportunity ${firestoreDocId}.`);
                 }
 
                 showModal("Success", "Opportunity and all related data deleted successfully!", () => {});
-                console.log("Opportunity deleted Firestore Doc ID:", firestoreDocId);
+                console.log("opportunities.js: Opportunity deleted Firestore Doc ID:", firestoreDocId);
             } catch (error) {
-                console.error("Error deleting opportunity:", error);
+                console.error("opportunities.js: Error deleting opportunity:", error);
                 showModal("Error", `Failed to delete opportunity: ${error.message}`, () => {});
             }
         }
@@ -496,9 +509,9 @@ export function listenForOpportunities() {
             const opportunity = { id: doc.id, ...doc.data() };
             displayOpportunity(opportunity);
         });
-        console.log("Opportunities data updated via onSnapshot. Total:", snapshot.size);
+        console.log("opportunities.js: Opportunities data updated via onSnapshot. Total:", snapshot.size);
     }, (error) => {
-        console.error("Error listening to opportunities:", error);
+        console.error("opportunities.js: Error listening to opportunities:", error);
         if (opportunityList) opportunityList.innerHTML = `<p class="text-red-500 text-center py-4 col-span-full">Error loading opportunities: ${error.message}</p>`;
     });
 
@@ -614,7 +627,9 @@ export function resetOpportunityForm() {
 
     // Reset currency to default (USD if available)
     if (opportunityCurrencySelect) {
-        opportunityCurrencySelect.value = allCurrencies.find(c => c.code === 'USD') ? 'USD' : '';
+        // --- ADDED DEBUG LOG ---
+        console.log("opportunities.js: resetOpportunityForm. allCurrencies:", allCurrencies);
+        opportunityCurrencySelect.value = allCurrencies.find(c => c.id === 'USD') ? 'USD' : ''; // Use c.id for currency code
         updateCurrencySymbol();
     }
 
@@ -695,7 +710,7 @@ async function handleContactFormSubmit(e) {
         }
         resetOpportunityContactForm();
     } catch (error) {
-        console.error("Error saving contact:", error);
+        console.error("opportunities.js: Error saving contact:", error);
         showModal("Error", `Failed to save contact: ${error.message}`, () => {});
     }
 }
@@ -710,7 +725,7 @@ async function deleteOpportunityContact(contactDocId) {
             await deleteDoc(doc(db, collectionPath, contactDocId));
             showModal("Success", "Contact deleted successfully!", () => {});
         } catch (error) {
-            console.error("Error deleting contact:", error);
+            console.error("opportunities.js: Error deleting contact:", error);
             showModal("Error", `Failed to delete contact: ${error.message}`, () => {});
         }
     });
@@ -735,7 +750,7 @@ function listenForOpportunityContacts() {
         }
         snapshot.forEach(doc => displayOpportunityContact({ id: doc.id, ...doc.data() }));
     }, (error) => {
-        console.error("Error listening to contacts:", error);
+        console.error("opportunities.js: Error listening to contacts:", error);
         if (opportunityContactList) opportunityContactList.innerHTML = `<p class="text-red-500 text-center py-4 col-span-full">Error loading contacts: ${error.message}</p>`;
     });
     addUnsubscribe('opportunityContacts', unsubscribeContacts);
@@ -837,7 +852,7 @@ async function handleLineFormSubmit(e) {
         }
         resetOpportunityLineForm();
     } catch (error) {
-        console.error("Error saving line item:", error);
+        console.error("opportunities.js: Error saving line item:", error);
         showModal("Error", `Failed to save line item: ${error.message}`, () => {});
     }
 }
@@ -852,7 +867,7 @@ async function deleteOpportunityLine(lineDocId) {
             await deleteDoc(doc(db, collectionPath, lineDocId));
             showModal("Success", "Line item deleted successfully!", () => {});
         } catch (error) {
-            console.error("Error deleting line item:", error);
+            console.error("opportunities.js: Error deleting line item:", error);
             showModal("Error", `Failed to delete line item: ${error.message}`, () => {});
         }
     });
@@ -877,7 +892,7 @@ function listenForOpportunityLines() {
         }
         snapshot.forEach(doc => displayOpportunityLine({ id: doc.id, ...doc.data() }));
     }, (error) => {
-        console.error("Error listening to lines:", error);
+        console.error("opportunities.js: Error listening to lines:", error);
         if (opportunityLineList) opportunityLineList.innerHTML = `<p class="text-red-500 text-center py-4 col-span-full">Error loading lines: ${error.message}</p>`;
     });
     addUnsubscribe('opportunityLines', unsubscribeLines);
@@ -984,7 +999,7 @@ async function handleQuoteFormSubmit(e) {
         }
         resetQuoteForm();
     } catch (error) {
-        console.error("Error saving quote:", error);
+        console.error("opportunities.js: Error saving quote:", error);
         showModal("Error", `Failed to save quote: ${error.message}`, () => {});
     }
 }
@@ -999,7 +1014,7 @@ async function deleteQuote(quoteDocId) {
             await deleteDoc(doc(db, collectionPath, quoteDocId));
             showModal("Success", "Quote deleted successfully!", () => {});
         } catch (error) {
-            console.error("Error deleting quote:", error);
+            console.error("opportunities.js: Error deleting quote:", error);
             showModal("Error", `Failed to delete quote: ${error.message}`, () => {});
         }
     });
@@ -1024,7 +1039,7 @@ function listenForQuotes() {
         }
         snapshot.forEach(doc => displayQuote({ id: doc.id, ...doc.data() }));
     }, (error) => {
-        console.error("Error listening to quotes:", error);
+        console.error("opportunities.js: Error listening to quotes:", error);
         if (quoteList) quoteList.innerHTML = `<p class="text-red-500 text-center py-4 col-span-full">Error loading quotes: ${error.message}</p>`;
     });
     addUnsubscribe('opportunityQuotes', unsubscribeQuotes);
@@ -1036,9 +1051,13 @@ function displayQuote(quote) {
     quoteRow.className = 'data-grid-row';
     quoteRow.dataset.id = quote.id;
 
-    // Find the currency symbol
-    const currency = allCurrencies.find(c => c.code === quote.currency);
-    const currencySymbol = currency ? currency.symbol : '';
+    // Find the currency symbol using the imported helper
+    // --- ADDED DEBUG LOGS ---
+    console.log("opportunities.js: displayQuote called. quote.currency:", quote.currency);
+    console.log("opportunities.js: getCurrencySymbol in displayQuote is:", getCurrencySymbol);
+
+    // This is the line that was reported to have the error (or similar assignment)
+    const currencySymbol = getCurrencySymbol(quote.currency);
 
     quoteRow.innerHTML = `
         <div class="px-2 py-1 truncate">${quote.id}</div>
@@ -1095,7 +1114,7 @@ function resetQuoteForm() {
     if (quoteIdDisplayGroup) quoteIdDisplayGroup.classList.add('hidden');
     if (quoteIdDisplay) quoteIdDisplay.textContent = '';
     if (quoteNetAmountInput) quoteNetAmountInput.value = '0.00';
-    if (submitQuoteButton) submitQuoteButton.textContent = 'Add Quote';
+    if (submitQuoteButton) submitQuoteButton.textContent = 'Add Quote'; // Corrected assignment
     if (quoteIsFinalCheckbox) quoteIsFinalCheckbox.checked = false;
 
     // Reset customer dropdown for quote to match the current opportunity's customer
