@@ -23,8 +23,8 @@ console.log("main.js: Using directly provided Firebase config:", firebaseConfig)
 export const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId; // Export appId
 
 export let app; // Export app instance
-export let db; // Export db instance (will be assigned later in initializeFirebase)
-export let auth; // Export auth instance (will be assigned later)
+export let db; // Export db instance
+export let auth; // Export auth instance
 export let currentUserId = null; // Will be set by Firebase Auth onAuthStateChanged
 export let isAuthReady = false; // Set to false initially, true when Firebase Auth confirms a user
 export let isDbReady = false; // NEW: Flag to indicate if Firestore DB instance is ready
@@ -437,8 +437,7 @@ export async function showSection(sectionId) {
     if (isAuthReady && db && isDbReady) { // Ensure auth and DB are ready
         if (sectionId === 'customers-section') {
             import('./customers.js').then(module => {
-                // Pass the db instance explicitly here
-                module.initCustomersModule();
+                module.initCustomersModule(db); // Pass the db instance explicitly
             }).catch(error => console.error("main.js: Failed to load customers module:", error));
             if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
         } else if (sectionId === 'opportunities-section') {
