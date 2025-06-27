@@ -3,7 +3,7 @@
 import { db, isAuthReady, currentUserId, isAdmin, addUnsubscribe, removeUnsubscribe, fetchCountryData, appCountries, appCountryStateMap, allCustomers, isDbReady } from './main.js';
 import { showModal, getCollectionPath, formatDate } from './utils.js'; // Import utility functions
 
-import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"; // Updated Firebase JS SDK version to match main.js
 
 
 // DOM elements for Customer Management Section
@@ -28,7 +28,7 @@ let customerCountrySelect;
 let customerAddressInput;
 let customerCityInput;
 let customerStateSelect;
-let customerZipCodeInput;
+let customerZipCodeInput; // This refers to the DOM element, correctly
 let addressValidationMessage;
 
 let individualIndustryGroup;
@@ -76,25 +76,7 @@ export async function initCustomersModule() {
         customerAddressInput = document.getElementById('customerAddress');
         customerCityInput = document.getElementById('customerCity');
         customerStateSelect = document.getElementById('customerState');
-        customerZipCodeInput = document => {
-            // Function to validate zip code based on selected country
-            const countryCode = customerCountrySelect.value;
-            const zipCode = customerZipCodeInput.value.trim();
-            // Simple validation example: US zip codes must be 5 digits
-            if (countryCode === 'US' && !/^\d{5}$/.test(zipCode)) {
-                addressValidationMessage.textContent = 'US zip code must be 5 digits.';
-                addressValidationMessage.classList.remove('hidden');
-                return false;
-            } else if (countryCode === 'CA' && !/^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/.test(zipCode)) {
-                // Canadian postal code pattern (e.g., A1A 1A1 or A1A1A1)
-                addressValidationMessage.textContent = 'Canadian postal code must be in A1A 1A1 format.';
-                addressValidationMessage.classList.remove('hidden');
-                return false;
-            } else {
-                addressValidationMessage.classList.add('hidden');
-            }
-            return true;
-        };
+        customerZipCodeInput = document.getElementById('customerZipCode'); // Correctly referencing the DOM element
         addressValidationMessage = document.getElementById('addressValidationMessage');
 
         individualIndustryGroup = document.getElementById('individualIndustryGroup');
@@ -202,21 +184,41 @@ function populateStates(countryCode) {
  * @param {string} address
  * @param {string} city
  * @param {string} country
- * @returns {boolean} True if address is considered valid based on non-empty values.
+ * @param {string} zipCode (now passed for specific validation)
+ * @param {string} countryCode (now passed for specific validation)
+ * @returns {boolean} True if address is considered valid based on non-empty values and basic zip.
  */
-function validateAddress(address, city, country) {
-    // Note: State and Zip Code are optional for this basic validation, as some countries don't have them.
-    const isValid = address.trim() !== '' && city.trim() !== '' && country.trim() !== '';
+function validateAddress(address, city, country, zipCode, countryCode) {
+    let isValid = true;
+    let message = '';
+
+    // Basic required fields check
+    if (address.trim() === '' || city.trim() === '' || country.trim() === '') {
+        message += 'Please enter a valid address, city, and select a country. ';
+        isValid = false;
+    }
+
+    // Country-specific zip code validation
+    if (zipCode && countryCode) {
+        if (countryCode === 'US' && !/^\d{5}(-\d{4})?$/.test(zipCode)) {
+            message += 'US zip code must be 5 digits (e.g., 90210) or 5+4 (e.g., 90210-1234). ';
+            isValid = false;
+        } else if (countryCode === 'CA' && !/^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/.test(zipCode)) {
+            message += 'Canadian postal code must be in A1A 1A1 format. ';
+            isValid = false;
+        }
+        // Add more country-specific regex patterns here as needed
+    }
 
     if (!isValid && addressValidationMessage) {
-        addressValidationMessage.textContent = 'Please enter a valid address, city, and select a country.';
+        addressValidationMessage.textContent = message.trim();
         addressValidationMessage.classList.remove('hidden');
-        return false;
     } else if (addressValidationMessage) {
         addressValidationMessage.classList.add('hidden');
     }
-    return true;
+    return isValid;
 }
+
 
 /**
  * Applies validation rules and shows/hides fields based on the selected customer type.
@@ -276,7 +278,7 @@ async function saveCustomer() {
     const address = customerAddressInput.value.trim();
     const city = customerCityInput.value.trim();
     const state = customerStateSelect.value;
-    const zipCode = customerZipCodeInput.value.trim();
+    const zipCode = customerZipCodeInput.value.trim(); // Ensure this value is captured
     const industry = customerType === 'Individual' ? customerIndustryInput.value.trim() : customerIndustrySelect.value;
     const customerSince = customerSinceInput.value;
     const description = customerDescriptionInput.value.trim();
@@ -313,7 +315,8 @@ async function saveCustomer() {
         return;
     }
 
-    if (!validateAddress(address, city, country)) {
+    // Call validateAddress with new zipCode and country parameters
+    if (!validateAddress(address, city, country, zipCode, country)) {
         return; // Validation message already shown by validateAddress
     }
 
@@ -406,7 +409,8 @@ export function listenForCustomers() {
     console.log("customers.js: Current state for listener - isAuthReady:", isAuthReady, "currentUserId:", currentUserId, "db:", db, "isDbReady:", isDbReady);
 
     // --- IMPORTANT DEBUGGING CHECK ---
-    if (!db || typeof db.collection !== 'function') {
+    // This is the line that was failing. Let's make absolutely sure db is a Firestore object here.
+    if (!db || typeof db.collection !== 'function' || db.type !== 'firestore') {
         console.error("customers.js: CRITICAL ERROR - 'db' is NOT a valid Firestore instance at the point of calling collection(). Current db value:", db);
         if (customerList) customerList.innerHTML = '<p class="text-red-500 text-center py-4 col-span-full">Error: Firestore connection not ready. Please try refreshing.</p>';
         return;
