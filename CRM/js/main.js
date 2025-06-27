@@ -459,11 +459,13 @@ export async function showSection(sectionId) {
     // Start specific listener for the active section, only if auth and DB are ready
     if (isAuthReady && db && isDbReady) {
         if (sectionId === 'customers-section') {
-            import('./customers.js').then(module => {
-                // Explicitly set the db instance within the customers module
-                module.setDbInstance(db); // Call the new setter
-                module.initCustomersModule();
-            }).catch(error => console.error("main.js: Failed to load customers module:", error));
+            // Use Promise.resolve().then to push the execution to the next microtask queue,
+            // giving the 'db' object a tiny bit more time to fully stabilize after assignment.
+            await Promise.resolve().then(async () => {
+                const customersModule = await import('./customers.js');
+                customersModule.setDbInstance(db); // Call the new setter
+                customersModule.initCustomersModule();
+            }).catch(error => console.error("main.js: Failed to load customers module or set DB instance:", error));
         } else if (sectionId === 'opportunities-section') {
             import('./opportunities.js').then(module => {
                 module.initOpportunitiesModule();
