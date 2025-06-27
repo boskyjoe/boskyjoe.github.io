@@ -285,12 +285,15 @@ function unsubscribeAll() {
 }
 
 
-// Function to show a custom confirmation modal
+/**
+ * Shows a custom confirmation modal.
+ * This is duplicated in utils.js, but also kept here for direct use within main.js if needed.
+ * It's recommended to import showModal from utils.js where possible.
+ */
 export function showModal(title, message, onConfirm, onCancel) {
     const modalContainer = document.getElementById('modalContainer'); // Ensure this is also initialized when used
     if (!modalContainer) {
         console.error("main.js: Modal container not found!");
-        alert(`${title}\n${message}`); // Fallback to alert if modal container doesn't exist
         return;
     }
     modalContainer.innerHTML = `
@@ -318,47 +321,48 @@ export function showModal(title, message, onConfirm, onCancel) {
     };
 }
 
+
 // Function to control the layout of the opportunity section
 function setOpportunityLayout(layoutType) {
     // Hide all internal opportunity views first
-    if (opportunityFullFormView) opportunityFullFormView.classList.add('hidden');
-    if (opportunityExistingListView) opportunityExistingListView.classList.add('hidden');
+    if (main.opportunityFullFormView) main.opportunityFullFormView.classList.add('hidden');
+    if (main.opportunityExistingListView) main.opportunityExistingListView.classList.add('hidden');
 
     // Remove all dynamic width classes from panels first
-    if (opportunityLeftPanel) {
+    if (main.opportunityLeftPanel) {
         // Remove Tailwind's default md:w-X/10 classes
-        opportunityLeftPanel.classList.remove('md:w-full', 'md:w-7/10', 'md:w-3/10');
+        main.opportunityLeftPanel.classList.remove('md:w-full', 'md:w-7/10', 'md:w-3/10');
         // Remove custom dynamic classes
-        opportunityLeftPanel.classList.remove('shrink-left');
+        main.opportunityLeftPanel.classList.remove('shrink-left');
     }
-    if (opportunityRightPanel) {
-        opportunityRightPanel.classList.remove('hidden-panel');
+    if (main.opportunityRightPanel) {
+        main.opportunityRightPanel.classList.remove('hidden-panel');
         // Remove Tailwind's default md:w-X/10 classes
-        opportunityRightPanel.classList.remove('md:w-full', 'md:w-7/10', 'md:w-3/10');
+        main.opportunityRightPanel.classList.remove('md:w-full', 'md:w-7/10', 'md:w-3/10');
         // Remove custom dynamic classes
-        opportunityRightPanel.classList.remove('expand-right');
+        main.opportunityRightPanel.classList.remove('expand-right');
     }
 
     switch (layoutType) {
         case 'full_form_and_list': // Default view for adding new, or after resetting edit form
-            if (opportunityFullFormView) opportunityFullFormView.classList.remove('hidden');
-            if (opportunityExistingListView) opportunityExistingListView.classList.remove('hidden');
-            if (opportunityLeftPanel) opportunityLeftPanel.classList.add('md:w-full'); // Take full width
-            if (opportunityRightPanel) opportunityRightPanel.classList.add('hidden-panel'); // Hide right panel completely
+            if (main.opportunityFullFormView) main.opportunityFullFormView.classList.remove('hidden');
+            if (main.opportunityExistingListView) main.opportunityExistingListView.classList.remove('hidden');
+            if (main.opportunityLeftPanel) main.opportunityLeftPanel.classList.add('md:w-full'); // Take full width
+            if (main.opportunityRightPanel) main.opportunityRightPanel.classList.add('hidden-panel'); // Hide right panel completely
             break;
         case 'edit_split_70_30': // Initial edit view: form + list (70) and accordions (30)
-            if (opportunityFullFormView) opportunityFullFormView.classList.remove('hidden');
-            if (opportunityExistingListView) opportunityExistingListView.classList.remove('hidden');
-            if (opportunityLeftPanel) opportunityLeftPanel.classList.add('md:w-7/10');
-            if (opportunityRightPanel) opportunityRightPanel.classList.remove('hidden-panel');
-            if (opportunityRightPanel) opportunityRightPanel.classList.add('md:w-3/10');
+            if (main.opportunityFullFormView) main.opportunityFullFormView.classList.remove('hidden');
+            if (main.opportunityExistingListView) main.opportunityExistingListView.classList.remove('hidden');
+            if (main.opportunityLeftPanel) main.opportunityLeftPanel.classList.add('md:w-7/10');
+            if (main.opportunityRightPanel) main.opportunityRightPanel.classList.remove('hidden-panel');
+            if (main.opportunityRightPanel) main.opportunityRightPanel.classList.add('md:w-3/10');
             break;
         case 'edit_split_30_70': // Accordion open view: form + list (30) and accordions (70)
-            if (opportunityFullFormView) opportunityFullFormView.classList.remove('hidden');
-            if (opportunityExistingListView) opportunityExistingListView.classList.remove('hidden');
-            if (opportunityLeftPanel) opportunityLeftPanel.classList.add('shrink-left'); // Custom class for shrinking
-            if (opportunityRightPanel) opportunityRightPanel.classList.remove('hidden-panel');
-            if (opportunityRightPanel) opportunityRightPanel.classList.add('expand-right'); // Custom class for expanding
+            if (main.opportunityFullFormView) main.opportunityFullFormView.classList.remove('hidden');
+            if (main.opportunityExistingListView) main.opportunityExistingListView.classList.remove('hidden');
+            if (main.opportunityLeftPanel) main.opportunityLeftPanel.classList.add('shrink-left'); // Custom class for shrinking
+            if (main.opportunityRightPanel) main.opportunityRightPanel.classList.remove('hidden-panel');
+            if (main.opportunityRightPanel) main.opportunityRightPanel.classList.add('expand-right'); // Custom class for expanding
             break;
         default:
             console.error("main.js: Unknown opportunity layout type:", layoutType);
@@ -431,16 +435,20 @@ export async function showSection(sectionId) {
         }
         else if (sectionId === 'admin-country-mapping-section') {
             if (isAdmin) { // Double check admin status for safety
-                loadAdminCountryData(); // Load existing data into admin textareas
+                // Load existing data into admin textareas through admin_data module
+                import('./admin_data.js').then(module => {
+                    module.initAdminDataModule('country_mapping');
+                }).catch(error => console.error("main.js: Failed to load admin_data module for country mapping:", error));
                 if (uploadAdminDataButton) uploadAdminDataButton.removeAttribute('disabled');
             } else {
                 if (uploadAdminDataButton) uploadAdminDataButton.setAttribute('disabled', 'disabled');
             }
         } else if (sectionId === 'currency-management-section') { // NEW
             if (isAdmin) {
-                // Now directly using functions from main.js, no separate module init
-                listenForCurrencies(); // Start listening for currencies
-                resetCurrencyForm(); // Reset currency form
+                // Initialize currency management through admin_data module
+                import('./admin_data.js').then(module => {
+                    module.initAdminDataModule('currency_management');
+                }).catch(error => console.error("main.js: Failed to load admin_data module for currency management:", error));
                 if (submitCurrencyButton) submitCurrencyButton.removeAttribute('disabled');
             } else {
                 if (submitCurrencyButton) submitCurrencyButton.setAttribute('disabled', 'disabled');
@@ -460,11 +468,14 @@ export async function showSection(sectionId) {
         else if (sectionId === 'price-book-management-section') { // NEW for Price Book
             if (isAdmin) {
                 // Import and call initPriceBookModule
-                import('./price_book_management.js').then(module => {
+                import('./price_book.js').then(module => { // Corrected import to price_book.js
                     module.initPriceBookModule();
                 }).catch(error => console.error("main.js: Failed to load price book module:", error));
             } else {
                 // Disable if not admin
+                if (document.getElementById('submitPriceBookButton')) { // Defensive check
+                     document.getElementById('submitPriceBookButton').setAttribute('disabled', 'disabled');
+                }
             }
         }
     } else {
@@ -554,8 +565,8 @@ export async function fetchCurrencies() { // Export this
             return;
         }
         // Corrected collection reference to include a document ID for `app_settings`
-        const collectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
-        const querySnapshot = await getDocs(query(collectionRef)); // Use query to ensure it's a valid Query object
+        const currenciesCollectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
+        const querySnapshot = await getDocs(query(currenciesCollectionRef)); // Use query to ensure it's a valid Query object
         allCurrencies = []; // Clear existing data
         querySnapshot.forEach((docSnap) => {
             allCurrencies.push({ id: docSnap.id, ...docSnap.data() });
@@ -764,7 +775,7 @@ async function initializeFirebase() {
     mobileLogoutButton = document.getElementById('mobileLogoutButton');
     navGoogleLoginButton = document.getElementById('navGoogleLoginButton');
 
-    // Home section Google login button
+    // Home section Google login button (for visual hint on home page)
     googleLoginButtonHome = document.getElementById('googleLoginButton');
     homeSignInMessage = document.getElementById('homeSignInMessage');
 
@@ -809,6 +820,18 @@ async function initializeFirebase() {
     if (linesAccordionHeader) linesAccordionHeader.addEventListener('click', () => toggleAccordion(linesAccordionHeader, linesAccordionContent));
     if (quotesAccordionHeader) quotesAccordionHeader.addEventListener('click', () => toggleAccordion(quotesAccordionHeader, quotesAccordionContent));
 
+    // NEW: Function to toggle accordions
+    function toggleAccordion(header, content) {
+        if (!header || !content) return;
+        header.classList.toggle('active');
+        content.classList.toggle('open');
+        if (content.classList.contains('open')) {
+            content.style.maxHeight = content.scrollHeight + "px"; // Set max-height to scrollHeight to animate
+        } else {
+            content.style.maxHeight = "0"; // Collapse
+        }
+    }
+
     // --- NEW: Admin Submenu Toggle Listeners ---
     if (desktopAdminMenuToggle && desktopAdminMenu) {
         desktopAdminMenuToggle.addEventListener('click', (e) => {
@@ -849,6 +872,7 @@ async function initializeFirebase() {
 
             console.log("main.js: onAuthStateChanged: Current Firebase UID:", currentUserId);
 
+            // UPDATED: Corrected path for fetching user profile from 'users_data'
             const userProfileRef = doc(db, 'users_data', user.uid);
             const userProfileSnap = await getDoc(userProfileRef);
 
@@ -877,9 +901,9 @@ async function initializeFirebase() {
                         phone: '',
                         role: 'User',
                         profileAccess: true
-                    });
+                    }, { merge: true }); // Use merge:true in case it's created by an admin already, but no role set.
                     console.log("main.js: Basic user profile created for:", user.uid);
-                    isAdmin = false;
+                    isAdmin = false; // New users default to non-admin
                 } catch (profileError) {
                     console.error("main.js: Error creating basic user profile:", profileError);
                     showModal("Profile Error", `Failed to create user profile: ${profileError.message}. Access to some features may be limited.`, () => {});
@@ -1112,223 +1136,44 @@ async function initializeFirebase() {
         currencyForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const editingId = currencyForm.dataset.editingId;
-            await saveCurrency(null, editingId || null); // Pass null for currencyData to indicate reading from textarea
+            // The saveCurrency function is now in admin_data.js and handles its own UI updates
+            import('./admin_data.js').then(module => {
+                module.saveCurrency(null, editingId || null);
+            }).catch(error => console.error("main.js: Failed to call saveCurrency from admin_data module:", error));
         });
     }
 }
 
-export async function saveCurrency(currencyData, existingCurrencyCode = null) {
-    if (!isAuthReady || !currentUserId || !isAdmin) {
-        showModal("Permission Denied", "Only administrators can manage currencies.", () => {});
+
+// New function to toggle accordion
+function toggleAccordion(header, content) {
+    if (!header || !content) {
+        console.warn("main.js: toggleAccordion called with null header or content.");
         return;
     }
+    header.classList.toggle('active');
+    // Toggle the 'open' class on the content
+    content.classList.toggle('open');
 
-    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden');
-    if (submitCurrencyButton) {
-        submitCurrencyButton.disabled = true;
-        submitCurrencyButton.textContent = 'Uploading...';
-    }
-
-
-    const inputCsv = adminCurrenciesInput.value.trim();
-    const currencyLines = inputCsv.split('\n').filter(line => line.trim() !== '');
-
-    if (currencyLines.length === 0) {
-        if (adminCurrencyMessageDiv) {
-            adminCurrencyMessageDiv.textContent = "Please enter currency data in the specified CSV format.";
-            adminCurrencyMessageDiv.className = 'message error';
-            adminCurrencyMessageDiv.classList.remove('hidden');
-        }
-        if (submitCurrencyButton) {
-            submitCurrencyButton.disabled = false;
-            submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
-        }
-        return;
-    }
-
-    const currenciesCollectionRef = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
-
-    try {
-        let updatesPerformed = 0;
-        let errorsOccurred = 0;
-        let totalProcessed = 0;
-
-        for (const line of currencyLines) {
-            totalProcessed++;
-            const parts = line.split(',');
-
-            const code = parts[0] ? parts[0].trim() : '';
-            const currencyName = parts[1] ? parts[1].trim() : '';
-            const symbol = parts[2] ? parts[2].trim() : '';
-            const symbol_native = parts[3] ? parts[3].trim() : '';
-
-            if (code === '' || currencyName === '' || symbol === '' || symbol_native === '') {
-                console.error(`main.js: Skipping invalid line (missing data for essential fields): '${line}'`);
-                errorsOccurred++;
-                continue;
-            }
-
-            if (existingCurrencyCode && code !== existingCurrencyCode) {
-                showModal("Validation Error", `When editing, the currency code in the input CSV (${code}) must match the currency being edited (${existingCurrencyCode}). Please provide only one line for the edited currency.`, () => {});
-                if (submitCurrencyButton) {
-                    submitCurrencyButton.disabled = false;
-                    submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
-                }
-                return;
-            }
-
-
-            const currencyDataToSave = {
-                currencyCode: code,
-                currencyName: currencyName,
-                symbol: symbol,
-                symbol_native: symbol_native
-            };
-
-            const currencyDocRef = doc(currenciesCollectionRef, code);
-
-            await setDoc(currencyDocRef, currencyDataToSave, { merge: true });
-            updatesPerformed++;
-        }
-
-        let message = `Upload complete. Total lines processed: ${totalProcessed}. Updated/Added currencies: ${updatesPerformed}. Errors/Skipped lines: ${errorsOccurred}.`;
-        if (errorsOccurred > 0) {
-            if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.className = 'message error';
-            message += " Please check console for details on skipped lines.";
-        } else {
-            if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.className = 'message success';
-        }
-        if (adminCurrencyMessageDiv) {
-            adminCurrencyMessageDiv.textContent = message;
-            adminCurrencyMessageDiv.classList.remove('hidden');
-        }
-        console.log("main.js: Admin currency data upload process finished.");
-
-        await fetchCurrencies();
-        resetCurrencyForm();
-    } catch (error) {
-        console.error("main.js: Error uploading currency data (caught in try-catch):", error);
-        if (adminCurrencyMessageDiv) {
-            adminCurrencyMessageDiv.textContent = `Error uploading currency data: ${error.message}`;
-            adminCurrencyMessageDiv.className = 'message error';
-            adminCurrencyMessageDiv.classList.remove('hidden');
-        }
-    } finally {
-        if (submitCurrencyButton) {
-            submitCurrencyButton.disabled = false;
-            submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
-        }
+    if (content.classList.contains('open')) {
+        // When opening, set max-height to its scrollHeight to enable CSS transition
+        content.style.maxHeight = content.scrollHeight + "px";
+    } else {
+        content.style.maxHeight = "0";
     }
 }
 
-
-export async function deleteCurrency(currencyCode) {
-    if (!isAuthReady || !currentUserId || !isAdmin) {
-        showModal("Permission Denied", "Only administrators can manage currencies.", () => {});
-        return;
-    }
-
-    showModal(
-        "Confirm Deletion",
-        `Are you sure you want to delete the currency '${currencyCode}'? This action cannot be undone.`,
-        async () => {
-            try {
-                const currencyDocRef = doc(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data", currencyCode);
-                await deleteDoc(currencyDocRef);
-                console.log("main.js: Currency deleted:", currencyCode);
-                showModal("Success", `Currency '${currencyCode}' deleted successfully!`, () => {});
-                await fetchCurrencies();
-            } catch (error) {
-                console.error("main.js: Error deleting currency:", error);
-                showModal("Error", `Failed to delete currency: ${error.message}`, () => {});
-            }
-        }
-    );
-}
-
-export function listenForCurrencies() {
-    if (unsubscribeCurrencies) {
-        removeUnsubscribe('currencies');
-    }
-
-    if (!isAuthReady || !currentUserId || !isAdmin) {
-        if (currencyList) currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Access Denied: Only administrators can view currencies.</p>';
-        return;
-    }
-
-    const q = collection(db, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
-
-    unsubscribeCurrencies = onSnapshot(q, (snapshot) => {
-        if (currencyList) currencyList.innerHTML = '';
-        if (snapshot.empty) {
-            if (currencyList) currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">No currencies found. Add them above!</p>';
-            return;
-        }
-        snapshot.forEach((doc) => {
-            const currency = { id: doc.id, ...doc.data() };
-            displayCurrency(currency);
-        });
-        console.log("main.js: Currencies data updated via onSnapshot. Total:", snapshot.size);
-    }, (error) => {
-        console.error("main.js: Error listening to currencies:", error);
-        if (currencyList) currencyList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading currencies: ${error.message}</p>`;
-    });
-    addUnsubscribe('currencies', unsubscribeCurrencies);
-}
-
-export function displayCurrency(currency) {
-    if (!currencyList) return;
-    const currencyRow = document.createElement('div');
-    currencyRow.className = 'data-grid-row';
-    currencyRow.dataset.id = currency.id;
-
-    currencyRow.innerHTML = `
-        <div class="px-2 py-1 truncate font-medium text-gray-800">${currency.id || 'N/A'}</div>
-        <div class="px-2 py-1 truncate">${currency.currencyName || 'N/A'}</div>
-        <div class="px-2 py-1 truncate">${currency.symbol || 'N/A'}</div>
-        <div class="px-2 py-1 truncate">${currency.symbol_native || 'N/A'}</div>
-        <div class="px-2 py-1 flex justify-end space-x-2">
-            <button class="edit-btn text-blue-600 hover:text-blue-800 font-semibold text-xs" data-id="${currency.id}" title="Edit">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-            </button>
-            <button class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs" data-id="${currency.id}" title="Delete">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-            </button>
-        </div>
-    `;
-    currencyList.appendChild(currencyRow);
-
-    currencyRow.querySelector('.edit-btn').addEventListener('click', () => editCurrency(currency));
-    currencyRow.querySelector('.delete-btn').addEventListener('click', () => deleteCurrency(currency.id));
-}
-
-export function editCurrency(currency) {
-    if (!isAdmin) {
-        showModal("Permission Denied", "Only administrators can edit currencies.", () => {});
-        return;
-    }
-    if (currencyFormTitle) currencyFormTitle.textContent = `Edit Currency: ${currency.id}`;
-    if (submitCurrencyButton) submitCurrencyButton.textContent = 'Update Currency';
-
-    if (currencyCodeDisplayGroup) currencyCodeDisplayGroup.classList.remove('hidden');
-    if (currencyCodeDisplay) currencyCodeDisplay.textContent = currency.id;
-
-    if (adminCurrenciesInput) adminCurrenciesInput.value = `${currency.id},${currency.currencyName || ''},${currency.symbol || ''},${currency.symbol_native || ''}`;
-
-    if (currencyForm) currencyForm.dataset.editingId = currency.id;
-    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden');
-    if (currencyForm) currencyForm.scrollIntoView({ behavior: 'smooth' });
-}
-
-export function resetCurrencyForm() {
-    if (currencyForm) currencyForm.reset();
-    if (currencyForm) currencyForm.dataset.editingId = '';
-    if (currencyFormTitle) currencyFormTitle.textContent = 'Add New Currency';
-    if (submitCurrencyButton) submitCurrencyButton.textContent = 'Upload Currencies to Firestore';
-    if (currencyCodeDisplayGroup) currencyCodeDisplayGroup.classList.add('hidden');
-    if (currencyCodeDisplay) currencyCodeDisplay.textContent = '';
-    if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden');
-}
+// These functions were moved from main.js to admin_data.js.
+// Keeping them here for completeness but they are no longer called directly from main.js
+// after the module refactoring.
+/*
+export async function saveCurrency(currencyData, existingCurrencyCode = null) { ... }
+export async function deleteCurrency(currencyCode) { ... }
+export function listenForCurrencies() { ... }
+export function displayCurrency(currency) { ... }
+export function editCurrency(currency) { ... }
+export function resetCurrencyForm() { ... }
+*/
 
 
 // Initialize Firebase on window load
