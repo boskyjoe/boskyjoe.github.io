@@ -49,7 +49,8 @@ export let allCustomers = []; // Exported to be used by other modules like oppor
 export async function initCustomersModule() {
     console.log("customers.js: initCustomersModule called.");
     // Now access main's properties via the 'main' object
-    console.log("customers.js: initCustomersModule current state - main.db:", main.db, "main.isAuthReady:", main.isAuthReady, "main.currentUserId:", main.currentUserId);
+    console.log("customers.js: initCustomersModule current state - main.db:", main.db, "main.isAuthReady:", main.isAuthReady, "main.isDbReady:", main.isDbReady, "main.currentUserId:", main.currentUserId); // Added main.isDbReady
+
 
     // Initialize DOM elements if they haven't been already. This helps prevent null references.
     if (!customersManagementSection) { // Check for a key element to prevent re-initialization
@@ -116,17 +117,17 @@ export async function initCustomersModule() {
     }
 
     // Load data specific to this module ONLY if auth and DB are ready
-    if (main.isAuthReady && main.currentUserId && main.db) { // Use main.isAuthReady, main.currentUserId, main.db
+    if (main.isAuthReady && main.currentUserId && main.db && main.isDbReady) { // Added main.isDbReady check
+        console.log("customers.js: Auth, User, and DB are ready. Initializing customer data.");
         if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
-        // It's important to await fetchCountryData if it's async and needed before populateCountries
         await main.fetchCountryData(); // Use main.fetchCountryData
         populateCountries();
         listenForCustomers();
         resetCustomerForm(); // Ensure the form is cleared and ready for new input
     } else {
+        console.warn("customers.js: Authentication, User, or Firestore DB not ready. Customers module not fully initialized for data operations.");
         if (submitCustomerButton) submitCustomerButton.setAttribute('disabled', 'disabled');
-        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Please sign in to view customers.</p>';
-        console.warn("customers.js: Authentication or Firestore DB not ready. Customers module not fully initialized.");
+        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Initializing customers. Please wait or sign in...</p>'; // Updated message
     }
 }
 
@@ -223,7 +224,7 @@ function applyCustomerTypeValidation() {
         individualFieldsDiv.classList.add('hidden');
         companyNameFieldDiv.classList.remove('hidden');
         individualIndustryGroup.classList.add('hidden');
-        companyIndustryGroup.classList.remove('hidden');
+        companyIndustryGroup.classList.add('hidden');
 
         customerCompanyNameInput.setAttribute('required', 'required');
     } else { // "Select Type" or other invalid selection
@@ -240,7 +241,7 @@ function applyCustomerTypeValidation() {
  * Data is read from the form fields.
  */
 async function saveCustomer() {
-    if (!main.isAuthReady || !main.currentUserId || !main.db) { // Use main.isAuthReady, main.currentUserId, main.db
+    if (!main.isAuthReady || !main.currentUserId || !main.db || !main.isDbReady) { // Added main.isDbReady
         showModal("Permission Denied", "Please sign in to manage customers, or Firestore is not ready.", () => {});
         return;
     }
@@ -324,7 +325,7 @@ async function saveCustomer() {
         if (existingCustomerDocId) {
             // Update existing customer
             const customerDocRef = doc(main.db, collectionPath, existingCustomerDocId); // Use main.db
-            await setDoc(customerDocRef, { ...customerToSave }, { merge: true }); // Use setDoc with merge for partial updates
+            await setDoc(customerDocRef, { ...customerToSave, updatedAt: new Date() }, { merge: true }); // Ensure updatedAt is updated
             showModal("Success", "Customer updated successfully!", () => { });
             console.log("customers.js: Customer updated:", existingCustomerDocId);
         } else {
@@ -348,7 +349,7 @@ async function saveCustomer() {
  * @param {string} firestoreDocId - The Firestore document ID of the customer to delete.
  */
 async function deleteCustomer(firestoreDocId) {
-    if (!main.isAuthReady || !main.currentUserId || !main.db) { // Use main.isAuthReady, main.currentUserId, main.db
+    if (!main.isAuthReady || !main.currentUserId || !main.db || !main.isDbReady) { // Added main.isDbReady
         showModal("Permission Denied", "Please sign in to delete customers, or Firestore is not ready.", () => {});
         return;
     }
@@ -380,11 +381,11 @@ export function listenForCustomers() {
     main.removeUnsubscribe('customers'); // Ensure any existing listener is removed (using main.removeUnsubscribe)
 
     console.log("customers.js: listenForCustomers called.");
-    console.log("customers.js: Current state for listener - main.isAuthReady:", main.isAuthReady, "main.currentUserId:", main.currentUserId, "main.db:", main.db);
+    console.log("customers.js: Current state for listener - main.isAuthReady:", main.isAuthReady, "main.currentUserId:", main.currentUserId, "main.db:", main.db, "main.isDbReady:", main.isDbReady);
 
 
-    if (!main.isAuthReady || !main.currentUserId || !main.db) { // Use main.isAuthReady, main.currentUserId, main.db
-        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Please sign in to view customers.</p>';
+    if (!main.isAuthReady || !main.currentUserId || !main.db || !main.isDbReady) { // Added main.isDbReady
+        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Initializing customers. Please wait or sign in...</p>';
         console.warn("customers.js: Customer listener skipped: Auth/DB not ready.");
         return;
     }
@@ -489,7 +490,7 @@ function displayCustomer(customer) {
  */
 function editCustomer(customer) {
     // Permission check: Only owner or admin can edit
-    if (!main.isAdmin && customer.ownerId !== main.currentUserId) { // Use main.isAdmin, main.currentUserId
+    if (!main.isAdmin && customer.ownerId !== main.currentUserId) {
         showModal("Permission Denied", "You do not have permission to edit this customer.", () => {});
         return;
     }
@@ -564,7 +565,7 @@ export function resetCustomerForm() {
     if (addressValidationMessage) addressValidationMessage.classList.add('hidden');
 
     // Enable submit button if auth is ready
-    if (main.isAuthReady && main.currentUserId) { // Use main.isAuthReady, main.currentUserId
+    if (main.isAuthReady && main.currentUserId && main.isDbReady) { // Added main.isDbReady
         if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
     } else {
         if (submitCustomerButton) submitCustomerButton.setAttribute('disabled', 'disabled');
