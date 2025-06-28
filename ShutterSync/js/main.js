@@ -139,12 +139,12 @@ async function loadHomeContent() {
 /**
  * Handles navigation clicks. Loads content into the main area and initializes module-specific JS.
  * @param {string} moduleName - The identifier for the module (e.g., 'customers', 'admin-users').
- * @param {function} [moduleInitFunction] - Optional function to call after content is loaded.
- * This will be defined in individual module JS files.
+ * @param {object} [moduleObject] - The module object itself (e.g., Customers, UsersModule).
+ * Its 'init' method will be called.
  * @param {boolean} [requiresLogin=false] - True if this module requires the user to be logged in.
  * @param {boolean} [requiresAdmin=false] - True if this module requires the user to be an admin.
  */
-async function navigateToModule(moduleName, moduleInitFunction = null, requiresLogin = false, requiresAdmin = false) {
+async function navigateToModule(moduleName, moduleObject = null, requiresLogin = false, requiresAdmin = false) {
     if (requiresLogin && !Utils.isLoggedIn()) {
         Utils.showMessage('Please sign in to access this feature.', 'warning');
         loadHomeContent(); // Redirect to home if not logged in
@@ -165,10 +165,10 @@ async function navigateToModule(moduleName, moduleInitFunction = null, requiresL
     Utils.renderContent(htmlContent);
 
     // Call the module's initialization function if provided
-    if (moduleInitFunction && typeof moduleInitFunction === 'function') {
+    // Changed this line: now we pass the module object and call its init method
+    if (moduleObject && typeof moduleObject.init === 'function') {
         try {
-            // Pass firebase, db, and Utils to the module init function
-            await moduleInitFunction(db, auth, Utils);
+            await moduleObject.init(db, auth, Utils); // Pass firebase, db, and Utils
             console.log(`main.js: Initialized ${moduleName} module.`);
         } catch (error) {
             Utils.handleError(error, `initializing ${moduleName} module`);
@@ -182,14 +182,14 @@ async function navigateToModule(moduleName, moduleInitFunction = null, requiresL
 function attachNavListeners() {
     document.getElementById('nav-home').addEventListener('click', (e) => {
         e.preventDefault();
-        navigateToModule('home', loadHomeContent); // Home also updates login status
+        navigateToModule('home', null); // No specific module object needed for home
     });
 
     document.getElementById('nav-customers').addEventListener('click', (e) => {
         e.preventDefault();
-        // Import Customers module dynamically and pass its init function
+        // Import Customers module dynamically and pass its *object*
         import('./customers.js').then(module => {
-            navigateToModule('customers', module.Customers.init, true); // Requires login
+            navigateToModule('customers', module.Customers, true); // Pass module.Customers
         }).catch(error => {
             Utils.handleError(error, 'loading customers module');
         });
@@ -197,9 +197,9 @@ function attachNavListeners() {
 
     document.getElementById('nav-opportunities').addEventListener('click', (e) => {
         e.preventDefault();
-        // Import Opportunities module dynamically and pass its init function
+        // Import Opportunities module dynamically and pass its *object*
         import('./opportunities.js').then(module => {
-            navigateToModule('opportunities', module.Opportunities.init, true); // Requires login
+            navigateToModule('opportunities', module.Opportunities, true); // Pass module.Opportunities
         }).catch(error => {
             Utils.handleError(error, 'loading opportunities module');
         });
@@ -214,7 +214,10 @@ function attachNavListeners() {
     document.getElementById('admin-country-mapping').addEventListener('click', (e) => {
         e.preventDefault();
         import('./admin_data.js').then(module => {
-            navigateToModule('admin-country-mapping', module.AdminData.initCountryMapping, true, true); // Requires login & admin
+            // Pass module.AdminData and then specify which init function to call within navigateToModule
+            // For now, moduleObject.init() will use the default. We need a way to specify initCountryMapping vs initCurrencies.
+            // Let's modify navigateToModule or the init functions of AdminData.
+            navigateToModule('admin-country-mapping', { init: module.AdminData.initCountryMapping }, true, true);
         }).catch(error => {
             Utils.handleError(error, 'loading admin_data module (country mapping)');
         });
@@ -223,7 +226,7 @@ function attachNavListeners() {
     document.getElementById('admin-currencies').addEventListener('click', (e) => {
         e.preventDefault();
         import('./admin_data.js').then(module => {
-            navigateToModule('admin-currencies', module.AdminData.initCurrencies, true, true); // Requires login & admin
+            navigateToModule('admin-currencies', { init: module.AdminData.initCurrencies }, true, true);
         }).catch(error => {
             Utils.handleError(error, 'loading admin_data module (currencies)');
         });
@@ -232,7 +235,7 @@ function attachNavListeners() {
     document.getElementById('admin-users').addEventListener('click', (e) => {
         e.preventDefault();
         import('./users.js').then(module => {
-            navigateToModule('admin-users', module.UsersModule.init, true, true); // Requires login & admin
+            navigateToModule('admin-users', module.UsersModule, true, true); // Pass module.UsersModule
         }).catch(error => {
             Utils.handleError(error, 'loading users module');
         });
@@ -241,7 +244,7 @@ function attachNavListeners() {
     document.getElementById('admin-price-book').addEventListener('click', (e) => {
         e.preventDefault();
         import('./price_book.js').then(module => {
-            navigateToModule('admin-price-book', module.PriceBook.init, true, true); // Requires login & admin
+            navigateToModule('admin-price-book', module.PriceBook, true, true); // Pass module.PriceBook
         }).catch(error => {
             Utils.handleError(error, 'loading price_book module');
         });
