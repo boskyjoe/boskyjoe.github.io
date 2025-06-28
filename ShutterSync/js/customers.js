@@ -1,10 +1,5 @@
 // js/customers.js
 
-// Ensure Grid.js is loaded for data grids
-// We will add these dynamically to the HTML rendered by this module
-// <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
-// <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
-
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
 
@@ -14,9 +9,11 @@ import { Utils } from './utils.js';
 export const Customers = {
     db: null,       // Firestore database instance
     auth: null,     // Firebase Auth instance
+    Utils: null,    // Utility functions instance
     unsubscribe: null, // To store the unsubscribe function for real-time listener
     currentCustomerId: null, // Used for editing an existing customer
     currentCustomerData: null, // Used for editing an existing customer
+    grid: null, // Grid.js instance for the customer table
 
     /**
      * Initializes the Customers module. This function is called by main.js.
@@ -24,17 +21,21 @@ export const Customers = {
      * @param {object} firebaseAuth - The Firebase Auth instance.
      * @param {object} utils - The Utils object for common functionalities.
      */
-    init: function(firestoreDb, firebaseAuth, utils) {
+    init: function(firestoreDb, firebaseAuth, utils) { // REMOVED: async keyword
         this.db = firestoreDb;
         this.auth = firebaseAuth;
-        // Ensure Utils is available directly for internal use if needed
         this.Utils = utils;
 
         console.log("Customers module initialized.");
+
+        // REMOVED: await this._loadGridJsAssets(); // Grid.js is now loaded globally in index.html
+
         this.renderCustomersUI(); // Render the initial UI for customers
         this.setupRealtimeListener(); // Set up real-time data listener
         this.attachEventListeners(); // Attach UI event listeners
     },
+
+    // REMOVED: _loadGridJsAssets method
 
     /**
      * Renders the main UI for the Customers module.
@@ -44,8 +45,7 @@ export const Customers = {
         const customerModuleContent = document.getElementById('customers-module-content');
         if (customerModuleContent) {
             customerModuleContent.innerHTML = `
-                <!-- Grid.js CSS -->
-                <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+                <!-- Grid.js CSS and JS are now loaded globally in index.html, removed from here -->
                 <div class="bg-white p-6 rounded-lg shadow-md mb-6">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-2xl font-semibold text-gray-800">Customer List</h3>
@@ -98,9 +98,6 @@ export const Customers = {
                         </form>
                     </div>
                 </div>
-
-                <!-- Grid.js JS -->
-                <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
             `;
         }
     },
@@ -139,6 +136,8 @@ export const Customers = {
             return;
         }
 
+        // Now, gridjs is guaranteed to be available globally.
+
         // Define columns for Grid.js
         const columns = [
             { id: 'name', name: 'Customer Name', sort: true },
@@ -164,16 +163,6 @@ export const Customers = {
             }
         ];
 
-        // Ensure Grid.js is available on the window object
-        if (typeof gridjs === 'undefined') {
-            console.warn("Grid.js not loaded. Attempting to reload script.");
-            // This scenario should ideally not happen if the script tag is correctly added
-            // but as a fallback, we can try to re-append or inform user.
-            this.Utils.showMessage("Grid.js library not loaded. Please refresh the page.", "error");
-            return;
-        }
-
-        // Initialize or update Grid.js
         if (this.grid) {
             this.grid.updateConfig({
                 data: customers.map(c => [c.id, c.name, c.email, c.phone, c.address]) // Map data to array for Grid.js
@@ -294,11 +283,6 @@ export const Customers = {
                 phone,
                 address,
                 updatedAt: new Date(),
-                // For 'customers' collection, creatorId is not strictly needed by security rules
-                // but good practice to record who created/modified it.
-                // However, the security rules for customers allow all authenticated users to CRUD.
-                // If you later decide to restrict customers by creator, you'd need this.
-                // createdBy: this.auth.currentUser ? this.auth.currentUser.uid : null,
             };
 
             if (this.currentCustomerId) {
@@ -323,7 +307,7 @@ export const Customers = {
      */
     editCustomer: function(id) {
         // Find the customer data from the currently loaded customers array
-        // (assuming this.customers contains the latest data from onSnapshot)
+        // (assuming this.customersData contains the latest data from onSnapshot)
         const customerToEdit = this.customersData.find(c => c.id === id);
         if (customerToEdit) {
             this.openCustomerModal('edit', customerToEdit);
