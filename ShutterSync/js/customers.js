@@ -1,6 +1,6 @@
 // js/customers.js
 
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
 
 /**
@@ -239,10 +239,7 @@ export const Customers = {
             c.customerType || '',
             c.industry || '',
             c.customerSource || '',
-            c.active || 'Active',    // Default 'Active' if missing
-            c.address || '',         // Address (for internal reference, not displayed in grid)
-            c.preferredContactMethod || '', // Preferred Contact Method (for internal reference)
-            c.additionalDetails || ''       // Additional Details (for internal reference)
+            c.active || 'Active'    // Default 'Active' if missing
         ]);
 
         if (this.grid) {
@@ -371,11 +368,43 @@ export const Customers = {
         const customerSource = document.getElementById('customer-source').value;
         const active = document.getElementById('active-status').value;
 
-
         if (!name) {
             this.Utils.showMessage('Customer Name is required.', 'warning');
             return;
         }
+
+        // --- DUPLICATE CHECK LOGIC START ---
+        if (!this.currentCustomerId) { // Only perform duplicate check when adding a new customer
+            if (email) { // If email is provided, check for duplicate emails
+                const customersRef = collection(this.db, "customers");
+                const q = query(customersRef, where("email", "==", email));
+                try {
+                    const querySnapshot = await getDocs(q);
+                    if (!querySnapshot.empty) {
+                        this.Utils.showMessage(`A customer with the email "${email}" already exists.`, 'error');
+                        return; // Stop execution if duplicate found
+                    }
+                } catch (error) {
+                    this.Utils.handleError(error, "checking for duplicate email");
+                    return; // Stop if there's an error during the check
+                }
+            } else { // If no email, check for duplicate name
+                 const customersRef = collection(this.db, "customers");
+                 const q = query(customersRef, where("name", "==", name));
+                 try {
+                     const querySnapshot = await getDocs(q);
+                     if (!querySnapshot.empty) {
+                         this.Utils.showMessage(`A customer with the name "${name}" already exists. Please provide an email or unique name.`, 'error');
+                         return; // Stop execution if duplicate found
+                     }
+                 } catch (error) {
+                     this.Utils.handleError(error, "checking for duplicate name");
+                     return; // Stop if there's an error during the check
+                 }
+            }
+        }
+        // --- DUPLICATE CHECK LOGIC END ---
+
 
         try {
             const customerData = {
