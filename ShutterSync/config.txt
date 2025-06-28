@@ -3,85 +3,58 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Function to check if the authenticated user has an 'Admin' role.
-    // It fetches the user's document from the 'users_data' collection
-    // and checks the 'role' field.
     function is_admin() {
       return get(/databases/$(database)/documents/users_data/$(request.auth.uid)).data.role == 'Admin';
     }
 
     // Global rule: All operations require the user to be authenticated.
-    // This is a foundational security measure for your application.
     match /{document=**} {
       allow read, write: if request.auth != null;
     }
 
     // Rules for the 'users_data' collection:
-    // This collection stores user profiles and their roles (Admin/User).
+    // Path: /users_data/{userId}
     match /users_data/{userId} {
-      // Users can read their own profile to check their role.
       allow get: if request.auth.uid == userId;
-
-      // New users can create their own profile document upon first login.
-      // They cannot set their own role to 'Admin' directly here.
-      // The `resource.data.role` could be checked if you want to enforce default role upon creation.
       allow create: if request.auth.uid == userId;
-
-      // Only administrators can update or delete any user's profile, including changing roles.
-      // This prevents users from self-promoting or deleting other users.
       allow update, delete: if is_admin();
     }
 
-    // Rules for Master Data collections (Country Mapping, Currencies, Price Books):
-    // These collections contain sensitive configuration data.
-    // Only users with the 'Admin' role can perform CRUD operations on them.
-    match /country_mapping/{docId} {
+    // Rules for Country Mapping:
+    // New Path: /app_metadata/countries_states/{docId}
+    match /app_metadata/countries_states/{docId} {
       allow read, create, update, delete: if is_admin();
     }
 
-    match /currencies/{docId} {
+    // Rules for Currencies:
+    // New Path: /app_metadata/app_settings/currencies_data/{docId}
+    match /app_metadata/app_settings/currencies_data/{docId} {
       allow read, create, update, delete: if is_admin();
     }
 
-    match /price_books/{docId} {
+    // Rules for Price Books:
+    // New Path: /app_metadata/app_settings/price_books_data/{docId}
+    match /app_metadata/app_settings/price_books_data/{docId} {
       allow read, create, update, delete: if is_admin();
     }
 
-    // Rules for the 'customers' collection:
-    // This is a common module, so any authenticated user can perform CRUD operations.
+    // Rules for the 'customers' collection: (No change)
+    // Path: /customers/{customerId}
     match /customers/{customerId} {
       allow read, create, update, delete: if request.auth != null;
     }
 
-    // Rules for the 'opportunities' collection:
-    // Access is restricted based on the creator of the opportunity or an Admin role.
+    // Rules for the 'opportunities' collection: (No change)
+    // Path: /opportunities/{opportunityId}
     match /opportunities/{opportunityId} {
-      // Users can read an opportunity if they are its creator or if they are an Admin.
       allow read: if request.auth.uid == resource.data.creatorId || is_admin();
-
-      // When creating an opportunity, the 'creatorId' field must be set to the
-      // currently authenticated user's UID to prevent impersonation.
       allow create: if request.auth.uid == request.resource.data.creatorId;
-
-      // Users can update or delete an opportunity only if they are its creator or an Admin.
       allow update, delete: if request.auth.uid == resource.data.creatorId || is_admin();
     }
 
-    // Rules for sub-collections of 'opportunities' (Opportunity Lines, Contacts, Quotes):
-    // These sub-collections inherit access control from their parent opportunity.
-    // The 'creatorId' of the parent opportunity determines access, or if the user is an Admin.
-    match /opportunities/{opportunityId}/lines/{lineId} {
-      // Access to lines depends on the parent opportunity's creator or admin status.
-      // The `get()` function retrieves the parent opportunity document to check its `creatorId`.
-      allow read, create, update, delete: if get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.creatorId == request.auth.uid || is_admin();
-    }
-
-    match /opportunities/{opportunityId}/contacts/{contactId} {
-      // Access to contacts depends on the parent opportunity's creator or admin status.
-      allow read, create, update, delete: if get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.creatorId == request.auth.uid || is_admin();
-    }
-
-    match /opportunities/{opportunityId}/quotes/{quoteId} {
-      // Access to quotes depends on the parent opportunity's creator or admin status.
+    // Rules for sub-collections of 'opportunities': (No change)
+    // Paths: /opportunities/{opportunityId}/lines/{lineId}, /opportunities/{opportunityId}/contacts/{contactId}, etc.
+    match /opportunities/{opportunityId}/{subcollection}/{docId} {
       allow read, create, update, delete: if get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.creatorId == request.auth.uid || is_admin();
     }
   }
