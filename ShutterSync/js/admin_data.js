@@ -137,7 +137,8 @@ export const AdminData = {
             this.countryUnsubscribe();
         }
 
-        const q = query(collection(this.db, "country_mapping"));
+        // UPDATED: Path changed to /app_metadata/countries_states
+        const q = query(collection(this.db, "app_metadata", "countries_states"));
 
         this.countryUnsubscribe = onSnapshot(q, (snapshot) => {
             const countries = [];
@@ -263,11 +264,13 @@ export const AdminData = {
         try {
             const countryData = { name, code, updatedAt: new Date() };
             if (this.currentCountryId) {
-                await updateDoc(doc(this.db, "country_mapping", this.currentCountryId), countryData);
+                // UPDATED: Path changed to /app_metadata/countries_states
+                await updateDoc(doc(this.db, "app_metadata", "countries_states", this.currentCountryId), countryData);
                 this.Utils.showMessage('Country updated successfully!', 'success');
             } else {
                 countryData.createdAt = new Date();
-                await addDoc(collection(this.db, "country_mapping"), countryData);
+                // UPDATED: Path changed to /app_metadata/countries_states
+                await addDoc(collection(this.db, "app_metadata", "countries_states"), countryData);
                 this.Utils.showMessage('Country added successfully!', 'success');
             }
             this.closeCountryModal();
@@ -298,7 +301,9 @@ export const AdminData = {
             const messageBox = messageModalContainer.querySelector('.p-6');
             const confirmBtn = document.createElement('button');
             confirmBtn.textContent = 'Confirm Delete'; confirmBtn.className = 'bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg mt-4 mr-2';
-            confirmBtn.onclick = async () => { try { await deleteDoc(doc(this.db, "country_mapping", id)); this.Utils.showMessage('Country deleted successfully!', 'success'); messageModalContainer.remove(); } catch (error) { this.Utils.handleError(error, "deleting country"); messageModalContainer.remove(); } };
+            confirmBtn.onclick = async () => { try {
+                // UPDATED: Path changed to /app_metadata/countries_states
+                await deleteDoc(doc(this.db, "app_metadata", "countries_states", id)); this.Utils.showMessage('Country deleted successfully!', 'success'); messageModalContainer.remove(); } catch (error) { this.Utils.handleError(error, "deleting country"); messageModalContainer.remove(); } };
             const cancelBtn = document.createElement('button');
             cancelBtn.textContent = 'Cancel'; cancelBtn.className = 'bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg mt-4';
             cancelBtn.onclick = () => { messageModalContainer.remove(); this.Utils.showMessage('Deletion cancelled.', 'info'); };
@@ -379,7 +384,8 @@ export const AdminData = {
             this.currencyUnsubscribe();
         }
 
-        const q = query(collection(this.db, "currencies"));
+        // UPDATED: Path changed to /app_metadata/app_settings/currencies_data
+        const q = query(collection(this.db, "app_metadata", "app_settings", "currencies_data"));
 
         this.currencyUnsubscribe = onSnapshot(q, (snapshot) => {
             const currencies = [];
@@ -508,11 +514,13 @@ export const AdminData = {
         try {
             const currencyData = { name, code, symbol, updatedAt: new Date() };
             if (this.currentCurrencyId) {
-                await updateDoc(doc(this.db, "currencies", this.currentCurrencyId), currencyData);
+                // UPDATED: Path changed to /app_metadata/app_settings/currencies_data
+                await updateDoc(doc(this.db, "app_metadata", "app_settings", "currencies_data", this.currentCurrencyId), currencyData);
                 this.Utils.showMessage('Currency updated successfully!', 'success');
             } else {
                 currencyData.createdAt = new Date();
-                await addDoc(collection(this.db, "currencies"), currencyData);
+                // UPDATED: Path changed to /app_metadata/app_settings/currencies_data
+                await addDoc(collection(this.db, "app_metadata", "app_settings", "currencies_data"), currencyData);
                 this.Utils.showMessage('Currency added successfully!', 'success');
             }
             this.closeCurrencyModal();
@@ -543,7 +551,9 @@ export const AdminData = {
             const messageBox = messageModalContainer.querySelector('.p-6');
             const confirmBtn = document.createElement('button');
             confirmBtn.textContent = 'Confirm Delete'; confirmBtn.className = 'bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg mt-4 mr-2';
-            confirmBtn.onclick = async () => { try { await deleteDoc(doc(this.db, "currencies", id)); this.Utils.showMessage('Currency deleted successfully!', 'success'); messageModalContainer.remove(); } catch (error) { this.Utils.handleError(error, "deleting currency"); messageModalContainer.remove(); } };
+            confirmBtn.onclick = async () => { try {
+                // UPDATED: Path changed to /app_metadata/app_settings/currencies_data
+                await deleteDoc(doc(this.db, "app_metadata", "app_settings", "currencies_data", id)); this.Utils.showMessage('Currency deleted successfully!', 'success'); messageModalContainer.remove(); } catch (error) { this.Utils.handleError(error, "deleting currency"); messageModalContainer.remove(); } };
             const cancelBtn = document.createElement('button');
             cancelBtn.textContent = 'Cancel'; cancelBtn.className = 'bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg mt-4';
             cancelBtn.onclick = () => { messageModalContainer.remove(); this.Utils.showMessage('Deletion cancelled.', 'info'); };
