@@ -21,21 +21,17 @@ export const Customers = {
      * @param {object} firebaseAuth - The Firebase Auth instance.
      * @param {object} utils - The Utils object for common functionalities.
      */
-    init: function(firestoreDb, firebaseAuth, utils) { // REMOVED: async keyword
+    init: function(firestoreDb, firebaseAuth, utils) {
         this.db = firestoreDb;
         this.auth = firebaseAuth;
         this.Utils = utils;
 
         console.log("Customers module initialized.");
 
-        // REMOVED: await this._loadGridJsAssets(); // Grid.js is now loaded globally in index.html
-
         this.renderCustomersUI(); // Render the initial UI for customers
         this.setupRealtimeListener(); // Set up real-time data listener
         this.attachEventListeners(); // Attach UI event listeners
     },
-
-    // REMOVED: _loadGridJsAssets method
 
     /**
      * Renders the main UI for the Customers module.
@@ -84,6 +80,47 @@ export const Customers = {
                                     <input type="text" id="customer-address" name="address"
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 </div>
+
+                                <!-- NEW FIELDS START HERE -->
+                                <div>
+                                    <label for="customer-type" class="block text-sm font-medium text-gray-700 mb-1">Customer Type</label>
+                                    <select id="customer-type" name="customerType"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                        <option value="">Select Type</option>
+                                        <option value="Individual">Individual</option>
+                                        <option value="Company">Company</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="preferred-contact-method" class="block text-sm font-medium text-gray-700 mb-1">Preferred Contact Method</label>
+                                    <select id="preferred-contact-method" name="preferredContactMethod"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                        <option value="">Select Method</option>
+                                        <option value="Email">Email</option>
+                                        <option value="Phone">Phone</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="industry" class="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+                                    <select id="industry" name="industry"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                        <option value="">Select Industry</option>
+                                        <option value="Technology">Technology</option>
+                                        <option value="Finance">Finance</option>
+                                        <option value="Healthcare">Healthcare</option>
+                                        <option value="Retail">Retail</option>
+                                        <option value="Education">Education</option>
+                                        <option value="Manufacturing">Manufacturing</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-1 md:col-span-2"> <!-- This textarea spans both columns on medium screens and up -->
+                                    <label for="additional-details" class="block text-sm font-medium text-gray-700 mb-1">Additional Details</label>
+                                    <textarea id="additional-details" name="additionalDetails" rows="3"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                                </div>
+                                <!-- NEW FIELDS END HERE -->
+
                             </div>
                             <div class="flex justify-end space-x-3 mt-6">
                                 <button type="button" id="cancel-customer-btn"
@@ -115,9 +152,10 @@ export const Customers = {
 
         this.unsubscribe = onSnapshot(q, (snapshot) => {
             const customers = [];
-            snapshot.forEach((doc) => {
-                customers.push({ id: doc.id, ...doc.data() });
+            snapshot.forEach((customerDoc) => { // Renamed 'doc' to 'customerDoc' to prevent shadowing
+                customers.push({ id: customerDoc.id, ...customerDoc.data() });
             });
+            this.customersData = customers; // Cache for easy access in edit/delete
             console.log("Customers data updated:", customers);
             this.renderCustomerGrid(customers);
         }, (error) => {
@@ -136,14 +174,15 @@ export const Customers = {
             return;
         }
 
-        // Now, gridjs is guaranteed to be available globally.
-
         // Define columns for Grid.js
         const columns = [
             { id: 'name', name: 'Customer Name', sort: true },
             { id: 'email', name: 'Email', sort: true },
             { id: 'phone', name: 'Phone' },
-            { id: 'address', name: 'Address' },
+            { id: 'customerType', name: 'Type' }, // New column
+            { id: 'industry', name: 'Industry' }, // New column
+            // Address and Preferred Contact Method/Additional Details might make the table too wide.
+            // Keeping them in the form for now.
             {
                 name: 'Actions',
                 formatter: (cell, row) => {
@@ -163,14 +202,22 @@ export const Customers = {
             }
         ];
 
+        // Ensure the data mapping matches the columns.
+        // The `id` column is implicitly the first element of the array if not explicitly listed.
+        // We need to map `id` first, then `name`, `email`, `phone`, `customerType`, `industry` for Grid.js actions
+        // and rendering, even if `id` is not a visible column.
+        const mappedData = customers.map(c => [
+            c.id, c.name, c.email, c.phone, c.customerType || '', c.industry || ''
+        ]);
+
         if (this.grid) {
             this.grid.updateConfig({
-                data: customers.map(c => [c.id, c.name, c.email, c.phone, c.address]) // Map data to array for Grid.js
+                data: mappedData
             }).forceRender();
         } else {
             this.grid = new gridjs.Grid({
                 columns: columns,
-                data: customers.map(c => [c.id, c.name, c.email, c.phone, c.address]), // Map data to array for Grid.js
+                data: mappedData,
                 sort: true,
                 search: true,
                 pagination: {
@@ -240,8 +287,17 @@ export const Customers = {
             document.getElementById('customer-email').value = customerData.email || '';
             document.getElementById('customer-phone').value = customerData.phone || '';
             document.getElementById('customer-address').value = customerData.address || '';
+            // Populate new fields
+            document.getElementById('customer-type').value = customerData.customerType || '';
+            document.getElementById('preferred-contact-method').value = customerData.preferredContactMethod || '';
+            document.getElementById('industry').value = customerData.industry || '';
+            document.getElementById('additional-details').value = customerData.additionalDetails || '';
         } else {
             title.textContent = 'Add New Customer';
+            // Set default values for new entries if desired
+            document.getElementById('customer-type').value = ''; // Ensure default is "Select Type"
+            document.getElementById('preferred-contact-method').value = ''; // Ensure default is "Select Method"
+            document.getElementById('industry').value = ''; // Ensure default is "Select Industry"
         }
 
         // Show the modal with animation
@@ -270,6 +326,12 @@ export const Customers = {
         const email = document.getElementById('customer-email').value.trim();
         const phone = document.getElementById('customer-phone').value.trim();
         const address = document.getElementById('customer-address').value.trim();
+        // Get new field values
+        const customerType = document.getElementById('customer-type').value;
+        const preferredContactMethod = document.getElementById('preferred-contact-method').value;
+        const industry = document.getElementById('industry').value;
+        const additionalDetails = document.getElementById('additional-details').value.trim();
+
 
         if (!name) {
             this.Utils.showMessage('Customer Name is required.', 'warning');
@@ -282,6 +344,10 @@ export const Customers = {
                 email,
                 phone,
                 address,
+                customerType: customerType, // New field
+                preferredContactMethod: preferredContactMethod, // New field
+                industry: industry, // New field
+                additionalDetails: additionalDetails, // New field
                 updatedAt: new Date(),
             };
 
