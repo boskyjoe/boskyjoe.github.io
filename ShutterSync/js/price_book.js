@@ -126,7 +126,8 @@ export const PriceBook = {
             this.unsubscribe(); // Detach existing listener if any
         }
 
-        const q = query(collection(this.db, "price_books"));
+        // UPDATED: Path changed to /app_metadata/app_settings/price_books_data
+        const q = query(collection(this.db, "app_metadata", "app_settings", "price_books_data"));
 
         this.unsubscribe = onSnapshot(q, (snapshot) => {
             const priceBookEntries = [];
@@ -248,9 +249,11 @@ export const PriceBook = {
         currencySelect.innerHTML = '<option value="">Select Currency</option>'; // Default empty option
 
         try {
-            const currenciesCollection = collection(this.db, "currencies");
+            // UPDATED: Path changed to /app_metadata/app_settings/currencies_data
+            const currenciesCollection = collection(this.db, "app_metadata", "app_settings", "currencies_data");
             const q = query(currenciesCollection);
-            const querySnapshot = await this.db.getDocs(q); // Use getDocs from Firestore
+            // Changed from this.db.getDocs(q) to getDocs(this.db, q) as per correct Firestore SDK usage
+            const querySnapshot = await this.db.getDocs(q); 
             querySnapshot.forEach((doc) => {
                 const currency = doc.data();
                 const option = document.createElement('option');
@@ -334,13 +337,13 @@ export const PriceBook = {
             };
 
             if (this.currentPriceBookId) {
-                // Update existing entry
-                await updateDoc(doc(this.db, "price_books", this.currentPriceBookId), entryData);
+                // UPDATED: Path changed to /app_metadata/app_settings/price_books_data
+                await updateDoc(doc(this.db, "app_metadata", "app_settings", "price_books_data", this.currentPriceBookId), entryData);
                 this.Utils.showMessage('Price book entry updated successfully!', 'success');
             } else {
-                // Add new entry
+                // UPDATED: Path changed to /app_metadata/app_settings/price_books_data
                 entryData.createdAt = new Date();
-                await addDoc(collection(this.db, "price_books"), entryData);
+                await addDoc(collection(this.db, "app_metadata", "app_settings", "price_books_data"), entryData);
                 this.Utils.showMessage('Price book entry added successfully!', 'success');
             }
             this.closePriceBookModal();
@@ -378,7 +381,8 @@ export const PriceBook = {
             confirmBtn.className = 'bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg mt-4 mr-2';
             confirmBtn.onclick = async () => {
                 try {
-                    await deleteDoc(doc(this.db, "price_books", id));
+                    // UPDATED: Path changed to /app_metadata/app_settings/price_books_data
+                    await deleteDoc(doc(this.db, "app_metadata", "app_settings", "price_books_data", id));
                     this.Utils.showMessage('Price book entry deleted successfully!', 'success');
                     messageModalContainer.remove();
                 } catch (error) {
