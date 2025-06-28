@@ -10,14 +10,14 @@ let domElementsInitialized = false; // Flag to ensure DOM elements are initializ
 // EXPORTED: Setter function for the Firestore DB instance
 export function setDbInstance(instance) {
     console.log("admin_data.js: setDbInstance received:", instance);
-    // Simplified and more robust check for a Firestore instance
-    // A Firestore instance will always have a 'collection' method.
-    if (instance && typeof instance.collection === 'function') {
-        firestoreDb = instance;
+    // MOST LENIENT CHECK FOR DIAGNOSIS: Directly assign.
+    // If firestoreDb is still null after this, then 'instance' itself was null/undefined when passed.
+    firestoreDb = instance;
+
+    if (firestoreDb) {
         console.log("admin_data.js: Firestore DB instance successfully set via setDbInstance. firestoreDb is now:", firestoreDb);
     } else {
-        console.error("admin_data.js: Attempted to set an invalid Firestore DB instance. Received:", instance, " Setting firestoreDb to null.");
-        firestoreDb = null;
+        console.error("admin_data.js: CRITICAL ERROR: Firestore DB instance is still null after direct assignment. This means the 'instance' passed was null/undefined.");
     }
 }
 
@@ -155,7 +155,6 @@ export async function initAdminDataModule(type) {
             }
         }
     }
-    // Removed the problematic early return/warning from here
 }
 
 
@@ -382,9 +381,10 @@ export async function fetchCurrencies() {
     try {
         const collectionRef = collection(firestoreDb, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
         const querySnapshot = await getDocs(collectionRef);
-        allCurrencies = []; // Clear existing data
+        allCurrencies = [];
         querySnapshot.forEach((docSnap) => {
-            allCurrencies.push({ id: docSnap.id, ...docSnap.data() });
+            const currency = { id: docSnap.id, ...docSnap.data() };
+            allCurrencies.push(currency);
         });
         console.log("admin_data.js: Currency data loaded from Firestore. Total:", allCurrencies.length);
     } catch (error) {
