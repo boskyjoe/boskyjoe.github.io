@@ -1,0 +1,225 @@
+/* css/style.css */
+
+/* General Body Styling and Font Smoothing */
+body {
+    font-family: 'Inter', sans-serif; /* Ensures Inter font is applied globally */
+    -webkit-font-smoothing: antialiased; /* Smoother font rendering on WebKit browsers */
+    -moz-osx-font-smoothing: grayscale; /* Smoother font rendering on Firefox */
+    background-color: #f3f4f6; /* Light gray background, matching Tailwind's bg-gray-100 */
+    color: #374151; /* Dark gray text color, matching Tailwind's text-gray-800 */
+    line-height: 1.6; /* Standard line height for readability */
+}
+
+/* Container for consistent padding and max-width */
+.container {
+    max-width: 1200px; /* Limits content width for better readability on large screens */
+    margin-left: auto; /* Centers the container */
+    margin-right: auto; /* Centers the container */
+    padding-left: 1rem; /* Responsive padding on left */
+    padding-right: 1rem; /* Responsive padding on right */
+}
+
+/* Header Styling - Background, Shadow, Text */
+header {
+    background-image: linear-gradient(to right, #2563eb, #4f46e5); /* Blue to Indigo gradient */
+    color: #ffffff; /* White text for header */
+    padding: 1rem 0; /* Vertical padding */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+}
+
+header h1 {
+    font-size: 2.25rem; /* Large font size for title */
+    font-weight: 700; /* Bold font weight */
+    letter-spacing: -0.025em; /* Tighten letter spacing for a modern look */
+}
+
+/* User Authentication Section - Buttons and Dropdowns */
+.user-auth button {
+    border-radius: 9999px; /* Fully rounded buttons */
+    padding: 0.5rem 1rem; /* Padding for clickability */
+    transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transitions */
+}
+
+#auth-button {
+    background-color: rgba(59, 130, 246, 0.2); /* Light blue background for user button */
+}
+
+#auth-button:hover {
+    background-color: rgba(59, 130, 246, 0.3); /* Slightly darker on hover */
+}
+
+#auth-dropdown {
+    position: absolute; /* Positions dropdown relative to its parent */
+    right: 0; /* Aligns to the right of the parent */
+    margin-top: 0.5rem; /* Space below button */
+    width: 12rem; /* Fixed width for dropdown */
+    background-color: #ffffff; /* White background */
+    color: #374151; /* Dark text */
+    border-radius: 0.375rem; /* Rounded corners */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Stronger shadow */
+    overflow: hidden; /* Ensures content stays within rounded borders */
+    transform-origin: top right; /* Origin for scale animation */
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out; /* Smooth show/hide animation */
+    z-index: 50; /* Ensures dropdown is on top */
+}
+
+#auth-dropdown button {
+    display: block; /* Makes buttons take full width */
+    width: 100%; /* Full width */
+    text-align: left; /* Aligns text to left */
+    padding: 0.5rem 1rem; /* Padding for dropdown items */
+    font-size: 0.875rem; /* Smaller font size */
+    color: #4b5563; /* Gray text */
+    transition: background-color 0.2s ease; /* Smooth hover effect */
+}
+
+#auth-dropdown button:hover {
+    background-color: #f3f4f6; /* Light gray background on hover */
+}
+
+#logout-button {
+    color: #dc2626; /* Red color for logout */
+}
+
+/* Navigation Bar Styling */
+nav {
+    background-color: #1e3a8a; /* Darker blue for nav bar */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+nav ul {
+    display: flex; /* Flexbox for horizontal menu */
+    justify-content: flex-start; /* Aligns items to the start */
+    align-items: center; /* Centers items vertically */
+    gap: 2rem; /* Space between nav items */
+}
+
+nav ul li a {
+    color: #ffffff; /* White text for nav links */
+    font-weight: 500; /* Medium font weight */
+    padding: 0.5rem 0.75rem; /* Padding for clickable area */
+    border-radius: 0.375rem; /* Slightly rounded corners */
+    transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transitions */
+}
+
+nav ul li a:hover {
+    background-color: #1c458a; /* Darker blue on hover */
+    color: #bfdbfe; /* Lighter blue text on hover */
+}
+
+/* Admin Menu Dropdown */
+#admin-menu ul {
+    position: absolute; /* Positions dropdown relative to its parent */
+    left: 0; /* Aligns to the left */
+    margin-top: 0.5rem; /* Space below parent link */
+    width: 12rem; /* Fixed width */
+    background-color: #ffffff; /* White background */
+    color: #374151; /* Dark text */
+    border-radius: 0.375rem; /* Rounded corners */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Shadow */
+    overflow: hidden; /* Ensures content stays within borders */
+    transform-origin: top left; /* Origin for scale animation */
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out; /* Smooth show/hide */
+    z-index: 50; /* Ensures dropdown is on top */
+}
+
+#admin-menu:hover ul {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
+#admin-menu ul li a {
+    display: block; /* Full width links */
+    padding: 0.5rem 1rem; /* Padding for submenu items */
+    font-size: 0.875rem; /* Smaller font size */
+    color: #4b5563; /* Gray text */
+    transition: background-color 0.2s ease; /* Smooth hover */
+}
+
+#admin-menu ul li a:hover {
+    background-color: #f3f4f6; /* Light gray background on hover */
+}
+
+/* Main Content Area Styling */
+main {
+    flex-grow: 1; /* Allows main content to take up available vertical space */
+    background-color: #ffffff; /* White background for content area */
+    border-radius: 0.5rem; /* Rounded corners for the content box */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06); /* Subtle shadow */
+    min-height: 400px; /* Minimum height to ensure presence */
+    display: flex; /* Flexbox for potential internal layout */
+    flex-direction: column; /* Stacks children vertically */
+}
+
+main h2 {
+    font-size: 2.25rem; /* Large heading */
+    font-weight: 600; /* Semi-bold */
+    color: #1f2937; /* Darker gray */
+    margin-bottom: 1.5rem; /* Space below heading */
+}
+
+main p {
+    font-size: 1.125rem; /* Slightly larger paragraph text */
+    color: #4b5563; /* Medium gray */
+}
+
+/* Footer Styling */
+footer {
+    background-color: #1f2937; /* Dark gray background for footer */
+    color: #d1d5db; /* Light gray text */
+    padding: 1rem 0; /* Vertical padding */
+    text-align: center; /* Center align text */
+    font-size: 0.875rem; /* Smaller font size */
+}
+
+/* Utility Classes (could be integrated with Tailwind, but here for clarity) */
+.hidden {
+    display: none !important; /* Forces element to be hidden */
+}
+
+.absolute {
+    position: absolute;
+}
+
+.relative {
+    position: relative;
+}
+
+.group:hover .group-hover\:opacity-100 {
+    opacity: 1;
+}
+
+.group:hover .group-hover\:scale-100 {
+    transform: scale(1);
+}
+
+.group:hover .group-hover\:pointer-events-auto {
+    pointer-events: auto;
+}
+
+.transition-all {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+.duration-200 {
+    transition-duration: 200ms;
+}
+
+.ease-out {
+    transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+}
+
+.opacity-0 {
+    opacity: 0;
+}
+
+.scale-95 {
+    transform: scale(0.95);
+}
+
+.pointer-events-none {
+    pointer-events: none;
+}
