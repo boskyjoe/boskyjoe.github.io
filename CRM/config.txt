@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Function to check if the current user is an Admin
+    // This function will fetch the user's role from their 'users_data' document.
+    // It requires read permission on 'users_data' for the current authenticated user.
+    function isAdmin() {
+      return request.auth != null &&
+             get(/databases/$(database)/documents/users_data/$(request.auth.uid)).data.role == 'Admin' &&
+             get(/databases/$(database)/documents/users_data/$(request.auth.uid)).data.profileAccess == true;
+    }
+
+    // =================================================================================================
+    // 1. User Profiles (`users_data/{userId}`)
+    //    - Users can read/update their own profile.
+    //    - Admins can read/list/create/update/delete all profiles.
+    //    - New user creation enforces a 'User' role by default unless an Admin creates them.
+    // =================================================================================================
+    match /users_data/{userId} {
+      // Allow any authenticated user to read any user's profile (e.g., for dropdowns, display names)
+      allow read: if request.auth != null;
+
+      // Allow authenticated user to CREATE their OWN user profile document (document ID must match UID).
+      // They can only create themselves with a 'User' role. This prevents self-elevation on sign-up.
+      allow create: if request.auth != null
+                      && request.auth.uid == userId
+                      && request.resource.data.role == 'User';
+
+      // Allow authenticated user to UPDATE their OWN profile (UID matches document ID).
+      // They CANNOT change their own 'role' field (prevents self-elevation).
+      // OR allow Admins to update ANY user profile, including changing roles.
+      allow update: if request.auth != null && (
+        isAdmin() || // Admins can update any user's profile
+        (request.auth.uid == userId && request.resource.data.role == resource.data.role) // User can update own, but not change role
+      );
+
+      // Allow only Admins to DELETE user profiles.
+      allow delete: if isAdmin();
+    }
+
+
+    // =================================================================================================
+    // 2. Customers (`artifacts/{appId}/public/data/customers/{customerId}`)
+    //    - All authenticated users can read, create, update, delete.
+    // =================================================================================================
+    match /artifacts/{appId}/public/data/customers/{customerId} {
+      allow read, write: if request.auth != null;
+    }
+
+
+    // =================================================================================================
+    // 3. Opportunities (`opportunities_data/{opportunityId}`) and their subcollections
+    //    - Read access for all authenticated users.
+    //    - Write access (create, update, delete) for Admins or the Opportunity Owner.
+    // =================================================================================================
+    match /opportunities_data/{opportunityId} {
+      // Any authenticated user can read any opportunity.
+      allow read: if request.auth != null;
+
+      // Write an opportunity:
+      // 1. If the user is an Admin.
+      // 2. OR, if the user is the owner (`ownerId` field) of the opportunity.
+      //    - For 'create' (new document), `request.resource.data.ownerId` is checked.
+      //    - For 'update'/'delete' (existing document), `resource.data.ownerId` is checked.
+      allow write: if request.auth != null && (
+        isAdmin() ||
+        (request.method == 'create' && request.auth.uid == request.resource.data.ownerId) ||
+        (request.method in ['update', 'delete'] && request.auth.uid == resource.data.ownerId)
+      );
+
+      // Subcollections of Opportunities (Contacts, Lines, Quotes)
+      // These inherit the parent opportunity's owner-based access or Admin override.
+      match /{subCollectionName}/{subDocumentId} {
+        // Any authenticated user can read related objects.
+        allow read: if request.auth != null;
+
+        // Write a related object (contact, line, quote):
+        // 1. If the user is an Admin.
+        // 2. OR, if the user is the owner of the PARENT opportunity.
+        //    `get()` is used here to fetch the `ownerId` from the parent opportunity document.
+        allow write: if request.auth != null && (
+          isAdmin() ||
+          request.auth.uid == get(/databases/$(database)/documents/opportunities_data/$(opportunityId)).data.ownerId
+        );
+      }
+    }
+
+
+    // =================================================================================================
+    // 4. App Metadata (`app_metadata`)
+    //    - Contains global app settings, countries, currencies, price books.
+    //    - Read access for all authenticated users.
+    //    - Write/Update/Delete access ONLY for Admins.
+    // =================================================================================================
+
+    // This rule applies to all documents and subcollections directly under `/app_metadata/`
+    // e.g., /app_metadata/countries_states, /app_metadata/app_settings
+    match /app_metadata/{document=**} {
+      allow read: if request.auth != null; // Authenticated users can read all app metadata
+      allow write: if isAdmin(); // Only Admins can modify any app metadata
+    }
+  }
+}
