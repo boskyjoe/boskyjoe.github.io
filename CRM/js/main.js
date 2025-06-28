@@ -167,7 +167,7 @@ let optyLineIdDisplay;
 let lineServiceDescriptionInput;
 let lineUnitPriceInput;
 let lineQuantityInput;
-let lineDiscountInput;
+let lineDiscountInput; // This was the problematic line
 let lineNetPriceInput;
 let lineStatusSelect;
 let submitOpportunityLineButton;
@@ -630,7 +630,7 @@ async function initializeFirebase() {
     lineServiceDescriptionInput = document.getElementById('lineServiceDescription');
     lineUnitPriceInput = document.getElementById('lineUnitPrice');
     lineQuantityInput = document.getElementById('lineQuantity');
-    lineDiscountInput = document = document.getElementById('lineDiscount'); // Fixed potential typo here (document = document)
+    lineDiscountInput = document.getElementById('lineDiscount'); // CORRECTED THIS LINE
     lineNetPriceInput = document.getElementById('lineNetPrice');
     lineStatusSelect = document.getElementById('lineStatus');
     submitOpportunityLineButton = document.getElementById('submitOpportunityLineButton');
