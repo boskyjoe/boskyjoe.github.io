@@ -1,6 +1,6 @@
 // js/users.js
 
-// Ensure Grid.js is loaded for data grids
+// Ensure Grid.js is loaded globally in index.html, not here.
 // <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
 // <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
 
@@ -17,6 +17,7 @@ export const UsersModule = {
     currentUserIdToEdit: null, // Used for editing an existing user's role
     usersData: [], // Cache for users data
     grid: null, // Grid.js instance for the users table
+    // REMOVED: gridJsLoaded: false, // Flag no longer needed as Grid.js is loaded globally
 
     /**
      * Initializes the Users module. This function is called by main.js.
@@ -25,10 +26,10 @@ export const UsersModule = {
      * @param {object} firebaseAuth - The Firebase Auth instance.
      * @param {object} utils - The Utils object for common functionalities.
      */
-    init: function(firestoreDb, firebaseAuth, utils) {
+    init: function(firestoreDb, firebaseAuth, utils) { // REMOVED: async keyword
         this.db = firestoreDb;
         this.auth = firebaseAuth;
-        this.Utils = utils; // Make Utils available internally
+        this.Utils = utils;
 
         // Defensive check, though main.js should prevent non-admins from reaching here
         if (!this.Utils.isAdmin()) {
@@ -37,10 +38,13 @@ export const UsersModule = {
         }
 
         console.log("Users module initialized.");
+        // REMOVED: await this._loadGridJsAssets(); // Grid.js is now loaded globally
         this.renderUsersUI(); // Render the initial UI for users
         this.setupRealtimeListener(); // Set up real-time data listener
         this.attachEventListeners(); // Attach UI event listeners
     },
+
+    // REMOVED: _loadGridJsAssets method
 
     /**
      * Renders the main UI for the Users module.
@@ -50,8 +54,7 @@ export const UsersModule = {
         const adminUsersContent = document.getElementById('admin-users-content');
         if (adminUsersContent) {
             adminUsersContent.innerHTML = `
-                <!-- Grid.js CSS -->
-                <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+                <!-- Grid.js CSS and JS are now loaded globally in index.html, removed from here -->
                 <div class="bg-white p-6 rounded-lg shadow-md mb-6">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-2xl font-semibold text-gray-800">System Users</h3>
@@ -96,9 +99,6 @@ export const UsersModule = {
                         </form>
                     </div>
                 </div>
-
-                <!-- Grid.js JS -->
-                <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
             `;
         }
     },
@@ -140,6 +140,10 @@ export const UsersModule = {
             return;
         }
 
+        // REMOVED: Check if gridjs is available, it's now loaded globally.
+        // if (typeof gridjs === 'undefined' || !this.gridJsLoaded) { ... }
+
+
         // Define columns for Grid.js
         const columns = [
             // { id: 'id', name: 'User ID' }, // You can show this for debugging if needed
@@ -173,12 +177,6 @@ export const UsersModule = {
                 }
             }
         ];
-
-        if (typeof gridjs === 'undefined') {
-            console.warn("Grid.js not loaded. Cannot render grid.");
-            this.Utils.showMessage("Grid.js library not loaded. Please refresh the page.", "error");
-            return;
-        }
 
         if (this.grid) {
             this.grid.updateConfig({
@@ -374,5 +372,6 @@ export const UsersModule = {
             this.grid.destroy(); // Destroy Grid.js instance
             this.grid = null;
         }
+        // REMOVED: this.gridJsLoaded = false; // Flag not needed anymore
     }
 };
