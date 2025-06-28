@@ -1,523 +1,424 @@
-// Use named imports for specific global states (excluding 'db' here)
-import { isAuthReady, currentUserId, isAdmin, addUnsubscribe, removeUnsubscribe, fetchCountryData, appCountries, appCountryStateMap, allCustomers, isDbReady } from './main.js';
-import { showModal, getCollectionPath, formatDate } from './utils.js'; // Import utility functions
-
-import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
-
+import { auth, currentUserId, isAdmin, isAuthReady, addUnsubscribe, removeUnsubscribe, appCountries, appCountryStateMap, allCustomers, fetchCountryData, fetchCurrencies, allCurrencies } from './main.js';
+import { showModal, showMessage, hideMessage } from './utils.js';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, query, getDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Global variable to hold the Firestore DB instance, explicitly set by main.js
 let firestoreDb = null;
+let projectId = null; // Store projectId here
+let customersDomElementsInitialized = false; // Flag to ensure DOM elements are initialized only once
 
 // EXPORTED: Setter function for the Firestore DB instance
 export function setDbInstance(instance) {
-    console.log("MODULE_NAME.js: setDbInstance received:", instance); // Adjust MODULE_NAME
-    firestoreDb = instance; // Directly assign
+    console.log("customers.js: setDbInstance received:", instance);
+    firestoreDb = instance; // Directly assign for robust assignment
     if (firestoreDb) {
-        console.log("MODULE_NAME.js: Firestore DB instance successfully set. firestoreDb is now:", firestoreDb);
+        // Ensure projectId is correctly derived from the FirebaseApp instance within Firestore
+        projectId = firestoreDb.app.options.projectId;
+        console.log("customers.js: Firestore DB instance successfully set. projectId:", projectId);
     } else {
-        console.error("MODULE_NAME.js: CRITICAL ERROR: Firestore DB instance is still null after direct assignment. This means the 'instance' passed was null/undefined.");
+        console.error("customers.js: CRITICAL ERROR: Firestore DB instance is still null after direct assignment. This means the 'instance' passed was null/undefined.");
+        projectId = null;
     }
 }
 
-
-// DOM elements for Customer Management Section
-let customersManagementSection;
+// DOM elements for customers.js
+let customersSection;
 let customerForm;
 let customerFormTitle;
 let customerIdDisplayGroup;
 let customerIdDisplay;
-
 let customerTypeSelect;
 let individualFieldsDiv;
 let customerFirstNameInput;
 let customerLastNameInput;
 let companyNameFieldDiv;
 let customerCompanyNameInput;
-
 let customerEmailInput;
 let customerPhoneInput;
-
-// Address fields
 let customerCountrySelect;
 let customerAddressInput;
 let customerCityInput;
 let customerStateSelect;
 let customerZipCodeInput;
 let addressValidationMessage;
-
 let individualIndustryGroup;
 let customerIndustryInput;
 let companyIndustryGroup;
 let customerIndustrySelect;
-
 let customerSinceInput;
 let customerDescriptionInput;
 let submitCustomerButton;
-let customerList; // Reference to the div for customer rows
-let customerSourceSelect; // NEW: Customer Source
-let customerActiveSelect; // NEW: Customer Active
+let customerList;
+let resetCustomerFormButton;
 
 /**
- * Initializes the Customers module, setting up DOM references, event listeners,
- * and starting data listeners if authentication is ready.
- * No longer accepts dbInstance as it directly imports 'db'.
+ * Initializes DOM elements and static event listeners for customers module.
+ * This should be called once, defensively.
+ */
+function initializeCustomersDomElements() {
+    if (customersDomElementsInitialized) return; // Already initialized
+
+    customersSection = document.getElementById('customers-section');
+    customerForm = document.getElementById('customerForm');
+    customerFormTitle = document.getElementById('customerFormTitle');
+    customerIdDisplayGroup = document.getElementById('customerIdDisplayGroup');
+    customerIdDisplay = document.getElementById('customerIdDisplay');
+    customerTypeSelect = document.getElementById('customerType');
+    individualFieldsDiv = document.getElementById('individualFields');
+    customerFirstNameInput = document.getElementById('customerFirstName');
+    customerLastNameInput = document.getElementById('customerLastName');
+    companyNameFieldDiv = document.getElementById('companyNameField');
+    customerCompanyNameInput = document.getElementById('customerCompanyName');
+    customerEmailInput = document.getElementById('customerEmail');
+    customerPhoneInput = document.getElementById('customerPhone');
+    customerCountrySelect = document.getElementById('customerCountry');
+    customerAddressInput = document.getElementById('customerAddress');
+    customerCityInput = document.getElementById('customerCity');
+    customerStateSelect = document.getElementById('customerState');
+    customerZipCodeInput = document.getElementById('customerZipCode');
+    addressValidationMessage = document.getElementById('addressValidationMessage');
+    individualIndustryGroup = document.getElementById('individualIndustryGroup');
+    customerIndustryInput = document.getElementById('customerIndustryInput');
+    companyIndustryGroup = document.getElementById('companyIndustryGroup');
+    customerIndustrySelect = document.getElementById('customerIndustrySelect');
+    customerSinceInput = document.getElementById('customerSince');
+    customerDescriptionInput = document.getElementById('customerDescription');
+    submitCustomerButton = document.getElementById('submitCustomerButton');
+    customerList = document.getElementById('customerList');
+    resetCustomerFormButton = document.getElementById('resetCustomerFormButton');
+
+    // Add static event listeners
+    if (customerForm) {
+        customerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await saveCustomer();
+        });
+    }
+    if (resetCustomerFormButton) {
+        resetCustomerFormButton.addEventListener('click', resetCustomerForm);
+    }
+    if (customerTypeSelect) {
+        customerTypeSelect.addEventListener('change', toggleCustomerTypeFields);
+    }
+    if (customerCountrySelect) {
+        customerCountrySelect.addEventListener('change', populateStateDropdown);
+    }
+
+    customersDomElementsInitialized = true;
+    console.log("customers.js: DOM elements and static event listeners initialized.");
+}
+
+
+/**
+ * Main initialization function for the Customers module.
  */
 export async function initCustomersModule() {
     console.log("customers.js: initCustomersModule called.");
-    // Access imported properties directly, and use the internally managed firestoreDb
-    console.log("customers.js: initCustomersModule current state - firestoreDb:", firestoreDb, "isAuthReady:", isAuthReady, "isDbReady:", isDbReady, "currentUserId:", currentUserId);
+    initializeCustomersDomElements(); // Ensure DOM elements are ready
 
-
-    // Initialize DOM elements if they haven't been already. This helps prevent null references.
-    if (!customersManagementSection) { // Check for a key element to prevent re-initialization
-        customersManagementSection = document.getElementById('customers-section');
-        customerForm = document.getElementById('customerForm');
-        customerFormTitle = document.getElementById('customerFormTitle');
-        customerIdDisplayGroup = document.getElementById('customerIdDisplayGroup');
-        customerIdDisplay = document.getElementById('customerIdDisplay');
-
-        customerTypeSelect = document.getElementById('customerType');
-        individualFieldsDiv = document.getElementById('individualFields');
-        customerFirstNameInput = document.getElementById('customerFirstName');
-        customerLastNameInput = document.getElementById('customerLastName');
-        companyNameFieldDiv = document.getElementById('companyNameField');
-        customerCompanyNameInput = document.getElementById('customerCompanyName');
-
-        customerEmailInput = document.getElementById('customerEmail');
-        customerPhoneInput = document.getElementById('customerPhone');
-
-        customerCountrySelect = document.getElementById('customerCountry');
-        customerAddressInput = document.getElementById('customerAddress');
-        customerCityInput = document.getElementById('customerCity');
-        customerStateSelect = document.getElementById('customerState');
-        customerZipCodeInput = document.getElementById('customerZipCode'); // Correctly referencing the DOM element
-        addressValidationMessage = document.getElementById('addressValidationMessage');
-
-        individualIndustryGroup = document.getElementById('individualIndustryGroup');
-        customerIndustryInput = document.getElementById('customerIndustryInput');
-        companyIndustryGroup = document.getElementById('companyIndustryGroup');
-        customerIndustrySelect = document.getElementById('customerIndustrySelect');
-
-        customerSinceInput = document.getElementById('customerSince');
-        customerDescriptionInput = document.getElementById('customerDescription');
-        submitCustomerButton = document.getElementById('submitCustomerButton');
-        customerList = document.getElementById('customerList');
-
-        customerSourceSelect = document.getElementById('customerSource'); // NEW
-        customerActiveSelect = document.getElementById('customerActive'); // NEW
-
-        // Add event listeners once, using `dataset.listenerAdded` to prevent duplicates
-        if (customerForm && !customerForm.dataset.listenerAdded) {
-            customerForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await saveCustomer();
-            });
-            customerForm.dataset.listenerAdded = 'true';
-        }
-        const resetBtn = document.getElementById('resetCustomerFormButton');
-        if (resetBtn && !resetBtn.dataset.listenerAdded) {
-            resetBtn.addEventListener('click', resetCustomerForm);
-            resetBtn.dataset.listenerAdded = 'true';
-        }
-
-        if (customerTypeSelect && !customerTypeSelect.dataset.listenerAdded) {
-            customerTypeSelect.addEventListener('change', applyCustomerTypeValidation);
-            customerTypeSelect.dataset.listenerAdded = 'true';
-            applyCustomerTypeValidation(); // Initial call
-        }
-
-        if (customerCountrySelect && !customerCountrySelect.dataset.listenerAdded) {
-            customerCountrySelect.addEventListener('change', (e) => populateStates(e.target.value));
-            customerCountrySelect.dataset.listenerAdded = 'true';
-        }
+    // CRITICAL: Ensure firestoreDb and projectId are available before proceeding
+    if (!firestoreDb || !projectId || !isAuthReady || !currentUserId) {
+        console.warn("customers.js: Firestore DB, Project ID, or Auth is not ready. Cannot initialize Customers module fully.");
+        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Initializing... Waiting for database connection and user authentication.</p>';
+        disableCustomerForm(); // Disable form if not ready
+        return;
     }
+    enableCustomerForm(); // Enable form if ready
 
-    // Load data specific to this module ONLY if auth and DB are ready AND firestoreDb is set
-    if (isAuthReady && currentUserId && firestoreDb && isDbReady) {
-        console.log("customers.js: Auth, User, and DB are ready. Initializing customer data.");
-        if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
-        await fetchCountryData(); // Used directly imported function from main
-        populateCountries();
-        listenForCustomers(); // This will use the firestoreDb
-        resetCustomerForm(); // Ensure the form is cleared and ready for new input
+    // Fetch country/currency data which is needed for dropdowns
+    // These will update main.js's global arrays which this module uses.
+    await fetchCountryData(); // This is a main.js export that calls admin_data.js's fetch
+    await fetchCurrencies(); // This is a main.js export that calls admin_data.js's fetch
+
+    populateCountryDropdown(); // Populate country dropdown
+    populateStateDropdown(); // Populate state dropdown initially (will be empty without country selection)
+
+    listenForCustomers(); // Start listening for customer list changes
+    resetCustomerForm(); // Reset form to initial state
+}
+
+function disableCustomerForm() {
+    customerForm?.querySelectorAll('input, select, textarea, button[type="submit"], button[type="button"]').forEach(el => el.setAttribute('disabled', 'disabled'));
+    if (submitCustomerButton) submitCustomerButton.textContent = 'Auth/DB Not Ready';
+}
+
+function enableCustomerForm() {
+    customerForm?.querySelectorAll('input, select, textarea, button[type="submit"], button[type="button"]').forEach(el => el.removeAttribute('disabled'));
+    if (submitCustomerButton) submitCustomerButton.textContent = 'Add Customer';
+}
+
+function toggleCustomerTypeFields() {
+    if (customerTypeSelect?.value === 'Individual') {
+        individualFieldsDiv?.classList.remove('hidden');
+        companyNameFieldDiv?.classList.add('hidden');
+        individualIndustryGroup?.classList.remove('hidden');
+        companyIndustryGroup?.classList.add('hidden');
+        customerFirstNameInput?.setAttribute('required', 'required');
+        customerLastNameInput?.setAttribute('required', 'required');
+        customerCompanyNameInput?.removeAttribute('required');
+        customerIndustryInput?.setAttribute('required', 'required');
+        customerIndustrySelect?.removeAttribute('required');
     } else {
-        console.warn("customers.js: Authentication, User, or Firestore DB not ready (or firestoreDb not set). Customers module not fully initialized for data operations.");
-        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Initializing customers. Please wait or sign in...</p>'; // Updated message
-        if (submitCustomerButton) submitCustomerButton.setAttribute('disabled', 'disabled');
+        individualFieldsDiv?.classList.add('hidden');
+        companyNameFieldDiv?.classList.remove('hidden');
+        individualIndustryGroup?.classList.add('hidden');
+        companyIndustryGroup?.classList.remove('hidden');
+        customerFirstNameInput?.removeAttribute('required');
+        customerLastNameInput?.removeAttribute('required');
+        customerCompanyNameInput?.setAttribute('required', 'required');
+        customerIndustryInput?.removeAttribute('required');
+        customerIndustrySelect?.setAttribute('required', 'required');
     }
 }
 
-/**
- * Gets the Firestore collection path for customers.
- * Customers are stored in a 'public' collection.
- * @returns {string} The full Firestore collection path.
- */
-function getCustomerCollectionPath() {
-    return getCollectionPath('customers', 'public'); // Data area 'customers', type 'public'
-}
-
-
-/* --- CUSTOMERS CRUD OPERATIONS --- */
-
-/**
- * Populates the country dropdown select element from the globally available `appCountries` array.
- */
-function populateCountries() {
+function populateCountryDropdown() {
     if (!customerCountrySelect) return;
     customerCountrySelect.innerHTML = '<option value="">Select Country</option>';
-    appCountries.forEach(country => { // Used directly imported array
-        const option = document.createElement('option');
-        option.value = country.code;
-        option.textContent = country.name;
-        customerCountrySelect.appendChild(option);
-    });
-    console.log("customers.js: Country dropdown populated.");
+    if (appCountries && appCountries.length > 0) {
+        appCountries.forEach(country => {
+            const option = document.createElement('option');
+            option.value = country.code;
+            option.textContent = country.name;
+            customerCountrySelect.appendChild(option);
+        });
+    }
 }
 
-/**
- * Populates the state/province dropdown based on the selected country code.
- * @param {string} countryCode - The two-letter code of the selected country.
- */
-function populateStates(countryCode) {
-    if (!customerStateSelect) return;
+function populateStateDropdown() {
+    if (!customerCountrySelect || !customerStateSelect) return;
+    const selectedCountryCode = customerCountrySelect.value;
     customerStateSelect.innerHTML = '<option value="">Select State/Province</option>';
-    const states = appCountryStateMap[countryCode] || []; // Used directly imported map
-    states.forEach(state => {
-        const option = document.createElement('option');
-        option.value = state;
-        option.textContent = state;
-        customerStateSelect.appendChild(option);
-    });
-    customerStateSelect.disabled = states.length === 0; // Disable if no states
-    console.log(`customers.js: States populated for ${countryCode}.`);
+    customerStateSelect.disabled = true; // Disable by default
+
+    if (selectedCountryCode && appCountryStateMap[selectedCountryCode] && appCountryStateMap[selectedCountryCode].length > 0) {
+        appCountryStateMap[selectedCountryCode].forEach(state => {
+            const option = document.createElement('option');
+            option.value = state;
+            option.textContent = state;
+            customerStateSelect.appendChild(option);
+        });
+        customerStateSelect.disabled = false;
+    }
 }
 
-/**
- * Placeholder for address validation. In a real app, this would call an external API.
- * For now, it performs basic checks for required address fields.
- * @param {string} address
- * @param {string} city
- * @param {string} country
- * @param {string} zipCode (now passed for specific validation)
- * @param {string} countryCode (now passed for specific validation)
- * @returns {boolean} True if address is considered valid based on non-empty values and basic zip.
- */
-function validateAddress(address, city, country, zipCode, countryCode) {
-    let isValid = true;
-    let message = '';
-
-    // Basic required fields check
-    if (address.trim() === '' || city.trim() === '' || country.trim() === '') {
-        message += 'Please enter a valid address, city, and select a country. ';
-        isValid = false;
-    }
-
-    // Country-specific zip code validation
-    if (zipCode && countryCode) {
-        if (countryCode === 'US' && !/^\d{5}(-\d{4})?$/.test(zipCode)) {
-            message += 'US zip code must be 5 digits (e.g., 90210) or 5+4 (e.g., 90210-1234). ';
-            isValid = false;
-        } else if (countryCode === 'CA' && !/^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/.test(zipCode)) {
-            message += 'Canadian postal code must be in A1A 1A1 format. ';
-            isValid = false;
-        }
-        // Add more country-specific regex patterns here as needed
-    }
-
-    if (!isValid && addressValidationMessage) {
-        addressValidationMessage.textContent = message.trim();
-        addressValidationMessage.classList.remove('hidden');
-    } else if (addressValidationMessage) {
-        addressValidationMessage.classList.add('hidden');
-    }
-    return isValid;
-}
-
-
-/**
- * Applies validation rules and shows/hides fields based on the selected customer type.
- */
-function applyCustomerTypeValidation() {
-    if (!customerTypeSelect || !individualFieldsDiv || !companyNameFieldDiv || !individualIndustryGroup || !companyIndustryGroup) return;
-
-    const customerType = customerTypeSelect.value;
-
-    // Reset required attributes first to avoid conflicts
-    customerFirstNameInput.removeAttribute('required');
-    customerLastNameInput.removeAttribute('required');
-    customerCompanyNameInput.removeAttribute('required');
-
-    if (customerType === 'Individual') {
-        individualFieldsDiv.classList.remove('hidden');
-        companyNameFieldDiv.classList.add('hidden');
-        individualIndustryGroup.classList.remove('hidden');
-        companyIndustryGroup.classList.add('hidden');
-
-        customerFirstNameInput.setAttribute('required', 'required');
-        customerLastNameInput.setAttribute('required', 'required');
-
-    } else if (customerType === 'Company') {
-        individualFieldsDiv.classList.add('hidden');
-        companyNameFieldDiv.classList.remove('hidden');
-        individualIndustryGroup.classList.add('hidden');
-        companyIndustryGroup.classList.add('hidden');
-
-        customerCompanyNameInput.setAttribute('required', 'required');
-    } else { // "Select Type" or other invalid selection
-        individualFieldsDiv.classList.add('hidden');
-        companyNameFieldDiv.classList.add('hidden');
-        individualIndustryGroup.classList.add('hidden');
-        companyIndustryGroup.classList.add('hidden');
-    }
-    console.log(`customers.js: Customer type validation applied for: ${customerType}.`);
-}
-
-/**
- * Saves (adds or updates) a customer record in Firestore.
- * Data is read from the form fields.
- */
+/* --- CUSTOMER CRUD OPERATIONS --- */
 async function saveCustomer() {
-    if (!isAuthReady || !currentUserId || !firestoreDb || !isDbReady) { // Use firestoreDb
-        showModal("Permission Denied", "Please sign in to manage customers, or Firestore is not ready.", () => {});
+    console.log("customers.js: saveCustomer called.");
+    if (!firestoreDb || !projectId || !isAuthReady || !currentUserId) {
+        showModal("Error", "Authentication or Database not ready. Please sign in or wait.", () => {});
         return;
     }
 
-    const customerType = customerTypeSelect.value;
-    const firstName = customerFirstNameInput.value.trim();
-    const lastName = customerLastNameInput.value.trim();
-    const companyName = customerCompanyNameInput.value.trim();
-    const email = customerEmailInput.value.trim();
-    const phone = customerPhoneInput.value.trim();
-    const country = customerCountrySelect.value;
-    const address = customerAddressInput.value.trim();
-    const city = customerCityInput.value.trim();
-    const state = customerStateSelect.value;
-    const zipCode = customerZipCodeInput.value.trim(); // Ensure this value is captured
-    const industry = customerType === 'Individual' ? customerIndustryInput.value.trim() : customerIndustrySelect.value;
-    const customerSince = customerSinceInput.value;
-    const description = customerDescriptionInput.value.trim();
-    const customerSource = customerSourceSelect.value; // NEW
-    const customerActive = customerActiveSelect.value === 'Yes'; // NEW: Boolean
-
-    // Basic client-side validation for mandatory fields
-    const mandatoryFields = [
-        { field: customerType, name: "Customer Type" },
-        { field: email, name: "Email" },
-        { field: phone, name: "Phone" },
-        { field: customerSince, name: "Customer Since Date" }
-    ];
-
-    if (customerType === 'Individual') {
-        mandatoryFields.push({ field: firstName, name: "First Name" });
-        mandatoryFields.push({ field: lastName, name: "Last Name" });
-    } else if (customerType === 'Company') {
-        mandatoryFields.push({ field: companyName, name: "Company Name" });
-    } else {
-        showModal("Validation Error", "Please select a valid customer type.", () => {});
+    // Basic validation
+    if (!customerEmailInput?.value || !customerPhoneInput?.value ||
+        !customerCountrySelect?.value || !customerAddressInput?.value ||
+        !customerCityInput?.value || !customerStateSelect?.value || !customerZipCodeInput?.value ||
+        !customerSinceInput?.value) {
+        showMessage('Please fill in all required fields.', 'error', customerForm);
         return;
     }
 
-    let missingFields = [];
-    mandatoryFields.forEach(item => {
-        if (!item.field) {
-            missingFields.push(item.name);
-        }
-    });
-
-    if (missingFields.length > 0) {
-        showModal("Validation Error", `Please fill in all mandatory fields: ${[...new Set(missingFields)].join(', ')}.`, () => {});
+    if (customerTypeSelect.value === 'Individual' && (!customerFirstNameInput?.value || !customerLastNameInput?.value || !customerIndustryInput?.value)) {
+        showMessage('Please fill in all required fields for individual customer type.', 'error', customerForm);
+        return;
+    }
+    if (customerTypeSelect.value === 'Company' && (!customerCompanyNameInput?.value || !customerIndustrySelect?.value)) {
+        showMessage('Please fill in all required fields for company customer type.', 'error', customerForm);
         return;
     }
 
-    // Call validateAddress with new zipCode and country parameters
-    if (!validateAddress(address, city, country, zipCode, country)) {
-        return; // Validation message already shown by validateAddress
-    }
+    submitCustomerButton.disabled = true;
+    submitCustomerButton.textContent = 'Saving...';
+    hideMessage(customerForm);
 
-    const customerToSave = {
-        customerType,
-        firstName: customerType === 'Individual' ? firstName : '',
-        lastName: customerType === 'Individual' ? lastName : '',
-        companyName: customerType === 'Company' ? companyName : '',
-        email,
-        phone,
-        address,
-        city,
-        state,
-        zipCode,
-        country,
-        industry,
-        customerSince, // Stored asYYYY-MM-DD string from input type="date"
-        description,
-        source: customerSource, // NEW
-        active: customerActive, // NEW
-        ownerId: currentUserId, // Link customer to the current logged-in user (directly imported)
-        updatedAt: new Date()
+    const isEditing = !!customerForm.dataset.editingId;
+    let customerDocId = customerForm.dataset.editingId;
+
+    const customerData = {
+        customerType: customerTypeSelect.value,
+        firstName: customerTypeSelect.value === 'Individual' ? customerFirstNameInput.value : '',
+        lastName: customerTypeSelect.value === 'Individual' ? customerLastNameInput.value : '',
+        companyName: customerTypeSelect.value === 'Company' ? customerCompanyNameInput.value : '',
+        email: customerEmailInput.value,
+        phone: customerPhoneInput.value,
+        country: customerCountrySelect.value,
+        address: customerAddressInput.value,
+        city: customerCityInput.value,
+        state: customerStateSelect.value,
+        zipCode: customerZipCodeInput.value,
+        industry: customerTypeSelect.value === 'Individual' ? customerIndustryInput.value : customerIndustrySelect.value,
+        customerSource: document.getElementById('customerSource').value, // NEW field
+        active: document.getElementById('customerActive').value === 'Yes', // NEW field
+        customerSince: customerSinceInput.value,
+        description: customerDescriptionInput.value,
+        lastModified: new Date().toISOString(),
+        createdBy: currentUserId,
+        // Only set creationDate on initial creation
+        ...(isEditing ? {} : { creationDate: new Date().toISOString() })
     };
 
-    const existingCustomerDocId = customerForm.dataset.editingId;
-    const collectionPath = getCustomerCollectionPath();
-
     try {
-        if (existingCustomerDocId) {
-            // Update existing customer
-            const customerDocRef = doc(firestoreDb, collectionPath, existingCustomerDocId); // Use firestoreDb
-            await setDoc(customerDocRef, { ...customerToSave, updatedAt: new Date() }, { merge: true }); // Ensure updatedAt is updated
-            showModal("Success", "Customer updated successfully!", () => { });
-            console.log("customers.js: Customer updated:", existingCustomerDocId);
+        const customerCollectionRef = collection(firestoreDb, `artifacts/${projectId}/public/data/customers`);
+        if (isEditing) {
+            const docRef = doc(customerCollectionRef, customerDocId);
+            await setDoc(docRef, customerData, { merge: true });
+            showMessage('Customer updated successfully!', 'success', customerForm);
+            console.log("customers.js: Customer updated:", customerDocId, customerData);
         } else {
-            // Add new customer
-            // Let Firestore generate the document ID, and then add a human-readable customerId field
-            const newDocRef = doc(collection(firestoreDb, collectionPath)); // Use firestoreDb
-            const newCustomerId = `CUST-${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
-            await setDoc(newDocRef, { ...customerToSave, customerId: newCustomerId, createdAt: new Date() });
-            showModal("Success", `New Customer added successfully! ID: ${newCustomerId}`, () => { });
-            console.log("customers.js: New Customer added with ID:", newCustomerId);
+            const newDocRef = await addDoc(customerCollectionRef, customerData);
+            customerDocId = newDocRef.id; // Get the ID of the newly added document
+            showMessage('Customer added successfully!', 'success', customerForm);
+            console.log("customers.js: Customer added with ID:", customerDocId, customerData);
         }
         resetCustomerForm();
-    }
-    catch (error) {
+    } catch (error) {
         console.error("customers.js: Error saving customer:", error);
-        showModal("Error", `Failed to save customer: ${error.message}`, () => { });
+        showMessage(`Error saving customer: ${error.message}`, 'error', customerForm);
+    } finally {
+        submitCustomerButton.disabled = false;
+        submitCustomerButton.textContent = isEditing ? 'Update Customer' : 'Add Customer';
     }
 }
 
-/**
- * Deletes a customer record from Firestore.
- * @param {string} firestoreDocId - The Firestore document ID of the customer to delete.
- */
-async function deleteCustomer(firestoreDocId) {
-    if (!isAuthReady || !currentUserId || !firestoreDb || !isDbReady) { // Use firestoreDb
-        showModal("Permission Denied", "Please sign in to delete customers, or Firestore is not ready.", () => {});
+async function editCustomer(customerId) {
+    console.log("customers.js: editCustomer called for ID:", customerId);
+    if (!firestoreDb || !projectId || !isAuthReady || !currentUserId) {
+        showModal("Error", "Authentication or Database not ready. Please sign in or wait.", () => {});
         return;
     }
 
-    const collectionPath = getCustomerCollectionPath();
+    hideMessage(customerForm); // Clear any previous form messages
+    customerFormTitle.textContent = "Edit Customer";
+    submitCustomerButton.textContent = "Update Customer";
+    customerIdDisplayGroup.classList.remove('hidden');
+    customerIdDisplay.textContent = customerId;
+    customerForm.dataset.editingId = customerId; // Store the ID in the form for updates
 
+    const docRef = doc(firestoreDb, `artifacts/${projectId}/public/data/customers`, customerId);
+    try {
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            customerTypeSelect.value = data.customerType || 'Individual';
+            toggleCustomerTypeFields(); // Adjust form fields based on type
+            customerFirstNameInput.value = data.firstName || '';
+            customerLastNameInput.value = data.lastName || '';
+            customerCompanyNameInput.value = data.companyName || '';
+            customerEmailInput.value = data.email || '';
+            customerPhoneInput.value = data.phone || '';
+            customerCountrySelect.value = data.country || '';
+            populateStateDropdown(); // Repopulate states after country is set
+            customerAddressInput.value = data.address || '';
+            customerCityInput.value = data.city || '';
+            customerStateSelect.value = data.value || ''; // Fixed: should be data.state
+            customerZipCodeInput.value = data.zipCode || '';
+            customerIndustryInput.value = data.customerType === 'Individual' ? data.industry : '';
+            customerIndustrySelect.value = data.customerType === 'Company' ? data.industry : '';
+            document.getElementById('customerSource').value = data.customerSource || '';
+            document.getElementById('customerActive').value = data.active ? 'Yes' : 'No';
+            customerSinceInput.value = data.customerSince || '';
+            customerDescriptionInput.value = data.description || '';
+        } else {
+            showMessage('Customer not found.', 'error', customerForm);
+            resetCustomerForm();
+        }
+    } catch (error) {
+        console.error("customers.js: Error loading customer for edit:", error);
+        showMessage(`Error loading customer: ${error.message}`, 'error', customerForm);
+    }
+}
+
+async function deleteCustomer(customerId) {
+    console.log("customers.js: deleteCustomer called for ID:", customerId);
+    if (!firestoreDb || !projectId || !isAuthReady || !currentUserId) {
+        showModal("Error", "Authentication or Database not ready. Please sign in or wait.", () => {});
+        return;
+    }
     showModal(
         "Confirm Deletion",
         "Are you sure you want to delete this customer? This action cannot be undone.",
         async () => {
             try {
-                const customerDocRef = doc(firestoreDb, collectionPath, firestoreDocId); // Use firestoreDb
-                await deleteDoc(customerDocRef);
-                showModal("Success", "Customer deleted successfully!", () => {});
-                console.log("customers.js: Customer deleted Firestore Doc ID:", firestoreDocId);
-            }
-            catch (error) {
+                const docRef = doc(firestoreDb, `artifacts/${projectId}/public/data/customers`, customerId);
+                await deleteDoc(docRef);
+                showMessage('Customer deleted successfully!', 'success', customerForm);
+                resetCustomerForm();
+                console.log("customers.js: Customer deleted:", customerId);
+            } catch (error) {
                 console.error("customers.js: Error deleting customer:", error);
-                showModal("Error", `Failed to delete customer: ${error.message}`, () => {});
+                showModal("Error", `Error deleting customer: ${error.message}`, () => {});
             }
         }
     );
 }
 
-/**
- * Sets up a real-time listener for customer data from Firestore.
- * Updates the UI and the `allCustomers` array whenever there are changes.
- */
-export function listenForCustomers() {
-    removeUnsubscribe('customers'); // Used directly imported function
+function resetCustomerForm() {
+    if (!customerForm) return; // Defensive check
+    customerForm.reset();
+    customerFormTitle.textContent = "Add New Customer";
+    submitCustomerButton.textContent = "Add Customer";
+    customerIdDisplayGroup.classList.add('hidden');
+    customerIdDisplay.textContent = '';
+    customerForm.dataset.editingId = ''; // Clear editing ID
+    hideMessage(customerForm);
+    toggleCustomerTypeFields(); // Reset to default (Individual) fields
+    populateCountryDropdown(); // Re-populate to reset country selection
+    populateStateDropdown(); // Reset state dropdown based on default country
+}
 
+function listenForCustomers() {
     console.log("customers.js: listenForCustomers called.");
-    console.log("customers.js: Current state for listener - isAuthReady:", isAuthReady, "currentUserId:", currentUserId, "firestoreDb:", firestoreDb, "isDbReady:", isDbReady);
-
-    // --- IMPORTANT DEBUGGING CHECK ---
-    // This check now uses the internal 'firestoreDb' variable
-    if (!firestoreDb || typeof firestoreDb.collection !== 'function' || firestoreDb.type !== 'firestore') {
-        console.error("customers.js: CRITICAL ERROR - 'firestoreDb' is NOT a valid Firestore instance at the point of calling collection(). Current firestoreDb value:", firestoreDb);
-        if (customerList) customerList.innerHTML = '<p class="text-red-500 text-center py-4 col-span-full">Error: Firestore connection not ready. Please try refreshing.</p>';
-        return;
-    }
-    // --- END IMPORTANT DEBUGGING CHECK ---
-
-    if (!isAuthReady || !currentUserId || !firestoreDb || !isDbReady) { // Use firestoreDb
-        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Initializing customers. Please wait or sign in...</p>';
-        console.warn("customers.js: Customer listener skipped: Auth/DB not ready.");
+    if (!firestoreDb || !projectId || !isAuthReady || !currentUserId) {
+        console.warn("customers.js: listenForCustomers: Firestore DB or Auth is not ready. Cannot set up listener.");
+        if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Waiting for database connection and user authentication...</p>';
         return;
     }
 
-    const collectionPath = getCollectionPath('customers', 'public'); // Get path via utils.js
-    
-    // Defensive check to ensure collectionPath is valid
-    if (typeof collectionPath !== 'string' || !collectionPath) { // Ensure it's a non-empty string
-        console.error("customers.js: Collection path for customers is invalid (not a string or empty). Cannot set up listener. Path received:", collectionPath);
-        if (customerList) customerList.innerHTML = '<p class="text-red-500 text-center py-4 col-span-full">Error: Could not determine customer data path.</p>';
-        return;
-    }
+    const customersColRef = collection(firestoreDb, `artifacts/${projectId}/public/data/customers`);
+    const q = query(customersColRef);
 
-    // Add logging for collectionPath and firestoreDb right before the collection() call
-    console.log("customers.js: DEBUG - collectionPath before collection():", collectionPath);
-    console.log("customers.js: DEBUG - firestoreDb before collection():", firestoreDb);
-
-    const q = collection(firestoreDb, collectionPath); // Use firestoreDb here
-
+    removeUnsubscribe('customers'); // Remove previous listener if any
     const unsubscribe = onSnapshot(q, (snapshot) => {
-        if (customerList) customerList.innerHTML = ''; // Clear current list
-        // allCustomers is imported as a direct reference, so we push directly to it.
-        allCustomers.length = 0; // Clear allCustomers array directly
-
+        if (!customerList) return; // Defensive check
+        customerList.innerHTML = ''; // Clear list before populating
         if (snapshot.empty) {
-            if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">No customers found. Add one above!</p>';
+            customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">No customers found.</p>';
+            allCustomers.length = 0; // Ensure global array is empty
             return;
         }
+        allCustomers.length = 0; // Clear existing data from global array
         snapshot.forEach((doc) => {
             const customer = { id: doc.id, ...doc.data() };
-            allCustomers.push(customer); // Populate the array for other modules
+            allCustomers.push(customer); // Populate global array for other modules
             displayCustomer(customer);
         });
-        console.log("customers.js: Customers data updated via onSnapshot. Total:", snapshot.size);
+        console.log("customers.js: Customers list updated via onSnapshot. Total:", snapshot.size);
     }, (error) => {
         console.error("customers.js: Error listening to customers:", error);
-        if (customerList) customerList.innerHTML = `<p class="text-red-500 text-center col-span-full py-4">Error loading customers: ${error.message}</p>`;
+        if (customerList) customerList.innerHTML = `<p class="text-red-500 text-center py-4 col-span-full">Error loading customers: ${error.message}</p>`;
     });
 
-    addUnsubscribe('customers', unsubscribe); // Use directly imported function
+    addUnsubscribe('customers', unsubscribe); // Add the new unsubscribe function
 }
 
-/**
- * Fetches all customer data once. Used for populating dropdowns in other modules (e.g., opportunities).
- * This function is redundant if `listenForCustomers` is always active and populates `allCustomers`.
- * However, it's good to keep if a one-time fetch is needed without a listener.
- * In this setup, `allCustomers` is already kept up-to-date by the listener.
- * Re-directing to use the `allCustomers` array which is updated by the listener.
- */
-export async function fetchCustomersForDropdown() {
-    console.log("customers.js: fetchCustomersForDropdown called. Returning current allCustomers array.");
-    return allCustomers; // Use allCustomers
-}
-
-
-/**
- * Displays a single customer record as a row in the UI grid.
- * @param {Object} customer - The customer object to display.
- */
 function displayCustomer(customer) {
-    if (!customerList) return;
-
+    if (!customerList) return; // Defensive check
     const customerRow = document.createElement('div');
-    customerRow.className = 'data-grid-row';
-    customerRow.dataset.id = customer.id;
+    customerRow.className = 'data-grid-row'; // Tailwind grid classes applied via CSS
+    customerRow.dataset.id = customer.id; // Store Firestore document ID
 
-    let displayName;
-    if (customer.customerType === 'Individual') {
-        displayName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
-    } else if (customer.customerType === 'Company') {
-        displayName = customer.companyName || '';
-    } else {
-        displayName = 'N/A';
-    }
-    if (!displayName) displayName = customer.customerId;
+    const customerName = customer.customerType === 'Individual' ? `${customer.firstName} ${customer.lastName}` : customer.companyName;
+    const customerAddress = `${customer.address}, ${customer.city}, ${customer.state}`;
 
     customerRow.innerHTML = `
-        <div class="px-2 py-1 truncate font-medium text-gray-800">${customer.customerId || 'N/A'}</div>
-        <div class="px-2 py-1 truncate">${displayName}</div>
+        <div class="px-2 py-1 truncate font-medium text-gray-800">${customer.id.substring(0, 7)}...</div>
+        <div class="px-2 py-1 truncate">${customerName || 'N/A'}</div>
         <div class="px-2 py-1 truncate">${customer.email || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden md:block">${customer.phone || 'N/A'}</div>
-        <div class="px-2 py-1 truncate hidden lg:block">${customer.address || ''}, ${customer.city || ''}, ${customer.country || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden lg:block">${customerAddress || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden lg:block">${customer.industry || 'N/A'}</div>
-        <div class="px-2 py-1 truncate hidden sm:block">${formatDate(customer.customerSince) || 'N/A'}</div>
-        <div class="px-2 py-1 truncate hidden md:block">${customer.source || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden sm:block">${customer.customerSince || 'N/A'}</div>
+        <div class="px-2 py-1 truncate hidden md:block">${customer.customerSource || 'N/A'}</div>
         <div class="px-2 py-1 truncate hidden md:block">${customer.active ? 'Yes' : 'No'}</div>
         <div class="px-2 py-1 flex justify-end space-x-2">
             <button class="edit-btn text-blue-600 hover:text-blue-800 font-semibold text-xs" data-id="${customer.id}" title="Edit">
@@ -530,94 +431,7 @@ function displayCustomer(customer) {
     `;
     customerList.appendChild(customerRow);
 
-    customerRow.querySelector('.edit-btn').addEventListener('click', () => editCustomer(customer));
+    // Add event listeners for the buttons
+    customerRow.querySelector('.edit-btn').addEventListener('click', () => editCustomer(customer.id));
     customerRow.querySelector('.delete-btn').addEventListener('click', () => deleteCustomer(customer.id));
-}
-
-/**
- * Populates the customer form with data from an existing customer object for editing.
- * @param {Object} customer - The customer object to load into the form.
- */
-function editCustomer(customer) {
-    // Permission check: Only owner or isAdmin can edit
-    if (!isAdmin && customer.ownerId !== currentUserId) { // Used directly imported variables
-        showModal("Permission Denied", "You do not have permission to edit this customer.", () => {});
-        return;
-    }
-
-    if (customerFormTitle) customerFormTitle.textContent = `Edit Customer: ${customer.customerId}`;
-    if (submitCustomerButton) submitCustomerButton.textContent = 'Update Customer';
-
-    if (customerForm) customerForm.dataset.editingId = customer.id;
-
-    if (customerIdDisplayGroup) customerIdDisplayGroup.classList.remove('hidden');
-    if (customerIdDisplay) customerIdDisplay.textContent = customer.customerId || 'N/A';
-
-    if (customerTypeSelect) customerTypeSelect.value = customer.customerType || '';
-    applyCustomerTypeValidation();
-
-    if (customer.customerType === 'Individual') {
-        if (customerFirstNameInput) customerFirstNameInput.value = customer.firstName || '';
-        if (customerLastNameInput) customerLastNameInput.value = customer.lastName || '';
-        if (customerIndustryInput) customerIndustryInput.value = customer.industry || '';
-    } else if (customer.customerType === 'Company') {
-        if (customerCompanyNameInput) customerCompanyNameInput.value = customer.companyName || '';
-        if (customerIndustrySelect) customerIndustrySelect.value = customer.industry || '';
-    }
-
-    if (customerEmailInput) customerEmailInput.value = customer.email || '';
-    if (customerPhoneInput) customerPhoneInput.value = customer.phone || '';
-    if (customerAddressInput) customerAddressInput.value = customer.address || '';
-    if (customerCityInput) customerCityInput.value = customer.city || '';
-    if (customerZipCodeInput) customerZipCodeInput.value = customer.zipCode || '';
-    if (customerDescriptionInput) customerDescriptionInput.value = customer.description || '';
-    if (customerSinceInput) customerSinceInput.value = formatDate(customer.customerSince); // Format date for input type="date"
-
-    if (customerSourceSelect) customerSourceSelect.value = customer.source || ''; // NEW
-    if (customerActiveSelect) customerActiveSelect.value = customer.active ? 'Yes' : 'No'; // NEW
-
-    // For country and state
-    if (customerCountrySelect) {
-        customerCountrySelect.value = customer.country || '';
-        const event = new Event('change'); // Trigger change to populate states
-        customerCountrySelect.dispatchEvent(event);
-    }
-    // Set state after states are populated by the above change event
-    // Using a setTimeout to ensure states have time to populate (though usually not necessary with sync populateStates)
-    setTimeout(() => {
-        if (customerStateSelect) customerStateSelect.value = customer.state || '';
-    }, 0);
-
-
-    if (customerForm) customerForm.scrollIntoView({ behavior: 'smooth' });
-}
-
-/**
- * Resets the customer form to its initial state (for adding a new customer).
- */
-export function resetCustomerForm() {
-    if (customerForm) customerForm.reset();
-    if (customerForm) customerForm.dataset.editingId = '';
-
-    if (customerFormTitle) customerFormTitle.textContent = 'Add New Customer';
-    if (submitCustomerButton) submitCustomerButton.textContent = 'Add Customer';
-
-    if (customerIdDisplayGroup) customerIdDisplayGroup.classList.add('hidden');
-    if (customerIdDisplay) customerIdDisplay.textContent = '';
-
-    if (customerTypeSelect) customerTypeSelect.value = 'Individual'; // Default to Individual
-    applyCustomerTypeValidation(); // Apply validation based on default type
-
-    if (customerCountrySelect) customerCountrySelect.value = '';
-    if (customerStateSelect) customerStateSelect.innerHTML = '<option value="">Select State/Province</option>';
-    if (customerStateSelect) customerStateSelect.disabled = true;
-
-    if (addressValidationMessage) addressValidationMessage.classList.add('hidden');
-
-    // Enable submit button if auth is ready
-    if (isAuthReady && currentUserId && firestoreDb && isDbReady) { // Use firestoreDb
-        if (submitCustomerButton) submitCustomerButton.removeAttribute('disabled');
-    } else {
-        if (submitCustomerButton) submitCustomerButton.setAttribute('disabled', 'disabled');
-    }
 }
