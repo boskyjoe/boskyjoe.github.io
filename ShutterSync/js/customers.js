@@ -75,10 +75,11 @@ export const Customers = {
                                     <input type="tel" id="customer-phone" name="phone"
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 </div>
+                                <!-- Address changed to textarea -->
                                 <div>
                                     <label for="customer-address" class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                                    <input type="text" id="customer-address" name="address"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <textarea id="customer-address" name="address" rows="3"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                                 </div>
 
                                 <!-- Existing New Fields -->
@@ -115,7 +116,7 @@ export const Customers = {
                                     </select>
                                 </div>
 
-                                <!-- NEW FIELDS START HERE -->
+                                <!-- Latest New Fields -->
                                 <div>
                                     <label for="customer-source" class="block text-sm font-medium text-gray-700 mb-1">Customer Source</label>
                                     <select id="customer-source" name="customerSource"
@@ -137,7 +138,6 @@ export const Customers = {
                                         <option value="Inactive">Inactive</option>
                                     </select>
                                 </div>
-                                <!-- NEW FIELDS END HERE -->
 
                                 <div class="col-span-1 md:col-span-2"> <!-- This textarea spans both columns on medium screens and up -->
                                     <label for="additional-details" class="block text-sm font-medium text-gray-700 mb-1">Additional Details</label>
@@ -204,8 +204,8 @@ export const Customers = {
             { id: 'phone', name: 'Phone' },
             { id: 'customerType', name: 'Type' },
             { id: 'industry', name: 'Industry' },
-            { id: 'customerSource', name: 'Source' }, // New column
-            { id: 'active', name: 'Active' },         // New column
+            { id: 'customerSource', name: 'Source' },
+            { id: 'active', name: 'Active' },
             {
                 name: 'Actions',
                 formatter: (cell, row) => {
@@ -238,8 +238,11 @@ export const Customers = {
             c.phone,
             c.customerType || '',
             c.industry || '',
-            c.customerSource || '', // New field
-            c.active || 'Active'    // New field, default to 'Active'
+            c.customerSource || '',
+            c.active || 'Active',    // Default 'Active' if missing
+            c.address || '',         // Address (for internal reference, not displayed in grid)
+            c.preferredContactMethod || '', // Preferred Contact Method (for internal reference)
+            c.additionalDetails || ''       // Additional Details (for internal reference)
         ]);
 
         if (this.grid) {
@@ -319,14 +322,12 @@ export const Customers = {
             document.getElementById('customer-email').value = customerData.email || '';
             document.getElementById('customer-phone').value = customerData.phone || '';
             document.getElementById('customer-address').value = customerData.address || '';
-            // Populate previous new fields
             document.getElementById('customer-type').value = customerData.customerType || '';
             document.getElementById('preferred-contact-method').value = customerData.preferredContactMethod || '';
             document.getElementById('industry').value = customerData.industry || '';
             document.getElementById('additional-details').value = customerData.additionalDetails || '';
-            // Populate new fields
             document.getElementById('customer-source').value = customerData.customerSource || '';
-            document.getElementById('active-status').value = customerData.active || 'Active'; // Default 'Active'
+            document.getElementById('active-status').value = customerData.active || 'Active';
         } else {
             title.textContent = 'Add New Customer';
             // Set default values for new entries
@@ -367,7 +368,6 @@ export const Customers = {
         const preferredContactMethod = document.getElementById('preferred-contact-method').value;
         const industry = document.getElementById('industry').value;
         const additionalDetails = document.getElementById('additional-details').value.trim();
-        // Get new field values
         const customerSource = document.getElementById('customer-source').value;
         const active = document.getElementById('active-status').value;
 
@@ -387,8 +387,8 @@ export const Customers = {
                 preferredContactMethod: preferredContactMethod,
                 industry: industry,
                 additionalDetails: additionalDetails,
-                customerSource: customerSource, // New field
-                active: active,               // New field
+                customerSource: customerSource,
+                active: active,
                 updatedAt: new Date(),
             };
 
