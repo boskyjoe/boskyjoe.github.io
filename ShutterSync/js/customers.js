@@ -81,7 +81,7 @@ export const Customers = {
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 </div>
 
-                                <!-- NEW FIELDS START HERE -->
+                                <!-- Existing New Fields -->
                                 <div>
                                     <label for="customer-type" class="block text-sm font-medium text-gray-700 mb-1">Customer Type</label>
                                     <select id="customer-type" name="customerType"
@@ -114,13 +114,36 @@ export const Customers = {
                                         <option value="Other">Other</option>
                                     </select>
                                 </div>
+
+                                <!-- NEW FIELDS START HERE -->
+                                <div>
+                                    <label for="customer-source" class="block text-sm font-medium text-gray-700 mb-1">Customer Source</label>
+                                    <select id="customer-source" name="customerSource"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                        <option value="">Select Source</option>
+                                        <option value="Website">Website</option>
+                                        <option value="Referral">Referral</option>
+                                        <option value="Social Media">Social Media</option>
+                                        <option value="Advertisement">Advertisement</option>
+                                        <option value="Event">Event</option>
+                                        <option value="Others">Others</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="active-status" class="block text-sm font-medium text-gray-700 mb-1">Active Status</label>
+                                    <select id="active-status" name="active"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                        <option value="Active">Active</option>
+                                        <option value="Inactive">Inactive</option>
+                                    </select>
+                                </div>
+                                <!-- NEW FIELDS END HERE -->
+
                                 <div class="col-span-1 md:col-span-2"> <!-- This textarea spans both columns on medium screens and up -->
                                     <label for="additional-details" class="block text-sm font-medium text-gray-700 mb-1">Additional Details</label>
                                     <textarea id="additional-details" name="additionalDetails" rows="3"
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                                 </div>
-                                <!-- NEW FIELDS END HERE -->
-
                             </div>
                             <div class="flex justify-end space-x-3 mt-6">
                                 <button type="button" id="cancel-customer-btn"
@@ -152,7 +175,7 @@ export const Customers = {
 
         this.unsubscribe = onSnapshot(q, (snapshot) => {
             const customers = [];
-            snapshot.forEach((customerDoc) => { // Renamed 'doc' to 'customerDoc' to prevent shadowing
+            snapshot.forEach((customerDoc) => {
                 customers.push({ id: customerDoc.id, ...customerDoc.data() });
             });
             this.customersData = customers; // Cache for easy access in edit/delete
@@ -179,23 +202,27 @@ export const Customers = {
             { id: 'name', name: 'Customer Name', sort: true },
             { id: 'email', name: 'Email', sort: true },
             { id: 'phone', name: 'Phone' },
-            { id: 'customerType', name: 'Type' }, // New column
-            { id: 'industry', name: 'Industry' }, // New column
-            // Address and Preferred Contact Method/Additional Details might make the table too wide.
-            // Keeping them in the form for now.
+            { id: 'customerType', name: 'Type' },
+            { id: 'industry', name: 'Industry' },
+            { id: 'customerSource', name: 'Source' }, // New column
+            { id: 'active', name: 'Active' },         // New column
             {
                 name: 'Actions',
                 formatter: (cell, row) => {
+                    // row.cells[0].data refers to the 'id' which is the first element in the mappedData
+                    const customerId = row.cells[0].data;
+                    const customerName = row.cells[1].data; // 'name' is the second element in mappedData
+
                     return gridjs.h('div', {
                         className: 'flex space-x-2'
                     }, [
                         gridjs.h('button', {
                             className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-md text-sm transition-colors duration-200',
-                            onClick: () => this.editCustomer(row.cells[0].data) // Pass doc ID
+                            onClick: () => this.editCustomer(customerId)
                         }, 'Edit'),
                         gridjs.h('button', {
                             className: 'bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm transition-colors duration-200',
-                            onClick: () => this.deleteCustomer(row.cells[0].data, row.cells[1].data) // Pass doc ID and name
+                            onClick: () => this.deleteCustomer(customerId, customerName)
                         }, 'Delete')
                     ]);
                 }
@@ -203,11 +230,16 @@ export const Customers = {
         ];
 
         // Ensure the data mapping matches the columns.
-        // The `id` column is implicitly the first element of the array if not explicitly listed.
-        // We need to map `id` first, then `name`, `email`, `phone`, `customerType`, `industry` for Grid.js actions
-        // and rendering, even if `id` is not a visible column.
+        // The 'id' is mapped first, then the visible columns in order.
         const mappedData = customers.map(c => [
-            c.id, c.name, c.email, c.phone, c.customerType || '', c.industry || ''
+            c.id,                   // ID (for internal use by actions)
+            c.name,
+            c.email,
+            c.phone,
+            c.customerType || '',
+            c.industry || '',
+            c.customerSource || '', // New field
+            c.active || 'Active'    // New field, default to 'Active'
         ]);
 
         if (this.grid) {
@@ -287,17 +319,22 @@ export const Customers = {
             document.getElementById('customer-email').value = customerData.email || '';
             document.getElementById('customer-phone').value = customerData.phone || '';
             document.getElementById('customer-address').value = customerData.address || '';
-            // Populate new fields
+            // Populate previous new fields
             document.getElementById('customer-type').value = customerData.customerType || '';
             document.getElementById('preferred-contact-method').value = customerData.preferredContactMethod || '';
             document.getElementById('industry').value = customerData.industry || '';
             document.getElementById('additional-details').value = customerData.additionalDetails || '';
+            // Populate new fields
+            document.getElementById('customer-source').value = customerData.customerSource || '';
+            document.getElementById('active-status').value = customerData.active || 'Active'; // Default 'Active'
         } else {
             title.textContent = 'Add New Customer';
-            // Set default values for new entries if desired
-            document.getElementById('customer-type').value = ''; // Ensure default is "Select Type"
-            document.getElementById('preferred-contact-method').value = ''; // Ensure default is "Select Method"
-            document.getElementById('industry').value = ''; // Ensure default is "Select Industry"
+            // Set default values for new entries
+            document.getElementById('customer-type').value = '';
+            document.getElementById('preferred-contact-method').value = '';
+            document.getElementById('industry').value = '';
+            document.getElementById('customer-source').value = '';
+            document.getElementById('active-status').value = 'Active'; // Default 'Active' for new customers
         }
 
         // Show the modal with animation
@@ -326,11 +363,13 @@ export const Customers = {
         const email = document.getElementById('customer-email').value.trim();
         const phone = document.getElementById('customer-phone').value.trim();
         const address = document.getElementById('customer-address').value.trim();
-        // Get new field values
         const customerType = document.getElementById('customer-type').value;
         const preferredContactMethod = document.getElementById('preferred-contact-method').value;
         const industry = document.getElementById('industry').value;
         const additionalDetails = document.getElementById('additional-details').value.trim();
+        // Get new field values
+        const customerSource = document.getElementById('customer-source').value;
+        const active = document.getElementById('active-status').value;
 
 
         if (!name) {
@@ -344,10 +383,12 @@ export const Customers = {
                 email,
                 phone,
                 address,
-                customerType: customerType, // New field
-                preferredContactMethod: preferredContactMethod, // New field
-                industry: industry, // New field
-                additionalDetails: additionalDetails, // New field
+                customerType: customerType,
+                preferredContactMethod: preferredContactMethod,
+                industry: industry,
+                additionalDetails: additionalDetails,
+                customerSource: customerSource, // New field
+                active: active,               // New field
                 updatedAt: new Date(),
             };
 
@@ -358,6 +399,11 @@ export const Customers = {
             } else {
                 // Add new customer
                 customerData.createdAt = new Date();
+                customerData.creatorId = this.auth.currentUser ? this.auth.currentUser.uid : null; // Ensure creatorId is set for new customers
+                if (!customerData.creatorId) {
+                    this.Utils.showMessage('You must be logged in to create a customer.', 'error');
+                    return;
+                }
                 await addDoc(collection(this.db, "customers"), customerData);
                 this.Utils.showMessage('Customer added successfully!', 'success');
             }
