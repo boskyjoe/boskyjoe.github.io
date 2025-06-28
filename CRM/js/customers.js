@@ -1,10 +1,11 @@
-import { auth, currentUserId, isAdmin, isAuthReady, addUnsubscribe, removeUnsubscribe, appCountries, appCountryStateMap, allCustomers, fetchCountryData, fetchCurrencies, allCurrencies } from './main.js';
+import { auth, currentUserId, isAdmin, isAuthReady, addUnsubscribe, removeUnsubscribe, appCountries, appCountryStateMap, allCustomers, fetchCountryData, fetchCurrencies, allCurrencies, appId as mainAppId } from './main.js';
 import { showModal, showMessage, hideMessage } from './utils.js';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, getDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Global variable to hold the Firestore DB instance, explicitly set by main.js
 let firestoreDb = null;
-let projectId = null; // Store projectId here
+// Use the projectId exported from main.js directly. This should be the most reliable source.
+let projectId = mainAppId;
 let customersDomElementsInitialized = false; // Flag to ensure DOM elements are initialized only once
 
 // EXPORTED: Setter function for the Firestore DB instance
@@ -12,8 +13,6 @@ export function setDbInstance(instance) {
     console.log("customers.js: setDbInstance received:", instance);
     firestoreDb = instance; // Directly assign for robust assignment
     if (firestoreDb) {
-        // Ensure projectId is correctly derived from the FirebaseApp instance within Firestore
-        projectId = firestoreDb.app.options.projectId;
         console.log("customers.js: Firestore DB instance successfully set. projectId:", projectId);
     } else {
         console.error("customers.js: CRITICAL ERROR: Firestore DB instance is still null after direct assignment. This means the 'instance' passed was null/undefined.");
@@ -310,7 +309,7 @@ async function editCustomer(customerId) {
             populateStateDropdown(); // Repopulate states after country is set
             customerAddressInput.value = data.address || '';
             customerCityInput.value = data.city || '';
-            customerStateSelect.value = data.value || ''; // Fixed: should be data.state
+            customerStateSelect.value = data.state || ''; // Set state after it's populated
             customerZipCodeInput.value = data.zipCode || '';
             customerIndustryInput.value = data.customerType === 'Individual' ? data.industry : '';
             customerIndustrySelect.value = data.customerType === 'Company' ? data.industry : '';
