@@ -1,6 +1,6 @@
 // js/opportunities.js
 
-// Ensure Grid.js is loaded for data grids
+// Ensure Grid.js is loaded globally in index.html, not here.
 // <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
 // <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
 
@@ -18,20 +18,26 @@ export const Opportunities = {
     opportunitiesData: [], // Cache for main opportunities data
     grid: null, // Grid.js instance for main opportunities table
 
+    // REMOVED: gridJsLoaded flag as Grid.js is now loaded globally in index.html
+    // REMOVED: _loadGridJsAssets method as Grid.js is now loaded globally in index.html
+
     /**
      * Initializes the Opportunities module. This function is called by main.js.
      * @param {object} firestoreDb - The Firestore database instance.
      * @param {object} firebaseAuth - The Firebase Auth instance.
      * @param {object} utils - The Utils object for common functionalities.
      */
-    init: function(firestoreDb, firebaseAuth, utils) {
+    init: function(firestoreDb, firebaseAuth, utils) { // REMOVED: async keyword
         this.db = firestoreDb;
         this.auth = firebaseAuth;
-        this.Utils = utils; // Make Utils available internally
+        this.Utils = utils;
 
         console.log("Opportunities module initialized.");
+
+        // REMOVED: await this._loadGridJsAssets(); // Grid.js is now loaded globally
+
         this.renderOpportunitiesUI(); // Render the initial UI
-        this.setupRealtimeListener(); // Set up real-time data listener for main opportunities
+        this.setupRealtimeListener(); // Set up real-time data listener
         this.attachEventListeners(); // Attach UI event listeners
     },
 
@@ -43,8 +49,7 @@ export const Opportunities = {
         const opportunitiesModuleContent = document.getElementById('opportunities-module-content');
         if (opportunitiesModuleContent) {
             opportunitiesModuleContent.innerHTML = `
-                <!-- Grid.js CSS -->
-                <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+                <!-- Grid.js CSS and JS are now loaded globally in index.html, removed from here -->
                 <div class="bg-white p-6 rounded-lg shadow-md mb-6">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-2xl font-semibold text-gray-800">Opportunity List</h3>
@@ -163,9 +168,6 @@ export const Opportunities = {
                         </form>
                     </div>
                 </div>
-
-                <!-- Grid.js JS -->
-                <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
             `;
         }
     },
@@ -206,6 +208,7 @@ export const Opportunities = {
                 let customerName = 'N/A';
                 if (oppData.customerId) {
                     try {
+                        // Corrected: Use getDoc with doc, not query with getDoc
                         const customerDoc = await getDoc(doc(this.db, 'customers', oppData.customerId));
                         if (customerDoc.exists()) {
                             customerName = customerDoc.data().name;
@@ -219,6 +222,7 @@ export const Opportunities = {
                 let createdByDisplayName = 'Unknown User';
                 if (oppData.creatorId) {
                     try {
+                        // Corrected: Use getDoc with doc, not query with getDoc
                         const userDoc = await getDoc(doc(this.db, 'users_data', oppData.creatorId));
                         if (userDoc.exists()) {
                             createdByDisplayName = userDoc.data().displayName || userDoc.data().email || 'Unknown User';
@@ -262,6 +266,9 @@ export const Opportunities = {
             return;
         }
 
+        // REMOVED: Check if gridjs is available *after* trying to load assets
+        // `gridjs` is now guaranteed to be available globally from index.html
+
         // Define columns for Grid.js
         const columns = [
             { id: 'name', name: 'Opportunity Name', sort: true },
@@ -299,13 +306,6 @@ export const Opportunities = {
                 }
             }
         ];
-
-        // Ensure Grid.js is available
-        if (typeof gridjs === 'undefined') {
-            console.warn("Grid.js not loaded. Cannot render grid.");
-            this.Utils.showMessage("Grid.js library not loaded. Please refresh the page.", "error");
-            return;
-        }
 
         if (this.grid) {
             this.grid.updateConfig({
@@ -382,7 +382,8 @@ export const Opportunities = {
         try {
             const customersCollection = collection(this.db, "customers");
             const q = query(customersCollection);
-            const querySnapshot = await getDoc(q); // Use getDocs here
+            // Corrected: Use getDocs directly from the 'firebase-firestore.js' import, not `this.db.getDocs`
+            const querySnapshot = await getDocs(q);
             querySnapshot.forEach((doc) => {
                 const customer = doc.data();
                 const option = document.createElement('option');
@@ -689,5 +690,6 @@ export const Opportunities = {
             this.grid.destroy(); // Destroy Grid.js instance
             this.grid = null;
         }
+        // REMOVED: this.gridJsLoaded = false; // Flag not needed anymore
     }
 };
