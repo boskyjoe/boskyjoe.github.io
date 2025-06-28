@@ -1,23 +1,23 @@
-import { db, auth, currentUserId, isAdmin, isAuthReady, addUnsubscribe, removeUnsubscribe } from './main.js';
+import { auth, currentUserId, isAdmin, isAuthReady, addUnsubscribe, removeUnsubscribe } from './main.js';
 import { showModal, APP_SETTINGS_DOC_ID } from './utils.js';
 
 import { collection, doc, setDoc, deleteDoc, onSnapshot, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Global variable to hold the Firestore DB instance, explicitly set by main.js
 let firestoreDb = null;
+let projectId = null; // Store projectId here
 let domElementsInitialized = false; // Flag to ensure DOM elements are initialized only once
 
 // EXPORTED: Setter function for the Firestore DB instance
 export function setDbInstance(instance) {
     console.log("admin_data.js: setDbInstance received:", instance);
-    // MOST LENIENT CHECK FOR DIAGNOSIS: Directly assign.
-    // If firestoreDb is still null after this, then 'instance' itself was null/undefined when passed.
-    firestoreDb = instance;
-
+    firestoreDb = instance; // Directly assign for robust assignment
     if (firestoreDb) {
-        console.log("admin_data.js: Firestore DB instance successfully set via setDbInstance. firestoreDb is now:", firestoreDb);
+        projectId = firestoreDb.app.options.projectId; // Get projectId from the db instance
+        console.log("admin_data.js: Firestore DB instance successfully set. projectId:", projectId);
     } else {
         console.error("admin_data.js: CRITICAL ERROR: Firestore DB instance is still null after direct assignment. This means the 'instance' passed was null/undefined.");
+        projectId = null;
     }
 }
 
@@ -163,14 +163,14 @@ export async function initAdminDataModule(type) {
 // Function to fetch country and state data from Firestore for the CRM forms
 export async function fetchCountryData() {
     console.log("admin_data.js: fetchCountryData called.");
-    if (!firestoreDb) { // Ensure db is initialized before attempting to use it
-        console.error("admin_data.js: CRITICAL ERROR in fetchCountryData - 'firestoreDb' is NOT a valid Firestore instance. Current firestoreDb value:", firestoreDb);
+    if (!firestoreDb || !projectId) { // Ensure db is initialized before attempting to use it
+        console.error("admin_data.js: CRITICAL ERROR in fetchCountryData - 'firestoreDb' or 'projectId' is NOT valid. Current firestoreDb value:", firestoreDb, "projectId:", projectId);
         appCountries = [];
         appCountryStateMap = {};
         return;
     }
     try {
-        const docRef = doc(firestoreDb, "app_metadata", "countries_states");
+        const docRef = doc(firestoreDb, "app_metadata", "countries_states"); // Use firestoreDb
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
@@ -204,7 +204,7 @@ async function loadAdminCountryData() {
         return;
     }
 
-    if (!firestoreDb) { // CRITICAL: Check firestoreDb here again before fetching
+    if (!firestoreDb || !projectId) { // CRITICAL: Check firestoreDb and projectId here again before fetching
         showModal("Error", "Firestore is not ready. Please try again in a moment.", () => {});
         if (adminMessageDiv) {
             adminMessageDiv.textContent = "Firestore not ready. Please try clicking the load icon again.";
@@ -239,7 +239,7 @@ async function loadAdminCountryData() {
 
 async function saveCountryData() {
     console.log("admin_data.js: saveCountryData called.");
-    if (!isAuthReady || !currentUserId || !isAdmin || !firestoreDb) {
+    if (!isAuthReady || !currentUserId || !isAdmin || !firestoreDb || !projectId) { // Use imported isAdmin and check firestoreDb
         showModal("Permission Denied", "Only administrators can upload country mapping data, or Firestore is not ready.", () => {});
         return;
     }
@@ -342,7 +342,7 @@ async function saveCountryData() {
     }
 
     try {
-        const docRef = doc(firestoreDb, "app_metadata", "countries_states");
+        const docRef = doc(firestoreDb, "app_metadata", "countries_states"); // Use firestoreDb
         await setDoc(docRef, dataToUpload, { merge: !isFullLoad });
 
         if (adminMessageDiv) {
@@ -373,18 +373,17 @@ async function saveCountryData() {
 // Function to fetch currency data from Firestore
 export async function fetchCurrencies() {
     console.log("admin_data.js: fetchCurrencies called.");
-    if (!firestoreDb) {
-        console.error("admin_data.js: CRITICAL ERROR in fetchCurrencies - 'firestoreDb' is NOT a valid Firestore instance. Current firestoreDb value:", firestoreDb);
+    if (!firestoreDb || !projectId) {
+        console.error("admin_data.js: CRITICAL ERROR in fetchCurrencies - 'firestoreDb' or 'projectId' is NOT valid. Current firestoreDb value:", firestoreDb, "projectId:", projectId);
         allCurrencies = [];
         return;
     }
     try {
-        const collectionRef = collection(firestoreDb, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
+        const collectionRef = collection(firestoreDb, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data"); // Use firestoreDb
         const querySnapshot = await getDocs(collectionRef);
-        allCurrencies = [];
+        allCurrencies = []; // Clear existing data
         querySnapshot.forEach((docSnap) => {
-            const currency = { id: docSnap.id, ...docSnap.data() };
-            allCurrencies.push(currency);
+            allCurrencies.push({ id: docSnap.id, ...docSnap.data() });
         });
         console.log("admin_data.js: Currency data loaded from Firestore. Total:", allCurrencies.length);
     } catch (error) {
@@ -406,7 +405,7 @@ function populateCurrencyInputForEdit() {
         return;
     }
     // Format all currencies into CSV string for the textarea
-    const currenciesString = allCurrencies.map(c => `${c.id},${c.currencyName || ''},${c.symbol || ''},${c.symbol_native || ''}`).join('\n');
+    const currenciesString = allCurrencies.map(c => `${c.id},${c.currencyName || '', c.symbol || '', c.symbol_native || ''}`).join('\n');
     adminCurrenciesInput.value = currenciesString;
     if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden');
     console.log("admin_data.js: All currencies loaded into textarea for editing.");
@@ -427,7 +426,7 @@ export function getCurrencyName(code) {
 
 async function saveCurrency(existingCurrencyCode = null) {
     console.log("admin_data.js: saveCurrency called.");
-    if (!isAuthReady || !currentUserId || !isAdmin || !firestoreDb) {
+    if (!isAuthReady || !currentUserId || !isAdmin || !firestoreDb || !projectId) { // Use imported isAdmin and check firestoreDb
         showModal("Permission Denied", "Only administrators can manage currencies, or Firestore is not ready.", () => {});
         return;
     }
@@ -454,7 +453,7 @@ async function saveCurrency(existingCurrencyCode = null) {
         return;
     }
 
-    const currenciesCollectionRef = collection(firestoreDb, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
+    const currenciesCollectionRef = collection(firestoreDb, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data"); // Use firestoreDb
 
     try {
         let updatesPerformed = 0;
@@ -537,7 +536,7 @@ async function saveCurrency(existingCurrencyCode = null) {
 
 export async function deleteCurrency(currencyCode) {
     console.log("admin_data.js: deleteCurrency called for code:", currencyCode);
-    if (!isAuthReady || !currentUserId || !isAdmin || !firestoreDb) {
+    if (!isAuthReady || !currentUserId || !isAdmin || !firestoreDb || !projectId) {
         showModal("Permission Denied", "Only administrators can manage currencies, or Firestore is not ready.", () => {});
         return;
     }
@@ -547,7 +546,7 @@ export async function deleteCurrency(currencyCode) {
         `Are you sure you want to delete the currency '${currencyCode}'? This action cannot be undone.`,
         async () => {
             try {
-                const currencyDocRef = doc(firestoreDb, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data", currencyCode);
+                const currencyDocRef = doc(firestoreDb, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data", currencyCode); // Use firestoreDb
                 await deleteDoc(currencyDocRef);
                 console.log("admin_data.js: Currency deleted:", currencyCode);
                 showModal("Success", `Currency '${currencyCode}' deleted successfully!`, () => {});
@@ -562,13 +561,14 @@ export async function deleteCurrency(currencyCode) {
 
 
 export function listenForCurrencies() {
-    if (!isAuthReady || !currentUserId || !isAdmin || !firestoreDb) {
-        console.warn("admin_data.js: listenForCurrencies: Firestore DB instance is not ready or user not authorized. Cannot set up listener.");
+    console.log("admin_data.js: listenForCurrencies called.");
+    if (!isAuthReady || !currentUserId || !isAdmin || !firestoreDb || !projectId) {
+        console.warn("admin_data.js: listenForCurrencies: Firestore DB instance, projectId, or user not authorized. Cannot set up listener.");
         if (currencyList) currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Access Denied: Only administrators can view currencies, or Firestore is not ready.</p>';
         return;
     }
 
-    const q = collection(firestoreDb, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data");
+    const q = collection(firestoreDb, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data"); // Use firestoreDb
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
         if (currencyList) currencyList.innerHTML = '';
