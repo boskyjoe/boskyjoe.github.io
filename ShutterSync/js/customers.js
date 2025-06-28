@@ -197,8 +197,10 @@ export const Customers = {
             return;
         }
 
-        // Define columns for Grid.js
+        // Define columns for Grid.js - These reference the object properties directly by 'id'
         const columns = [
+            // The 'id' property here refers to the key in the data object, not an array index.
+            // We are NOT adding a column for `id` itself in the visual grid.
             { id: 'name', name: 'Customer Name', sort: true },
             { id: 'email', name: 'Email', sort: true },
             { id: 'phone', name: 'Phone' },
@@ -209,9 +211,9 @@ export const Customers = {
             {
                 name: 'Actions',
                 formatter: (cell, row) => {
-                    // row.cells[0].data refers to the 'id' which is the first element in the mappedData
-                    const customerId = row.cells[0].data;
-                    const customerName = row.cells[1].data; // 'name' is the second element in mappedData
+                    // Access original data object for the row directly
+                    const customerId = row.original.id;
+                    const customerName = row.original.name;
 
                     return gridjs.h('div', {
                         className: 'flex space-x-2'
@@ -229,27 +231,29 @@ export const Customers = {
             }
         ];
 
-        // Ensure the data mapping matches the columns.
-        // The 'id' is mapped first, then the visible columns in order.
-        const mappedData = customers.map(c => [
-            c.id,                   // ID (for internal use by actions)
-            c.name,
-            c.email,
-            c.phone,
-            c.customerType || '',
-            c.industry || '',
-            c.customerSource || '',
-            c.active || 'Active'    // Default 'Active' if missing
-        ]);
+        // CRITICAL FIX: Map data to an array of OBJECTS, not arrays of arrays.
+        // The keys of these objects should match the 'id' properties in the 'columns' array.
+        const mappedData = customers.map(c => ({
+            id: c.id, // Keep ID as a property for internal use by actions formatter
+            name: c.name || '',
+            email: c.email || '',
+            phone: c.phone || '',
+            customerType: c.customerType || '',
+            industry: c.industry || '',
+            customerSource: c.customerSource || '',
+            active: c.active || 'Active', // Default 'Active' if missing
+            // Other fields (address, additionalDetails, etc.) are part of the object
+            // but not explicitly listed as columns, which is fine.
+        }));
 
         if (this.grid) {
             this.grid.updateConfig({
-                data: mappedData
+                data: mappedData // Pass array of objects
             }).forceRender();
         } else {
             this.grid = new gridjs.Grid({
                 columns: columns,
-                data: mappedData,
+                data: mappedData, // Pass array of objects
                 sort: true,
                 search: true,
                 pagination: {
@@ -367,6 +371,7 @@ export const Customers = {
         const additionalDetails = document.getElementById('additional-details').value.trim();
         const customerSource = document.getElementById('customer-source').value;
         const active = document.getElementById('active-status').value;
+
 
         if (!name) {
             this.Utils.showMessage('Customer Name is required.', 'warning');
