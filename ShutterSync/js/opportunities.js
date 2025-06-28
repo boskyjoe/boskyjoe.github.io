@@ -4,7 +4,8 @@
 // <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
 // <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
 
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+// Corrected import: added getDocs to the list of imported functions
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
 
 /**
@@ -18,23 +19,18 @@ export const Opportunities = {
     opportunitiesData: [], // Cache for main opportunities data
     grid: null, // Grid.js instance for main opportunities table
 
-    // REMOVED: gridJsLoaded flag as Grid.js is now loaded globally in index.html
-    // REMOVED: _loadGridJsAssets method as Grid.js is now loaded globally in index.html
-
     /**
      * Initializes the Opportunities module. This function is called by main.js.
      * @param {object} firestoreDb - The Firestore database instance.
      * @param {object} firebaseAuth - The Firebase Auth instance.
      * @param {object} utils - The Utils object for common functionalities.
      */
-    init: function(firestoreDb, firebaseAuth, utils) { // REMOVED: async keyword
+    init: function(firestoreDb, firebaseAuth, utils) {
         this.db = firestoreDb;
         this.auth = firebaseAuth;
         this.Utils = utils;
 
         console.log("Opportunities module initialized.");
-
-        // REMOVED: await this._loadGridJsAssets(); // Grid.js is now loaded globally
 
         this.renderOpportunitiesUI(); // Render the initial UI
         this.setupRealtimeListener(); // Set up real-time data listener
@@ -208,7 +204,6 @@ export const Opportunities = {
                 let customerName = 'N/A';
                 if (oppData.customerId) {
                     try {
-                        // Corrected: Use getDoc with doc, not query with getDoc
                         const customerDoc = await getDoc(doc(this.db, 'customers', oppData.customerId));
                         if (customerDoc.exists()) {
                             customerName = customerDoc.data().name;
@@ -222,7 +217,6 @@ export const Opportunities = {
                 let createdByDisplayName = 'Unknown User';
                 if (oppData.creatorId) {
                     try {
-                        // Corrected: Use getDoc with doc, not query with getDoc
                         const userDoc = await getDoc(doc(this.db, 'users_data', oppData.creatorId));
                         if (userDoc.exists()) {
                             createdByDisplayName = userDoc.data().displayName || userDoc.data().email || 'Unknown User';
@@ -265,9 +259,6 @@ export const Opportunities = {
             console.error("Opportunity grid container not found.");
             return;
         }
-
-        // REMOVED: Check if gridjs is available *after* trying to load assets
-        // `gridjs` is now guaranteed to be available globally from index.html
 
         // Define columns for Grid.js
         const columns = [
@@ -383,7 +374,7 @@ export const Opportunities = {
             const customersCollection = collection(this.db, "customers");
             const q = query(customersCollection);
             // Corrected: Use getDocs directly from the 'firebase-firestore.js' import, not `this.db.getDocs`
-            const querySnapshot = await getDocs(q);
+            const querySnapshot = await getDocs(q); // THIS IS THE LINE WHERE getDocs WAS MISSING FROM IMPORT
             querySnapshot.forEach((doc) => {
                 const customer = doc.data();
                 const option = document.createElement('option');
@@ -454,7 +445,7 @@ export const Opportunities = {
         const customerId = document.getElementById('opportunity-customer').value;
         const status = document.getElementById('opportunity-status').value;
         const value = parseFloat(document.getElementById('opportunity-value').value) || 0;
-        const closeDate = document.getElementById('opportunity-close-date').value; // YYYY-MM-DD string
+        const closeDate = document.getElementById('opportunity-close-date').value; //YYYY-MM-DD string
 
         if (!name || !customerId) {
             this.Utils.showMessage('Opportunity Name and Customer are required.', 'warning');
@@ -690,6 +681,5 @@ export const Opportunities = {
             this.grid.destroy(); // Destroy Grid.js instance
             this.grid = null;
         }
-        // REMOVED: this.gridJsLoaded = false; // Flag not needed anymore
     }
 };
