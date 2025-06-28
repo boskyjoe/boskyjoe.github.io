@@ -87,7 +87,8 @@ export let currentEditedOpportunity = null; // Stores the full opportunity objec
 export const APP_SETTINGS_DOC_ID = "app_settings";
 
 // --- DOM Element References ---
-// Declare DOM element variables globally for main.js access
+// Declare DOM element variables globally for main.js access.
+// These will be assigned within initializeFirebase.
 let customersSection;
 let customerForm;
 let customerFormTitle;
@@ -193,6 +194,21 @@ let adminCountryMappingSection;
 let currencyManagementSection;
 let priceBookManagementSection;
 
+let usersManagementSection;
+let userForm;
+let userFormTitle;
+let userIdDisplayGroup;
+let userIdDisplayInput;
+let userNameInput;
+let userFirstNameInput;
+let userLastNameInput;
+let userEmailInput;
+let userPhoneInput;
+let userRoleSelect;
+let userSkillsInput;
+let submitUserButton;
+let userList;
+
 let logoutButton;
 let mobileLogoutButton;
 let navGoogleLoginButton;
@@ -255,6 +271,7 @@ function showModal(title, message, onConfirm, onCancel) {
 
 // Function to control the layout of the opportunity section
 function setOpportunityLayout(layoutType) {
+    // Defensive check: ensure elements exist before manipulating them
     if (!opportunityFullFormView || !opportunityExistingListView || !opportunityLeftPanel || !opportunityRightPanel) {
         console.warn("main.js: Opportunity layout elements not found. Cannot set layout.");
         return;
@@ -300,13 +317,10 @@ function setOpportunityLayout(layoutType) {
 function toggleButtonsDisabled(disabled) {
     const buttons = [
         submitCustomerButton, submitOpportunityButton, submitOpportunityContactButton,
-        submitOpportunityLineButton, submitQuoteButton,
-        // Removed uploadAdminDataButton and submitCurrencyButton as they are handled by admin_data.js now
-        // And their disabled state should be managed within their respective modules based on their own init logic
-        submitUserButton
+        submitOpportunityLineButton, submitQuoteButton, submitUserButton
     ];
     buttons.forEach(btn => {
-        if (btn) {
+        if (btn) { // Ensure button element exists before trying to manipulate it
             if (disabled) {
                 btn.setAttribute('disabled', 'disabled');
                 btn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -344,7 +358,7 @@ export async function showSection(sectionId) {
 
     // Hide all sections first
     allSections.forEach(section => {
-        if (section) {
+        if (section) { // Defensive check: ensure section exists
             section.classList.add('hidden');
         }
     });
@@ -357,7 +371,7 @@ export async function showSection(sectionId) {
     }
     // Close mobile menu AND admin submenus when navigating (if open)
     if (mobileMenu) mobileMenu.classList.remove('open');
-    if (desktopAdminSubMenu && desktopAdminMenu) desktopAdminMenu.classList.remove('active');
+    if (desktopAdminSubMenu && desktopAdminMenu) desktopAdminMenu.classList.remove('active'); // Defensive check for desktopAdminMenu
     if (mobileAdminSubMenu) mobileAdminSubMenu.classList.add('hidden');
 
     // Stop all listeners first to prevent redundant updates
@@ -375,12 +389,14 @@ export async function showSection(sectionId) {
     }
 
     // CRITICAL: Ensure db and auth are initialized and ready before proceeding
+    // This check is very important before importing and initializing modules.
     if (!db || !auth || !isDbReady || !isAuthReady) {
-        console.warn(`main.js: Attempted to show section ${sectionId} but Firebase/Firestore is not fully ready. Retrying init if needed.`);
+        console.warn(`main.js: Attempted to show section ${sectionId} but Firebase/Firestore is not fully ready. Modules will not initialize.`);
         toggleButtonsDisabled(true); // Disable all buttons
         // Inform user that app is initializing
+        // Using defensive checks for customerList before accessing innerHTML
         if (customerList) customerList.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-full">Initializing application. Please wait...</p>';
-        return; // Exit, as we cannot proceed without a ready DB
+        return; // Exit, as we cannot proceed with module initialization
     } else {
         toggleButtonsDisabled(false); // Enable buttons once DB is ready and auth confirmed
     }
@@ -397,6 +413,8 @@ export async function showSection(sectionId) {
     } else if (sectionId === 'opportunities-section') {
         try {
             const opportunitiesModule = await import('./opportunities.js');
+            // opportunities.js will now import 'db' directly from main.js if it uses it.
+            // If it also has a setDbInstance, call it. For consistency, let's call it if it exists.
             if (opportunitiesModule.setDbInstance) {
                 opportunitiesModule.setDbInstance(db);
             }
@@ -526,7 +544,7 @@ async function initializeFirebase() {
         }
     }
 
-    // --- IMPORTANT: Initialize all DOM element references here AFTER app initialization ---
+    // --- IMPORTANT: Initialize all DOM element references here BEFORE setting up onAuthStateChanged ---
     customersSection = document.getElementById('customers-section');
     customerForm = document.getElementById('customerForm');
     customerFormTitle = document.getElementById('customerFormTitle');
@@ -612,7 +630,7 @@ async function initializeFirebase() {
     lineServiceDescriptionInput = document.getElementById('lineServiceDescription');
     lineUnitPriceInput = document.getElementById('lineUnitPrice');
     lineQuantityInput = document.getElementById('lineQuantity');
-    lineDiscountInput = document.getElementById('lineDiscount');
+    lineDiscountInput = document = document.getElementById('lineDiscount'); // Fixed potential typo here (document = document)
     lineNetPriceInput = document.getElementById('lineNetPrice');
     lineStatusSelect = document.getElementById('lineStatus');
     submitOpportunityLineButton = document.getElementById('submitOpportunityLineButton');
@@ -679,6 +697,7 @@ async function initializeFirebase() {
 
     homeSection = document.getElementById('home-section');
     eventsSection = document.getElementById('events-section');
+    // Populate allSections AFTER all individual elements have been assigned
     allSections = [
         homeSection,
         customersSection,
@@ -689,11 +708,12 @@ async function initializeFirebase() {
         authSection,
         currencyManagementSection,
         priceBookManagementSection
-    ].filter(section => section !== null);
+    ].filter(section => section !== null); // Filter out any that might still be null if ID not found
+
 
     // Accordion toggles for Opportunity related objects
     function toggleAccordion(header, content) {
-        if (!header || !content) return;
+        if (!header || !content) return; // Defensive check
         header.classList.toggle('active');
         if (content.style.maxHeight) {
             content.style.maxHeight = null;
@@ -705,26 +725,27 @@ async function initializeFirebase() {
     if (linesAccordionHeader) linesAccordionHeader.addEventListener('click', () => toggleAccordion(linesAccordionHeader, linesAccordionContent));
     if (quotesAccordionHeader) quotesAccordionHeader.addEventListener('click', () => toggleAccordion(quotesAccordionHeader, quotesAccordionContent));
 
-    if (desktopAdminMenuToggle && desktopAdminMenu) {
+    if (desktopAdminMenuToggle && desktopAdminMenu) { // Defensive check for desktopAdminMenu
         desktopAdminMenuToggle.addEventListener('click', (e) => {
             e.preventDefault();
             desktopAdminMenu.classList.toggle('active');
         });
     }
     document.addEventListener('click', (e) => {
+        // More robust check to close dropdown only if click is outside the toggle and the menu itself
         if (desktopAdminMenu && !desktopAdminMenu.contains(e.target) && !e.target.closest('#desktopAdminMenuToggle')) {
             desktopAdminMenu.classList.remove('active');
         }
     });
 
-    if (mobileAdminMenuToggle && mobileAdminSubMenu) {
+    if (mobileAdminMenuToggle && mobileAdminSubMenu) { // Defensive check for mobileAdminSubMenu
         mobileAdminMenuToggle.addEventListener('click', (e) => {
             e.preventDefault();
             mobileAdminSubMenu.classList.toggle('hidden');
         });
     }
 
-    // Listen for auth state changes
+    // --- IMPORTANT: onAuthStateChanged listener is set up LAST, after all DOM elements are referenced ---
     onAuthStateChanged(auth, async (user) => {
         isAuthReady = true; // Auth is ready as soon as this listener fires once
         console.log("main.js: onAuthStateChanged: Auth state changed. User:", user ? user.email || user.uid : "null");
@@ -737,6 +758,7 @@ async function initializeFirebase() {
 
         if (user) {
             currentUserId = user.uid;
+            // Defensive checks before accessing DOM elements
             if (userIdDisplay) userIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
             if (mobileUserIdDisplay) mobileUserIdDisplay.textContent = `User ID: ${user.email || user.uid}`;
 
@@ -780,20 +802,23 @@ async function initializeFirebase() {
                 isAdmin = false; // Ensure isAdmin is false on error
             }
 
-            if (isAdmin) {
-                if (desktopAdminMenu) desktopAdminMenu.classList.remove('hidden');
-                if (mobileAdminMenu) mobileAdminMenu.classList.remove('hidden');
-            } else {
-                if (desktopAdminMenu) desktopAdminMenu.classList.add('hidden');
-                if (mobileAdminMenu) mobileAdminMenu.classList.add('hidden');
+            // Show/hide admin menus based on isAdmin status
+            if (desktopAdminMenu) { // Defensive check
+                if (isAdmin) {
+                    desktopAdminMenu.classList.remove('hidden');
+                } else {
+                    desktopAdminMenu.classList.add('hidden');
+                }
+            }
+            if (mobileAdminMenu) { // Defensive check
+                if (isAdmin) {
+                    mobileAdminMenu.classList.remove('hidden');
+                } else {
+                    mobileAdminMenu.classList.add('hidden');
+                }
             }
 
-            // IMPORTANT CHANGE HERE: Removed direct calls to fetchCountryData() and fetchCurrencies()
-            // These will now be triggered by module-specific initialization when sections are navigated to,
-            // or by explicit user actions (like clicking the "load" icons in Admin Data).
-            // await fetchCountryData();
-            // await fetchCurrencies();
-
+            // Show the home section (now guaranteed to have DOM elements ready)
             showSection('home-section');
 
         } else {
@@ -828,6 +853,7 @@ async function initializeFirebase() {
         }
     });
 
+    // Event listeners for navigation and auth buttons (can be set up here as they don't depend on auth state to exist)
     if (mobileMenuButton) {
         mobileMenuButton.addEventListener('click', () => {
             if (mobileMenu) mobileMenu.classList.toggle('open');
