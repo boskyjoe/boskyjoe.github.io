@@ -167,7 +167,7 @@ let optyLineIdDisplay;
 let lineServiceDescriptionInput;
 let lineUnitPriceInput;
 let lineQuantityInput;
-let lineDiscountInput; // This was the problematic line
+let lineDiscountInput;
 let lineNetPriceInput;
 let lineStatusSelect;
 let submitOpportunityLineButton;
@@ -401,7 +401,8 @@ export async function showSection(sectionId) {
         toggleButtonsDisabled(false); // Enable buttons once DB is ready and auth confirmed
     }
 
-    // Start specific listener for the active section, only if auth and DB are ready
+    // Dynamically import and initialize modules for the active section
+    // Pass the 'db' instance to each module's 'setDbInstance' function
     if (sectionId === 'customers-section') {
         try {
             const customersModule = await import('./customers.js');
@@ -413,8 +414,6 @@ export async function showSection(sectionId) {
     } else if (sectionId === 'opportunities-section') {
         try {
             const opportunitiesModule = await import('./opportunities.js');
-            // opportunities.js will now import 'db' directly from main.js if it uses it.
-            // If it also has a setDbInstance, call it. For consistency, let's call it if it exists.
             if (opportunitiesModule.setDbInstance) {
                 opportunitiesModule.setDbInstance(db);
             }
@@ -425,6 +424,7 @@ export async function showSection(sectionId) {
     } else if (sectionId === 'admin-country-mapping-section') {
         if (isAdmin) {
             try {
+                // Import adminDataModule dynamically
                 const adminDataModule = await import('./admin_data.js');
                 adminDataModule.setDbInstance(db); // Pass the live db instance
                 adminDataModule.initAdminDataModule('country_mapping');
@@ -435,6 +435,7 @@ export async function showSection(sectionId) {
     } else if (sectionId === 'currency-management-section') {
         if (isAdmin) {
             try {
+                // Import adminDataModule dynamically
                 const adminDataModule = await import('./admin_data.js');
                 adminDataModule.setDbInstance(db); // Pass the live db instance
                 adminDataModule.initAdminDataModule('currency_management');
@@ -480,49 +481,70 @@ async function handleGoogleLogin() {
 }
 
 // These functions (`fetchCountryData`, `fetchCurrencies`, `getCurrencySymbol`, `getCurrencyName`)
-// are primarily wrappers for the module `admin_data.js` to update main.js's global state,
-// or provide utility. They are no longer explicitly called during the initial onAuthStateChanged.
-// Their internal logic in admin_data.js should already handle the `firestoreDb` checks.
-import {
-    fetchCountryData as fetchCountryDataFromAdmin,
-    appCountries as adminAppCountries,
-    appCountryStateMap as adminAppCountryStateMap,
-    allCurrencies as adminAllCurrencies,
-    getCurrencySymbol as adminGetCurrencySymbol,
-    getCurrencyName as adminGetCurrencyName
-} from './admin_data.js';
+// are now wrappers that call the functions from admin_data.js after dynamic import.
+// This ensures admin_data.js has its 'firestoreDb' set before its functions are invoked.
+
+// Dynamic import for admin_dataModule to ensure its functions are available
+// This is typically handled by `showSection` on demand, but if these are called globally
+// before a section is loaded, we need to ensure admin_dataModule is loaded.
+// For now, let's assume these are called after showSection has handled the import for relevant section.
+// If needed, we might need a global `ensureAdminDataModuleLoaded` function.
+let adminDataModule = {}; // Placeholder to be populated after dynamic import if needed globally
 
 export async function fetchCountryData() {
-    // This function's primary role is to update main.js's global appCountries/appCountryStateMap
-    // by calling admin_data.js's fetch. It should only be called when needed (e.g., in other module's init)
-    // and after db is ready.
-    if (db && isDbReady) {
-        await fetchCountryDataFromAdmin();
-        appCountries = adminAppCountries;
-        appCountryStateMap = adminAppCountryStateMap;
-    } else {
+    console.log("main.js: fetchCountryData called (wrapper).");
+    if (!db || !isDbReady) {
         console.warn("main.js: Cannot fetch country data, DB not ready.");
+        return;
+    }
+    try {
+        // Ensure the module is loaded and its setDbInstance has been called if not already.
+        // This is a safety measure if this function is called directly outside of showSection.
+        if (!adminDataModule.fetchCountryData) {
+            adminDataModule = await import('./admin_data.js');
+            adminDataModule.setDbInstance(db); // Ensure its DB instance is set
+        }
+        await adminDataModule.fetchCountryData();
+        appCountries = adminDataModule.appCountries; // Update main's global array
+        appCountryStateMap = adminDataModule.appCountryStateMap; // Update main's global map
+    } catch (error) {
+        console.error("main.js: Error in fetchCountryData wrapper:", error);
     }
 }
 
 export async function fetchCurrencies() {
-    // Similar to fetchCountryData, this updates main.js's global allCurrencies
-    // It should be called when needed and after db is ready.
-    if (db && isDbReady) {
-        await adminGetCurrencySymbol(); // This function in admin_data.js actually fetches all currencies and updates its local 'allCurrencies'
-        allCurrencies = adminAllCurrencies; // Then update main.js's global 'allCurrencies'
-    } else {
+    console.log("main.js: fetchCurrencies called (wrapper).");
+    if (!db || !isDbReady) {
         console.warn("main.js: Cannot fetch currencies, DB not ready.");
+        return;
+    }
+    try {
+        if (!adminDataModule.fetchCurrencies) {
+            adminDataModule = await import('./admin_data.js');
+            adminDataModule.setDbInstance(db);
+        }
+        await adminDataModule.fetchCurrencies();
+        allCurrencies = adminDataModule.allCurrencies; // Update main's global array
+    } catch (error) {
+        console.error("main.js: Error in fetchCurrencies wrapper:", error);
     }
 }
 
 
 export function getCurrencySymbol(code) {
-    return adminGetCurrencySymbol(code);
+    if (adminDataModule.getCurrencySymbol) {
+        return adminDataModule.getCurrencySymbol(code);
+    }
+    console.warn("main.js: adminDataModule not loaded, cannot get currency symbol.");
+    return code; // Fallback
 }
 
 export function getCurrencyName(code) {
-    return adminGetCurrencyName(code);
+    if (adminDataModule.getCurrencyName) {
+        return adminDataModule.getCurrencyName(code);
+    }
+    console.warn("main.js: adminDataModule not loaded, cannot get currency name.");
+    return code; // Fallback
 }
 
 
@@ -535,7 +557,7 @@ async function initializeFirebase() {
             auth = getAuth(app); // Initialize auth first
             db = getFirestore(app); // Then initialize db
             isDbReady = true; // Set db ready flag AFTER db is assigned
-            console.log("main.js: Firebase app and services initialized. DB Ready:", isDbReady);
+            console.log("main.js: Firebase app and services initialized. DB Ready:", isDbReady, "Actual db instance:", db); // NEW: Log db instance
         } catch (error) {
             console.error("main.js: Error initializing Firebase services:", error);
             showModal("Firebase Service Error", `Failed to initialize Firebase services: ${error.message}`, () => {});
@@ -630,7 +652,7 @@ async function initializeFirebase() {
     lineServiceDescriptionInput = document.getElementById('lineServiceDescription');
     lineUnitPriceInput = document.getElementById('lineUnitPrice');
     lineQuantityInput = document.getElementById('lineQuantity');
-    lineDiscountInput = document.getElementById('lineDiscount'); // CORRECTED THIS LINE
+    lineDiscountInput = document.getElementById('lineDiscount');
     lineNetPriceInput = document.getElementById('lineNetPrice');
     lineStatusSelect = document.getElementById('lineStatus');
     submitOpportunityLineButton = document.getElementById('submitOpportunityLineButton');
