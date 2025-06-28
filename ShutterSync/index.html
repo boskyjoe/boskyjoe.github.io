@@ -54,9 +54,10 @@
         <div class="container mx-auto px-4 py-3">
             <ul class="flex space-x-8 text-white font-medium text-lg">
                 <li><a href="#" id="nav-home" class="hover:text-blue-200 transition-colors duration-300 py-2 px-3 rounded-md hover:bg-blue-700">Home</a></li>
-                <li><a href="#" id="nav-customers" class="hover:text-blue-200 transition-colors duration-300 py-2 px-3 rounded-md hover:bg-blue-700">Customers</a></li>
-                <li><a href="#" id="nav-opportunities" class="hover:text-blue-200 transition-colors duration-300 py-2 px-3 rounded-md hover:bg-blue-700">Opportunities</a></li>
-                <li><a href="#" id="nav-events" class="hover:text-blue-200 transition-colors duration-300 py-2 px-3 rounded-md hover:bg-blue-700">Events</a></li>
+                <!-- Initially hide these links; they will be shown on successful login by JS -->
+                <li><a href="#" id="nav-customers" class="hover:text-blue-200 transition-colors duration-300 py-2 px-3 rounded-md hover:bg-blue-700 hidden">Customers</a></li>
+                <li><a href="#" id="nav-opportunities" class="hover:text-blue-200 transition-colors duration-300 py-2 px-3 rounded-md hover:bg-blue-700 hidden">Opportunities</a></li>
+                <li><a href="#" id="nav-events" class="hover:text-blue-200 transition-colors duration-300 py-2 px-3 rounded-md hover:bg-blue-700 hidden">Events</a></li>
                 <!-- Admin Menu with Hover Pullout Submenu -->
                 <li id="admin-menu" class="relative group hidden"> <!-- Initially hidden, shown based on user role via JS -->
                     <a href="#" class="hover:text-blue-200 transition-colors duration-300 py-2 px-3 rounded-md hover:bg-blue-700 flex items-center">
@@ -75,8 +76,10 @@
 
     <!-- Main Content Area (where different module content will be loaded) -->
     <main id="main-content" class="container mx-auto p-6 flex-grow">
+        <!-- Default content on load for logged-out state -->
         <h2 class="text-3xl font-semibold text-gray-800 mb-6">Welcome to ShutterSync CRM!</h2>
-        <p class="text-gray-600">Please sign in to access the full features of the application.</p>
+        <p class="text-gray-600">Please sign in with your Google account to access all features.</p>
+        <p class="text-gray-600 mt-4">You can click the user icon (<i class="fas fa-user-circle"></i>) in the top right corner to sign in.</p>
     </main>
 
     <!-- Footer (optional, but good for completeness) -->
@@ -111,6 +114,9 @@
         const authButton = document.getElementById('auth-button');
         const authDropdown = document.getElementById('auth-dropdown');
 
+        // Main content area reference
+        const mainContentArea = document.getElementById('main-content');
+
 
         // Firebase Configuration (from your project details)
         const firebaseConfig = {
@@ -128,25 +134,14 @@
         window.firebaseAuth = getAuth(window.firebaseApp);
         window.firebaseDb = getFirestore(window.firebaseApp);
 
-        // Canvas provided global variables
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfigFromCanvas = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // Canvas provided global variables (no longer used for initial auth logic)
+        // const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // const firebaseConfigFromCanvas = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        // const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        // Custom authentication for Canvas environment
-        async function authenticateForCanvas() {
-            try {
-                if (initialAuthToken) {
-                    await signInWithCustomToken(window.firebaseAuth, initialAuthToken);
-                    console.log("Signed in with custom token from Canvas.");
-                } else {
-                    await signInAnonymously(window.firebaseAuth);
-                    console.log("Signed in anonymously (no custom token available).");
-                }
-            } catch (error) {
-                console.error("Firebase authentication error:", error);
-            }
-        }
+        // REMOVED: Custom authentication for Canvas environment, as it was forcing anonymous login
+        // async function authenticateForCanvas() { ... }
+
 
         // Authentication state observer
         onAuthStateChanged(window.firebaseAuth, async (user) => {
@@ -167,6 +162,7 @@
                         console.log("User Role:", window.currentUserRole);
                     } else {
                         // If user_data document does not exist, create it with default 'User' role
+                        // This will happen only for genuinely new Google sign-ins.
                         await setDoc(userDocRef, {
                             email: user.email,
                             displayName: user.displayName,
@@ -181,14 +177,7 @@
                     window.currentUserRole = 'User'; // Fallback to 'User' role on error
                 }
 
-                // Show/hide Admin menu based on role
-                if (window.currentUserRole === 'Admin') {
-                    adminMenu.classList.remove('hidden');
-                } else {
-                    adminMenu.classList.add('hidden');
-                }
-
-                // Call main.js's loggedInInit function if it exists
+                // Call main.js's loggedInInit function
                 if (typeof window.loggedInInit === 'function') {
                     window.loggedInInit();
                 }
@@ -200,12 +189,18 @@
                 userDisplayName.textContent = 'Guest';
                 googleLoginButton.classList.remove('hidden');
                 logoutButton.classList.add('hidden');
-                adminMenu.classList.add('hidden'); // Hide admin menu if not logged in
 
-                // Call main.js's loggedOutInit function if it exists
+                // Call main.js's loggedOutInit function
                 if (typeof window.loggedOutInit === 'function') {
                     window.loggedOutInit();
                 }
+
+                // Explicitly set content for logged-out state if not handled by loggedOutInit
+                mainContentArea.innerHTML = `
+                    <h2 class="text-3xl font-semibold text-gray-800 mb-6">Welcome to ShutterSync CRM!</h2>
+                    <p class="text-gray-600">Please sign in with your Google account to access all features.</p>
+                    <p class="text-gray-600 mt-4">You can click the user icon (<i class="fas fa-user-circle"></i>) in the top right corner to sign in.</p>
+                `;
             }
         });
 
@@ -217,12 +212,10 @@
                 console.log("Google Sign-in successful.");
             } catch (error) {
                 console.error("Google Sign-in error:", error);
-                // Handle specific errors like pop-up closed by user
                 if (error.code === 'auth/popup-closed-by-user') {
                     console.log("Sign-in popup closed by user.");
                 } else {
-                    // Display a user-friendly message for other errors
-                    Utils.showMessage("Sign-in failed. Please try again.", "error"); // Use Utils.showMessage
+                    Utils.showMessage("Sign-in failed. Please try again.", "error");
                 }
             }
         });
@@ -234,12 +227,12 @@
                 console.log("User signed out.");
             } catch (error) {
                 console.error("Logout error:", error);
-                Utils.showMessage("Logout failed. Please try again.", "error"); // Use Utils.showMessage
+                Utils.showMessage("Logout failed. Please try again.", "error");
             }
         });
 
-        // Initial authentication for Canvas environment on page load
-        authenticateForCanvas();
+        // REMOVED: Initial authentication for Canvas environment on page load.
+        // authenticateForCanvas(); // This was causing unwanted anonymous sign-ins.
 
         // Dropdown toggle for user profile button
         authButton.addEventListener('click', (event) => {
@@ -268,7 +261,7 @@
     <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
     <!-- Main application logic -->
     <script type="module" src="js/main.js"></script>
-    <!-- Utility functions -->
+    <!-- Utility functions (already imported in inline script, but explicit include here ensures module graph for other files) -->
     <script type="module" src="js/utils.js"></script>
     <!-- Module-specific JavaScript files will be loaded dynamically or included here -->
     <script type="module" src="js/admin_data.js"></script>
