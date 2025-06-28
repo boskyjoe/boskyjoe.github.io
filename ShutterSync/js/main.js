@@ -9,6 +9,9 @@ const db = window.firebaseDb;
 let currentUserId = window.currentUserId; // Will be updated by onAuthStateChanged in index.html
 let currentUserRole = window.currentUserRole; // Will be updated by onAuthStateChanged in index.html
 
+// Track the currently active module for proper cleanup
+let currentActiveModule = null;
+
 /**
  * Global function to initialize application state when a user logs in.
  * This is called by the onAuthStateChanged listener in index.html.
@@ -31,7 +34,12 @@ window.loggedOutInit = () => {
     currentUserRole = 'Guest';
     console.log("main.js: User logged out.");
     updateNavigationVisibility();
-    loadHomeContent(); // Show the default welcome message
+    // Ensure any previously active module is destroyed on logout
+    if (currentActiveModule && typeof currentActiveModule.destroy === 'function') {
+        currentActiveModule.destroy();
+        currentActiveModule = null;
+    }
+    loadHomeContent(); // Show the default welcome message for logged-out state
 };
 
 /**
@@ -77,17 +85,15 @@ function getModuleHtml(moduleName) {
                 </div>
             `;
         case 'customers':
-            // This content will be replaced by actual Customers module UI later
             return `<div class="p-6">
                         <h2 class="text-3xl font-semibold text-gray-800 mb-6">Customers</h2>
-                        <p class="text-gray-700">Module for managing customer data. Coming soon!</p>
+                        <p class="text-gray-700">Module for managing customer data.</p>
                         <div id="customers-module-content"></div>
                     </div>`;
         case 'opportunities':
-            // This content will be replaced by actual Opportunities module UI later
             return `<div class="p-6">
                         <h2 class="text-3xl font-semibold text-gray-800 mb-6">Opportunities</h2>
-                        <p class="text-gray-700">Module for managing sales opportunities. Coming soon!</p>
+                        <p class="text-gray-700">Module for managing sales opportunities.</p>
                         <div id="opportunities-module-content"></div>
                     </div>`;
         case 'events':
@@ -98,25 +104,25 @@ function getModuleHtml(moduleName) {
         case 'admin-country-mapping':
             return `<div class="p-6">
                         <h2 class="text-3xl font-semibold text-gray-800 mb-6">Admin: Country Mapping</h2>
-                        <p class="text-gray-700">Manage country related master data. Coming soon!</p>
+                        <p class="text-gray-700">Manage country related master data.</p>
                         <div id="admin-country-mapping-content"></div>
                     </div>`;
         case 'admin-currencies':
             return `<div class="p-6">
                         <h2 class="text-3xl font-semibold text-gray-800 mb-6">Admin: Currencies</h2>
-                        <p class="text-gray-700">Manage currency master data. Coming soon!</p>
+                        <p class="text-gray-700">Manage currency master data.</p>
                         <div id="admin-currencies-content"></div>
                     </div>`;
         case 'admin-users':
             return `<div class="p-6">
                         <h2 class="text-3xl font-semibold text-gray-800 mb-6">Admin: Users</h2>
-                        <p class="text-gray-700">Manage user roles and accounts. Coming soon!</p>
+                        <p class="text-gray-700">Manage user roles and accounts.</p>
                         <div id="admin-users-content"></div>
                     </div>`;
         case 'admin-price-book':
             return `<div class="p-6">
                         <h2 class="text-3xl font-semibold text-gray-800 mb-6">Admin: Price Book</h2>
-                        <p class="text-gray-700">Manage product price books. Coming soon!</p>
+                        <p class="text-gray-700">Manage product price books.</p>
                         <div id="admin-price-book-content"></div>
                     </div>`;
         default:
@@ -132,6 +138,11 @@ function getModuleHtml(moduleName) {
  */
 async function loadHomeContent() {
     Utils.clearAndLoadContent(false); // Clear content, no loading spinner for home
+    // Destroy previous module if exists
+    if (currentActiveModule && typeof currentActiveModule.destroy === 'function') {
+        currentActiveModule.destroy();
+        currentActiveModule = null; // Clear reference
+    }
     const html = getModuleHtml('home');
     Utils.renderContent(html);
 }
@@ -158,6 +169,13 @@ async function navigateToModule(moduleName, moduleObject = null, requiresLogin =
 
     Utils.clearAndLoadContent(true); // Clear content and show loading spinner
 
+    // Destroy the previously active module BEFORE rendering new content
+    if (currentActiveModule && typeof currentActiveModule.destroy === 'function') {
+        console.log(`main.js: Destroying previous module: ${currentActiveModule.name || 'Unnamed Module'}`);
+        currentActiveModule.destroy();
+        currentActiveModule = null; // Clear reference
+    }
+
     // Simulate network delay for loading
     await new Promise(resolve => setTimeout(resolve, 300));
 
@@ -165,10 +183,10 @@ async function navigateToModule(moduleName, moduleObject = null, requiresLogin =
     Utils.renderContent(htmlContent);
 
     // Call the module's initialization function if provided
-    // Changed this line: now we pass the module object and call its init method
     if (moduleObject && typeof moduleObject.init === 'function') {
         try {
             await moduleObject.init(db, auth, Utils); // Pass firebase, db, and Utils
+            currentActiveModule = moduleObject; // Set the new active module
             console.log(`main.js: Initialized ${moduleName} module.`);
         } catch (error) {
             Utils.handleError(error, `initializing ${moduleName} module`);
@@ -214,10 +232,7 @@ function attachNavListeners() {
     document.getElementById('admin-country-mapping').addEventListener('click', (e) => {
         e.preventDefault();
         import('./admin_data.js').then(module => {
-            // Pass module.AdminData and then specify which init function to call within navigateToModule
-            // For now, moduleObject.init() will use the default. We need a way to specify initCountryMapping vs initCurrencies.
-            // Let's modify navigateToModule or the init functions of AdminData.
-            navigateToModule('admin-country-mapping', { init: module.AdminData.initCountryMapping }, true, true);
+            navigateToModule('admin-country-mapping', { name: 'AdminData.CountryMapping', init: module.AdminData.initCountryMapping }, true, true);
         }).catch(error => {
             Utils.handleError(error, 'loading admin_data module (country mapping)');
         });
@@ -226,7 +241,7 @@ function attachNavListeners() {
     document.getElementById('admin-currencies').addEventListener('click', (e) => {
         e.preventDefault();
         import('./admin_data.js').then(module => {
-            navigateToModule('admin-currencies', { init: module.AdminData.initCurrencies }, true, true);
+            navigateToModule('admin-currencies', { name: 'AdminData.Currencies', init: module.AdminData.initCurrencies }, true, true);
         }).catch(error => {
             Utils.handleError(error, 'loading admin_data module (currencies)');
         });
@@ -265,6 +280,7 @@ function updateNavigationVisibility() {
         navOpportunities.classList.remove('hidden');
         navEvents.classList.remove('hidden');
     } else {
+        // Hide all user-specific nav items if not logged in
         navCustomers.classList.add('hidden');
         navOpportunities.classList.add('hidden');
         navEvents.classList.add('hidden');
@@ -280,13 +296,12 @@ function updateNavigationVisibility() {
 // Initial setup when main.js loads
 document.addEventListener('DOMContentLoaded', () => {
     attachNavListeners();
-    // Initially load home content. onAuthStateChanged in index.html will then call loggedInInit/loggedOutInit
-    // which in turn will re-render home or adjust navigation.
+    // Initially load home content. The onAuthStateChanged listener in index.html
+    // will call loggedInInit/loggedOutInit, which will then re-render home
+    // and adjust navigation based on the actual auth state.
     loadHomeContent();
     updateNavigationVisibility(); // Set initial visibility based on current auth state (might be 'Guest')
 });
 
 // Export functions that might be needed by other modules (though direct imports are preferred)
-// For now, this is mainly for window.loggedInInit and window.loggedOutInit called by index.html
-// but it's good practice to explicitly export if other modules might need to import main.js functions.
 export { navigateToModule, Utils }; // Export Utils for convenience, though direct import is also done.
