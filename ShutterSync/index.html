@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShutterSync CRM</title>
+    <!-- Link to the main CSS file -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Inter font from Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN for utility classes and responsive design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+    <!-- Title Bar / Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-bold tracking-tight">ShutterSync CRM</h1>
+            <div class="user-auth flex items-center space-x-4">
+                <!-- User Account Icon / Login Button -->
+                <div id="user-profile" class="relative group">
+                    <button id="auth-button" class="flex items-center space-x-2 text-white hover:text-blue-200 transition-colors duration-300 focus:outline-none p-2 rounded-full bg-blue-500 bg-opacity-20 hover:bg-opacity-30">
+                        <i class="fas fa-user-circle text-2xl"></i>
+                        <span id="user-display-name" class="font-medium">Guest</span>
+                    </button>
+                    <!-- Dropdown for user options / login/logout (initially hidden, managed by JS) -->
+                    <div id="auth-dropdown" class="absolute right-0 mt-2 w-48 bg-white text-gray-800 rounded-md shadow-lg py-2 z-50 opacity-0 scale-95 origin-top-right transition-all duration-200 ease-out pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto">
+                        <button id="google-login-button" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+                            <i class="fab fa-google mr-2"></i> Sign in with Google
+                        </button>
+                        <button id="logout-button" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 transition-colors duration-200 hidden">
+                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Bar -->
+    <nav class="bg-blue-800 shadow-md">
+        <div class="container mx-auto px-4 py-3">
+            <ul class="flex space-x-8 text-white font-medium text-lg">
+                <li><a href="#" id="nav-home" class="hover:text-blue-200 transition-colors duration-300 py-2 px-3 rounded-md hover:bg-blue-700">Home</a></li>
+                <li><a href="#" id="nav-customers" class="hover:text-blue-200 transition-colors duration-300 py-2 px-3 rounded-md hover:bg-blue-700">Customers</a></li>
+                <li><a href="#" id="nav-opportunities" class="hover:text-blue-200 transition-colors duration-300 py-2 px-3 rounded-md hover:bg-blue-700">Opportunities</a></li>
+                <li><a href="#" id="nav-events" class="hover:text-blue-200 transition-colors duration-300 py-2 px-3 rounded-md hover:bg-blue-700">Events</a></li>
+                <!-- Admin Menu with Hover Pullout Submenu -->
+                <li id="admin-menu" class="relative group hidden"> <!-- Initially hidden, shown based on user role via JS -->
+                    <a href="#" class="hover:text-blue-200 transition-colors duration-300 py-2 px-3 rounded-md hover:bg-blue-700 flex items-center">
+                        Admin <i class="fas fa-chevron-down text-xs ml-2 group-hover:rotate-180 transition-transform duration-200"></i>
+                    </a>
+                    <ul class="absolute left-0 mt-2 w-48 bg-white text-gray-800 rounded-md shadow-lg py-2 z-50 opacity-0 scale-95 origin-top transition-all duration-200 ease-out pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto">
+                        <li><a href="#" id="admin-country-mapping" class="block px-4 py-2 text-sm hover:bg-gray-100 transition-colors duration-200">Country Mapping</a></li>
+                        <li><a href="#" id="admin-currencies" class="block px-4 py-2 text-sm hover:bg-gray-100 transition-colors duration-200">Currencies</a></li>
+                        <li><a href="#" id="admin-users" class="block px-4 py-2 text-sm hover:bg-gray-100 transition-colors duration-200">Users</a></li>
+                        <li><a href="#" id="admin-price-book" class="block px-4 py-2 text-sm hover:bg-gray-100 transition-colors duration-200">Price Book</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content Area (where different module content will be loaded) -->
+    <main id="main-content" class="container mx-auto p-6 flex-grow">
+        <h2 class="text-3xl font-semibold text-gray-800 mb-6">Welcome to ShutterSync CRM!</h2>
+        <p class="text-gray-600">Please sign in to access the full features of the application.</p>
+    </main>
+
+    <!-- Footer (optional, but good for completeness) -->
+    <footer class="bg-gray-800 text-white text-center p-4 mt-8">
+        <div class="container mx-auto text-sm">
+            &copy; 2025 ShutterSync CRM. All rights reserved.
+        </div>
+    </footer>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // Global Firebase variables - will be passed to modules
+        window.firebaseApp = null;
+        window.firebaseAuth = null;
+        window.firebaseDb = null;
+        window.currentUserId = null;
+        window.currentUserRole = 'Guest'; // Default role
+
+        // Firebase Configuration (from your project details)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
+            authDomain: "shuttersync-96971.firebaseapp.com",
+            projectId: "shuttersync-96971",
+            storageBucket: "shuttersync-96971.firebasestorage.app",
+            messagingSenderId: "10782416018",
+            appId: "1:10782416018:web:361db5572882a62f291a4b",
+            measurementId: "G-T0W9CES4D3"
+        };
+
+        // Initialize Firebase
+        window.firebaseApp = initializeApp(firebaseConfig);
+        window.firebaseAuth = getAuth(window.firebaseApp);
+        window.firebaseDb = getFirestore(window.firebaseApp);
+
+        // Canvas provided global variables
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfigFromCanvas = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Custom authentication for Canvas environment
+        async function authenticateForCanvas() {
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(window.firebaseAuth, initialAuthToken);
+                    console.log("Signed in with custom token from Canvas.");
+                } else {
+                    await signInAnonymously(window.firebaseAuth);
+                    console.log("Signed in anonymously (no custom token available).");
+                }
+            } catch (error) {
+                console.error("Firebase authentication error:", error);
+            }
+        }
+
+        // Authentication state observer
+        onAuthStateChanged(window.firebaseAuth, async (user) => {
+            const userDisplayName = document.getElementById('user-display-name');
+            const googleLoginButton = document.getElementById('google-login-button');
+            const logoutButton = document.getElementById('logout-button');
+            const adminMenu = document.getElementById('admin-menu');
+            const authButton = document.getElementById('auth-button');
+            const authDropdown = document.getElementById('auth-dropdown');
+
+            if (user) {
+                console.log("User is signed in:", user.uid);
+                window.currentUserId = user.uid;
+                userDisplayName.textContent = user.displayName || user.email || 'User';
+                googleLoginButton.classList.add('hidden');
+                logoutButton.classList.remove('hidden');
+
+                // Check user role from Firestore
+                const userDocRef = doc(window.firebaseDb, "users_data", user.uid);
+                try {
+                    const userDocSnap = await getDoc(userDocRef);
+                    if (userDocSnap.exists()) {
+                        const userData = userDocSnap.data();
+                        window.currentUserRole = userData.role || 'User';
+                        console.log("User Role:", window.currentUserRole);
+                    } else {
+                        // If user_data document does not exist, create it with default 'User' role
+                        await setDoc(userDocRef, {
+                            email: user.email,
+                            displayName: user.displayName,
+                            role: 'User', // Default role for new users
+                            createdAt: new Date()
+                        });
+                        window.currentUserRole = 'User';
+                        console.log("New user_data document created with role 'User'.");
+                    }
+                } catch (error) {
+                    console.error("Error fetching or creating user role:", error);
+                    window.currentUserRole = 'User'; // Fallback to 'User' role on error
+                }
+
+                // Show/hide Admin menu based on role
+                if (window.currentUserRole === 'Admin') {
+                    adminMenu.classList.remove('hidden');
+                } else {
+                    adminMenu.classList.add('hidden');
+                }
+
+                // Call main.js's loggedInInit function if it exists
+                if (typeof window.loggedInInit === 'function') {
+                    window.loggedInInit();
+                }
+
+            } else {
+                console.log("User is signed out.");
+                window.currentUserId = null;
+                window.currentUserRole = 'Guest';
+                userDisplayName.textContent = 'Guest';
+                googleLoginButton.classList.remove('hidden');
+                logoutButton.classList.add('hidden');
+                adminMenu.classList.add('hidden'); // Hide admin menu if not logged in
+
+                // Call main.js's loggedOutInit function if it exists
+                if (typeof window.loggedOutInit === 'function') {
+                    window.loggedOutInit();
+                }
+            }
+        });
+
+        // Event listener for Google Sign-in
+        document.getElementById('google-login-button').addEventListener('click', async () => {
+            const provider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(window.firebaseAuth, provider);
+                console.log("Google Sign-in successful.");
+            } catch (error) {
+                console.error("Google Sign-in error:", error);
+                // Handle specific errors like pop-up closed by user
+                if (error.code === 'auth/popup-closed-by-user') {
+                    console.log("Sign-in popup closed by user.");
+                } else {
+                    // Display a user-friendly message for other errors
+                    alert("Sign-in failed. Please try again."); // Use a custom modal in a real app
+                }
+            }
+        });
+
+        // Event listener for Logout
+        document.getElementById('logout-button').addEventListener('click', async () => {
+            try {
+                await signOut(window.firebaseAuth);
+                console.log("User signed out.");
+            } catch (error) {
+                console.error("Logout error:", error);
+                alert("Logout failed. Please try again."); // Use a custom modal in a real app
+            }
+        });
+
+        // Initial authentication for Canvas environment on page load
+        authenticateForCanvas();
+
+        // Dropdown toggle for user profile button
+        authButton.addEventListener('click', (event) => {
+            event.stopPropagation(); // Prevent document click from closing immediately
+            authDropdown.classList.toggle('opacity-0');
+            authDropdown.classList.toggle('scale-95');
+            authDropdown.classList.toggle('pointer-events-none');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (event) => {
+            if (!authButton.contains(event.target) && !authDropdown.contains(event.target)) {
+                authDropdown.classList.add('opacity-0');
+                authDropdown.classList.add('scale-95');
+                authDropdown.classList.add('pointer-events-none');
+            }
+        });
+
+    </script>
+    <!-- Main application logic -->
+    <script type="module" src="js/main.js"></script>
+    <!-- Utility functions -->
+    <script type="module" src="js/utils.js"></script>
+    <!-- Module-specific JavaScript files will be loaded dynamically or included here -->
+    <script type="module" src="js/admin_data.js"></script>
+    <script type="module" src="js/customers.js"></script>
+    <script type="module" src="js/opportunities.js"></script>
+    <script type="module" src="js/price_book.js"></script>
+    <script type="module" src="js/users.js"></script>
+
+</body>
+</html>
