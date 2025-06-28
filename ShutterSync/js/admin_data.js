@@ -1,6 +1,6 @@
 // js/admin_data.js
 
-// Ensure Grid.js is loaded for data grids
+// Ensure Grid.js is loaded globally in index.html, not here.
 // <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
 // <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
 
@@ -21,12 +21,14 @@ export const AdminData = {
     currentCountryId: null,
     countriesData: [],
     countryGrid: null,
+    // REMOVED: countryGridJsLoaded: false, // Flag no longer needed as Grid.js is loaded globally
 
     // Properties for Currencies
     currencyUnsubscribe: null,
     currentCurrencyId: null,
     currenciesData: [],
     currencyGrid: null,
+    // REMOVED: currencyGridJsLoaded: false, // Flag no longer needed as Grid.js is loaded globally
 
     /**
      * Common initialization function to set up Firebase and Utils.
@@ -47,13 +49,17 @@ export const AdminData = {
         return true;
     },
 
+    // REMOVED: _loadCountryGridJsAssets method
+    // REMOVED: _loadCurrencyGridJsAssets method
+
     /**
      * Initializes the Country Mapping module. Called by main.js.
      */
-    initCountryMapping: function(firestoreDb, firebaseAuth, utils) {
+    initCountryMapping: function(firestoreDb, firebaseAuth, utils) { // REMOVED: async keyword
         if (!this.commonInit(firestoreDb, firebaseAuth, utils)) return;
 
         console.log("Admin: Country Mapping module initialized.");
+        // REMOVED: await this._loadCountryGridJsAssets(); // Grid.js is now loaded globally
         this.renderCountryMappingUI();
         this.setupCountryRealtimeListener();
         this.attachCountryEventListeners();
@@ -62,10 +68,11 @@ export const AdminData = {
     /**
      * Initializes the Currencies module. Called by main.js.
      */
-    initCurrencies: function(firestoreDb, firebaseAuth, utils) {
+    initCurrencies: function(firestoreDb, firebaseAuth, utils) { // REMOVED: async keyword
         if (!this.commonInit(firestoreDb, firebaseAuth, utils)) return;
 
         console.log("Admin: Currencies module initialized.");
+        // REMOVED: await this._loadCurrencyGridJsAssets(); // Grid.js is now loaded globally
         this.renderCurrenciesUI();
         this.setupCurrencyRealtimeListener();
         this.attachCurrencyEventListeners();
@@ -82,8 +89,7 @@ export const AdminData = {
         const adminCountryMappingContent = document.getElementById('admin-country-mapping-content');
         if (adminCountryMappingContent) {
             adminCountryMappingContent.innerHTML = `
-                <!-- Grid.js CSS -->
-                <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+                <!-- Grid.js CSS and JS are now loaded globally in index.html, removed from here -->
                 <div class="bg-white p-6 rounded-lg shadow-md mb-6">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-2xl font-semibold text-gray-800">Country Mapping</h3>
@@ -123,21 +129,18 @@ export const AdminData = {
                         </form>
                     </div>
                 </div>
-                <!-- Grid.js JS -->
-                <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
             `;
         }
     },
 
     /**
-     * Sets up the real-time listener for the 'country_mapping' collection.
+     * Sets up the real-time listener for the 'app_metadata/countries_states' collection.
      */
     setupCountryRealtimeListener: function() {
         if (this.countryUnsubscribe) {
             this.countryUnsubscribe();
         }
 
-        // UPDATED: Path changed to /app_metadata/countries_states
         const q = query(collection(this.db, "app_metadata", "countries_states"));
 
         this.countryUnsubscribe = onSnapshot(q, (snapshot) => {
@@ -159,6 +162,9 @@ export const AdminData = {
     renderCountryGrid: function(countries) {
         const gridContainer = document.getElementById('country-grid-container');
         if (!gridContainer) return;
+
+        // Now, gridjs is guaranteed to be available globally.
+        // REMOVED: if (typeof gridjs === 'undefined' || !this.countryGridJsLoaded) { ... }
 
         const columns = [
             { id: 'name', name: 'Country Name', sort: true },
@@ -182,11 +188,6 @@ export const AdminData = {
                 }
             }
         ];
-
-        if (typeof gridjs === 'undefined') {
-            this.Utils.showMessage("Grid.js library not loaded. Please refresh the page.", "error");
-            return;
-        }
 
         if (this.countryGrid) {
             this.countryGrid.updateConfig({
@@ -264,12 +265,10 @@ export const AdminData = {
         try {
             const countryData = { name, code, updatedAt: new Date() };
             if (this.currentCountryId) {
-                // UPDATED: Path changed to /app_metadata/countries_states
                 await updateDoc(doc(this.db, "app_metadata", "countries_states", this.currentCountryId), countryData);
                 this.Utils.showMessage('Country updated successfully!', 'success');
             } else {
                 countryData.createdAt = new Date();
-                // UPDATED: Path changed to /app_metadata/countries_states
                 await addDoc(collection(this.db, "app_metadata", "countries_states"), countryData);
                 this.Utils.showMessage('Country added successfully!', 'success');
             }
@@ -301,9 +300,7 @@ export const AdminData = {
             const messageBox = messageModalContainer.querySelector('.p-6');
             const confirmBtn = document.createElement('button');
             confirmBtn.textContent = 'Confirm Delete'; confirmBtn.className = 'bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg mt-4 mr-2';
-            confirmBtn.onclick = async () => { try {
-                // UPDATED: Path changed to /app_metadata/countries_states
-                await deleteDoc(doc(this.db, "app_metadata", "countries_states", id)); this.Utils.showMessage('Country deleted successfully!', 'success'); messageModalContainer.remove(); } catch (error) { this.Utils.handleError(error, "deleting country"); messageModalContainer.remove(); } };
+            confirmBtn.onclick = async () => { try { await deleteDoc(doc(this.db, "app_metadata", "countries_states", id)); this.Utils.showMessage('Country deleted successfully!', 'success'); messageModalContainer.remove(); } catch (error) { this.Utils.handleError(error, "deleting country"); messageModalContainer.remove(); } };
             const cancelBtn = document.createElement('button');
             cancelBtn.textContent = 'Cancel'; cancelBtn.className = 'bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg mt-4';
             cancelBtn.onclick = () => { messageModalContainer.remove(); this.Utils.showMessage('Deletion cancelled.', 'info'); };
@@ -324,8 +321,7 @@ export const AdminData = {
         const adminCurrenciesContent = document.getElementById('admin-currencies-content');
         if (adminCurrenciesContent) {
             adminCurrenciesContent.innerHTML = `
-                <!-- Grid.js CSS -->
-                <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+                <!-- Grid.js CSS and JS are now loaded globally in index.html, removed from here -->
                 <div class="bg-white p-6 rounded-lg shadow-md mb-6">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-2xl font-semibold text-gray-800">Currencies</h3>
@@ -370,21 +366,18 @@ export const AdminData = {
                         </form>
                     </div>
                 </div>
-                <!-- Grid.js JS -->
-                <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
             `;
         }
     },
 
     /**
-     * Sets up the real-time listener for the 'currencies' collection.
+     * Sets up the real-time listener for the 'app_metadata/app_settings/currencies_data' collection.
      */
     setupCurrencyRealtimeListener: function() {
         if (this.currencyUnsubscribe) {
             this.currencyUnsubscribe();
         }
 
-        // UPDATED: Path changed to /app_metadata/app_settings/currencies_data
         const q = query(collection(this.db, "app_metadata", "app_settings", "currencies_data"));
 
         this.currencyUnsubscribe = onSnapshot(q, (snapshot) => {
@@ -406,6 +399,9 @@ export const AdminData = {
     renderCurrencyGrid: function(currencies) {
         const gridContainer = document.getElementById('currency-grid-container');
         if (!gridContainer) return;
+
+        // Now, gridjs is guaranteed to be available globally.
+        // REMOVED: if (typeof gridjs === 'undefined' || !this.currencyGridJsLoaded) { ... }
 
         const columns = [
             { id: 'name', name: 'Currency Name', sort: true },
@@ -430,11 +426,6 @@ export const AdminData = {
                 }
             }
         ];
-
-        if (typeof gridjs === 'undefined') {
-            this.Utils.showMessage("Grid.js library not loaded. Please refresh the page.", "error");
-            return;
-        }
 
         if (this.currencyGrid) {
             this.currencyGrid.updateConfig({
@@ -514,12 +505,10 @@ export const AdminData = {
         try {
             const currencyData = { name, code, symbol, updatedAt: new Date() };
             if (this.currentCurrencyId) {
-                // UPDATED: Path changed to /app_metadata/app_settings/currencies_data
                 await updateDoc(doc(this.db, "app_metadata", "app_settings", "currencies_data", this.currentCurrencyId), currencyData);
                 this.Utils.showMessage('Currency updated successfully!', 'success');
             } else {
                 currencyData.createdAt = new Date();
-                // UPDATED: Path changed to /app_metadata/app_settings/currencies_data
                 await addDoc(collection(this.db, "app_metadata", "app_settings", "currencies_data"), currencyData);
                 this.Utils.showMessage('Currency added successfully!', 'success');
             }
@@ -551,9 +540,7 @@ export const AdminData = {
             const messageBox = messageModalContainer.querySelector('.p-6');
             const confirmBtn = document.createElement('button');
             confirmBtn.textContent = 'Confirm Delete'; confirmBtn.className = 'bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg mt-4 mr-2';
-            confirmBtn.onclick = async () => { try {
-                // UPDATED: Path changed to /app_metadata/app_settings/currencies_data
-                await deleteDoc(doc(this.db, "app_metadata", "app_settings", "currencies_data", id)); this.Utils.showMessage('Currency deleted successfully!', 'success'); messageModalContainer.remove(); } catch (error) { this.Utils.handleError(error, "deleting currency"); messageModalContainer.remove(); } };
+            confirmBtn.onclick = async () => { try { await deleteDoc(doc(this.db, "app_metadata", "app_settings", "currencies_data", id)); this.Utils.showMessage('Currency deleted successfully!', 'success'); messageModalContainer.remove(); } catch (error) { this.Utils.handleError(error, "deleting currency"); messageModalContainer.remove(); } };
             const cancelBtn = document.createElement('button');
             cancelBtn.textContent = 'Cancel'; cancelBtn.className = 'bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg mt-4';
             cancelBtn.onclick = () => { messageModalContainer.remove(); this.Utils.showMessage('Deletion cancelled.', 'info'); };
@@ -576,6 +563,8 @@ export const AdminData = {
             this.countryGrid.destroy();
             this.countryGrid = null;
         }
+        // REMOVED: this.countryGridJsLoaded = false; // Flag not needed anymore
+
         if (this.currencyUnsubscribe) {
             this.currencyUnsubscribe();
             this.currencyUnsubscribe = null;
@@ -585,5 +574,6 @@ export const AdminData = {
             this.currencyGrid.destroy();
             this.currencyGrid = null;
         }
+        // REMOVED: this.currencyGridJsLoaded = false; // Flag not needed anymore
     }
 };
