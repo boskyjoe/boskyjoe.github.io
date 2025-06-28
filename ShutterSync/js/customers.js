@@ -375,32 +375,40 @@ export const Customers = {
 
         // --- DUPLICATE CHECK LOGIC START ---
         if (!this.currentCustomerId) { // Only perform duplicate check when adding a new customer
-            if (email) { // If email is provided, check for duplicate emails
-                const customersRef = collection(this.db, "customers");
-                const q = query(customersRef, where("email", "==", email));
+            const customersRef = collection(this.db, "customers");
+            let q;
+            let errorMessage = '';
+
+            if (customerType === 'Individual' && email) {
+                // For individuals, unique on email
+                q = query(customersRef, where("email", "==", email));
+                errorMessage = `A customer with the email "${email}" already exists.`;
+            } else if (customerType === 'Company' && name) {
+                // For companies, unique on name AND customerType
+                q = query(customersRef, where("name", "==", name), where("customerType", "==", "Company"));
+                errorMessage = `A company with the name "${name}" already exists.`;
+            } else {
+                // Fallback or if required fields are missing for uniqueness check
+                if (!email && !name) {
+                     this.Utils.showMessage('For new customers, please provide at least an Email (for individuals) or Customer Name (for companies) for uniqueness check.', 'warning');
+                     return;
+                }
+                // Default to a simple name check if type is not selected or for mixed cases
+                q = query(customersRef, where("name", "==", name));
+                errorMessage = `A customer with the name "${name}" already exists. Please provide more unique details like email or verify customer type.`;
+            }
+
+            if (q) { // Only execute query if 'q' was successfully defined
                 try {
                     const querySnapshot = await getDocs(q);
                     if (!querySnapshot.empty) {
-                        this.Utils.showMessage(`A customer with the email "${email}" already exists.`, 'error');
+                        this.Utils.showMessage(errorMessage, 'error');
                         return; // Stop execution if duplicate found
                     }
                 } catch (error) {
-                    this.Utils.handleError(error, "checking for duplicate email");
+                    this.Utils.handleError(error, "checking for duplicate customer");
                     return; // Stop if there's an error during the check
                 }
-            } else { // If no email, check for duplicate name
-                 const customersRef = collection(this.db, "customers");
-                 const q = query(customersRef, where("name", "==", name));
-                 try {
-                     const querySnapshot = await getDocs(q);
-                     if (!querySnapshot.empty) {
-                         this.Utils.showMessage(`A customer with the name "${name}" already exists. Please provide an email or unique name.`, 'error');
-                         return; // Stop execution if duplicate found
-                     }
-                 } catch (error) {
-                     this.Utils.handleError(error, "checking for duplicate name");
-                     return; // Stop if there's an error during the check
-                 }
             }
         }
         // --- DUPLICATE CHECK LOGIC END ---
