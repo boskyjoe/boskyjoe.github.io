@@ -9,7 +9,9 @@ let firestoreDb = null;
 // EXPORTED: Setter function for the Firestore DB instance
 export function setDbInstance(instance) {
     console.log("admin_data.js: setDbInstance received:", instance);
-    if (instance && instance.type === 'firestore' && typeof instance.collection === 'function') {
+    // REMOVED: instance.type === 'firestore' as it's not a standard property
+    // Simplified check: if it's an object, has an 'app' property (linking to FirebaseApp), and has a 'collection' function
+    if (instance && typeof instance.app !== 'undefined' && typeof instance.collection === 'function') {
         firestoreDb = instance;
         console.log("admin_data.js: Firestore DB instance successfully set via setDbInstance.");
     } else {
