@@ -10,13 +10,12 @@ let firestoreDb = null;
 
 // EXPORTED: Setter function for the Firestore DB instance
 export function setDbInstance(instance) {
-    console.log("customers.js: setDbInstance received:", instance); // NEW: Crucial debug log
-    if (instance && instance.type === 'firestore' && typeof instance.collection === 'function') { // Added typeof check for collection
-        firestoreDb = instance;
-        console.log("customers.js: Firestore DB instance successfully set via setDbInstance.");
+    console.log("MODULE_NAME.js: setDbInstance received:", instance); // Adjust MODULE_NAME
+    firestoreDb = instance; // Directly assign
+    if (firestoreDb) {
+        console.log("MODULE_NAME.js: Firestore DB instance successfully set. firestoreDb is now:", firestoreDb);
     } else {
-        console.error("customers.js: Attempted to set an invalid Firestore DB instance. Received:", instance);
-        firestoreDb = null; // Ensure it's null if invalid
+        console.error("MODULE_NAME.js: CRITICAL ERROR: Firestore DB instance is still null after direct assignment. This means the 'instance' passed was null/undefined.");
     }
 }
 
