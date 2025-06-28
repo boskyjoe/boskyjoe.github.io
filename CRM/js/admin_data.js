@@ -13,8 +13,15 @@ export function setDbInstance(instance) {
     console.log("admin_data.js: setDbInstance received:", instance);
     firestoreDb = instance; // Directly assign for robust assignment
     if (firestoreDb) {
-        projectId = firestoreDb.app.options.projectId; // Get projectId from the db instance
-        console.log("admin_data.js: Firestore DB instance successfully set. projectId:", projectId);
+        // Ensure projectId is correctly derived from the FirebaseApp instance within Firestore
+        // Use a defensive check for instance.app and instance.app.options
+        if (firestoreDb.app && firestoreDb.app.options && firestoreDb.app.options.projectId) {
+            projectId = firestoreDb.app.options.projectId;
+            console.log("admin_data.js: Firestore DB instance successfully set. projectId:", projectId);
+        } else {
+            console.error("admin_data.js: Firestore DB instance set, but projectId could not be extracted from db.app.options.projectId. db object:", firestoreDb);
+            projectId = null;
+        }
     } else {
         console.error("admin_data.js: CRITICAL ERROR: Firestore DB instance is still null after direct assignment. This means the 'instance' passed was null/undefined.");
         projectId = null;
@@ -91,11 +98,13 @@ function initializeAdminDomElements() {
     }
     if (loadCountriesIcon) {
         loadCountriesIcon.addEventListener('click', async () => {
+            console.log("admin_data.js: Load Countries Icon clicked.");
             await loadAdminCountryData();
         });
     }
     if (loadCountryStateMapIcon) {
         loadCountryStateMapIcon.addEventListener('click', async () => {
+            console.log("admin_data.js: Load Country State Map Icon clicked.");
             await loadAdminCountryData();
         });
     }
@@ -111,6 +120,7 @@ function initializeAdminDomElements() {
 
     if (loadCurrenciesIcon) {
         loadCurrenciesIcon.addEventListener('click', async () => {
+            console.log("admin_data.js: Load Currencies Icon clicked.");
             await fetchCurrencies();
             populateCurrencyInputForEdit();
         });
@@ -126,13 +136,13 @@ export async function initAdminDataModule(type) {
     // Ensure DOM elements are initialized first and only once.
     initializeAdminDomElements();
 
-    console.log("admin_data.js: initAdminDataModule current state (after DOM init) - firestoreDb:", firestoreDb, "isAuthReady:", isAuthReady, "currentUserId:", currentUserId, "isAdmin:", isAdmin);
+    console.log("admin_data.js: initAdminDataModule current state (after DOM init) - firestoreDb:", firestoreDb, "projectId:", projectId, "isAuthReady:", isAuthReady, "currentUserId:", currentUserId, "isAdmin:", isAdmin);
 
     // Conditional logic based on type
     if (type === 'country_mapping') {
         // Enable/Disable buttons based on auth and admin status *and if firestoreDb is available*
         if (uploadAdminDataButton) {
-            if (isAuthReady && isAdmin && firestoreDb) {
+            if (isAuthReady && isAdmin && firestoreDb && projectId) {
                 uploadAdminDataButton.removeAttribute('disabled');
             } else {
                 uploadAdminDataButton.setAttribute('disabled', 'disabled');
@@ -140,15 +150,15 @@ export async function initAdminDataModule(type) {
         }
     } else if (type === 'currency_management') {
         // Listener for currency changes. This should also only be set if firestoreDb is ready.
-        if (firestoreDb) { // CRITICAL: Only set up listener if DB is ready
+        if (firestoreDb && projectId) { // CRITICAL: Only set up listener if DB and projectId are ready
              listenForCurrencies();
         } else {
-            console.warn("admin_data.js: Firestore DB instance is not set. Cannot set up currency listener.");
+            console.warn("admin_data.js: Firestore DB instance or Project ID is not set. Cannot set up currency listener.");
             if (currencyList) currencyList.innerHTML = '<p class="text-gray-500 text-center col-span-full py-4">Firestore not ready. Cannot display currencies.</p>';
         }
         resetCurrencyForm(); // Always reset form on module init
         if (submitCurrencyButton) {
-            if (isAuthReady && isAdmin && firestoreDb) {
+            if (isAuthReady && isAdmin && firestoreDb && projectId) {
                 submitCurrencyButton.removeAttribute('disabled');
             } else {
                 submitCurrencyButton.setAttribute('disabled', 'disabled');
@@ -169,6 +179,8 @@ export async function fetchCountryData() {
         appCountryStateMap = {};
         return;
     }
+    // NEW: Log firestoreDb immediately before calling doc()
+    console.log("admin_data.js: fetchCountryData: About to call doc(). firestoreDb value:", firestoreDb);
     try {
         const docRef = doc(firestoreDb, "app_metadata", "countries_states"); // Use firestoreDb
         const docSnap = await getDoc(docRef);
@@ -239,7 +251,7 @@ async function loadAdminCountryData() {
 
 async function saveCountryData() {
     console.log("admin_data.js: saveCountryData called.");
-    if (!isAuthReady || !currentUserId || !isAdmin || !firestoreDb || !projectId) { // Use imported isAdmin and check firestoreDb
+    if (!isAuthReady || !currentUserId || !isAdmin || !firestoreDb || !projectId) {
         showModal("Permission Denied", "Only administrators can upload country mapping data, or Firestore is not ready.", () => {});
         return;
     }
@@ -378,6 +390,8 @@ export async function fetchCurrencies() {
         allCurrencies = [];
         return;
     }
+    // NEW: Log firestoreDb immediately before calling collection()
+    console.log("admin_data.js: fetchCurrencies: About to call collection(). firestoreDb value:", firestoreDb);
     try {
         const collectionRef = collection(firestoreDb, "app_metadata", APP_SETTINGS_DOC_ID, "currencies_data"); // Use firestoreDb
         const querySnapshot = await getDocs(collectionRef);
@@ -405,7 +419,7 @@ function populateCurrencyInputForEdit() {
         return;
     }
     // Format all currencies into CSV string for the textarea
-    const currenciesString = allCurrencies.map(c => `${c.id},${c.currencyName || '', c.symbol || '', c.symbol_native || ''}`).join('\n');
+    const currenciesString = allCurrencies.map(c => `${c.id},${c.currencyName || ''},${c.symbol || ''},${c.symbol_native || ''}`).join('\n');
     adminCurrenciesInput.value = currenciesString;
     if (adminCurrencyMessageDiv) adminCurrencyMessageDiv.classList.add('hidden');
     console.log("admin_data.js: All currencies loaded into textarea for editing.");
