@@ -97,6 +97,15 @@
         window.currentUserId = null;
         window.currentUserRole = 'Guest'; // Default role
 
+        // Declare DOM elements here to ensure they are in scope for event listeners below
+        const userDisplayName = document.getElementById('user-display-name');
+        const googleLoginButton = document.getElementById('google-login-button');
+        const logoutButton = document.getElementById('logout-button');
+        const adminMenu = document.getElementById('admin-menu');
+        const authButton = document.getElementById('auth-button');
+        const authDropdown = document.getElementById('auth-dropdown');
+
+
         // Firebase Configuration (from your project details)
         const firebaseConfig = {
             apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
@@ -135,13 +144,6 @@
 
         // Authentication state observer
         onAuthStateChanged(window.firebaseAuth, async (user) => {
-            const userDisplayName = document.getElementById('user-display-name');
-            const googleLoginButton = document.getElementById('google-login-button');
-            const logoutButton = document.getElementById('logout-button');
-            const adminMenu = document.getElementById('admin-menu');
-            const authButton = document.getElementById('auth-button');
-            const authDropdown = document.getElementById('auth-dropdown');
-
             if (user) {
                 console.log("User is signed in:", user.uid);
                 window.currentUserId = user.uid;
@@ -202,7 +204,7 @@
         });
 
         // Event listener for Google Sign-in
-        document.getElementById('google-login-button').addEventListener('click', async () => {
+        googleLoginButton.addEventListener('click', async () => {
             const provider = new GoogleAuthProvider();
             try {
                 await signInWithPopup(window.firebaseAuth, provider);
@@ -214,19 +216,19 @@
                     console.log("Sign-in popup closed by user.");
                 } else {
                     // Display a user-friendly message for other errors
-                    alert("Sign-in failed. Please try again."); // Use a custom modal in a real app
+                    Utils.showMessage("Sign-in failed. Please try again.", "error"); // Use Utils.showMessage
                 }
             }
         });
 
         // Event listener for Logout
-        document.getElementById('logout-button').addEventListener('click', async () => {
+        logoutButton.addEventListener('click', async () => {
             try {
                 await signOut(window.firebaseAuth);
                 console.log("User signed out.");
             } catch (error) {
                 console.error("Logout error:", error);
-                alert("Logout failed. Please try again."); // Use a custom modal in a real app
+                Utils.showMessage("Logout failed. Please try again.", "error"); // Use Utils.showMessage
             }
         });
 
@@ -238,7 +240,12 @@
             event.stopPropagation(); // Prevent document click from closing immediately
             authDropdown.classList.toggle('opacity-0');
             authDropdown.classList.toggle('scale-95');
-            authDropdown.classList.toggle('pointer-events-none');
+            authDropdown.classList.toggle('pointer-events-none'); // Disable pointer events when hidden
+
+            // Ensure pointer events are enabled when dropdown is visible
+            if (!authDropdown.classList.contains('opacity-0')) {
+                 authDropdown.classList.remove('pointer-events-none');
+            }
         });
 
         // Close dropdown when clicking outside
@@ -249,6 +256,11 @@
                 authDropdown.classList.add('pointer-events-none');
             }
         });
+
+        // Import Utils just for the inline script, since it's used for messages here
+        // The main modules import it themselves.
+        import { Utils } from './js/utils.js';
+        window.Utils = Utils; // Expose Utils globally for this script and others if needed.
 
     </script>
     <!-- Main application logic -->
