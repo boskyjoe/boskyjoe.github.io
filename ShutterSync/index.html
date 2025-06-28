@@ -19,6 +19,8 @@
             -moz-osx-font-smoothing: grayscale;
         }
     </style>
+    <!-- Grid.js CSS - Loaded Globally for all modules -->
+    <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
 
@@ -84,11 +86,15 @@
         </div>
     </footer>
 
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDKs and Main Application Script -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { Utils } from './js/utils.js'; // Import Utils here for use in this inline script
+
+        // Expose Utils globally for direct use if needed by other inline scripts or future modules
+        window.Utils = Utils;
 
         // Global Firebase variables - will be passed to modules
         window.firebaseApp = null;
@@ -257,12 +263,9 @@
             }
         });
 
-        // Import Utils just for the inline script, since it's used for messages here
-        // The main modules import it themselves.
-        import { Utils } from './js/utils.js';
-        window.Utils = Utils; // Expose Utils globally for this script and others if needed.
-
     </script>
+    <!-- Grid.js JS - Loaded Globally for all modules -->
+    <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
     <!-- Main application logic -->
     <script type="module" src="js/main.js"></script>
     <!-- Utility functions -->
