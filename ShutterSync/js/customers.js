@@ -197,10 +197,10 @@ export const Customers = {
             return;
         }
 
-        // Define columns for Grid.js - These reference the object properties directly by 'id'
+        // Define columns for Grid.js
         const columns = [
-            // The 'id' property here refers to the key in the data object, not an array index.
-            // We are NOT adding a column for `id` itself in the visual grid.
+            // Add a hidden 'id' column first to ensure 'row.cell('id').data' works
+            { id: 'id', name: 'ID', hidden: true },
             { id: 'name', name: 'Customer Name', sort: true },
             { id: 'email', name: 'Email', sort: true },
             { id: 'phone', name: 'Phone' },
@@ -211,9 +211,9 @@ export const Customers = {
             {
                 name: 'Actions',
                 formatter: (cell, row) => {
-                    // Access original data object for the row directly
-                    const customerId = row.original.id;
-                    const customerName = row.original.name;
+                    // Access data using row.cell(columnId).data
+                    const customerId = row.cell('id').data;
+                    const customerName = row.cell('name').data;
 
                     return gridjs.h('div', {
                         className: 'flex space-x-2'
@@ -231,19 +231,19 @@ export const Customers = {
             }
         ];
 
-        // CRITICAL FIX: Map data to an array of OBJECTS, not arrays of arrays.
-        // The keys of these objects should match the 'id' properties in the 'columns' array.
+        // Ensure the data mapping provides objects with keys matching column 'id's.
         const mappedData = customers.map(c => ({
-            id: c.id, // Keep ID as a property for internal use by actions formatter
+            id: c.id,
             name: c.name || '',
             email: c.email || '',
             phone: c.phone || '',
             customerType: c.customerType || '',
             industry: c.industry || '',
             customerSource: c.customerSource || '',
-            active: c.active || 'Active', // Default 'Active' if missing
-            // Other fields (address, additionalDetails, etc.) are part of the object
-            // but not explicitly listed as columns, which is fine.
+            active: c.active || 'Active',
+            // Other fields (address, additionalDetails, etc.) don't need to be explicitly
+            // included here if they are not defined as columns, but will be present in the full 'c' object
+            // which is cached in this.customersData for 'editCustomer'
         }));
 
         if (this.grid) {
@@ -394,11 +394,16 @@ export const Customers = {
                 errorMessage = `A company with the name "${name}" already exists.`;
             } else {
                 // Fallback or if required fields are missing for uniqueness check
+                // This 'else' branch handles cases where:
+                // - customerType is not 'Individual' or 'Company'
+                // - customerType is 'Individual' but email is empty
+                // - customerType is 'Company' but name is empty
                 if (!email && !name) {
                      this.Utils.showMessage('For new customers, please provide at least an Email (for individuals) or Customer Name (for companies) for uniqueness check.', 'warning');
                      return;
                 }
-                // Default to a simple name check if type is not selected or for mixed cases
+                // If customerType is missing or not specific, default to checking by name only (less strict)
+                // This covers cases where user might select "Select Type" and enter only a name.
                 q = query(customersRef, where("name", "==", name));
                 errorMessage = `A customer with the name "${name}" already exists. Please provide more unique details like email or verify customer type.`;
             }
