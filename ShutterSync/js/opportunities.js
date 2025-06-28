@@ -196,9 +196,10 @@ export const Opportunities = {
 
         this.unsubscribe = onSnapshot(q, async (snapshot) => {
             const opportunities = [];
-            for (const doc of snapshot.docs) {
-                const oppData = doc.data();
-                const oppId = doc.id;
+            // Renamed 'doc' to 'opportunityDoc' to avoid shadowing the imported 'doc' function
+            for (const opportunityDoc of snapshot.docs) {
+                const oppData = opportunityDoc.data();
+                const oppId = opportunityDoc.id;
 
                 // Fetch customer name for display
                 let customerName = 'N/A';
@@ -373,8 +374,7 @@ export const Opportunities = {
         try {
             const customersCollection = collection(this.db, "customers");
             const q = query(customersCollection);
-            // Corrected: Use getDocs directly from the 'firebase-firestore.js' import, not `this.db.getDocs`
-            const querySnapshot = await getDocs(q); // THIS IS THE LINE WHERE getDocs WAS MISSING FROM IMPORT
+            const querySnapshot = await getDocs(q); // getDocs is now correctly imported
             querySnapshot.forEach((doc) => {
                 const customer = doc.data();
                 const option = document.createElement('option');
