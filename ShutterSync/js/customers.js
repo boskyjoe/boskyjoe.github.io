@@ -199,7 +199,8 @@ export const Customers = {
 
         // Define columns for Grid.js
         const columns = [
-            // Add a hidden 'id' column first to ensure 'row.cell('id').data' works
+            // IMPORTANT: 'id' column must be first for row.cells[0].data to work reliably
+            // for the actions formatter, even if it's hidden.
             { id: 'id', name: 'ID', hidden: true },
             { id: 'name', name: 'Customer Name', sort: true },
             { id: 'email', name: 'Email', sort: true },
@@ -211,9 +212,9 @@ export const Customers = {
             {
                 name: 'Actions',
                 formatter: (cell, row) => {
-                    // Access data using row.cell(columnId).data
-                    const customerId = row.cell('id').data;
-                    const customerName = row.cell('name').data;
+                    // Access data using row.cells[index].data for simplicity and compatibility
+                    const customerId = row.cells[0].data; // ID from the first mapped element
+                    const customerName = row.cells[1].data; // Name from the second mapped element
 
                     return gridjs.h('div', {
                         className: 'flex space-x-2'
@@ -231,29 +232,27 @@ export const Customers = {
             }
         ];
 
-        // Ensure the data mapping provides objects with keys matching column 'id's.
-        const mappedData = customers.map(c => ({
-            id: c.id,
-            name: c.name || '',
-            email: c.email || '',
-            phone: c.phone || '',
-            customerType: c.customerType || '',
-            industry: c.industry || '',
-            customerSource: c.customerSource || '',
-            active: c.active || 'Active',
-            // Other fields (address, additionalDetails, etc.) don't need to be explicitly
-            // included here if they are not defined as columns, but will be present in the full 'c' object
-            // which is cached in this.customersData for 'editCustomer'
-        }));
+        // CRITICAL FIX: Map data back to an array of ARRAYS for consistency with row.cells[index].data access.
+        // Ensure the order matches the columns array (ID first, then visible columns).
+        const mappedData = customers.map(c => [
+            c.id,                   // 0: ID (hidden)
+            c.name || '',           // 1: Customer Name
+            c.email || '',          // 2: Email
+            c.phone || '',          // 3: Phone
+            c.customerType || '',   // 4: Type
+            c.industry || '',       // 5: Industry
+            c.customerSource || '', // 6: Source
+            c.active || 'Active'    // 7: Active (Default 'Active' if missing)
+        ]);
 
         if (this.grid) {
             this.grid.updateConfig({
-                data: mappedData // Pass array of objects
+                data: mappedData // Pass array of arrays
             }).forceRender();
         } else {
             this.grid = new gridjs.Grid({
                 columns: columns,
-                data: mappedData, // Pass array of objects
+                data: mappedData, // Pass array of arrays
                 sort: true,
                 search: true,
                 pagination: {
