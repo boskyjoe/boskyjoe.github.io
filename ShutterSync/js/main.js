@@ -1,307 +1,191 @@
 // js/main.js
 
-import { Utils } from './utils.js'; // Import utility functions
+// Using export default for consistency with index.html import
+export default {
+    db: null,
+    auth: null,
+    appId: null,
+    initialAuthToken: null,
+    moduleDestroyers: {}, // Stores functions to destroy/unsubscribe modules
 
-// Global references to Firebase services and current user info, populated from index.html
-// These are available via window object due to how index.html sets them up.
-const auth = window.firebaseAuth;
-const db = window.firebaseDb;
-let currentUserId = window.currentUserId; // Will be updated by onAuthStateChanged in index.html
-let currentUserRole = window.currentUserRole; // Will be updated by onAuthStateChanged in index.html
+    /**
+     * Initializes the Main application module.
+     * @param {object} firestoreDb - The Firestore database instance.
+     * @param {object} firebaseAuth - The Firebase Auth instance.
+     * @param {string} appId - The application ID.
+     * @param {string|null} initialAuthToken - Firebase custom auth token.
+     */
+    init: function(firestoreDb, firebaseAuth, appId, initialAuthToken) {
+        this.db = firestoreDb;
+        this.auth = firebaseAuth;
+        this.appId = appId;
+        this.initialAuthToken = initialAuthToken;
+        console.log("Main module initialized.");
 
-// Track the currently active module for proper cleanup
-let currentActiveModule = null;
+        // Attach an Auth state change listener to update UI on login/logout
+        this.auth.onAuthStateChanged(user => {
+            if (user) {
+                // User is signed in.
+                this.updateUserHeaderUI(user);
+            } else {
+                // User is signed out.
+                this.updateUserHeaderUI(null);
+            }
+        });
+    },
 
-/**
- * Global function to initialize application state when a user logs in.
- * This is called by the onAuthStateChanged listener in index.html.
- */
-window.loggedInInit = async () => {
-    currentUserId = window.currentUserId;
-    currentUserRole = window.currentUserRole;
-    console.log("main.js: User logged in. UID:", currentUserId, "Role:", currentUserRole);
-    updateNavigationVisibility();
-    // Load home content by default after login
-    loadHomeContent();
-};
+    /**
+     * Loads a specific module's UI into the content area.
+     * @param {string} moduleName - The name of the module to load (e.g., 'customers', 'opportunities').
+     */
+    loadModule: async function(moduleName) {
+        const contentArea = document.getElementById('content-area');
+        if (!contentArea) {
+            console.error("Content area not found.");
+            return;
+        }
 
-/**
- * Global function to reset application state when a user logs out.
- * This is called by the onAuthStateChanged listener in index.html.
- */
-window.loggedOutInit = () => {
-    currentUserId = null;
-    currentUserRole = 'Guest';
-    console.log("main.js: User logged out.");
-    updateNavigationVisibility();
-    // Ensure any previously active module is destroyed on logout
-    if (currentActiveModule && typeof currentActiveModule.destroy === 'function') {
-        currentActiveModule.destroy();
-        currentActiveModule = null;
-    }
-    loadHomeContent(); // Show the default welcome message for logged-out state
-};
+        // Destroy previous module's listeners/instances if any
+        const lastActiveModule = localStorage.getItem('lastActiveModule');
+        if (lastActiveModule && this.moduleDestroyers[lastActiveModule]) {
+            console.log(`Destroying ${lastActiveModule} module.`);
+            this.moduleDestroyers[lastActiveModule]();
+        }
 
-/**
- * Dynamically loads an HTML template string for a given module.
- * In a real app, these would typically come from separate files or a templating system.
- * For now, we'll use simple string literals.
- * @param {string} moduleName - The name of the module to load.
- * @returns {string} HTML content for the module.
- */
-function getModuleHtml(moduleName) {
-    switch (moduleName) {
-        case 'home':
-            return `
-                <div class="p-6">
-                    <h2 class="text-3xl font-semibold text-gray-800 mb-6">Welcome to ShutterSync CRM!</h2>
-                    <p class="text-gray-700 leading-relaxed mb-4">
-                        This is your central hub for managing customers, opportunities, and essential business data.
-                        Use the navigation bar above to explore different sections.
-                    </p>
-                    ${currentUserId ?
-                        `<p class="text-gray-700 leading-relaxed mb-4">
-                            You are currently logged in as <span class="font-bold">${window.firebaseAuth.currentUser.displayName || window.firebaseAuth.currentUser.email || 'User'}</span>
-                            with role <span class="font-bold text-blue-600">${currentUserRole}</span>.
-                        </p>` :
-                        `<p class="text-gray-700 leading-relaxed mb-4">
-                            Please sign in with your Google account to access all features.
-                        </p>`
-                    }
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-                        <div class="bg-blue-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
-                            <h3 class="text-xl font-bold text-blue-800 mb-2">Customers</h3>
-                            <p class="text-gray-700">Manage all your client relationships and contact details.</p>
-                        </div>
-                        <div class="bg-green-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
-                            <h3 class="text-xl font-bold text-green-800 mb-2">Opportunities</h3>
-                            <p class="text-gray-700">Track and manage your sales pipeline from lead to close.</p>
-                        </div>
-                        <div class="bg-purple-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
-                            <h3 class="text-xl font-bold text-purple-800 mb-2">Admin Tools</h3>
-                            <p class="text-gray-700">Access master data settings and user management (Admin only).</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-        case 'customers':
-            return `<div class="p-6">
-                        <h2 class="text-3xl font-semibold text-gray-800 mb-6">Customers</h2>
-                        <p class="text-gray-700">Module for managing customer data.</p>
-                        <div id="customers-module-content"></div>
-                    </div>`;
-        case 'opportunities':
-            return `<div class="p-6">
-                        <h2 class="text-3xl font-semibold text-gray-800 mb-6">Opportunities</h2>
-                        <p class="text-gray-700">Module for managing sales opportunities.</p>
-                        <div id="opportunities-module-content"></div>
-                    </div>`;
-        case 'events':
-            return `<div class="p-6">
-                        <h2 class="text-3xl font-semibold text-gray-800 mb-6">Events</h2>
-                        <p class="text-gray-700">Module for managing events. Coming soon!</p>
-                    </div>`;
-        case 'admin-country-mapping':
-            return `<div class="p-6">
-                        <h2 class="text-3xl font-semibold text-gray-800 mb-6">Admin: Country Mapping</h2>
-                        <p class="text-gray-700">Manage country related master data.</p>
-                        <div id="admin-country-mapping-content"></div>
-                    </div>`;
-        case 'admin-currencies':
-            return `<div class="p-6">
-                        <h2 class="text-3xl font-semibold text-gray-800 mb-6">Admin: Currencies</h2>
-                        <p class="text-gray-700">Manage currency master data.</p>
-                        <div id="admin-currencies-content"></div>
-                    </div>`;
-        case 'admin-users':
-            return `<div class="p-6">
-                        <h2 class="text-3xl font-semibold text-gray-800 mb-6">Admin: Users</h2>
-                        <p class="text-gray-700">Manage user roles and accounts.</p>
-                        <div id="admin-users-content"></div>
-                    </div>`;
-        case 'admin-price-book':
-            return `<div class="p-6">
-                        <h2 class="text-3xl font-semibold text-gray-800 mb-6">Admin: Price Book</h2>
-                        <p class="text-gray-700">Manage product price books.</p>
-                        <div id="admin-price-book-content"></div>
-                    </div>`;
-        default:
-            return `<div class="p-6">
-                        <h2 class="text-3xl font-semibold text-gray-800 mb-6">Page Not Found</h2>
-                        <p class="text-gray-700">The requested page could not be found.</p>
-                    </div>`;
-    }
-}
+        contentArea.innerHTML = '<div class="text-center p-8"><i class="fas fa-spinner fa-spin text-4xl text-blue-500"></i><p class="mt-4 text-gray-700">Loading module...</p></div>';
 
-/**
- * Loads and displays the content for the Home page.
- */
-async function loadHomeContent() {
-    Utils.clearAndLoadContent(false); // Clear content, no loading spinner for home
-    // Destroy previous module if exists
-    if (currentActiveModule && typeof currentActiveModule.destroy === 'function') {
-        currentActiveModule.destroy();
-        currentActiveModule = null; // Clear reference
-    }
-    const html = getModuleHtml('home');
-    Utils.renderContent(html);
-}
-
-/**
- * Handles navigation clicks. Loads content into the main area and initializes module-specific JS.
- * @param {string} moduleName - The identifier for the module (e.g., 'customers', 'admin-users').
- * @param {object} [moduleObject] - The module object itself (e.g., Customers, UsersModule).
- * Its 'init' method will be called.
- * @param {boolean} [requiresLogin=false] - True if this module requires the user to be logged in.
- * @param {boolean} [requiresAdmin=false] - True if this module requires the user to be an admin.
- */
-async function navigateToModule(moduleName, moduleObject = null, requiresLogin = false, requiresAdmin = false) {
-    if (requiresLogin && !Utils.isLoggedIn()) {
-        Utils.showMessage('Please sign in to access this feature.', 'warning');
-        loadHomeContent(); // Redirect to home if not logged in
-        return;
-    }
-    if (requiresAdmin && !Utils.isAdmin()) {
-        Utils.showMessage('You do not have permission to access this administrative section.', 'error');
-        loadHomeContent(); // Redirect to home if not admin
-        return;
-    }
-
-    Utils.clearAndLoadContent(true); // Clear content and show loading spinner
-
-    // Destroy the previously active module BEFORE rendering new content
-    if (currentActiveModule && typeof currentActiveModule.destroy === 'function') {
-        console.log(`main.js: Destroying previous module: ${currentActiveModule.name || 'Unnamed Module'}`);
-        currentActiveModule.destroy();
-        currentActiveModule = null; // Clear reference
-    }
-
-    // Simulate network delay for loading
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    const htmlContent = getModuleHtml(moduleName);
-    Utils.renderContent(htmlContent);
-
-    // Call the module's initialization function if provided
-    if (moduleObject && typeof moduleObject.init === 'function') {
         try {
-            await moduleObject.init(db, auth, Utils); // Pass firebase, db, and Utils
-            currentActiveModule = moduleObject; // Set the new active module
-            console.log(`main.js: Initialized ${moduleName} module.`);
+            switch (moduleName) {
+                case 'customers':
+                    // Customers module is already imported and initialized in index.html
+                    // Just clear the content and let its renderCustomersUI take over
+                    contentArea.innerHTML = '<div id="customers-module-content"></div>';
+                    // Re-initialize or ensure re-render (it auto-renders via listener)
+                    Customers.renderCustomersUI();
+                    Customers.setupRealtimeListener();
+                    break;
+                case 'opportunities':
+                    contentArea.innerHTML = '<div id="opportunities-module-content"></div>';
+                    Opportunities.renderOpportunitiesUI();
+                    Opportunities.setupRealtimeListener();
+                    break;
+                case 'users':
+                    // Check if current user is admin before rendering for users module
+                    if (!Utils.isAdmin()) {
+                         contentArea.innerHTML = `
+                            <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                                <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
+                                <p class="text-gray-600">You do not have administrative privileges to view this section.</p>
+                            </div>
+                        `;
+                        localStorage.setItem('lastActiveModule', 'customers'); // Redirect to default if access denied
+                        Utils.showMessage("Access Denied: You must be an Admin to view User Management.", "error");
+                        return; // Stop execution
+                    }
+                    contentArea.innerHTML = '<div id="users-module-content"></div>';
+                    Users.renderUsersUI(); // This will render based on isAdmin status inside its own logic
+                    Users.setupRealtimeListener(); // This will also only run if isAdmin
+                    break;
+                case 'admin-data':
+                    if (!Utils.isAdmin()) {
+                        contentArea.innerHTML = `
+                            <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                                <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
+                                <p class="text-gray-600">You do not have administrative privileges to view this section.</p>
+                            </div>
+                        `;
+                        localStorage.setItem('lastActiveModule', 'customers');
+                        Utils.showMessage("Access Denied: You must be an Admin to view App Metadata.", "error");
+                        return;
+                    }
+                    contentArea.innerHTML = '<div id="admin-data-module-content"></div>';
+                    AdminData.renderAdminDataUI();
+                    AdminData.setupRealtimeListeners();
+                    break;
+                case 'price-book':
+                    if (!Utils.isAdmin()) {
+                        contentArea.innerHTML = `
+                            <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                                <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
+                                <p class="text-gray-600">You do not have administrative privileges to view this section.</p>
+                            </div>
+                        `;
+                        localStorage.setItem('lastActiveModule', 'customers');
+                        Utils.showMessage("Access Denied: You must be an Admin to view Price Books.", "error");
+                        return;
+                    }
+                    contentArea.innerHTML = '<div id="price-book-module-content"></div>';
+                    PriceBook.renderPriceBookUI();
+                    PriceBook.setupRealtimeListener();
+                    break;
+                default:
+                    contentArea.innerHTML = `<p class="text-red-500">Module "${moduleName}" not found.</p>`;
+                    return;
+            }
+            localStorage.setItem('lastActiveModule', moduleName);
+            console.log(`Module "${moduleName}" loaded.`);
+
+            // Ensure Admin status changes trigger UI updates (e.g., hiding/showing admin links)
+            // This listener is crucial for dynamic access control display
+            Utils.onAdminStatusChange(() => {
+                this.updateAdminLinksVisibility();
+            });
+
         } catch (error) {
-            Utils.handleError(error, `initializing ${moduleName} module`);
+            console.error(`Failed to load module ${moduleName}:`, error);
+            contentArea.innerHTML = `<p class="text-red-500">Error loading module: ${error.message}</p>`;
+            Utils.showMessage(`Error loading ${moduleName} module.`, 'error');
+        }
+    },
+
+    /**
+     * Sets the module destroy functions. Called by index.html script.
+     * @param {object} destroyers - An object mapping module names to their destroy functions.
+     */
+    setModuleDestroyers: function(destroyers) {
+        this.moduleDestroyers = destroyers;
+    },
+
+    /**
+     * Updates the user information display in the navigation bar.
+     * @param {object|null} user - The Firebase User object or null if logged out.
+     */
+    updateUserHeaderUI: function(user) {
+        const userDisplayNameElem = document.getElementById('user-display-name');
+        const userIconContainer = document.getElementById('user-icon-container');
+        const logoutBtn = document.getElementById('logout-btn');
+
+        if (userDisplayNameElem && userIconContainer && logoutBtn) {
+            if (user) {
+                const displayName = user.displayName || user.email || 'Guest';
+                userDisplayNameElem.textContent = displayName;
+                userIconContainer.innerHTML = `<i class="fas fa-user-circle text-2xl"></i>`; // User icon
+                userDisplayNameElem.classList.remove('hidden');
+                userIconContainer.classList.remove('hidden');
+                logoutBtn.classList.remove('hidden');
+            } else {
+                userDisplayNameElem.textContent = '';
+                userIconContainer.innerHTML = ''; // Clear icon
+                userDisplayNameElem.classList.add('hidden');
+                userIconContainer.classList.add('hidden');
+                logoutBtn.classList.add('hidden'); // Hide logout button
+            }
+        }
+        // Always update visibility of Admin links based on current status
+        this.updateAdminLinksVisibility();
+    },
+
+    /**
+     * Updates the visibility of Admin-related navigation links based on user role.
+     */
+    updateAdminLinksVisibility: function() {
+        const adminDropdown = document.querySelector('.group .relative'); // The div containing the Admin button and dropdown
+        if (adminDropdown) {
+            if (Utils.isAdmin()) {
+                adminDropdown.classList.remove('hidden');
+            } else {
+                adminDropdown.classList.add('hidden');
+            }
         }
     }
-}
-
-/**
- * Attaches event listeners to the navigation links.
- */
-function attachNavListeners() {
-    document.getElementById('nav-home').addEventListener('click', (e) => {
-        e.preventDefault();
-        navigateToModule('home', null); // No specific module object needed for home
-    });
-
-    document.getElementById('nav-customers').addEventListener('click', (e) => {
-        e.preventDefault();
-        // Import Customers module dynamically and pass its *object*
-        import('./customers.js').then(module => {
-            navigateToModule('customers', module.Customers, true); // Pass module.Customers
-        }).catch(error => {
-            Utils.handleError(error, 'loading customers module');
-        });
-    });
-
-    document.getElementById('nav-opportunities').addEventListener('click', (e) => {
-        e.preventDefault();
-        // Import Opportunities module dynamically and pass its *object*
-        import('./opportunities.js').then(module => {
-            navigateToModule('opportunities', module.Opportunities, true); // Pass module.Opportunities
-        }).catch(error => {
-            Utils.handleError(error, 'loading opportunities module');
-        });
-    });
-
-    document.getElementById('nav-events').addEventListener('click', (e) => {
-        e.preventDefault();
-        navigateToModule('events', null, true); // Requires login, no specific init for now
-    });
-
-    // Admin submenu items
-    document.getElementById('admin-country-mapping').addEventListener('click', (e) => {
-        e.preventDefault();
-        import('./admin_data.js').then(module => {
-            navigateToModule('admin-country-mapping', { name: 'AdminData.CountryMapping', init: module.AdminData.initCountryMapping }, true, true);
-        }).catch(error => {
-            Utils.handleError(error, 'loading admin_data module (country mapping)');
-        });
-    });
-
-    document.getElementById('admin-currencies').addEventListener('click', (e) => {
-        e.preventDefault();
-        import('./admin_data.js').then(module => {
-            navigateToModule('admin-currencies', { name: 'AdminData.Currencies', init: module.AdminData.initCurrencies }, true, true);
-        }).catch(error => {
-            Utils.handleError(error, 'loading admin_data module (currencies)');
-        });
-    });
-
-    document.getElementById('admin-users').addEventListener('click', (e) => {
-        e.preventDefault();
-        import('./users.js').then(module => {
-            navigateToModule('admin-users', module.UsersModule, true, true); // Pass module.UsersModule
-        }).catch(error => {
-            Utils.handleError(error, 'loading users module');
-        });
-    });
-
-    document.getElementById('admin-price-book').addEventListener('click', (e) => {
-        e.preventDefault();
-        import('./price_book.js').then(module => {
-            navigateToModule('admin-price-book', module.PriceBook, true, true); // Pass module.PriceBook
-        }).catch(error => {
-            Utils.handleError(error, 'loading price_book module');
-        });
-    });
-}
-
-/**
- * Updates the visibility of navigation elements based on login status and user role.
- */
-function updateNavigationVisibility() {
-    const navCustomers = document.getElementById('nav-customers');
-    const navOpportunities = document.getElementById('nav-opportunities');
-    const navEvents = document.getElementById('nav-events');
-    const adminMenu = document.getElementById('admin-menu');
-
-    if (Utils.isLoggedIn()) {
-        navCustomers.classList.remove('hidden');
-        navOpportunities.classList.remove('hidden');
-        navEvents.classList.remove('hidden');
-    } else {
-        // Hide all user-specific nav items if not logged in
-        navCustomers.classList.add('hidden');
-        navOpportunities.classList.add('hidden');
-        navEvents.classList.add('hidden');
-    }
-
-    if (Utils.isAdmin()) {
-        adminMenu.classList.remove('hidden');
-    } else {
-        adminMenu.classList.add('hidden');
-    }
-}
-
-// Initial setup when main.js loads
-document.addEventListener('DOMContentLoaded', () => {
-    attachNavListeners();
-    // Initially load home content. The onAuthStateChanged listener in index.html
-    // will call loggedInInit/loggedOutInit, which will then re-render home
-    // and adjust navigation based on the actual auth state.
-    loadHomeContent();
-    updateNavigationVisibility(); // Set initial visibility based on current auth state (might be 'Guest')
-});
-
-// Export functions that might be needed by other modules (though direct imports are preferred)
-export { navigateToModule, Utils }; // Export Utils for convenience, though direct import is also done.
+};
