@@ -2,6 +2,7 @@
 
 import { doc, getDoc, setDoc, updateDoc, collection, query, getCountFromServer, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
+import { Auth } from './auth.js'; // NEW: Import Auth to check login status
 
 /**
  * The AdminData module handles displaying and managing application metadata.
@@ -34,6 +35,28 @@ export const AdminData = {
             return;
         }
 
+        // --- NEW: Login Requirement Check for the module itself ---
+        if (!Auth.isLoggedIn()) {
+            adminDataModuleContent.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
+                    <p class="text-gray-600 mb-4">You must be logged in to view application metadata.</p>
+                    <button id="go-to-login-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                        Go to Home / Login
+                    </button>
+                </div>
+            `;
+            // Attach event listener for the new button
+            document.getElementById('go-to-login-btn')?.addEventListener('click', () => {
+                window.Main.loadModule('home'); // Redirect to home page
+            });
+            // No destroy needed here as this module doesn't have listeners/grids to destroy
+            this.Utils.showMessage("Access Denied: Please log in to view App Metadata.", "error");
+            return; // Stop execution if not logged in
+        }
+        // --- END NEW ---
+
+        // Existing Admin check (after login check)
         if (this.Utils.isAdmin()) {
             adminDataModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md mb-6">
@@ -78,18 +101,25 @@ export const AdminData = {
                     </div>
                 </div>
             `;
-            // After rendering HTML, fetch data and attach event listeners
             this.fetchAppStatistics();
             this.fetchAppSettings();
             this.attachEventListeners();
         } else {
+            // If logged in but not admin
             adminDataModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
                     <p class="text-gray-600">You do not have administrative privileges to view this section.</p>
+                    <button id="go-to-home-btn" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                        Go to Home
+                    </button>
                 </div>
             `;
+            document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
+                window.Main.loadModule('home'); // Redirect to home page
+            });
             console.log("Not an admin, skipping Admin Data UI.");
+            this.Utils.showMessage("Access Denied: You must be an Admin to view App Metadata.", "error");
         }
     },
 
@@ -97,6 +127,13 @@ export const AdminData = {
      * Fetches and displays application statistics (total users, customers, opportunities).
      */
     fetchAppStatistics: async function() {
+        // --- NEW: Login & Admin Requirement Check for data fetch ---
+        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+            console.warn("Attempted to fetch app statistics without being logged in as admin.");
+            return; // Prevent fetching if not allowed
+        }
+        // --- END NEW ---
+
         try {
             const usersCount = (await getCountFromServer(collection(this.db, 'users_data'))).data().count;
             const customersCount = (await getCountFromServer(collection(this.db, 'customers'))).data().count;
@@ -118,6 +155,13 @@ export const AdminData = {
      * Fetches and pre-fills application settings from Firestore.
      */
     fetchAppSettings: async function() {
+        // --- NEW: Login & Admin Requirement Check for data fetch ---
+        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+            console.warn("Attempted to fetch app settings without being logged in as admin.");
+            return; // Prevent fetching if not allowed
+        }
+        // --- END NEW ---
+
         try {
             const appSettingsDocRef = doc(this.db, 'app_metadata', 'settings');
             const docSnap = await getDoc(appSettingsDocRef);
@@ -128,7 +172,6 @@ export const AdminData = {
                 document.getElementById('contact-email').value = settings.contactEmail || '';
             } else {
                 console.log("No app settings found, using defaults.");
-                // Optionally set default values if no document exists
                 document.getElementById('app-name').value = 'ShutterSync CRM';
                 document.getElementById('contact-email').value = 'support@shuttersync.com';
             }
@@ -154,6 +197,13 @@ export const AdminData = {
      * Saves application settings to Firestore.
      */
     saveAppSettings: async function() {
+        // --- NEW: Login & Admin Requirement Check for save ---
+        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+            this.Utils.showMessage('You must be logged in as an Admin to save application settings.', 'error');
+            return;
+        }
+        // --- END NEW ---
+
         const appName = document.getElementById('app-name').value.trim();
         const contactEmail = document.getElementById('contact-email').value.trim();
 
@@ -170,21 +220,17 @@ export const AdminData = {
 
         try {
             const appSettingsDocRef = doc(this.db, 'app_metadata', 'settings');
-            await this.Utils.setDoc(appSettingsDocRef, settingsData, { merge: true }); // Use Utils.setDoc for error handling
+            await this.Utils.setDoc(appSettingsDocRef, settingsData, { merge: true });
             this.Utils.showMessage('Application settings saved successfully!', 'success');
         } catch (error) {
-            // Error handled by Utils.setDoc, no need to duplicate here
+            // Error handled by Utils.setDoc
         }
     },
 
     /**
-     * Cleans up the AdminData module (though not strictly necessary for this module
-     * as it doesn't have real-time listeners or Grid.js instances that need destroying,
-     * it's good practice for consistency).
+     * Cleans up the AdminData module.
      */
     destroy: function() {
-        // No specific listeners or Grid.js instances to unsubscribe/destroy in this module
-        // But useful to have for consistency in Main.js's moduleDestroyers
         const adminDataModuleContent = document.getElementById('admin-data-module-content');
         if (adminDataModuleContent) {
             adminDataModuleContent.innerHTML = '';
