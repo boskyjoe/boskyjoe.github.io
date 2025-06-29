@@ -254,12 +254,12 @@ export const Users = {
         const userDocRef = doc(this.db, "users_data", this.currentEditingUserId);
 
         try {
-            await updateDoc(userDocRef, { role: newRole, updatedAt: new Date() });
+            await this.Utils.updateDoc(userDocRef, { role: newRole, updatedAt: new Date() });
             this.Utils.showMessage(`User role updated to "${newRole}" successfully!`, 'success');
             this.closeUserRoleModal();
             // Important: If the current user's role was changed, update isAdmin status in Utils
             if (this.currentEditingUserId === this.auth.currentUser.uid) {
-                this.Utils.updateAdminStatus();
+                this.Utils.updateAdminStatus(newRole); // Explicitly pass the new role
             }
         } catch (error) {
             this.Utils.handleError(error, "updating user role");
