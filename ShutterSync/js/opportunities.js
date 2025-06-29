@@ -66,6 +66,11 @@ export const Opportunities = {
                         <div><strong class="text-gray-700">Customer:</strong> <span id="detail-customer"></span></div>
                         <div><strong class="text-gray-700">Status:</strong> <span id="detail-status"></span></div>
                         <div><strong class="text-gray-700">Value:</strong> <span id="detail-value"></span></div>
+                        <div><strong class="text-gray-700">Currency:</strong> <span id="detail-currency"></span></div>
+                        <div><strong class="text-gray-700">Event Type:</strong> <span id="detail-event-type"></span></div>
+                        <div class="col-span-1 md:col-span-2"><strong class="text-gray-700">Location:</strong> <span id="detail-location"></span></div>
+                        <div class="col-span-1 md:col-span-2"><strong class="text-gray-700">Description:</strong> <span id="detail-description"></span></div>
+                        <div><strong class="text-gray-700">Active:</strong> <span id="detail-active"></span></div>
                         <div><strong class="text-gray-700">Close Date:</strong> <span id="detail-close-date"></span></div>
                         <div><strong class="text-gray-700">Created By:</strong> <span id="detail-created-by"></span></div>
                         <div><strong class="text-gray-700">Created At:</strong> <span id="detail-created-at"></span></div>
@@ -115,7 +120,7 @@ export const Opportunities = {
                     <div class="bg-white p-8 rounded-lg shadow-2xl max-w-lg w-full transform transition-all duration-300 scale-95 opacity-0">
                         <h4 id="opportunity-modal-title" class="text-2xl font-bold text-gray-800 mb-6">Add New Opportunity</h4>
                         <form id="opportunity-form">
-                            <div class="grid grid-cols-1 gap-4 mb-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label for="opportunity-name" class="block text-sm font-medium text-gray-700 mb-1">Opportunity Name</label>
                                     <input type="text" id="opportunity-name" name="name" required
@@ -150,6 +155,51 @@ export const Opportunities = {
                                     <input type="date" id="opportunity-close-date" name="closeDate"
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 </div>
+
+                                <!-- NEW FIELDS FOR OPPORTUNITY START HERE -->
+                                <div>
+                                    <label for="opportunity-currency" class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                                    <select id="opportunity-currency" name="currency" required
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                        <!-- Options will be dynamically loaded from currencies_data collection -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="opportunity-event-type" class="block text-sm font-medium text-gray-700 mb-1">Event Type</label>
+                                    <select id="opportunity-event-type" name="eventType"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                        <option value="">Select Type</option>
+                                        <option value="Save the Day">Save the Day</option>
+                                        <option value="Pre-Wedding Photo Shoot">Pre-Wedding Photo Shoot</option>
+                                        <option value="Wedding">Wedding</option>
+                                        <option value="Post-Wedding Photo Shoot">Post-Wedding Photo Shoot</option>
+                                        <option value="Baby Shower">Baby Shower</option>
+                                        <option value="Corporate Event">Corporate Event</option>
+                                        <option value="Product Launch">Product Launch</option>
+                                        <option value="Political Meeting">Political Meeting</option>
+                                        <option value="Others">Others</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-1 md:col-span-2">
+                                    <label for="opportunity-location" class="block text-sm font-medium text-gray-700 mb-1">Proposed Event Location</label>
+                                    <textarea id="opportunity-location" name="proposedEventLocation" rows="3"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                                </div>
+                                <div class="col-span-1 md:col-span-2">
+                                    <label for="opportunity-description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                    <textarea id="opportunity-description" name="description" rows="3"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                                </div>
+                                <div>
+                                    <label for="opportunity-active-status" class="block text-sm font-medium text-gray-700 mb-1">Active Status</label>
+                                    <select id="opportunity-active-status" name="active"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                        <option value="Active">Active</option>
+                                        <option value="Inactive">Inactive</option>
+                                    </select>
+                                </div>
+                                <!-- NEW FIELDS FOR OPPORTUNITY END HERE -->
+
                             </div>
                             <div class="flex justify-end space-x-3 mt-6">
                                 <button type="button" id="cancel-opportunity-btn"
@@ -235,6 +285,11 @@ export const Opportunities = {
                     customerName: customerName, // Display customer name
                     status: oppData.status,
                     value: oppData.value,
+                    currency: oppData.currency || '', // New field
+                    eventType: oppData.eventType || '', // New field
+                    proposedEventLocation: oppData.proposedEventLocation || '', // New field
+                    description: oppData.description || '', // New field
+                    active: oppData.active || 'Active', // New field
                     closeDate: oppData.closeDate,
                     creatorId: oppData.creatorId,
                     creatorName: createdByDisplayName,
@@ -263,16 +318,26 @@ export const Opportunities = {
 
         // Define columns for Grid.js
         const columns = [
+            // IMPORTANT: 'id' column must be first for row.cells[0].data to work reliably
+            // for the actions formatter, even if it's hidden.
+            { id: 'id', name: 'ID', hidden: true }, // Added hidden ID column
             { id: 'name', name: 'Opportunity Name', sort: true },
             { id: 'customerName', name: 'Customer', sort: true }, // Display customer name
             { id: 'status', name: 'Status', sort: true },
             { id: 'value', name: 'Value', sort: true, formatter: (cell) => `$${parseFloat(cell || 0).toFixed(2)}` },
+            { id: 'currency', name: 'Currency', sort: true },       // New column
+            { id: 'eventType', name: 'Event Type', sort: true },    // New column
+            { id: 'active', name: 'Active', sort: true },           // New column
             { id: 'closeDate', name: 'Close Date', sort: true },
             { id: 'creatorName', name: 'Created By', sort: true }, // Display creator name
             {
                 name: 'Actions',
                 formatter: (cell, row) => {
-                    const oppId = row.cells[0].data; // Assuming ID is the first cell data (hidden implicitly by not adding id column explicitly)
+                    // Access data using row.cells[index].data for simplicity and compatibility
+                    const oppId = row.cells[0].data; // ID from the first mapped element
+                    const oppName = row.cells[1].data; // Name from the second mapped element (Opportunity Name)
+
+                    // Find the full opportunity object from cached data using the ID
                     const opp = this.opportunitiesData.find(o => o.id === oppId);
                     const isCreator = opp && opp.creatorId === (this.auth.currentUser ? this.auth.currentUser.uid : null);
                     const isAdmin = this.Utils.isAdmin();
@@ -292,21 +357,36 @@ export const Opportunities = {
                         }, 'Edit') : '',
                         canEditDelete ? gridjs.h('button', {
                             className: 'bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm transition-colors duration-200',
-                            onClick: () => this.deleteOpportunity(oppId, opp.name)
+                            onClick: () => this.deleteOpportunity(oppId, oppName) // Pass oppName
                         }, 'Delete') : ''
                     ]);
                 }
             }
         ];
 
+        // CRITICAL FIX: Map data to an array of ARRAYS for consistency with row.cells[index].data access.
+        // Ensure the order of elements in the inner array directly corresponds to the 'columns' array.
+        const mappedData = opportunities.map(o => [
+            o.id,              // 0: ID (hidden)
+            o.name,            // 1: Opportunity Name
+            o.customerName,    // 2: Customer
+            o.status,          // 3: Status
+            o.value,           // 4: Value
+            o.currency || '',  // 5: Currency (New)
+            o.eventType || '', // 6: Event Type (New)
+            o.active || 'Active', // 7: Active (New)
+            o.closeDate,       // 8: Close Date
+            o.creatorName      // 9: Created By
+        ]);
+
         if (this.grid) {
             this.grid.updateConfig({
-                data: opportunities.map(o => [o.id, o.name, o.customerName, o.status, o.value, o.closeDate, o.creatorName]) // Map data for Grid.js
+                data: mappedData // Pass array of arrays
             }).forceRender();
         } else {
             this.grid = new gridjs.Grid({
                 columns: columns,
-                data: opportunities.map(o => [o.id, o.name, o.customerName, o.status, o.value, o.closeDate, o.creatorName]), // Map data for Grid.js
+                data: mappedData, // Pass array of arrays
                 sort: true,
                 search: true,
                 pagination: {
@@ -388,6 +468,29 @@ export const Opportunities = {
     },
 
     /**
+     * Populates the currency dropdown in the opportunity modal.
+     */
+    populateCurrencyDropdown: async function() {
+        const currencySelect = document.getElementById('opportunity-currency');
+        currencySelect.innerHTML = '<option value="">Select a Currency</option>'; // Default empty option
+
+        try {
+            const currenciesCollection = collection(this.db, "app_metadata/app_settings/currencies_data");
+            const q = query(currenciesCollection);
+            const querySnapshot = await getDocs(q);
+            querySnapshot.forEach((doc) => {
+                const currency = doc.data();
+                const option = document.createElement('option');
+                option.value = currency.code; // Assuming 'code' is the unique identifier for currency
+                option.textContent = `${currency.name} (${currency.code})`;
+                currencySelect.appendChild(option);
+            });
+        } catch (error) {
+            this.Utils.handleError(error, "populating currency dropdown");
+        }
+    },
+
+    /**
      * Opens the opportunity add/edit modal.
      * @param {string} mode - 'add' or 'edit'.
      * @param {object} [opportunityData=null] - Data for the opportunity if in 'edit' mode.
@@ -402,6 +505,7 @@ export const Opportunities = {
         this.selectedOpportunityId = null; // Clear selected ID
 
         await this.populateCustomerDropdown(); // Populate customer dropdown first
+        await this.populateCurrencyDropdown(); // Populate new currency dropdown
 
         if (mode === 'edit' && opportunityData) {
             title.textContent = 'Edit Opportunity';
@@ -410,14 +514,20 @@ export const Opportunities = {
             document.getElementById('opportunity-customer').value = opportunityData.customerId || '';
             document.getElementById('opportunity-status').value = opportunityData.status || 'Prospecting';
             document.getElementById('opportunity-value').value = opportunityData.value || '';
-            // Handle date format for input[type="date"]
-            if (opportunityData.closeDate) {
-                document.getElementById('opportunity-close-date').value = opportunityData.closeDate;
-            }
+            document.getElementById('opportunity-close-date').value = opportunityData.closeDate || '';
+
+            // Populate new fields
+            document.getElementById('opportunity-currency').value = opportunityData.currency || '';
+            document.getElementById('opportunity-event-type').value = opportunityData.eventType || '';
+            document.getElementById('opportunity-location').value = opportunityData.proposedEventLocation || '';
+            document.getElementById('opportunity-description').value = opportunityData.description || '';
+            document.getElementById('opportunity-active-status').value = opportunityData.active || 'Active';
+
         } else {
             title.textContent = 'Add New Opportunity';
-            // Set default status for new opportunity
+            // Set default status and active status for new opportunity
             document.getElementById('opportunity-status').value = 'Prospecting';
+            document.getElementById('opportunity-active-status').value = 'Active'; // Default 'Active' for new opportunities
         }
 
         modal.classList.remove('hidden');
@@ -447,8 +557,19 @@ export const Opportunities = {
         const value = parseFloat(document.getElementById('opportunity-value').value) || 0;
         const closeDate = document.getElementById('opportunity-close-date').value; //YYYY-MM-DD string
 
+        // Retrieve new field values
+        const currency = document.getElementById('opportunity-currency').value;
+        const eventType = document.getElementById('opportunity-event-type').value;
+        const proposedEventLocation = document.getElementById('opportunity-location').value.trim();
+        const description = document.getElementById('opportunity-description').value.trim();
+        const active = document.getElementById('opportunity-active-status').value;
+
         if (!name || !customerId) {
             this.Utils.showMessage('Opportunity Name and Customer are required.', 'warning');
+            return;
+        }
+        if (!currency) {
+            this.Utils.showMessage('Currency is required for the opportunity.', 'warning');
             return;
         }
 
@@ -458,6 +579,11 @@ export const Opportunities = {
                 customerId,
                 status,
                 value,
+                currency,                 // New field
+                eventType,                // New field
+                proposedEventLocation,    // New field
+                description,              // New field
+                active,                   // New field
                 closeDate,
                 updatedAt: new Date(),
                 // creatorId is crucial for security rules
@@ -558,24 +684,30 @@ export const Opportunities = {
             return;
         }
 
-        this.selectedOpportunityId = id; // Set selected opportunity ID
+        this.selectedOpportunityId = opportunity.id; // Set selected opportunity ID
 
         document.getElementById('detail-name').textContent = opportunity.name || 'N/A';
         document.getElementById('detail-customer').textContent = opportunity.customerName || 'N/A';
         document.getElementById('detail-status').textContent = opportunity.status || 'N/A';
-        document.getElementById('detail-value').textContent = `$${parseFloat(opportunity.value || 0).toFixed(2)}`;
+        document.getElementById('detail-value').textContent = `${opportunity.currency || '$'}${parseFloat(opportunity.value || 0).toFixed(2)}`;
         document.getElementById('detail-close-date').textContent = opportunity.closeDate || 'N/A';
         document.getElementById('detail-created-by').textContent = opportunity.creatorName || 'N/A';
         document.getElementById('detail-created-at').textContent = opportunity.createdAt ? opportunity.createdAt.toLocaleString() : 'N/A';
         document.getElementById('detail-updated-at').textContent = opportunity.updatedAt ? opportunity.updatedAt.toLocaleString() : 'N/A';
+
+        // Display new fields in detail view
+        // These elements were added in renderOpportunitiesUI, now populate them
+        if (document.getElementById('detail-currency')) document.getElementById('detail-currency').textContent = opportunity.currency || 'N/A';
+        if (document.getElementById('detail-event-type')) document.getElementById('detail-event-type').textContent = opportunity.eventType || 'N/A';
+        if (document.getElementById('detail-location')) document.getElementById('detail-location').textContent = opportunity.proposedEventLocation || 'N/A';
+        if (document.getElementById('detail-description')) document.getElementById('detail-description').textContent = opportunity.description || 'N/A';
+        if (document.getElementById('detail-active')) document.getElementById('detail-active').textContent = opportunity.active || 'N/A';
 
         // Show the detail view
         const detailView = document.getElementById('opportunity-detail-view');
         detailView.classList.remove('hidden');
 
         // Render related lists (lines, contacts, quotes)
-        // For now, these will be simple placeholders, but this is where
-        // you would call dedicated functions to fetch and render these subcollections.
         this.renderOpportunityLinesGrid(id);
         this.renderOpportunityContactsGrid(id);
         this.renderOpportunityQuotesGrid(id);
