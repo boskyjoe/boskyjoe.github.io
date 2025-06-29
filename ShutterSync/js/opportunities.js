@@ -17,7 +17,7 @@ export const Opportunities = {
     selectedOpportunityId: null, // Stores the ID of the currently selected opportunity for detail view
     opportunitiesData: [], // Cache for main opportunities data
     grid: null, // Grid.js instance for main opportunities table
-    currenciesMap: new Map(), // Cache for currency data (code -> {name, symbol_native})
+    currenciesMap: new Map(), // Cache for currency data (code -> {name, symbol_native, symbol})
 
     /**
      * Initializes the Opportunities module. This function is called by main.js.
@@ -156,7 +156,7 @@ export const Opportunities = {
                                 </div>
                                 <!-- NEW FIELD: Value - Conditional visibility -->
                                 <div id="opportunity-value-group" class="hidden">
-                                    <label for="opportunity-value" class="block text-sm font-medium text-gray-700 mb-1">Value ($)</label>
+                                    <label for="opportunity-value" class="block text-sm font-medium text-gray-700 mb-1" id="opportunity-value-label">Value ($)</label>
                                     <input type="number" id="opportunity-value" name="value" step="0.01" min="0"
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 </div>
@@ -242,12 +242,10 @@ export const Opportunities = {
 
         this.unsubscribe = onSnapshot(q, async (snapshot) => {
             const opportunities = [];
-            // Renamed 'doc' to 'opportunityDoc' to avoid shadowing the imported 'doc' function
             for (const opportunityDoc of snapshot.docs) {
                 const oppData = opportunityDoc.data();
                 const oppId = opportunityDoc.id;
 
-                // Fetch customer name for display
                 let customerName = 'N/A';
                 if (oppData.customerId) {
                     try {
@@ -260,7 +258,6 @@ export const Opportunities = {
                     }
                 }
 
-                // Fetch creator's display name
                 let createdByDisplayName = 'Unknown User';
                 if (oppData.creatorId) {
                     try {
@@ -273,21 +270,14 @@ export const Opportunities = {
                     }
                 }
 
-                // Get currency symbol for display from cached map
-                let currencySymbolNative = '';
-                if (oppData.currency && this.currenciesMap.has(oppData.currency)) {
-                    currencySymbolNative = this.currenciesMap.get(oppData.currency).symbol_native;
-                }
-
                 opportunities.push({
                     id: oppId,
                     name: oppData.name,
-                    customerId: oppData.customerId, // Keep customer ID for reference
-                    customerName: customerName, // Display customer name
+                    customerId: oppData.customerId,
+                    customerName: customerName,
                     status: oppData.status,
                     value: oppData.value,
                     currency: oppData.currency || '',
-                    currencySymbolNative: currencySymbolNative, // Stored for grid display
                     eventType: oppData.eventType || '',
                     proposedEventLocation: oppData.proposedEventLocation || '',
                     description: oppData.description || '',
@@ -299,7 +289,7 @@ export const Opportunities = {
                     updatedAt: oppData.updatedAt ? oppData.updatedAt.toDate() : null
                 });
             }
-            this.opportunitiesData = opportunities; // Cache the data
+            this.opportunitiesData = opportunities;
             console.log("Opportunities data updated:", opportunities);
             this.renderOpportunityGrid(opportunities);
         }, (error) => {
@@ -318,26 +308,22 @@ export const Opportunities = {
             return;
         }
 
-        // Define columns for Grid.js
         const columns = [
             { id: 'id', name: 'ID', hidden: true },
             { id: 'name', name: 'Opportunity Name', sort: true },
             { id: 'customerName', name: 'Customer', sort: true },
             { id: 'status', name: 'Status', sort: true },
-            // UPDATED: Value formatter to include symbol_native
             {
                 id: 'value',
                 name: 'Value',
                 sort: true,
                 formatter: (cell, row) => {
                     const value = parseFloat(cell || 0).toFixed(2);
-                    const currencyCode = row.cells[5].data; // Currency code from mappedData array
+                    const currencyCode = row.cells[5].data; // Currency code from mappedData array (position 5)
                     let symbolNative = '';
                     if (currencyCode && this.currenciesMap.has(currencyCode)) {
                         symbolNative = this.currenciesMap.get(currencyCode).symbol_native;
                     }
-
-                    // Display symbol_native and currencyCode for clarity
                     return `${symbolNative}${value} (${currencyCode})`;
                 }
             },
@@ -349,8 +335,8 @@ export const Opportunities = {
             {
                 name: 'Actions',
                 formatter: (cell, row) => {
-                    const oppId = row.cells[0].data; // ID from the first mapped element
-                    const oppName = row.cells[1].data; // Name from the second mapped element (Opportunity Name)
+                    const oppId = row.cells[0].data;
+                    const oppName = row.cells[1].data;
 
                     const opp = this.opportunitiesData.find(o => o.id === oppId);
                     const isCreator = opp && opp.creatorId === (this.auth.currentUser ? this.auth.currentUser.uid : null);
@@ -378,18 +364,17 @@ export const Opportunities = {
             }
         ];
 
-        // Map data to an array of ARRAYS. Order must match the 'columns' array.
         const mappedData = opportunities.map(o => [
-            o.id,                   // 0: ID (hidden)
-            o.name,                 // 1: Opportunity Name
-            o.customerName,         // 2: Customer
-            o.status,               // 3: Status
-            o.value,                // 4: Value
-            o.currency,             // 5: Currency (code, e.g., "USD")
-            o.eventType,            // 6: Event Type
-            o.active,               // 7: Active
-            o.closeDate,            // 8: Close Date
-            o.creatorName           // 9: Created By
+            o.id,
+            o.name,
+            o.customerName,
+            o.status,
+            o.value,
+            o.currency, // Ensure currency is at the correct index for Value formatter
+            o.eventType,
+            o.active,
+            o.closeDate,
+            o.creatorName
         ]);
 
         if (this.grid) {
@@ -444,29 +429,36 @@ export const Opportunities = {
             });
         }
 
-        // Event listener for closing the detail view
         document.getElementById('close-detail-btn').addEventListener('click', () => {
             document.getElementById('opportunity-detail-view').classList.add('hidden');
-            this.selectedOpportunityId = null; // Clear selected ID
-            // Optionally, re-render the main grid or ensure it's visible
+            this.selectedOpportunityId = null;
         });
 
-        // Event listener for Currency dropdown change
         const currencySelect = document.getElementById('opportunity-currency');
-        if (currencySelect) {
+        const valueGroup = document.getElementById('opportunity-value-group');
+        const valueInput = document.getElementById('opportunity-value');
+        const valueLabel = document.getElementById('opportunity-value-label'); // Get the label element
+
+        if (currencySelect && valueGroup && valueInput && valueLabel) {
             currencySelect.addEventListener('change', () => {
-                const valueGroup = document.getElementById('opportunity-value-group');
-                const valueInput = document.getElementById('opportunity-value');
-                if (currencySelect.value) { // If a currency is selected
+                const selectedCurrencyCode = currencySelect.value;
+                if (selectedCurrencyCode) {
                     valueGroup.classList.remove('hidden');
-                } else { // If no currency is selected
+                    const currencyInfo = this.currenciesMap.get(selectedCurrencyCode);
+                    // Update label with native symbol
+                    if (currencyInfo && currencyInfo.symbol_native) {
+                        valueLabel.textContent = `Value (${currencyInfo.symbol_native})`;
+                    } else {
+                        valueLabel.textContent = `Value (${selectedCurrencyCode})`; // Fallback to code
+                    }
+                } else {
                     valueGroup.classList.add('hidden');
                     valueInput.value = ''; // Clear value if currency is deselected
+                    valueLabel.textContent = `Value ($)`; // Reset label to default
                 }
             });
         }
 
-        // Attach listeners for related object buttons (these will trigger sub-modals/actions)
         document.getElementById('add-line-btn').addEventListener('click', () => this.Utils.showMessage('Add Opportunity Line functionality coming soon!', 'info'));
         document.getElementById('add-contact-btn').addEventListener('click', () => this.Utils.showMessage('Add Opportunity Contact functionality coming soon!', 'info'));
         document.getElementById('add-quote-btn').addEventListener('click', () => this.Utils.showMessage('Add Quote functionality coming soon!', 'info'));
@@ -477,7 +469,7 @@ export const Opportunities = {
      */
     populateCustomerDropdown: async function() {
         const customerSelect = document.getElementById('opportunity-customer');
-        customerSelect.innerHTML = '<option value="">Select a Customer</option>'; // Default empty option
+        customerSelect.innerHTML = '<option value="">Select a Customer</option>';
 
         try {
             const customersCollection = collection(this.db, "customers");
@@ -501,8 +493,8 @@ export const Opportunities = {
      */
     populateCurrencyDropdown: async function() {
         const currencySelect = document.getElementById('opportunity-currency');
-        currencySelect.innerHTML = '<option value="">Select a Currency</option>'; // Default empty option
-        this.currenciesMap.clear(); // Clear previous cache
+        currencySelect.innerHTML = '<option value="">Select a Currency</option>';
+        this.currenciesMap.clear();
 
         try {
             const currenciesCollection = collection(this.db, "app_metadata/app_settings/currencies_data");
@@ -510,10 +502,9 @@ export const Opportunities = {
             const querySnapshot = await getDocs(q);
             querySnapshot.forEach((doc) => {
                 const currency = doc.data();
-                // Cache the full currency data by its code
                 this.currenciesMap.set(currency.currencyCode, {
-                    name: currency.currencyName,
-                    symbol: currency.symbol, // Keeping 'symbol' for potential future use or if it's there
+                    currencyName: currency.currencyName, // Store name too
+                    symbol: currency.symbol,
                     symbol_native: currency.symbol_native
                 });
 
@@ -538,14 +529,14 @@ export const Opportunities = {
         const form = document.getElementById('opportunity-form');
         const valueGroup = document.getElementById('opportunity-value-group');
         const valueInput = document.getElementById('opportunity-value');
+        const valueLabel = document.getElementById('opportunity-value-label'); // Get the label element
 
 
-        // Reset form fields
         form.reset();
-        this.selectedOpportunityId = null; // Clear selected ID
+        this.selectedOpportunityId = null;
 
-        await this.populateCustomerDropdown(); // Populate customer dropdown first
-        await this.populateCurrencyDropdown(); // Populate new currency dropdown and cache currencies
+        await this.populateCustomerDropdown();
+        await this.populateCurrencyDropdown();
 
         if (mode === 'edit' && opportunityData) {
             title.textContent = 'Edit Opportunity';
@@ -556,27 +547,34 @@ export const Opportunities = {
             document.getElementById('opportunity-value').value = opportunityData.value || '';
             document.getElementById('opportunity-close-date').value = opportunityData.closeDate || '';
 
-            // Populate new fields
             document.getElementById('opportunity-currency').value = opportunityData.currency || '';
             document.getElementById('opportunity-event-type').value = opportunityData.eventType || '';
             document.getElementById('opportunity-location').value = opportunityData.proposedEventLocation || '';
             document.getElementById('opportunity-description').value = opportunityData.description || '';
             document.getElementById('opportunity-active-status').value = opportunityData.active || 'Active';
 
-            // Show value field if currency is already selected in edit mode
+            // Show value field and set label if currency is already selected in edit mode
             if (opportunityData.currency) {
                 valueGroup.classList.remove('hidden');
+                const currencyInfo = this.currenciesMap.get(opportunityData.currency);
+                if (currencyInfo && currencyInfo.symbol_native) {
+                    valueLabel.textContent = `Value (${currencyInfo.symbol_native})`;
+                } else {
+                    valueLabel.textContent = `Value (${opportunityData.currency})`; // Fallback to code
+                }
             } else {
                 valueGroup.classList.add('hidden');
+                valueInput.value = '';
+                valueLabel.textContent = `Value ($)`; // Reset label to default
             }
 
         } else {
             title.textContent = 'Add New Opportunity';
-            // Set default status and active status for new opportunity
             document.getElementById('opportunity-status').value = 'Prospecting';
-            document.getElementById('opportunity-active-status').value = 'Active'; // Default 'Active' for new opportunities
+            document.getElementById('opportunity-active-status').value = 'Active';
             valueGroup.classList.add('hidden'); // Hide value field for new opportunities initially
             valueInput.value = ''; // Ensure value is cleared
+            valueLabel.textContent = `Value ($)`; // Reset label to default
         }
 
         modal.classList.remove('hidden');
@@ -604,7 +602,7 @@ export const Opportunities = {
         const customerId = document.getElementById('opportunity-customer').value;
         const status = document.getElementById('opportunity-status').value;
         const value = parseFloat(document.getElementById('opportunity-value').value) || 0;
-        const closeDate = document.getElementById('opportunity-close-date').value; //YYYY-MM-DD string
+        const closeDate = document.getElementById('opportunity-close-date').value;
 
         const currency = document.getElementById('opportunity-currency').value;
         const eventType = document.getElementById('opportunity-event-type').value;
