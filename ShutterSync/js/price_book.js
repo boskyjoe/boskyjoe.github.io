@@ -2,6 +2,7 @@
 
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
+import { Auth } from './auth.js'; // NEW: Import Auth to check login status
 
 /**
  * The PriceBook module handles the management of price book entries.
@@ -24,7 +25,6 @@ export const PriceBook = {
         this.auth = firebaseAuth;
         this.Utils = utils;
         console.log("PriceBook module initialized.");
-        // No DOM interaction here, as renderPriceBookUI handles it.
     },
 
     /**
@@ -38,6 +38,28 @@ export const PriceBook = {
             return;
         }
 
+        // --- NEW: Login Requirement Check for the module itself ---
+        if (!Auth.isLoggedIn()) {
+            priceBookModuleContent.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
+                    <p class="text-gray-600 mb-4">You must be logged in to view price book management.</p>
+                    <button id="go-to-login-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                        Go to Home / Login
+                    </button>
+                </div>
+            `;
+            // Attach event listener for the new button
+            document.getElementById('go-to-login-btn')?.addEventListener('click', () => {
+                window.Main.loadModule('home'); // Redirect to home page
+            });
+            this.destroy(); // Clean up any previous grid/listeners
+            this.Utils.showMessage("Access Denied: Please log in to view Price Books.", "error");
+            return; // Stop execution if not logged in
+        }
+        // --- END NEW ---
+
+        // Existing Admin check (after login check)
         if (this.Utils.isAdmin()) {
             priceBookModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md mb-6">
@@ -92,47 +114,55 @@ export const PriceBook = {
                     </div>
                 </div>
             `;
-            // After rendering HTML, attach event listeners and setup the real-time listener
             this.attachEventListeners();
             this.setupRealtimeListener();
         } else {
+            // If logged in but not admin
             priceBookModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
                     <p class="text-gray-600">You do not have administrative privileges to view this section.</p>
+                    <button id="go-to-home-btn" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                        Go to Home
+                    </button>
                 </div>
             `;
+            document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
+                window.Main.loadModule('home'); // Redirect to home page
+            });
             console.log("Not an admin, skipping Price Book UI.");
+            this.Utils.showMessage("Access Denied: You must be an Admin to view Price Books.", "error");
         }
     },
 
     /**
      * Sets up the real-time listener for the 'price_books_data' subcollection.
-     * This path is defined in firebase-rules as /app_metadata/app_settings/price_books_data/{docId}
      */
     setupRealtimeListener: function() {
         if (this.unsubscribe) {
             this.unsubscribe(); // Detach existing listener if any
         }
 
-        if (this.Utils.isAdmin()) {
-            const priceBookCollectionRef = collection(this.db, "app_metadata", "app_settings", "price_books_data");
-            const q = query(priceBookCollectionRef);
-
-            this.unsubscribe = onSnapshot(q, (snapshot) => {
-                const items = [];
-                snapshot.forEach((doc) => {
-                    items.push({ id: doc.id, ...doc.data() });
-                });
-                console.log("Price Book data updated:", items);
-                this.renderPriceBookGrid(items);
-            }, (error) => {
-                this.Utils.handleError(error, "fetching price book data");
-            });
-        } else {
-            console.log("Not an admin, skipping price book data listener setup.");
-            this.renderPriceBookGrid([]); // Ensure grid is empty or not rendered for non-admins
+        // Additional check for logged-in user before setting up listener
+        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+            console.log("Not logged in or not admin, skipping price book data listener setup.");
+            this.renderPriceBookGrid([]); // Ensure grid is empty or not rendered
+            return;
         }
+
+        const priceBookCollectionRef = collection(this.db, "app_metadata", "app_settings", "price_books_data");
+        const q = query(priceBookCollectionRef);
+
+        this.unsubscribe = onSnapshot(q, (snapshot) => {
+            const items = [];
+            snapshot.forEach((doc) => {
+                items.push({ id: doc.id, ...doc.data() });
+            });
+            console.log("Price Book data updated:", items);
+            this.renderPriceBookGrid(items);
+        }, (error) => {
+            this.Utils.handleError(error, "fetching price book data");
+        });
     },
 
     /**
@@ -142,7 +172,7 @@ export const PriceBook = {
     renderPriceBookGrid: function(items) {
         const gridContainer = document.getElementById('price-book-grid-container');
         if (!gridContainer) {
-            console.error("Price Book grid container not found.");
+            console.error("Price Book grid container not found."); // This error is okay if not admin
             return;
         }
 
@@ -163,6 +193,12 @@ export const PriceBook = {
                 width: '100px',
                 formatter: (cell, row) => {
                     const itemId = row.cells[0].data; // Get item ID
+
+                    // Double-check permissions here before rendering buttons
+                    if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+                        return '';
+                    }
+
                     return gridjs.h('div', {
                         className: 'flex items-center justify-center space-x-2'
                     }, [
@@ -237,6 +273,13 @@ export const PriceBook = {
      * @param {string|null} itemId - The ID of the item to edit, if mode is 'edit'.
      */
     openPriceBookModal: async function(mode, itemId = null) {
+        // --- NEW: Login & Admin Requirement Check for modals ---
+        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+            this.Utils.showMessage('You must be logged in as an Admin to add/edit price book items.', 'error');
+            return;
+        }
+        // --- END NEW ---
+
         const modal = document.getElementById('price-book-modal');
         const title = document.getElementById('price-book-modal-title');
         const form = document.getElementById('price-book-form');
@@ -249,7 +292,6 @@ export const PriceBook = {
             title.textContent = 'Edit Price Book Item';
             this.currentEditingItemId = itemId;
             try {
-                // Fetch item data to pre-fill form
                 const itemDoc = await getDoc(doc(this.db, 'app_metadata', 'app_settings', 'price_books_data', itemId));
                 if (itemDoc.exists()) {
                     const data = itemDoc.data();
@@ -288,13 +330,21 @@ export const PriceBook = {
      * Saves a new price book item or updates an existing one to Firestore.
      */
     savePriceBookItem: async function() {
+        // --- NEW: Login & Admin Requirement Check for save ---
+        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+            this.Utils.showMessage('You must be logged in as an Admin to save price book items.', 'error');
+            this.closePriceBookModal();
+            return;
+        }
+        // --- END NEW ---
+
         const itemName = document.getElementById('item-name').value.trim();
         const itemDescription = document.getElementById('item-description').value.trim();
         const unitPrice = parseFloat(document.getElementById('unit-price').value);
         const isActive = document.getElementById('is-active').checked;
 
         if (!itemName || isNaN(unitPrice) || unitPrice < 0) {
-            this.Utils.showMessage('Item Name and a valid Unit Price are required.', 'warning');
+            this.Utils.showMessage('Item Name and a valid Unit Price (non-negative) are required.', 'warning');
             return;
         }
 
@@ -309,20 +359,17 @@ export const PriceBook = {
         try {
             const collectionRef = collection(this.db, "app_metadata", "app_settings", "price_books_data");
             if (this.currentEditingItemId) {
-                // Update existing item
                 const itemRef = doc(collectionRef, this.currentEditingItemId);
-                await this.Utils.updateDoc(itemRef, itemData); // Use Utils.updateDoc
+                await this.Utils.updateDoc(itemRef, itemData);
                 this.Utils.showMessage('Price Book Item updated successfully!', 'success');
             } else {
-                // Add new item
                 itemData.createdAt = new Date();
                 await addDoc(collectionRef, itemData);
                 this.Utils.showMessage('Price Book Item added successfully!', 'success');
             }
             this.closePriceBookModal();
         } catch (error) {
-            // Error handling is centralized in Utils.updateDoc/addDoc, no need to duplicate here
-            // this.Utils.handleError(error, "saving price book item"); // This line would be redundant
+            this.Utils.handleError(error, "saving price book item");
         }
     },
 
@@ -332,12 +379,18 @@ export const PriceBook = {
      * @param {string} itemName - The name of the item for confirmation message.
      */
     deletePriceBookItem: async function(itemId, itemName) {
-        this.Utils.showMessage(`Are you sure you want to delete price book item "${itemName}"?`, 'warning', 0); // 0 duration for persistent
+        // --- NEW: Login & Admin Requirement Check for delete ---
+        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+            this.Utils.showMessage('You must be logged in as an Admin to delete price book items.', 'error');
+            return;
+        }
+        // --- END NEW ---
+
+        this.Utils.showMessage(`Are you sure you want to delete price book item "${itemName}"?`, 'warning', 0);
 
         const messageModalContainer = document.getElementById('message-modal-container');
         if (messageModalContainer) {
             const messageBox = messageModalContainer.querySelector('div');
-            // Remove existing buttons to avoid duplicates
             const existingButtons = messageBox.querySelectorAll('button:not(#message-close-btn)');
             existingButtons.forEach(btn => btn.remove());
 
@@ -348,10 +401,10 @@ export const PriceBook = {
                 try {
                     await deleteDoc(doc(this.db, "app_metadata", "app_settings", "price_books_data", itemId));
                     this.Utils.showMessage('Price Book Item deleted successfully!', 'success');
-                    messageModalContainer.classList.add('hidden'); // Hide modal explicitly after action
+                    messageModalContainer.classList.add('hidden');
                 } catch (error) {
                     this.Utils.handleError(error, "deleting price book item");
-                    messageModalContainer.classList.add('hidden'); // Hide modal explicitly after action
+                    messageModalContainer.classList.add('hidden');
                 }
             };
             const cancelBtn = document.createElement('button');
@@ -383,7 +436,6 @@ export const PriceBook = {
             this.priceBookGrid.destroy();
             this.priceBookGrid = null;
         }
-        // Remove content from the DOM when destroying
         const priceBookModuleContent = document.getElementById('price-book-module-content');
         if (priceBookModuleContent) {
             priceBookModuleContent.innerHTML = '';
