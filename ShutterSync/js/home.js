@@ -25,11 +25,10 @@ export const Home = {
         console.log("Home module initialized.");
 
         // Listen for admin status changes to potentially re-render the admin card
-        // This ensures the admin card appears immediately if role changes while on home page
         this.Utils.onAdminStatusChange(() => {
-            // Re-render only the dynamic parts or the whole module if simpler
+            // Re-render the entire Home UI to reflect login/admin status changes
             if (document.getElementById('home-module-content')) {
-                console.log("Admin status changed, re-rendering Home UI.");
+                console.log("Auth status changed, re-rendering Home UI.");
                 this.renderHomeUI();
             }
         });
@@ -56,7 +55,7 @@ export const Home = {
                     <i class="fas fa-exclamation-triangle mr-2"></i> You are not logged in.
                 </p>
                 <p class="text-yellow-700 mb-6">
-                    Click the button below to log in and access all features.
+                    Click the button below to log in with your Google account to access all features.
                 </p>
                 <button id="google-login-btn"
                     class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors duration-200 inline-flex items-center text-lg">
@@ -145,11 +144,8 @@ export const Home = {
         const googleLoginBtn = document.getElementById('google-login-btn');
         if (googleLoginBtn) {
             googleLoginBtn.addEventListener('click', async () => {
-                // Here, you would typically trigger Google Sign-In.
-                // For now, we'll trigger the anonymous login as set up in Auth.js.
-                // If you want actual Google login, we'd need to add that to Auth.js.
-                this.Utils.showMessage("Attempting login...", "info", 2000);
-                await Auth.login(); // Triggers the general login flow (anonymous or custom token)
+                this.Utils.showMessage("Initiating Google login...", "info", 2000);
+                await Auth.login(); // Triggers the Google sign-in process
             });
         }
     },
