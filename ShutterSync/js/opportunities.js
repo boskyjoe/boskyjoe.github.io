@@ -11,19 +11,16 @@ import { Utils } from './utils.js';
  * The Opportunities object handles all functionality related to opportunity management.
  */
 export const Opportunities = {
-    db: null,       // Firestore database instance
-    auth: null,     // Firebase Auth instance
-    unsubscribe: null, // To store the unsubscribe function for real-time listener (main opportunities)
-    selectedOpportunityId: null, // Stores the ID of the currently selected opportunity for detail view
-    opportunitiesData: [], // Cache for main opportunities data
-    grid: null, // Grid.js instance for main opportunities table
+    db: null,
+    auth: null,
+    unsubscribe: null,
+    selectedOpportunityId: null,
+    opportunitiesData: [],
+    grid: null,
     currenciesMap: new Map(), // Cache for currency data (code -> {name, symbol_native, symbol})
 
     /**
-     * Initializes the Opportunities module. This function is called by main.js.
-     * @param {object} firestoreDb - The Firestore database instance.
-     * @param {object} firebaseAuth - The Firebase Auth instance.
-     * @param {object} utils - The Utils object for common functionalities.
+     * Initializes the Opportunities module.
      */
     init: function(firestoreDb, firebaseAuth, utils) {
         this.db = firestoreDb;
@@ -32,14 +29,13 @@ export const Opportunities = {
 
         console.log("Opportunities module initialized.");
 
-        this.renderOpportunitiesUI(); // Render the initial UI
-        this.setupRealtimeListener(); // Set up real-time data listener
-        this.attachEventListeners(); // Attach UI event listeners
+        this.renderOpportunitiesUI();
+        this.setupRealtimeListener();
+        this.attachEventListeners();
     },
 
     /**
      * Renders the main UI for the Opportunities module.
-     * This includes the Add New Opportunity button, data grid container, and detail view area.
      */
     renderOpportunitiesUI: function() {
         const opportunitiesModuleContent = document.getElementById('opportunities-module-content');
@@ -110,7 +106,6 @@ export const Opportunities = {
                     </div>
                 </div>
 
-                <!-- Opportunity Add/Edit Modal (initially hidden) -->
                 <div id="opportunity-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[900] hidden">
                     <div class="bg-white p-8 rounded-lg shadow-2xl max-w-lg w-full transform transition-all duration-300 scale-95 opacity-0">
                         <h4 id="opportunity-modal-title" class="text-2xl font-bold text-gray-800 mb-6">Add New Opportunity</h4>
@@ -125,7 +120,6 @@ export const Opportunities = {
                                     <label for="opportunity-customer" class="block text-sm font-medium text-gray-700 mb-1">Customer</label>
                                     <select id="opportunity-customer" name="customer" required
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                        <!-- Options will be dynamically loaded from customers collection -->
                                     </select>
                                 </div>
                                 <div>
@@ -146,15 +140,12 @@ export const Opportunities = {
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 </div>
 
-                                <!-- NEW FIELD: Currency - Moved up -->
                                 <div>
                                     <label for="opportunity-currency" class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
                                     <select id="opportunity-currency" name="currency" required
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                        <!-- Options will be dynamically loaded from currencies_data collection -->
                                     </select>
                                 </div>
-                                <!-- NEW FIELD: Value - Conditional visibility -->
                                 <div id="opportunity-value-group" class="hidden">
                                     <label for="opportunity-value" class="block text-sm font-medium text-gray-700 mb-1" id="opportunity-value-label">Value ($)</label>
                                     <input type="number" id="opportunity-value" name="value" step="0.01" min="0"
@@ -216,20 +207,17 @@ export const Opportunities = {
 
     /**
      * Sets up the real-time listener for the 'opportunities' collection.
-     * Filters opportunities based on creatorId for non-admin users.
      */
     setupRealtimeListener: function() {
         if (this.unsubscribe) {
-            this.unsubscribe(); // Detach existing listener if any
+            this.unsubscribe();
         }
 
         let q;
         if (this.Utils.isAdmin()) {
-            // Admins can see all opportunities
             q = query(collection(this.db, "opportunities"));
             console.log("Admin user: Fetching all opportunities.");
         } else {
-            // Non-admin users can only see opportunities they created
             const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
             if (!currentUserId) {
                 console.warn("User not logged in, cannot fetch opportunities.");
@@ -299,7 +287,6 @@ export const Opportunities = {
 
     /**
      * Renders or updates the Grid.js table with the provided opportunity data.
-     * @param {Array<object>} opportunities - An array of opportunity objects.
      */
     renderOpportunityGrid: function(opportunities) {
         const gridContainer = document.getElementById('opportunity-grid-container');
@@ -310,13 +297,14 @@ export const Opportunities = {
 
         const columns = [
             { id: 'id', name: 'ID', hidden: true },
-            { id: 'name', name: 'Opportunity Name', sort: true },
-            { id: 'customerName', name: 'Customer', sort: true },
-            { id: 'status', name: 'Status', sort: true },
+            { id: 'name', name: 'Opportunity Name', sort: true, width: 'auto' },
+            { id: 'customerName', name: 'Customer', sort: true, width: 'auto' },
+            { id: 'status', name: 'Status', sort: true, width: '120px' },
             {
                 id: 'value',
                 name: 'Value',
                 sort: true,
+                width: '150px',
                 formatter: (cell, row) => {
                     const value = parseFloat(cell || 0).toFixed(2);
                     const currencyCode = row.cells[5].data; // Currency code from mappedData array (position 5)
@@ -327,13 +315,14 @@ export const Opportunities = {
                     return `${symbolNative}${value} (${currencyCode})`;
                 }
             },
-            { id: 'currency', name: 'Currency', sort: true },
-            { id: 'eventType', name: 'Event Type', sort: true },
-            { id: 'active', name: 'Active', sort: true },
-            { id: 'closeDate', name: 'Close Date', sort: true },
-            { id: 'creatorName', name: 'Created By', sort: true },
+            { id: 'currency', name: 'Currency', sort: true, width: '100px' },
+            { id: 'eventType', name: 'Event Type', sort: true, width: '150px' },
+            { id: 'active', name: 'Active', sort: true, width: '80px' },
+            { id: 'closeDate', name: 'Close Date', sort: true, width: '120px' },
+            { id: 'creatorName', name: 'Created By', sort: true, width: 'auto' },
             {
                 name: 'Actions',
+                width: '120px',
                 formatter: (cell, row) => {
                     const oppId = row.cells[0].data;
                     const oppName = row.cells[1].data;
@@ -345,20 +334,23 @@ export const Opportunities = {
                     const canEditDelete = isCreator || isAdmin;
 
                     return gridjs.h('div', {
-                        className: 'flex space-x-2'
+                        className: 'flex items-center justify-center space-x-2'
                     }, [
                         gridjs.h('button', {
-                            className: 'bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm transition-colors duration-200',
+                            className: 'p-1 rounded-md text-gray-600 hover:bg-blue-100 hover:text-blue-600 transition-colors duration-200',
+                            title: 'View Opportunity Details',
                             onClick: () => this.viewOpportunityDetails(oppId)
-                        }, 'View'),
+                        }, gridjs.h('i', { className: 'fas fa-eye text-lg' })),
                         canEditDelete ? gridjs.h('button', {
-                            className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-md text-sm transition-colors duration-200',
+                            className: 'p-1 rounded-md text-gray-600 hover:bg-yellow-100 hover:text-yellow-600 transition-colors duration-200',
+                            title: 'Edit Opportunity',
                             onClick: () => this.editOpportunity(oppId)
-                        }, 'Edit') : '',
+                        }, gridjs.h('i', { className: 'fas fa-edit text-lg' })) : '',
                         canEditDelete ? gridjs.h('button', {
-                            className: 'bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm transition-colors duration-200',
+                            className: 'p-1 rounded-md text-gray-600 hover:bg-red-100 hover:text-red-600 transition-colors duration-200',
+                            title: 'Delete Opportunity',
                             onClick: () => this.deleteOpportunity(oppId, oppName)
-                        }, 'Delete') : ''
+                        }, gridjs.h('i', { className: 'fas fa-trash-alt text-lg' })) : ''
                     ]);
                 }
             }
@@ -370,7 +362,7 @@ export const Opportunities = {
             o.customerName,
             o.status,
             o.value,
-            o.currency, // Ensure currency is at the correct index for Value formatter
+            o.currency,
             o.eventType,
             o.active,
             o.closeDate,
@@ -392,8 +384,8 @@ export const Opportunities = {
                 },
                 className: {
                     table: 'min-w-full divide-y divide-gray-200',
-                    th: 'px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
-                    td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                    th: 'px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-normal break-words',
+                    td: 'px-6 py-4 text-sm text-gray-900 whitespace-normal break-words',
                     footer: 'flex items-center justify-between px-6 py-3',
                     paginationButton: 'px-3 py-1 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100',
                     paginationButtonCurrent: 'bg-blue-600 text-white hover:bg-blue-700',
@@ -405,7 +397,7 @@ export const Opportunities = {
     },
 
     /**
-     * Attaches event listeners for UI interactions (Add button, form submission, modal close, etc.).
+     * Attaches event listeners for UI interactions.
      */
     attachEventListeners: function() {
         document.getElementById('add-opportunity-btn').addEventListener('click', () => this.openOpportunityModal('add'));
@@ -437,7 +429,7 @@ export const Opportunities = {
         const currencySelect = document.getElementById('opportunity-currency');
         const valueGroup = document.getElementById('opportunity-value-group');
         const valueInput = document.getElementById('opportunity-value');
-        const valueLabel = document.getElementById('opportunity-value-label'); // Get the label element
+        const valueLabel = document.getElementById('opportunity-value-label');
 
         if (currencySelect && valueGroup && valueInput && valueLabel) {
             currencySelect.addEventListener('change', () => {
@@ -445,16 +437,15 @@ export const Opportunities = {
                 if (selectedCurrencyCode) {
                     valueGroup.classList.remove('hidden');
                     const currencyInfo = this.currenciesMap.get(selectedCurrencyCode);
-                    // Update label with native symbol
                     if (currencyInfo && currencyInfo.symbol_native) {
                         valueLabel.textContent = `Value (${currencyInfo.symbol_native})`;
                     } else {
-                        valueLabel.textContent = `Value (${selectedCurrencyCode})`; // Fallback to code
+                        valueLabel.textContent = `Value (${selectedCurrencyCode})`;
                     }
                 } else {
                     valueGroup.classList.add('hidden');
-                    valueInput.value = ''; // Clear value if currency is deselected
-                    valueLabel.textContent = `Value ($)`; // Reset label to default
+                    valueInput.value = '';
+                    valueLabel.textContent = `Value ($)`;
                 }
             });
         }
@@ -489,7 +480,6 @@ export const Opportunities = {
 
     /**
      * Populates the currency dropdown in the opportunity modal.
-     * Caches currency data in `this.currenciesMap` for later use.
      */
     populateCurrencyDropdown: async function() {
         const currencySelect = document.getElementById('opportunity-currency');
@@ -503,7 +493,7 @@ export const Opportunities = {
             querySnapshot.forEach((doc) => {
                 const currency = doc.data();
                 this.currenciesMap.set(currency.currencyCode, {
-                    currencyName: currency.currencyName, // Store name too
+                    currencyName: currency.currencyName,
                     symbol: currency.symbol,
                     symbol_native: currency.symbol_native
                 });
@@ -520,8 +510,6 @@ export const Opportunities = {
 
     /**
      * Opens the opportunity add/edit modal.
-     * @param {string} mode - 'add' or 'edit'.
-     * @param {object} [opportunityData=null] - Data for the opportunity if in 'edit' mode.
      */
     openOpportunityModal: async function(mode, opportunityData = null) {
         const modal = document.getElementById('opportunity-modal');
@@ -529,8 +517,7 @@ export const Opportunities = {
         const form = document.getElementById('opportunity-form');
         const valueGroup = document.getElementById('opportunity-value-group');
         const valueInput = document.getElementById('opportunity-value');
-        const valueLabel = document.getElementById('opportunity-value-label'); // Get the label element
-
+        const valueLabel = document.getElementById('opportunity-value-label');
 
         form.reset();
         this.selectedOpportunityId = null;
@@ -553,28 +540,27 @@ export const Opportunities = {
             document.getElementById('opportunity-description').value = opportunityData.description || '';
             document.getElementById('opportunity-active-status').value = opportunityData.active || 'Active';
 
-            // Show value field and set label if currency is already selected in edit mode
             if (opportunityData.currency) {
                 valueGroup.classList.remove('hidden');
                 const currencyInfo = this.currenciesMap.get(opportunityData.currency);
                 if (currencyInfo && currencyInfo.symbol_native) {
                     valueLabel.textContent = `Value (${currencyInfo.symbol_native})`;
                 } else {
-                    valueLabel.textContent = `Value (${opportunityData.currency})`; // Fallback to code
+                    valueLabel.textContent = `Value (${opportunityData.currency})`;
                 }
             } else {
                 valueGroup.classList.add('hidden');
                 valueInput.value = '';
-                valueLabel.textContent = `Value ($)`; // Reset label to default
+                valueLabel.textContent = `Value ($)`;
             }
 
         } else {
             title.textContent = 'Add New Opportunity';
             document.getElementById('opportunity-status').value = 'Prospecting';
             document.getElementById('opportunity-active-status').value = 'Active';
-            valueGroup.classList.add('hidden'); // Hide value field for new opportunities initially
-            valueInput.value = ''; // Ensure value is cleared
-            valueLabel.textContent = `Value ($)`; // Reset label to default
+            valueGroup.classList.add('hidden');
+            valueInput.value = '';
+            valueLabel.textContent = `Value ($)`;
         }
 
         modal.classList.remove('hidden');
@@ -655,8 +641,7 @@ export const Opportunities = {
     },
 
     /**
-     * Handles editing an opportunity. Fetches data and opens modal in edit mode.
-     * @param {string} id - The document ID of the opportunity to edit.
+     * Handles editing an opportunity.
      */
     editOpportunity: function(id) {
         const opportunityToEdit = this.opportunitiesData.find(o => o.id === id);
@@ -669,8 +654,6 @@ export const Opportunities = {
 
     /**
      * Deletes an opportunity from Firestore after confirmation.
-     * @param {string} id - The document ID of the opportunity to delete.
-     * @param {string} name - The name of the opportunity for confirmation message.
      */
     deleteOpportunity: async function(id, name) {
         this.Utils.showMessage(`Are you sure you want to delete opportunity "${name}"? This will also delete all related Lines, Contacts, and Quotes.`, 'warning', 0);
@@ -713,7 +696,6 @@ export const Opportunities = {
 
     /**
      * Displays the detailed view of a specific opportunity.
-     * @param {string} id - The document ID of the opportunity to view.
      */
     viewOpportunityDetails: async function(id) {
         const opportunity = this.opportunitiesData.find(o => o.id === id);
@@ -732,7 +714,6 @@ export const Opportunities = {
         document.getElementById('detail-created-at').textContent = opportunity.createdAt ? opportunity.createdAt.toLocaleString() : 'N/A';
         document.getElementById('detail-updated-at').textContent = opportunity.updatedAt ? opportunity.updatedAt.toLocaleString() : 'N/A';
 
-        // Display new fields in detail view, including formatted value
         const formattedValue = parseFloat(opportunity.value || 0).toFixed(2);
         const currencyInfo = this.currenciesMap.get(opportunity.currency);
         const valueWithSymbol = currencyInfo ? `${currencyInfo.symbol_native}${formattedValue} (${opportunity.currency})` : `${formattedValue} (${opportunity.currency || 'N/A'})`;
@@ -754,7 +735,6 @@ export const Opportunities = {
 
     /**
      * Placeholder function to render Opportunity Lines grid.
-     * @param {string} opportunityId
      */
     renderOpportunityLinesGrid: function(opportunityId) {
         const gridContainer = document.getElementById('opportunity-lines-grid');
@@ -781,7 +761,6 @@ export const Opportunities = {
 
     /**
      * Placeholder function to render Opportunity Contacts grid.
-     * @param {string} opportunityId
      */
     renderOpportunityContactsGrid: function(opportunityId) {
         const gridContainer = document.getElementById('opportunity-contacts-grid');
@@ -807,7 +786,6 @@ export const Opportunities = {
 
     /**
      * Placeholder function to render Opportunity Quotes grid.
-     * @param {string} opportunityId
      */
     renderOpportunityQuotesGrid: function(opportunityId) {
         const gridContainer = document.getElementById('opportunity-quotes-grid');
@@ -841,9 +819,9 @@ export const Opportunities = {
             console.log("Opportunities module listener unsubscribed.");
         }
         if (this.grid) {
-            this.grid.destroy(); // Destroy Grid.js instance
+            this.grid.destroy();
             this.grid = null;
         }
-        this.currenciesMap.clear(); // Clear cached currencies
+        this.currenciesMap.clear();
     }
 };
