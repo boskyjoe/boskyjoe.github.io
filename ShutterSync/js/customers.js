@@ -197,71 +197,69 @@ export const Customers = {
             return;
         }
 
-        // Define columns for Grid.js
+        // Define columns for Grid.js with widths and text wrapping
         const columns = [
-            // IMPORTANT: 'id' column must be first for row.cells[0].data to work reliably
-            // for the actions formatter, even if it's hidden.
             { id: 'id', name: 'ID', hidden: true },
-            { id: 'name', name: 'Customer Name', sort: true },
-            { id: 'email', name: 'Email', sort: true },
-            { id: 'phone', name: 'Phone' },
-            { id: 'customerType', name: 'Type' },
-            { id: 'industry', name: 'Industry' },
-            { id: 'customerSource', name: 'Source' },
-            { id: 'active', name: 'Active' },
+            { id: 'name', name: 'Customer Name', sort: true, width: 'auto' }, // Auto width, flexible
+            { id: 'email', name: 'Email', sort: true, width: 'auto' }, // Auto width, flexible
+            { id: 'phone', name: 'Phone', width: '120px' },
+            { id: 'customerType', name: 'Type', width: '100px' },
+            { id: 'industry', name: 'Industry', width: '130px' },
+            { id: 'customerSource', name: 'Source', width: '130px' },
+            { id: 'active', name: 'Active', width: '80px' },
             {
                 name: 'Actions',
+                width: '100px', // Adjusted width for icons
                 formatter: (cell, row) => {
-                    // Access data using row.cells[index].data for simplicity and compatibility
-                    const customerId = row.cells[0].data; // ID from the first mapped element
-                    const customerName = row.cells[1].data; // Name from the second mapped element
+                    const customerId = row.cells[0].data;
+                    const customerName = row.cells[1].data;
 
                     return gridjs.h('div', {
-                        className: 'flex space-x-2'
+                        className: 'flex items-center justify-center space-x-2' // Centered icons
                     }, [
                         gridjs.h('button', {
-                            className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-md text-sm transition-colors duration-200',
+                            className: 'p-1 rounded-md text-gray-600 hover:bg-yellow-100 hover:text-yellow-600 transition-colors duration-200', // Subtle styling
+                            title: 'Edit Customer', // Accessibility
                             onClick: () => this.editCustomer(customerId)
-                        }, 'Edit'),
+                        }, gridjs.h('i', { className: 'fas fa-edit text-lg' })), // Edit Icon
                         gridjs.h('button', {
-                            className: 'bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm transition-colors duration-200',
+                            className: 'p-1 rounded-md text-gray-600 hover:bg-red-100 hover:text-red-600 transition-colors duration-200', // Subtle styling
+                            title: 'Delete Customer', // Accessibility
                             onClick: () => this.deleteCustomer(customerId, customerName)
-                        }, 'Delete')
+                        }, gridjs.h('i', { className: 'fas fa-trash-alt text-lg' })) // Delete Icon
                     ]);
                 }
             }
         ];
 
-        // CRITICAL FIX: Map data back to an array of ARRAYS for consistency with row.cells[index].data access.
-        // Ensure the order matches the columns array (ID first, then visible columns).
         const mappedData = customers.map(c => [
-            c.id,                   // 0: ID (hidden)
-            c.name || '',           // 1: Customer Name
-            c.email || '',          // 2: Email
-            c.phone || '',          // 3: Phone
-            c.customerType || '',   // 4: Type
-            c.industry || '',       // 5: Industry
-            c.customerSource || '', // 6: Source
-            c.active || 'Active'    // 7: Active (Default 'Active' if missing)
+            c.id,
+            c.name || '',
+            c.email || '',
+            c.phone || '',
+            c.customerType || '',
+            c.industry || '',
+            c.customerSource || '',
+            c.active || 'Active'
         ]);
 
         if (this.grid) {
             this.grid.updateConfig({
-                data: mappedData // Pass array of arrays
+                data: mappedData
             }).forceRender();
         } else {
             this.grid = new gridjs.Grid({
                 columns: columns,
-                data: mappedData, // Pass array of arrays
+                data: mappedData,
                 sort: true,
                 search: true,
                 pagination: {
-                    limit: 10 // Items per page
+                    limit: 10
                 },
                 className: {
                     table: 'min-w-full divide-y divide-gray-200',
-                    th: 'px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
-                    td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                    th: 'px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-normal break-words', // Text wrapping for headers
+                    td: 'px-6 py-4 text-sm text-gray-900 whitespace-normal break-words', // Text wrapping for data
                     footer: 'flex items-center justify-between px-6 py-3',
                     paginationButton: 'px-3 py-1 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100',
                     paginationButtonCurrent: 'bg-blue-600 text-white hover:bg-blue-700',
@@ -393,30 +391,24 @@ export const Customers = {
                 errorMessage = `A company with the name "${name}" already exists.`;
             } else {
                 // Fallback or if required fields are missing for uniqueness check
-                // This 'else' branch handles cases where:
-                // - customerType is not 'Individual' or 'Company'
-                // - customerType is 'Individual' but email is empty
-                // - customerType is 'Company' but name is empty
                 if (!email && !name) {
                      this.Utils.showMessage('For new customers, please provide at least an Email (for individuals) or Customer Name (for companies) for uniqueness check.', 'warning');
                      return;
                 }
-                // If customerType is missing or not specific, default to checking by name only (less strict)
-                // This covers cases where user might select "Select Type" and enter only a name.
                 q = query(customersRef, where("name", "==", name));
                 errorMessage = `A customer with the name "${name}" already exists. Please provide more unique details like email or verify customer type.`;
             }
 
-            if (q) { // Only execute query if 'q' was successfully defined
+            if (q) {
                 try {
                     const querySnapshot = await getDocs(q);
                     if (!querySnapshot.empty) {
                         this.Utils.showMessage(errorMessage, 'error');
-                        return; // Stop execution if duplicate found
+                        return;
                     }
                 } catch (error) {
                     this.Utils.handleError(error, "checking for duplicate customer");
-                    return; // Stop if there's an error during the check
+                    return;
                 }
             }
         }
@@ -439,13 +431,11 @@ export const Customers = {
             };
 
             if (this.currentCustomerId) {
-                // Update existing customer
                 await updateDoc(doc(this.db, "customers", this.currentCustomerId), customerData);
                 this.Utils.showMessage('Customer updated successfully!', 'success');
             } else {
-                // Add new customer
                 customerData.createdAt = new Date();
-                customerData.creatorId = this.auth.currentUser ? this.auth.currentUser.uid : null; // Ensure creatorId is set for new customers
+                customerData.creatorId = this.auth.currentUser ? this.auth.currentUser.uid : null;
                 if (!customerData.creatorId) {
                     this.Utils.showMessage('You must be logged in to create a customer.', 'error');
                     return;
@@ -464,8 +454,6 @@ export const Customers = {
      * @param {string} id - The document ID of the customer to edit.
      */
     editCustomer: function(id) {
-        // Find the customer data from the currently loaded customers array
-        // (assuming this.customersData contains the latest data from onSnapshot)
         const customerToEdit = this.customersData.find(c => c.id === id);
         if (customerToEdit) {
             this.openCustomerModal('edit', customerToEdit);
@@ -480,13 +468,11 @@ export const Customers = {
      * @param {string} name - The name of the customer for confirmation message.
      */
     deleteCustomer: async function(id, name) {
-        // Implement a custom confirmation modal instead of browser's confirm()
-        this.Utils.showMessage(`Are you sure you want to delete "${name}"?`, 'warning', 0); // 0 duration for persistent message
+        this.Utils.showMessage(`Are you sure you want to delete "${name}"?`, 'warning', 0);
 
-        // Add confirmation buttons to the message modal
         const messageModalContainer = document.getElementById('message-modal-container');
         if (messageModalContainer) {
-            const messageBox = messageModalContainer.querySelector('.p-6'); // Find the message box element
+            const messageBox = messageModalContainer.querySelector('.p-6');
             const confirmBtn = document.createElement('button');
             confirmBtn.textContent = 'Confirm Delete';
             confirmBtn.className = 'bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg mt-4 mr-2';
@@ -494,10 +480,10 @@ export const Customers = {
                 try {
                     await deleteDoc(doc(this.db, "customers", id));
                     this.Utils.showMessage('Customer deleted successfully!', 'success');
-                    messageModalContainer.remove(); // Close confirmation modal
+                    messageModalContainer.remove();
                 } catch (error) {
                     this.Utils.handleError(error, "deleting customer");
-                    messageModalContainer.remove(); // Close confirmation modal on error too
+                    messageModalContainer.remove();
                 }
             };
 
@@ -505,11 +491,10 @@ export const Customers = {
             cancelBtn.textContent = 'Cancel';
             cancelBtn.className = 'bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg mt-4';
             cancelBtn.onclick = () => {
-                messageModalContainer.remove(); // Close confirmation modal
+                messageModalContainer.remove();
                 this.Utils.showMessage('Deletion cancelled.', 'info');
             };
 
-            // Remove existing buttons if any and append new ones
             const existingButtons = messageBox.querySelectorAll('button:not(.absolute.top-2)');
             existingButtons.forEach(btn => btn.remove());
 
@@ -523,8 +508,6 @@ export const Customers = {
 
     /**
      * Detaches the real-time listener when the module is no longer active.
-     * (Currently not explicitly called, but good practice for cleanup when navigating away
-     * if the UI is completely replaced.)
      */
     destroy: function() {
         if (this.unsubscribe) {
@@ -533,11 +516,10 @@ export const Customers = {
             console.log("Customers module listener unsubscribed.");
         }
         if (this.grid) {
-            this.grid.destroy(); // Destroy Grid.js instance
+            this.grid.destroy();
             this.grid = null;
         }
     }
 };
 
-// This array will hold the current customer data for easy access during edit operations
 Customers.customersData = [];
