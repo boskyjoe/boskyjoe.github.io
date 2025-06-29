@@ -48,8 +48,12 @@
         <div class="container mx-auto flex justify-between items-center">
             <a href="#" id="home-link" class="text-2xl font-bold tracking-wide hover:text-gray-300 transition-colors duration-200">ShutterSync CRM</a>
             <div class="flex items-center space-x-4">
+                <!-- NEW: Home Link -->
+                <a href="#" data-module="customers" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Home</a>
                 <a href="#" data-module="customers" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Customers</a>
                 <a href="#" data-module="opportunities" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Opportunities</a>
+                <!-- NEW: Events Link -->
+                <a href="#" data-module="events" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Events</a>
 
                 <!-- Admin Dropdown Menu -->
                 <div class="relative group hidden"> <!-- Hidden by default, shown if isAdmin -->
@@ -106,9 +110,14 @@
 
 
         // Firebase configuration (provided by Canvas/runtime environment)
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        let firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // FIX: Ensure projectId is always present in firebaseConfig
+        if (!firebaseConfig.projectId) {
+            firebaseConfig.projectId = appId;
+        }
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
@@ -116,12 +125,12 @@
         const auth = getAuth(app);
 
         // Import modules
-        import Main from './js/main.js'; // <-- CORRECTED: Now a default import
+        import Main from './js/main.js';
         import { Auth } from './js/auth.js';
         import { Utils } from './js/utils.js';
         import { Customers } from './js/customers.js';
         import { Opportunities } from './js/opportunities.js';
-        import { Users } from './js/users.js';
+        import { Users } from './js/users.js'; // Corrected import syntax here
         import { AdminData } from './js/admin_data.js';
         import { PriceBook } from './js/price_book.js';
 
@@ -149,6 +158,7 @@
             'users': () => Users.destroy(),
             'admin-data': () => AdminData.destroy(),
             'price-book': () => PriceBook.destroy(),
+            'events': () => Utils.showMessage('Events module is not yet implemented.', 'info', 3000), // Placeholder for events
         });
 
         // Event listener for module navigation
@@ -169,6 +179,8 @@
         });
 
         // Event listener for home link to load default module (Customers)
+        // This is already linked as data-module="customers" in the new Home link.
+        // Keeping this for robustness if the main title is clicked.
         document.getElementById('home-link').addEventListener('click', (e) => {
             e.preventDefault();
             Main.loadModule('customers');
@@ -178,7 +190,6 @@
         Auth.onAuthReady(() => {
             const lastModule = localStorage.getItem('lastActiveModule') || 'customers';
             Main.loadModule(lastModule);
-            // This ensures the header UI is updated immediately after auth is ready
             Main.updateUserHeaderUI(auth.currentUser);
         });
 
