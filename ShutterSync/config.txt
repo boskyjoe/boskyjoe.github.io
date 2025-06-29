@@ -3,59 +3,113 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Function to check if the authenticated user has an 'Admin' role.
+    // Ensure request.auth.uid is not null before attempting to get the document
     function is_admin() {
-      return get(/databases/$(database)/documents/users_data/$(request.auth.uid)).data.role == 'Admin';
+      return request.auth != null && get(/databases/$(database)/documents/users_data/$(request.auth.uid)).data.role == 'Admin';
     }
 
-    // Global rule: All operations require the user to be authenticated.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
-    }
+    // --- Core Security Principle ---
+    // The global wildcard rule has been REMOVED.
+    // By default, all access is denied. Access is only granted if explicitly allowed by a specific rule below.
 
-    // Rules for the 'users_data' collection:
-    // Path: /users_data/{userId}
+    // 1. Rules for the 'users_data' collection:
+    //    Requirements:
+    //    - When a new user logs in, their record can be created with their login details.
+    //    - Only an admin can delete or update user records.
     match /users_data/{userId} {
-      allow get: if request.auth.uid == userId;
-      allow create: if request.auth.uid == userId;
+      // Allow any authenticated user to read (get/list) any user's profile.
+      allow read: if request.auth != null;
+      // Allow a user to create their OWN profile record upon first login (matching their UID).
+      allow create: if request.auth != null && request.auth.uid == userId;
+      // Only Admins can update or delete user profiles.
       allow update, delete: if is_admin();
     }
 
-    // Rules for Country Mapping:
-    // New Path: /app_metadata/countries_states/{docId}
-    match /app_metadata/countries_states/{docId} {
-      allow read, create, update, delete: if is_admin();
-    }
-
-    // Rules for Currencies:
-    // New Path: /app_metadata/app_settings/currencies_data/{docId}
-    match /app_metadata/app_settings/currencies_data/{docId} {
-      allow read, create, update, delete: if is_admin();
-    }
-
-    // Rules for Price Books:
-    // New Path: /app_metadata/app_settings/price_books_data/{docId}
-    match /app_metadata/app_settings/price_books_data/{docId} {
-      allow read, create, update, delete: if is_admin();
-    }
-
-    // Rules for the 'customers' collection: (No change)
-    // Path: /customers/{customerId}
+    // 2. Rules for 'customers' collection:
+    //    Requirements:
+    //    - Any logged-in user can create a customer.
+    //    - They can edit the customer record they have created.
+    //    - Admin users can perform all CRUD operations.
     match /customers/{customerId} {
-      allow read, create, update, delete: if request.auth != null;
+      allow read: if request.auth != null; // Any authenticated user can read customers
+
+      // Allow creation if authenticated AND the creatorId in the new document matches the authenticated user's UID.
+      // Enforce that only expected fields are present on creation to prevent arbitrary data injection.
+      allow create: if request.auth != null &&
+                       request.resource.data.creatorId == request.auth.uid &&
+                       request.resource.data.keys().hasAll([
+                         'name', 'email', 'phone', 'address',
+                         'customerType', 'preferredContactMethod', 'industry', 'additionalDetails',
+                         'customerSource', 'active',
+                         'createdAt', 'updatedAt', 'creatorId'
+                       ]) &&
+                       request.resource.data.keys().hasOnly([
+                         'name', 'email', 'phone', 'address',
+                         'customerType', 'preferredContactMethod', 'industry', 'additionalDetails',
+                         'customerSource', 'active',
+                         'createdAt', 'updatedAt', 'creatorId'
+                       ]);
+
+      // Allow update if authenticated AND (user is the creator OR user is an admin).
+      // Removed the strict `hasOnly` check.
+      allow update: if request.auth != null &&
+                       (request.auth.uid == resource.data.creatorId || is_admin());
+
+      // Allow delete if authenticated AND (user is the creator OR user is an admin).
+      allow delete: if request.auth != null &&
+                       (request.auth.uid == resource.data.creatorId || is_admin());
     }
 
-    // Rules for the 'opportunities' collection: (No change)
-    // Path: /opportunities/{opportunityId}
+    // 3. Rules for the 'opportunities' collection:
+    //    - Any logged-in user can create an opportunity.
+    //    - They can edit the opportunity they have created.
+    //    - Admin users can perform all CRUD operations.
     match /opportunities/{opportunityId} {
-      allow read: if request.auth.uid == resource.data.creatorId || is_admin();
-      allow create: if request.auth.uid == request.resource.data.creatorId;
-      allow update, delete: if request.auth.uid == resource.data.creatorId || is_admin();
+      // Read: Allow if user is the creator OR user is an admin.
+      allow read: if request.auth != null && (request.auth.uid == resource.data.creatorId || is_admin());
+
+      // Create: Allow if authenticated AND the creatorId in the new document matches the authenticated user's UID.
+      // Enforce that only expected fields are present on creation.
+      allow create: if request.auth != null &&
+                       request.auth.uid == request.resource.data.creatorId &&
+                       request.resource.data.keys().hasAll([
+                         'name', 'customerId', 'status', 'value', 'closeDate',
+                         'currency', 'eventType', 'proposedEventLocation', 'description', 'active',
+                         'createdAt', 'updatedAt', 'creatorId'
+                       ]) &&
+                       request.resource.data.keys().hasOnly([
+                         'name', 'customerId', 'status', 'value', 'closeDate',
+                         'currency', 'eventType', 'proposedEventLocation', 'description', 'active',
+                         'createdAt', 'updatedAt', 'creatorId'
+                       ]);
+
+      // Update/Delete: Allow if user is the creator OR user is an admin.
+      allow update: if request.auth != null && (request.auth.uid == resource.data.creatorId || is_admin());
+      allow delete: if request.auth != null && (request.auth.uid == resource.data.creatorId || is_admin());
     }
 
-    // Rules for sub-collections of 'opportunities': (No change)
-    // Paths: /opportunities/{opportunityId}/lines/{lineId}, /opportunities/{opportunityId}/contacts/{contactId}, etc.
+    // 4. Rules for sub-collections of 'opportunities' (e.g., 'lines', 'contacts', 'quotes'):
+    //    Access to subcollections depends on the parent opportunity's creator OR admin role.
     match /opportunities/{opportunityId}/{subcollection}/{docId} {
-      allow read, create, update, delete: if get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.creatorId == request.auth.uid || is_admin();
+      // Allow read, create, update, delete if the authenticated user is the creator of the parent opportunity
+      // OR if the authenticated user is an admin.
+      allow read, create, update, delete: if request.auth != null && (get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.creatorId == request.auth.uid || is_admin());
+    }
+
+    // 5. Rules for App Metadata Collections (Countries, Currencies, Price Books):
+    //    - Only Admin users can perform CRUD operations.
+    //    - NEW: All authenticated users can READ these collections.
+    match /app_metadata/countries_states/{docId} {
+      allow read: if request.auth != null; // <--- CHANGED: Any authenticated user can read
+      allow create, update, delete: if is_admin(); // Only Admins can write
+    }
+    match /app_metadata/app_settings/currencies_data/{docId} {
+      allow read: if request.auth != null; // <--- CHANGED: Any authenticated user can read
+      allow create, update, delete: if is_admin(); // Only Admins can write
+    }
+    match /app_metadata/app_settings/price_books_data/{docId} {
+      allow read: if request.auth != null; // <--- CHANGED: Any authenticated user can read
+      allow create, update, delete: if is_admin(); // Only Admins can write
     }
   }
 }
