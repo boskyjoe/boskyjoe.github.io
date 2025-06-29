@@ -1,6 +1,6 @@
 // js/customers.js
 
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
 import { Auth } from './auth.js'; // CORRECTED: Added Auth import
 
@@ -128,7 +128,6 @@ export const Customers = {
                 </div>
             </div>
         `;
-        // After rendering HTML, attach event listeners and setup the real-time listener
         this.attachEventListeners();
         this.setupRealtimeListener();
     },
@@ -143,13 +142,11 @@ export const Customers = {
 
         const userId = this.auth.currentUser ? this.auth.currentUser.uid : null;
         if (!userId) {
-            console.log("No user ID found, cannot set up customer listener.");
-            // Render an empty grid or display a message
-            this.renderCustomersGrid([]);
+            console.log("No user ID found, cannot set up customer listener. (User likely not logged in or session expired)");
+            this.renderCustomersGrid([]); // Clear grid if not logged in
             return;
         }
 
-        // Query customers either for the current user or all if admin
         const customersCollectionRef = collection(this.db, "customers");
         let q;
         if (this.Utils.isAdmin()) {
@@ -169,7 +166,6 @@ export const Customers = {
             console.log("Customers data updated:", customers);
         }, (error) => {
             this.Utils.handleError(error, "fetching customers data");
-            // Render an empty grid or display an error message
             this.renderCustomersGrid([]);
         });
     },
@@ -197,7 +193,7 @@ export const Customers = {
                 width: '100px',
                 formatter: (cell, row) => {
                     const customerId = row.cells[0].data; // Get customer ID
-                    const customerData = customers.find(c => c.id === customerId); // Get full customer data
+                    const customerData = customers.find(c => c.id === customerId); // Find full customer data
                     const creatorId = customerData?.creatorId; // Get creatorId from original data
                     const isCurrentUserCreator = this.auth.currentUser && creatorId === this.auth.currentUser.uid;
                     const canEditOrDelete = this.Utils.isAdmin() || isCurrentUserCreator;
@@ -515,11 +511,7 @@ export const Customers = {
             this.customersGrid.destroy();
             this.customersGrid = null;
         }
-        // Remove content from the DOM when destroying. Main.js will handle this.
-        // const customersModuleContent = document.getElementById('customers-module-content');
-        // if (customersModuleContent) {
-        //     customersModuleContent.innerHTML = '';
-        // }
+        // Main.js now handles clearing the innerHTML of the content area for this module.
         console.log("Customers module destroyed.");
     }
 };
