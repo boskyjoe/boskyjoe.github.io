@@ -2,6 +2,7 @@
 
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, orderBy, startAfter, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
+import { Auth } from './auth.js'; // NEW: Import Auth to check login status
 
 /**
  * The CustomersModule object handles all functionality related to customer management.
@@ -26,10 +27,6 @@ export const Customers = {
         this.auth = firebaseAuth;
         this.Utils = utils;
         console.log("Customers module initialized.");
-
-        // We don't call renderCustomersUI or attachEventListeners here
-        // as they depend on the module's HTML being loaded into the DOM,
-        // which happens via Main.loadModule.
     },
 
     /**
@@ -42,6 +39,27 @@ export const Customers = {
             console.error("Customers module content area not found in DOM.");
             return;
         }
+
+        // --- NEW: Login Requirement Check ---
+        if (!Auth.isLoggedIn()) {
+            customersModuleContent.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
+                    <p class="text-gray-600 mb-4">You must be logged in to view customer data.</p>
+                    <button id="go-to-login-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                        Go to Home / Login
+                    </button>
+                </div>
+            `;
+            // Attach event listener for the new button
+            document.getElementById('go-to-login-btn')?.addEventListener('click', () => {
+                window.Main.loadModule('home'); // Redirect to home page
+            });
+            this.destroy(); // Clean up any previous grid/listeners
+            this.Utils.showMessage("Access Denied: Please log in to view Customers.", "error");
+            return; // Stop execution if not logged in
+        }
+        // --- END NEW ---
 
         customersModuleContent.innerHTML = `
             <div class="bg-white p-6 rounded-lg shadow-md mb-6">
@@ -102,7 +120,6 @@ export const Customers = {
                 </div>
             </div>
         `;
-        // After rendering HTML, attach event listeners and setup the real-time listener
         this.attachEventListeners();
         this.setupRealtimeListener();
     },
@@ -117,13 +134,11 @@ export const Customers = {
 
         const userId = this.auth.currentUser ? this.auth.currentUser.uid : null;
         if (!userId) {
-            console.log("No user ID found, cannot set up customer listener.");
-            // Render an empty grid or display a message
-            this.renderCustomersGrid([]);
+            console.log("No user ID found, cannot set up customer listener. (User likely not logged in or session expired)");
+            this.renderCustomersGrid([]); // Clear grid if not logged in
             return;
         }
 
-        // Query customers either for the current user or all if admin
         const customersCollectionRef = collection(this.db, "customers");
         let q;
         if (this.Utils.isAdmin()) {
@@ -143,7 +158,6 @@ export const Customers = {
             console.log("Customers data updated:", customers);
         }, (error) => {
             this.Utils.handleError(error, "fetching customers data");
-            // Render an empty grid or display an error message
             this.renderCustomersGrid([]);
         });
     },
@@ -171,7 +185,8 @@ export const Customers = {
                 width: '100px',
                 formatter: (cell, row) => {
                     const customerId = row.cells[0].data; // Get customer ID
-                    const creatorId = customers.find(c => c.id === customerId)?.creatorId; // Get creatorId from original data
+                    const customerData = customers.find(c => c.id === customerId); // Find full customer data
+                    const creatorId = customerData?.creatorId; // Get creatorId from original data
                     const isCurrentUserCreator = this.auth.currentUser && creatorId === this.auth.currentUser.uid;
                     const canEditOrDelete = this.Utils.isAdmin() || isCurrentUserCreator;
 
@@ -360,8 +375,13 @@ export const Customers = {
                 this.Utils.showMessage('Customer updated successfully!', 'success');
             } else {
                 // Add new customer
-                // Add creatorId for filtering by user later
-                customerData.creatorId = this.auth.currentUser ? this.auth.currentUser.uid : 'anonymous';
+                // Ensure creatorId is set ONLY if user is logged in
+                if (!this.auth.currentUser) {
+                    this.Utils.showMessage('You must be logged in to add a new customer.', 'error');
+                    this.closeCustomerModal();
+                    return;
+                }
+                customerData.creatorId = this.auth.currentUser.uid; // Now guaranteed to be a logged-in user's UID
                 customerData.createdAt = new Date();
                 await addDoc(collection(this.db, "customers"), customerData);
                 this.Utils.showMessage('Customer added successfully!', 'success');
