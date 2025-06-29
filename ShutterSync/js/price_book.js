@@ -1,20 +1,19 @@
 // js/price_book.js
 
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, query, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
-import { Auth } from './auth.js'; // NEW: Import Auth to check login status
+import { Auth } from './auth.js'; // CORRECTED: Added Auth import
 
 /**
- * The PriceBook module handles the management of price book entries.
- * This module is only accessible to users with the 'Admin' role.
+ * The PriceBook module handles the management of products/services and their pricing.
  */
 export const PriceBook = {
     db: null,
     auth: null,
     Utils: null,
-    unsubscribe: null, // Listener for price book data
+    unsubscribe: null, // Listener for price book items
     currentEditingItemId: null, // For editing price book items
-    priceBookGrid: null, // Grid.js instance for price book
+    priceBookGrid: null, // Grid.js instance for the price book table
 
     /**
      * Initializes the PriceBook module.
@@ -25,41 +24,47 @@ export const PriceBook = {
         this.auth = firebaseAuth;
         this.Utils = utils;
         console.log("PriceBook module initialized.");
+
+        // Do NOT call renderPriceBookUI or attachEventListeners here.
+        // They depend on the module's HTML being loaded into the DOM by Main.loadModule.
     },
 
     /**
-     * Renders the main UI for the Price Book module.
-     * This is called by Main.js when the 'price-book' module is activated.
+     * Renders the main UI for the PriceBook module.
+     * This is called by Main.js when the 'priceBook' module is activated.
+     * @param {HTMLElement} moduleContentElement - The DOM element where the PriceBook UI should be rendered.
      */
-    renderPriceBookUI: function() {
-        const priceBookModuleContent = document.getElementById('price-book-module-content');
+    renderPriceBookUI: function(moduleContentElement) { // Added moduleContentElement parameter
+        // CRITICAL FIX: Use the passed moduleContentElement directly
+        const priceBookModuleContent = moduleContentElement;
+
         if (!priceBookModuleContent) {
-            console.error("Price Book module content area not found in DOM.");
+            console.error("PriceBook module: Target content element was not provided or is null.");
+            this.Utils.showMessage("Error: Price Book module could not find its content area.", "error");
             return;
         }
 
-        // --- NEW: Login Requirement Check for the module itself ---
+        // --- NEW: Login Requirement Check ---
         if (!Auth.isLoggedIn()) {
             priceBookModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
-                    <p class="text-gray-600 mb-4">You must be logged in to view price book management.</p>
-                    <button id="go-to-login-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                    <p class="text-gray-600 mb-4">You must be logged in to view price book data.</p>
+                    <button id="go-to-home-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
                         Go to Home / Login
                     </button>
                 </div>
             `;
             // Attach event listener for the new button
-            document.getElementById('go-to-login-btn')?.addEventListener('click', () => {
+            document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
                 window.Main.loadModule('home'); // Redirect to home page
             });
             this.destroy(); // Clean up any previous grid/listeners
-            this.Utils.showMessage("Access Denied: Please log in to view Price Books.", "error");
+            this.Utils.showMessage("Access Denied: Please log in to view Price Book.", "error");
             return; // Stop execution if not logged in
         }
         // --- END NEW ---
 
-        // Existing Admin check (after login check)
         if (this.Utils.isAdmin()) {
             priceBookModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md mb-6">
@@ -70,7 +75,7 @@ export const PriceBook = {
                             <i class="fas fa-plus mr-2"></i> Add Item
                         </button>
                     </div>
-                    <p class="text-sm text-gray-600 mb-4">Define and manage products/services and their pricing.</p>
+                    <p class="text-sm text-gray-600 mb-4">Manage products and services offered, including their prices.</p>
                     <div id="price-book-grid-container" class="border border-gray-200 rounded-lg overflow-hidden"></div>
                 </div>
 
@@ -79,33 +84,44 @@ export const PriceBook = {
                     <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full transform transition-all duration-300 scale-95 opacity-0">
                         <h4 id="price-book-modal-title" class="text-2xl font-bold text-gray-800 mb-6">Add New Price Book Item</h4>
                         <form id="price-book-form">
-                            <div class="grid grid-cols-1 gap-4 mb-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label for="item-name" class="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
                                     <input type="text" id="item-name" name="itemName" required
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 </div>
                                 <div>
+                                    <label for="item-type" class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                                    <select id="item-type" name="itemType" required
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white">
+                                        <option value="Product">Product</option>
+                                        <option value="Service">Service</option>
+                                    </select>
+                                </div>
+                                <div class="md:col-span-2">
                                     <label for="item-description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                    <textarea id="item-description" name="itemDescription" rows="2"
+                                    <textarea id="item-description" name="description" rows="2"
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                                 </div>
                                 <div>
-                                    <label for="unit-price" class="block text-sm font-medium text-gray-700 mb-1">Unit Price ($)</label>
-                                    <input type="number" id="unit-price" name="unitPrice" min="0" step="0.01" required
+                                    <label for="unit-price" class="block text-sm font-medium text-gray-700 mb-1">Unit Price</label>
+                                    <input type="number" id="unit-price" name="unitPrice" step="0.01" min="0" required
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 </div>
                                 <div>
-                                    <label for="is-active" class="block text-sm font-medium text-gray-700 mb-1">Is Active?</label>
-                                    <input type="checkbox" id="is-active" name="isActive" class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <label for="currency" class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                                    <select id="currency" name="currency" required
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white">
+                                        <!-- Currencies will be loaded here dynamically -->
+                                    </select>
                                 </div>
                             </div>
                             <div class="flex justify-end space-x-3 mt-6">
-                                <button type="button" id="cancel-price-book-btn"
+                                <button type="button" id="cancel-price-book-item-btn"
                                     class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors duration-200">
                                     Cancel
                                 </button>
-                                <button type="submit" id="save-price-book-btn"
+                                <button type="submit" id="save-price-book-item-btn"
                                     class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
                                     Save Item
                                 </button>
@@ -114,55 +130,47 @@ export const PriceBook = {
                     </div>
                 </div>
             `;
+            // After rendering HTML, attach event listeners and setup the real-time listener
             this.attachEventListeners();
             this.setupRealtimeListener();
         } else {
-            // If logged in but not admin
             priceBookModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
                     <p class="text-gray-600">You do not have administrative privileges to view this section.</p>
-                    <button id="go-to-home-btn" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
-                        Go to Home
-                    </button>
                 </div>
             `;
-            document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
-                window.Main.loadModule('home'); // Redirect to home page
-            });
             console.log("Not an admin, skipping Price Book UI.");
-            this.Utils.showMessage("Access Denied: You must be an Admin to view Price Books.", "error");
+            if (this.priceBookGrid) { this.priceBookGrid.destroy(); this.priceBookGrid = null; }
         }
     },
 
     /**
-     * Sets up the real-time listener for the 'price_books_data' subcollection.
+     * Sets up the real-time listener for the 'price_book' collection.
+     * Only runs if the current user is an Admin.
      */
     setupRealtimeListener: function() {
         if (this.unsubscribe) {
             this.unsubscribe(); // Detach existing listener if any
         }
 
-        // Additional check for logged-in user before setting up listener
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
-            console.log("Not logged in or not admin, skipping price book data listener setup.");
-            this.renderPriceBookGrid([]); // Ensure grid is empty or not rendered
-            return;
-        }
-
-        const priceBookCollectionRef = collection(this.db, "app_metadata", "app_settings", "price_books_data");
-        const q = query(priceBookCollectionRef);
-
-        this.unsubscribe = onSnapshot(q, (snapshot) => {
-            const items = [];
-            snapshot.forEach((doc) => {
-                items.push({ id: doc.id, ...doc.data() });
+        if (this.Utils.isAdmin()) {
+            const q = query(collection(this.db, "app_data/global/price_book"));
+            this.unsubscribe = onSnapshot(q, (snapshot) => {
+                const items = [];
+                snapshot.forEach((doc) => {
+                    items.push({ id: doc.id, ...doc.data() });
+                });
+                console.log("Price Book data updated:", items);
+                this.renderPriceBookGrid(items);
+            }, (error) => {
+                this.Utils.handleError(error, "fetching price book data");
+                this.renderPriceBookGrid([]);
             });
-            console.log("Price Book data updated:", items);
-            this.renderPriceBookGrid(items);
-        }, (error) => {
-            this.Utils.handleError(error, "fetching price book data");
-        });
+        } else {
+            console.log("Not an admin, skipping price book listener setup.");
+            this.renderPriceBookGrid([]);
+        }
     },
 
     /**
@@ -172,70 +180,55 @@ export const PriceBook = {
     renderPriceBookGrid: function(items) {
         const gridContainer = document.getElementById('price-book-grid-container');
         if (!gridContainer) {
-            console.error("Price Book grid container not found."); // This error is okay if not admin
+            console.error("Price book grid container not found.");
             return;
         }
 
         const columns = [
             { id: 'id', name: 'ID', hidden: true },
             { id: 'itemName', name: 'Item Name', sort: true, width: 'auto' },
-            { id: 'itemDescription', name: 'Description', sort: false, width: 'auto' },
-            { id: 'unitPrice', name: 'Unit Price ($)', sort: true, width: '150px', formatter: (cell) => cell ? `$${parseFloat(cell).toFixed(2)}` : '$0.00' },
-            {
-                id: 'isActive',
-                name: 'Active',
-                sort: true,
-                width: '80px',
-                formatter: (cell) => cell ? 'Yes' : 'No'
-            },
+            { id: 'itemType', name: 'Type', sort: true, width: '100px' },
+            { id: 'description', name: 'Description', sort: false, width: 'auto' },
+            { id: 'unitPrice', name: 'Unit Price', sort: true, width: '120px', formatter: (cell, row) => {
+                const currency = items.find(i => i.id === row.cells[0].data)?.currency || '';
+                return `${currency} ${parseFloat(cell).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }},
+            { id: 'currency', name: 'Currency', sort: true, width: '100px' },
             {
                 name: 'Actions',
                 width: '100px',
                 formatter: (cell, row) => {
-                    const itemId = row.cells[0].data; // Get item ID
-
-                    // Double-check permissions here before rendering buttons
-                    if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
-                        return '';
-                    }
-
+                    const itemId = row.cells[0].data;
+                    const itemData = items.find(i => i.id === itemId);
                     return gridjs.h('div', {
                         className: 'flex items-center justify-center space-x-2'
                     }, [
                         gridjs.h('button', {
                             className: 'p-1 rounded-md text-gray-600 hover:bg-yellow-100 hover:text-yellow-600 transition-colors duration-200',
                             title: 'Edit Item',
-                            onClick: () => this.openPriceBookModal('edit', itemId)
+                            onClick: () => this.openPriceBookModal('edit', itemId, itemData)
                         }, gridjs.h('i', { className: 'fas fa-edit text-lg' })),
                         gridjs.h('button', {
                             className: 'p-1 rounded-md text-gray-600 hover:bg-red-100 hover:text-red-600 transition-colors duration-200',
                             title: 'Delete Item',
-                            onClick: () => this.deletePriceBookItem(itemId, row.cells[1].data)
+                            onClick: () => this.deletePriceBookItem(itemId, itemData.itemName)
                         }, gridjs.h('i', { className: 'fas fa-trash-alt text-lg' }))
                     ]);
                 }
             }
         ];
 
-        const mappedData = items.map(item => [
-            item.id,
-            item.itemName || '',
-            item.itemDescription || '',
-            item.unitPrice || 0,
-            item.isActive || false
-        ]);
+        const mappedData = items.map(i => [i.id, i.itemName, i.itemType, i.description, i.unitPrice, i.currency]);
 
         if (this.priceBookGrid) {
-            this.priceBookGrid.updateConfig({
-                data: mappedData
-            }).forceRender();
+            this.priceBookGrid.updateConfig({ data: mappedData }).forceRender();
         } else {
             this.priceBookGrid = new gridjs.Grid({
                 columns: columns,
                 data: mappedData,
                 sort: true,
                 search: true,
-                pagination: { limit: 10 },
+                pagination: { limit: 5 },
                 className: {
                     table: 'min-w-full divide-y divide-gray-200',
                     th: 'px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-normal break-words',
@@ -251,31 +244,49 @@ export const PriceBook = {
     },
 
     /**
-     * Attaches event listeners for UI interactions within the Price Book module.
+     * Fetches currencies from Firestore to populate the currency dropdown.
+     */
+    fetchCurrenciesForDropdown: async function(selectedCurrency = null) {
+        const currencySelect = document.getElementById('currency');
+        if (!currencySelect) return;
+
+        currencySelect.innerHTML = '<option value="">Select Currency</option>';
+        try {
+            // Updated path to app_metadata/global/currencies based on firebase-rules
+            const q = query(collection(this.db, "app_data/global/currencies"));
+            const querySnapshot = await getDocs(q);
+            querySnapshot.forEach((docSnap) => {
+                const currencyData = docSnap.data();
+                const option = document.createElement('option');
+                option.value = currencyData.code;
+                option.textContent = `${currencyData.code} (${currencyData.symbol})`;
+                if (currencyData.code === selectedCurrency) {
+                    option.selected = true;
+                }
+                currencySelect.appendChild(option);
+            });
+        } catch (error) {
+            this.Utils.handleError(error, "fetching currencies for dropdown");
+        }
+    },
+
+    /**
+     * Attaches event listeners for UI interactions within the PriceBook module.
      */
     attachEventListeners: function() {
-        const addPriceBookItemBtn = document.getElementById('add-price-book-item-btn');
-        if (addPriceBookItemBtn) addPriceBookItemBtn.addEventListener('click', () => this.openPriceBookModal('add'));
-
-        const priceBookForm = document.getElementById('price-book-form');
-        if (priceBookForm) priceBookForm.addEventListener('submit', (e) => { e.preventDefault(); this.savePriceBookItem(); });
-
-        const cancelPriceBookBtn = document.getElementById('cancel-price-book-btn');
-        if (cancelPriceBookBtn) cancelPriceBookBtn.addEventListener('click', () => this.closePriceBookModal());
-
-        const priceBookModal = document.getElementById('price-book-modal');
-        if (priceBookModal) priceBookModal.addEventListener('click', (e) => { if (e.target === priceBookModal) this.closePriceBookModal(); });
+        document.getElementById('add-price-book-item-btn')?.addEventListener('click', () => this.openPriceBookModal('add'));
+        document.getElementById('price-book-form')?.addEventListener('submit', (e) => { e.preventDefault(); this.savePriceBookItem(); });
+        document.getElementById('cancel-price-book-item-btn')?.addEventListener('click', () => this.closePriceBookModal());
+        document.getElementById('price-book-modal')?.addEventListener('click', (e) => { if (e.target === document.getElementById('price-book-modal')) this.closePriceBookModal(); });
     },
 
     /**
      * Opens the price book item add/edit modal.
-     * @param {string} mode - 'add' or 'edit'.
-     * @param {string|null} itemId - The ID of the item to edit, if mode is 'edit'.
      */
-    openPriceBookModal: async function(mode, itemId = null) {
-        // --- NEW: Login & Admin Requirement Check for modals ---
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
-            this.Utils.showMessage('You must be logged in as an Admin to add/edit price book items.', 'error');
+    openPriceBookModal: async function(mode, id = null, itemData = {}) {
+        // --- NEW: Login Requirement Check for modals ---
+        if (!Auth.isLoggedIn()) {
+            this.Utils.showMessage('You must be logged in to add/edit price book items.', 'error');
             return;
         }
         // --- END NEW ---
@@ -283,42 +294,31 @@ export const PriceBook = {
         const modal = document.getElementById('price-book-modal');
         const title = document.getElementById('price-book-modal-title');
         const form = document.getElementById('price-book-form');
+        form.reset();
+        this.currentEditingItemId = null;
 
-        form.reset(); // Clear previous form data
-        document.getElementById('is-active').checked = true; // Default to active for new items
-        this.currentEditingItemId = null; // Clear ID for add mode
+        // Fetch currencies first so dropdown is populated
+        await this.fetchCurrenciesForDropdown(itemData.currency);
 
-        if (mode === 'edit' && itemId) {
+        if (mode === 'edit' && id && itemData) {
             title.textContent = 'Edit Price Book Item';
-            this.currentEditingItemId = itemId;
-            try {
-                const itemDoc = await getDoc(doc(this.db, 'app_metadata', 'app_settings', 'price_books_data', itemId));
-                if (itemDoc.exists()) {
-                    const data = itemDoc.data();
-                    document.getElementById('item-name').value = data.itemName || '';
-                    document.getElementById('item-description').value = data.itemDescription || '';
-                    document.getElementById('unit-price').value = data.unitPrice || 0;
-                    document.getElementById('is-active').checked = data.isActive || false;
-                } else {
-                    this.Utils.showMessage('Price Book Item not found for editing.', 'error');
-                    this.closePriceBookModal();
-                    return;
-                }
-            } catch (error) {
-                this.Utils.handleError(error, "fetching price book item for edit");
-                this.closePriceBookModal();
-                return;
-            }
+            this.currentEditingItemId = id;
+            document.getElementById('item-name').value = itemData.itemName || '';
+            document.getElementById('item-type').value = itemData.itemType || 'Product';
+            document.getElementById('item-description').value = itemData.description || '';
+            document.getElementById('unit-price').value = itemData.unitPrice || 0;
+            document.getElementById('currency').value = itemData.currency || ''; // Set currency from fetched data
         } else {
             title.textContent = 'Add New Price Book Item';
+            document.getElementById('item-type').value = 'Product'; // Default for new
+            document.getElementById('unit-price').value = 0; // Default for new
         }
-
         modal.classList.remove('hidden');
         setTimeout(() => { modal.querySelector('div').classList.remove('opacity-0', 'scale-95'); }, 10);
     },
 
     /**
-     * Closes the price book modal.
+     * Closes the price book item modal.
      */
     closePriceBookModal: function() {
         const modal = document.getElementById('price-book-modal');
@@ -327,40 +327,41 @@ export const PriceBook = {
     },
 
     /**
-     * Saves a new price book item or updates an existing one to Firestore.
+     * Saves a new price book item or updates an existing one.
      */
     savePriceBookItem: async function() {
-        // --- NEW: Login & Admin Requirement Check for save ---
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
-            this.Utils.showMessage('You must be logged in as an Admin to save price book items.', 'error');
+        // --- NEW: Login Requirement Check for save ---
+        if (!Auth.isLoggedIn()) {
+            this.Utils.showMessage('You must be logged in to save price book items.', 'error');
             this.closePriceBookModal();
             return;
         }
         // --- END NEW ---
 
         const itemName = document.getElementById('item-name').value.trim();
-        const itemDescription = document.getElementById('item-description').value.trim();
+        const itemType = document.getElementById('item-type').value;
+        const description = document.getElementById('item-description').value.trim();
         const unitPrice = parseFloat(document.getElementById('unit-price').value);
-        const isActive = document.getElementById('is-active').checked;
+        const currency = document.getElementById('currency').value;
 
-        if (!itemName || isNaN(unitPrice) || unitPrice < 0) {
-            this.Utils.showMessage('Item Name and a valid Unit Price (non-negative) are required.', 'warning');
+        if (!itemName || !itemType || isNaN(unitPrice) || unitPrice < 0 || !currency) {
+            this.Utils.showMessage('All fields are required (Item Name, Type, Unit Price, Currency) and Unit Price must be a positive number.', 'warning');
             return;
         }
 
         const itemData = {
             itemName: itemName,
-            itemDescription: itemDescription,
+            itemType: itemType,
+            description: description,
             unitPrice: unitPrice,
-            isActive: isActive,
-            updatedAt: new Date()
+            currency: currency
         };
 
         try {
-            const collectionRef = collection(this.db, "app_metadata", "app_settings", "price_books_data");
+            const collectionRef = collection(this.db, "app_data/global/price_book"); // Updated path
             if (this.currentEditingItemId) {
                 const itemRef = doc(collectionRef, this.currentEditingItemId);
-                await this.Utils.updateDoc(itemRef, itemData);
+                await this.Utils.updateDoc(itemRef, itemData); // Using Utils.updateDoc
                 this.Utils.showMessage('Price Book Item updated successfully!', 'success');
             } else {
                 itemData.createdAt = new Date();
@@ -375,22 +376,21 @@ export const PriceBook = {
 
     /**
      * Deletes a price book item from Firestore.
-     * @param {string} itemId - The ID of the item to delete.
-     * @param {string} itemName - The name of the item for confirmation message.
      */
-    deletePriceBookItem: async function(itemId, itemName) {
-        // --- NEW: Login & Admin Requirement Check for delete ---
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
-            this.Utils.showMessage('You must be logged in as an Admin to delete price book items.', 'error');
+    deletePriceBookItem: async function(id, itemName) {
+        // --- NEW: Login Requirement Check for delete ---
+        if (!Auth.isLoggedIn()) {
+            this.Utils.showMessage('You must be logged in to delete price book items.', 'error');
             return;
         }
         // --- END NEW ---
 
-        this.Utils.showMessage(`Are you sure you want to delete price book item "${itemName}"?`, 'warning', 0);
+        this.Utils.showMessage(`Are you sure you want to delete price book item "${itemName}"?`, 'warning', 0); // 0 duration for persistent
 
         const messageModalContainer = document.getElementById('message-modal-container');
         if (messageModalContainer) {
             const messageBox = messageModalContainer.querySelector('div');
+            // Remove existing buttons to avoid duplicates
             const existingButtons = messageBox.querySelectorAll('button:not(#message-close-btn)');
             existingButtons.forEach(btn => btn.remove());
 
@@ -399,12 +399,12 @@ export const PriceBook = {
             confirmBtn.className = 'bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg mt-4 mr-2 transition-colors duration-200';
             confirmBtn.onclick = async () => {
                 try {
-                    await deleteDoc(doc(this.db, "app_metadata", "app_settings", "price_books_data", itemId));
+                    await deleteDoc(doc(this.db, "app_data/global/price_book", id)); // Updated path
                     this.Utils.showMessage('Price Book Item deleted successfully!', 'success');
-                    messageModalContainer.classList.add('hidden');
+                    messageModalContainer.classList.add('hidden'); // Hide modal explicitly after action
                 } catch (error) {
                     this.Utils.handleError(error, "deleting price book item");
-                    messageModalContainer.classList.add('hidden');
+                    messageModalContainer.classList.add('hidden'); // Hide modal explicitly after action
                 }
             };
             const cancelBtn = document.createElement('button');
@@ -424,7 +424,7 @@ export const PriceBook = {
     },
 
     /**
-     * Detaches the real-time listener when the module is no longer active.
+     * Detaches all real-time listeners and destroys Grid.js instances.
      */
     destroy: function() {
         if (this.unsubscribe) {
@@ -436,9 +436,8 @@ export const PriceBook = {
             this.priceBookGrid.destroy();
             this.priceBookGrid = null;
         }
-        const priceBookModuleContent = document.getElementById('price-book-module-content');
-        if (priceBookModuleContent) {
-            priceBookModuleContent.innerHTML = '';
-        }
+        // Remove content from the DOM when destroying
+        // No need to clear innerHTML here, as Main.js will clear the specific moduleContentElement.
+        console.log("PriceBook module destroyed.");
     }
 };
