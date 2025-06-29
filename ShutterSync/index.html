@@ -52,7 +52,7 @@
                 <a href="#" data-module="opportunities" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Opportunities</a>
 
                 <!-- Admin Dropdown Menu -->
-                <div class="relative group">
+                <div class="relative group hidden"> <!-- Hidden by default, shown if isAdmin -->
                     <button class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200 flex items-center">
                         Admin <i class="fas fa-caret-down ml-2"></i>
                     </button>
@@ -64,7 +64,13 @@
                     </div>
                 </div>
 
-                <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-200">
+                <!-- User Info Display -->
+                <div class="flex items-center space-x-2 ml-4">
+                    <span id="user-icon-container" class="text-gray-300 hidden"><i class="fas fa-user-circle text-2xl"></i></span>
+                    <span id="user-display-name" class="text-gray-300 text-sm font-medium hidden"></span>
+                </div>
+
+                <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-200 hidden"> <!-- Hidden by default -->
                     <i class="fas fa-sign-out-alt mr-2"></i> Logout
                 </button>
             </div>
@@ -110,7 +116,7 @@
         const auth = getAuth(app);
 
         // Import modules
-        import Main from './js/main.js'; // <-- CHANGED THIS LINE: Now a default import
+        import Main from './js/main.js'; // <-- CORRECTED: Now a default import
         import { Auth } from './js/auth.js';
         import { Utils } from './js/utils.js';
         import { Customers } from './js/customers.js';
@@ -172,6 +178,8 @@
         Auth.onAuthReady(() => {
             const lastModule = localStorage.getItem('lastActiveModule') || 'customers';
             Main.loadModule(lastModule);
+            // This ensures the header UI is updated immediately after auth is ready
+            Main.updateUserHeaderUI(auth.currentUser);
         });
 
         // Initiate the login process (will handle initial token or anonymous)
