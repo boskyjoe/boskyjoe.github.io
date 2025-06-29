@@ -2,7 +2,7 @@
 
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, orderBy, startAfter, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
-import { Auth } from './auth.js'; // NEW: Import Auth to check login status
+import { Auth } from './auth.js';
 
 /**
  * The CustomersModule object handles all functionality related to customer management.
@@ -11,17 +11,10 @@ export const Customers = {
     db: null,
     auth: null,
     Utils: null,
-    unsubscribe: null, // To store the unsubscribe function for the real-time listener
-    currentEditingCustomerId: null, // Stores the ID of the customer being edited
-    customersGrid: null, // Grid.js instance for the customers table
+    unsubscribe: null,
+    currentEditingCustomerId: null,
+    customersGrid: null,
 
-    /**
-     * Initializes the Customers module.
-     * This method should only initialize core dependencies, not interact with the DOM yet.
-     * @param {object} firestoreDb - The Firestore database instance.
-     * @param {object} firebaseAuth - The Firebase Auth instance.
-     * @param {object} utils - The Utils object for common functionalities.
-     */
     init: function(firestoreDb, firebaseAuth, utils) {
         this.db = firestoreDb;
         this.auth = firebaseAuth;
@@ -29,10 +22,6 @@ export const Customers = {
         console.log("Customers module initialized.");
     },
 
-    /**
-     * Renders the main UI for the Customers module.
-     * This is called by Main.js when the 'customers' module is activated.
-     */
     renderCustomersUI: function() {
         const customersModuleContent = document.getElementById('customers-module-content');
         if (!customersModuleContent) {
@@ -40,7 +29,6 @@ export const Customers = {
             return;
         }
 
-        // --- NEW: Login Requirement Check ---
         if (!Auth.isLoggedIn()) {
             customersModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
@@ -51,15 +39,13 @@ export const Customers = {
                     </button>
                 </div>
             `;
-            // Attach event listener for the new button
             document.getElementById('go-to-login-btn')?.addEventListener('click', () => {
-                window.Main.loadModule('home'); // Redirect to home page
+                window.Main.loadModule('home');
             });
-            this.destroy(); // Clean up any previous grid/listeners
+            this.destroy();
             this.Utils.showMessage("Access Denied: Please log in to view Customers.", "error");
-            return; // Stop execution if not logged in
+            return;
         }
-        // --- END NEW ---
 
         customersModuleContent.innerHTML = `
             <div class="bg-white p-6 rounded-lg shadow-md mb-6">
@@ -81,8 +67,8 @@ export const Customers = {
                     <form id="customer-form">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
-                                <label for="customer-name" class="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                                <input type="text" id="customer-name" name="companyName" required
+                                <label for="customer-name-field" class="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                                <input type="text" id="customer-name-field" name="name" required
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             </div>
                             <div>
@@ -105,6 +91,49 @@ export const Customers = {
                                 <textarea id="customer-address" name="address" rows="2"
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                             </div>
+
+                            <!-- NEW Customer-Specific Fields based on Security Rules -->
+                            <div>
+                                <label for="customer-type" class="block text-sm font-medium text-gray-700 mb-1">Customer Type</label>
+                                <select id="customer-type" name="customerType"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <option value="">Select Type</option>
+                                    <option value="Individual">Individual</option>
+                                    <option value="Business">Business</option>
+                                    <option value="Non-Profit">Non-Profit</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="contact-method" class="block text-sm font-medium text-gray-700 mb-1">Preferred Contact Method</label>
+                                <select id="contact-method" name="preferredContactMethod"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <option value="">Select Method</option>
+                                    <option value="Email">Email</option>
+                                    <option value="Phone">Phone</option>
+                                    <option value="SMS">SMS</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="industry" class="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+                                <input type="text" id="industry" name="industry"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            </div>
+                            <div>
+                                <label for="customer-source" class="block text-sm font-medium text-gray-700 mb-1">Customer Source</label>
+                                <input type="text" id="customer-source" name="customerSource"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label for="additional-details" class="block text-sm font-medium text-gray-700 mb-1">Additional Details</label>
+                                <textarea id="additional-details" name="additionalDetails" rows="2"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                            </div>
+                            <div class="md:col-span-2 flex items-center">
+                                <input type="checkbox" id="customer-active" name="active" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <label for="customer-active" class="ml-2 block text-sm font-medium text-gray-700">Active Customer?</label>
+                            </div>
+                            <!-- END NEW Customer-Specific Fields -->
+
                         </div>
                         <div class="flex justify-end space-x-3 mt-6">
                             <button type="button" id="cancel-customer-btn"
@@ -129,23 +158,23 @@ export const Customers = {
      */
     setupRealtimeListener: function() {
         if (this.unsubscribe) {
-            this.unsubscribe(); // Detach existing listener if any
+            this.unsubscribe();
         }
 
         const userId = this.auth.currentUser ? this.auth.currentUser.uid : null;
         if (!userId) {
             console.log("No user ID found, cannot set up customer listener. (User likely not logged in or session expired)");
-            this.renderCustomersGrid([]); // Clear grid if not logged in
+            this.renderCustomersGrid([]);
             return;
         }
 
         const customersCollectionRef = collection(this.db, "customers");
         let q;
         if (this.Utils.isAdmin()) {
-            q = query(customersCollectionRef); // Admins see all customers
+            q = query(customersCollectionRef);
             console.log("Admin user: Fetching all customers.");
         } else {
-            q = query(customersCollectionRef, where("creatorId", "==", userId)); // Standard users see only their own
+            q = query(customersCollectionRef, where("creatorId", "==", userId));
             console.log("Standard user: Fetching customers created by:", userId);
         }
 
@@ -164,6 +193,7 @@ export const Customers = {
 
     /**
      * Renders or updates the Grid.js table with the provided customer data.
+     * Updated columns to reflect new fields.
      * @param {Array<object>} customers - An array of customer objects.
      */
     renderCustomersGrid: function(customers) {
@@ -175,23 +205,26 @@ export const Customers = {
 
         const columns = [
             { id: 'id', name: 'ID', hidden: true },
-            { id: 'companyName', name: 'Company Name', sort: true, width: 'auto' },
+            { id: 'name', name: 'Company Name', sort: true, width: 'auto' }, // Changed to 'name' to match rule
             { id: 'contactPerson', name: 'Contact Person', sort: true, width: 'auto' },
             { id: 'email', name: 'Email', width: 'auto' },
             { id: 'phone', name: 'Phone', width: '150px' },
             { id: 'address', name: 'Address', width: 'auto' },
+            { id: 'customerType', name: 'Type', width: '100px' }, // New Column
+            { id: 'industry', name: 'Industry', width: '120px' }, // New Column
+            { id: 'active', name: 'Active', width: '80px', formatter: (cell) => cell ? 'Yes' : 'No' }, // New Column
             {
                 name: 'Actions',
                 width: '100px',
                 formatter: (cell, row) => {
-                    const customerId = row.cells[0].data; // Get customer ID
-                    const customerData = customers.find(c => c.id === customerId); // Find full customer data
-                    const creatorId = customerData?.creatorId; // Get creatorId from original data
+                    const customerId = row.cells[0].data;
+                    const customerData = customers.find(c => c.id === customerId);
+                    const creatorId = customerData?.creatorId;
                     const isCurrentUserCreator = this.auth.currentUser && creatorId === this.auth.currentUser.uid;
                     const canEditOrDelete = this.Utils.isAdmin() || isCurrentUserCreator;
 
                     if (!canEditOrDelete) {
-                        return ''; // No actions if not allowed
+                        return '';
                     }
 
                     return gridjs.h('div', {
@@ -214,11 +247,14 @@ export const Customers = {
 
         const mappedData = customers.map(c => [
             c.id,
-            c.companyName || '',
+            c.name || '', // Changed to 'name'
             c.contactPerson || '',
             c.email || '',
             c.phone || '',
-            c.address || ''
+            c.address || '',
+            c.customerType || '', // New field
+            c.industry || '',     // New field
+            c.active || false     // New field
         ]);
 
         if (this.customersGrid) {
@@ -248,16 +284,10 @@ export const Customers = {
         }
     },
 
-    /**
-     * Attaches event listeners for UI interactions within the Customers module.
-     * This is called AFTER the HTML is rendered.
-     */
     attachEventListeners: function() {
         const addCustomerBtn = document.getElementById('add-customer-btn');
         if (addCustomerBtn) {
             addCustomerBtn.addEventListener('click', () => this.openCustomerModal('add'));
-        } else {
-            console.error("Add customer button not found after rendering.");
         }
 
         const customerForm = document.getElementById('customer-form');
@@ -283,32 +313,39 @@ export const Customers = {
         }
     },
 
-    /**
-     * Opens the customer add/edit modal.
-     * @param {string} mode - 'add' or 'edit'.
-     * @param {string|null} customerId - The ID of the customer to edit, if mode is 'edit'.
-     */
     openCustomerModal: async function(mode, customerId = null) {
+        if (!Auth.isLoggedIn()) {
+            this.Utils.showMessage('You must be logged in to add/edit customers.', 'error');
+            return;
+        }
+
         const modal = document.getElementById('customer-modal');
         const title = document.getElementById('customer-modal-title');
         const form = document.getElementById('customer-form');
 
-        form.reset(); // Clear previous form data
-        this.currentEditingCustomerId = null; // Clear ID for add mode
+        form.reset();
+        this.currentEditingCustomerId = null;
+        document.getElementById('customer-active').checked = true; // Default to active for new customers
 
         if (mode === 'edit' && customerId) {
             title.textContent = 'Edit Customer';
             this.currentEditingCustomerId = customerId;
             try {
-                // Fetch customer data to pre-fill form
                 const customerDoc = await getDoc(doc(this.db, 'customers', customerId));
                 if (customerDoc.exists()) {
                     const data = customerDoc.data();
-                    document.getElementById('customer-name').value = data.companyName || '';
+                    document.getElementById('customer-name-field').value = data.name || ''; // Changed ID
                     document.getElementById('contact-person').value = data.contactPerson || '';
                     document.getElementById('customer-email').value = data.email || '';
                     document.getElementById('customer-phone').value = data.phone || '';
                     document.getElementById('customer-address').value = data.address || '';
+                    // NEW fields for editing
+                    document.getElementById('customer-type').value = data.customerType || '';
+                    document.getElementById('contact-method').value = data.preferredContactMethod || '';
+                    document.getElementById('industry').value = data.industry || '';
+                    document.getElementById('customer-source').value = data.customerSource || '';
+                    document.getElementById('additional-details').value = data.additionalDetails || '';
+                    document.getElementById('customer-active').checked = data.active !== false; // Default to true if undefined
                 } else {
                     this.Utils.showMessage('Customer not found for editing.', 'error');
                     this.closeCustomerModal();
@@ -321,6 +358,13 @@ export const Customers = {
             }
         } else {
             title.textContent = 'Add New Customer';
+            // Default values for new customer that align with rule's hasAll
+            document.getElementById('customer-type').value = '';
+            document.getElementById('contact-method').value = '';
+            document.getElementById('industry').value = '';
+            document.getElementById('customer-source').value = '';
+            document.getElementById('additional-details').value = '';
+            document.getElementById('customer-active').checked = true; // Default active
         }
 
         modal.classList.remove('hidden');
@@ -329,59 +373,66 @@ export const Customers = {
         }, 10);
     },
 
-    /**
-     * Closes the customer modal.
-     */
     closeCustomerModal: function() {
         const modal = document.getElementById('customer-modal');
         if (modal) {
             modal.querySelector('div').classList.add('opacity-0', 'scale-95');
             modal.addEventListener('transitionend', () => {
                 modal.classList.add('hidden');
-                modal.removeAttribute('dataset.editingCustomerId'); // Clean up
+                modal.removeAttribute('dataset.editingCustomerId');
             }, { once: true });
         }
     },
 
-    /**
-     * Saves a new customer or updates an existing one to Firestore.
-     */
     saveCustomer: async function() {
-        const customerName = document.getElementById('customer-name').value.trim();
+        if (!Auth.isLoggedIn()) {
+            this.Utils.showMessage('You must be logged in to add a new customer.', 'error');
+            this.closeCustomerModal();
+            return;
+        }
+
+        // Renamed customerName to 'name' for rule consistency
+        const name = document.getElementById('customer-name-field').value.trim();
         const contactPerson = document.getElementById('contact-person').value.trim();
         const email = document.getElementById('customer-email').value.trim();
         const phone = document.getElementById('customer-phone').value.trim();
         const address = document.getElementById('customer-address').value.trim();
 
-        if (!customerName || !contactPerson) {
+        // NEW fields from UI (or default if no UI input)
+        const customerType = document.getElementById('customer-type').value || '';
+        const preferredContactMethod = document.getElementById('contact-method').value || '';
+        const industry = document.getElementById('industry').value.trim() || '';
+        const customerSource = document.getElementById('customer-source').value.trim() || '';
+        const additionalDetails = document.getElementById('additional-details').value.trim() || '';
+        const active = document.getElementById('customer-active').checked;
+
+        if (!name || !contactPerson) {
             this.Utils.showMessage('Company Name and Contact Person are required.', 'warning');
             return;
         }
 
         const customerData = {
-            companyName: customerName,
+            name: name, // Changed from companyName to name
             contactPerson: contactPerson,
             email: email,
             phone: phone,
             address: address,
+            customerType: customerType,                // NEW
+            preferredContactMethod: preferredContactMethod, // NEW
+            industry: industry,                      // NEW
+            additionalDetails: additionalDetails,      // NEW
+            customerSource: customerSource,            // NEW
+            active: active,                          // NEW
             updatedAt: new Date()
         };
 
         try {
             if (this.currentEditingCustomerId) {
-                // Update existing customer
                 const customerRef = doc(this.db, "customers", this.currentEditingCustomerId);
                 await this.Utils.updateDoc(customerRef, customerData);
                 this.Utils.showMessage('Customer updated successfully!', 'success');
             } else {
-                // Add new customer
-                // Ensure creatorId is set ONLY if user is logged in
-                if (!this.auth.currentUser) {
-                    this.Utils.showMessage('You must be logged in to add a new customer.', 'error');
-                    this.closeCustomerModal();
-                    return;
-                }
-                customerData.creatorId = this.auth.currentUser.uid; // Now guaranteed to be a logged-in user's UID
+                customerData.creatorId = this.auth.currentUser.uid;
                 customerData.createdAt = new Date();
                 await addDoc(collection(this.db, "customers"), customerData);
                 this.Utils.showMessage('Customer added successfully!', 'success');
@@ -392,18 +443,17 @@ export const Customers = {
         }
     },
 
-    /**
-     * Deletes a customer from Firestore.
-     * @param {string} customerId - The ID of the customer to delete.
-     * @param {string} customerName - The name of the customer for confirmation message.
-     */
     deleteCustomer: async function(customerId, customerName) {
-        this.Utils.showMessage(`Are you sure you want to delete customer "${customerName}"?`, 'warning', 0); // 0 duration for persistent
+        if (!Auth.isLoggedIn()) {
+            this.Utils.showMessage('You must be logged in to delete customers.', 'error');
+            return;
+        }
+
+        this.Utils.showMessage(`Are you sure you want to delete customer "${customerName}"?`, 'warning', 0);
 
         const messageModalContainer = document.getElementById('message-modal-container');
         if (messageModalContainer) {
             const messageBox = messageModalContainer.querySelector('div');
-            // Remove existing buttons to avoid duplicates
             const existingButtons = messageBox.querySelectorAll('button:not(#message-close-btn)');
             existingButtons.forEach(btn => btn.remove());
 
@@ -414,10 +464,10 @@ export const Customers = {
                 try {
                     await deleteDoc(doc(this.db, "customers", customerId));
                     this.Utils.showMessage('Customer deleted successfully!', 'success');
-                    messageModalContainer.classList.add('hidden'); // Hide modal explicitly after action
+                    messageModalContainer.classList.add('hidden');
                 } catch (error) {
                     this.Utils.handleError(error, "deleting customer");
-                    messageModalContainer.classList.add('hidden'); // Hide modal explicitly after action
+                    messageModalContainer.classList.add('hidden');
                 }
             };
             const cancelBtn = document.createElement('button');
@@ -436,9 +486,6 @@ export const Customers = {
         }
     },
 
-    /**
-     * Detaches the real-time listener when the module is no longer active.
-     */
     destroy: function() {
         if (this.unsubscribe) {
             this.unsubscribe();
@@ -449,7 +496,6 @@ export const Customers = {
             this.customersGrid.destroy();
             this.customersGrid = null;
         }
-        // Remove content from the DOM when destroying
         const customersModuleContent = document.getElementById('customers-module-content');
         if (customersModuleContent) {
             customersModuleContent.innerHTML = '';
