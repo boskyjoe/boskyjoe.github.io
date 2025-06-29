@@ -1,208 +1,118 @@
 // js/opportunities.js
 
-// Ensure Grid.js is loaded globally in index.html, not here.
-// <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
-// <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
-
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
 
 /**
- * The Opportunities object handles all functionality related to opportunity management.
+ * The OpportunitiesModule object handles all functionality related to opportunity management.
  */
 export const Opportunities = {
     db: null,
     auth: null,
-    unsubscribe: null,
-    selectedOpportunityId: null,
-    opportunitiesData: [],
-    grid: null,
-    currenciesMap: new Map(), // Cache for currency data (code -> {name, symbol_native, symbol})
+    Utils: null,
+    unsubscribe: null, // To store the unsubscribe function for the real-time listener
+    currentEditingOpportunityId: null, // Stores the ID of the opportunity being edited
+    opportunitiesGrid: null, // Grid.js instance for the opportunities table
 
     /**
      * Initializes the Opportunities module.
+     * This method should only initialize core dependencies, not interact with the DOM yet.
+     * @param {object} firestoreDb - The Firestore database instance.
+     * @param {object} firebaseAuth - The Firebase Auth instance.
+     * @param {object} utils - The Utils object for common functionalities.
      */
     init: function(firestoreDb, firebaseAuth, utils) {
         this.db = firestoreDb;
         this.auth = firebaseAuth;
         this.Utils = utils;
-
         console.log("Opportunities module initialized.");
 
-        this.renderOpportunitiesUI();
-        this.setupRealtimeListener();
-        this.attachEventListeners();
+        // Do NOT call renderOpportunitiesUI or attachEventListeners here.
+        // They depend on the module's HTML being loaded into the DOM by Main.loadModule.
     },
 
     /**
      * Renders the main UI for the Opportunities module.
+     * This is called by Main.js when the 'opportunities' module is activated.
      */
     renderOpportunitiesUI: function() {
         const opportunitiesModuleContent = document.getElementById('opportunities-module-content');
-        if (opportunitiesModuleContent) {
-            opportunitiesModuleContent.innerHTML = `
-                <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-2xl font-semibold text-gray-800">Opportunity List</h3>
-                        <button id="add-opportunity-btn"
-                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-                            <i class="fas fa-plus mr-2"></i> Add New Opportunity
-                        </button>
-                    </div>
-                    <div id="opportunity-grid-container" class="border border-gray-200 rounded-lg overflow-hidden"></div>
-                </div>
-
-                <div id="opportunity-detail-view" class="bg-white p-6 rounded-lg shadow-md mt-6 hidden">
-                    <h3 class="text-2xl font-semibold text-gray-800 mb-4" id="detail-view-title">Opportunity Details</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div><strong class="text-gray-700">Name:</strong> <span id="detail-name"></span></div>
-                        <div><strong class="text-gray-700">Customer:</strong> <span id="detail-customer"></span></div>
-                        <div><strong class="text-gray-700">Status:</strong> <span id="detail-status"></span></div>
-                        <div><strong class="text-gray-700">Value:</strong> <span id="detail-value"></span></div>
-                        <div><strong class="text-gray-700">Currency:</strong> <span id="detail-currency"></span></div>
-                        <div><strong class="text-gray-700">Event Type:</strong> <span id="detail-event-type"></span></div>
-                        <div class="col-span-1 md:col-span-2"><strong class="text-gray-700">Location:</strong> <span id="detail-location"></span></div>
-                        <div class="col-span-1 md:col-span-2"><strong class="text-gray-700">Description:</strong> <span id="detail-description"></span></div>
-                        <div><strong class="text-gray-700">Active:</strong> <span id="detail-active"></span></div>
-                        <div><strong class="text-gray-700">Close Date:</strong> <span id="detail-close-date"></span></div>
-                        <div><strong class="text-gray-700">Created By:</strong> <span id="detail-created-by"></span></div>
-                        <div><strong class="text-gray-700">Created At:</strong> <span id="detail-created-at"></span></div>
-                        <div><strong class="text-gray-700">Updated At:</strong> <span id="detail-updated-at"></span></div>
-                    </div>
-
-                    <div class="mt-8 border-t pt-6 border-gray-200">
-                        <h4 class="text-xl font-semibold text-gray-800 mb-4">Related Information</h4>
-
-                        <div class="bg-gray-50 p-4 rounded-lg mb-4">
-                            <div class="flex justify-between items-center mb-4">
-                                <h5 class="text-lg font-semibold text-gray-700">Opportunity Lines</h5>
-                                <button id="add-line-btn" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm"><i class="fas fa-plus mr-1"></i> Add Line</button>
-                            </div>
-                            <div id="opportunity-lines-grid" class="border border-gray-200 rounded-lg overflow-hidden"></div>
-                        </div>
-
-                        <div class="bg-gray-50 p-4 rounded-lg mb-4">
-                            <div class="flex justify-between items-center mb-4">
-                                <h5 class="text-lg font-semibold text-gray-700">Opportunity Contacts</h5>
-                                <button id="add-contact-btn" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm"><i class="fas fa-plus mr-1"></i> Add Contact</button>
-                            </div>
-                            <div id="opportunity-contacts-grid" class="border border-gray-200 rounded-lg overflow-hidden"></div>
-                        </div>
-
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <div class="flex justify-between items-center mb-4">
-                                <h5 class="text-lg font-semibold text-gray-700">Quotes</h5>
-                                <button id="add-quote-btn" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm"><i class="fas fa-plus mr-1"></i> Add Quote</button>
-                            </div>
-                            <div id="opportunity-quotes-grid" class="border border-gray-200 rounded-lg overflow-hidden"></div>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-end space-x-3 mt-6">
-                        <button id="close-detail-btn"
-                            class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors duration-200">
-                            Close Details
-                        </button>
-                    </div>
-                </div>
-
-                <div id="opportunity-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[900] hidden">
-                    <div class="bg-white p-8 rounded-lg shadow-2xl max-w-lg w-full transform transition-all duration-300 scale-95 opacity-0">
-                        <h4 id="opportunity-modal-title" class="text-2xl font-bold text-gray-800 mb-6">Add New Opportunity</h4>
-                        <form id="opportunity-form">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label for="opportunity-name" class="block text-sm font-medium text-gray-700 mb-1">Opportunity Name</label>
-                                    <input type="text" id="opportunity-name" name="name" required
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                </div>
-                                <div>
-                                    <label for="opportunity-customer" class="block text-sm font-medium text-gray-700 mb-1">Customer</label>
-                                    <select id="opportunity-customer" name="customer" required
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                    </select>
-                                </div>
-                                <div>
-                                    <label for="opportunity-status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                                    <select id="opportunity-status" name="status"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                        <option value="Prospecting">Prospecting</option>
-                                        <option value="Qualification">Qualification</option>
-                                        <option value="Proposal">Proposal</option>
-                                        <option value="Negotiation">Negotiation</option>
-                                        <option value="Closed Won">Closed Won</option>
-                                        <option value="Closed Lost">Closed Lost</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label for="opportunity-close-date" class="block text-sm font-medium text-gray-700 mb-1">Expected Close Date</label>
-                                    <input type="date" id="opportunity-close-date" name="closeDate"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                </div>
-
-                                <div>
-                                    <label for="opportunity-currency" class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
-                                    <select id="opportunity-currency" name="currency" required
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                    </select>
-                                </div>
-                                <div id="opportunity-value-group" class="hidden">
-                                    <label for="opportunity-value" class="block text-sm font-medium text-gray-700 mb-1" id="opportunity-value-label">Value ($)</label>
-                                    <input type="number" id="opportunity-value" name="value" step="0.01" min="0"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                </div>
-
-                                <div>
-                                    <label for="opportunity-event-type" class="block text-sm font-medium text-gray-700 mb-1">Event Type</label>
-                                    <select id="opportunity-event-type" name="eventType"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                        <option value="">Select Type</option>
-                                        <option value="Save the Day">Save the Day</option>
-                                        <option value="Pre-Wedding Photo Shoot">Pre-Wedding Photo Shoot</option>
-                                        <option value="Wedding">Wedding</option>
-                                        <option value="Post-Wedding Photo Shoot">Post-Wedding Photo Shoot</option>
-                                        <option value="Baby Shower">Baby Shower</option>
-                                        <option value="Corporate Event">Corporate Event</option>
-                                        <option value="Product Launch">Product Launch</option>
-                                        <option value="Political Meeting">Political Meeting</option>
-                                        <option value="Others">Others</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label for="opportunity-active-status" class="block text-sm font-medium text-gray-700 mb-1">Active Status</label>
-                                    <select id="opportunity-active-status" name="active"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                        <option value="Active">Active</option>
-                                        <option value="Inactive">Inactive</option>
-                                    </select>
-                                </div>
-
-                                <div class="col-span-1 md:col-span-2">
-                                    <label for="opportunity-location" class="block text-sm font-medium text-gray-700 mb-1">Proposed Event Location</label>
-                                    <textarea id="opportunity-location" name="proposedEventLocation" rows="3"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
-                                </div>
-                                <div class="col-span-1 md:col-span-2">
-                                    <label for="opportunity-description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                    <textarea id="opportunity-description" name="description" rows="3"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
-                                </div>
-                            </div>
-                            <div class="flex justify-end space-x-3 mt-6">
-                                <button type="button" id="cancel-opportunity-btn"
-                                    class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors duration-200">
-                                    Cancel
-                                </button>
-                                <button type="submit" id="save-opportunity-btn"
-                                    class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
-                                    Save Opportunity
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            `;
+        if (!opportunitiesModuleContent) {
+            console.error("Opportunities module content area not found in DOM.");
+            return;
         }
+
+        opportunitiesModuleContent.innerHTML = `
+            <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-semibold text-gray-800">Opportunity Management</h3>
+                    <button id="add-opportunity-btn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-200">
+                        <i class="fas fa-plus mr-2"></i> Add Opportunity
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 mb-4">Track and manage your sales opportunities.</p>
+                <div id="opportunities-grid-container" class="border border-gray-200 rounded-lg overflow-hidden"></div>
+            </div>
+
+            <!-- Opportunity Modal (Add/Edit Form) -->
+            <div id="opportunity-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[900] hidden">
+                <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full transform transition-all duration-300 scale-95 opacity-0">
+                    <h4 id="opportunity-modal-title" class="text-2xl font-bold text-gray-800 mb-6">Add New Opportunity</h4>
+                    <form id="opportunity-form">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="opportunity-name" class="block text-sm font-medium text-gray-700 mb-1">Opportunity Name</label>
+                                <input type="text" id="opportunity-name" name="name" required
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            </div>
+                            <div>
+                                <label for="customer-select" class="block text-sm font-medium text-gray-700 mb-1">Customer</label>
+                                <select id="customer-select" name="customerId" required
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <option value="">Select Customer</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="stage-select" class="block text-sm font-medium text-gray-700 mb-1">Stage</label>
+                                <select id="stage-select" name="stage" required
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <option value="New">New</option>
+                                    <option value="Qualification">Qualification</option>
+                                    <option value="Proposal">Proposal</option>
+                                    <option value="Negotiation">Negotiation</option>
+                                    <option value="Closed Won">Closed Won</option>
+                                    <option value="Closed Lost">Closed Lost</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
+                                <input type="number" id="amount" name="amount" min="0" step="0.01"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label for="close-date" class="block text-sm font-medium text-gray-700 mb-1">Expected Close Date</label>
+                                <input type="date" id="close-date" name="expectedCloseDate"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            </div>
+                        </div>
+                        <div class="flex justify-end space-x-3 mt-6">
+                            <button type="button" id="cancel-opportunity-btn"
+                                class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors duration-200">
+                                Cancel
+                            </button>
+                            <button type="submit" id="save-opportunity-btn"
+                                class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                                Save Opportunity
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        // After rendering HTML, attach event listeners and setup the real-time listener
+        this.attachEventListeners();
+        this.setupRealtimeListener();
     },
 
     /**
@@ -210,147 +120,110 @@ export const Opportunities = {
      */
     setupRealtimeListener: function() {
         if (this.unsubscribe) {
-            this.unsubscribe();
+            this.unsubscribe(); // Detach existing listener if any
         }
 
+        const userId = this.auth.currentUser ? this.auth.currentUser.uid : null;
+        if (!userId) {
+            console.log("User not logged in, cannot set up opportunity listener.");
+            // Render an empty grid or display a message
+            this.renderOpportunitiesGrid([]);
+            return;
+        }
+
+        const opportunitiesCollectionRef = collection(this.db, "opportunities");
         let q;
         if (this.Utils.isAdmin()) {
-            q = query(collection(this.db, "opportunities"));
+            q = query(opportunitiesCollectionRef); // Admins see all opportunities
             console.log("Admin user: Fetching all opportunities.");
         } else {
-            const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
-            if (!currentUserId) {
-                console.warn("User not logged in, cannot fetch opportunities.");
-                this.Utils.showMessage("Please log in to view opportunities.", "info");
-                return;
-            }
-            q = query(collection(this.db, "opportunities"), where("creatorId", "==", currentUserId));
-            console.log("Standard user: Fetching opportunities created by:", currentUserId);
+            q = query(opportunitiesCollectionRef, where("creatorId", "==", userId)); // Standard users see only their own
+            console.log("Standard user: Fetching opportunities created by:", userId);
         }
 
         this.unsubscribe = onSnapshot(q, async (snapshot) => {
             const opportunities = [];
-            for (const opportunityDoc of snapshot.docs) {
-                const oppData = opportunityDoc.data();
-                const oppId = opportunityDoc.id;
+            const customerNamesMap = new Map(); // Cache for customer names
 
-                let customerName = 'N/A';
-                if (oppData.customerId) {
+            for (const docSnapshot of snapshot.docs) {
+                const data = docSnapshot.data();
+                let customerName = 'Unknown Customer';
+
+                // Fetch customer name if not already cached
+                if (data.customerId && !customerNamesMap.has(data.customerId)) {
                     try {
-                        const customerDoc = await getDoc(doc(this.db, 'customers', oppData.customerId));
+                        const customerDoc = await getDoc(doc(this.db, "customers", data.customerId));
                         if (customerDoc.exists()) {
-                            customerName = customerDoc.data().name;
+                            customerNamesMap.set(data.customerId, customerDoc.data().companyName);
+                        } else {
+                            customerNamesMap.set(data.customerId, 'Customer Deleted');
                         }
                     } catch (error) {
-                        console.error("Error fetching customer name:", error);
+                        console.error("Error fetching customer name for opportunity:", error);
+                        customerNamesMap.set(data.customerId, 'Error Fetching Customer');
                     }
                 }
-
-                let createdByDisplayName = 'Unknown User';
-                if (oppData.creatorId) {
-                    try {
-                        const userDoc = await getDoc(doc(this.db, 'users_data', oppData.creatorId));
-                        if (userDoc.exists()) {
-                            createdByDisplayName = userDoc.data().displayName || userDoc.data().email || 'Unknown User';
-                        }
-                    } catch (error) {
-                        console.error("Error fetching creator name:", error);
-                    }
-                }
+                customerName = customerNamesMap.get(data.customerId) || customerName;
 
                 opportunities.push({
-                    id: oppId,
-                    name: oppData.name,
-                    customerId: oppData.customerId,
+                    id: docSnapshot.id,
                     customerName: customerName,
-                    status: oppData.status,
-                    value: oppData.value,
-                    currency: oppData.currency || '',
-                    eventType: oppData.eventType || '',
-                    proposedEventLocation: oppData.proposedEventLocation || '',
-                    description: oppData.description || '',
-                    active: oppData.active || 'Active',
-                    closeDate: oppData.closeDate,
-                    creatorId: oppData.creatorId,
-                    creatorName: createdByDisplayName,
-                    createdAt: oppData.createdAt ? oppData.createdAt.toDate() : null,
-                    updatedAt: oppData.updatedAt ? oppData.updatedAt.toDate() : null
+                    ...data
                 });
             }
-            this.opportunitiesData = opportunities;
+            this.renderOpportunitiesGrid(opportunities);
             console.log("Opportunities data updated:", opportunities);
-            this.renderOpportunityGrid(opportunities);
         }, (error) => {
             this.Utils.handleError(error, "fetching opportunities data");
+            // Render an empty grid or display an error message
+            this.renderOpportunitiesGrid([]);
         });
     },
 
     /**
      * Renders or updates the Grid.js table with the provided opportunity data.
+     * @param {Array<object>} opportunities - An array of opportunity objects.
      */
-    renderOpportunityGrid: function(opportunities) {
-        const gridContainer = document.getElementById('opportunity-grid-container');
+    renderOpportunitiesGrid: function(opportunities) {
+        const gridContainer = document.getElementById('opportunities-grid-container');
         if (!gridContainer) {
-            console.error("Opportunity grid container not found.");
+            console.error("Opportunities grid container not found.");
             return;
         }
 
         const columns = [
             { id: 'id', name: 'ID', hidden: true },
             { id: 'name', name: 'Opportunity Name', sort: true, width: 'auto' },
-            { id: 'customerName', name: 'Customer', sort: true, width: 'auto' },
-            { id: 'status', name: 'Status', sort: true, width: '120px' },
-            {
-                id: 'value',
-                name: 'Value',
-                sort: true,
-                width: '150px',
-                formatter: (cell, row) => {
-                    const value = parseFloat(cell || 0).toFixed(2);
-                    const currencyCode = row.cells[5].data; // Currency code from mappedData array (position 5)
-                    let symbolNative = '';
-                    if (currencyCode && this.currenciesMap.has(currencyCode)) {
-                        symbolNative = this.currenciesMap.get(currencyCode).symbol_native;
-                    }
-                    return `${symbolNative}${value} (${currencyCode})`;
-                }
-            },
-            { id: 'currency', name: 'Currency', sort: true, width: '100px' },
-            { id: 'eventType', name: 'Event Type', sort: true, width: '150px' },
-            { id: 'active', name: 'Active', sort: true, width: '80px' },
-            { id: 'closeDate', name: 'Close Date', sort: true, width: '120px' },
-            { id: 'creatorName', name: 'Created By', sort: true, width: 'auto' },
+            { id: 'customerName', name: 'Customer', sort: true, width: 'auto' }, // Display name, not ID
+            { id: 'stage', name: 'Stage', sort: true, width: '120px' },
+            { id: 'amount', name: 'Amount ($)', sort: true, width: '120px', formatter: (cell) => cell ? `$${parseFloat(cell).toFixed(2)}` : '$0.00' },
+            { id: 'expectedCloseDate', name: 'Close Date', sort: true, width: '150px', formatter: (cell) => cell ? new Date(cell).toLocaleDateString() : '' },
             {
                 name: 'Actions',
-                width: '120px',
+                width: '100px',
                 formatter: (cell, row) => {
-                    const oppId = row.cells[0].data;
-                    const oppName = row.cells[1].data;
+                    const opportunityId = row.cells[0].data;
+                    const opportunityData = opportunities.find(o => o.id === opportunityId);
+                    const isCurrentUserCreator = this.auth.currentUser && opportunityData?.creatorId === this.auth.currentUser.uid;
+                    const canEditOrDelete = this.Utils.isAdmin() || isCurrentUserCreator;
 
-                    const opp = this.opportunitiesData.find(o => o.id === oppId);
-                    const isCreator = opp && opp.creatorId === (this.auth.currentUser ? this.auth.currentUser.uid : null);
-                    const isAdmin = this.Utils.isAdmin();
-
-                    const canEditDelete = isCreator || isAdmin;
+                    if (!canEditOrDelete) {
+                        return ''; // No actions if not allowed
+                    }
 
                     return gridjs.h('div', {
                         className: 'flex items-center justify-center space-x-2'
                     }, [
                         gridjs.h('button', {
-                            className: 'p-1 rounded-md text-gray-600 hover:bg-blue-100 hover:text-blue-600 transition-colors duration-200',
-                            title: 'View Opportunity Details',
-                            onClick: () => this.viewOpportunityDetails(oppId)
-                        }, gridjs.h('i', { className: 'fas fa-eye text-lg' })),
-                        canEditDelete ? gridjs.h('button', {
                             className: 'p-1 rounded-md text-gray-600 hover:bg-yellow-100 hover:text-yellow-600 transition-colors duration-200',
                             title: 'Edit Opportunity',
-                            onClick: () => this.editOpportunity(oppId)
-                        }, gridjs.h('i', { className: 'fas fa-edit text-lg' })) : '',
-                        canEditDelete ? gridjs.h('button', {
+                            onClick: () => this.openOpportunityModal('edit', opportunityId)
+                        }, gridjs.h('i', { className: 'fas fa-edit text-lg' })),
+                        gridjs.h('button', {
                             className: 'p-1 rounded-md text-gray-600 hover:bg-red-100 hover:text-red-600 transition-colors duration-200',
                             title: 'Delete Opportunity',
-                            onClick: () => this.deleteOpportunity(oppId, oppName)
-                        }, gridjs.h('i', { className: 'fas fa-trash-alt text-lg' })) : ''
+                            onClick: () => this.deleteOpportunity(opportunityId, row.cells[1].data)
+                        }, gridjs.h('i', { className: 'fas fa-trash-alt text-lg' }))
                     ]);
                 }
             }
@@ -358,23 +231,19 @@ export const Opportunities = {
 
         const mappedData = opportunities.map(o => [
             o.id,
-            o.name,
-            o.customerName,
-            o.status,
-            o.value,
-            o.currency,
-            o.eventType,
-            o.active,
-            o.closeDate,
-            o.creatorName
+            o.name || '',
+            o.customerName || '',
+            o.stage || '',
+            o.amount || 0,
+            o.expectedCloseDate ? new Date(o.expectedCloseDate.toDate ? o.expectedCloseDate.toDate() : o.expectedCloseDate).toISOString().split('T')[0] : ''
         ]);
 
-        if (this.grid) {
-            this.grid.updateConfig({
+        if (this.opportunitiesGrid) {
+            this.opportunitiesGrid.updateConfig({
                 data: mappedData
             }).forceRender();
         } else {
-            this.grid = new gridjs.Grid({
+            this.opportunitiesGrid = new gridjs.Grid({
                 columns: columns,
                 data: mappedData,
                 sort: true,
@@ -397,10 +266,51 @@ export const Opportunities = {
     },
 
     /**
-     * Attaches event listeners for UI interactions.
+     * Populates the customer dropdown in the opportunity modal.
+     */
+    populateCustomerDropdown: async function() {
+        const customerSelect = document.getElementById('customer-select');
+        customerSelect.innerHTML = '<option value="">Select Customer</option>';
+
+        const userId = this.auth.currentUser ? this.auth.currentUser.uid : null;
+        if (!userId) {
+            console.log("No user ID found, cannot populate customer dropdown.");
+            return;
+        }
+
+        const customersCollectionRef = collection(this.db, "customers");
+        let q;
+        if (this.Utils.isAdmin()) {
+            q = query(customersCollectionRef); // Admins can link to any customer
+        } else {
+            q = query(customersCollectionRef, where("creatorId", "==", userId)); // Standard users can only link to their own customers
+        }
+
+        try {
+            const querySnapshot = await getDocs(q);
+            querySnapshot.forEach((doc) => {
+                const customer = doc.data();
+                const option = document.createElement('option');
+                option.value = doc.id;
+                option.textContent = customer.companyName;
+                customerSelect.appendChild(option);
+            });
+        } catch (error) {
+            this.Utils.handleError(error, "populating customer dropdown");
+        }
+    },
+
+    /**
+     * Attaches event listeners for UI interactions within the Opportunities module.
+     * This is called AFTER the HTML is rendered.
      */
     attachEventListeners: function() {
-        document.getElementById('add-opportunity-btn').addEventListener('click', () => this.openOpportunityModal('add'));
+        const addOpportunityBtn = document.getElementById('add-opportunity-btn');
+        if (addOpportunityBtn) {
+            addOpportunityBtn.addEventListener('click', () => this.openOpportunityModal('add'));
+        } else {
+            console.error("Add opportunity button not found after rendering.");
+        }
 
         const opportunityForm = document.getElementById('opportunity-form');
         if (opportunityForm) {
@@ -410,7 +320,10 @@ export const Opportunities = {
             });
         }
 
-        document.getElementById('cancel-opportunity-btn').addEventListener('click', () => this.closeOpportunityModal());
+        const cancelOpportunityBtn = document.getElementById('cancel-opportunity-btn');
+        if (cancelOpportunityBtn) {
+            cancelOpportunityBtn.addEventListener('click', () => this.closeOpportunityModal());
+        }
 
         const opportunityModal = document.getElementById('opportunity-modal');
         if (opportunityModal) {
@@ -420,147 +333,49 @@ export const Opportunities = {
                 }
             });
         }
-
-        document.getElementById('close-detail-btn').addEventListener('click', () => {
-            document.getElementById('opportunity-detail-view').classList.add('hidden');
-            this.selectedOpportunityId = null;
-        });
-
-        const currencySelect = document.getElementById('opportunity-currency');
-        const valueGroup = document.getElementById('opportunity-value-group');
-        const valueInput = document.getElementById('opportunity-value');
-        const valueLabel = document.getElementById('opportunity-value-label');
-
-        if (currencySelect && valueGroup && valueInput && valueLabel) {
-            currencySelect.addEventListener('change', () => {
-                const selectedCurrencyCode = currencySelect.value;
-                if (selectedCurrencyCode) {
-                    valueGroup.classList.remove('hidden');
-                    const currencyInfo = this.currenciesMap.get(selectedCurrencyCode);
-                    if (currencyInfo && currencyInfo.symbol_native) {
-                        valueLabel.textContent = `Value (${currencyInfo.symbol_native})`;
-                    } else {
-                        valueLabel.textContent = `Value (${selectedCurrencyCode})`;
-                    }
-                } else {
-                    valueGroup.classList.add('hidden');
-                    valueInput.value = '';
-                    valueLabel.textContent = `Value ($)`;
-                }
-            });
-        }
-
-        document.getElementById('add-line-btn').addEventListener('click', () => this.Utils.showMessage('Add Opportunity Line functionality coming soon!', 'info'));
-        document.getElementById('add-contact-btn').addEventListener('click', () => this.Utils.showMessage('Add Opportunity Contact functionality coming soon!', 'info'));
-        document.getElementById('add-quote-btn').addEventListener('click', () => this.Utils.showMessage('Add Quote functionality coming soon!', 'info'));
-    },
-
-    /**
-     * Populates the customer dropdown in the opportunity modal.
-     */
-    populateCustomerDropdown: async function() {
-        const customerSelect = document.getElementById('opportunity-customer');
-        customerSelect.innerHTML = '<option value="">Select a Customer</option>';
-
-        try {
-            const customersCollection = collection(this.db, "customers");
-            const q = query(customersCollection);
-            const querySnapshot = await getDocs(q);
-            querySnapshot.forEach((doc) => {
-                const customer = doc.data();
-                const option = document.createElement('option');
-                option.value = doc.id;
-                option.textContent = customer.name;
-                customerSelect.appendChild(option);
-            });
-        } catch (error) {
-            this.Utils.handleError(error, "populating customer dropdown");
-        }
-    },
-
-    /**
-     * Populates the currency dropdown in the opportunity modal.
-     */
-    populateCurrencyDropdown: async function() {
-        const currencySelect = document.getElementById('opportunity-currency');
-        currencySelect.innerHTML = '<option value="">Select a Currency</option>';
-        this.currenciesMap.clear();
-
-        try {
-            const currenciesCollection = collection(this.db, "app_metadata/app_settings/currencies_data");
-            const q = query(currenciesCollection);
-            const querySnapshot = await getDocs(q);
-            querySnapshot.forEach((doc) => {
-                const currency = doc.data();
-                this.currenciesMap.set(currency.currencyCode, {
-                    currencyName: currency.currencyName,
-                    symbol: currency.symbol,
-                    symbol_native: currency.symbol_native
-                });
-
-                const option = document.createElement('option');
-                option.value = currency.currencyCode;
-                option.textContent = `${currency.currencyName} (${currency.currencyCode}) - ${currency.symbol_native}`;
-                currencySelect.appendChild(option);
-            });
-        } catch (error) {
-            this.Utils.handleError(error, "populating currency dropdown");
-        }
     },
 
     /**
      * Opens the opportunity add/edit modal.
+     * @param {string} mode - 'add' or 'edit'.
+     * @param {string|null} opportunityId - The ID of the opportunity to edit, if mode is 'edit'.
      */
-    openOpportunityModal: async function(mode, opportunityData = null) {
+    openOpportunityModal: async function(mode, opportunityId = null) {
         const modal = document.getElementById('opportunity-modal');
         const title = document.getElementById('opportunity-modal-title');
         const form = document.getElementById('opportunity-form');
-        const valueGroup = document.getElementById('opportunity-value-group');
-        const valueInput = document.getElementById('opportunity-value');
-        const valueLabel = document.getElementById('opportunity-value-label');
 
-        form.reset();
-        this.selectedOpportunityId = null;
+        form.reset(); // Clear previous form data
+        this.currentEditingOpportunityId = null; // Clear ID for add mode
 
-        await this.populateCustomerDropdown();
-        await this.populateCurrencyDropdown();
+        await this.populateCustomerDropdown(); // Populate customer dropdown first
 
-        if (mode === 'edit' && opportunityData) {
+        if (mode === 'edit' && opportunityId) {
             title.textContent = 'Edit Opportunity';
-            this.selectedOpportunityId = opportunityData.id;
-            document.getElementById('opportunity-name').value = opportunityData.name || '';
-            document.getElementById('opportunity-customer').value = opportunityData.customerId || '';
-            document.getElementById('opportunity-status').value = opportunityData.status || 'Prospecting';
-            document.getElementById('opportunity-value').value = opportunityData.value || '';
-            document.getElementById('opportunity-close-date').value = opportunityData.closeDate || '';
-
-            document.getElementById('opportunity-currency').value = opportunityData.currency || '';
-            document.getElementById('opportunity-event-type').value = opportunityData.eventType || '';
-            document.getElementById('opportunity-location').value = opportunityData.proposedEventLocation || '';
-            document.getElementById('opportunity-description').value = opportunityData.description || '';
-            document.getElementById('opportunity-active-status').value = opportunityData.active || 'Active';
-
-            if (opportunityData.currency) {
-                valueGroup.classList.remove('hidden');
-                const currencyInfo = this.currenciesMap.get(opportunityData.currency);
-                if (currencyInfo && currencyInfo.symbol_native) {
-                    valueLabel.textContent = `Value (${currencyInfo.symbol_native})`;
+            this.currentEditingOpportunityId = opportunityId;
+            try {
+                // Fetch opportunity data to pre-fill form
+                const opportunityDoc = await getDoc(doc(this.db, 'opportunities', opportunityId));
+                if (opportunityDoc.exists()) {
+                    const data = opportunityDoc.data();
+                    document.getElementById('opportunity-name').value = data.name || '';
+                    document.getElementById('customer-select').value = data.customerId || '';
+                    document.getElementById('stage-select').value = data.stage || 'New';
+                    document.getElementById('amount').value = data.amount || '';
+                    document.getElementById('close-date').value = data.expectedCloseDate ? new Date(data.expectedCloseDate.toDate ? data.expectedCloseDate.toDate() : data.expectedCloseDate).toISOString().split('T')[0] : '';
                 } else {
-                    valueLabel.textContent = `Value (${opportunityData.currency})`;
+                    this.Utils.showMessage('Opportunity not found for editing.', 'error');
+                    this.closeOpportunityModal();
+                    return;
                 }
-            } else {
-                valueGroup.classList.add('hidden');
-                valueInput.value = '';
-                valueLabel.textContent = `Value ($)`;
+            } catch (error) {
+                this.Utils.handleError(error, "fetching opportunity for edit");
+                this.closeOpportunityModal();
+                return;
             }
-
         } else {
             title.textContent = 'Add New Opportunity';
-            document.getElementById('opportunity-status').value = 'Prospecting';
-            document.getElementById('opportunity-active-status').value = 'Active';
-            valueGroup.classList.add('hidden');
-            valueInput.value = '';
-            valueLabel.textContent = `Value ($)`;
+            document.getElementById('stage-select').value = 'New'; // Default for new
         }
 
         modal.classList.remove('hidden');
@@ -570,14 +385,16 @@ export const Opportunities = {
     },
 
     /**
-     * Closes the opportunity add/edit modal.
+     * Closes the opportunity modal.
      */
     closeOpportunityModal: function() {
         const modal = document.getElementById('opportunity-modal');
-        modal.querySelector('div').classList.add('opacity-0', 'scale-95');
-        modal.addEventListener('transitionend', () => {
-            modal.classList.add('hidden');
-        }, { once: true });
+        if (modal) {
+            modal.querySelector('div').classList.add('opacity-0', 'scale-95');
+            modal.addEventListener('transitionend', () => {
+                modal.classList.add('hidden');
+            }, { once: true });
+        }
     },
 
     /**
@@ -585,51 +402,38 @@ export const Opportunities = {
      */
     saveOpportunity: async function() {
         const name = document.getElementById('opportunity-name').value.trim();
-        const customerId = document.getElementById('opportunity-customer').value;
-        const status = document.getElementById('opportunity-status').value;
-        const value = parseFloat(document.getElementById('opportunity-value').value) || 0;
-        const closeDate = document.getElementById('opportunity-close-date').value;
+        const customerId = document.getElementById('customer-select').value;
+        const stage = document.getElementById('stage-select').value;
+        const amount = parseFloat(document.getElementById('amount').value);
+        const expectedCloseDate = document.getElementById('close-date').value;
 
-        const currency = document.getElementById('opportunity-currency').value;
-        const eventType = document.getElementById('opportunity-event-type').value;
-        const proposedEventLocation = document.getElementById('opportunity-location').value.trim();
-        const description = document.getElementById('opportunity-description').value.trim();
-        const active = document.getElementById('opportunity-active-status').value;
-
-        if (!name || !customerId) {
-            this.Utils.showMessage('Opportunity Name and Customer are required.', 'warning');
+        if (!name || !customerId || !stage) {
+            this.Utils.showMessage('Opportunity Name, Customer, and Stage are required.', 'warning');
             return;
         }
-        if (!currency) {
-            this.Utils.showMessage('Currency is required for the opportunity.', 'warning');
+        if (isNaN(amount) || amount < 0) {
+            this.Utils.showMessage('Amount must be a valid positive number.', 'warning');
             return;
         }
+
+        const opportunityData = {
+            name: name,
+            customerId: customerId,
+            stage: stage,
+            amount: amount,
+            expectedCloseDate: expectedCloseDate ? new Date(expectedCloseDate) : null,
+            updatedAt: new Date()
+        };
 
         try {
-            const opportunityData = {
-                name,
-                customerId,
-                status,
-                value,
-                currency,
-                eventType,
-                proposedEventLocation,
-                description,
-                active,
-                closeDate,
-                updatedAt: new Date(),
-                creatorId: this.auth.currentUser ? this.auth.currentUser.uid : null,
-            };
-
-            if (!opportunityData.creatorId) {
-                this.Utils.showMessage('You must be logged in to create an opportunity.', 'error');
-                return;
-            }
-
-            if (this.selectedOpportunityId) {
-                await updateDoc(doc(this.db, "opportunities", this.selectedOpportunityId), opportunityData);
+            if (this.currentEditingOpportunityId) {
+                // Update existing opportunity
+                const opportunityRef = doc(this.db, "opportunities", this.currentEditingOpportunityId);
+                await this.Utils.updateDoc(opportunityRef, opportunityData);
                 this.Utils.showMessage('Opportunity updated successfully!', 'success');
             } else {
+                // Add new opportunity
+                opportunityData.creatorId = this.auth.currentUser ? this.auth.currentUser.uid : 'anonymous';
                 opportunityData.createdAt = new Date();
                 await addDoc(collection(this.db, "opportunities"), opportunityData);
                 this.Utils.showMessage('Opportunity added successfully!', 'success');
@@ -641,50 +445,40 @@ export const Opportunities = {
     },
 
     /**
-     * Handles editing an opportunity.
+     * Deletes an opportunity from Firestore.
+     * @param {string} opportunityId - The ID of the opportunity to delete.
+     * @param {string} opportunityName - The name of the opportunity for confirmation message.
      */
-    editOpportunity: function(id) {
-        const opportunityToEdit = this.opportunitiesData.find(o => o.id === id);
-        if (opportunityToEdit) {
-            this.openOpportunityModal('edit', opportunityToEdit);
-        } else {
-            this.Utils.showMessage('Opportunity not found for editing.', 'error');
-        }
-    },
-
-    /**
-     * Deletes an opportunity from Firestore after confirmation.
-     */
-    deleteOpportunity: async function(id, name) {
-        this.Utils.showMessage(`Are you sure you want to delete opportunity "${name}"? This will also delete all related Lines, Contacts, and Quotes.`, 'warning', 0);
+    deleteOpportunity: async function(opportunityId, opportunityName) {
+        this.Utils.showMessage(`Are you sure you want to delete opportunity "${opportunityName}"?`, 'warning', 0); // 0 duration for persistent
 
         const messageModalContainer = document.getElementById('message-modal-container');
         if (messageModalContainer) {
-            const messageBox = messageModalContainer.querySelector('.p-6');
+            const messageBox = messageModalContainer.querySelector('div');
+            // Remove existing buttons to avoid duplicates
+            const existingButtons = messageBox.querySelectorAll('button:not(#message-close-btn)');
+            existingButtons.forEach(btn => btn.remove());
+
             const confirmBtn = document.createElement('button');
             confirmBtn.textContent = 'Confirm Delete';
-            confirmBtn.className = 'bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg mt-4 mr-2';
+            confirmBtn.className = 'bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg mt-4 mr-2 transition-colors duration-200';
             confirmBtn.onclick = async () => {
                 try {
-                    await deleteDoc(doc(this.db, "opportunities", id));
-                    this.Utils.showMessage('Opportunity and its related data (if any) deleted successfully!', 'success');
-                    messageModalContainer.remove();
+                    await deleteDoc(doc(this.db, "opportunities", opportunityId));
+                    this.Utils.showMessage('Opportunity deleted successfully!', 'success');
+                    messageModalContainer.classList.add('hidden'); // Hide modal explicitly after action
                 } catch (error) {
                     this.Utils.handleError(error, "deleting opportunity");
-                    messageModalContainer.remove();
+                    messageModalContainer.classList.add('hidden'); // Hide modal explicitly after action
                 }
             };
-
             const cancelBtn = document.createElement('button');
             cancelBtn.textContent = 'Cancel';
-            cancelBtn.className = 'bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg mt-4';
+            cancelBtn.className = 'bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg mt-4 transition-colors duration-200';
             cancelBtn.onclick = () => {
-                messageModalContainer.remove();
+                messageModalContainer.classList.add('hidden');
                 this.Utils.showMessage('Deletion cancelled.', 'info');
             };
-
-            const existingButtons = messageBox.querySelectorAll('button:not(.absolute.top-2)');
-            existingButtons.forEach(btn => btn.remove());
 
             const buttonContainer = document.createElement('div');
             buttonContainer.className = 'flex justify-end pt-4 border-t border-gray-200 mt-4';
@@ -695,122 +489,7 @@ export const Opportunities = {
     },
 
     /**
-     * Displays the detailed view of a specific opportunity.
-     */
-    viewOpportunityDetails: async function(id) {
-        const opportunity = this.opportunitiesData.find(o => o.id === id);
-        if (!opportunity) {
-            this.Utils.showMessage('Opportunity details not found.', 'error');
-            return;
-        }
-
-        this.selectedOpportunityId = opportunity.id;
-
-        document.getElementById('detail-name').textContent = opportunity.name || 'N/A';
-        document.getElementById('detail-customer').textContent = opportunity.customerName || 'N/A';
-        document.getElementById('detail-status').textContent = opportunity.status || 'N/A';
-        document.getElementById('detail-close-date').textContent = opportunity.closeDate || 'N/A';
-        document.getElementById('detail-created-by').textContent = opportunity.creatorName || 'N/A';
-        document.getElementById('detail-created-at').textContent = opportunity.createdAt ? opportunity.createdAt.toLocaleString() : 'N/A';
-        document.getElementById('detail-updated-at').textContent = opportunity.updatedAt ? opportunity.updatedAt.toLocaleString() : 'N/A';
-
-        const formattedValue = parseFloat(opportunity.value || 0).toFixed(2);
-        const currencyInfo = this.currenciesMap.get(opportunity.currency);
-        const valueWithSymbol = currencyInfo ? `${currencyInfo.symbol_native}${formattedValue} (${opportunity.currency})` : `${formattedValue} (${opportunity.currency || 'N/A'})`;
-
-        document.getElementById('detail-value').textContent = valueWithSymbol;
-        document.getElementById('detail-currency').textContent = opportunity.currency || 'N/A';
-        document.getElementById('detail-event-type').textContent = opportunity.eventType || 'N/A';
-        document.getElementById('detail-location').textContent = opportunity.proposedEventLocation || 'N/A';
-        document.getElementById('detail-description').textContent = opportunity.description || 'N/A';
-        document.getElementById('detail-active').textContent = opportunity.active || 'N/A';
-
-        const detailView = document.getElementById('opportunity-detail-view');
-        detailView.classList.remove('hidden');
-
-        this.renderOpportunityLinesGrid(id);
-        this.renderOpportunityContactsGrid(id);
-        this.renderOpportunityQuotesGrid(id);
-    },
-
-    /**
-     * Placeholder function to render Opportunity Lines grid.
-     */
-    renderOpportunityLinesGrid: function(opportunityId) {
-        const gridContainer = document.getElementById('opportunity-lines-grid');
-        gridContainer.innerHTML = '<p class="text-gray-600 text-sm italic py-4">Loading opportunity lines...</p>';
-        setTimeout(() => {
-            const linesData = [
-                // { id: 'l1', item: 'CRM License', quantity: 1, unitPrice: 500, total: 500 },
-                // { id: 'l2', item: 'Onboarding Service', quantity: 1, unitPrice: 1000, total: 1000 },
-            ];
-
-            if (linesData.length === 0) {
-                gridContainer.innerHTML = '<p class="text-gray-600 text-sm italic py-4">No opportunity lines found.</p>';
-            } else {
-                 new gridjs.Grid({
-                    columns: ['Item', 'Quantity', 'Unit Price', 'Total'],
-                    data: linesData.map(l => [l.item, l.quantity, `$${l.unitPrice}`, `$${l.total}`]),
-                    className: {
-                        container: 'shadow-none border border-gray-200 rounded-lg'
-                    }
-                }).render(gridContainer);
-            }
-        }, 500);
-    },
-
-    /**
-     * Placeholder function to render Opportunity Contacts grid.
-     */
-    renderOpportunityContactsGrid: function(opportunityId) {
-        const gridContainer = document.getElementById('opportunity-contacts-grid');
-        gridContainer.innerHTML = '<p class="text-gray-600 text-sm italic py-4">Loading opportunity contacts...</p>';
-        setTimeout(() => {
-            const contactsData = [
-                // { id: 'c1', name: 'Jane Doe', email: 'jane@example.com', role: 'Decision Maker' },
-            ];
-
-            if (contactsData.length === 0) {
-                gridContainer.innerHTML = '<p class="text-gray-600 text-sm italic py-4">No opportunity contacts found.</p>';
-            } else {
-                new gridjs.Grid({
-                    columns: ['Name', 'Email', 'Role'],
-                    data: contactsData.map(c => [c.name, c.email, c.role]),
-                    className: {
-                        container: 'shadow-none border border-gray-200 rounded-lg'
-                    }
-                }).render(gridContainer);
-            }
-        }, 500);
-    },
-
-    /**
-     * Placeholder function to render Opportunity Quotes grid.
-     */
-    renderOpportunityQuotesGrid: function(opportunityId) {
-        const gridContainer = document.getElementById('opportunity-quotes-grid');
-        gridContainer.innerHTML = '<p class="text-gray-600 text-sm italic py-4">Loading quotes...</p>';
-        setTimeout(() => {
-            const quotesData = [
-                // { id: 'q1', quoteNumber: 'Q-001', amount: 2500, status: 'Draft', date: '2025-06-20' },
-            ];
-
-            if (quotesData.length === 0) {
-                gridContainer.innerHTML = '<p class="text-gray-600 text-sm italic py-4">No quotes found.</p>';
-            } else {
-                new gridjs.Grid({
-                    columns: ['Quote Number', 'Amount', 'Status', 'Date'],
-                    data: quotesData.map(q => [q.quoteNumber, `$${q.amount}`, q.status, q.date]),
-                    className: {
-                        container: 'shadow-none border border-gray-200 rounded-lg'
-                    }
-                }).render(gridContainer);
-            }
-        }, 500);
-    },
-
-    /**
-     * Detaches the main real-time listener when the module is no longer active.
+     * Detaches the real-time listener when the module is no longer active.
      */
     destroy: function() {
         if (this.unsubscribe) {
@@ -818,10 +497,14 @@ export const Opportunities = {
             this.unsubscribe = null;
             console.log("Opportunities module listener unsubscribed.");
         }
-        if (this.grid) {
-            this.grid.destroy();
-            this.grid = null;
+        if (this.opportunitiesGrid) {
+            this.opportunitiesGrid.destroy();
+            this.opportunitiesGrid = null;
         }
-        this.currenciesMap.clear();
+        // Remove content from the DOM when destroying
+        const opportunitiesModuleContent = document.getElementById('opportunities-module-content');
+        if (opportunitiesModuleContent) {
+            opportunitiesModuleContent.innerHTML = '';
+        }
     }
 };
