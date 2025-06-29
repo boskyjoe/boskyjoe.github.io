@@ -18,7 +18,6 @@ export const Opportunities = {
 
     /**
      * Initializes the Opportunities module.
-     * This method should only initialize core dependencies, not interact with the DOM yet.
      * @param {object} firestoreDb - The Firestore database instance.
      * @param {object} firebaseAuth - The Firebase Auth instance.
      * @param {object} utils - The Utils object for common functionalities.
@@ -28,9 +27,6 @@ export const Opportunities = {
         this.auth = firebaseAuth;
         this.Utils = utils;
         console.log("Opportunities module initialized.");
-
-        // Do NOT call renderOpportunitiesUI or attachEventListeners here.
-        // They depend on the module's HTML being loaded into the DOM by Main.loadModule.
     },
 
     /**
@@ -38,7 +34,7 @@ export const Opportunities = {
      * This is called by Main.js when the 'opportunities' module is activated.
      * @param {HTMLElement} moduleContentElement - The DOM element where the Opportunities UI should be rendered.
      */
-    renderOpportunitiesUI: function(moduleContentElement) { // Added moduleContentElement parameter
+    renderOpportunitiesUI: function(moduleContentElement) {
         // CRITICAL FIX: Use the passed moduleContentElement directly
         const opportunitiesModuleContent = moduleContentElement;
 
@@ -54,13 +50,13 @@ export const Opportunities = {
                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
                     <p class="text-gray-600 mb-4">You must be logged in to view opportunity data.</p>
-                    <button id="go-to-login-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                    <button id="go-to-home-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
                         Go to Home / Login
                     </button>
                 </div>
             `;
             // Attach event listener for the new button
-            document.getElementById('go-to-login-btn')?.addEventListener('click', () => {
+            document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
                 window.Main.loadModule('home'); // Redirect to home page
             });
             this.destroy(); // Clean up any previous grid/listeners
@@ -68,7 +64,6 @@ export const Opportunities = {
             return; // Stop execution if not logged in
         }
         // --- END NEW ---
-
 
         opportunitiesModuleContent.innerHTML = `
             <div class="bg-white p-6 rounded-lg shadow-md mb-6">
@@ -80,9 +75,10 @@ export const Opportunities = {
                     </button>
                 </div>
                 <p class="text-sm text-gray-600 mb-4">Track potential sales and their progress.</p>
-                <div id="opportunities-grid-container" class="border border-gray-200 rounded-lg overflow-hidden"></div>
+                <div id="opportunity-grid-container" class="border border-gray-200 rounded-lg overflow-hidden"></div>
             </div>
 
+            <!-- Opportunity Modal (Add/Edit Form) -->
             <div id="opportunity-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[900] hidden">
                 <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full transform transition-all duration-300 scale-95 opacity-0">
                     <h4 id="opportunity-modal-title" class="text-2xl font-bold text-gray-800 mb-6">Add New Opportunity</h4>
@@ -138,8 +134,7 @@ export const Opportunities = {
         `;
         // After rendering HTML, attach event listeners and setup the real-time listener
         this.attachEventListeners();
-        // Moved fetchAndCacheCustomers here, and it now calls populateCustomerDropdown
-        this.fetchAndCacheCustomers().then(() => {
+        this.fetchAndCacheCustomers().then(() => { // NEW: Fetch customers before setting up listener
             this.setupRealtimeListener();
         });
     },
@@ -152,7 +147,7 @@ export const Opportunities = {
         this._customerNamesMap.clear(); // Clear existing map
         const userId = this.auth.currentUser ? this.auth.currentUser.uid : null;
         if (!userId) {
-            console.log("No user ID, cannot fetch customers for dropdown.");
+            console.log("No user ID, cannot fetch customers for dropdown. (User likely not logged in or session expired)");
             return;
         }
 
@@ -213,7 +208,7 @@ export const Opportunities = {
 
         const userId = this.auth.currentUser ? this.auth.currentUser.uid : null;
         if (!userId) {
-            console.log("User not logged in, cannot set up opportunity listener.");
+            console.log("User not logged in, cannot set up opportunity listener. (User likely not logged in or session expired)");
             this.renderOpportunitiesGrid([]);
             return;
         }
@@ -232,7 +227,7 @@ export const Opportunities = {
             const opportunities = [];
             snapshot.forEach((doc) => {
                 const data = doc.data();
-                // Use the cached _customerNamesMap for lookup
+                // NEW: Use the cached _customerNamesMap for lookup
                 const customerName = this._customerNamesMap.get(data.customerId) || 'Unknown Customer';
                 opportunities.push({ id: doc.id, customerName: customerName, ...data });
             });
@@ -249,9 +244,9 @@ export const Opportunities = {
      * @param {Array<object>} opportunities - An array of opportunity objects.
      */
     renderOpportunitiesGrid: function(opportunities) {
-        const gridContainer = document.getElementById('opportunities-grid-container');
+        const gridContainer = document.getElementById('opportunity-grid-container');
         if (!gridContainer) {
-            console.error("Opportunities grid container not found.");
+            console.error("Opportunity grid container not found.");
             return;
         }
 
@@ -382,7 +377,6 @@ export const Opportunities = {
         form.reset();
         this.currentEditingOpportunityId = null;
 
-        // Ensure customer dropdown is populated before opening modal
         await this.fetchAndCacheCustomers(); // Re-fetch to ensure latest customers if needed
         this.populateCustomerDropdown();
 
@@ -393,6 +387,14 @@ export const Opportunities = {
                 const opportunityDoc = await getDoc(doc(this.db, 'opportunities', opportunityId));
                 if (opportunityDoc.exists()) {
                     const data = opportunityDoc.data();
+                    // --- NEW: Creator ID check for edit ---
+                    const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
+                    if (!this.Utils.isAdmin() && data.creatorId !== currentUserId) {
+                        this.Utils.showMessage('You do not have permission to edit this opportunity.', 'error');
+                        this.closeOpportunityModal();
+                        return;
+                    }
+                    // --- END NEW ---
                     document.getElementById('opportunity-name').value = data.opportunityName || '';
                     document.getElementById('amount').value = data.amount || 0;
                     document.getElementById('stage-select').value = data.stage || 'Prospecting';
@@ -429,7 +431,7 @@ export const Opportunities = {
             modal.querySelector('div').classList.add('opacity-0', 'scale-95');
             modal.addEventListener('transitionend', () => {
                 modal.classList.add('hidden');
-                modal.removeAttribute('dataset.editingOpportunityId'); // Clean up
+                this.currentEditingOpportunityId = null; // Reset ID on close
             }, { once: true });
         }
     },
@@ -470,6 +472,18 @@ export const Opportunities = {
             if (this.currentEditingOpportunityId) {
                 // Update existing opportunity
                 const opportunityRef = doc(this.db, "opportunities", this.currentEditingOpportunityId);
+                // --- NEW: Creator ID check for save update ---
+                const existingDoc = await getDoc(opportunityRef);
+                if (existingDoc.exists()) {
+                    const data = existingDoc.data();
+                    const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
+                    if (!this.Utils.isAdmin() && data.creatorId !== currentUserId) {
+                        this.Utils.showMessage('You do not have permission to update this opportunity.', 'error');
+                        this.closeOpportunityModal();
+                        return;
+                    }
+                }
+                // --- END NEW ---
                 await this.Utils.updateDoc(opportunityRef, opportunityData);
                 this.Utils.showMessage('Opportunity updated successfully!', 'success');
             } else {
@@ -495,6 +509,24 @@ export const Opportunities = {
         if (!Auth.isLoggedIn()) {
             this.Utils.showMessage('You must be logged in to delete opportunities.', 'error');
             return;
+        }
+        // --- END NEW ---
+
+        // --- NEW: Creator ID check for delete ---
+        try {
+            const opportunityRef = doc(this.db, "opportunities", opportunityId);
+            const existingDoc = await getDoc(opportunityRef);
+            if (existingDoc.exists()) {
+                const data = existingDoc.data();
+                const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
+                if (!this.Utils.isAdmin() && data.creatorId !== currentUserId) {
+                    this.Utils.showMessage('You do not have permission to delete this opportunity.', 'error');
+                    return; // Prevent deletion
+                }
+            }
+        } catch (error) {
+            this.Utils.handleError(error, "checking delete permission for opportunity");
+            return; // Prevent deletion
         }
         // --- END NEW ---
 
@@ -549,9 +581,7 @@ export const Opportunities = {
             this.opportunitiesGrid = null;
         }
         this._customerNamesMap.clear(); // Clear cached customer names
-        const opportunitiesModuleContent = document.getElementById('opportunities-module-content');
-        if (opportunitiesModuleContent) {
-            opportunitiesModuleContent.innerHTML = '';
-        }
+        // Main.js now handles clearing the innerHTML of the content area for this module.
+        console.log("Opportunities module destroyed.");
     }
 };
