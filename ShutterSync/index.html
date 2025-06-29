@@ -48,15 +48,13 @@
         <div class="container mx-auto flex justify-between items-center">
             <a href="#" id="home-link" class="text-2xl font-bold tracking-wide hover:text-gray-300 transition-colors duration-200">ShutterSync CRM</a>
             <div class="flex items-center space-x-4">
-                <!-- NEW: Home Link -->
                 <a href="#" data-module="customers" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Home</a>
                 <a href="#" data-module="customers" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Customers</a>
                 <a href="#" data-module="opportunities" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Opportunities</a>
-                <!-- NEW: Events Link -->
                 <a href="#" data-module="events" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Events</a>
 
                 <!-- Admin Dropdown Menu -->
-                <div class="relative group hidden"> <!-- Hidden by default, shown if isAdmin -->
+                <div class="relative group hidden">
                     <button class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200 flex items-center">
                         Admin <i class="fas fa-caret-down ml-2"></i>
                     </button>
@@ -74,7 +72,7 @@
                     <span id="user-display-name" class="text-gray-300 text-sm font-medium hidden"></span>
                 </div>
 
-                <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-200 hidden"> <!-- Hidden by default -->
+                <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-200 hidden">
                     <i class="fas fa-sign-out-alt mr-2"></i> Logout
                 </button>
             </div>
@@ -108,18 +106,21 @@
         import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, doc, getDoc, collection, query, where, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+        // Firebase configuration (DIRECTLY DEFINED)
+        const firebaseConfig = {
+          apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
+          authDomain: "shuttersync-96971.firebaseapp.com",
+          projectId: "shuttersync-96971",
+          storageBucket: "shuttersync-96971.firebasestorage.app",
+          messagingSenderId: "10782416018",
+          appId: "1:10782416018:web:361db5572882a62f291a4b",
+          measurementId: "G-T0W9CES4D3"
+        };
 
-        // Firebase configuration (provided by Canvas/runtime environment)
-        let firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId; // Use actual projectId as fallback for appId
 
-        // FIX: Ensure projectId is always present in firebaseConfig
-        if (!firebaseConfig.projectId) {
-            firebaseConfig.projectId = appId;
-        }
-
-        // Diagnostic Log: Inspect the final firebaseConfig before initialization
+        // Diagnostic Log: Inspect the final firebaseConfig before initializeApp
         console.log("Firebase config object before initializeApp:", firebaseConfig);
 
         // Initialize Firebase
