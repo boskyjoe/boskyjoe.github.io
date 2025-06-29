@@ -6,92 +6,199 @@
     <title>ShutterSync CRM</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts - Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Custom CSS (for minor overrides/additions) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"></link>
+    <!-- Grid.js CSS -->
+    <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+    <!-- Main styles -->
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Optional: Smooth transition for modal */
+        #customer-modal > div,
+        #opportunity-modal > div,
+        #user-role-modal > div,
+        #country-state-modal > div,
+        #currency-modal > div,
+        #price-book-modal > div,
+        #message-modal-container > div {
+            transition: all 0.3s ease-out;
+        }
+
+        /* Hide number input arrows (for Chrome, Safari, Edge, Opera) */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        /* Hide number input arrows (for Firefox) */
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        /* Ensure Grid.js pagination buttons match theme */
+        .gridjs-pages button.gridjs-currentPage {
+            @apply bg-blue-600 text-white;
+        }
+    </style>
 </head>
-<body class="flex flex-col min-h-screen">
-    <!-- Header -->
-    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-md">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-3xl font-bold tracking-tight">ShutterSync CRM</h1>
-            <div class="relative group">
-                <button id="user-dropdown-btn" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
-                    <i class="fas fa-user-circle mr-2"></i>
-                    <span id="user-info-span" class="hidden"></span>
-                    <span id="login-register-placeholder">Login / Register</span>
-                    <i class="fas fa-chevron-down ml-2"></i>
-                </button>
-                <div class="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform scale-95 group-hover:scale-100 origin-top-right">
-                    <a href="#" id="logout-btn" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hidden">
-                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                    </a>
-                </div>
-            </div>
-        </div>
-    </header>
-
+<body class="bg-gray-100 font-sans antialiased">
     <!-- Navigation Bar -->
-    <nav class="bg-gray-800 shadow-md">
-        <div class="container mx-auto px-4 py-3 flex justify-between items-center text-sm">
-            <div class="flex space-x-4">
-                <a href="#" data-module="home" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md font-medium"><i class="fas fa-home mr-2"></i> Home</a>
-                <a href="#" data-module="customers" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md font-medium"><i class="fas fa-users mr-2"></i> Customers</a>
-                <a href="#" data-module="opportunities" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md font-medium"><i class="fas fa-handshake mr-2"></i> Opportunities</a>
+    <nav class="bg-gray-800 text-white p-4 shadow-lg fixed w-full top-0 left-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="#" id="home-link" class="text-2xl font-bold tracking-wide hover:text-gray-300 transition-colors duration-200">ShutterSync CRM</a>
+            <div class="flex items-center space-x-4">
+                <a href="#" data-module="home" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Home</a>
+                <a href="#" data-module="customers" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Customers</a>
+                <a href="#" data-module="opportunities" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Opportunities</a>
+                <a href="#" data-module="events" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Events</a>
 
-                <!-- Admin Dropdown Menu - Initially hidden, shown for Admins by JS -->
-                <div id="nav-admin-dropdown" class="relative group hidden">
-                    <button class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
-                        <i class="fas fa-user-shield mr-2"></i> Admin
-                        <i class="fas fa-chevron-down ml-2"></i>
+                <!-- Admin Dropdown Menu -->
+                <div class="relative group hidden">
+                    <button class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200 flex items-center">
+                        Admin <i class="fas fa-caret-down ml-2"></i>
                     </button>
-                    <div class="absolute left-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform scale-95 group-hover:scale-100 origin-top-left">
-                        <a href="#" data-module="users" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"><i class="fas fa-users-cog mr-2"></i> User Management</a>
-                        <a href="#" data-module="adminData" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"><i class="fas fa-cogs mr-2"></i> App Metadata</a>
-                        <a href="#" data-module="priceBook" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"><i class="fas fa-dollar-sign mr-2"></i> Price Book</a>
+                    <div class="absolute hidden group-hover:block bg-gray-700 text-white rounded-md shadow-lg py-2 w-48 mt-1 z-10">
+                        <a href="#" data-module="users" class="block px-4 py-2 text-sm hover:bg-gray-600 transition-colors duration-200">Users</a>
+                        <a href="#" data-module="admin-data" class="block px-4 py-2 text-sm hover:bg-gray-600 transition-colors duration-200">Country Mapping</a>
+                        <a href="#" data-module="admin-data" class="block px-4 py-2 text-sm hover:bg-gray-600 transition-colors duration-200">Currency</a>
+                        <a href="#" data-module="price-book" class="block px-4 py-2 text-sm hover:bg-gray-600 transition-colors duration-200">Price Books</a>
                     </div>
                 </div>
+
+                <!-- User Info Display -->
+                <div class="flex items-center space-x-2 ml-4">
+                    <span id="user-icon-container" class="text-gray-300 hidden"><i class="fas fa-user-circle text-2xl"></i></span>
+                    <span id="user-display-name" class="text-gray-300 text-sm font-medium hidden"></span>
+                </div>
+
+                <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-200 hidden">
+                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                </button>
             </div>
         </div>
     </nav>
 
     <!-- Main Content Area -->
-    <main id="content-area" class="container mx-auto my-6 p-6 bg-white rounded-lg shadow-md flex-grow">
-        <!-- Content will be loaded here by JavaScript modules -->
-        <!-- Each module will load its content into a div with a specific ID, e.g., 'home-module-content' -->
-        <div id="home-module-content"></div>
-        <div id="customers-module-content"></div>
-        <div id="opportunities-module-content"></div>
-        <div id="users-module-content"></div>
-        <div id="admin-data-module-content"></div>
-        <div id="price-book-module-content"></div>
+    <main class="container mx-auto mt-20 p-4">
+        <div id="content-area">
+            <!-- Content will be loaded here by main.js -->
+        </div>
     </main>
 
-    <!-- Global Message Modal Container -->
+    <!-- Global Message Box -->
     <div id="message-modal-container" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[1000] hidden">
         <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-full transform transition-all duration-300 scale-95 opacity-0 text-center">
-            <p id="message-content" class="text-lg font-semibold mb-4 text-gray-800"></p>
+            <div id="message-content" class="text-gray-800 text-lg font-semibold mb-4"></div>
             <button id="message-close-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
                 OK
             </button>
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-gray-300 p-4 text-center mt-auto">
-        <div class="container mx-auto">
-            &copy; 2025 ShutterSync CRM. All rights reserved.
-        </div>
-    </footer>
 
-    <!-- Grid.js Library -->
+    <!-- Grid.js Library (loaded globally) -->
     <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
-    <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
 
-    <!-- Main application entry point -->
-    <script type="module" src="js/main.js"></script>
+    <!-- Firebase SDK (loaded globally) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, query, where, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // Firebase configuration (DIRECTLY DEFINED)
+        const firebaseConfig = {
+          apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
+          authDomain: "shuttersync-96971.firebaseapp.com",
+          projectId: "shuttersync-96971",
+          storageBucket: "shuttersync-96971.firebasestorage.app",
+          messagingSenderId: "10782416018",
+          appId: "1:10782416018:web:361db5572882a62f291a4b",
+          measurementId: "G-T0W9CES4D3"
+        };
+
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
+
+        console.log("Firebase config object before initializeApp:", firebaseConfig);
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Import modules
+        import Main from './js/main.js';
+        import { Auth } from './js/auth.js';
+        import { Utils } from './js/utils.js';
+        import { Customers } from './js/customers.js';
+        import { Opportunities } from './js/opportunities.js';
+        import { Users } from './js/users.js';
+        import { AdminData } from './js/admin_data.js';
+        import { PriceBook } from './js/price_book.js';
+        import { Home } from './js/home.js'; // NEW: Import Home module
+
+        // Initialize Utils first as it's a dependency
+        Utils.init(db, auth, appId);
+
+        // Initialize Auth module with Firebase instances and Utils
+        Auth.init(db, auth, Utils);
+
+        // Initialize Main module (Main's init should be independent of initialAuthToken directly)
+        Main.init(db, auth, appId, initialAuthToken);
+
+        // Initialize other modules. They also need db, auth, and Utils.
+        Customers.init(db, auth, Utils);
+        Opportunities.init(db, auth, Utils);
+        Users.init(db, auth, Utils);
+        AdminData.init(db, auth, Utils);
+        PriceBook.init(db, auth, Utils);
+        Home.init(db, auth, Utils); // NEW: Initialize Home module
+
+        // Ensure modules are properly destroyed/unsubscribed when switching
+        Main.setModuleDestroyers({
+            'home': () => Home.destroy(), // NEW: Destroyer for Home module
+            'customers': () => Customers.destroy(),
+            'opportunities': () => Opportunities.destroy(),
+            'users': () => Users.destroy(),
+            'admin-data': () => AdminData.destroy(),
+            'price-book': () => PriceBook.destroy(),
+            'events': () => Utils.showMessage('Events module is not yet implemented.', 'info', 3000),
+        });
+
+        // Event listener for module navigation
+        document.querySelectorAll('nav a[data-module]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const moduleName = e.target.dataset.module;
+                if (moduleName) {
+                    Main.loadModule(moduleName);
+                }
+            });
+        });
+
+        // Event listener for logout button
+        document.getElementById('logout-btn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            await Auth.logout();
+        });
+
+        // Event listener for home link to load default module (Home)
+        document.getElementById('home-link').addEventListener('click', (e) => {
+            e.preventDefault();
+            Main.loadModule('home'); // CHANGE: Clicks on title go to 'home'
+        });
+
+        // Handle initial module load after authentication check
+        Auth.onAuthReady(() => {
+            const lastModule = localStorage.getItem('lastActiveModule') || 'home'; // CHANGE: Default to 'home'
+            Main.loadModule(lastModule);
+            Main.updateUserHeaderUI(auth.currentUser);
+        });
+
+        // Expose Main globally so Home module's buttons can access loadModule if needed
+        window.Main = Main;
+
+    </script>
 </body>
 </html>
