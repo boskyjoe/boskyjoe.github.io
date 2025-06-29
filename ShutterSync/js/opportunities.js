@@ -377,6 +377,8 @@ export const Opportunities = {
             o.active || 'Active', // 7: Active (New)
             o.closeDate,       // 8: Close Date
             o.creatorName      // 9: Created By
+            // No need to map other data like customerId, creatorId, createdAt, updatedAt
+            // as they are not columns, but are available in this.opportunitiesData for lookup.
         ]);
 
         if (this.grid) {
@@ -481,8 +483,9 @@ export const Opportunities = {
             querySnapshot.forEach((doc) => {
                 const currency = doc.data();
                 const option = document.createElement('option');
-                option.value = currency.code; // Assuming 'code' is the unique identifier for currency
-                option.textContent = `${currency.name} (${currency.code})`;
+                // FIXED: Use currency.currencyCode for value and a combined text for display
+                option.value = currency.currencyCode;
+                option.textContent = `${currency.currencyName} (${currency.currencyCode}) - ${currency.symbol_native}`;
                 currencySelect.appendChild(option);
             });
         } catch (error) {
@@ -689,6 +692,7 @@ export const Opportunities = {
         document.getElementById('detail-name').textContent = opportunity.name || 'N/A';
         document.getElementById('detail-customer').textContent = opportunity.customerName || 'N/A';
         document.getElementById('detail-status').textContent = opportunity.status || 'N/A';
+        // Use the actual currency code from the data to format the value display
         document.getElementById('detail-value').textContent = `${opportunity.currency || '$'}${parseFloat(opportunity.value || 0).toFixed(2)}`;
         document.getElementById('detail-close-date').textContent = opportunity.closeDate || 'N/A';
         document.getElementById('detail-created-by').textContent = opportunity.creatorName || 'N/A';
