@@ -1,6 +1,13 @@
 // js/main.js
 
-// Using export default for consistency with index.html import
+import { Auth } from './auth.js'; // Ensure Auth is imported if Main uses it directly for auth.currentUser
+import { Utils } from './utils.js'; // Ensure Utils is imported
+import { Customers } from './customers.js'; // Ensure Customers is imported
+import { Opportunities } from './opportunities.js';
+import { Users } from './users.js';
+import { AdminData } from './admin_data.js';
+import { PriceBook } from './price_book.js';
+
 export default {
     db: null,
     auth: null,
@@ -57,20 +64,14 @@ export default {
         try {
             switch (moduleName) {
                 case 'customers':
-                    // Customers module is already imported and initialized in index.html
-                    // Just clear the content and let its renderCustomersUI take over
                     contentArea.innerHTML = '<div id="customers-module-content"></div>';
-                    // Re-initialize or ensure re-render (it auto-renders via listener)
-                    Customers.renderCustomersUI();
-                    Customers.setupRealtimeListener();
+                    Customers.renderCustomersUI(); // Calls render UI AND attaches listeners/sets up listener
                     break;
                 case 'opportunities':
                     contentArea.innerHTML = '<div id="opportunities-module-content"></div>';
-                    Opportunities.renderOpportunitiesUI();
-                    Opportunities.setupRealtimeListener();
+                    Opportunities.renderOpportunitiesUI(); // This should also handle its own listeners
                     break;
                 case 'users':
-                    // Check if current user is admin before rendering for users module
                     if (!Utils.isAdmin()) {
                          contentArea.innerHTML = `
                             <div class="bg-white p-6 rounded-lg shadow-md text-center">
@@ -78,13 +79,12 @@ export default {
                                 <p class="text-gray-600">You do not have administrative privileges to view this section.</p>
                             </div>
                         `;
-                        localStorage.setItem('lastActiveModule', 'customers'); // Redirect to default if access denied
+                        localStorage.setItem('lastActiveModule', 'customers');
                         Utils.showMessage("Access Denied: You must be an Admin to view User Management.", "error");
-                        return; // Stop execution
+                        return;
                     }
                     contentArea.innerHTML = '<div id="users-module-content"></div>';
-                    Users.renderUsersUI(); // This will render based on isAdmin status inside its own logic
-                    Users.setupRealtimeListener(); // This will also only run if isAdmin
+                    Users.renderUsersUI(); // Should handle its own listeners and listener setup
                     break;
                 case 'admin-data':
                     if (!Utils.isAdmin()) {
@@ -99,8 +99,7 @@ export default {
                         return;
                     }
                     contentArea.innerHTML = '<div id="admin-data-module-content"></div>';
-                    AdminData.renderAdminDataUI();
-                    AdminData.setupRealtimeListeners();
+                    AdminData.renderAdminDataUI(); // Should handle its own listeners and listener setup
                     break;
                 case 'price-book':
                     if (!Utils.isAdmin()) {
@@ -115,8 +114,14 @@ export default {
                         return;
                     }
                     contentArea.innerHTML = '<div id="price-book-module-content"></div>';
-                    PriceBook.renderPriceBookUI();
-                    PriceBook.setupRealtimeListener();
+                    PriceBook.renderPriceBookUI(); // Should handle its own listeners and listener setup
+                    break;
+                case 'events':
+                    contentArea.innerHTML = `<div class="bg-white p-6 rounded-lg shadow-md text-center">
+                                                <h3 class="text-2xl font-semibold text-gray-800 mb-4">Events</h3>
+                                                <p class="text-gray-600">Events module is not yet implemented.</p>
+                                            </div>`;
+                    localStorage.setItem('lastActiveModule', moduleName);
                     break;
                 default:
                     contentArea.innerHTML = `<p class="text-red-500">Module "${moduleName}" not found.</p>`;
@@ -125,8 +130,6 @@ export default {
             localStorage.setItem('lastActiveModule', moduleName);
             console.log(`Module "${moduleName}" loaded.`);
 
-            // Ensure Admin status changes trigger UI updates (e.g., hiding/showing admin links)
-            // This listener is crucial for dynamic access control display
             Utils.onAdminStatusChange(() => {
                 this.updateAdminLinksVisibility();
             });
