@@ -2,6 +2,7 @@
 
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDoc, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
+import { Auth } from './auth.js'; // NEW: Import Auth to check login status
 
 /**
  * The Opportunities module handles all functionality related to opportunity management.
@@ -13,7 +14,7 @@ export const Opportunities = {
     unsubscribe: null, // To store the unsubscribe function for the real-time listener
     currentEditingOpportunityId: null, // Stores the ID of the opportunity being edited
     opportunitiesGrid: null, // Grid.js instance for the opportunities table
-    _customerNamesMap: new Map(), // New: Map to store customer IDs to names for quick lookup
+    _customerNamesMap: new Map(), // Map to store customer IDs to names for quick lookup
 
     /**
      * Initializes the Opportunities module.
@@ -39,6 +40,27 @@ export const Opportunities = {
             return;
         }
 
+        // --- NEW: Login Requirement Check ---
+        if (!Auth.isLoggedIn()) {
+            opportunitiesModuleContent.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
+                    <p class="text-gray-600 mb-4">You must be logged in to view opportunity data.</p>
+                    <button id="go-to-login-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                        Go to Home / Login
+                    </button>
+                </div>
+            `;
+            // Attach event listener for the new button
+            document.getElementById('go-to-login-btn')?.addEventListener('click', () => {
+                window.Main.loadModule('home'); // Redirect to home page
+            });
+            this.destroy(); // Clean up any previous grid/listeners
+            this.Utils.showMessage("Access Denied: Please log in to view Opportunities.", "error");
+            return; // Stop execution if not logged in
+        }
+        // --- END NEW ---
+
         opportunitiesModuleContent.innerHTML = `
             <div class="bg-white p-6 rounded-lg shadow-md mb-6">
                 <div class="flex justify-between items-center mb-6">
@@ -52,6 +74,7 @@ export const Opportunities = {
                 <div id="opportunity-grid-container" class="border border-gray-200 rounded-lg overflow-hidden"></div>
             </div>
 
+            <!-- Opportunity Modal (Add/Edit Form) -->
             <div id="opportunity-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[900] hidden">
                 <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full transform transition-all duration-300 scale-95 opacity-0">
                     <h4 id="opportunity-modal-title" class="text-2xl font-bold text-gray-800 mb-6">Add New Opportunity</h4>
@@ -66,7 +89,8 @@ export const Opportunities = {
                                 <label for="customer-select" class="block text-sm font-medium text-gray-700 mb-1">Related Customer</label>
                                 <select id="customer-select" name="customerId" required
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white">
-                                    </select>
+                                    <!-- Options will be populated dynamically -->
+                                </select>
                             </div>
                             <div>
                                 <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
@@ -105,9 +129,8 @@ export const Opportunities = {
                 </div>
             </div>
         `;
-        // After rendering HTML, attach event listeners and setup the real-time listener
         this.attachEventListeners();
-        this.fetchAndCacheCustomers().then(() => { // NEW: Fetch customers before setting up listener
+        this.fetchAndCacheCustomers().then(() => {
             this.setupRealtimeListener();
         });
     },
@@ -120,7 +143,7 @@ export const Opportunities = {
         this._customerNamesMap.clear(); // Clear existing map
         const userId = this.auth.currentUser ? this.auth.currentUser.uid : null;
         if (!userId) {
-            console.log("No user ID, cannot fetch customers for dropdown.");
+            console.log("No user ID, cannot fetch customers for dropdown. (User likely not logged in or session expired)");
             return;
         }
 
@@ -139,8 +162,7 @@ export const Opportunities = {
                 this._customerNamesMap.set(docSnap.id, customerData.companyName || 'N/A');
             });
             console.log("Customers cached:", this._customerNamesMap);
-            // Re-populate dropdown if modal is open, or ensure it's ready for next open
-            this.populateCustomerDropdown();
+            this.populateCustomerDropdown(); // Re-populate dropdown to ensure it's up-to-date
         } catch (error) {
             this.Utils.handleError(error, "fetching customers for opportunity dropdown");
         }
@@ -157,7 +179,6 @@ export const Opportunities = {
 
         customerSelect.innerHTML = '<option value="">Select a Customer</option>'; // Default option
 
-        // Sort customers by name for display
         const sortedCustomers = Array.from(this._customerNamesMap.entries()).sort((a, b) => a[1].localeCompare(b[1]));
 
         sortedCustomers.forEach(([id, name]) => {
@@ -181,7 +202,7 @@ export const Opportunities = {
 
         const userId = this.auth.currentUser ? this.auth.currentUser.uid : null;
         if (!userId) {
-            console.log("User not logged in, cannot set up opportunity listener.");
+            console.log("User not logged in, cannot set up opportunity listener. (User likely not logged in or session expired)");
             this.renderOpportunitiesGrid([]);
             return;
         }
@@ -200,8 +221,7 @@ export const Opportunities = {
             const opportunities = [];
             snapshot.forEach((doc) => {
                 const data = doc.data();
-                // NEW: Use the cached _customerNamesMap for lookup
-                const customerName = this._customerNamesMap.get(data.customerId) || 'Unknown Customer';
+                const customerName = this._customerNamesMap.get(data.customerId) || 'Unknown Customer'; // Use cached map
                 opportunities.push({ id: doc.id, customerName: customerName, ...data });
             });
             this.renderOpportunitiesGrid(opportunities);
@@ -336,6 +356,13 @@ export const Opportunities = {
      * @param {string|null} opportunityId - The ID of the opportunity to edit, if mode is 'edit'.
      */
     openOpportunityModal: async function(mode, opportunityId = null) {
+        // --- NEW: Login Requirement Check for modals ---
+        if (!Auth.isLoggedIn()) {
+            this.Utils.showMessage('You must be logged in to add/edit opportunities.', 'error');
+            return;
+        }
+        // --- END NEW ---
+
         const modal = document.getElementById('opportunity-modal');
         const title = document.getElementById('opportunity-modal-title');
         const form = document.getElementById('opportunity-form');
@@ -343,7 +370,6 @@ export const Opportunities = {
         form.reset();
         this.currentEditingOpportunityId = null;
 
-        // Ensure customer dropdown is populated before opening modal
         await this.fetchAndCacheCustomers(); // Re-fetch to ensure latest customers if needed
         this.populateCustomerDropdown();
 
@@ -399,14 +425,22 @@ export const Opportunities = {
      * Saves a new opportunity or updates an existing one to Firestore.
      */
     saveOpportunity: async function() {
+        // --- NEW: Login Requirement Check for save ---
+        if (!Auth.isLoggedIn()) {
+            this.Utils.showMessage('You must be logged in to save opportunities.', 'error');
+            this.closeOpportunityModal();
+            return;
+        }
+        // --- END NEW ---
+
         const opportunityName = document.getElementById('opportunity-name').value.trim();
         const customerId = document.getElementById('customer-select').value;
         const amount = parseFloat(document.getElementById('amount').value);
         const stage = document.getElementById('stage-select').value;
         const closeDate = document.getElementById('close-date').value;
 
-        if (!opportunityName || !customerId || isNaN(amount)) {
-            this.Utils.showMessage('Opportunity Name, Customer, and Amount are required.', 'warning');
+        if (!opportunityName || !customerId || isNaN(amount) || amount < 0) { // Added amount < 0 validation
+            this.Utils.showMessage('Opportunity Name, Customer, and a valid positive Amount are required.', 'warning');
             return;
         }
 
@@ -421,13 +455,11 @@ export const Opportunities = {
 
         try {
             if (this.currentEditingOpportunityId) {
-                // Update existing opportunity
                 const opportunityRef = doc(this.db, "opportunities", this.currentEditingOpportunityId);
                 await this.Utils.updateDoc(opportunityRef, opportunityData);
                 this.Utils.showMessage('Opportunity updated successfully!', 'success');
             } else {
-                // Add new opportunity
-                opportunityData.creatorId = this.auth.currentUser ? this.auth.currentUser.uid : 'anonymous';
+                opportunityData.creatorId = this.auth.currentUser.uid; // Now guaranteed to be a logged-in user's UID
                 opportunityData.createdAt = new Date();
                 await addDoc(collection(this.db, "opportunities"), opportunityData);
                 this.Utils.showMessage('Opportunity added successfully!', 'success');
@@ -444,6 +476,13 @@ export const Opportunities = {
      * @param {string} opportunityName - The name of the opportunity for confirmation message.
      */
     deleteOpportunity: async function(opportunityId, opportunityName) {
+        // --- NEW: Login Requirement Check for delete ---
+        if (!Auth.isLoggedIn()) {
+            this.Utils.showMessage('You must be logged in to delete opportunities.', 'error');
+            return;
+        }
+        // --- END NEW ---
+
         this.Utils.showMessage(`Are you sure you want to delete opportunity "${opportunityName}"? This action cannot be undone.`, 'warning', 0);
 
         const messageModalContainer = document.getElementById('message-modal-container');
@@ -494,9 +533,7 @@ export const Opportunities = {
             this.opportunitiesGrid.destroy();
             this.opportunitiesGrid = null;
         }
-        // Clear cached customer names
-        this._customerNamesMap.clear();
-        // Remove content from the DOM when destroying
+        this._customerNamesMap.clear(); // Clear cached customer names
         const opportunitiesModuleContent = document.getElementById('opportunities-module-content');
         if (opportunitiesModuleContent) {
             opportunitiesModuleContent.innerHTML = '';
