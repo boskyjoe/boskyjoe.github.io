@@ -6,11 +6,13 @@
     <title>ShutterSync CRM</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"></link>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- Grid.js CSS -->
     <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
-    <!-- Main styles -->
+    <!-- Main styles (your custom CSS) -->
     <link rel="stylesheet" href="css/style.css">
     <style>
         /* Optional: Smooth transition for modal */
@@ -53,23 +55,23 @@
                 <a href="#" data-module="opportunities" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Opportunities</a>
                 <a href="#" data-module="events" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Events</a>
 
-                <!-- Admin Dropdown Menu -->
-                <div class="relative group hidden">
+                <!-- Admin Dropdown Menu - Initially hidden, shown for Admins by JS -->
+                <div id="nav-admin-dropdown" class="relative group hidden">
                     <button class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200 flex items-center">
                         Admin <i class="fas fa-caret-down ml-2"></i>
                     </button>
                     <div class="absolute hidden group-hover:block bg-gray-700 text-white rounded-md shadow-lg py-2 w-48 mt-1 z-10">
                         <a href="#" data-module="users" class="block px-4 py-2 text-sm hover:bg-gray-600 transition-colors duration-200">Users</a>
-                        <a href="#" data-module="admin-data" class="block px-4 py-2 text-sm hover:bg-gray-600 transition-colors duration-200">Country Mapping</a>
-                        <a href="#" data-module="admin-data" class="block px-4 py-2 text-sm hover:bg-gray-600 transition-colors duration-200">Currency</a>
-                        <a href="#" data-module="price-book" class="block px-4 py-2 text-sm hover:bg-gray-600 transition-colors duration-200">Price Books</a>
+                        <a href="#" data-module="adminData" class="block px-4 py-2 text-sm hover:bg-gray-600 transition-colors duration-200">App Metadata</a>
+                        <a href="#" data-module="priceBook" class="block px-4 py-2 text-sm hover:bg-gray-600 transition-colors duration-200">Price Books</a>
                     </div>
                 </div>
 
-                <!-- User Info Display -->
+                <!-- User Info Display & Logout -->
                 <div class="flex items-center space-x-2 ml-4">
                     <span id="user-icon-container" class="text-gray-300 hidden"><i class="fas fa-user-circle text-2xl"></i></span>
-                    <span id="user-display-name" class="text-gray-300 text-sm font-medium hidden"></span>
+                    <span id="user-info-span" class="text-gray-300 text-sm font-medium hidden"></span> <!-- Changed ID for consistency with Main.js -->
+                    <span id="login-register-placeholder" class="text-gray-300 text-sm font-medium">Login / Register</span> <!-- Added ID for consistency -->
                 </div>
 
                 <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-200 hidden">
@@ -82,7 +84,14 @@
     <!-- Main Content Area -->
     <main class="container mx-auto mt-20 p-4">
         <div id="content-area">
-            <!-- Content will be loaded here by main.js -->
+            <!-- Content will be loaded here by JavaScript modules -->
+            <!-- Placeholder divs for each module's content -->
+            <div id="home-module-content"></div>
+            <div id="customers-module-content"></div>
+            <div id="opportunities-module-content"></div>
+            <div id="users-module-content"></div>
+            <div id="admin-data-module-content"></div>
+            <div id="price-book-module-content"></div>
         </div>
     </main>
 
@@ -128,7 +137,7 @@
         const auth = getAuth(app);
 
         // Import modules
-        import Main from './js/main.js';
+        import Main from './js/main.js'; // Now correctly imports the default export
         import { Auth } from './js/auth.js';
         import { Utils } from './js/utils.js';
         import { Customers } from './js/customers.js';
@@ -136,7 +145,7 @@
         import { Users } from './js/users.js';
         import { AdminData } from './js/admin_data.js';
         import { PriceBook } from './js/price_book.js';
-        import { Home } from './js/home.js'; // NEW: Import Home module
+        import { Home } from './js/home.js'; // Import Home module
 
         // Initialize Utils first as it's a dependency
         Utils.init(db, auth, appId);
@@ -145,7 +154,7 @@
         Auth.init(db, auth, Utils);
 
         // Initialize Main module (Main's init should be independent of initialAuthToken directly)
-        Main.init(db, auth, appId, initialAuthToken);
+        Main.init(app, db, auth, appId); // Pass app, db, auth, and appId
 
         // Initialize other modules. They also need db, auth, and Utils.
         Customers.init(db, auth, Utils);
@@ -153,16 +162,16 @@
         Users.init(db, auth, Utils);
         AdminData.init(db, auth, Utils);
         PriceBook.init(db, auth, Utils);
-        Home.init(db, auth, Utils); // NEW: Initialize Home module
+        Home.init(db, auth, Utils); // Initialize Home module
 
         // Ensure modules are properly destroyed/unsubscribed when switching
         Main.setModuleDestroyers({
-            'home': () => Home.destroy(), // NEW: Destroyer for Home module
+            'home': () => Home.destroy(),
             'customers': () => Customers.destroy(),
             'opportunities': () => Opportunities.destroy(),
             'users': () => Users.destroy(),
-            'admin-data': () => AdminData.destroy(),
-            'price-book': () => PriceBook.destroy(),
+            'adminData': () => AdminData.destroy(), // Corrected module name here
+            'priceBook': () => PriceBook.destroy(), // Corrected module name here
             'events': () => Utils.showMessage('Events module is not yet implemented.', 'info', 3000),
         });
 
@@ -186,17 +195,18 @@
         // Event listener for home link to load default module (Home)
         document.getElementById('home-link').addEventListener('click', (e) => {
             e.preventDefault();
-            Main.loadModule('home'); // CHANGE: Clicks on title go to 'home'
+            Main.loadModule('home');
         });
 
         // Handle initial module load after authentication check
         Auth.onAuthReady(() => {
-            const lastModule = localStorage.getItem('lastActiveModule') || 'home'; // CHANGE: Default to 'home'
+            const lastModule = localStorage.getItem('lastActiveModule') || 'home';
             Main.loadModule(lastModule);
-            Main.updateUserHeaderUI(auth.currentUser);
+            // Main.updateUserHeaderUI is called by Main's init through Auth.onAuthReady internally
+            // The Main.updateNavAdminDropdown is also called similarly.
         });
 
-        // Expose Main globally so Home module's buttons can access loadModule if needed
+        // Expose Main globally if other non-module scripts need to access it (unlikely with this setup)
         window.Main = Main;
 
     </script>
