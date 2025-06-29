@@ -70,8 +70,8 @@
                 <!-- User Info Display & Logout -->
                 <div class="flex items-center space-x-2 ml-4">
                     <span id="user-icon-container" class="text-gray-300 hidden"><i class="fas fa-user-circle text-2xl"></i></span>
-                    <span id="user-info-span" class="text-gray-300 text-sm font-medium hidden"></span> <!-- Changed ID for consistency with Main.js -->
-                    <span id="login-register-placeholder" class="text-gray-300 text-sm font-medium">Login / Register</span> <!-- Added ID for consistency -->
+                    <span id="user-info-span" class="text-gray-300 text-sm font-medium hidden"></span>
+                    <span id="login-register-placeholder" class="text-gray-300 text-sm font-medium">Login / Register</span>
                 </div>
 
                 <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-200 hidden">
@@ -83,16 +83,13 @@
 
     <!-- Main Content Area -->
     <main class="container mx-auto mt-20 p-4">
-        <div id="content-area">
-            <!-- Content will be loaded here by JavaScript modules -->
-            <!-- Placeholder divs for each module's content -->
-            <div id="home-module-content"></div>
-            <div id="customers-module-content"></div>
-            <div id="opportunities-module-content"></div>
-            <div id="users-module-content"></div>
-            <div id="admin-data-module-content"></div>
-            <div id="price-book-module-content"></div>
-        </div>
+        <!-- CRITICAL FIX: Added 'module-content-area' class and 'hidden' to all module content divs -->
+        <div id="home-module-content" class="module-content-area hidden"></div>
+        <div id="customers-module-content" class="module-content-area hidden"></div>
+        <div id="opportunities-module-content" class="module-content-area hidden"></div>
+        <div id="users-module-content" class="module-content-area hidden"></div>
+        <div id="admin-data-module-content" class="module-content-area hidden"></div>
+        <div id="price-book-module-content" class="module-content-area hidden"></div>
     </main>
 
     <!-- Global Message Box -->
@@ -172,7 +169,7 @@
             'users': () => Users.destroy(),
             'adminData': () => AdminData.destroy(), // Corrected module name here
             'priceBook': () => PriceBook.destroy(), // Corrected module name here
-            'events': () => Utils.showMessage('Events module is not yet implemented.', 'info', 3000),
+            'events': () => Utils.showMessage('Events module is not yet implemented.', 'info', 3000), // Example for unimplemented module
         });
 
         // Event listener for module navigation
@@ -198,13 +195,10 @@
             Main.loadModule('home');
         });
 
-        // Handle initial module load after authentication check
-        Auth.onAuthReady(() => {
-            const lastModule = localStorage.getItem('lastActiveModule') || 'home';
-            Main.loadModule(lastModule);
-            // Main.updateUserHeaderUI is called by Main's init through Auth.onAuthReady internally
-            // The Main.updateNavAdminDropdown is also called similarly.
-        });
+        // Initial UI update and module load after authentication check
+        // This is now primarily orchestrated by Main.init's Auth.onAuthReady callback.
+        // We'll rely on Main.init and its internal calls to updateUI and loadModule.
+        // No direct Auth.onAuthReady() call needed here as Main.init handles it.
 
         // Expose Main globally if other non-module scripts need to access it (unlikely with this setup)
         window.Main = Main;
