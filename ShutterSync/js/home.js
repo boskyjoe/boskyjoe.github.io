@@ -30,7 +30,7 @@ export const Home = {
      * This function now receives the specific DOM element to render into.
      * @param {HTMLElement} moduleContentElement - The DOM element where the Home UI should be rendered.
      */
-    renderHomeUI: function(moduleContentElement) { // Changed parameter name for clarity
+    renderHomeUI: function(moduleContentElement) {
         // CRITICAL FIX: Use the passed moduleContentElement directly
         const homeModuleContent = moduleContentElement;
 
