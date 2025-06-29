@@ -1,7 +1,8 @@
 // js/customers.js
 
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, orderBy, startAfter, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
+import { Auth } from './auth.js'; // CORRECTED: Added Auth import
 
 /**
  * The CustomersModule object handles all functionality related to customer management.
@@ -46,6 +47,27 @@ export const Customers = {
             this.Utils.showMessage("Error: Customers module could not find its content area.", "error");
             return;
         }
+
+        // --- NEW: Login Requirement Check for the module itself ---
+        if (!Auth.isLoggedIn()) {
+            customersModuleContent.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
+                    <p class="text-gray-600 mb-4">You must be logged in to view customer data.</p>
+                    <button id="go-to-home-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                        Go to Home / Login
+                    </button>
+                </div>
+            `;
+            // Attach event listener for the new button
+            document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
+                window.Main.loadModule('home'); // Redirect to home page
+            });
+            this.destroy(); // Clean up any previous grid/listeners
+            this.Utils.showMessage("Access Denied: Please log in to view Customers.", "error");
+            return; // Stop execution if not logged in
+        }
+        // --- END NEW ---
 
         customersModuleContent.innerHTML = `
             <div class="bg-white p-6 rounded-lg shadow-md mb-6">
@@ -175,7 +197,8 @@ export const Customers = {
                 width: '100px',
                 formatter: (cell, row) => {
                     const customerId = row.cells[0].data; // Get customer ID
-                    const creatorId = customers.find(c => c.id === customerId)?.creatorId; // Get creatorId from original data
+                    const customerData = customers.find(c => c.id === customerId); // Get full customer data
+                    const creatorId = customerData?.creatorId; // Get creatorId from original data
                     const isCurrentUserCreator = this.auth.currentUser && creatorId === this.auth.currentUser.uid;
                     const canEditOrDelete = this.Utils.isAdmin() || isCurrentUserCreator;
 
@@ -278,6 +301,13 @@ export const Customers = {
      * @param {string|null} customerId - The ID of the customer to edit, if mode is 'edit'.
      */
     openCustomerModal: async function(mode, customerId = null) {
+        // --- NEW: Login Requirement Check for modals ---
+        if (!Auth.isLoggedIn()) {
+            this.Utils.showMessage('You must be logged in to add/edit customers.', 'error');
+            return;
+        }
+        // --- END NEW ---
+
         const modal = document.getElementById('customer-modal');
         const title = document.getElementById('customer-modal-title');
         const form = document.getElementById('customer-form');
@@ -293,6 +323,14 @@ export const Customers = {
                 const customerDoc = await getDoc(doc(this.db, 'customers', customerId));
                 if (customerDoc.exists()) {
                     const data = customerDoc.data();
+                    // --- NEW: Creator ID check for edit ---
+                    const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
+                    if (!this.Utils.isAdmin() && data.creatorId !== currentUserId) {
+                        this.Utils.showMessage('You do not have permission to edit this customer.', 'error');
+                        this.closeCustomerModal();
+                        return;
+                    }
+                    // --- END NEW ---
                     document.getElementById('customer-name').value = data.companyName || '';
                     document.getElementById('contact-person').value = data.contactPerson || '';
                     document.getElementById('customer-email').value = data.email || '';
@@ -327,7 +365,7 @@ export const Customers = {
             modal.querySelector('div').classList.add('opacity-0', 'scale-95');
             modal.addEventListener('transitionend', () => {
                 modal.classList.add('hidden');
-                modal.removeAttribute('dataset.editingCustomerId'); // Clean up
+                this.currentEditingCustomerId = null; // Reset ID on close
             }, { once: true });
         }
     },
@@ -336,6 +374,14 @@ export const Customers = {
      * Saves a new customer or updates an existing one to Firestore.
      */
     saveCustomer: async function() {
+        // --- NEW: Login Requirement Check for save ---
+        if (!Auth.isLoggedIn()) {
+            this.Utils.showMessage('You must be logged in to save customers.', 'error');
+            this.closeCustomerModal();
+            return;
+        }
+        // --- END NEW ---
+
         const customerName = document.getElementById('customer-name').value.trim();
         const contactPerson = document.getElementById('contact-person').value.trim();
         const email = document.getElementById('customer-email').value.trim();
@@ -360,12 +406,23 @@ export const Customers = {
             if (this.currentEditingCustomerId) {
                 // Update existing customer
                 const customerRef = doc(this.db, "customers", this.currentEditingCustomerId);
+                // --- NEW: Creator ID check for save update ---
+                const existingDoc = await getDoc(customerRef);
+                if (existingDoc.exists()) {
+                    const data = existingDoc.data();
+                    const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
+                    if (!this.Utils.isAdmin() && data.creatorId !== currentUserId) {
+                        this.Utils.showMessage('You do not have permission to update this customer.', 'error');
+                        this.closeCustomerModal();
+                        return;
+                    }
+                }
+                // --- END NEW ---
                 await this.Utils.updateDoc(customerRef, customerData);
                 this.Utils.showMessage('Customer updated successfully!', 'success');
             } else {
                 // Add new customer
-                // Add creatorId for filtering by user later
-                customerData.creatorId = this.auth.currentUser ? this.auth.currentUser.uid : 'anonymous';
+                customerData.creatorId = this.auth.currentUser.uid; // Now guaranteed to be a logged-in user's UID
                 customerData.createdAt = new Date();
                 await addDoc(collection(this.db, "customers"), customerData);
                 this.Utils.showMessage('Customer added successfully!', 'success');
@@ -382,6 +439,31 @@ export const Customers = {
      * @param {string} customerName - The name of the customer for confirmation message.
      */
     deleteCustomer: async function(customerId, customerName) {
+        // --- NEW: Login Requirement Check for delete ---
+        if (!Auth.isLoggedIn()) {
+            this.Utils.showMessage('You must be logged in to delete customers.', 'error');
+            return;
+        }
+        // --- END NEW ---
+
+        // --- NEW: Creator ID check for delete ---
+        try {
+            const customerRef = doc(this.db, "customers", customerId);
+            const existingDoc = await getDoc(customerRef);
+            if (existingDoc.exists()) {
+                const data = existingDoc.data();
+                const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
+                if (!this.Utils.isAdmin() && data.creatorId !== currentUserId) {
+                    this.Utils.showMessage('You do not have permission to delete this customer.', 'error');
+                    return; // Prevent deletion
+                }
+            }
+        } catch (error) {
+            this.Utils.handleError(error, "checking delete permission for customer");
+            return; // Prevent deletion
+        }
+        // --- END NEW ---
+
         this.Utils.showMessage(`Are you sure you want to delete customer "${customerName}"?`, 'warning', 0); // 0 duration for persistent
 
         const messageModalContainer = document.getElementById('message-modal-container');
@@ -433,8 +515,11 @@ export const Customers = {
             this.customersGrid.destroy();
             this.customersGrid = null;
         }
-        // Remove content from the DOM when destroying
-        // No need to clear innerHTML here, as Main.js will clear the specific moduleContentElement.
+        // Remove content from the DOM when destroying. Main.js will handle this.
+        // const customersModuleContent = document.getElementById('customers-module-content');
+        // if (customersModuleContent) {
+        //     customersModuleContent.innerHTML = '';
+        // }
         console.log("Customers module destroyed.");
     }
 };
