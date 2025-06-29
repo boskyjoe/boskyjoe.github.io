@@ -2,6 +2,7 @@
 
 import { collection, onSnapshot, doc, updateDoc, query, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
+import { Auth } from './auth.js'; // NEW: Import Auth to check login status
 
 /**
  * The Users module handles user management, primarily for Admin roles.
@@ -23,9 +24,6 @@ export const Users = {
         this.auth = firebaseAuth;
         this.Utils = utils;
         console.log("Users module initialized.");
-
-        // Do NOT call renderUsersUI or attachEventListeners here.
-        // They depend on the module's HTML being loaded into the DOM by Main.loadModule.
     },
 
     /**
@@ -39,6 +37,28 @@ export const Users = {
             return;
         }
 
+        // --- NEW: Login Requirement Check for the module itself ---
+        if (!Auth.isLoggedIn()) {
+            usersModuleContent.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
+                    <p class="text-gray-600 mb-4">You must be logged in to view user management.</p>
+                    <button id="go-to-login-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                        Go to Home / Login
+                    </button>
+                </div>
+            `;
+            // Attach event listener for the new button
+            document.getElementById('go-to-login-btn')?.addEventListener('click', () => {
+                window.Main.loadModule('home'); // Redirect to home page
+            });
+            this.destroy(); // Clean up any previous grid/listeners
+            this.Utils.showMessage("Access Denied: Please log in to view User Management.", "error");
+            return; // Stop execution if not logged in
+        }
+        // --- END NEW ---
+
+        // Existing Admin check (after login check)
         if (this.Utils.isAdmin()) {
             usersModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md mb-6">
@@ -83,42 +103,52 @@ export const Users = {
             this.attachEventListeners();
             this.setupRealtimeListener();
         } else {
+            // If logged in but not admin
             usersModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
                     <p class="text-gray-600">You do not have administrative privileges to view this section.</p>
+                    <button id="go-to-home-btn" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                        Go to Home
+                    </button>
                 </div>
             `;
+            document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
+                window.Main.loadModule('home'); // Redirect to home page
+            });
+            this.destroy(); // Clean up any previous grid/listeners
             console.log("Not an admin, skipping user management UI.");
-            this.renderUsersGrid([]); // Render an empty grid if not admin, or ensure no grid is rendered
+            this.Utils.showMessage("Access Denied: You must be an Admin to view User Management.", "error");
         }
     },
 
     /**
      * Sets up the real-time listener for the 'users_data' collection.
-     * Only runs if the current user is an Admin.
+     * Only runs if the current user is an Admin AND logged in.
      */
     setupRealtimeListener: function() {
         if (this.unsubscribe) {
             this.unsubscribe(); // Detach existing listener if any
         }
 
-        if (this.Utils.isAdmin()) {
-            const q = query(collection(this.db, "users_data"));
-            this.unsubscribe = onSnapshot(q, (snapshot) => {
-                const users = [];
-                snapshot.forEach((doc) => {
-                    users.push({ id: doc.id, ...doc.data() });
-                });
-                console.log("Users data updated:", users);
-                this.renderUsersGrid(users);
-            }, (error) => {
-                this.Utils.handleError(error, "fetching users data");
-            });
-        } else {
-            console.log("Not an admin, skipping users data listener setup.");
-            this.renderUsersGrid([]); // Ensure grid is empty or not rendered for non-admins
+        // Additional check for logged-in user before setting up listener
+        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+            console.log("Not logged in or not admin, skipping users data listener setup.");
+            this.renderUsersGrid([]); // Ensure grid is empty or not rendered
+            return;
         }
+
+        const q = query(collection(this.db, "users_data"));
+        this.unsubscribe = onSnapshot(q, (snapshot) => {
+            const users = [];
+            snapshot.forEach((doc) => {
+                users.push({ id: doc.id, ...doc.data() });
+            });
+            console.log("Users data updated:", users);
+            this.renderUsersGrid(users);
+        }, (error) => {
+            this.Utils.handleError(error, "fetching users data");
+        });
     },
 
     /**
@@ -128,12 +158,12 @@ export const Users = {
     renderUsersGrid: function(users) {
         const gridContainer = document.getElementById('users-grid-container');
         if (!gridContainer) {
-            console.error("User grid container not found or user is not admin.");
+            console.error("User grid container not found or user is not admin."); // This error is okay if not admin
             return;
         }
 
         const columns = [
-            { id: 'id', name: 'User ID', hidden: false, width: 'auto' }, // Keep ID visible for admin for clarity
+            { id: 'id', name: 'User ID', hidden: false, width: 'auto' },
             { id: 'displayName', name: 'Display Name', sort: true, width: 'auto' },
             { id: 'email', name: 'Email', sort: true, width: 'auto' },
             { id: 'role', name: 'Role', sort: true, width: '120px' },
@@ -143,8 +173,12 @@ export const Users = {
                 formatter: (cell, row) => {
                     const userId = row.cells[0].data;
                     const userName = row.cells[1].data;
-                    const userEmail = row.cells[2].data; // Get email to pass to modal
+                    const userEmail = row.cells[2].data;
                     const userRole = row.cells[3].data;
+
+                    if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) { // Double-check permissions here
+                        return '';
+                    }
 
                     // Prevent editing of own role
                     if (this.auth.currentUser && userId === this.auth.currentUser.uid) {
@@ -160,7 +194,7 @@ export const Users = {
                             className: 'p-1 rounded-md text-gray-600 hover:bg-yellow-100 hover:text-yellow-600 transition-colors duration-200',
                             title: 'Edit User Role',
                             onClick: () => this.openUserRoleModal(userId, userName, userEmail, userRole)
-                        }, gridjs.h('i', { className: 'fas fa-user-tag text-lg' })) // Icon for user role
+                        }, gridjs.h('i', { className: 'fas fa-user-tag text-lg' }))
                     ]);
                 }
             }
@@ -183,7 +217,7 @@ export const Users = {
                 data: mappedData,
                 sort: true,
                 search: true,
-                pagination: { limit: 5 }, // Smaller pagination for admin tables
+                pagination: { limit: 5 },
                 className: {
                     table: 'min-w-full divide-y divide-gray-200',
                     th: 'px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-normal break-words',
@@ -217,12 +251,19 @@ export const Users = {
      * Opens the user role edit modal.
      */
     openUserRoleModal: function(userId, displayName, email, role) {
+        // --- NEW: Login & Admin Requirement Check for modals ---
+        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+            this.Utils.showMessage('You must be logged in as an Admin to edit user roles.', 'error');
+            return;
+        }
+        // --- END NEW ---
+
         const modal = document.getElementById('user-role-modal');
         const title = document.getElementById('user-role-modal-title');
         const form = document.getElementById('user-role-form');
 
         form.reset();
-        this.currentEditingUserId = userId; // Store the user ID
+        this.currentEditingUserId = userId;
 
         title.textContent = 'Edit User Role';
         document.getElementById('user-display-name-modal').value = displayName || email || 'N/A';
@@ -245,6 +286,14 @@ export const Users = {
      * Saves the updated user role to Firestore.
      */
     saveUserRole: async function() {
+        // --- NEW: Login & Admin Requirement Check for save ---
+        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+            this.Utils.showMessage('You must be logged in as an Admin to save user roles.', 'error');
+            this.closeUserRoleModal();
+            return;
+        }
+        // --- END NEW ---
+
         if (!this.currentEditingUserId) {
             this.Utils.showMessage('No user selected for role update.', 'warning');
             return;
@@ -259,7 +308,7 @@ export const Users = {
             this.closeUserRoleModal();
             // Important: If the current user's role was changed, update isAdmin status in Utils
             if (this.currentEditingUserId === this.auth.currentUser.uid) {
-                this.Utils.updateAdminStatus(newRole); // Explicitly pass the new role
+                this.Utils.updateAdminStatus(newRole);
             }
         } catch (error) {
             this.Utils.handleError(error, "updating user role");
