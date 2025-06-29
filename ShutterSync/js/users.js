@@ -2,6 +2,7 @@
 
 import { collection, onSnapshot, doc, updateDoc, query, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
+import { Auth } from './auth.js'; // CORRECTED: Added Auth import
 
 /**
  * The Users module handles user management, primarily for Admin roles.
@@ -43,6 +44,28 @@ export const Users = {
             return;
         }
 
+        // --- NEW: Login Requirement Check for the module itself ---
+        if (!Auth.isLoggedIn()) {
+            usersModuleContent.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
+                    <p class="text-gray-600 mb-4">You must be logged in to view user management.</p>
+                    <button id="go-to-home-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                        Go to Home / Login
+                    </button>
+                </div>
+            `;
+            // Attach event listener for the new button
+            document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
+                window.Main.loadModule('home'); // Redirect to home page
+            });
+            this.destroy(); // Clean up any previous grid/listeners
+            this.Utils.showMessage("Access Denied: Please log in to view Users.", "error");
+            return; // Stop execution if not logged in
+        }
+        // --- END NEW ---
+
+        // Existing Admin check (after login check)
         if (this.Utils.isAdmin()) {
             usersModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md mb-6">
@@ -87,14 +110,22 @@ export const Users = {
             this.attachEventListeners();
             this.setupRealtimeListener();
         } else {
+            // If logged in but not admin
             usersModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
                     <p class="text-gray-600">You do not have administrative privileges to view this section.</p>
+                    <button id="go-to-home-btn" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                        Go to Home
+                    </button>
                 </div>
             `;
+            document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
+                window.Main.loadModule('home'); // Redirect to home page
+            });
             console.log("Not an admin, skipping user management UI.");
-            this.renderUsersGrid([]); // Render an empty grid if not admin, or ensure no grid is rendered
+            this.Utils.showMessage("Access Denied: You must be an Admin to view User Management.", "error");
+            this.renderUsersGrid([]); // Ensure grid is empty or not rendered for non-admins
         }
     },
 
@@ -221,6 +252,13 @@ export const Users = {
      * Opens the user role edit modal.
      */
     openUserRoleModal: function(userId, displayName, email, role) {
+        // --- NEW: Login/Admin Requirement Check for modals ---
+        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+            this.Utils.showMessage('You do not have permission to edit user roles.', 'error');
+            return;
+        }
+        // --- END NEW ---
+
         const modal = document.getElementById('user-role-modal');
         const title = document.getElementById('user-role-modal-title');
         const form = document.getElementById('user-role-form');
@@ -249,6 +287,14 @@ export const Users = {
      * Saves the updated user role to Firestore.
      */
     saveUserRole: async function() {
+        // --- NEW: Login/Admin Requirement Check for save ---
+        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+            this.Utils.showMessage('You do not have permission to save user roles.', 'error');
+            this.closeUserRoleModal();
+            return;
+        }
+        // --- END NEW ---
+
         if (!this.currentEditingUserId) {
             this.Utils.showMessage('No user selected for role update.', 'warning');
             return;
@@ -257,11 +303,19 @@ export const Users = {
         const newRole = document.getElementById('user-role-select').value;
         const userDocRef = doc(this.db, "users_data", this.currentEditingUserId);
 
+        // Prevent admin from changing their own role, or if current user is not admin
+        if (this.currentEditingUserId === this.auth.currentUser.uid && newRole !== 'Admin') {
+            this.Utils.showMessage("Admins cannot demote themselves. Please ask another admin to change your role.", "error");
+            this.closeUserRoleModal();
+            return;
+        }
+
+
         try {
             await this.Utils.updateDoc(userDocRef, { role: newRole, updatedAt: new Date() });
             this.Utils.showMessage(`User role updated to "${newRole}" successfully!`, 'success');
             this.closeUserRoleModal();
-            // Important: If the current user's role was changed, update isAdmin status in Utils
+            // Important: If the current user's role was changed (by another admin), update isAdmin status in Utils
             if (this.currentEditingUserId === this.auth.currentUser.uid) {
                 this.Utils.updateAdminStatus(newRole); // Explicitly pass the new role
             }
@@ -284,10 +338,6 @@ export const Users = {
             this.usersGrid = null;
         }
         // Removed content clearing as Main.js handles it for the primary module content area
-        // const usersModuleContent = document.getElementById('users-module-content');
-        // if (usersModuleContent) {
-        //     usersModuleContent.innerHTML = '';
-        // }
         console.log("Users module destroyed.");
     }
 };
