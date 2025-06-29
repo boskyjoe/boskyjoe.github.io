@@ -1,178 +1,236 @@
 // js/main.js
 
+// Import all modules
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
 import { Auth } from './auth.js';
 import { Utils } from './utils.js';
+import { Home } from './home.js';
 import { Customers } from './customers.js';
 import { Opportunities } from './opportunities.js';
 import { Users } from './users.js';
 import { AdminData } from './admin_data.js';
 import { PriceBook } from './price_book.js';
-import { Home } from './home.js'; // NEW: Import the Home module
 
-export default {
+/**
+ * The main application controller.
+ * Handles Firebase initialization, module loading, and global UI updates.
+ */
+window.Main = {
+    firebaseApp: null,
     db: null,
     auth: null,
-    appId: null,
-    initialAuthToken: null,
-    moduleDestroyers: {},
+    currentModule: null,
+    moduleInstances: {}, // Store initialized module instances
+    moduleDestroyers: {}, // Store module destroy functions for cleanup
 
-    init: function(firestoreDb, firebaseAuth, appId, initialAuthToken) {
-        this.db = firestoreDb;
-        this.auth = firebaseAuth;
-        this.appId = appId;
-        this.initialAuthToken = initialAuthToken;
-        console.log("Main module initialized.");
+    /**
+     * Initializes Firebase and all application modules.
+     * This is the entry point of the application.
+     */
+    init: function() {
+        // Firebase configuration (replace with your actual config)
+        const firebaseConfig = {
+            apiKey: "YOUR_FIREBASE_API_KEY", // Make sure this is replaced with your actual key
+            authDomain: "shuttersync-96971.firebaseapp.com",
+            projectId: "shuttersync-96971",
+            storageBucket: "shuttersync-96971.appspot.com",
+            messagingSenderId: "305141201552",
+            appId: "1:305141201552:web:127d14d23580a568218d6e",
+            measurementId: "G-G998B500C5"
+        };
 
-        this.auth.onAuthStateChanged(user => {
-            if (user) {
-                this.updateUserHeaderUI(user);
+        this.firebaseApp = initializeApp(firebaseConfig);
+        this.db = getFirestore(this.firebaseApp);
+        this.auth = getAuth(this.firebaseApp);
+
+        // Initialize Utils module first, as others depend on it for error handling etc.
+        Utils.init(this.db, this.auth);
+
+        // Initialize Auth module
+        Auth.init(this.db, this.auth, Utils);
+
+        // Initialize other modules
+        this.moduleInstances.home = Home;
+        Home.init(this.db, this.auth, Utils);
+        Home.loadModuleCallback = this.loadModule.bind(this); // Pass loadModule to Home module
+
+        this.moduleInstances.customers = Customers;
+        Customers.init(this.db, this.auth, Utils);
+        this.moduleDestroyers.customers = Customers.destroy.bind(Customers);
+
+        this.moduleInstances.opportunities = Opportunities;
+        Opportunities.init(this.db, this.auth, Utils);
+        this.moduleDestroyers.opportunities = Opportunities.destroy.bind(Opportunities);
+
+        this.moduleInstances.users = Users;
+        Users.init(this.db, this.auth, Utils);
+        this.moduleDestroyers.users = Users.destroy.bind(Users);
+
+        this.moduleInstances.adminData = AdminData;
+        AdminData.init(this.db, this.auth, Utils);
+        this.moduleDestroyers.adminData = AdminData.destroy.bind(AdminData);
+
+        this.moduleInstances.priceBook = PriceBook;
+        PriceBook.init(this.db, this.auth, Utils);
+        this.moduleDestroyers.priceBook = PriceBook.destroy.bind(PriceBook);
+
+        // Attach global event listeners
+        this.attachGlobalEventListeners();
+
+        // Initial UI update based on auth state
+        Auth.onAuthReady(() => {
+            this.updateUIForAuthStatus();
+            // Load the last active module or default to home
+            const lastActiveModule = localStorage.getItem('lastActiveModule');
+            if (Auth.isLoggedIn() && lastActiveModule && lastActiveModule !== 'home') {
+                 // Try to load it, but if access is denied, it will redirect to home
+                this.loadModule(lastActiveModule);
             } else {
-                this.updateUserHeaderUI(null);
+                this.loadModule('home');
+            }
+        });
+
+        // Listen for admin status changes from Utils to re-render UI
+        Utils.onAdminStatusChange(() => {
+            this.updateUIForAuthStatus();
+            // If the current module is admin-gated and status changed, re-render it
+            if (this.currentModule && ['users', 'adminData', 'priceBook'].includes(this.currentModule)) {
+                this.loadModule(this.currentModule);
             }
         });
     },
 
-    loadModule: async function(moduleName) {
+    /**
+     * Loads a specified application module.
+     * @param {string} moduleName - The name of the module to load ('home', 'customers', etc.).
+     */
+    loadModule: function(moduleName) {
+        // Cleanup the previously loaded module if any
+        if (this.currentModule && this.moduleDestroyers[this.currentModule]) {
+            this.moduleDestroyers[this.currentModule]();
+        }
+
         const contentArea = document.getElementById('content-area');
-        if (!contentArea) {
-            console.error("Content area not found.");
-            return;
+        if (contentArea) {
+            contentArea.innerHTML = ''; // Clear previous content
         }
 
-        const lastActiveModule = localStorage.getItem('lastActiveModule');
-        if (lastActiveModule && this.moduleDestroyers[lastActiveModule]) {
-            console.log(`Destroying ${lastActiveModule} module.`);
-            this.moduleDestroyers[lastActiveModule]();
+        // Deactivate all nav links first
+        document.querySelectorAll('nav a').forEach(link => {
+            link.classList.remove('bg-gray-700', 'text-white');
+            link.classList.add('text-gray-300', 'hover:bg-gray-700', 'hover:text-white');
+        });
+
+        // Activate the current nav link
+        const activeLink = document.querySelector(`nav a[data-module="${moduleName}"]`);
+        if (activeLink) {
+            activeLink.classList.add('bg-gray-700', 'text-white');
+            activeLink.classList.remove('text-gray-300', 'hover:bg-gray-700', 'hover:text-white');
         }
 
-        contentArea.innerHTML = '<div class="text-center p-8"><i class="fas fa-spinner fa-spin text-4xl text-blue-500"></i><p class="mt-4 text-gray-700">Loading module...</p></div>';
-
-        try {
-            switch (moduleName) {
-                case 'home': // NEW: Case for Home module
-                    contentArea.innerHTML = '<div id="home-module-content"></div>';
-                    Home.renderHomeUI();
-                    break;
-                case 'customers':
-                    contentArea.innerHTML = '<div id="customers-module-content"></div>';
-                    Customers.renderCustomersUI();
-                    break;
-                case 'opportunities':
-                    contentArea.innerHTML = '<div id="opportunities-module-content"></div>';
-                    Opportunities.renderOpportunitiesUI();
-                    break;
-                case 'users':
-                    if (!Utils.isAdmin()) {
-                         contentArea.innerHTML = `
-                            <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                                <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
-                                <p class="text-gray-600">You do not have administrative privileges to view this section.</p>
-                            </div>
-                        `;
-                        localStorage.setItem('lastActiveModule', 'home'); // Redirect to home if access denied
-                        Utils.showMessage("Access Denied: You must be an Admin to view User Management.", "error");
-                        return;
-                    }
-                    contentArea.innerHTML = '<div id="users-module-content"></div>';
-                    Users.renderUsersUI();
-                    break;
-                case 'admin-data':
-                    if (!Utils.isAdmin()) {
-                        contentArea.innerHTML = `
-                            <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                                <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
-                                <p class="text-gray-600">You do not have administrative privileges to view this section.</p>
-                            </div>
-                        `;
-                        localStorage.setItem('lastActiveModule', 'home'); // Redirect to home if access denied
-                        Utils.showMessage("Access Denied: You must be an Admin to view App Metadata.", "error");
-                        return;
-                    }
-                    contentArea.innerHTML = '<div id="admin-data-module-content"></div>';
-                    AdminData.renderAdminDataUI();
-                    break;
-                case 'price-book':
-                    if (!Utils.isAdmin()) {
-                        contentArea.innerHTML = `
-                            <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                                <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
-                                <p class="text-gray-600">You do not have administrative privileges to view this section.</p>
-                            </div>
-                        `;
-                        localStorage.setItem('lastActiveModule', 'home'); // Redirect to home if access denied
-                        Utils.showMessage("Access Denied: You must be an Admin to view Price Books.", "error");
-                        return;
-                    }
-                    contentArea.innerHTML = '<div id="price-book-module-content"></div>';
-                    PriceBook.renderPriceBookUI();
-                    break;
-                case 'events':
-                    contentArea.innerHTML = `<div class="bg-white p-6 rounded-lg shadow-md text-center">
-                                                <h3 class="text-2xl font-semibold text-gray-800 mb-4">Events</h3>
-                                                <p class="text-gray-600">Events module is not yet implemented.</p>
-                                            </div>`;
-                    localStorage.setItem('lastActiveModule', moduleName);
-                    break;
-                default:
-                    contentArea.innerHTML = `<p class="text-red-500">Module "${moduleName}" not found.</p>`;
-                    return;
+        // Load the new module
+        if (this.moduleInstances[moduleName]) {
+            this.currentModule = moduleName;
+            localStorage.setItem('lastActiveModule', moduleName); // Remember for next session
+            console.log(`Loading module: ${moduleName}`);
+            // All modules now have a render*UI method (e.g., renderHomeUI)
+            const renderMethodName = `render${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)}UI`;
+            if (typeof this.moduleInstances[moduleName][renderMethodName] === 'function') {
+                this.moduleInstances[moduleName][renderMethodName]();
+            } else {
+                console.error(`Render method "${renderMethodName}" not found for module "${moduleName}".`);
+                // Fallback to home if render method is missing
+                this.loadModule('home');
+                Utils.showMessage("Error loading module. Redirected to Home.", "error");
             }
-            localStorage.setItem('lastActiveModule', moduleName);
-            console.log(`Module "${moduleName}" loaded.`);
-
-            // Pass Main.loadModule to Home if Home needs to call it (for internal buttons)
-            // This is a more robust way to allow sub-modules to trigger navigation.
-            if (moduleName === 'home') {
-                Home.loadModuleCallback = this.loadModule.bind(this);
-            }
-
-            Utils.onAdminStatusChange(() => {
-                this.updateAdminLinksVisibility();
-            });
-
-        } catch (error) {
-            console.error(`Failed to load module ${moduleName}:`, error);
-            contentArea.innerHTML = `<p class="text-red-500">Error loading module: ${error.message}</p>`;
-            Utils.showMessage(`Error loading ${moduleName} module.`, 'error');
+        } else {
+            console.error(`Module "${moduleName}" not found.`);
+            this.loadModule('home'); // Fallback to home if module doesn't exist
+            Utils.showMessage("Module not found. Redirected to Home.", "error");
         }
     },
 
-    setModuleDestroyers: function(destroyers) {
-        this.moduleDestroyers = destroyers;
-    },
+    /**
+     * Updates the global UI elements based on authentication status and user role.
+     */
+    updateUIForAuthStatus: function() {
+        const isLoggedIn = Auth.isLoggedIn();
+        const isAdmin = Utils.isAdmin();
+        const currentUser = this.auth.currentUser;
 
-    updateUserHeaderUI: function(user) {
-        const userDisplayNameElem = document.getElementById('user-display-name');
-        const userIconContainer = document.getElementById('user-icon-container');
+        // User Info in Navbar
+        const userInfoSpan = document.getElementById('user-info-span');
         const logoutBtn = document.getElementById('logout-btn');
+        const loginRegisterPlaceholder = document.getElementById('login-register-placeholder');
 
-        if (userDisplayNameElem && userIconContainer && logoutBtn) {
-            if (user) {
-                const displayName = user.displayName || user.email || 'Guest';
-                userDisplayNameElem.textContent = displayName;
-                userIconContainer.innerHTML = `<i class="fas fa-user-circle text-2xl"></i>`;
-                userDisplayNameElem.classList.remove('hidden');
-                userIconContainer.classList.remove('hidden');
-                logoutBtn.classList.remove('hidden');
+        if (userInfoSpan) {
+            if (isLoggedIn && currentUser) {
+                userInfoSpan.textContent = currentUser.displayName || currentUser.email || 'Logged In';
+                userInfoSpan.classList.remove('hidden');
+                if (logoutBtn) logoutBtn.classList.remove('hidden');
+                if (loginRegisterPlaceholder) loginRegisterPlaceholder.classList.add('hidden');
             } else {
-                userDisplayNameElem.textContent = '';
-                userIconContainer.innerHTML = '';
-                userDisplayNameElem.classList.add('hidden');
-                userIconContainer.classList.add('hidden');
-                logoutBtn.classList.add('hidden');
+                userInfoSpan.textContent = '';
+                userInfoSpan.classList.add('hidden');
+                if (logoutBtn) logoutBtn.classList.add('hidden');
+                if (loginRegisterPlaceholder) loginRegisterPlaceholder.classList.remove('hidden');
             }
         }
-        this.updateAdminLinksVisibility();
+
+        // --- FIX FOR ADMIN NAV DROPDOWN ---
+        const adminNavDropdown = document.getElementById('nav-admin-dropdown');
+        if (adminNavDropdown) {
+            if (isAdmin) {
+                adminNavDropdown.classList.remove('hidden');
+            } else {
+                adminNavDropdown.classList.add('hidden');
+            }
+        } else {
+            console.warn("Admin navigation dropdown element not found: #nav-admin-dropdown");
+        }
+        // --- END FIX ---
+
+        // Control visibility of other nav links if needed (currently all visible if logged in)
+        // For example, if you want only specific links for logged-in users:
+        // const protectedLinks = document.querySelectorAll('nav a[data-module]:not([data-module="home"])');
+        // protectedLinks.forEach(link => {
+        //     if (isLoggedIn) {
+        //         link.classList.remove('hidden');
+        //     } else {
+        //         link.classList.add('hidden');
+        //     }
+        // });
     },
 
-    updateAdminLinksVisibility: function() {
-        const adminDropdown = document.querySelector('.group .relative');
-        if (adminDropdown) {
-            if (Utils.isAdmin()) {
-                adminDropdown.classList.remove('hidden');
-            } else {
-                adminDropdown.classList.add('hidden');
-            }
+    /**
+     * Attaches global event listeners to the navigation bar and logout button.
+     */
+    attachGlobalEventListeners: function() {
+        // Navigation links
+        document.querySelectorAll('nav a[data-module]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const moduleName = e.target.dataset.module;
+                this.loadModule(moduleName);
+            });
+        });
+
+        // Logout button
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                await Auth.logout();
+                this.updateUIForAuthStatus(); // Update UI after logout
+                this.loadModule('home'); // Always redirect to home after logout
+            });
         }
     }
 };
+
+// Initialize the Main application when the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.Main.init();
+});
