@@ -48,7 +48,7 @@
         <div class="container mx-auto flex justify-between items-center">
             <a href="#" id="home-link" class="text-2xl font-bold tracking-wide hover:text-gray-300 transition-colors duration-200">ShutterSync CRM</a>
             <div class="flex items-center space-x-4">
-                <a href="#" data-module="customers" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Home</a>
+                <a href="#" data-module="home" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Home</a>
                 <a href="#" data-module="customers" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Customers</a>
                 <a href="#" data-module="opportunities" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Opportunities</a>
                 <a href="#" data-module="events" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Events</a>
@@ -118,9 +118,8 @@
         };
 
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId; // Use actual projectId as fallback for appId
+        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
 
-        // Diagnostic Log: Inspect the final firebaseConfig before initializeApp
         console.log("Firebase config object before initializeApp:", firebaseConfig);
 
         // Initialize Firebase
@@ -137,7 +136,7 @@
         import { Users } from './js/users.js';
         import { AdminData } from './js/admin_data.js';
         import { PriceBook } from './js/price_book.js';
-
+        import { Home } from './js/home.js'; // NEW: Import Home module
 
         // Initialize Utils first as it's a dependency
         Utils.init(db, auth, appId);
@@ -145,7 +144,7 @@
         // Initialize Auth module with Firebase instances and Utils
         Auth.init(db, auth, Utils);
 
-        // Initialize Main module
+        // Initialize Main module (Main's init should be independent of initialAuthToken directly)
         Main.init(db, auth, appId, initialAuthToken);
 
         // Initialize other modules. They also need db, auth, and Utils.
@@ -154,15 +153,17 @@
         Users.init(db, auth, Utils);
         AdminData.init(db, auth, Utils);
         PriceBook.init(db, auth, Utils);
+        Home.init(db, auth, Utils); // NEW: Initialize Home module
 
         // Ensure modules are properly destroyed/unsubscribed when switching
         Main.setModuleDestroyers({
+            'home': () => Home.destroy(), // NEW: Destroyer for Home module
             'customers': () => Customers.destroy(),
             'opportunities': () => Opportunities.destroy(),
             'users': () => Users.destroy(),
             'admin-data': () => AdminData.destroy(),
             'price-book': () => PriceBook.destroy(),
-            'events': () => Utils.showMessage('Events module is not yet implemented.', 'info', 3000), // Placeholder for events
+            'events': () => Utils.showMessage('Events module is not yet implemented.', 'info', 3000),
         });
 
         // Event listener for module navigation
@@ -182,21 +183,21 @@
             await Auth.logout();
         });
 
-        // Event listener for home link to load default module (Customers)
+        // Event listener for home link to load default module (Home)
         document.getElementById('home-link').addEventListener('click', (e) => {
             e.preventDefault();
-            Main.loadModule('customers');
+            Main.loadModule('home'); // CHANGE: Clicks on title go to 'home'
         });
 
         // Handle initial module load after authentication check
         Auth.onAuthReady(() => {
-            const lastModule = localStorage.getItem('lastActiveModule') || 'customers';
+            const lastModule = localStorage.getItem('lastActiveModule') || 'home'; // CHANGE: Default to 'home'
             Main.loadModule(lastModule);
             Main.updateUserHeaderUI(auth.currentUser);
         });
 
-        // Initiate the login process (will handle initial token or anonymous)
-        Auth.login(initialAuthToken);
+        // Expose Main globally so Home module's buttons can access loadModule if needed
+        window.Main = Main;
 
     </script>
 </body>
