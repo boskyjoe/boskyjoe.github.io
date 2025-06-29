@@ -2,49 +2,48 @@
 
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDoc, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
-import { Auth } from './auth.js';
 
 /**
- * The Opportunities module handles all functionality related to opportunity management.
+ * The OpportunitiesModule object handles all functionality related to opportunity management.
  */
 export const Opportunities = {
     db: null,
     auth: null,
     Utils: null,
-    unsubscribe: null,
-    currentEditingOpportunityId: null,
-    opportunitiesGrid: null,
-    _customerNamesMap: new Map(),
+    unsubscribe: null, // To store the unsubscribe function for the real-time listener
+    currentEditingOpportunityId: null, // Stores the ID of the opportunity being edited
+    opportunitiesGrid: null, // Grid.js instance for the opportunities table
+    _customerNamesMap: new Map(), // Map to store customer IDs to names for quick lookup
 
+    /**
+     * Initializes the Opportunities module.
+     * This method should only initialize core dependencies, not interact with the DOM yet.
+     * @param {object} firestoreDb - The Firestore database instance.
+     * @param {object} firebaseAuth - The Firebase Auth instance.
+     * @param {object} utils - The Utils object for common functionalities.
+     */
     init: function(firestoreDb, firebaseAuth, utils) {
         this.db = firestoreDb;
         this.auth = firebaseAuth;
         this.Utils = utils;
         console.log("Opportunities module initialized.");
+
+        // Do NOT call renderOpportunitiesUI or attachEventListeners here.
+        // They depend on the module's HTML being loaded into the DOM by Main.loadModule.
     },
 
-    renderOpportunitiesUI: function() {
-        const opportunitiesModuleContent = document.getElementById('opportunities-module-content');
-        if (!opportunitiesModuleContent) {
-            console.error("Opportunities module content area not found in DOM.");
-            return;
-        }
+    /**
+     * Renders the main UI for the Opportunities module.
+     * This is called by Main.js when the 'opportunities' module is activated.
+     * @param {HTMLElement} moduleContentElement - The DOM element where the Opportunities UI should be rendered.
+     */
+    renderOpportunitiesUI: function(moduleContentElement) { // Added moduleContentElement parameter
+        // CRITICAL FIX: Use the passed moduleContentElement directly
+        const opportunitiesModuleContent = moduleContentElement;
 
-        if (!Auth.isLoggedIn()) {
-            opportunitiesModuleContent.innerHTML = `
-                <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
-                    <p class="text-gray-600 mb-4">You must be logged in to view opportunity data.</p>
-                    <button id="go-to-login-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
-                        Go to Home / Login
-                    </button>
-                </div>
-            `;
-            document.getElementById('go-to-login-btn')?.addEventListener('click', () => {
-                window.Main.loadModule('home');
-            });
-            this.destroy();
-            this.Utils.showMessage("Access Denied: Please log in to view Opportunities.", "error");
+        if (!opportunitiesModuleContent) {
+            console.error("Opportunities module: Target content element was not provided or is null.");
+            this.Utils.showMessage("Error: Opportunities module could not find its content area.", "error");
             return;
         }
 
@@ -58,35 +57,33 @@ export const Opportunities = {
                     </button>
                 </div>
                 <p class="text-sm text-gray-600 mb-4">Track potential sales and their progress.</p>
-                <div id="opportunity-grid-container" class="border border-gray-200 rounded-lg overflow-hidden"></div>
+                <div id="opportunities-grid-container" class="border border-gray-200 rounded-lg overflow-hidden"></div>
             </div>
 
-            <!-- Opportunity Modal (Add/Edit Form) -->
             <div id="opportunity-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[900] hidden">
                 <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full transform transition-all duration-300 scale-95 opacity-0">
                     <h4 id="opportunity-modal-title" class="text-2xl font-bold text-gray-800 mb-6">Add New Opportunity</h4>
                     <form id="opportunity-form">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="grid grid-cols-1 gap-4 mb-4">
                             <div>
-                                <label for="opportunity-name-field" class="block text-sm font-medium text-gray-700 mb-1">Opportunity Name</label>
-                                <input type="text" id="opportunity-name-field" name="name" required
+                                <label for="opportunity-name" class="block text-sm font-medium text-gray-700 mb-1">Opportunity Name</label>
+                                <input type="text" id="opportunity-name" name="opportunityName" required
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             </div>
                             <div>
                                 <label for="customer-select" class="block text-sm font-medium text-gray-700 mb-1">Related Customer</label>
                                 <select id="customer-select" name="customerId" required
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white">
-                                    <!-- Options will be populated dynamically -->
-                                </select>
+                                    </select>
                             </div>
                             <div>
-                                <label for="amount-field" class="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
-                                <input type="number" id="amount-field" name="value" step="0.01" min="0" required
+                                <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                                <input type="number" id="amount" name="amount" step="0.01" min="0" required
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             </div>
                             <div>
                                 <label for="stage-select" class="block text-sm font-medium text-gray-700 mb-1">Stage</label>
-                                <select id="stage-select" name="status" required
+                                <select id="stage-select" name="stage" required
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white">
                                     <option value="Prospecting">Prospecting</option>
                                     <option value="Qualification">Qualification</option>
@@ -97,37 +94,10 @@ export const Opportunities = {
                                 </select>
                             </div>
                             <div>
-                                <label for="close-date-field" class="block text-sm font-medium text-gray-700 mb-1">Expected Close Date</label>
-                                <input type="date" id="close-date-field" name="closeDate"
+                                <label for="close-date" class="block text-sm font-medium text-gray-700 mb-1">Expected Close Date</label>
+                                <input type="date" id="close-date" name="expectedCloseDate"
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             </div>
-
-                            <!-- NEW Opportunity-Specific Fields based on Security Rules -->
-                            <div>
-                                <label for="currency" class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
-                                <input type="text" id="currency" name="currency" placeholder="e.g., USD"
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            </div>
-                            <div>
-                                <label for="event-type" class="block text-sm font-medium text-gray-700 mb-1">Event Type</label>
-                                <input type="text" id="event-type" name="eventType" placeholder="e.g., Conference"
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            </div>
-                            <div class="md:col-span-2">
-                                <label for="proposed-location" class="block text-sm font-medium text-gray-700 mb-1">Proposed Event Location</label>
-                                <input type="text" id="proposed-location" name="proposedEventLocation"
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            </div>
-                            <div class="md:col-span-2">
-                                <label for="description-field" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                <textarea id="description-field" name="description" rows="2"
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
-                            </div>
-                            <div class="md:col-span-2 flex items-center">
-                                <input type="checkbox" id="opportunity-active" name="active" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                                <label for="opportunity-active" class="ml-2 block text-sm font-medium text-gray-700">Active Opportunity?</label>
-                            </div>
-                            <!-- END NEW Opportunity-Specific Fields -->
                         </div>
                         <div class="flex justify-end space-x-3 mt-6">
                             <button type="button" id="cancel-opportunity-btn"
@@ -143,7 +113,9 @@ export const Opportunities = {
                 </div>
             </div>
         `;
+        // After rendering HTML, attach event listeners and setup the real-time listener
         this.attachEventListeners();
+        // Moved fetchAndCacheCustomers here, and it now calls populateCustomerDropdown
         this.fetchAndCacheCustomers().then(() => {
             this.setupRealtimeListener();
         });
@@ -154,28 +126,29 @@ export const Opportunities = {
      * @returns {Promise<void>} A promise that resolves when customers are fetched and cached.
      */
     fetchAndCacheCustomers: async function() {
-        this._customerNamesMap.clear();
+        this._customerNamesMap.clear(); // Clear existing map
         const userId = this.auth.currentUser ? this.auth.currentUser.uid : null;
         if (!userId) {
-            console.log("No user ID, cannot fetch customers for dropdown. (User likely not logged in or session expired)");
+            console.log("No user ID, cannot fetch customers for dropdown.");
             return;
         }
 
         const customersCollectionRef = collection(this.db, "customers");
         let q;
         if (this.Utils.isAdmin()) {
-            q = query(customersCollectionRef, orderBy('name')); // Changed to 'name'
+            q = query(customersCollectionRef, orderBy('companyName'));
         } else {
-            q = query(customersCollectionRef, where("creatorId", "==", userId), orderBy('name')); // Changed to 'name'
+            q = query(customersCollectionRef, where("creatorId", "==", userId), orderBy('companyName'));
         }
 
         try {
             const querySnapshot = await getDocs(q);
             querySnapshot.forEach((docSnap) => {
                 const customerData = docSnap.data();
-                this._customerNamesMap.set(docSnap.id, customerData.name || 'N/A'); // Changed to 'name'
+                this._customerNamesMap.set(docSnap.id, customerData.companyName || 'N/A');
             });
             console.log("Customers cached:", this._customerNamesMap);
+            // Re-populate dropdown if modal is open, or ensure it's ready for next open
             this.populateCustomerDropdown();
         } catch (error) {
             this.Utils.handleError(error, "fetching customers for opportunity dropdown");
@@ -191,8 +164,9 @@ export const Opportunities = {
         const customerSelect = document.getElementById('customer-select');
         if (!customerSelect) return;
 
-        customerSelect.innerHTML = '<option value="">Select a Customer</option>';
+        customerSelect.innerHTML = '<option value="">Select a Customer</option>'; // Default option
 
+        // Sort customers by name for display
         const sortedCustomers = Array.from(this._customerNamesMap.entries()).sort((a, b) => a[1].localeCompare(b[1]));
 
         sortedCustomers.forEach(([id, name]) => {
@@ -211,12 +185,12 @@ export const Opportunities = {
      */
     setupRealtimeListener: function() {
         if (this.unsubscribe) {
-            this.unsubscribe();
+            this.unsubscribe(); // Detach existing listener if any
         }
 
         const userId = this.auth.currentUser ? this.auth.currentUser.uid : null;
         if (!userId) {
-            console.log("User not logged in, cannot set up opportunity listener. (User likely not logged in or session expired)");
+            console.log("User not logged in, cannot set up opportunity listener.");
             this.renderOpportunitiesGrid([]);
             return;
         }
@@ -224,10 +198,10 @@ export const Opportunities = {
         const opportunitiesCollectionRef = collection(this.db, "opportunities");
         let q;
         if (this.Utils.isAdmin()) {
-            q = query(opportunitiesCollectionRef);
+            q = query(opportunitiesCollectionRef); // Admins see all opportunities
             console.log("Admin user: Fetching all opportunities.");
         } else {
-            q = query(opportunitiesCollectionRef, where("creatorId", "==", userId));
+            q = query(opportunitiesCollectionRef, where("creatorId", "==", userId)); // Standard users see only their own
             console.log("Standard user: Fetching opportunities created by:", userId);
         }
 
@@ -235,6 +209,7 @@ export const Opportunities = {
             const opportunities = [];
             snapshot.forEach((doc) => {
                 const data = doc.data();
+                // Use the cached _customerNamesMap for lookup
                 const customerName = this._customerNamesMap.get(data.customerId) || 'Unknown Customer';
                 opportunities.push({ id: doc.id, customerName: customerName, ...data });
             });
@@ -248,40 +223,34 @@ export const Opportunities = {
 
     /**
      * Renders or updates the Grid.js table with the provided opportunity data.
-     * Updated columns to reflect new fields.
      * @param {Array<object>} opportunities - An array of opportunity objects.
      */
     renderOpportunitiesGrid: function(opportunities) {
-        const gridContainer = document.getElementById('opportunity-grid-container');
+        const gridContainer = document.getElementById('opportunities-grid-container');
         if (!gridContainer) {
-            console.error("Opportunity grid container not found.");
+            console.error("Opportunities grid container not found.");
             return;
         }
 
         const columns = [
             { id: 'id', name: 'ID', hidden: true },
-            { id: 'name', name: 'Opportunity Name', sort: true, width: 'auto' }, // Renamed from opportunityName
-            { id: 'customerName', name: 'Customer', sort: true, width: 'auto' },
-            { id: 'value', name: 'Amount ($)', sort: true, width: '100px', formatter: (cell) => `$${parseFloat(cell).toLocaleString()}` }, // Renamed from amount
-            { id: 'status', name: 'Stage', sort: true, width: '120px' }, // Renamed from stage
-            { id: 'closeDate', name: 'Close Date', sort: true, width: '120px', formatter: (cell) => cell ? new Date(cell.toDate()).toLocaleDateString() : 'N/A' }, // Renamed from expectedCloseDate
-            { id: 'currency', name: 'Currency', width: '80px' },           // NEW
-            { id: 'eventType', name: 'Event Type', width: '120px' },       // NEW
-            { id: 'proposedEventLocation', name: 'Location', width: 'auto' }, // NEW
-            { id: 'description', name: 'Description', width: 'auto' },       // NEW
-            { id: 'active', name: 'Active', width: '80px', formatter: (cell) => cell ? 'Yes' : 'No' }, // NEW
+            { id: 'opportunityName', name: 'Opportunity Name', sort: true, width: 'auto' },
+            { id: 'customerName', name: 'Customer', sort: true, width: 'auto' }, // Display customer name
+            { id: 'amount', name: 'Amount', sort: true, width: '100px', formatter: (cell) => `$${parseFloat(cell).toLocaleString()}` },
+            { id: 'stage', name: 'Stage', sort: true, width: '120px' },
+            { id: 'expectedCloseDate', name: 'Close Date', sort: true, width: '120px', formatter: (cell) => cell ? new Date(cell.toDate()).toLocaleDateString() : 'N/A' },
             {
                 name: 'Actions',
                 width: '100px',
                 formatter: (cell, row) => {
-                    const opportunityId = row.cells[0].data;
+                    const opportunityId = row.cells[0].data; // Get opportunity ID
                     const opportunityData = opportunities.find(o => o.id === opportunityId);
                     const creatorId = opportunityData?.creatorId;
                     const isCurrentUserCreator = this.auth.currentUser && creatorId === this.auth.currentUser.uid;
                     const canEditOrDelete = this.Utils.isAdmin() || isCurrentUserCreator;
 
                     if (!canEditOrDelete) {
-                        return '';
+                        return ''; // No actions if not allowed
                     }
 
                     return gridjs.h('div', {
@@ -304,16 +273,11 @@ export const Opportunities = {
 
         const mappedData = opportunities.map(o => [
             o.id,
-            o.name || '',                     // Renamed from opportunityName
+            o.opportunityName || '',
             o.customerName || '',
-            o.value || 0,                     // Renamed from amount
-            o.status || '',                   // Renamed from stage
-            o.closeDate || '',                // Renamed from expectedCloseDate
-            o.currency || '',                 // NEW
-            o.eventType || '',                // NEW
-            o.proposedEventLocation || '',    // NEW
-            o.description || '',              // NEW
-            o.active || false                 // NEW
+            o.amount || 0,
+            o.stage || '',
+            o.expectedCloseDate || ''
         ]);
 
         if (this.opportunitiesGrid) {
@@ -343,6 +307,9 @@ export const Opportunities = {
         }
     },
 
+    /**
+     * Attaches event listeners for UI interactions within the Opportunities module.
+     */
     attachEventListeners: function() {
         const addOpportunityBtn = document.getElementById('add-opportunity-btn');
         if (addOpportunityBtn) {
@@ -372,21 +339,21 @@ export const Opportunities = {
         }
     },
 
+    /**
+     * Opens the opportunity add/edit modal.
+     * @param {string} mode - 'add' or 'edit'.
+     * @param {string|null} opportunityId - The ID of the opportunity to edit, if mode is 'edit'.
+     */
     openOpportunityModal: async function(mode, opportunityId = null) {
-        if (!Auth.isLoggedIn()) {
-            this.Utils.showMessage('You must be logged in to add/edit opportunities.', 'error');
-            return;
-        }
-
         const modal = document.getElementById('opportunity-modal');
         const title = document.getElementById('opportunity-modal-title');
         const form = document.getElementById('opportunity-form');
 
         form.reset();
         this.currentEditingOpportunityId = null;
-        document.getElementById('opportunity-active').checked = true; // Default to active for new opportunities
 
-        await this.fetchAndCacheCustomers();
+        // Ensure customer dropdown is populated before opening modal
+        await this.fetchAndCacheCustomers(); // Re-fetch to ensure latest customers if needed
         this.populateCustomerDropdown();
 
         if (mode === 'edit' && opportunityId) {
@@ -396,17 +363,11 @@ export const Opportunities = {
                 const opportunityDoc = await getDoc(doc(this.db, 'opportunities', opportunityId));
                 if (opportunityDoc.exists()) {
                     const data = opportunityDoc.data();
-                    document.getElementById('opportunity-name-field').value = data.name || ''; // Renamed ID
-                    document.getElementById('amount-field').value = data.value || 0;         // Renamed ID
-                    document.getElementById('stage-select').value = data.status || 'Prospecting'; // Renamed ID
-                    document.getElementById('close-date-field').value = data.closeDate ? new Date(data.closeDate.toDate()).toISOString().split('T')[0] : ''; // Renamed ID
-                    // NEW fields for editing
-                    document.getElementById('currency').value = data.currency || '';
-                    document.getElementById('event-type').value = data.eventType || '';
-                    document.getElementById('proposed-location').value = data.proposedEventLocation || '';
-                    document.getElementById('description-field').value = data.description || '';
-                    document.getElementById('opportunity-active').checked = data.active !== false; // Default true if undefined
-                    this.populateCustomerDropdown(data.customerId);
+                    document.getElementById('opportunity-name').value = data.opportunityName || '';
+                    document.getElementById('amount').value = data.amount || 0;
+                    document.getElementById('stage-select').value = data.stage || 'Prospecting';
+                    document.getElementById('close-date').value = data.expectedCloseDate ? new Date(data.expectedCloseDate.toDate()).toISOString().split('T')[0] : '';
+                    this.populateCustomerDropdown(data.customerId); // Pre-select customer
                 } else {
                     this.Utils.showMessage('Opportunity not found for editing.', 'error');
                     this.closeOpportunityModal();
@@ -419,14 +380,8 @@ export const Opportunities = {
             }
         } else {
             title.textContent = 'Add New Opportunity';
-            document.getElementById('stage-select').value = 'Prospecting';
-            document.getElementById('close-date-field').valueAsDate = new Date();
-            // Default values for new opportunity that align with rule's hasAll
-            document.getElementById('currency').value = ''; // Default empty
-            document.getElementById('event-type').value = ''; // Default empty
-            document.getElementById('proposed-location').value = ''; // Default empty
-            document.getElementById('description-field').value = ''; // Default empty
-            document.getElementById('opportunity-active').checked = true; // Default active
+            document.getElementById('stage-select').value = 'Prospecting'; // Default for new
+            document.getElementById('close-date').valueAsDate = new Date(); // Default to today
         }
 
         modal.classList.remove('hidden');
@@ -435,64 +390,53 @@ export const Opportunities = {
         }, 10);
     },
 
+    /**
+     * Closes the opportunity modal.
+     */
     closeOpportunityModal: function() {
         const modal = document.getElementById('opportunity-modal');
         if (modal) {
             modal.querySelector('div').classList.add('opacity-0', 'scale-95');
             modal.addEventListener('transitionend', () => {
                 modal.classList.add('hidden');
-                modal.removeAttribute('dataset.editingOpportunityId');
+                modal.removeAttribute('dataset.editingOpportunityId'); // Clean up
             }, { once: true });
         }
     },
 
+    /**
+     * Saves a new opportunity or updates an existing one to Firestore.
+     */
     saveOpportunity: async function() {
-        if (!Auth.isLoggedIn()) {
-            this.Utils.showMessage('You must be logged in to save opportunities.', 'error');
-            this.closeOpportunityModal();
-            return;
-        }
-
-        // Renamed fields to match Security Rules
-        const name = document.getElementById('opportunity-name-field').value.trim();
+        const opportunityName = document.getElementById('opportunity-name').value.trim();
         const customerId = document.getElementById('customer-select').value;
-        const value = parseFloat(document.getElementById('amount-field').value); // Renamed to 'value'
-        const status = document.getElementById('stage-select').value;             // Renamed to 'status'
-        const closeDate = document.getElementById('close-date-field').value;     // Renamed to 'closeDate'
+        const amount = parseFloat(document.getElementById('amount').value);
+        const stage = document.getElementById('stage-select').value;
+        const closeDate = document.getElementById('close-date').value;
 
-        // NEW fields from UI (or default if no UI input)
-        const currency = document.getElementById('currency').value.trim() || '';
-        const eventType = document.getElementById('event-type').value.trim() || '';
-        const proposedEventLocation = document.getElementById('proposed-location').value.trim() || '';
-        const description = document.getElementById('description-field').value.trim() || '';
-        const active = document.getElementById('opportunity-active').checked;
-
-        if (!name || !customerId || isNaN(value) || value < 0) {
-            this.Utils.showMessage('Opportunity Name, Customer, and a valid positive Amount are required.', 'warning');
+        if (!opportunityName || !customerId || isNaN(amount)) {
+            this.Utils.showMessage('Opportunity Name, Customer, and Amount are required.', 'warning');
             return;
         }
 
         const opportunityData = {
-            name: name,
+            opportunityName: opportunityName,
             customerId: customerId,
-            status: status, // Matches rule
-            value: value,   // Matches rule
-            closeDate: closeDate ? new Date(closeDate) : null, // Matches rule
-            currency: currency,
-            eventType: eventType,
-            proposedEventLocation: proposedEventLocation,
-            description: description,
-            active: active,
+            amount: amount,
+            stage: stage,
+            expectedCloseDate: closeDate ? new Date(closeDate) : null,
             updatedAt: new Date()
         };
 
         try {
             if (this.currentEditingOpportunityId) {
+                // Update existing opportunity
                 const opportunityRef = doc(this.db, "opportunities", this.currentEditingOpportunityId);
                 await this.Utils.updateDoc(opportunityRef, opportunityData);
                 this.Utils.showMessage('Opportunity updated successfully!', 'success');
             } else {
-                opportunityData.creatorId = this.auth.currentUser.uid;
+                // Add new opportunity
+                opportunityData.creatorId = this.auth.currentUser ? this.auth.currentUser.uid : 'anonymous';
                 opportunityData.createdAt = new Date();
                 await addDoc(collection(this.db, "opportunities"), opportunityData);
                 this.Utils.showMessage('Opportunity added successfully!', 'success');
@@ -503,12 +447,12 @@ export const Opportunities = {
         }
     },
 
+    /**
+     * Deletes an opportunity from Firestore.
+     * @param {string} opportunityId - The ID of the opportunity to delete.
+     * @param {string} opportunityName - The name of the opportunity for confirmation message.
+     */
     deleteOpportunity: async function(opportunityId, opportunityName) {
-        if (!Auth.isLoggedIn()) {
-            this.Utils.showMessage('You must be logged in to delete opportunities.', 'error');
-            return;
-        }
-
         this.Utils.showMessage(`Are you sure you want to delete opportunity "${opportunityName}"? This action cannot be undone.`, 'warning', 0);
 
         const messageModalContainer = document.getElementById('message-modal-container');
@@ -525,8 +469,7 @@ export const Opportunities = {
                     await deleteDoc(doc(this.db, "opportunities", opportunityId));
                     this.Utils.showMessage('Opportunity deleted successfully!', 'success');
                     messageModalContainer.classList.add('hidden');
-                }
-                catch (error) {
+                } catch (error) {
                     this.Utils.handleError(error, "deleting opportunity");
                     messageModalContainer.classList.add('hidden');
                 }
@@ -547,6 +490,9 @@ export const Opportunities = {
         }
     },
 
+    /**
+     * Detaches the real-time listener when the module is no longer active.
+     */
     destroy: function() {
         if (this.unsubscribe) {
             this.unsubscribe();
@@ -557,10 +503,13 @@ export const Opportunities = {
             this.opportunitiesGrid.destroy();
             this.opportunitiesGrid = null;
         }
+        // Clear cached customer names
         this._customerNamesMap.clear();
-        const opportunitiesModuleContent = document.getElementById('opportunities-module-content');
-        if (opportunitiesModuleContent) {
-            opportunitiesModuleContent.innerHTML = '';
-        }
+        // Remove content from the DOM when destroying. Main.js will handle this.
+        // const opportunitiesModuleContent = document.getElementById('opportunities-module-content');
+        // if (opportunitiesModuleContent) {
+        //     opportunitiesModuleContent.innerHTML = '';
+        // }
+        console.log("Opportunities module destroyed.");
     }
 };
