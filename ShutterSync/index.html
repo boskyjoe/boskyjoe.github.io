@@ -95,13 +95,14 @@
     <!-- Firebase SDK (loaded globally) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, doc, getDoc, collection, query, where, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
 
         // Firebase configuration (provided by Canvas/runtime environment)
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // Use default if not provided
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
@@ -109,7 +110,7 @@
         const auth = getAuth(app);
 
         // Import modules
-        import { Main } from './js/main.js';
+        import Main from './js/main.js'; // <-- CHANGED THIS LINE: Now a default import
         import { Auth } from './js/auth.js';
         import { Utils } from './js/utils.js';
         import { Customers } from './js/customers.js';
@@ -120,13 +121,15 @@
 
 
         // Initialize Utils first as it's a dependency
-        Utils.init(db, auth);
+        Utils.init(db, auth, appId);
 
-        // Pass initialized Firebase instances to Main module
+        // Initialize Auth module with Firebase instances and Utils
+        Auth.init(db, auth, Utils);
+
+        // Initialize Main module
         Main.init(db, auth, appId, initialAuthToken);
 
-        // Pass initialized Firebase and Utils instances to other modules
-        Auth.init(db, auth, Utils);
+        // Initialize other modules. They also need db, auth, and Utils.
         Customers.init(db, auth, Utils);
         Opportunities.init(db, auth, Utils);
         Users.init(db, auth, Utils);
@@ -140,7 +143,6 @@
             'users': () => Users.destroy(),
             'admin-data': () => AdminData.destroy(),
             'price-book': () => PriceBook.destroy(),
-            // Add destroyers for other modules as they are developed
         });
 
         // Event listener for module navigation
@@ -157,21 +159,23 @@
         // Event listener for logout button
         document.getElementById('logout-btn').addEventListener('click', async (e) => {
             e.preventDefault();
-            await Auth.logout(); // Use the Auth module's logout function
+            await Auth.logout();
         });
 
         // Event listener for home link to load default module (Customers)
         document.getElementById('home-link').addEventListener('click', (e) => {
             e.preventDefault();
-            Main.loadModule('customers'); // Load customers as default home
+            Main.loadModule('customers');
         });
 
         // Handle initial module load after authentication check
         Auth.onAuthReady(() => {
-            // Check if there's a stored last module or default to 'customers'
             const lastModule = localStorage.getItem('lastActiveModule') || 'customers';
-            Main.loadModule(lastModule); // Load the last active module or default
+            Main.loadModule(lastModule);
         });
+
+        // Initiate the login process (will handle initial token or anonymous)
+        Auth.login(initialAuthToken);
 
     </script>
 </body>
