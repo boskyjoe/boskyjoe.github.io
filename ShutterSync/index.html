@@ -119,10 +119,8 @@
             firebaseConfig.projectId = appId;
         }
 
-        // IMPORTANT: Ensure that firebaseConfig.apiKey is correctly provided by the environment.
-        // It is a crucial credential for Firebase to work. If it's still missing after this,
-        // you might need to manually check the __firebase_config value in your Canvas environment setup.
-        console.log("Firebase config received:", firebaseConfig); // Diagnostic log
+        // Diagnostic Log: Inspect the final firebaseConfig before initialization
+        console.log("Firebase config object before initializeApp:", firebaseConfig);
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
