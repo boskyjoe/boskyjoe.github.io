@@ -119,6 +119,11 @@
             firebaseConfig.projectId = appId;
         }
 
+        // IMPORTANT: Ensure that firebaseConfig.apiKey is correctly provided by the environment.
+        // It is a crucial credential for Firebase to work. If it's still missing after this,
+        // you might need to manually check the __firebase_config value in your Canvas environment setup.
+        console.log("Firebase config received:", firebaseConfig); // Diagnostic log
+
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -130,7 +135,7 @@
         import { Utils } from './js/utils.js';
         import { Customers } from './js/customers.js';
         import { Opportunities } from './js/opportunities.js';
-        import { Users } from './js/users.js'; // Corrected import syntax here
+        import { Users } from './js/users.js';
         import { AdminData } from './js/admin_data.js';
         import { PriceBook } from './js/price_book.js';
 
@@ -179,8 +184,6 @@
         });
 
         // Event listener for home link to load default module (Customers)
-        // This is already linked as data-module="customers" in the new Home link.
-        // Keeping this for robustness if the main title is clicked.
         document.getElementById('home-link').addEventListener('click', (e) => {
             e.preventDefault();
             Main.loadModule('customers');
