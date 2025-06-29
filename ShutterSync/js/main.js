@@ -87,7 +87,7 @@ const Main = {
         Utils.onAdminStatusChange(() => {
             this.updateNavAdminDropdown();
             // If the current module is admin-gated and role changed, re-render it
-            if (this.currentModule && ['users', 'admin-data', 'price-book'].includes(this.currentModule)) {
+            if (this.currentModule && ['users', 'adminData', 'priceBook'].includes(this.currentModule)) {
                 this.loadModule(this.currentModule);
             }
         });
@@ -111,13 +111,11 @@ const Main = {
             this.moduleDestroyers[this.currentModule]();
         }
 
-        // --- CRITICAL FIX: Hide all module content areas and then show only the active one ---
-        // Get all module content divs
+        // Hide all module content areas first
         document.querySelectorAll('.module-content-area').forEach(div => {
             div.classList.add('hidden'); // Hide all module divs
-            // Also clear their innerHTML to ensure content is gone for non-active ones
-            // This prevents old data from flashing if a module is quickly reopened
-            div.innerHTML = '';
+            // IMPORTANT: Do NOT clear innerHTML of ALL divs here.
+            // Only the *currently active* module's div will be cleared below.
         });
 
         // Deactivate all nav links first (removes active styling)
@@ -145,10 +143,11 @@ const Main = {
             localStorage.setItem('lastActiveModule', moduleName); // Remember for next session
             console.log(`Loading module: ${moduleName}`);
 
-            // Get the specific module's content div and make it visible
+            // Get the specific module's content div
             const moduleContentDiv = document.getElementById(`${moduleName}-module-content`);
             if (moduleContentDiv) {
                 moduleContentDiv.classList.remove('hidden'); // Make the active module's div visible
+                moduleContentDiv.innerHTML = ''; // IMPORTANT: Clear only THIS specific div's content
             } else {
                 console.error(`Specific content div '${moduleName}-module-content' not found.`);
                 Utils.showMessage("Internal error: Module content area missing. Redirected to Home.", "error");
@@ -161,7 +160,8 @@ const Main = {
             const renderMethodName = `render${moduleName.charAt(0).toUpperCase() + moduleName.slice(1).replace('-', '')}UI`;
 
             if (typeof this.moduleInstances[moduleName][renderMethodName] === 'function') {
-                this.moduleInstances[moduleName][renderMethodName]();
+                // CRITICAL FIX: Pass the moduleContentDiv element directly to the render function
+                this.moduleInstances[moduleName][renderMethodName](moduleContentDiv);
             } else {
                 console.error(`Render method "${renderMethodName}" not found for module "${moduleName}".`);
                 this.loadModule('home'); // Fallback to home if render method is missing
