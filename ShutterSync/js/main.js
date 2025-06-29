@@ -17,7 +17,7 @@ import { PriceBook } from './price_book.js';
  * module loading, and global UI updates.
  * It is designed to be imported as a default ES module by index.html.
  */
-const Main = { // This is now a local constant, not directly 'window.Main'
+const Main = {
     firebaseApp: null,
     db: null,
     auth: null,
@@ -111,18 +111,20 @@ const Main = { // This is now a local constant, not directly 'window.Main'
             this.moduleDestroyers[this.currentModule]();
         }
 
-        const contentArea = document.getElementById('content-area');
-        if (contentArea) {
-            contentArea.innerHTML = ''; // Clear previous content
-        }
+        // --- CRITICAL FIX: Hide all module content areas and then show only the active one ---
+        // Get all module content divs
+        document.querySelectorAll('.module-content-area').forEach(div => {
+            div.classList.add('hidden'); // Hide all module divs
+            // Also clear their innerHTML to ensure content is gone for non-active ones
+            // This prevents old data from flashing if a module is quickly reopened
+            div.innerHTML = '';
+        });
 
-        // Deactivate all nav links first
+        // Deactivate all nav links first (removes active styling)
         document.querySelectorAll('nav a[data-module]').forEach(link => {
             link.classList.remove('bg-gray-700', 'text-white');
             link.classList.add('text-gray-300', 'hover:bg-gray-700', 'hover:text-white');
         });
-        // Also handle admin dropdown buttons if they get active class somehow
-        // (This might be redundant if the links inside are managed, but good for main button)
         const adminDropdownButton = document.querySelector('#nav-admin-dropdown > button');
         if (adminDropdownButton) {
             adminDropdownButton.classList.remove('bg-gray-700', 'text-white');
@@ -142,6 +144,17 @@ const Main = { // This is now a local constant, not directly 'window.Main'
             this.currentModule = moduleName;
             localStorage.setItem('lastActiveModule', moduleName); // Remember for next session
             console.log(`Loading module: ${moduleName}`);
+
+            // Get the specific module's content div and make it visible
+            const moduleContentDiv = document.getElementById(`${moduleName}-module-content`);
+            if (moduleContentDiv) {
+                moduleContentDiv.classList.remove('hidden'); // Make the active module's div visible
+            } else {
+                console.error(`Specific content div '${moduleName}-module-content' not found.`);
+                Utils.showMessage("Internal error: Module content area missing. Redirected to Home.", "error");
+                this.loadModule('home');
+                return;
+            }
 
             // Construct the render method name (e.g., renderHomeUI, renderAdminDataUI)
             // Special handling for 'admin-data' to remove hyphen for method name
@@ -164,12 +177,12 @@ const Main = { // This is now a local constant, not directly 'window.Main'
     /**
      * Updates the user info in the header (display name/email and logout button).
      * This is called by Auth.onAuthReady and by Main's init.
-     * @param {object} currentUser - The Firebase User object or null.
+     * @param {object|null} currentUser - The Firebase User object or null.
      */
     updateUserHeaderUI: function(currentUser) {
         const userInfoSpan = document.getElementById('user-info-span');
         const loginRegisterPlaceholder = document.getElementById('login-register-placeholder');
-        const logoutBtn = document.getElementById('logout-btn'); // Assuming this is the logout button
+        const logoutBtn = document.getElementById('logout-btn');
 
         if (userInfoSpan && loginRegisterPlaceholder && logoutBtn) {
             if (currentUser) {
@@ -191,7 +204,7 @@ const Main = { // This is now a local constant, not directly 'window.Main'
      * This is called by Auth.onAuthReady and by Utils.onAdminStatusChange.
      */
     updateNavAdminDropdown: function() {
-        const adminNavDropdown = document.getElementById('nav-admin-dropdown'); // Assumes an ID for the admin dropdown container
+        const adminNavDropdown = document.getElementById('nav-admin-dropdown');
         if (adminNavDropdown) {
             if (Utils.isAdmin()) {
                 adminNavDropdown.classList.remove('hidden');
@@ -202,7 +215,6 @@ const Main = { // This is now a local constant, not directly 'window.Main'
             console.warn("Admin navigation dropdown element not found: #nav-admin-dropdown");
         }
     }
-    // Note: attachGlobalEventListeners is no longer needed here as they are inlined in index.html
 };
 
-export default Main; // Export Main as the default export
+export default Main;
