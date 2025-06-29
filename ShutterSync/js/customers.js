@@ -92,15 +92,16 @@ export const Customers = {
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                             </div>
 
-                            <!-- NEW Customer-Specific Fields based on Security Rules -->
+                            <!-- Customer-Specific Fields based on Security Rules -->
                             <div>
                                 <label for="customer-type" class="block text-sm font-medium text-gray-700 mb-1">Customer Type</label>
-                                <select id="customer-type" name="customerType"
+                                <select id="customer-type" name="customerType" required
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                     <option value="">Select Type</option>
                                     <option value="Individual">Individual</option>
                                     <option value="Business">Business</option>
                                     <option value="Non-Profit">Non-Profit</option>
+                                    <option value="Company">Company</option> <!-- Ensure 'Company' is an option -->
                                 </select>
                             </div>
                             <div>
@@ -132,8 +133,6 @@ export const Customers = {
                                 <input type="checkbox" id="customer-active" name="active" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
                                 <label for="customer-active" class="ml-2 block text-sm font-medium text-gray-700">Active Customer?</label>
                             </div>
-                            <!-- END NEW Customer-Specific Fields -->
-
                         </div>
                         <div class="flex justify-end space-x-3 mt-6">
                             <button type="button" id="cancel-customer-btn"
@@ -205,14 +204,14 @@ export const Customers = {
 
         const columns = [
             { id: 'id', name: 'ID', hidden: true },
-            { id: 'name', name: 'Company Name', sort: true, width: 'auto' }, // Changed to 'name' to match rule
+            { id: 'name', name: 'Company Name', sort: true, width: 'auto' },
             { id: 'contactPerson', name: 'Contact Person', sort: true, width: 'auto' },
             { id: 'email', name: 'Email', width: 'auto' },
             { id: 'phone', name: 'Phone', width: '150px' },
             { id: 'address', name: 'Address', width: 'auto' },
-            { id: 'customerType', name: 'Type', width: '100px' }, // New Column
-            { id: 'industry', name: 'Industry', width: '120px' }, // New Column
-            { id: 'active', name: 'Active', width: '80px', formatter: (cell) => cell ? 'Yes' : 'No' }, // New Column
+            { id: 'customerType', name: 'Type', width: '100px' },
+            { id: 'industry', name: 'Industry', width: '120px' },
+            { id: 'active', name: 'Active', width: '80px', formatter: (cell) => cell ? 'Yes' : 'No' },
             {
                 name: 'Actions',
                 width: '100px',
@@ -247,14 +246,14 @@ export const Customers = {
 
         const mappedData = customers.map(c => [
             c.id,
-            c.name || '', // Changed to 'name'
+            c.name || '',
             c.contactPerson || '',
             c.email || '',
             c.phone || '',
             c.address || '',
-            c.customerType || '', // New field
-            c.industry || '',     // New field
-            c.active || false     // New field
+            c.customerType || '',
+            c.industry || '',
+            c.active || false
         ]);
 
         if (this.customersGrid) {
@@ -325,7 +324,7 @@ export const Customers = {
 
         form.reset();
         this.currentEditingCustomerId = null;
-        document.getElementById('customer-active').checked = true; // Default to active for new customers
+        document.getElementById('customer-active').checked = true;
 
         if (mode === 'edit' && customerId) {
             title.textContent = 'Edit Customer';
@@ -334,18 +333,17 @@ export const Customers = {
                 const customerDoc = await getDoc(doc(this.db, 'customers', customerId));
                 if (customerDoc.exists()) {
                     const data = customerDoc.data();
-                    document.getElementById('customer-name-field').value = data.name || ''; // Changed ID
+                    document.getElementById('customer-name-field').value = data.name || '';
                     document.getElementById('contact-person').value = data.contactPerson || '';
                     document.getElementById('customer-email').value = data.email || '';
                     document.getElementById('customer-phone').value = data.phone || '';
                     document.getElementById('customer-address').value = data.address || '';
-                    // NEW fields for editing
                     document.getElementById('customer-type').value = data.customerType || '';
                     document.getElementById('contact-method').value = data.preferredContactMethod || '';
                     document.getElementById('industry').value = data.industry || '';
                     document.getElementById('customer-source').value = data.customerSource || '';
                     document.getElementById('additional-details').value = data.additionalDetails || '';
-                    document.getElementById('customer-active').checked = data.active !== false; // Default to true if undefined
+                    document.getElementById('customer-active').checked = data.active !== false;
                 } else {
                     this.Utils.showMessage('Customer not found for editing.', 'error');
                     this.closeCustomerModal();
@@ -358,13 +356,12 @@ export const Customers = {
             }
         } else {
             title.textContent = 'Add New Customer';
-            // Default values for new customer that align with rule's hasAll
             document.getElementById('customer-type').value = '';
             document.getElementById('contact-method').value = '';
             document.getElementById('industry').value = '';
             document.getElementById('customer-source').value = '';
             document.getElementById('additional-details').value = '';
-            document.getElementById('customer-active').checked = true; // Default active
+            document.getElementById('customer-active').checked = true;
         }
 
         modal.classList.remove('hidden');
@@ -384,6 +381,56 @@ export const Customers = {
         }
     },
 
+    /**
+     * Checks for customer uniqueness based on type (email for Individual, name+type for Company).
+     * @param {string} customerId - The ID of the current customer being edited (null for new).
+     * @param {string} customerType - The type of customer ('Individual' or 'Company').
+     * @param {string} name - The company name.
+     * @param {string} email - The customer email.
+     * @returns {Promise<boolean>} True if unique, false if a duplicate is found.
+     */
+    checkCustomerUniqueness: async function(customerId, customerType, name, email) {
+        const customersCollectionRef = collection(this.db, "customers");
+        let q;
+
+        if (customerType === 'Individual') {
+            if (!email) {
+                this.Utils.showMessage('Email is required for Individual customers.', 'warning');
+                return false;
+            }
+            q = query(customersCollectionRef, where("email", "==", email));
+        } else if (customerType === 'Company') {
+            if (!name) {
+                this.Utils.showMessage('Company Name is required for Company customers.', 'warning');
+                return false;
+            }
+            // For composite index: name + customerType
+            q = query(customersCollectionRef,
+                      where("name", "==", name),
+                      where("customerType", "==", customerType));
+        } else {
+            // For other types or if type is not selected, assume no specific uniqueness check or handle as needed
+            // For now, we'll let it pass if not Individual or Company, but could add a generic name check if desired.
+            return true;
+        }
+
+        try {
+            const querySnapshot = await getDocs(q);
+            let isUnique = true;
+            querySnapshot.forEach(docSnap => {
+                // If in edit mode, allow the current customer's own document to be matched
+                if (docSnap.id !== customerId) {
+                    isUnique = false;
+                }
+            });
+            return isUnique;
+        } catch (error) {
+            this.Utils.handleError(error, "checking customer uniqueness");
+            return false; // Assume not unique or error occurred
+        }
+    },
+
+
     saveCustomer: async function() {
         if (!Auth.isLoggedIn()) {
             this.Utils.showMessage('You must be logged in to add a new customer.', 'error');
@@ -391,14 +438,11 @@ export const Customers = {
             return;
         }
 
-        // Renamed customerName to 'name' for rule consistency
         const name = document.getElementById('customer-name-field').value.trim();
         const contactPerson = document.getElementById('contact-person').value.trim();
         const email = document.getElementById('customer-email').value.trim();
         const phone = document.getElementById('customer-phone').value.trim();
         const address = document.getElementById('customer-address').value.trim();
-
-        // NEW fields from UI (or default if no UI input)
         const customerType = document.getElementById('customer-type').value || '';
         const preferredContactMethod = document.getElementById('contact-method').value || '';
         const industry = document.getElementById('industry').value.trim() || '';
@@ -406,23 +450,45 @@ export const Customers = {
         const additionalDetails = document.getElementById('additional-details').value.trim() || '';
         const active = document.getElementById('customer-active').checked;
 
-        if (!name || !contactPerson) {
-            this.Utils.showMessage('Company Name and Contact Person are required.', 'warning');
+        if (!name || !contactPerson || !customerType) { // customerType is now required for uniqueness logic
+            this.Utils.showMessage('Company Name, Contact Person, and Customer Type are required.', 'warning');
             return;
         }
 
+        // --- NEW: Perform uniqueness check before saving ---
+        const isUnique = await this.checkCustomerUniqueness(
+            this.currentEditingCustomerId,
+            customerType,
+            name,
+            email
+        );
+
+        if (!isUnique) {
+            let message = '';
+            if (customerType === 'Individual') {
+                message = `An Individual customer with email "${email}" already exists.`;
+            } else if (customerType === 'Company') {
+                message = `A Company customer with name "${name}" and type "${customerType}" already exists.`;
+            } else {
+                message = `A customer with the same unique identifier already exists.`;
+            }
+            this.Utils.showMessage(message, 'warning');
+            return; // Stop saving if not unique
+        }
+        // --- END NEW ---
+
         const customerData = {
-            name: name, // Changed from companyName to name
+            name: name,
             contactPerson: contactPerson,
             email: email,
             phone: phone,
             address: address,
-            customerType: customerType,                // NEW
-            preferredContactMethod: preferredContactMethod, // NEW
-            industry: industry,                      // NEW
-            additionalDetails: additionalDetails,      // NEW
-            customerSource: customerSource,            // NEW
-            active: active,                          // NEW
+            customerType: customerType,
+            preferredContactMethod: preferredContactMethod,
+            industry: industry,
+            additionalDetails: additionalDetails,
+            customerSource: customerSource,
+            active: active,
             updatedAt: new Date()
         };
 
