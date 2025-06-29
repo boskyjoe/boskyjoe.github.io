@@ -1,10 +1,7 @@
 // js/main.js
 
-// Import all modules
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
+// Import all application modules.
+// These modules should be designed with named exports (e.g., export const Auth = { ... })
 import { Auth } from './auth.js';
 import { Utils } from './utils.js';
 import { Home } from './home.js';
@@ -16,95 +13,96 @@ import { PriceBook } from './price_book.js';
 
 /**
  * The main application controller.
- * Handles Firebase initialization, module loading, and global UI updates.
+ * This module orchestrates Firebase setup (receiving initialized instances),
+ * module loading, and global UI updates.
+ * It is designed to be imported as a default ES module by index.html.
  */
-window.Main = {
+const Main = { // This is now a local constant, not directly 'window.Main'
     firebaseApp: null,
     db: null,
     auth: null,
     currentModule: null,
-    moduleInstances: {}, // Store initialized module instances
-    moduleDestroyers: {}, // Store module destroy functions for cleanup
+    moduleInstances: {}, // Stores initialized module instances
+    moduleDestroyers: {}, // Stores module destroy functions for cleanup
 
     /**
-     * Initializes Firebase and all application modules.
-     * This is the entry point of the application.
+     * Initializes the Main application controller.
+     * This method is called by the inline script in index.html,
+     * passing the initialized Firebase instances and application ID.
+     *
+     * @param {object} firebaseApp - The Firebase App instance.
+     * @param {object} firestoreDb - The Firestore database instance.
+     * @param {object} firebaseAuth - The Firebase Auth instance.
+     * @param {string} appId - The application ID.
      */
-    init: function() {
-        // Firebase configuration (replace with your actual config)
-        const firebaseConfig = {
-            apiKey: "YOUR_FIREBASE_API_KEY", // Make sure this is replaced with your actual key
-            authDomain: "shuttersync-96971.firebaseapp.com",
-            projectId: "shuttersync-96971",
-            storageBucket: "shuttersync-96971.appspot.com",
-            messagingSenderId: "305141201552",
-            appId: "1:305141201552:web:127d14d23580a568218d6e",
-            measurementId: "G-G998B500C5"
-        };
+    init: function(firebaseApp, firestoreDb, firebaseAuth, appId) {
+        this.firebaseApp = firebaseApp;
+        this.db = firestoreDb;
+        this.auth = firebaseAuth;
+        console.log("Main module initialized with Firebase instances.");
 
-        this.firebaseApp = initializeApp(firebaseConfig);
-        this.db = getFirestore(this.firebaseApp);
-        this.auth = getAuth(this.firebaseApp);
+        // Initialize Utils first as it's a core dependency and needs db/auth
+        Utils.init(this.db, this.auth, appId);
 
-        // Initialize Utils module first, as others depend on it for error handling etc.
-        Utils.init(this.db, this.auth);
-
-        // Initialize Auth module
+        // Initialize Auth module. It sets up onAuthStateChanged listener
         Auth.init(this.db, this.auth, Utils);
 
-        // Initialize other modules
+        // Initialize other modules, passing their dependencies
         this.moduleInstances.home = Home;
         Home.init(this.db, this.auth, Utils);
-        Home.loadModuleCallback = this.loadModule.bind(this); // Pass loadModule to Home module
+        // Home module needs a way to trigger Main's loadModule
+        Home.loadModuleCallback = this.loadModule.bind(this);
 
         this.moduleInstances.customers = Customers;
         Customers.init(this.db, this.auth, Utils);
-        this.moduleDestroyers.customers = Customers.destroy.bind(Customers);
 
         this.moduleInstances.opportunities = Opportunities;
         Opportunities.init(this.db, this.auth, Utils);
-        this.moduleDestroyers.opportunities = Opportunities.destroy.bind(Opportunities);
 
         this.moduleInstances.users = Users;
         Users.init(this.db, this.auth, Utils);
-        this.moduleDestroyers.users = Users.destroy.bind(Users);
 
         this.moduleInstances.adminData = AdminData;
         AdminData.init(this.db, this.auth, Utils);
-        this.moduleDestroyers.adminData = AdminData.destroy.bind(AdminData);
 
         this.moduleInstances.priceBook = PriceBook;
         PriceBook.init(this.db, this.auth, Utils);
-        this.moduleDestroyers.priceBook = PriceBook.destroy.bind(PriceBook);
 
-        // Attach global event listeners
-        this.attachGlobalEventListeners();
-
-        // Initial UI update based on auth state
+        // Ensure global UI elements are updated when auth status or admin status changes
+        // Auth.onAuthReady ensures initial setup after Firebase Auth has determined user state
         Auth.onAuthReady(() => {
-            this.updateUIForAuthStatus();
-            // Load the last active module or default to home
+            this.updateUserHeaderUI(this.auth.currentUser);
+            this.updateNavAdminDropdown();
+            // Load the last active module or default to home after auth is ready
             const lastActiveModule = localStorage.getItem('lastActiveModule');
             if (Auth.isLoggedIn() && lastActiveModule && lastActiveModule !== 'home') {
-                 // Try to load it, but if access is denied, it will redirect to home
+                 // Try to load it. If access is denied by module's own check, it will redirect to home.
                 this.loadModule(lastActiveModule);
             } else {
                 this.loadModule('home');
             }
         });
 
-        // Listen for admin status changes from Utils to re-render UI
+        // Utils.onAdminStatusChange updates UI elements that depend on admin role
         Utils.onAdminStatusChange(() => {
-            this.updateUIForAuthStatus();
-            // If the current module is admin-gated and status changed, re-render it
-            if (this.currentModule && ['users', 'adminData', 'priceBook'].includes(this.currentModule)) {
+            this.updateNavAdminDropdown();
+            // If the current module is admin-gated and role changed, re-render it
+            if (this.currentModule && ['users', 'admin-data', 'price-book'].includes(this.currentModule)) {
                 this.loadModule(this.currentModule);
             }
         });
     },
 
     /**
-     * Loads a specified application module.
+     * Sets the module destroyer functions. Called once by the inline script in index.html.
+     * @param {object} destroyersMap - An object mapping module names to their destroy functions.
+     */
+    setModuleDestroyers: function(destroyersMap) {
+        this.moduleDestroyers = destroyersMap;
+    },
+
+    /**
+     * Loads a specified application module into the content area.
      * @param {string} moduleName - The name of the module to load ('home', 'customers', etc.).
      */
     loadModule: function(moduleName) {
@@ -119,10 +117,18 @@ window.Main = {
         }
 
         // Deactivate all nav links first
-        document.querySelectorAll('nav a').forEach(link => {
+        document.querySelectorAll('nav a[data-module]').forEach(link => {
             link.classList.remove('bg-gray-700', 'text-white');
             link.classList.add('text-gray-300', 'hover:bg-gray-700', 'hover:text-white');
         });
+        // Also handle admin dropdown buttons if they get active class somehow
+        // (This might be redundant if the links inside are managed, but good for main button)
+        const adminDropdownButton = document.querySelector('#nav-admin-dropdown > button');
+        if (adminDropdownButton) {
+            adminDropdownButton.classList.remove('bg-gray-700', 'text-white');
+            adminDropdownButton.classList.add('text-gray-300', 'hover:bg-gray-700', 'hover:text-white');
+        }
+
 
         // Activate the current nav link
         const activeLink = document.querySelector(`nav a[data-module="${moduleName}"]`);
@@ -136,14 +142,16 @@ window.Main = {
             this.currentModule = moduleName;
             localStorage.setItem('lastActiveModule', moduleName); // Remember for next session
             console.log(`Loading module: ${moduleName}`);
-            // All modules now have a render*UI method (e.g., renderHomeUI)
-            const renderMethodName = `render${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)}UI`;
+
+            // Construct the render method name (e.g., renderHomeUI, renderAdminDataUI)
+            // Special handling for 'admin-data' to remove hyphen for method name
+            const renderMethodName = `render${moduleName.charAt(0).toUpperCase() + moduleName.slice(1).replace('-', '')}UI`;
+
             if (typeof this.moduleInstances[moduleName][renderMethodName] === 'function') {
                 this.moduleInstances[moduleName][renderMethodName]();
             } else {
                 console.error(`Render method "${renderMethodName}" not found for module "${moduleName}".`);
-                // Fallback to home if render method is missing
-                this.loadModule('home');
+                this.loadModule('home'); // Fallback to home if render method is missing
                 Utils.showMessage("Error loading module. Redirected to Home.", "error");
             }
         } else {
@@ -154,36 +162,38 @@ window.Main = {
     },
 
     /**
-     * Updates the global UI elements based on authentication status and user role.
+     * Updates the user info in the header (display name/email and logout button).
+     * This is called by Auth.onAuthReady and by Main's init.
+     * @param {object} currentUser - The Firebase User object or null.
      */
-    updateUIForAuthStatus: function() {
-        const isLoggedIn = Auth.isLoggedIn();
-        const isAdmin = Utils.isAdmin();
-        const currentUser = this.auth.currentUser;
-
-        // User Info in Navbar
+    updateUserHeaderUI: function(currentUser) {
         const userInfoSpan = document.getElementById('user-info-span');
-        const logoutBtn = document.getElementById('logout-btn');
         const loginRegisterPlaceholder = document.getElementById('login-register-placeholder');
+        const logoutBtn = document.getElementById('logout-btn'); // Assuming this is the logout button
 
-        if (userInfoSpan) {
-            if (isLoggedIn && currentUser) {
+        if (userInfoSpan && loginRegisterPlaceholder && logoutBtn) {
+            if (currentUser) {
                 userInfoSpan.textContent = currentUser.displayName || currentUser.email || 'Logged In';
                 userInfoSpan.classList.remove('hidden');
-                if (logoutBtn) logoutBtn.classList.remove('hidden');
-                if (loginRegisterPlaceholder) loginRegisterPlaceholder.classList.add('hidden');
+                loginRegisterPlaceholder.classList.add('hidden');
+                logoutBtn.classList.remove('hidden');
             } else {
                 userInfoSpan.textContent = '';
                 userInfoSpan.classList.add('hidden');
-                if (logoutBtn) logoutBtn.classList.add('hidden');
-                if (loginRegisterPlaceholder) loginRegisterPlaceholder.classList.remove('hidden');
+                loginRegisterPlaceholder.classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
             }
         }
+    },
 
-        // --- FIX FOR ADMIN NAV DROPDOWN ---
-        const adminNavDropdown = document.getElementById('nav-admin-dropdown');
+    /**
+     * Updates the visibility of the Admin navigation dropdown based on user role.
+     * This is called by Auth.onAuthReady and by Utils.onAdminStatusChange.
+     */
+    updateNavAdminDropdown: function() {
+        const adminNavDropdown = document.getElementById('nav-admin-dropdown'); // Assumes an ID for the admin dropdown container
         if (adminNavDropdown) {
-            if (isAdmin) {
+            if (Utils.isAdmin()) {
                 adminNavDropdown.classList.remove('hidden');
             } else {
                 adminNavDropdown.classList.add('hidden');
@@ -191,46 +201,8 @@ window.Main = {
         } else {
             console.warn("Admin navigation dropdown element not found: #nav-admin-dropdown");
         }
-        // --- END FIX ---
-
-        // Control visibility of other nav links if needed (currently all visible if logged in)
-        // For example, if you want only specific links for logged-in users:
-        // const protectedLinks = document.querySelectorAll('nav a[data-module]:not([data-module="home"])');
-        // protectedLinks.forEach(link => {
-        //     if (isLoggedIn) {
-        //         link.classList.remove('hidden');
-        //     } else {
-        //         link.classList.add('hidden');
-        //     }
-        // });
-    },
-
-    /**
-     * Attaches global event listeners to the navigation bar and logout button.
-     */
-    attachGlobalEventListeners: function() {
-        // Navigation links
-        document.querySelectorAll('nav a[data-module]').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const moduleName = e.target.dataset.module;
-                this.loadModule(moduleName);
-            });
-        });
-
-        // Logout button
-        const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', async () => {
-                await Auth.logout();
-                this.updateUIForAuthStatus(); // Update UI after logout
-                this.loadModule('home'); // Always redirect to home after logout
-            });
-        }
     }
+    // Note: attachGlobalEventListeners is no longer needed here as they are inlined in index.html
 };
 
-// Initialize the Main application when the DOM is fully loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.Main.init();
-});
+export default Main; // Export Main as the default export
