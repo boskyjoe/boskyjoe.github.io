@@ -7,6 +7,7 @@ import { Opportunities } from './opportunities.js';
 import { Users } from './users.js';
 import { AdminData } from './admin_data.js';
 import { PriceBook } from './price_book.js';
+import { Home } from './home.js'; // NEW: Import the Home module
 
 export default {
     db: null,
@@ -48,6 +49,10 @@ export default {
 
         try {
             switch (moduleName) {
+                case 'home': // NEW: Case for Home module
+                    contentArea.innerHTML = '<div id="home-module-content"></div>';
+                    Home.renderHomeUI();
+                    break;
                 case 'customers':
                     contentArea.innerHTML = '<div id="customers-module-content"></div>';
                     Customers.renderCustomersUI();
@@ -64,7 +69,7 @@ export default {
                                 <p class="text-gray-600">You do not have administrative privileges to view this section.</p>
                             </div>
                         `;
-                        localStorage.setItem('lastActiveModule', 'customers');
+                        localStorage.setItem('lastActiveModule', 'home'); // Redirect to home if access denied
                         Utils.showMessage("Access Denied: You must be an Admin to view User Management.", "error");
                         return;
                     }
@@ -79,7 +84,7 @@ export default {
                                 <p class="text-gray-600">You do not have administrative privileges to view this section.</p>
                             </div>
                         `;
-                        localStorage.setItem('lastActiveModule', 'customers');
+                        localStorage.setItem('lastActiveModule', 'home'); // Redirect to home if access denied
                         Utils.showMessage("Access Denied: You must be an Admin to view App Metadata.", "error");
                         return;
                     }
@@ -94,7 +99,7 @@ export default {
                                 <p class="text-gray-600">You do not have administrative privileges to view this section.</p>
                             </div>
                         `;
-                        localStorage.setItem('lastActiveModule', 'customers');
+                        localStorage.setItem('lastActiveModule', 'home'); // Redirect to home if access denied
                         Utils.showMessage("Access Denied: You must be an Admin to view Price Books.", "error");
                         return;
                     }
@@ -114,6 +119,12 @@ export default {
             }
             localStorage.setItem('lastActiveModule', moduleName);
             console.log(`Module "${moduleName}" loaded.`);
+
+            // Pass Main.loadModule to Home if Home needs to call it (for internal buttons)
+            // This is a more robust way to allow sub-modules to trigger navigation.
+            if (moduleName === 'home') {
+                Home.loadModuleCallback = this.loadModule.bind(this);
+            }
 
             Utils.onAdminStatusChange(() => {
                 this.updateAdminLinksVisibility();
