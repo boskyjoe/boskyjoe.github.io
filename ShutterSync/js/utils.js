@@ -1,18 +1,20 @@
 // js/utils.js
 
+import { doc, getDoc, setDoc, updateDoc as firestoreUpdateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
 /**
- * The Utils module provides common utility functions for the application,
- * including message display, error handling, and user role management.
+ * The Utils module provides common utility functions used across the application,
+ * such as message display, error handling, and Firebase interactions.
  */
 export const Utils = {
-    db: null,
-    auth: null,
-    appId: null,
-    _isAdminStatus: false, // Stores the current admin status
-    _adminStatusCallbacks: [], // Callbacks to run when admin status changes
+    db: null, // Firestore DB instance
+    auth: null, // Firebase Auth instance
+    appId: null, // The application ID provided by the Canvas environment
+    _isAdmin: false, // Internal flag for admin status
+    adminStatusCallbacks: [], // Callbacks to run when admin status changes
 
     /**
-     * Initializes the Utils module with Firebase instances and app ID.
+     * Initializes the Utils module.
      * @param {object} firestoreDb - The Firestore database instance.
      * @param {object} firebaseAuth - The Firebase Auth instance.
      * @param {string} appId - The application ID.
@@ -21,191 +23,241 @@ export const Utils = {
         this.db = firestoreDb;
         this.auth = firebaseAuth;
         this.appId = appId;
-        console.log("Utils module initialized.");
+        console.log("Utils module initialized with App ID:", this.appId);
+
+        // Create the message modal container if it doesn't exist
+        this.createMessageModal();
     },
 
     /**
-     * Displays a message to the user using a custom modal.
-     * @param {string} message - The message content.
-     * @param {string} type - Type of message ('success', 'error', 'warning', 'info').
-     * @param {number} [duration=3000] - Duration in milliseconds for which the message is displayed. 0 for persistent.
+     * Creates the hidden modal for displaying messages (success, error, warning).
+     */
+    createMessageModal: function() {
+        if (!document.getElementById('message-modal-container')) {
+            const modalHtml = `
+                <div id="message-modal-container" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[1000] hidden">
+                    <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-full transform transition-all duration-300 scale-95 opacity-0">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 id="message-title" class="text-xl font-bold text-gray-800"></h4>
+                            <button id="message-close-btn" class="text-gray-500 hover:text-gray-700 text-2xl font-bold">&times;</button>
+                        </div>
+                        <p id="message-text" class="text-gray-700 mb-4"></p>
+                        <div id="message-buttons" class="flex justify-end">
+                            <!-- Buttons for confirmation dialogs will be appended here -->
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            document.getElementById('message-close-btn')?.addEventListener('click', () => this.hideMessage());
+            document.getElementById('message-modal-container')?.addEventListener('click', (e) => {
+                if (e.target === document.getElementById('message-modal-container')) {
+                    this.hideMessage();
+                }
+            });
+        }
+    },
+
+    /**
+     * Displays a message in a central modal.
+     * @param {string} message - The message text.
+     * @param {string} type - 'success', 'error', 'warning', or 'info'.
+     * @param {number} duration - Duration in milliseconds before auto-hiding. 0 for persistent (requires manual close).
      */
     showMessage: function(message, type = 'info', duration = 3000) {
-        const modalContainer = document.getElementById('message-modal-container');
-        const messageContent = document.getElementById('message-content');
+        const container = document.getElementById('message-modal-container');
+        const titleEl = document.getElementById('message-title');
+        const textEl = document.getElementById('message-text');
         const closeBtn = document.getElementById('message-close-btn');
+        const buttonsContainer = document.getElementById('message-buttons');
 
-        if (!modalContainer || !messageContent || !closeBtn) {
+        if (!container || !titleEl || !textEl || !closeBtn || !buttonsContainer) {
             console.error("Message modal elements not found.");
-            // Fallback to console log if UI elements are missing
-            console.log(`Message (${type}): ${message}`);
             return;
         }
 
-        // Apply type-specific styling for the message content and button
-        messageContent.className = 'text-lg font-semibold mb-4'; // Reset classes
-        closeBtn.className = 'bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200'; // Default close button style
-
+        titleEl.className = 'text-xl font-bold'; // Reset classes
         switch (type) {
             case 'success':
-                messageContent.classList.add('text-green-700');
-                closeBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-                closeBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                titleEl.textContent = 'Success!';
+                titleEl.classList.add('text-green-700');
                 break;
             case 'error':
-                messageContent.classList.add('text-red-700');
-                closeBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-                closeBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                titleEl.textContent = 'Error!';
+                titleEl.classList.add('text-red-700');
                 break;
             case 'warning':
-                messageContent.classList.add('text-yellow-700');
-                closeBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-                closeBtn.classList.add('bg-yellow-600', 'hover:bg-yellow-700');
+                titleEl.textContent = 'Warning!';
+                titleEl.classList.add('text-yellow-700');
                 break;
             case 'info':
             default:
-                messageContent.classList.add('text-gray-800');
-                // Default blue styles are already set
+                titleEl.textContent = 'Information';
+                titleEl.classList.add('text-blue-700');
                 break;
         }
 
-        messageContent.textContent = message;
-        modalContainer.classList.remove('hidden');
+        textEl.textContent = message;
+        // Clear any previous custom buttons (like confirm/cancel)
+        buttonsContainer.innerHTML = ''; // This clears the container, including any custom buttons
 
-        // Show transition
-        setTimeout(() => {
-            modalContainer.querySelector('div').classList.remove('opacity-0', 'scale-95');
-        }, 10);
-
-        // Remove any dynamically added buttons from previous calls (e.g., delete confirmations)
-        const messageBox = modalContainer.querySelector('div');
-        const existingDynamicButtons = messageBox.querySelectorAll('button:not(#message-close-btn)');
-        existingDynamicButtons.forEach(btn => btn.remove());
-        // Re-add the default close button if it was removed
-        if (!messageBox.contains(closeBtn)) {
-            messageBox.appendChild(closeBtn);
-        }
-
-
-        // Hide after duration if not persistent
-        if (duration > 0) {
+        if (duration === 0) {
+            closeBtn.classList.remove('hidden'); // Ensure close button is visible for persistent messages
+        } else {
+            closeBtn.classList.add('hidden'); // Hide close button for auto-hiding messages
             setTimeout(() => {
                 this.hideMessage();
             }, duration);
-        } else {
-            // If duration is 0, make close button explicitly hide the modal
-            closeBtn.onclick = () => {
-                this.hideMessage();
-            };
         }
+
+        container.classList.remove('hidden');
+        setTimeout(() => {
+            container.querySelector('div').classList.remove('opacity-0', 'scale-95');
+        }, 10);
     },
 
     /**
      * Hides the message modal.
      */
     hideMessage: function() {
-        const modalContainer = document.getElementById('message-modal-container');
-        if (modalContainer) {
-            modalContainer.querySelector('div').classList.add('opacity-0', 'scale-95');
-            modalContainer.addEventListener('transitionend', () => {
-                modalContainer.classList.add('hidden');
-                // Reset onclick for the close button to default behavior if needed
-                document.getElementById('message-close-btn').onclick = null;
+        const container = document.getElementById('message-modal-container');
+        if (container) {
+            container.querySelector('div').classList.add('opacity-0', 'scale-95');
+            container.addEventListener('transitionend', () => {
+                container.classList.add('hidden');
             }, { once: true });
         }
     },
 
     /**
-     * Handles Firebase errors and displays a user-friendly message.
-     * @param {object} error - The Firebase error object.
-     * @param {string} context - A description of where the error occurred.
+     * Handles common error scenarios and displays a user-friendly message.
+     * @param {Error} error - The error object.
+     * @param {string} context - A string describing where the error occurred (e.g., "login", "saving data").
      */
     handleError: function(error, context = "an operation") {
         console.error(`Error during ${context}:`, error);
         let errorMessage = `An unexpected error occurred during ${context}.`;
 
+        // More specific error messages for Firebase Auth
         if (error.code) {
             switch (error.code) {
-                case 'auth/invalid-api-key':
-                    errorMessage = "Authentication failed: Invalid API key. Please check your Firebase configuration.";
+                case 'auth/email-already-in-use':
+                    errorMessage = 'Email already in use. Please use a different email or log in.';
                     break;
-                case 'auth/network-request-failed':
-                    errorMessage = "Authentication failed: Network error. Please check your internet connection.";
+                case 'auth/invalid-email':
+                    errorMessage = 'Invalid email address.';
                     break;
-                case 'permission-denied':
-                    errorMessage = "Access Denied: You do not have permission to perform this action.";
+                case 'auth/operation-not-allowed':
+                    errorMessage = 'Email/password accounts are not enabled.';
                     break;
-                case 'resource-exhausted':
-                    errorMessage = "Operation failed: Quota exceeded. Please try again later or contact support.";
+                case 'auth/weak-password':
+                    errorMessage = 'Password is too weak. Please use a stronger password.';
                     break;
-                case 'unavailable':
-                    errorMessage = "Service unavailable. Please try again later.";
+                case 'auth/user-disabled':
+                    errorMessage = 'Your account has been disabled.';
+                    break;
+                case 'auth/user-not-found':
+                case 'auth/wrong-password':
+                    errorMessage = 'Invalid login credentials.';
+                    break;
+                case 'auth/popup-closed-by-user':
+                    errorMessage = 'Login popup closed. Please try again.';
+                    break;
+                case 'auth/cancelled-popup-request':
+                    errorMessage = 'Another login request is already in progress.';
+                    break;
+                case 'permission-denied': // Firestore permission error
+                    errorMessage = 'Permission denied. You may not have access to perform this action.';
+                    break;
+                case 'unavailable': // Firestore unavailable
+                    errorMessage = 'Service is temporarily unavailable. Please try again later.';
                     break;
                 default:
                     errorMessage = `An error occurred: ${error.message || error.code}.`;
             }
+        } else if (error.message) {
+            errorMessage = error.message;
         }
-        this.showMessage(errorMessage, 'error');
+
+        this.showMessage(errorMessage, 'error', 5000);
     },
 
     /**
-     * Updates the internal admin status and triggers callbacks if status changes.
-     * This method is called by Auth.js after determining the user's role.
-     * @param {string|null} role - The role of the current user ('Admin', 'Standard', or null if logged out).
+     * Gets a Firestore document using the stored db instance.
+     * Includes default error handling.
+     * @param {DocumentReference} docRef - The Firestore document reference.
+     * @returns {Promise<DocumentSnapshot>} A promise that resolves with the DocumentSnapshot.
      */
-    updateAdminStatus: function(role) {
-        const newStatus = (role === 'Admin');
-        if (this._isAdminStatus !== newStatus) {
-            this._isAdminStatus = newStatus;
-            console.log(`Admin status changed to: ${this._isAdminStatus}`);
-            this._adminStatusCallbacks.forEach(cb => cb(this._isAdminStatus));
-        }
-    },
-
-    /**
-     * Returns whether the current user is an admin.
-     * @returns {boolean} True if the current user has an 'Admin' role, false otherwise.
-     */
-    isAdmin: function() {
-        return this._isAdminStatus;
-    },
-
-    /**
-     * Registers a callback to be executed when the admin status changes.
-     * @param {function(boolean)} callback - The function to call with the new admin status.
-     */
-    onAdminStatusChange: function(callback) {
-        this._adminStatusCallbacks.push(callback);
-    },
-
-    /**
-     * Generic wrapper for Firestore updateDoc to centralize error handling.
-     * @param {DocumentReference} docRef - The document reference.
-     * @param {object} data - The data to update.
-     */
-    updateDoc: async function(docRef, data) {
+    getDoc: async function(docRef) {
         try {
-            await updateDoc(docRef, data);
-            // Success message is handled by calling module
+            return await getDoc(docRef);
         } catch (error) {
-            this.handleError(error, `updating document ${docRef.id}`);
-            throw error; // Re-throw to allow calling module to handle UI specifics if needed
+            this.handleError(error, `getting document ${docRef.path}`);
+            throw error; // Re-throw to allow calling context to handle if needed
         }
     },
 
     /**
-     * Generic wrapper for Firestore setDoc to centralize error handling.
-     * @param {DocumentReference} docRef - The document reference.
+     * Sets a Firestore document using the stored db instance.
+     * Includes default error handling.
+     * @param {DocumentReference} docRef - The Firestore document reference.
      * @param {object} data - The data to set.
-     * @param {object} options - Options for setDoc (e.g., { merge: true }).
+     * @param {SetOptions} options - Options for the set operation (e.g., { merge: true }).
+     * @returns {Promise<void>}
      */
     setDoc: async function(docRef, data, options = {}) {
         try {
             await setDoc(docRef, data, options);
-            // Success message is handled by calling module
         } catch (error) {
-            this.handleError(error, `setting document ${docRef.id}`);
+            this.handleError(error, `setting document ${docRef.path}`);
             throw error;
         }
+    },
+
+    /**
+     * Updates a Firestore document using the stored db instance.
+     * Includes default error handling.
+     * @param {DocumentReference} docRef - The Firestore document reference.
+     * @param {object} data - The data to update.
+     * @returns {Promise<void>}
+     */
+    updateDoc: async function(docRef, data) {
+        try {
+            await firestoreUpdateDoc(docRef, data); // Use aliased import name
+        } catch (error) {
+            this.handleError(error, `updating document ${docRef.path}`);
+            throw error;
+        }
+    },
+
+    /**
+     * Updates the internal admin status and notifies any registered callbacks.
+     * @param {string} role - The new role ('Admin' or 'Standard').
+     */
+    updateAdminStatus: function(role) {
+        const newIsAdmin = (role === 'Admin');
+        if (this._isAdmin !== newIsAdmin) {
+            this._isAdmin = newIsAdmin;
+            console.log("Admin status changed to:", this._isAdmin);
+            this.adminStatusCallbacks.forEach(callback => callback(this._isAdmin));
+        }
+    },
+
+    /**
+     * Checks if the current user has an 'Admin' role.
+     * This status is set and maintained by the Auth module.
+     * @returns {boolean} True if the user is an admin, false otherwise.
+     */
+    isAdmin: function() {
+        return this._isAdmin;
+    },
+
+    /**
+     * Registers a callback function to be called when the admin status changes.
+     * @param {function} callback - The function to call with the new admin status.
+     */
+    onAdminStatusChange: function(callback) {
+        this.adminStatusCallbacks.push(callback);
     }
 };
