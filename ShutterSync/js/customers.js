@@ -2,7 +2,7 @@
 
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
-import { Auth } from './auth.js'; // CORRECTED: Added Auth import
+import { Auth } from './auth.js';
 
 /**
  * The CustomersModule object handles all functionality related to customer management.
@@ -113,6 +113,44 @@ export const Customers = {
                                 <textarea id="customer-address" name="address" rows="2"
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                             </div>
+                            <!-- New Fields for strict rule validation -->
+                            <div class="md:col-span-2">
+                                <label for="customer-type" class="block text-sm font-medium text-gray-700 mb-1">Customer Type</label>
+                                <select id="customer-type" name="customerType"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white">
+                                    <option value="Individual">Individual</option>
+                                    <option value="Business">Business</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label for="preferred-contact-method" class="block text-sm font-medium text-gray-700 mb-1">Preferred Contact Method</label>
+                                <select id="preferred-contact-method" name="preferredContactMethod"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white">
+                                    <option value="Email">Email</option>
+                                    <option value="Phone">Phone</option>
+                                    <option value="Mail">Mail</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label for="industry" class="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+                                <input type="text" id="industry" name="industry"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            </div>
+                             <div class="md:col-span-2">
+                                <label for="customer-source" class="block text-sm font-medium text-gray-700 mb-1">Customer Source</label>
+                                <input type="text" id="customer-source" name="customerSource"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label for="additional-details" class="block text-sm font-medium text-gray-700 mb-1">Additional Details</label>
+                                <textarea id="additional-details" name="additionalDetails" rows="2"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                            </div>
+                            <div class="md:col-span-2 flex items-center">
+                                <input type="checkbox" id="customer-active" name="active" checked
+                                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <label for="customer-active" class="ml-2 block text-sm font-medium text-gray-700">Active Customer</label>
+                            </div>
                         </div>
                         <div class="flex justify-end space-x-3 mt-6">
                             <button type="button" id="cancel-customer-btn"
@@ -183,11 +221,14 @@ export const Customers = {
 
         const columns = [
             { id: 'id', name: 'ID', hidden: true },
-            { id: 'companyName', name: 'Company Name', sort: true, width: 'auto' },
+            { id: 'name', name: 'Company Name', sort: true, width: 'auto' }, // Changed to 'name' for display consistency with data
             { id: 'contactPerson', name: 'Contact Person', sort: true, width: 'auto' },
             { id: 'email', name: 'Email', width: 'auto' },
             { id: 'phone', name: 'Phone', width: '150px' },
             { id: 'address', name: 'Address', width: 'auto' },
+            // Display newly added fields if desired, otherwise they will just be in the Firestore data
+            { id: 'customerType', name: 'Type', sort: true, width: 'auto' },
+            { id: 'industry', name: 'Industry', sort: true, width: 'auto' },
             {
                 name: 'Actions',
                 width: '100px',
@@ -213,7 +254,7 @@ export const Customers = {
                         gridjs.h('button', {
                             className: 'p-1 rounded-md text-gray-600 hover:bg-red-100 hover:text-red-600 transition-colors duration-200',
                             title: 'Delete Customer',
-                            onClick: () => this.deleteCustomer(customerId, row.cells[1].data)
+                            onClick: () => this.deleteCustomer(customerId, customerData.name) // Use customerData.name
                         }, gridjs.h('i', { className: 'fas fa-trash-alt text-lg' }))
                     ]);
                 }
@@ -222,11 +263,13 @@ export const Customers = {
 
         const mappedData = customers.map(c => [
             c.id,
-            c.companyName || '',
+            c.name || '', // Use 'name' from Firestore
             c.contactPerson || '',
             c.email || '',
             c.phone || '',
-            c.address || ''
+            c.address || '',
+            c.customerType || '',
+            c.industry || ''
         ]);
 
         if (this.customersGrid) {
@@ -327,11 +370,17 @@ export const Customers = {
                         return;
                     }
                     // --- END NEW ---
-                    document.getElementById('customer-name').value = data.companyName || '';
+                    document.getElementById('customer-name').value = data.name || ''; // Use 'name'
                     document.getElementById('contact-person').value = data.contactPerson || '';
                     document.getElementById('customer-email').value = data.email || '';
                     document.getElementById('customer-phone').value = data.phone || '';
                     document.getElementById('customer-address').value = data.address || '';
+                    document.getElementById('customer-type').value = data.customerType || 'Individual';
+                    document.getElementById('preferred-contact-method').value = data.preferredContactMethod || 'Email';
+                    document.getElementById('industry').value = data.industry || '';
+                    document.getElementById('customer-source').value = data.customerSource || '';
+                    document.getElementById('additional-details').value = data.additionalDetails || '';
+                    document.getElementById('customer-active').checked = data.active !== false; // Default to checked
                 } else {
                     this.Utils.showMessage('Customer not found for editing.', 'error');
                     this.closeCustomerModal();
@@ -344,6 +393,10 @@ export const Customers = {
             }
         } else {
             title.textContent = 'Add New Customer';
+            // Set defaults for new customer
+            document.getElementById('customer-type').value = 'Individual';
+            document.getElementById('preferred-contact-method').value = 'Email';
+            document.getElementById('customer-active').checked = true;
         }
 
         modal.classList.remove('hidden');
@@ -378,23 +431,36 @@ export const Customers = {
         }
         // --- END NEW ---
 
-        const customerName = document.getElementById('customer-name').value.trim();
+        const name = document.getElementById('customer-name').value.trim(); // Changed to 'name'
         const contactPerson = document.getElementById('contact-person').value.trim();
         const email = document.getElementById('customer-email').value.trim();
         const phone = document.getElementById('customer-phone').value.trim();
         const address = document.getElementById('customer-address').value.trim();
+        const customerType = document.getElementById('customer-type').value;
+        const preferredContactMethod = document.getElementById('preferred-contact-method').value;
+        const industry = document.getElementById('industry').value.trim();
+        const customerSource = document.getElementById('customer-source').value.trim();
+        const additionalDetails = document.getElementById('additional-details').value.trim();
+        const active = document.getElementById('customer-active').checked;
 
-        if (!customerName || !contactPerson) {
+
+        if (!name || !contactPerson) {
             this.Utils.showMessage('Company Name and Contact Person are required.', 'warning');
             return;
         }
 
         const customerData = {
-            companyName: customerName,
+            name: name, // Changed to 'name'
             contactPerson: contactPerson,
             email: email,
             phone: phone,
             address: address,
+            customerType: customerType,
+            preferredContactMethod: preferredContactMethod,
+            industry: industry,
+            customerSource: customerSource,
+            additionalDetails: additionalDetails,
+            active: active,
             updatedAt: new Date()
         };
 
