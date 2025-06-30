@@ -1,7 +1,7 @@
 // js/home.js
 
-import { Auth } from './auth.js';
-import { Utils } from './utils.js';
+import { Auth } from './auth.js'; // Still needed for Auth.loginWithGoogle
+import { Utils } from './utils.js'; // Still needed for Utils.showMessage
 
 /**
  * The Home module handles the rendering of the main dashboard/home page.
@@ -27,34 +27,31 @@ export const Home = {
 
     /**
      * Renders the Home UI into the provided content area element.
-     * This function now receives the specific DOM element to render into.
+     * This function now receives the specific DOM element to render into,
+     * AND the explicit authentication state.
+     *
      * @param {HTMLElement} moduleContentElement - The DOM element where the Home UI should be rendered.
+     * @param {boolean} isLoggedIn - The current login status (true/false).
+     * @param {boolean} isAdmin - The current admin status (true/false).
+     * @param {object|null} currentUser - The current Firebase User object, or null if logged out.
      */
-    renderHomeUI: function(moduleContentElement) {
-        // CRITICAL FIX: Use the passed moduleContentElement directly
+    renderHomeUI: function(moduleContentElement, isLoggedIn, isAdmin, currentUser) {
         const homeModuleContent = moduleContentElement;
 
-        // main.js is now responsible for clearing innerHTML of the specific module's div
-        // and ensuring it's not null before calling this.
-        // We still keep a simple check for robustness.
         if (!homeModuleContent) {
             console.error("Home module: Target content element was not provided or is null.");
             this.Utils.showMessage("Error: Home module could not find its content area.", "error");
             return;
         }
 
-        const isLoggedIn = Auth.isLoggedIn();
-        const isAdmin = this.Utils.isAdmin();
-        const currentUser = this.auth.currentUser;
-
-        // Dynamic content based on login and admin status
+        // Use the passed isLoggedIn and isAdmin directly
         let welcomeMessage = "Welcome to ShutterSync CRM!";
         let actionCards = `
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Login / Register Card -->
                 <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 transform hover:scale-105">
                     <h4 class="text-xl font-semibold text-gray-800 mb-3"><i class="fas fa-sign-in-alt text-blue-500 mr-2"></i> Get Started</h4>
-                    <p class="text-gray-600 mb-4">Log in or register to access your CRM features.</p>
+                    <p class="text-gray-600 mb-4">Log in to access your CRM features.</p>
                     <button id="login-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200 w-full">
                         Login with Google
                     </button>
@@ -63,7 +60,6 @@ export const Home = {
         `;
 
         if (isLoggedIn) {
-            const userEmail = currentUser ? (currentUser.email || 'user') : 'user';
             welcomeMessage = `Welcome, ${currentUser ? (currentUser.displayName || currentUser.email) : 'Authenticated User'}!`;
             actionCards = `
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -150,10 +146,9 @@ export const Home = {
 
     /**
      * Cleans up any resources used by the Home module when it's unloaded.
-     * Currently, Home module does not have persistent listeners, so this is minimal.
      */
     destroy: function() {
         console.log("Home module destroyed.");
-        // The content is cleared by Main.js, so no need to clear it here.
+        // Main.js now handles clearing the innerHTML of the content area for this module.
     }
 };
