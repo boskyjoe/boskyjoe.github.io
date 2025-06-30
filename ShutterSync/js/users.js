@@ -2,7 +2,7 @@
 
 import { collection, onSnapshot, doc, updateDoc, query, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
-import { Auth } from './auth.js'; // CORRECTED: Added Auth import
+import { Auth } from './auth.js';
 
 /**
  * The Users module handles user management, primarily for Admin roles.
@@ -24,9 +24,6 @@ export const Users = {
         this.auth = firebaseAuth;
         this.Utils = utils;
         console.log("Users module initialized.");
-
-        // Do NOT call renderUsersUI or attachEventListeners here.
-        // They depend on the module's HTML being loaded into the DOM by Main.loadModule.
     },
 
     /**
@@ -34,7 +31,7 @@ export const Users = {
      * This is called by Main.js when the 'users' module is activated.
      * @param {HTMLElement} moduleContentElement - The DOM element where the Users UI should be rendered.
      */
-    renderUsersUI: function(moduleContentElement) { // Added moduleContentElement parameter
+    renderUsersUI: function(moduleContentElement) {
         // CRITICAL FIX: Use the passed moduleContentElement directly
         const usersModuleContent = moduleContentElement;
 
@@ -138,22 +135,25 @@ export const Users = {
             this.unsubscribe(); // Detach existing listener if any
         }
 
-        if (this.Utils.isAdmin()) {
-            const q = query(collection(this.db, "users_data"));
-            this.unsubscribe = onSnapshot(q, (snapshot) => {
-                const users = [];
-                snapshot.forEach((doc) => {
-                    users.push({ id: doc.id, ...doc.data() });
-                });
-                console.log("Users data updated:", users);
-                this.renderUsersGrid(users);
-            }, (error) => {
-                this.Utils.handleError(error, "fetching users data");
-            });
-        } else {
-            console.log("Not an admin, skipping users data listener setup.");
-            this.renderUsersGrid([]); // Ensure grid is empty or not rendered for non-admins
+        const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
+        if (!currentUserId || !this.Utils.isAdmin()) { // Ensure both logged in and admin
+            console.log("Not logged in or not an admin, skipping users data listener setup.");
+            this.renderUsersGrid([]); // Clear grid if not authorized
+            return;
         }
+
+        const q = query(collection(this.db, "users_data"));
+        this.unsubscribe = onSnapshot(q, (snapshot) => {
+            const users = [];
+            snapshot.forEach((doc) => {
+                users.push({ id: doc.id, ...doc.data() });
+            });
+            console.log("Users data updated:", users);
+            this.renderUsersGrid(users);
+        }, (error) => {
+            this.Utils.handleError(error, "fetching users data");
+            this.renderUsersGrid([]);
+        });
     },
 
     /**
@@ -254,7 +254,7 @@ export const Users = {
     openUserRoleModal: function(userId, displayName, email, role) {
         // --- NEW: Login/Admin Requirement Check for modals ---
         if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
-            this.Utils.showMessage('You do not have permission to edit user roles.', 'error');
+            this.Utils.showMessage('You do not have permission to add/edit user roles.', 'error'); // Changed for consistency
             return;
         }
         // --- END NEW ---
@@ -303,13 +303,12 @@ export const Users = {
         const newRole = document.getElementById('user-role-select').value;
         const userDocRef = doc(this.db, "users_data", this.currentEditingUserId);
 
-        // Prevent admin from changing their own role, or if current user is not admin
+        // Prevent admin from changing their own role
         if (this.currentEditingUserId === this.auth.currentUser.uid && newRole !== 'Admin') {
             this.Utils.showMessage("Admins cannot demote themselves. Please ask another admin to change your role.", "error");
             this.closeUserRoleModal();
             return;
         }
-
 
         try {
             await this.Utils.updateDoc(userDocRef, { role: newRole, updatedAt: new Date() });
@@ -337,7 +336,7 @@ export const Users = {
             this.usersGrid.destroy();
             this.usersGrid = null;
         }
-        // Removed content clearing as Main.js handles it for the primary module content area
+        // Main.js now handles clearing the innerHTML of the content area for this module.
         console.log("Users module destroyed.");
     }
 };
