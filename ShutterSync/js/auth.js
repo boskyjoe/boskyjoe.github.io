@@ -1,154 +1,166 @@
 // js/auth.js
 
-// Import necessary Firebase Auth functions, including GoogleAuthProvider
-import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+// Import all necessary Firebase Auth functions, including for custom token and anonymous sign-in.
+import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { Utils } from './utils.js'; // Ensure Utils is imported
+// Utils is passed to Auth.init, so no direct import is strictly necessary here.
 
 /**
- * The Auth module handles all Firebase Authentication related functionalities.
+ * The Auth module handles all user authentication functionalities
+ * using Firebase Authentication.
  */
 export const Auth = {
-    db: null,
     auth: null,
-    Utils: null, // Store Utils reference
-    _authReadyCallbacks: [], // Callbacks to run when auth state is first determined
-    _isAuthInitialCheckComplete: false, // Flag to ensure onAuthReady callbacks run only once
+    db: null, // Firestore DB instance
+    Utils: null, // Reference to the Utils module
+    authReadyCallbacks: [], // Callbacks to run when auth state is first determined
+    _isAdmin: false, // Internal flag for admin status
 
     /**
-     * Initializes the Auth module.
-     * @param {object} firestoreDb - The Firestore database instance.
+     * Initializes the Auth module with Firebase Auth and Firestore instances.
+     * @param {object} firebaseDb - The Firebase Firestore database instance.
      * @param {object} firebaseAuth - The Firebase Auth instance.
-     * @param {object} utils - The Utils object for common functionalities.
+     * @param {object} utils - The Utils module instance.
      */
-    init: function(firestoreDb, firebaseAuth, utils) {
-        this.db = firestoreDb;
+    init: function(firebaseDb, firebaseAuth, utils) {
+        this.db = firebaseDb;
         this.auth = firebaseAuth;
-        this.Utils = utils; // Assign Utils reference
+        this.Utils = utils; // Store reference to Utils
+
         console.log("Auth module initialized.");
+        this.setupAuthStateListener();
+        this.performInitialSignIn();
+    },
 
-        // Listen for auth state changes
-        onAuthStateChanged(this.auth, async (user) => {
-            console.log("Auth state changed. User:", user ? user.uid : "null");
-            if (user) {
-                // User is signed in. Ensure their user document exists and update their role.
-                await this.ensureUserDocumentAndSetRole(user);
+    /**
+     * Attempts to sign in with a custom token if available (for Canvas environment),
+     * otherwise signs in anonymously as a fallback.
+     */
+    performInitialSignIn: async function() {
+        // Check for __initial_auth_token provided by the Canvas environment
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            try {
+                await signInWithCustomToken(this.auth, __initial_auth_token);
+                console.log("Signed in with custom token.");
+            } catch (error) {
+                // If custom token sign-in fails (e.g., expired token), fall back to anonymous
+                console.warn("Error signing in with custom token, falling back to anonymous:", error);
+                try {
+                    await signInAnonymously(this.auth);
+                    console.log("Signed in anonymously due to custom token failure.");
+                } catch (anonError) {
+                    console.error("Error performing anonymous sign-in:", anonError);
+                }
+            }
+        } else {
+            // In environments where __initial_auth_token is not present, or if not already signed in
+            if (!this.auth.currentUser) {
+                try {
+                    await signInAnonymously(this.auth);
+                    console.log("Signed in anonymously.");
+                } catch (error) {
+                    console.error("Error signing in anonymously:", error);
+                }
             } else {
-                // User is signed out. Clear admin status.
-                this.Utils.updateAdminStatus(null);
+                console.log("User already signed in (e.g., via Google session or anonymous).");
+            }
+        }
+    },
+
+    /**
+     * Sets up the Firebase Auth state listener.
+     * This listener updates the UI and user role whenever the authentication state changes.
+     */
+    setupAuthStateListener: function() {
+        onAuthStateChanged(this.auth, async (user) => {
+            console.log("Auth state changed. Current user:", user ? user.uid : "No user");
+
+            if (user) {
+                // User is signed in. Fetch or create user_data document.
+                const userDocRef = doc(this.db, 'users_data', user.uid);
+                try {
+                    const docSnap = await this.Utils.getDoc(userDocRef); // Use Utils.getDoc
+
+                    if (docSnap.exists()) {
+                        const userData = docSnap.data();
+                        this._isAdmin = userData.role === 'Admin';
+                        this.Utils.updateAdminStatus(userData.role); // Notify Utils of role
+                        console.log(`User data loaded. Role: ${userData.role}, IsAdmin: ${this._isAdmin}`);
+                    } else {
+                        // User's first login or no user_data exists, create it
+                        const defaultUserData = {
+                            email: user.email,
+                            displayName: user.displayName,
+                            role: 'Standard', // Default role
+                            createdAt: new Date(),
+                            lastLogin: new Date()
+                        };
+                        await this.Utils.setDoc(userDocRef, defaultUserData); // Use Utils.setDoc
+                        this._isAdmin = false;
+                        this.Utils.updateAdminStatus('Standard'); // Notify Utils of default role
+                        console.log("New user data created with Standard role.");
+                    }
+                } catch (error) {
+                    this.Utils.handleError(error, "fetching/creating user data");
+                    this._isAdmin = false; // Default to non-admin on error
+                    this.Utils.updateAdminStatus('Standard'); // Notify Utils of role
+                }
+            } else {
+                // User is signed out.
+                this._isAdmin = false;
+                this.Utils.updateAdminStatus('Standard'); // User is no longer admin
             }
 
-            // Mark initial check complete and run callbacks if not already done
-            if (!this._isAuthInitialCheckComplete) {
-                this._isAuthInitialCheckComplete = true;
-                this._authReadyCallbacks.forEach(cb => cb());
-                this._authReadyCallbacks = []; // Clear callbacks after execution
-            }
+            // Run any callbacks that were waiting for auth to be ready
+            this.authReadyCallbacks.forEach(callback => callback(user));
+            this.authReadyCallbacks = []; // Clear callbacks after running them once
         });
     },
 
     /**
-     * Ensures a user document exists in 'users_data' and updates their role in Utils.
-     * If the user document doesn't exist, it creates one with a default 'Standard' role.
-     * Also updates lastLogin timestamp.
-     * @param {object} user - The Firebase User object.
+     * Adds a callback function to be executed when the initial authentication state
+     * has been determined (user logged in/out, and their role fetched).
+     * @param {function} callback - The function to call with the current user object.
      */
-    ensureUserDocumentAndSetRole: async function(user) {
-        if (!user || !user.uid) {
-            console.warn("Attempted to ensure user document with null/invalid user object.");
-            this.Utils.updateAdminStatus(null);
-            return;
-        }
-
-        const userDocRef = doc(this.db, 'users_data', user.uid);
-        try {
-            const userDocSnap = await getDoc(userDocRef);
-            let userRole = 'Standard'; // Default role
-
-            if (userDocSnap.exists()) {
-                const userData = userDocSnap.data();
-                userRole = userData.role || 'Standard'; // Use existing role or default
-                console.log(`User document exists for ${user.uid}, role: ${userRole}`);
-                // Update lastLogin timestamp
-                await updateDoc(userDocRef, { lastLogin: new Date() });
-            } else {
-                // Document does not exist, create it with default 'Standard' role
-                await setDoc(userDocRef, {
-                    uid: user.uid,
-                    email: user.email || null,
-                    displayName: user.displayName || 'Unnamed User', // Google users will have displayName
-                    role: 'Standard',
-                    createdAt: new Date(),
-                    lastLogin: new Date()
-                });
-                console.log(`Created new user document for ${user.uid} with role: Standard`);
-            }
-            // Update the admin status in Utils after ensuring the user document
-            this.Utils.updateAdminStatus(userRole);
-        } catch (error) {
-            this.Utils.handleError(error, "ensuring user document/setting role");
-            // Fallback: If error, assume standard role or clear status
-            this.Utils.updateAdminStatus(null);
+    onAuthReady: function(callback) {
+        // If auth state has already been determined (currentUser is not undefined/null), run callback immediately
+        // onAuthStateChanged fires initially even if no user is logged in, setting currentUser to null.
+        if (this.auth.currentUser !== undefined) {
+             callback(this.auth.currentUser);
+        } else {
+            this.authReadyCallbacks.push(callback);
         }
     },
 
     /**
-     * Initiates the Google Sign-in process.
-     * The initialAuthToken (custom token) flow is removed as we only support Google Sign-in.
+     * Logs the user in with Google.
      */
-    login: async function() {
+    loginWithGoogle: async function() {
         const provider = new GoogleAuthProvider();
         try {
-            // Force account selection to allow user to switch Google accounts if desired
-            provider.setCustomParameters({
-                prompt: 'select_account'
-            });
             await signInWithPopup(this.auth, provider);
-            console.log("Logged in with Google.");
-            // onAuthStateChanged listener will handle ensureUserDocumentAndSetRole and UI updates
+            this.Utils.showMessage('Successfully logged in with Google!', 'success');
+            // onAuthStateChanged listener will handle subsequent UI updates and module loading.
         } catch (error) {
-            // Handle specific Google Auth errors
+            this.Utils.handleError(error, "Google login");
             if (error.code === 'auth/popup-closed-by-user') {
-                console.log("Google sign-in popup closed by user.");
-                this.Utils.showMessage("Login cancelled.", "info");
+                this.Utils.showMessage('Login cancelled by user.', 'info');
             } else if (error.code === 'auth/cancelled-popup-request') {
-                console.log("Another popup request already in progress.");
-                this.Utils.showMessage("Login request already in progress. Please wait.", "warning");
-            } else {
-                this.Utils.handleError(error, "Google login");
-                this.Utils.showMessage("Google login failed. Please try again.", "error");
+                this.Utils.showMessage('Another login request is already in progress.', 'warning');
             }
         }
     },
 
     /**
-     * Logs out the current user.
+     * Logs the current user out.
      */
     logout: async function() {
         try {
             await signOut(this.auth);
-            console.log("User logged out.");
-            this.Utils.showMessage("You have been logged out.", "info");
-            localStorage.removeItem('lastActiveModule'); // Clear last active module on logout
-            window.Main.loadModule('home'); // Redirect to home page
+            this.Utils.showMessage('Successfully logged out.', 'success');
+            // onAuthStateChanged listener will handle subsequent UI updates and module loading.
         } catch (error) {
             this.Utils.handleError(error, "logout");
-            this.Utils.showMessage("Logout failed. Please try again.", "error");
-        }
-    },
-
-    /**
-     * Registers a callback to be executed once the initial authentication state is determined.
-     * This is useful for delaying UI rendering until the user's login status and role are known.
-     * @param {function} callback - The function to call.
-     */
-    onAuthReady: function(callback) {
-        if (this._isAuthInitialCheckComplete) {
-            // If auth state has already been determined and processed, call immediately
-            callback();
-        } else {
-            // Otherwise, queue the callback
-            this._authReadyCallbacks.push(callback);
         }
     },
 
@@ -157,6 +169,22 @@ export const Auth = {
      * @returns {boolean} True if a user is logged in, false otherwise.
      */
     isLoggedIn: function() {
-        return this.auth.currentUser !== null;
+        return !!this.auth.currentUser;
+    },
+
+    /**
+     * Provides access to the Firebase Auth instance.
+     * @returns {object} The Firebase Auth instance.
+     */
+    getAuthInstance: function() {
+        return this.auth;
+    },
+
+    /**
+     * Provides access to the current authenticated user object.
+     * @returns {object|null} The Firebase User object or null.
+     */
+    getCurrentUser: function() {
+        return this.auth.currentUser;
     }
 };
