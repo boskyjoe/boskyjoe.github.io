@@ -149,10 +149,13 @@ export const Auth = {
     loginWithGoogle: async function() {
         const provider = new GoogleAuthProvider();
         try {
+            console.log("Attempting Google login popup...");
             await signInWithPopup(this.auth, provider);
+            console.log("Google login successful!");
             this.Utils.showMessage('Successfully logged in with Google!', 'success');
             // onAuthStateChanged listener will handle subsequent UI updates and module loading.
         } catch (error) {
+            console.error("Google login error details:", error); // Detailed error log
             this.Utils.handleError(error, "Google login");
             if (error.code === 'auth/popup-closed-by-user') {
                 this.Utils.showMessage('Login cancelled by user.', 'info');
@@ -167,10 +170,18 @@ export const Auth = {
      */
     logout: async function() {
         try {
+            if (!this.auth) {
+                console.error("Auth instance is null. Cannot log out.");
+                this.Utils.showMessage('Logout failed: Authentication service not initialized.', 'error');
+                return;
+            }
+            console.log("Attempting Firebase signOut...");
             await signOut(this.auth);
+            console.log("Firebase signOut successful!");
             this.Utils.showMessage('Successfully logged out.', 'success');
             // onAuthStateChanged listener will handle subsequent UI updates and module loading.
         } catch (error) {
+            console.error("Logout error details:", error); // Detailed error log for logout
             this.Utils.handleError(error, "logout");
         }
     },
