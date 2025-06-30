@@ -1,10 +1,8 @@
 // js/auth.js
 
 // Import all necessary Firebase Auth functions.
-// signInAnonymously is removed from imports as it will no longer be used.
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-// Utils is passed to Auth.init, so no direct import is strictly necessary here.
 
 /**
  * The Auth module handles all user authentication functionalities
@@ -15,7 +13,7 @@ export const Auth = {
     db: null, // Firestore DB instance
     Utils: null, // Reference to the Utils module
     authReadyCallbacks: [], // Callbacks to run when auth state is first determined
-    _isAdmin: false, // Internal flag for admin status
+    _isAdmin: false, // Internal flag for admin status (redundant, but kept for clarity with Utils.isAdmin)
 
     /**
      * Initializes the Auth module with Firebase Auth and Firestore instances.
@@ -39,19 +37,14 @@ export const Auth = {
      * If custom token sign-in fails or is not provided, the user will remain unauthenticated.
      */
     performInitialSignIn: async function() {
-        // Check for __initial_auth_token provided by the Canvas environment
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
             try {
                 await signInWithCustomToken(this.auth, __initial_auth_token);
                 console.log("Signed in with custom token.");
             } catch (error) {
-                // If custom token sign-in fails, do NOT fall back to anonymous.
-                // The user will simply remain unauthenticated, which is handled by onAuthStateChanged.
                 console.warn("Error signing in with custom token. User will remain unauthenticated.", error);
             }
         } else {
-            // If no custom token is provided, do nothing.
-            // The onAuthStateChanged listener will fire with null, indicating unauthenticated state.
             console.log("No custom auth token provided. User will start unauthenticated.");
         }
     },
@@ -64,17 +57,18 @@ export const Auth = {
         onAuthStateChanged(this.auth, async (user) => {
             console.log("Auth state changed. Current user:", user ? user.uid : "No user");
 
+            let currentIsAdmin = false; // Default
             if (user) {
                 // User is signed in. Fetch or create user_data document.
                 const userDocRef = doc(this.db, 'users_data', user.uid);
                 try {
-                    const docSnap = await this.Utils.getDoc(userDocRef); // Use Utils.getDoc
+                    const docSnap = await this.Utils.getDoc(userDocRef);
 
                     if (docSnap.exists()) {
                         const userData = docSnap.data();
-                        this._isAdmin = userData.role === 'Admin';
+                        currentIsAdmin = userData.role === 'Admin';
                         this.Utils.updateAdminStatus(userData.role); // Notify Utils of role
-                        console.log(`User data loaded. Role: ${userData.role}, IsAdmin: ${this._isAdmin}`);
+                        console.log(`User data loaded. Role: ${userData.role}, IsAdmin: ${currentIsAdmin}`);
                     } else {
                         // User's first Google login, create their user_data document.
                         const defaultUserData = {
@@ -84,24 +78,29 @@ export const Auth = {
                             createdAt: new Date(),
                             lastLogin: new Date()
                         };
-                        await this.Utils.setDoc(userDocRef, defaultUserData); // Use Utils.setDoc
-                        this._isAdmin = false;
+                        await this.Utils.setDoc(userDocRef, defaultUserData);
+                        currentIsAdmin = false;
                         this.Utils.updateAdminStatus('Standard'); // Notify Utils of default role
                         console.log("New user data created with Standard role for Google login.");
                     }
                 } catch (error) {
                     this.Utils.handleError(error, "fetching/creating user data");
-                    this._isAdmin = false; // Default to non-admin on error
+                    currentIsAdmin = false; // Default to non-admin on error
                     this.Utils.updateAdminStatus('Standard'); // Notify Utils of role
                 }
             } else {
                 // User is signed out or never authenticated.
-                this._isAdmin = false;
+                currentIsAdmin = false;
                 this.Utils.updateAdminStatus('Standard'); // User is no longer admin (or never was)
             }
 
-            // Run any callbacks that were waiting for auth to be ready
-            this.authReadyCallbacks.forEach(callback => callback(user));
+            // Store the resolved isAdmin status internally
+            this._isAdmin = currentIsAdmin;
+
+            // Run any callbacks that were waiting for auth to be ready,
+            // passing the definitive isLoggedIn, isAdmin, and currentUser.
+            const isLoggedIn = !!user;
+            this.authReadyCallbacks.forEach(callback => callback(isLoggedIn, currentIsAdmin, user));
             this.authReadyCallbacks = []; // Clear callbacks after running them once
         });
     },
@@ -109,13 +108,14 @@ export const Auth = {
     /**
      * Adds a callback function to be executed when the initial authentication state
      * has been determined (user logged in/out, and their role fetched).
-     * @param {function} callback - The function to call with the current user object.
+     * @param {function(boolean, boolean, object|null)} callback - The function to call with
+     * isLoggedIn (boolean), isAdmin (boolean), and currentUser (object|null).
      */
     onAuthReady: function(callback) {
-        // If auth state has already been determined (currentUser is not undefined/null), run callback immediately
-        // onAuthStateChanged fires initially even if no user is logged in, setting currentUser to null.
+        // If auth state has already been determined, run callback immediately
+        // `this.auth.currentUser !== undefined` means `onAuthStateChanged` has fired at least once.
         if (this.auth.currentUser !== undefined) {
-             callback(this.auth.currentUser);
+             callback(!!this.auth.currentUser, this._isAdmin, this.auth.currentUser);
         } else {
             this.authReadyCallbacks.push(callback);
         }
