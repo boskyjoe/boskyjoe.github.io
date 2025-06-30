@@ -7,202 +7,152 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome for icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- Grid.js CSS -->
     <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
-    <!-- Main styles (your custom CSS) -->
-    <link rel="stylesheet" href="css/style.css">
     <style>
-        /* Optional: Smooth transition for modal */
-        #customer-modal > div,
-        #opportunity-modal > div,
-        #user-role-modal > div,
-        #country-state-modal > div,
-        #currency-modal > div,
-        #price-book-modal > div,
-        #message-modal-container > div {
-            transition: all 0.3s ease-out;
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
         }
-
-        /* Hide number input arrows (for Chrome, Safari, Edge, Opera) */
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-
-        /* Hide number input arrows (for Firefox) */
-        input[type=number] {
-            -moz-appearance: textfield;
-        }
-
-        /* Ensure Grid.js pagination buttons match theme */
-        .gridjs-pages button.gridjs-currentPage {
-            @apply bg-blue-600 text-white;
+        /* Custom styles for dropdown to ensure it's above other content */
+        .relative.group:hover .absolute {
+            display: block;
         }
     </style>
 </head>
-<body class="bg-gray-100 font-sans antialiased">
-    <!-- Navigation Bar -->
-    <nav class="bg-gray-800 text-white p-4 shadow-lg fixed w-full top-0 left-0 z-50">
+<body class="flex flex-col min-h-screen">
+    <!-- Header -->
+    <header class="bg-gray-800 text-white p-4 shadow-md">
         <div class="container mx-auto flex justify-between items-center">
-            <a href="#" id="home-link" class="text-2xl font-bold tracking-wide hover:text-gray-300 transition-colors duration-200">ShutterSync CRM</a>
+            <h1 class="text-2xl font-bold">ShutterSync CRM</h1>
+            <nav>
+                <ul class="flex space-x-4 items-center">
+                    <li><a href="#" data-module="home" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">Home</a></li>
+                    <li><a href="#" data-module="customers" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">Customers</a></li>
+                    <li><a href="#" data-module="opportunities" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">Opportunities</a></li>
+                    <!-- User & Admin Dropdown -->
+                    <li class="relative group">
+                        <button id="nav-admin-dropdown" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center">
+                            <i class="fas fa-tools mr-2"></i> Admin Tools <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                        </button>
+                        <div class="absolute hidden bg-gray-800 text-white mt-2 py-2 rounded-md shadow-lg z-50">
+                            <a href="#" data-module="users" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">User Management</a>
+                            <a href="#" data-module="adminData" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">App Metadata</a>
+                            <a href="#" data-module="priceBook" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Price Book</a>
+                        </div>
+                    </li>
+                </ul>
+            </nav>
             <div class="flex items-center space-x-4">
-                <a href="#" data-module="home" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Home</a>
-                <a href="#" data-module="customers" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Customers</a>
-                <a href="#" data-module="opportunities" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Opportunities</a>
-                <a href="#" data-module="events" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200">Events</a>
-
-                <!-- Admin Dropdown Menu - Initially hidden, shown for Admins by JS -->
-                <div id="nav-admin-dropdown" class="relative group hidden">
-                    <button class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors duration-200 flex items-center">
-                        Admin <i class="fas fa-caret-down ml-2"></i>
-                    </button>
-                    <div class="absolute hidden group-hover:block bg-gray-700 text-white rounded-md shadow-lg py-2 w-48 mt-1 z-10">
-                        <a href="#" data-module="users" class="block px-4 py-2 text-sm hover:bg-gray-600 transition-colors duration-200">Users</a>
-                        <a href="#" data-module="adminData" class="block px-4 py-2 text-sm hover:bg-gray-600 transition-colors duration-200">App Metadata</a>
-                        <a href="#" data-module="priceBook" class="block px-4 py-2 text-sm hover:bg-gray-600 transition-colors duration-200">Price Books</a>
-                    </div>
+                <span id="user-info-span" class="text-gray-300 text-sm hidden"></span>
+                <div id="login-register-placeholder">
+                    <!-- This will be dynamically controlled by JS. The login button is on the home page. -->
                 </div>
-
-                <!-- User Info Display & Logout -->
-                <div class="flex items-center space-x-2 ml-4">
-                    <span id="user-icon-container" class="text-gray-300 hidden"><i class="fas fa-user-circle text-2xl"></i></span>
-                    <span id="user-info-span" class="text-gray-300 text-sm font-medium hidden"></span>
-                    <span id="login-register-placeholder" class="text-gray-300 text-sm font-medium">Login / Register</span>
-                </div>
-
-                <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-200 hidden">
-                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                </button>
+                <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors duration-200 hidden">Logout</button>
             </div>
         </div>
-    </nav>
+    </header>
 
     <!-- Main Content Area -->
-    <main class="container mx-auto mt-20 p-4">
-        <!-- CRITICAL FIX: Added 'module-content-area' class and 'hidden' to all module content divs -->
+    <main class="container mx-auto p-6 flex-grow">
+        <!-- Module content will be loaded dynamically here -->
         <div id="home-module-content" class="module-content-area hidden"></div>
         <div id="customers-module-content" class="module-content-area hidden"></div>
         <div id="opportunities-module-content" class="module-content-area hidden"></div>
         <div id="users-module-content" class="module-content-area hidden"></div>
-        <div id="admin-data-module-content" class="module-content-area hidden"></div>
-        <div id="price-book-module-content" class="module-content-area hidden"></div>
+        <div id="adminData-module-content" class="module-content-area hidden"></div>
+        <div id="priceBook-module-content" class="module-content-area hidden"></div>
     </main>
 
-    <!-- Global Message Box -->
-    <div id="message-modal-container" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[1000] hidden">
-        <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-full transform transition-all duration-300 scale-95 opacity-0 text-center">
-            <div id="message-content" class="text-gray-800 text-lg font-semibold mb-4"></div>
-            <button id="message-close-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
-                OK
-            </button>
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white p-4 text-center text-sm shadow-inner">
+        <div class="container mx-auto">
+            &copy; 2025 ShutterSync CRM. All rights reserved.
         </div>
-    </div>
+    </footer>
 
-
-    <!-- Grid.js Library (loaded globally) -->
+    <!-- Grid.js JavaScript -->
     <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
 
-    <!-- Firebase SDK (loaded globally) -->
+    <!-- Firebase SDK (Version aligned with Auth, Firestore imports) -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, query, where, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-        // Firebase configuration (DIRECTLY DEFINED)
-        const firebaseConfig = {
-          apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
-          authDomain: "shuttersync-96971.firebaseapp.com",
-          projectId: "shuttersync-96971",
-          storageBucket: "shuttersync-96971.firebasestorage.app",
-          messagingSenderId: "10782416018",
-          appId: "1:10782416018:web:361db5572882a62f291a4b",
-          measurementId: "G-T0W9CES4D3"
-        };
-
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
-
-        console.log("Firebase config object before initializeApp:", firebaseConfig);
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-
-        // Import modules
-        import Main from './js/main.js'; // Now correctly imports the default export
-        import { Auth } from './js/auth.js';
-        import { Utils } from './js/utils.js';
+        // Import all necessary JS modules
+        import Main from './js/main.js'; // Ensure this path is correct relative to index.html
+        import { Home } from './js/home.js';
         import { Customers } from './js/customers.js';
         import { Opportunities } from './js/opportunities.js';
         import { Users } from './js/users.js';
         import { AdminData } from './js/admin_data.js';
         import { PriceBook } from './js/price_book.js';
-        import { Home } from './js/home.js'; // Import Home module
 
-        // Initialize Utils first as it's a dependency
-        Utils.init(db, auth, appId);
+        // Firebase JS SDK libraries
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // Initialize Auth module with Firebase instances and Utils
-        Auth.init(db, auth, Utils);
+        // IMPORTANT: Firebase configuration and initialization
+        // __firebase_config and __app_id are global variables provided by the Canvas environment.
+        // We parse __firebase_config from a string to a JavaScript object.
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-        // Initialize Main module (Main's init should be independent of initialAuthToken directly)
-        Main.init(app, db, auth, appId); // Pass app, db, auth, and appId
+        // Initialize Firebase services
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
 
-        // Initialize other modules. They also need db, auth, and Utils.
-        Customers.init(db, auth, Utils);
-        Opportunities.init(db, auth, Utils);
-        Users.init(db, auth, Utils);
-        AdminData.init(db, auth, Utils);
-        PriceBook.init(db, auth, Utils);
-        Home.init(db, auth, Utils); // Initialize Home module
+        // Initialise Main module with Firebase instances and app ID
+        Main.init(app, db, auth, appId);
 
-        // Ensure modules are properly destroyed/unsubscribed when switching
+        // Set up module destroyers to clean up listeners/instances when modules are switched
+        // Each module's 'destroy' method is responsible for cleaning up its own listeners and resources.
         Main.setModuleDestroyers({
-            'home': () => Home.destroy(),
-            'customers': () => Customers.destroy(),
-            'opportunities': () => Opportunities.destroy(),
-            'users': () => Users.destroy(),
-            'adminData': () => AdminData.destroy(), // Corrected module name here
-            'priceBook': () => PriceBook.destroy(), // Corrected module name here
-            'events': () => Utils.showMessage('Events module is not yet implemented.', 'info', 3000), // Example for unimplemented module
+            home: Home.destroy,
+            customers: Customers.destroy,
+            opportunities: Opportunities.destroy,
+            users: Users.destroy,
+            adminData: AdminData.destroy,
+            priceBook: PriceBook.destroy
         });
 
-        // Event listener for module navigation
+        // Add event listeners for main navigation links
         document.querySelectorAll('nav a[data-module]').forEach(link => {
             link.addEventListener('click', (e) => {
-                e.preventDefault();
+                e.preventDefault(); // Prevent default link behavior
                 const moduleName = e.target.dataset.module;
-                if (moduleName) {
-                    Main.loadModule(moduleName);
-                }
+                // Main.loadModule will internally ensure the correct authentication state
+                // is passed to the target module's render function.
+                window.Main.loadModule(moduleName);
             });
         });
 
-        // Event listener for logout button
-        document.getElementById('logout-btn').addEventListener('click', async (e) => {
+        // Toggle admin dropdown visibility
+        const adminDropdownButton = document.querySelector('#nav-admin-dropdown');
+        if (adminDropdownButton) {
+            adminDropdownButton.addEventListener('click', function(event) {
+                event.stopPropagation(); // Prevent click from bubbling up and immediately closing
+                const dropdownContent = this.nextElementSibling;
+                if (dropdownContent && dropdownContent.classList.contains('absolute')) {
+                    dropdownContent.classList.toggle('hidden');
+                }
+            });
+            // Close dropdown if clicked anywhere outside of it
+            document.addEventListener('click', function(event) {
+                const dropdownContent = adminDropdownButton.nextElementSibling;
+                if (dropdownContent && dropdownContent.classList.contains('absolute') && !adminDropdownButton.contains(event.target) && !dropdownContent.contains(event.target)) {
+                    dropdownContent.classList.add('hidden');
+                }
+            });
+        }
+
+        // Logout button listener
+        document.getElementById('logout-btn')?.addEventListener('click', (e) => {
             e.preventDefault();
-            await Auth.logout();
+            Auth.logout();
         });
-
-        // Event listener for home link to load default module (Home)
-        document.getElementById('home-link').addEventListener('click', (e) => {
-            e.preventDefault();
-            Main.loadModule('home');
-        });
-
-        // Initial UI update and module load after authentication check
-        // This is now primarily orchestrated by Main.init's Auth.onAuthReady callback.
-        // We'll rely on Main.init and its internal calls to updateUI and loadModule.
-        // No direct Auth.onAuthReady() call needed here as Main.init handles it.
-
-        // Expose Main globally if other non-module scripts need to access it (unlikely with this setup)
-        window.Main = Main;
-
     </script>
 </body>
 </html>
