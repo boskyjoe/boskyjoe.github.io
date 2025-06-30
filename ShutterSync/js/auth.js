@@ -171,14 +171,15 @@ export const Auth = {
             console.log("Auth: Google login successful! User:", result.user.uid, result.user.displayName);
             this.Utils.showMessage('Successfully logged in with Google!', 'success');
 
-            // CRITICAL FIX: After successful login, force Main to reload the home module.
-            // This ensures the UI re-renders with the correct, authenticated state.
-            // Main.loadModule will query Auth.isLoggedIn(), Utils.isAdmin(), etc.
+            // CRITICAL FIX: After successful login, explicitly wait for the Auth state to be fully resolved
+            // (including admin role fetch) before forcing Main to reload the home module.
+            // This prevents the home page from rendering with outdated isAdmin=false.
             if (window.Main && typeof window.Main.loadModule === 'function') {
-                console.log("Auth: Forcing Home module reload after successful login.");
-                window.Main.loadModule('home');
+                console.log("Auth: Login successful. Waiting for onAuthReady to trigger Main.loadModule('home').");
+                // Auth.onAuthReady will now handle the loadModule call after role is determined.
+                // We don't need to call loadModule directly here.
             } else {
-                console.warn("Auth: window.Main or loadModule not available for post-login refresh.");
+                console.warn("Auth: window.Main or loadModule not available for post-login refresh. UI might not update correctly.");
             }
 
         } catch (error) {
@@ -211,12 +212,14 @@ export const Auth = {
             console.log("Auth: Firebase signOut successful!");
             this.Utils.showMessage('Successfully logged out.', 'success');
 
-            // After logout, force Main to reload the home module in logged-out state.
+            // CRITICAL FIX: After logout, explicitly wait for the Auth state to be fully resolved
+            // (user will be null, isAdmin will be false) before forcing Main to reload the home module.
             if (window.Main && typeof window.Main.loadModule === 'function') {
-                console.log("Auth: Forcing Home module reload after logout.");
-                window.Main.loadModule('home'); // loadModule will get current (logged out) state
+                 console.log("Auth: Logout successful. Waiting for onAuthReady to trigger Main.loadModule('home').");
+                // Auth.onAuthReady will now handle the loadModule call after user state is null.
+                // We don't need to call loadModule directly here.
             } else {
-                console.warn("Auth: window.Main or loadModule not available for post-logout refresh.");
+                console.warn("Auth: window.Main or loadModule not available for post-logout refresh. UI might not update correctly.");
             }
 
         } catch (error) {
