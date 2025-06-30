@@ -1,7 +1,7 @@
 // js/home.js
 
-import { Auth } from './auth.js'; // Still needed for Auth.loginWithGoogle
-import { Utils } from './utils.js'; // Still needed for Utils.showMessage
+import { Auth } from './auth.js';
+import { Utils } from './utils.js';
 
 /**
  * The Home module handles the rendering of the main dashboard/home page.
@@ -38,13 +38,19 @@ export const Home = {
     renderHomeUI: function(moduleContentElement, isLoggedIn, isAdmin, currentUser) {
         const homeModuleContent = moduleContentElement;
 
+        // *** DIAGNOSTIC LOGS START ***
+        console.log("Home.renderHomeUI called:");
+        console.log("  isLoggedIn:", isLoggedIn);
+        console.log("  isAdmin:", isAdmin);
+        console.log("  currentUser:", currentUser ? currentUser.uid : "null");
+        // *** DIAGNOSTIC LOGS END ***
+
         if (!homeModuleContent) {
             console.error("Home module: Target content element was not provided or is null.");
             this.Utils.showMessage("Error: Home module could not find its content area.", "error");
             return;
         }
 
-        // Use the passed isLoggedIn and isAdmin directly for rendering logic
         let welcomeMessage = "Welcome to ShutterSync CRM!";
         let actionCards = `
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -59,7 +65,7 @@ export const Home = {
             </div>
         `;
 
-        if (isLoggedIn) {
+        if (isLoggedIn) { // Use the passed isLoggedIn
             welcomeMessage = `Welcome, ${currentUser ? (currentUser.displayName || currentUser.email) : 'Authenticated User'}!`;
             actionCards = `
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -80,7 +86,7 @@ export const Home = {
                     </div>
                 </div>
             `;
-            if (isAdmin) {
+            if (isAdmin) { // Use the passed isAdmin
                 // Admin Tools card
                 actionCards += `
                     <div class="mt-6">
@@ -138,7 +144,8 @@ export const Home = {
                     const action = e.currentTarget.dataset.action;
                     if (this.loadModuleCallback) {
                         // When clicking a card, re-call loadModule with the current confirmed state
-                        this.loadModuleCallback(action, true, this.Utils.isAdmin(), this.auth.currentUser);
+                        // Retrieve the latest state from Auth and Utils before passing it
+                        this.loadModuleCallback(action, Auth.isLoggedIn(), Utils.isAdmin(), Auth.getCurrentUser());
                     }
                 });
             });
