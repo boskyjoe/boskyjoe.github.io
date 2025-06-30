@@ -29,10 +29,13 @@ export const Users = {
     /**
      * Renders the main UI for the Users module.
      * This is called by Main.js when the 'users' module is activated.
+     *
      * @param {HTMLElement} moduleContentElement - The DOM element where the Users UI should be rendered.
+     * @param {boolean} isLoggedIn - The current login status (true/false).
+     * @param {boolean} isAdmin - The current admin status (true/false).
+     * @param {object|null} currentUser - The current Firebase User object, or null if logged out.
      */
-    renderUsersUI: function(moduleContentElement) {
-        // CRITICAL FIX: Use the passed moduleContentElement directly
+    renderUsersUI: function(moduleContentElement, isLoggedIn, isAdmin, currentUser) {
         const usersModuleContent = moduleContentElement;
 
         if (!usersModuleContent) {
@@ -41,8 +44,8 @@ export const Users = {
             return;
         }
 
-        // --- NEW: Login Requirement Check for the module itself ---
-        if (!Auth.isLoggedIn()) {
+        // Use the passed isLoggedIn directly for module access check
+        if (!isLoggedIn) {
             usersModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
@@ -52,18 +55,16 @@ export const Users = {
                     </button>
                 </div>
             `;
-            // Attach event listener for the new button
             document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
-                window.Main.loadModule('home'); // Redirect to home page
+                window.Main.loadModule('home', isLoggedIn, isAdmin, currentUser); // Redirect to home page
             });
             this.destroy(); // Clean up any previous grid/listeners
             this.Utils.showMessage("Access Denied: Please log in to view Users.", "error");
-            return; // Stop execution if not logged in
+            return;
         }
-        // --- END NEW ---
 
-        // Existing Admin check (after login check)
-        if (this.Utils.isAdmin()) {
+        // Use the passed isAdmin directly for UI rendering
+        if (isAdmin) {
             usersModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md mb-6">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-6">User Management</h3>
@@ -103,9 +104,9 @@ export const Users = {
                     </div>
                 </div>
             `;
-            // After rendering HTML, attach event listeners and setup the real-time listener
             this.attachEventListeners();
-            this.setupRealtimeListener();
+            // Pass resolved auth state to listener setup
+            this.setupRealtimeListener(isLoggedIn, isAdmin, currentUser);
         } else {
             // If logged in but not admin
             usersModuleContent.innerHTML = `
@@ -118,7 +119,7 @@ export const Users = {
                 </div>
             `;
             document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
-                window.Main.loadModule('home'); // Redirect to home page
+                window.Main.loadModule('home', isLoggedIn, isAdmin, currentUser); // Redirect to home page
             });
             console.log("Not an admin, skipping user management UI.");
             this.Utils.showMessage("Access Denied: You must be an Admin to view User Management.", "error");
@@ -128,15 +129,18 @@ export const Users = {
 
     /**
      * Sets up the real-time listener for the 'users_data' collection.
+     * @param {boolean} isLoggedIn - The current login status.
+     * @param {boolean} isAdmin - The current admin status.
+     * @param {object|null} currentUser - The current Firebase User object.
      * Only runs if the current user is an Admin.
      */
-    setupRealtimeListener: function() {
+    setupRealtimeListener: function(isLoggedIn, isAdmin, currentUser) {
         if (this.unsubscribe) {
             this.unsubscribe(); // Detach existing listener if any
         }
 
-        const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
-        if (!currentUserId || !this.Utils.isAdmin()) { // Ensure both logged in and admin
+        const userId = currentUser ? currentUser.uid : null;
+        if (!isLoggedIn || !isAdmin || !userId) { // Rely on passed flags
             console.log("Not logged in or not an admin, skipping users data listener setup.");
             this.renderUsersGrid([]); // Clear grid if not authorized
             return;
@@ -162,6 +166,7 @@ export const Users = {
      */
     renderUsersGrid: function(users) {
         const gridContainer = document.getElementById('users-grid-container');
+        // This check implicitly relies on isAdmin having been true to render the container
         if (!gridContainer) {
             console.error("User grid container not found or user is not admin.");
             return;
@@ -182,7 +187,7 @@ export const Users = {
                     const userRole = row.cells[3].data;
 
                     // Prevent editing of own role
-                    if (this.auth.currentUser && userId === this.auth.currentUser.uid) {
+                    if (Auth.getCurrentUser() && userId === Auth.getCurrentUser().uid) {
                         return gridjs.h('span', {
                             className: 'text-gray-500 text-sm italic'
                         }, ' (Your Account)');
@@ -252,12 +257,11 @@ export const Users = {
      * Opens the user role edit modal.
      */
     openUserRoleModal: function(userId, displayName, email, role) {
-        // --- NEW: Login/Admin Requirement Check for modals ---
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
-            this.Utils.showMessage('You do not have permission to add/edit user roles.', 'error'); // Changed for consistency
+        // Use Auth.isLoggedIn() and Utils.isAdmin() for real-time check when modal is opened
+        if (!Auth.isLoggedIn() || !Utils.isAdmin()) {
+            this.Utils.showMessage('You do not have permission to add/edit user roles.', 'error');
             return;
         }
-        // --- END NEW ---
 
         const modal = document.getElementById('user-role-modal');
         const title = document.getElementById('user-role-modal-title');
@@ -287,13 +291,12 @@ export const Users = {
      * Saves the updated user role to Firestore.
      */
     saveUserRole: async function() {
-        // --- NEW: Login/Admin Requirement Check for save ---
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+        // Use Auth.isLoggedIn() and Utils.isAdmin() for real-time check when saving
+        if (!Auth.isLoggedIn() || !Utils.isAdmin()) {
             this.Utils.showMessage('You do not have permission to save user roles.', 'error');
             this.closeUserRoleModal();
             return;
         }
-        // --- END NEW ---
 
         if (!this.currentEditingUserId) {
             this.Utils.showMessage('No user selected for role update.', 'warning');
@@ -304,7 +307,7 @@ export const Users = {
         const userDocRef = doc(this.db, "users_data", this.currentEditingUserId);
 
         // Prevent admin from changing their own role
-        if (this.currentEditingUserId === this.auth.currentUser.uid && newRole !== 'Admin') {
+        if (this.currentEditingUserId === Auth.getCurrentUser().uid && newRole !== 'Admin') {
             this.Utils.showMessage("Admins cannot demote themselves. Please ask another admin to change your role.", "error");
             this.closeUserRoleModal();
             return;
@@ -315,7 +318,7 @@ export const Users = {
             this.Utils.showMessage(`User role updated to "${newRole}" successfully!`, 'success');
             this.closeUserRoleModal();
             // Important: If the current user's role was changed (by another admin), update isAdmin status in Utils
-            if (this.currentEditingUserId === this.auth.currentUser.uid) {
+            if (this.currentEditingUserId === Auth.getCurrentUser().uid) {
                 this.Utils.updateAdminStatus(newRole); // Explicitly pass the new role
             }
         } catch (error) {
@@ -336,7 +339,6 @@ export const Users = {
             this.usersGrid.destroy();
             this.usersGrid = null;
         }
-        // Main.js now handles clearing the innerHTML of the content area for this module.
         console.log("Users module destroyed.");
     }
 };
