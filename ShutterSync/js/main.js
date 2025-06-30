@@ -231,9 +231,9 @@ const Main = {
         const logoutBtn = document.getElementById('logout-btn');
 
         console.log("Main: updateUserHeaderUI called with currentUser:", currentUser ? currentUser.uid : "null");
-        console.log("Main: userInfoSpan element:", userInfoSpan);
-        console.log("Main: loginRegisterPlaceholder element:", loginRegisterPlaceholder);
-        console.log("Main: logoutBtn element:", logoutBtn);
+        console.log("Main: userInfoSpan element EXISTS:", !!userInfoSpan);
+        console.log("Main: loginRegisterPlaceholder element EXISTS:", !!loginRegisterPlaceholder);
+        console.log("Main: logoutBtn element EXISTS:", !!logoutBtn);
 
 
         if (userInfoSpan && loginRegisterPlaceholder && logoutBtn) {
@@ -243,13 +243,13 @@ const Main = {
                 userInfoSpan.classList.remove('hidden');
                 loginRegisterPlaceholder.classList.add('hidden');
                 logoutBtn.classList.remove('hidden');
-                console.log(`Main: Header UI updated: Displaying "${userName}", hiding login placeholder, showing logout button.`);
+                console.log(`Main: Header UI updated: Displaying "${userName}", loginPlaceholder hidden: ${loginRegisterPlaceholder.classList.contains('hidden')}, logoutBtn hidden: ${logoutBtn.classList.contains('hidden')}.`);
             } else {
                 userInfoSpan.textContent = '';
                 userInfoSpan.classList.add('hidden'); // Ensure it's hidden if no user
                 loginRegisterPlaceholder.classList.remove('hidden');
                 logoutBtn.classList.add('hidden');
-                console.log("Main: Header UI updated: User logged out, showing login placeholder, hiding logout button.");
+                console.log(`Main: Header UI updated: User logged out. loginRegisterPlaceholder hidden: ${loginRegisterPlaceholder.classList.contains('hidden')}, logoutBtn hidden: ${logoutBtn.classList.contains('hidden')}.`);
             }
         } else {
             console.error("Main: Header UI elements not found. Cannot update header.");
@@ -264,18 +264,18 @@ const Main = {
         const adminDropdownContent = adminNavDropdown ? adminNavDropdown.nextElementSibling : null; // The div containing admin links
 
         console.log("Main: updateNavAdminDropdown called. Utils.isAdmin():", Utils.isAdmin());
-        console.log("Main: adminNavDropdown button element:", adminNavDropdown);
-        console.log("Main: adminDropdownContent element:", adminDropdownContent);
+        console.log("Main: adminNavDropdown button element EXISTS:", !!adminNavDropdown);
+        console.log("Main: adminDropdownContent element EXISTS:", !!adminDropdownContent);
 
 
         if (adminNavDropdown && adminDropdownContent) {
             if (Utils.isAdmin()) {
                 adminNavDropdown.classList.remove('hidden');
-                console.log("Main: Admin dropdown button shown.");
+                console.log("Main: Admin dropdown button shown. ClassList:", adminNavDropdown.classList.toString());
             } else {
                 adminNavDropdown.classList.add('hidden');
                 adminDropdownContent.classList.add('hidden'); // Ensure content is also hidden if button is hidden
-                console.log("Main: Admin dropdown button hidden, content hidden.");
+                console.log("Main: Admin dropdown button hidden, content hidden. ClassList:", adminNavDropdown.classList.toString());
             }
         } else {
             console.warn("Main: Admin navigation dropdown button or content element not found.");
