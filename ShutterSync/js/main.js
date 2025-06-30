@@ -25,12 +25,14 @@ const Main = {
 
     /**
      * Initializes the Main application controller.
+     * This method is now asynchronous and waits for Auth to be ready.
+     *
      * @param {object} firebaseApp - The Firebase App instance.
      * @param {object} firestoreDb - The Firestore database instance.
      * @param {object} firebaseAuth - The Firebase Auth instance.
      * @param {string} appId - The application ID.
      */
-    init: function(firebaseApp, firestoreDb, firebaseAuth, appId) {
+    init: async function(firebaseApp, firestoreDb, firebaseAuth, appId) { // Make init async
         this.firebaseApp = firebaseApp;
         this.db = firestoreDb;
         this.auth = firebaseAuth;
@@ -39,8 +41,10 @@ const Main = {
         // Initialize Utils first as it's a core dependency and needs db/auth
         Utils.init(this.db, this.auth, appId);
 
-        // Initialize Auth module. It sets up onAuthStateChanged listener
-        Auth.init(this.db, this.auth, Utils);
+        // Await Auth.init to ensure onAuthStateChanged has had a chance to fire at least once.
+        // Auth.init now returns a promise that resolves when auth state is determined.
+        await Auth.init(this.db, this.auth, Utils);
+        console.log("Auth module reports initial state ready. Proceeding with Main initialization.");
 
         // Initialize other modules, passing their dependencies
         this.moduleInstances.home = Home;
@@ -62,8 +66,8 @@ const Main = {
         this.moduleInstances.priceBook = PriceBook;
         PriceBook.init(this.db, this.auth, Utils);
 
-        // Auth.onAuthReady ensures initial setup after Firebase Auth has determined user state.
-        // This is the SOLE trigger for the initial module load based on auth status.
+        // This Auth.onAuthReady will now primarily handle the *initial* module load,
+        // and subsequent auth state changes (login/logout).
         Auth.onAuthReady((isLoggedIn, isAdmin, currentUser) => {
             if (!this._isInitialAuthReady) {
                 this._isInitialAuthReady = true; // Mark as done for first load
@@ -71,7 +75,7 @@ const Main = {
                 // Update header UI based on the resolved user
                 this.updateUserHeaderUI(currentUser);
                 // Update nav dropdown based on resolved admin status
-                this.updateNavAdminDropdown(); // This uses Utils.isAdmin() which is set by Auth.onAuthStateChanged
+                this.updateNavAdminDropdown();
 
                 const lastActiveModule = localStorage.getItem('lastActiveModule');
                 if (isLoggedIn && lastActiveModule && lastActiveModule !== 'home') {
@@ -84,8 +88,8 @@ const Main = {
                     this.loadModule('home', isLoggedIn, isAdmin, currentUser);
                 }
             } else {
-                // For subsequent auth state changes (e.g., after login/logout triggered by user actions),
-                // just update UI. The loadModule call above handles initial page logic.
+                // For subsequent auth state changes (e.g., after user explicitly logs in/out),
+                // just update UI elements that depend on auth state.
                 this.updateUserHeaderUI(currentUser);
                 this.updateNavAdminDropdown();
             }
@@ -106,7 +110,6 @@ const Main = {
                 }
             }
         });
-        // Important: No direct loadModule call here, must wait for Auth.onAuthReady.
     },
 
     /**
@@ -121,10 +124,11 @@ const Main = {
      * Loads a specified application module into the content area.
      *
      * @param {string} moduleName - The name of the module to load ('home', 'customers', etc.).
-     * @param {boolean} [isLoggedIn] - Optional: The current login status.
-     * @param {boolean} [isAdmin] - Optional: The current admin status.
-     * @param {object|null} [currentUser] - Optional: The current Firebase User object.
-     * These optional parameters are primarily passed from Auth.onAuthReady for the initial load.
+     * @param {boolean} [isLoggedIn] - Optional: The current login status. Defaults to Auth.isLoggedIn().
+     * @param {boolean} [isAdmin] - Optional: The current admin status. Defaults to Utils.isAdmin().
+     * @param {object|null} [currentUser] - Optional: The current Firebase User object. Defaults to Auth.getCurrentUser().
+     * These optional parameters are primarily passed from Auth.onAuthReady for the initial load,
+     * ensuring the module receives the definitive state. For subsequent calls, they will default to live Auth/Utils values.
      */
     loadModule: function(moduleName, isLoggedIn = Auth.isLoggedIn(), isAdmin = Utils.isAdmin(), currentUser = Auth.getCurrentUser()) {
         // Cleanup the previously loaded module if any
