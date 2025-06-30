@@ -24,6 +24,7 @@ const Main = {
     currentModule: null,
     moduleInstances: {}, // Stores initialized module instances
     moduleDestroyers: {}, // Stores module destroy functions for cleanup
+    _isInitialAuthReady: false, // Flag to ensure initial module load only happens once via onAuthReady
 
     /**
      * Initializes the Main application controller.
@@ -71,15 +72,25 @@ const Main = {
         // Ensure global UI elements are updated when auth status or admin status changes
         // Auth.onAuthReady ensures initial setup after Firebase Auth has determined user state
         Auth.onAuthReady(() => {
-            this.updateUserHeaderUI(this.auth.currentUser);
-            this.updateNavAdminDropdown();
-            // Load the last active module or default to home after auth is ready
-            const lastActiveModule = localStorage.getItem('lastActiveModule');
-            if (Auth.isLoggedIn() && lastActiveModule && lastActiveModule !== 'home') {
-                 // Try to load it. If access is denied by module's own check, it will redirect to home.
-                this.loadModule(lastActiveModule);
+            // This callback fires ONLY after the initial authentication state (logged in/out, role) is determined.
+            if (!this._isInitialAuthReady) {
+                this._isInitialAuthReady = true; // Mark as done for first load
+
+                this.updateUserHeaderUI(this.auth.currentUser);
+                this.updateNavAdminDropdown();
+
+                // This is the SOLE place for the initial module load.
+                const lastActiveModule = localStorage.getItem('lastActiveModule');
+                if (Auth.isLoggedIn() && lastActiveModule && lastActiveModule !== 'home') {
+                     // Try to load it. If access is denied by module's own check, it will redirect to home.
+                    this.loadModule(lastActiveModule);
+                } else {
+                    this.loadModule('home');
+                }
             } else {
-                this.loadModule('home');
+                // For subsequent auth state changes (e.g., after login/logout), just update UI
+                this.updateUserHeaderUI(this.auth.currentUser);
+                this.updateNavAdminDropdown();
             }
         });
 
@@ -87,10 +98,16 @@ const Main = {
         Utils.onAdminStatusChange(() => {
             this.updateNavAdminDropdown();
             // If the current module is admin-gated and role changed, re-render it
-            if (this.currentModule && ['users', 'adminData', 'priceBook'].includes(this.currentModule)) {
-                this.loadModule(this.currentModule);
+            // This ensures if an admin demotes themselves or is demoted by another admin,
+            // they are kicked out of admin modules.
+            if (this.currentModule && ['users', 'adminData', 'priceBook'].includes(this.currentModule) && !Utils.isAdmin()) {
+                this.loadModule('home'); // Redirect to home if admin privilege is lost
+            } else if (this.currentModule && ['users', 'adminData', 'priceBook'].includes(this.currentModule)) {
+                 // Re-render admin page if admin status changes (e.g. from standard to admin by another admin)
+                 this.loadModule(this.currentModule);
             }
         });
+        // Important: No direct loadModule call here, must wait for Auth.onAuthReady.
     },
 
     /**
@@ -130,12 +147,21 @@ const Main = {
         }
 
 
-        // Activate the current nav link
+        // Activate the current nav link (if it's a direct nav link)
         const activeLink = document.querySelector(`nav a[data-module="${moduleName}"]`);
         if (activeLink) {
             activeLink.classList.add('bg-gray-700', 'text-white');
             activeLink.classList.remove('text-gray-300', 'hover:bg-gray-700', 'hover:text-white');
+        } else {
+            // If it's an admin module accessed via dropdown, activate the dropdown button itself
+            if (['users', 'adminData', 'priceBook'].includes(moduleName)) {
+                 if (adminDropdownButton) {
+                    adminDropdownButton.classList.add('bg-gray-700', 'text-white');
+                    adminDropdownButton.classList.remove('text-gray-300', 'hover:bg-gray-700', 'hover:text-white');
+                }
+            }
         }
+
 
         // Load the new module
         if (this.moduleInstances[moduleName]) {
@@ -160,7 +186,7 @@ const Main = {
             const renderMethodName = `render${moduleName.charAt(0).toUpperCase() + moduleName.slice(1).replace('-', '')}UI`;
 
             if (typeof this.moduleInstances[moduleName][renderMethodName] === 'function') {
-                // CRITICAL FIX: Pass the moduleContentDiv element directly to the render function
+                // Pass the moduleContentDiv element directly to the render function
                 this.moduleInstances[moduleName][renderMethodName](moduleContentDiv);
             } else {
                 console.error(`Render method "${renderMethodName}" not found for module "${moduleName}".`);
