@@ -248,6 +248,13 @@ const Main = {
         } else {
             console.warn("Admin navigation dropdown element not found: #nav-admin-dropdown");
         }
+    },
+
+    /**
+     * Public method for logging out, exposed globally via window.Main.logout.
+     */
+    logout: async function() {
+        await Auth.logout(); // Call the Auth module's logout function
     }
 };
 
