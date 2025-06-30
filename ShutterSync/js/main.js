@@ -69,35 +69,29 @@ const Main = {
         // This Auth.onAuthReady will now primarily handle the *initial* module load,
         // and subsequent auth state changes (login/logout).
         Auth.onAuthReady((isLoggedIn, isAdmin, currentUser) => {
-            console.log("Main: onAuthReady callback triggered."); // Added log
+            console.log("Main: onAuthReady callback triggered. Current _isInitialAuthReady:", this._isInitialAuthReady);
+
+            // Always update global UI elements that reflect auth status
+            this.updateUserHeaderUI(currentUser);
+            this.updateNavAdminDropdown();
+
             if (!this._isInitialAuthReady) {
                 this._isInitialAuthReady = true; // Mark as done for first load
                 console.log("Main: onAuthReady (initial load) - isLoggedIn:", isLoggedIn, "isAdmin:", isAdmin, "currentUser:", currentUser ? currentUser.uid : "null");
 
-                // Update header UI based on the resolved user
-                this.updateUserHeaderUI(currentUser);
-                // Update nav dropdown based on resolved admin status
-                this.updateNavAdminDropdown();
-
                 const lastActiveModule = localStorage.getItem('lastActiveModule');
                 if (isLoggedIn && lastActiveModule && lastActiveModule !== 'home') {
-                    // If logged in and had a last module, try to load it.
-                    // Pass the definitive state here.
                     this.loadModule(lastActiveModule, isLoggedIn, isAdmin, currentUser);
                 } else {
-                    // Otherwise, load the home module.
-                    // Pass the definitive state here.
                     this.loadModule('home', isLoggedIn, isAdmin, currentUser);
                 }
             } else {
                 // For subsequent auth state changes (e.g., after user explicitly logs in/out),
-                // we need to *force reload* the current module (usually home) to reflect the new state.
+                // we need to *force reload* the current module to reflect the new state.
                 console.log("Main: onAuthReady (subsequent change) - isLoggedIn:", isLoggedIn, "isAdmin:", isAdmin, "currentUser:", currentUser ? currentUser.uid : "null");
-                this.updateUserHeaderUI(currentUser);
-                this.updateNavAdminDropdown();
 
-                // *** CRITICAL FIX: Reload the current module to reflect the new auth state ***
-                // Ensure this is called with the LATEST determined state.
+                // *** CRITICAL FIX: Always reload the currently active module (or home)
+                // after a subsequent auth state change to ensure UI reflects the new state. ***
                 this.loadModule(this.currentModule || 'home', isLoggedIn, isAdmin, currentUser);
                 console.log(`Main: Reloaded module '${this.currentModule || 'home'}' due to auth state change.`);
             }
@@ -110,13 +104,9 @@ const Main = {
             this.updateNavAdminDropdown();
             // If the current module is admin-gated and role changed, re-render it
             if (this.currentModule && ['users', 'adminData', 'priceBook'].includes(this.currentModule)) {
-                if (!isAdminStatus) { // No longer admin
-                     // If user was in an admin module and is no longer admin, redirect to home
-                    this.loadModule('home', Auth.isLoggedIn(), isAdminStatus, Auth.getCurrentUser());
-                } else { // Became admin
-                     // If user becomes admin while on an admin-related page, refresh it
-                    this.loadModule(this.currentModule, Auth.isLoggedIn(), isAdminStatus, Auth.getCurrentUser());
-                }
+                // Force reload of the current module with the new isAdminStatus
+                this.loadModule(this.currentModule, Auth.isLoggedIn(), isAdminStatus, Auth.getCurrentUser());
+                console.log(`Main: Reloaded module '${this.currentModule}' due to admin status change.`);
             }
         });
     },
@@ -209,6 +199,7 @@ const Main = {
                     isAdmin,
                     currentUser
                 );
+                console.log(`Main: Successfully rendered ${moduleName} module.`);
             } else {
                 console.error(`Main: Render method "${renderMethodName}" not found for module "${moduleName}".`);
                 this.loadModule('home', isLoggedIn, isAdmin, currentUser); // Recurse with home module
