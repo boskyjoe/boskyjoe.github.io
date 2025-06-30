@@ -13,6 +13,16 @@ export const Utils = {
     _isAdmin: false, // Internal flag for admin status
     adminStatusCallbacks: [], // Callbacks to run when admin status changes
 
+    // NEW: Store references to modal elements once they are created
+    _messageModal: {
+        container: null,
+        contentBox: null,
+        title: null,
+        text: null,
+        closeBtn: null,
+        buttonsContainer: null
+    },
+
     /**
      * Initializes the Utils module.
      * @param {object} firestoreDb - The Firestore database instance.
@@ -31,9 +41,10 @@ export const Utils = {
 
     /**
      * Creates the hidden modal for displaying messages (success, error, warning).
+     * This function is called once during Utils.init().
      */
     createMessageModal: function() {
-        if (!document.getElementById('message-modal-container')) {
+        if (!document.getElementById('message-modal-container')) { // Only create if it doesn't exist
             const modalHtml = `
                 <div id="message-modal-container" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[1000] hidden">
                     <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-full transform transition-all duration-300 scale-95 opacity-0">
@@ -49,14 +60,23 @@ export const Utils = {
                 </div>
             `;
             document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-            document.getElementById('message-close-btn')?.addEventListener('click', () => this.hideMessage());
-            document.getElementById('message-modal-container')?.addEventListener('click', (e) => {
-                if (e.target === document.getElementById('message-modal-container')) {
-                    this.hideMessage();
-                }
-            });
         }
+
+        // Store references to the elements, now guaranteed to exist
+        this._messageModal.container = document.getElementById('message-modal-container');
+        this._messageModal.contentBox = this._messageModal.container?.querySelector('div'); // The inner div
+        this._messageModal.title = document.getElementById('message-title');
+        this._messageModal.text = document.getElementById('message-text');
+        this._messageModal.closeBtn = document.getElementById('message-close-btn');
+        this._messageModal.buttonsContainer = document.getElementById('message-buttons');
+
+        // Attach event listeners for the modal
+        this._messageModal.closeBtn?.addEventListener('click', () => this.hideMessage());
+        this._messageModal.container?.addEventListener('click', (e) => {
+            if (e.target === this._messageModal.container) { // Only close if clicked outside the content box
+                this.hideMessage();
+            }
+        });
     },
 
     /**
@@ -66,39 +86,38 @@ export const Utils = {
      * @param {number} duration - Duration in milliseconds before auto-hiding. 0 for persistent (requires manual close).
      */
     showMessage: function(message, type = 'info', duration = 3000) {
-        const container = document.getElementById('message-modal-container');
-        const titleEl = document.getElementById('message-title');
-        const textEl = document.getElementById('message-text');
-        const closeBtn = document.getElementById('message-close-btn');
-        const buttonsContainer = document.getElementById('message-buttons');
+        const { container, contentBox, title, text, closeBtn, buttonsContainer } = this._messageModal;
 
-        if (!container || !titleEl || !textEl || !closeBtn || !buttonsContainer) {
-            console.error("Message modal elements not found.");
+        // Basic check if all essential modal elements are referenced
+        if (!container || !title || !text || !closeBtn || !buttonsContainer) {
+            console.error("Message modal elements are not fully initialized. Cannot show message.");
+            // Fallback to console log if modal can't be shown
+            console.log(`Message (${type}): ${message}`);
             return;
         }
 
-        titleEl.className = 'text-xl font-bold'; // Reset classes
+        title.className = 'text-xl font-bold'; // Reset classes
         switch (type) {
             case 'success':
-                titleEl.textContent = 'Success!';
-                titleEl.classList.add('text-green-700');
+                title.textContent = 'Success!';
+                title.classList.add('text-green-700');
                 break;
             case 'error':
-                titleEl.textContent = 'Error!';
-                titleEl.classList.add('text-red-700');
+                title.textContent = 'Error!';
+                title.classList.add('text-red-700');
                 break;
             case 'warning':
-                titleEl.textContent = 'Warning!';
-                titleEl.classList.add('text-yellow-700');
+                title.textContent = 'Warning!';
+                title.classList.add('text-yellow-700');
                 break;
             case 'info':
             default:
-                titleEl.textContent = 'Information';
-                titleEl.classList.add('text-blue-700');
+                title.textContent = 'Information';
+                title.classList.add('text-blue-700');
                 break;
         }
 
-        textEl.textContent = message;
+        text.textContent = message;
         // Clear any previous custom buttons (like confirm/cancel)
         buttonsContainer.innerHTML = ''; // This clears the container, including any custom buttons
 
@@ -112,8 +131,9 @@ export const Utils = {
         }
 
         container.classList.remove('hidden');
+        // Add a small delay before showing the transition for smooth animation
         setTimeout(() => {
-            container.querySelector('div').classList.remove('opacity-0', 'scale-95');
+            contentBox.classList.remove('opacity-0', 'scale-95');
         }, 10);
     },
 
@@ -121,9 +141,9 @@ export const Utils = {
      * Hides the message modal.
      */
     hideMessage: function() {
-        const container = document.getElementById('message-modal-container');
-        if (container) {
-            container.querySelector('div').classList.add('opacity-0', 'scale-95');
+        const { container, contentBox } = this._messageModal;
+        if (container && contentBox) {
+            contentBox.classList.add('opacity-0', 'scale-95');
             container.addEventListener('transitionend', () => {
                 container.classList.add('hidden');
             }, { once: true });
@@ -162,7 +182,7 @@ export const Utils = {
                     errorMessage = 'Invalid login credentials.';
                     break;
                 case 'auth/popup-closed-by-user':
-                    errorMessage = 'Login popup closed. Please try again.';
+                    errorMessage = 'Login cancelled by user.';
                     break;
                 case 'auth/cancelled-popup-request':
                     errorMessage = 'Another login request is already in progress.';
