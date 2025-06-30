@@ -32,10 +32,13 @@ export const Opportunities = {
     /**
      * Renders the main UI for the Opportunities module.
      * This is called by Main.js when the 'opportunities' module is activated.
+     *
      * @param {HTMLElement} moduleContentElement - The DOM element where the Opportunities UI should be rendered.
+     * @param {boolean} isLoggedIn - The current login status (true/false).
+     * @param {boolean} isAdmin - The current admin status (true/false).
+     * @param {object|null} currentUser - The current Firebase User object, or null if logged out.
      */
-    renderOpportunitiesUI: function(moduleContentElement) {
-        // CRITICAL FIX: Use the passed moduleContentElement directly
+    renderOpportunitiesUI: function(moduleContentElement, isLoggedIn, isAdmin, currentUser) {
         const opportunitiesModuleContent = moduleContentElement;
 
         if (!opportunitiesModuleContent) {
@@ -44,8 +47,8 @@ export const Opportunities = {
             return;
         }
 
-        // --- NEW: Login Requirement Check for the module itself ---
-        if (!Auth.isLoggedIn()) {
+        // Use the passed isLoggedIn directly for module access check
+        if (!isLoggedIn) {
             opportunitiesModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
@@ -55,15 +58,13 @@ export const Opportunities = {
                     </button>
                 </div>
             `;
-            // Attach event listener for the new button
             document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
-                window.Main.loadModule('home'); // Redirect to home page
+                window.Main.loadModule('home', isLoggedIn, isAdmin, currentUser); // Redirect to home page
             });
             this.destroy(); // Clean up any previous grid/listeners
             this.Utils.showMessage("Access Denied: Please log in to view Opportunities.", "error");
-            return; // Stop execution if not logged in
+            return;
         }
-        // --- END NEW ---
 
         opportunitiesModuleContent.innerHTML = `
             <div class="bg-white p-6 rounded-lg shadow-md mb-6">
@@ -132,28 +133,31 @@ export const Opportunities = {
                 </div>
             </div>
         `;
-        // After rendering HTML, attach event listeners and setup the real-time listener
         this.attachEventListeners();
-        this.fetchAndCacheCustomers().then(() => { // NEW: Fetch customers before setting up listener
-            this.setupRealtimeListener();
+        // Pass the resolved auth state to fetchAndCacheCustomers and setupRealtimeListener
+        this.fetchAndCacheCustomers(isLoggedIn, isAdmin, currentUser).then(() => {
+            this.setupRealtimeListener(isLoggedIn, isAdmin, currentUser);
         });
     },
 
     /**
      * Fetches all customers and caches their names for quick lookup.
+     * @param {boolean} isLoggedIn - The current login status.
+     * @param {boolean} isAdmin - The current admin status.
+     * @param {object|null} currentUser - The current Firebase User object.
      * @returns {Promise<void>} A promise that resolves when customers are fetched and cached.
      */
-    fetchAndCacheCustomers: async function() {
+    fetchAndCacheCustomers: async function(isLoggedIn, isAdmin, currentUser) {
         this._customerNamesMap.clear(); // Clear existing map
-        const userId = this.auth.currentUser ? this.auth.currentUser.uid : null;
-        if (!userId) {
-            console.log("No user ID, cannot fetch customers for dropdown. (User likely not logged in or session expired)");
+        const userId = currentUser ? currentUser.uid : null;
+        if (!isLoggedIn || !userId) {
+            console.log("Not logged in, cannot fetch customers for dropdown.");
             return;
         }
 
         const customersCollectionRef = collection(this.db, "customers");
         let q;
-        if (this.Utils.isAdmin()) {
+        if (isAdmin) {
             q = query(customersCollectionRef, orderBy('name')); // Use 'name' for ordering
         } else {
             q = query(customersCollectionRef, where("creatorId", "==", userId), orderBy('name')); // Use 'name' for ordering
@@ -166,8 +170,7 @@ export const Opportunities = {
                 this._customerNamesMap.set(docSnap.id, customerData.name || 'N/A'); // Use 'name'
             });
             console.log("Customers cached:", this._customerNamesMap);
-            // Re-populate dropdown if modal is open, or ensure it's ready for next open
-            this.populateCustomerDropdown();
+            this.populateCustomerDropdown(); // Populate dropdown immediately after fetching
         } catch (error) {
             this.Utils.handleError(error, "fetching customers for opportunity dropdown");
         }
@@ -200,22 +203,25 @@ export const Opportunities = {
 
     /**
      * Sets up the real-time listener for the 'opportunities' collection.
+     * @param {boolean} isLoggedIn - The current login status.
+     * @param {boolean} isAdmin - The current admin status.
+     * @param {object|null} currentUser - The current Firebase User object.
      */
-    setupRealtimeListener: function() {
+    setupRealtimeListener: function(isLoggedIn, isAdmin, currentUser) {
         if (this.unsubscribe) {
             this.unsubscribe(); // Detach existing listener if any
         }
 
-        const userId = this.auth.currentUser ? this.auth.currentUser.uid : null;
-        if (!userId) {
-            console.log("User not logged in, cannot set up opportunity listener. (User likely not logged in or session expired)");
+        const userId = currentUser ? currentUser.uid : null;
+        if (!isLoggedIn || !userId) {
+            console.log("Not logged in, cannot set up opportunity listener.");
             this.renderOpportunitiesGrid([]);
             return;
         }
 
         const opportunitiesCollectionRef = collection(this.db, "opportunities");
         let q;
-        if (this.Utils.isAdmin()) {
+        if (isAdmin) {
             q = query(opportunitiesCollectionRef); // Admins see all opportunities
             console.log("Admin user: Fetching all opportunities.");
         } else {
@@ -227,7 +233,7 @@ export const Opportunities = {
             const opportunities = [];
             snapshot.forEach((doc) => {
                 const data = doc.data();
-                // NEW: Use the cached _customerNamesMap for lookup
+                // Use the cached _customerNamesMap for lookup
                 const customerName = this._customerNamesMap.get(data.customerId) || 'Unknown Customer';
                 opportunities.push({ id: doc.id, customerName: customerName, ...data });
             });
@@ -264,8 +270,9 @@ export const Opportunities = {
                     const opportunityId = row.cells[0].data; // Get opportunity ID
                     const opportunityData = opportunities.find(o => o.id === opportunityId);
                     const creatorId = opportunityData?.creatorId;
-                    const isCurrentUserCreator = this.auth.currentUser && creatorId === this.auth.currentUser.uid;
-                    const canEditOrDelete = this.Utils.isAdmin() || isCurrentUserCreator;
+                    // Use Auth.getCurrentUser() and Utils.isAdmin() for permission checks at time of rendering actions
+                    const isCurrentUserCreator = Auth.getCurrentUser() && creatorId === Auth.getCurrentUser().uid;
+                    const canEditOrDelete = Utils.isAdmin() || isCurrentUserCreator;
 
                     if (!canEditOrDelete) {
                         return ''; // No actions if not allowed
@@ -363,12 +370,11 @@ export const Opportunities = {
      * @param {string|null} opportunityId - The ID of the opportunity to edit, if mode is 'edit'.
      */
     openOpportunityModal: async function(mode, opportunityId = null) {
-        // --- NEW: Login Requirement Check for modals ---
+        // Use Auth.isLoggedIn() for real-time check when modal is opened
         if (!Auth.isLoggedIn()) {
             this.Utils.showMessage('You must be logged in to add/edit opportunities.', 'error');
             return;
         }
-        // --- END NEW ---
 
         const modal = document.getElementById('opportunity-modal');
         const title = document.getElementById('opportunity-modal-title');
@@ -377,7 +383,8 @@ export const Opportunities = {
         form.reset();
         this.currentEditingOpportunityId = null;
 
-        await this.fetchAndCacheCustomers(); // Re-fetch to ensure latest customers if needed
+        // Fetch customers always (it uses Auth.isLoggedIn/Utils.isAdmin internally)
+        await this.fetchAndCacheCustomers(Auth.isLoggedIn(), Utils.isAdmin(), Auth.getCurrentUser());
         this.populateCustomerDropdown();
 
         if (mode === 'edit' && opportunityId) {
@@ -387,14 +394,13 @@ export const Opportunities = {
                 const opportunityDoc = await getDoc(doc(this.db, 'opportunities', opportunityId));
                 if (opportunityDoc.exists()) {
                     const data = opportunityDoc.data();
-                    // --- NEW: Creator ID check for edit ---
-                    const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
-                    if (!this.Utils.isAdmin() && data.creatorId !== currentUserId) {
+                    // Use Utils.isAdmin() for real-time admin check
+                    const currentUserId = Auth.getCurrentUser() ? Auth.getCurrentUser().uid : null;
+                    if (!Utils.isAdmin() && data.creatorId !== currentUserId) {
                         this.Utils.showMessage('You do not have permission to edit this opportunity.', 'error');
                         this.closeOpportunityModal();
                         return;
                     }
-                    // --- END NEW ---
                     document.getElementById('opportunity-name').value = data.name || ''; // Use 'name'
                     document.getElementById('amount').value = data.amount || 0;
                     document.getElementById('stage-select').value = data.stage || 'Prospecting';
@@ -440,13 +446,12 @@ export const Opportunities = {
      * Saves a new opportunity or updates an existing one to Firestore.
      */
     saveOpportunity: async function() {
-        // --- NEW: Login Requirement Check for save ---
+        // Use Auth.isLoggedIn() for real-time check when saving
         if (!Auth.isLoggedIn()) {
             this.Utils.showMessage('You must be logged in to save opportunities.', 'error');
             this.closeOpportunityModal();
             return;
         }
-        // --- END NEW ---
 
         const name = document.getElementById('opportunity-name').value.trim(); // Changed to 'name'
         const customerId = document.getElementById('customer-select').value;
@@ -472,23 +477,22 @@ export const Opportunities = {
             if (this.currentEditingOpportunityId) {
                 // Update existing opportunity
                 const opportunityRef = doc(this.db, "opportunities", this.currentEditingOpportunityId);
-                // --- NEW: Creator ID check for save update ---
+                // Use Utils.isAdmin() for real-time admin check
                 const existingDoc = await getDoc(opportunityRef);
                 if (existingDoc.exists()) {
                     const data = existingDoc.data();
-                    const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
-                    if (!this.Utils.isAdmin() && data.creatorId !== currentUserId) {
+                    const currentUserId = Auth.getCurrentUser() ? Auth.getCurrentUser().uid : null;
+                    if (!Utils.isAdmin() && data.creatorId !== currentUserId) {
                         this.Utils.showMessage('You do not have permission to update this opportunity.', 'error');
                         this.closeOpportunityModal();
                         return;
                     }
                 }
-                // --- END NEW ---
                 await this.Utils.updateDoc(opportunityRef, opportunityData);
                 this.Utils.showMessage('Opportunity updated successfully!', 'success');
             } else {
                 // Add new opportunity
-                opportunityData.creatorId = this.auth.currentUser.uid; // Now guaranteed to be a logged-in user's UID
+                opportunityData.creatorId = Auth.getCurrentUser().uid; // Now guaranteed to be a logged-in user's UID
                 opportunityData.createdAt = new Date();
                 await addDoc(collection(this.db, "opportunities"), opportunityData);
                 this.Utils.showMessage('Opportunity added successfully!', 'success');
@@ -505,21 +509,20 @@ export const Opportunities = {
      * @param {string} opportunityName - The name of the opportunity for confirmation message.
      */
     deleteOpportunity: async function(opportunityId, opportunityName) {
-        // --- NEW: Login Requirement Check for delete ---
+        // Use Auth.isLoggedIn() for real-time check when deleting
         if (!Auth.isLoggedIn()) {
             this.Utils.showMessage('You must be logged in to delete opportunities.', 'error');
             return;
         }
-        // --- END NEW ---
 
-        // --- NEW: Creator ID check for delete ---
         try {
             const opportunityRef = doc(this.db, "opportunities", opportunityId);
             const existingDoc = await getDoc(opportunityRef);
             if (existingDoc.exists()) {
                 const data = existingDoc.data();
-                const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
-                if (!this.Utils.isAdmin() && data.creatorId !== currentUserId) {
+                // Use Utils.isAdmin() for real-time admin check
+                const currentUserId = Auth.getCurrentUser() ? Auth.getCurrentUser().uid : null;
+                if (!Utils.isAdmin() && data.creatorId !== currentUserId) {
                     this.Utils.showMessage('You do not have permission to delete this opportunity.', 'error');
                     return; // Prevent deletion
                 }
@@ -528,7 +531,6 @@ export const Opportunities = {
             this.Utils.handleError(error, "checking delete permission for opportunity");
             return; // Prevent deletion
         }
-        // --- END NEW ---
 
         this.Utils.showMessage(`Are you sure you want to delete opportunity "${opportunityName}"? This action cannot be undone.`, 'warning', 0);
 
