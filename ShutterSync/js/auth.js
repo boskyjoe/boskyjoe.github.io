@@ -149,8 +149,6 @@ export const Auth = {
         } else {
             // Should ideally not happen if init is called first, but fallback
             console.warn("Auth: _authReadyPromise not initialized when onAuthReady was called. This might indicate an out-of-order init/call.");
-            // If the promise somehow wasn't set up, attempt to resolve it by waiting for the next state change
-            // This is a defensive measure and suggests an issue in the init sequence.
             setTimeout(() => { // Give onAuthStateChanged a moment to fire
                  callback(!!this.auth.currentUser, this._isAdmin, this.auth.currentUser);
             }, 100);
@@ -164,7 +162,6 @@ export const Auth = {
         const provider = new GoogleAuthProvider();
         try {
             console.log("Auth: Attempting Google login popup...");
-            // CRITICAL: Ensure this.auth is available
             if (!this.auth) {
                 console.error("Auth: Firebase auth instance is not initialized. Cannot perform Google login.");
                 this.Utils.showMessage('Login failed: Authentication service not ready.', 'error');
@@ -173,7 +170,17 @@ export const Auth = {
             const result = await signInWithPopup(this.auth, provider);
             console.log("Auth: Google login successful! User:", result.user.uid, result.user.displayName);
             this.Utils.showMessage('Successfully logged in with Google!', 'success');
-            // onAuthStateChanged listener will handle subsequent UI updates and module loading.
+
+            // CRITICAL FIX: After successful login, force Main to reload the home module.
+            // This ensures the UI re-renders with the correct, authenticated state.
+            // Main.loadModule will query Auth.isLoggedIn(), Utils.isAdmin(), etc.
+            if (window.Main && typeof window.Main.loadModule === 'function') {
+                console.log("Auth: Forcing Home module reload after successful login.");
+                window.Main.loadModule('home');
+            } else {
+                console.warn("Auth: window.Main or loadModule not available for post-login refresh.");
+            }
+
         } catch (error) {
             console.error("Auth: Google login error details:", error); // Detailed error log
             this.Utils.handleError(error, "Google login");
@@ -203,11 +210,15 @@ export const Auth = {
             await signOut(this.auth);
             console.log("Auth: Firebase signOut successful!");
             this.Utils.showMessage('Successfully logged out.', 'success');
-            // onAuthStateChanged listener will handle subsequent UI updates and module loading.
-            // After logout, typically the app should return to an unauthenticated state,
-            // which onAuthStateChanged will handle. For the Home module, it will re-render
-            // to show the login button.
-            window.Main.loadModule('home', false, false, null); // Force load home in logged-out state
+
+            // After logout, force Main to reload the home module in logged-out state.
+            if (window.Main && typeof window.Main.loadModule === 'function') {
+                console.log("Auth: Forcing Home module reload after logout.");
+                window.Main.loadModule('home'); // loadModule will get current (logged out) state
+            } else {
+                console.warn("Auth: window.Main or loadModule not available for post-logout refresh.");
+            }
+
         } catch (error) {
             console.error("Auth: Logout error details:", error); // Detailed error log for logout
             this.Utils.handleError(error, "logout");
