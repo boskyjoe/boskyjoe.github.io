@@ -1,8 +1,9 @@
 // js/auth.js
 
-// Import all necessary Firebase Auth functions, including for custom token and anonymous sign-in.
-import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+// Import all necessary Firebase Auth functions.
+// signInAnonymously is removed from imports as it will no longer be used.
+import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 // Utils is passed to Auth.init, so no direct import is strictly necessary here.
 
 /**
@@ -33,8 +34,9 @@ export const Auth = {
     },
 
     /**
-     * Attempts to sign in with a custom token if available (for Canvas environment),
-     * otherwise signs in anonymously as a fallback.
+     * Attempts to sign in with a custom token if available (for Canvas environment).
+     * IMPORTANT: This function no longer falls back to anonymous sign-in.
+     * If custom token sign-in fails or is not provided, the user will remain unauthenticated.
      */
     performInitialSignIn: async function() {
         // Check for __initial_auth_token provided by the Canvas environment
@@ -43,27 +45,14 @@ export const Auth = {
                 await signInWithCustomToken(this.auth, __initial_auth_token);
                 console.log("Signed in with custom token.");
             } catch (error) {
-                // If custom token sign-in fails (e.g., expired token), fall back to anonymous
-                console.warn("Error signing in with custom token, falling back to anonymous:", error);
-                try {
-                    await signInAnonymously(this.auth);
-                    console.log("Signed in anonymously due to custom token failure.");
-                } catch (anonError) {
-                    console.error("Error performing anonymous sign-in:", anonError);
-                }
+                // If custom token sign-in fails, do NOT fall back to anonymous.
+                // The user will simply remain unauthenticated, which is handled by onAuthStateChanged.
+                console.warn("Error signing in with custom token. User will remain unauthenticated.", error);
             }
         } else {
-            // In environments where __initial_auth_token is not present, or if not already signed in
-            if (!this.auth.currentUser) {
-                try {
-                    await signInAnonymously(this.auth);
-                    console.log("Signed in anonymously.");
-                } catch (error) {
-                    console.error("Error signing in anonymously:", error);
-                }
-            } else {
-                console.log("User already signed in (e.g., via Google session or anonymous).");
-            }
+            // If no custom token is provided, do nothing.
+            // The onAuthStateChanged listener will fire with null, indicating unauthenticated state.
+            console.log("No custom auth token provided. User will start unauthenticated.");
         }
     },
 
@@ -87,18 +76,18 @@ export const Auth = {
                         this.Utils.updateAdminStatus(userData.role); // Notify Utils of role
                         console.log(`User data loaded. Role: ${userData.role}, IsAdmin: ${this._isAdmin}`);
                     } else {
-                        // User's first login or no user_data exists, create it
+                        // User's first Google login, create their user_data document.
                         const defaultUserData = {
                             email: user.email,
                             displayName: user.displayName,
-                            role: 'Standard', // Default role
+                            role: 'Standard', // Default role for new Google-signed-in users
                             createdAt: new Date(),
                             lastLogin: new Date()
                         };
                         await this.Utils.setDoc(userDocRef, defaultUserData); // Use Utils.setDoc
                         this._isAdmin = false;
                         this.Utils.updateAdminStatus('Standard'); // Notify Utils of default role
-                        console.log("New user data created with Standard role.");
+                        console.log("New user data created with Standard role for Google login.");
                     }
                 } catch (error) {
                     this.Utils.handleError(error, "fetching/creating user data");
@@ -106,9 +95,9 @@ export const Auth = {
                     this.Utils.updateAdminStatus('Standard'); // Notify Utils of role
                 }
             } else {
-                // User is signed out.
+                // User is signed out or never authenticated.
                 this._isAdmin = false;
-                this.Utils.updateAdminStatus('Standard'); // User is no longer admin
+                this.Utils.updateAdminStatus('Standard'); // User is no longer admin (or never was)
             }
 
             // Run any callbacks that were waiting for auth to be ready
