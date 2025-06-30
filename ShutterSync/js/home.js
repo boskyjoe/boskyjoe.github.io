@@ -40,9 +40,9 @@ export const Home = {
 
         // *** DIAGNOSTIC LOGS START ***
         console.log("Home.renderHomeUI called:");
-        console.log("  isLoggedIn:", isLoggedIn);
-        console.log("  isAdmin:", isAdmin);
-        console.log("  currentUser:", currentUser ? currentUser.uid : "null");
+        console.log("  Home: isLoggedIn received:", isLoggedIn);
+        console.log("  Home: isAdmin received:", isAdmin);
+        console.log("  Home: currentUser received:", currentUser ? currentUser.uid : "null");
         // *** DIAGNOSTIC LOGS END ***
 
         if (!homeModuleContent) {
@@ -52,18 +52,7 @@ export const Home = {
         }
 
         let welcomeMessage = "Welcome to ShutterSync CRM!";
-        let actionCards = `
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Login / Register Card -->
-                <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 transform hover:scale-105">
-                    <h4 class="text-xl font-semibold text-gray-800 mb-3"><i class="fas fa-sign-in-alt text-blue-500 mr-2"></i> Get Started</h4>
-                    <p class="text-gray-600 mb-4">Log in to access your CRM features.</p>
-                    <button id="login-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200 w-full">
-                        Login with Google
-                    </button>
-                </div>
-            </div>
-        `;
+        let actionCards = ''; // Initialize as empty
 
         if (isLoggedIn) { // Use the passed isLoggedIn
             welcomeMessage = `Welcome, ${currentUser ? (currentUser.displayName || currentUser.email) : 'Authenticated User'}!`;
@@ -110,8 +99,27 @@ export const Home = {
                         </div>
                     </div>
                 `;
+                 console.log("Home: Rendered with Admin cards."); // Log for Admin path
+            } else {
+                console.log("Home: Rendered with Standard user cards (no Admin cards)."); // Log for Standard user path
             }
+        } else {
+            // Unauthenticated state
+            actionCards = `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Login / Register Card -->
+                    <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 transform hover:scale-105">
+                        <h4 class="text-xl font-semibold text-gray-800 mb-3"><i class="fas fa-sign-in-alt text-blue-500 mr-2"></i> Get Started</h4>
+                        <p class="text-gray-600 mb-4">Log in to access your CRM features.</p>
+                        <button id="login-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200 w-full">
+                            Login with Google
+                        </button>
+                    </div>
+                </div>
+            `;
+            console.log("Home: Rendered with Login button (unauthenticated)."); // Log for unauthenticated path
         }
+
 
         homeModuleContent.innerHTML = `
             <div class="p-6">
@@ -119,6 +127,7 @@ export const Home = {
                 ${actionCards}
             </div>
         `;
+        console.log("Home: HTML content set for homeModuleContent."); // Confirm innerHTML is set
 
         // Attach event listeners for dynamic cards
         this.attachEventListeners(homeModuleContent, isLoggedIn);
@@ -136,6 +145,9 @@ export const Home = {
                 loginButton.addEventListener('click', () => {
                     Auth.loginWithGoogle();
                 });
+                console.log("Home: Attached event listener to Login button.");
+            } else {
+                console.warn("Home: Login button not found to attach listener.");
             }
         } else {
             // Event listeners for logged-in user cards
@@ -145,10 +157,12 @@ export const Home = {
                     if (this.loadModuleCallback) {
                         // When clicking a card, re-call loadModule with the current confirmed state
                         // Retrieve the latest state from Auth and Utils before passing it
+                        console.log(`Home: Card clicked: ${action}. Calling Main.loadModule.`);
                         this.loadModuleCallback(action, Auth.isLoggedIn(), Utils.isAdmin(), Auth.getCurrentUser());
                     }
                 });
             });
+            console.log("Home: Attached event listeners to feature cards.");
         }
     },
 
