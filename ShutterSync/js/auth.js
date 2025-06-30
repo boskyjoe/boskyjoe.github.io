@@ -1,6 +1,5 @@
 // js/auth.js
 
-// Import all necessary Firebase Auth functions.
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -12,23 +11,39 @@ export const Auth = {
     auth: null,
     db: null, // Firestore DB instance
     Utils: null, // Reference to the Utils module
-    authReadyCallbacks: [], // Callbacks to run when auth state is first determined
-    _isAdmin: false, // Internal flag for admin status (redundant, but kept for clarity with Utils.isAdmin)
+    _authReadyResolver: null, // Function to resolve the _authReadyPromise
+    _authReadyPromise: null, // Promise that resolves when auth state is determined
+    _isAdmin: false, // Internal flag for admin status, synced with Utils.isAdmin
 
     /**
      * Initializes the Auth module with Firebase Auth and Firestore instances.
+     * This method now returns a Promise that resolves when the initial authentication
+     * state has been determined (onAuthStateChanged fires for the first time).
+     *
      * @param {object} firebaseDb - The Firebase Firestore database instance.
      * @param {object} firebaseAuth - The Firebase Auth instance.
      * @param {object} utils - The Utils module instance.
+     * @returns {Promise<void>} A promise that resolves when the initial auth state is ready.
      */
     init: function(firebaseDb, firebaseAuth, utils) {
         this.db = firebaseDb;
         this.auth = firebaseAuth;
-        this.Utils = utils; // Store reference to Utils
-
+        this.Utils = utils;
         console.log("Auth module initialized.");
-        this.setupAuthStateListener();
-        this.performInitialSignIn();
+
+        // Create a new promise for auth readiness if it doesn't already exist.
+        // This promise will be resolved by the onAuthStateChanged listener after its first run.
+        if (!this._authReadyPromise) {
+            this._authReadyPromise = new Promise(resolve => {
+                this._authReadyResolver = resolve;
+            });
+        }
+
+        this.setupAuthStateListener(); // Sets up the Firebase listener
+        this.performInitialSignIn();   // Attempts token/anonymous sign-in
+
+        // Return the promise. Main.js will await this.
+        return this._authReadyPromise;
     },
 
     /**
@@ -37,6 +52,7 @@ export const Auth = {
      * If custom token sign-in fails or is not provided, the user will remain unauthenticated.
      */
     performInitialSignIn: async function() {
+        // On GitHub, __initial_auth_token will be undefined, so this block will be skipped.
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
             try {
                 await signInWithCustomToken(this.auth, __initial_auth_token);
@@ -54,15 +70,17 @@ export const Auth = {
      * This listener updates the UI and user role whenever the authentication state changes.
      */
     setupAuthStateListener: function() {
+        // This listener fires immediately upon registration with the current auth state,
+        // and then again on any subsequent changes (login, logout, token refresh).
         onAuthStateChanged(this.auth, async (user) => {
             console.log("Auth state changed. Current user:", user ? user.uid : "No user");
 
-            let currentIsAdmin = false; // Default
+            let currentIsAdmin = false; // Default to false
             if (user) {
                 // User is signed in. Fetch or create user_data document.
                 const userDocRef = doc(this.db, 'users_data', user.uid);
                 try {
-                    const docSnap = await this.Utils.getDoc(userDocRef);
+                    const docSnap = await this.Utils.getDoc(userDocRef); // Use Utils.getDoc
 
                     if (docSnap.exists()) {
                         const userData = docSnap.data();
@@ -78,14 +96,14 @@ export const Auth = {
                             createdAt: new Date(),
                             lastLogin: new Date()
                         };
-                        await this.Utils.setDoc(userDocRef, defaultUserData);
-                        currentIsAdmin = false;
+                        await this.Utils.setDoc(userDocRef, defaultUserData); // Use Utils.setDoc
+                        currentIsAdmin = false; // Newly created user is Standard
                         this.Utils.updateAdminStatus('Standard'); // Notify Utils of default role
                         console.log("New user data created with Standard role for Google login.");
                     }
                 } catch (error) {
                     this.Utils.handleError(error, "fetching/creating user data");
-                    currentIsAdmin = false; // Default to non-admin on error
+                    currentIsAdmin = false; // Default to non-admin on error if there's an issue
                     this.Utils.updateAdminStatus('Standard'); // Notify Utils of role
                 }
             } else {
@@ -94,14 +112,15 @@ export const Auth = {
                 this.Utils.updateAdminStatus('Standard'); // User is no longer admin (or never was)
             }
 
-            // Store the resolved isAdmin status internally
+            // Update Auth module's internal _isAdmin flag
             this._isAdmin = currentIsAdmin;
 
-            // Run any callbacks that were waiting for auth to be ready,
-            // passing the definitive isLoggedIn, isAdmin, and currentUser.
-            const isLoggedIn = !!user;
-            this.authReadyCallbacks.forEach(callback => callback(isLoggedIn, currentIsAdmin, user));
-            this.authReadyCallbacks = []; // Clear callbacks after running them once
+            // If the _authReadyPromise has not been resolved yet, resolve it now.
+            // This happens only once, on the very first auth state determination.
+            if (this._authReadyResolver) {
+                this._authReadyResolver(); // Resolve the promise (no value needed, just signal completion)
+                this._authReadyResolver = null; // Clear the resolver to prevent multiple resolutions
+            }
         });
     },
 
@@ -112,12 +131,15 @@ export const Auth = {
      * isLoggedIn (boolean), isAdmin (boolean), and currentUser (object|null).
      */
     onAuthReady: function(callback) {
-        // If auth state has already been determined, run callback immediately
-        // `this.auth.currentUser !== undefined` means `onAuthStateChanged` has fired at least once.
-        if (this.auth.currentUser !== undefined) {
-             callback(!!this.auth.currentUser, this._isAdmin, this.auth.currentUser);
+        // If the promise is already resolved, call the callback immediately.
+        // This._authReadyResolver being null means the promise has already been resolved.
+        if (this._authReadyPromise && this._authReadyResolver === null) {
+            callback(!!this.auth.currentUser, this._isAdmin, this.auth.currentUser);
         } else {
-            this.authReadyCallbacks.push(callback);
+            // Otherwise, wait for the promise to resolve, then call the callback.
+            this._authReadyPromise.then(() => {
+                callback(!!this.auth.currentUser, this._isAdmin, this.auth.currentUser);
+            });
         }
     },
 
