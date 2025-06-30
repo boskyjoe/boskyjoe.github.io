@@ -29,10 +29,13 @@ export const PriceBook = {
     /**
      * Renders the main UI for the PriceBook module.
      * This is called by Main.js when the 'priceBook' module is activated.
+     *
      * @param {HTMLElement} moduleContentElement - The DOM element where the PriceBook UI should be rendered.
+     * @param {boolean} isLoggedIn - The current login status (true/false).
+     * @param {boolean} isAdmin - The current admin status (true/false).
+     * @param {object|null} currentUser - The current Firebase User object, or null if logged out.
      */
-    renderPriceBookUI: function(moduleContentElement) {
-        // CRITICAL FIX: Use the passed moduleContentElement directly
+    renderPriceBookUI: function(moduleContentElement, isLoggedIn, isAdmin, currentUser) {
         const priceBookModuleContent = moduleContentElement;
 
         if (!priceBookModuleContent) {
@@ -41,8 +44,8 @@ export const PriceBook = {
             return;
         }
 
-        // --- NEW: Login Requirement Check for the module itself ---
-        if (!Auth.isLoggedIn()) {
+        // Use the passed isLoggedIn directly for module access check
+        if (!isLoggedIn) {
             priceBookModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
@@ -52,17 +55,16 @@ export const PriceBook = {
                     </button>
                 </div>
             `;
-            // Attach event listener for the new button
             document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
-                window.Main.loadModule('home'); // Redirect to home page
+                window.Main.loadModule('home', isLoggedIn, isAdmin, currentUser); // Redirect to home page
             });
             this.destroy(); // Clean up any previous grid/listeners
             this.Utils.showMessage("Access Denied: Please log in to view Price Book.", "error");
-            return; // Stop execution if not logged in
+            return;
         }
-        // --- END NEW ---
 
-        if (this.Utils.isAdmin()) {
+        // Use the passed isAdmin directly for UI rendering
+        if (isAdmin) {
             priceBookModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md mb-6">
                     <div class="flex justify-between items-center mb-6">
@@ -127,9 +129,9 @@ export const PriceBook = {
                     </div>
                 </div>
             `;
-            // After rendering HTML, attach event listeners and setup the real-time listener
             this.attachEventListeners();
-            this.setupRealtimeListener();
+            // Pass resolved auth state to listener setup
+            this.setupRealtimeListener(isLoggedIn, isAdmin, currentUser);
         } else {
             // If logged in but not admin
             priceBookModuleContent.innerHTML = `
@@ -142,7 +144,7 @@ export const PriceBook = {
                 </div>
             `;
             document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
-                window.Main.loadModule('home'); // Redirect to home page
+                window.Main.loadModule('home', isLoggedIn, isAdmin, currentUser); // Redirect to home page
             });
             console.log("Not an admin, skipping Price Book UI.");
             if (this.priceBookGrid) { this.priceBookGrid.destroy(); this.priceBookGrid = null; }
@@ -152,15 +154,18 @@ export const PriceBook = {
 
     /**
      * Sets up the real-time listener for the 'price_book' collection.
+     * @param {boolean} isLoggedIn - The current login status.
+     * @param {boolean} isAdmin - The current admin status.
+     * @param {object|null} currentUser - The current Firebase User object.
      * Only runs if the current user is an Admin.
      */
-    setupRealtimeListener: function() {
+    setupRealtimeListener: function(isLoggedIn, isAdmin, currentUser) {
         if (this.unsubscribe) {
             this.unsubscribe(); // Detach existing listener if any
         }
 
-        const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
-        if (!currentUserId || !this.Utils.isAdmin()) { // Ensure both logged in and admin
+        const userId = currentUser ? currentUser.uid : null;
+        if (!isLoggedIn || !isAdmin || !userId) { // Rely on passed flags
             console.log("Not logged in or not an admin, skipping price book listener setup.");
             this.renderPriceBookGrid([]); // Clear grid if not authorized
             return;
@@ -260,13 +265,12 @@ export const PriceBook = {
         const currencySelect = document.getElementById('currency');
         if (!currencySelect) return;
 
-        // --- NEW: Login/Admin Requirement Check for fetching currencies ---
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+        // Use Auth.isLoggedIn() and Utils.isAdmin() for real-time check when fetching
+        if (!Auth.isLoggedIn() || !Utils.isAdmin()) {
             console.log('Not authorized to fetch currencies for dropdown.');
             currencySelect.innerHTML = '<option value="">(Login as Admin)</option>';
             return;
         }
-        // --- END NEW ---
 
         currencySelect.innerHTML = '<option value="">Select Currency</option>';
         try {
@@ -302,12 +306,11 @@ export const PriceBook = {
      * Opens the price book item add/edit modal.
      */
     openPriceBookModal: async function(mode, id = null, itemData = {}) {
-        // --- NEW: Login/Admin Requirement Check for modals ---
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+        // Use Auth.isLoggedIn() and Utils.isAdmin() for real-time check when modal is opened
+        if (!Auth.isLoggedIn() || !Utils.isAdmin()) {
             this.Utils.showMessage('You do not have permission to add/edit price book items.', 'error');
             return;
         }
-        // --- END NEW ---
 
         const modal = document.getElementById('price-book-modal');
         const title = document.getElementById('price-book-modal-title');
@@ -315,7 +318,7 @@ export const PriceBook = {
         form.reset();
         this.currentEditingItemId = null;
 
-        // Fetch currencies first so dropdown is populated
+        // Fetch currencies first so dropdown is populated (it uses Auth.isLoggedIn/Utils.isAdmin internally)
         await this.fetchCurrenciesForDropdown(itemData.currency);
 
         if (mode === 'edit' && id && itemData) {
@@ -348,13 +351,12 @@ export const PriceBook = {
      * Saves a new price book item or updates an existing one.
      */
     savePriceBookItem: async function() {
-        // --- NEW: Login/Admin Requirement Check for save ---
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+        // Use Auth.isLoggedIn() and Utils.isAdmin() for real-time check when saving
+        if (!Auth.isLoggedIn() || !Utils.isAdmin()) {
             this.Utils.showMessage('You do not have permission to save price book items.', 'error');
             this.closePriceBookModal();
             return;
         }
-        // --- END NEW ---
 
         const itemName = document.getElementById('item-name').value.trim();
         const itemType = document.getElementById('item-type').value;
@@ -397,12 +399,11 @@ export const PriceBook = {
      * Deletes a price book item from Firestore.
      */
     deletePriceBookItem: async function(id, itemName) {
-        // --- NEW: Login/Admin Requirement Check for delete ---
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+        // Use Auth.isLoggedIn() and Utils.isAdmin() for real-time check when deleting
+        if (!Auth.isLoggedIn() || !Utils.isAdmin()) {
             this.Utils.showMessage('You do not have permission to delete price book items.', 'error');
             return;
         }
-        // --- END NEW ---
 
         this.Utils.showMessage(`Are you sure you want to delete price book item "${itemName}"?`, 'warning', 0); // 0 duration for persistent
 
@@ -456,7 +457,6 @@ export const PriceBook = {
             this.priceBookGrid.destroy();
             this.priceBookGrid = null;
         }
-        // Main.js now handles clearing the innerHTML of the content area for this module.
         console.log("PriceBook module destroyed.");
     }
 };
