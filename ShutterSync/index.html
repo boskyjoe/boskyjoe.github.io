@@ -162,10 +162,10 @@
             });
         }
 
-        // Logout button listener
+        // Logout button listener - NOW CALLS window.Main.logout()
         document.getElementById('logout-btn')?.addEventListener('click', (e) => {
             e.preventDefault();
-            Auth.logout();
+            window.Main.logout(); // Call Main's public logout method
         });
     </script>
 </body>
