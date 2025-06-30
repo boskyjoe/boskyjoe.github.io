@@ -33,10 +33,13 @@ export const AdminData = {
     /**
      * Renders the main UI for the AdminData module.
      * This is called by Main.js when the 'adminData' module is activated.
+     *
      * @param {HTMLElement} moduleContentElement - The DOM element where the AdminData UI should be rendered.
+     * @param {boolean} isLoggedIn - The current login status (true/false).
+     * @param {boolean} isAdmin - The current admin status (true/false).
+     * @param {object|null} currentUser - The current Firebase User object, or null if logged out.
      */
-    renderAdminDataUI: function(moduleContentElement) {
-        // CRITICAL FIX: Use the passed moduleContentElement directly
+    renderAdminDataUI: function(moduleContentElement, isLoggedIn, isAdmin, currentUser) {
         const adminDataModuleContent = moduleContentElement;
 
         if (!adminDataModuleContent) {
@@ -45,8 +48,8 @@ export const AdminData = {
             return;
         }
 
-        // --- NEW: Login Requirement Check for the module itself ---
-        if (!Auth.isLoggedIn()) {
+        // Use the passed isLoggedIn directly for module access check
+        if (!isLoggedIn) {
             adminDataModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
@@ -56,18 +59,16 @@ export const AdminData = {
                     </button>
                 </div>
             `;
-            // Attach event listener for the new button
             document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
-                window.Main.loadModule('home'); // Redirect to home page
+                window.Main.loadModule('home', isLoggedIn, isAdmin, currentUser); // Redirect to home page
             });
             this.destroy(); // Clean up any previous grid/listeners
             this.Utils.showMessage("Access Denied: Please log in to view App Metadata.", "error");
-            return; // Stop execution if not logged in
+            return;
         }
-        // --- END NEW ---
 
-        // Existing Admin check (after login check)
-        if (this.Utils.isAdmin()) {
+        // Use the passed isAdmin directly for UI rendering
+        if (isAdmin) {
             adminDataModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md mb-6">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-6">Application Metadata</h3>
@@ -198,11 +199,10 @@ export const AdminData = {
                     </div>
                 </div>
             `;
-            // After rendering HTML, attach event listeners and setup the real-time listeners
-            this.fetchAppStatistics();
-            this.fetchAppSettings();
+            this.fetchAppStatistics(isLoggedIn, isAdmin, currentUser); // Pass current state
+            this.fetchAppSettings(isLoggedIn, isAdmin, currentUser); // Pass current state
             this.attachEventListeners();
-            this.setupRealtimeListeners();
+            this.setupRealtimeListeners(isLoggedIn, isAdmin, currentUser); // Pass current state
         } else {
             // If logged in but not admin
             adminDataModuleContent.innerHTML = `
@@ -215,7 +215,7 @@ export const AdminData = {
                 </div>
             `;
             document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
-                window.Main.loadModule('home'); // Redirect to home page
+                window.Main.loadModule('home', isLoggedIn, isAdmin, currentUser); // Redirect to home page
             });
             console.log("Not an admin, skipping Admin Data UI.");
             this.Utils.showMessage("Access Denied: You must be an Admin to view App Metadata.", "error");
@@ -227,9 +227,12 @@ export const AdminData = {
 
     /**
      * Fetches and displays application statistics (total users, customers, opportunities).
+     * @param {boolean} isLoggedIn - The current login status.
+     * @param {boolean} isAdmin - The current admin status.
+     * @param {object|null} currentUser - The current Firebase User object.
      */
-    fetchAppStatistics: async function() {
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+    fetchAppStatistics: async function(isLoggedIn, isAdmin, currentUser) {
+        if (!isLoggedIn || !isAdmin) { // Rely on passed flags
             console.log("Not logged in or not admin, skipping fetchAppStatistics.");
             return;
         }
@@ -260,9 +263,12 @@ export const AdminData = {
 
     /**
      * Fetches and pre-fills application settings from Firestore.
+     * @param {boolean} isLoggedIn - The current login status.
+     * @param {boolean} isAdmin - The current admin status.
+     * @param {object|null} currentUser - The current Firebase User object.
      */
-    fetchAppSettings: async function() {
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+    fetchAppSettings: async function(isLoggedIn, isAdmin, currentUser) {
+        if (!isLoggedIn || !isAdmin) { // Rely on passed flags
             console.log("Not logged in or not admin, skipping fetchAppSettings.");
             return;
         }
@@ -289,13 +295,15 @@ export const AdminData = {
 
     /**
      * Sets up real-time listeners for 'app_metadata/countries_states' and 'app_metadata/app_settings/currencies_data'.
+     * @param {boolean} isLoggedIn - The current login status.
+     * @param {boolean} isAdmin - The current admin status.
+     * @param {object|null} currentUser - The current Firebase User object.
      * Only runs if the current user is an Admin.
      */
-    setupRealtimeListeners: function() {
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+    setupRealtimeListeners: function(isLoggedIn, isAdmin, currentUser) {
+        if (!isLoggedIn || !isAdmin) { // Rely on passed flags
             console.log("Not logged in or not an admin, skipping real-time listeners for Admin Data.");
-            // Ensure listeners are unsubscribed if user state changes to non-admin
-            this.destroy();
+            this.destroy(); // Ensure listeners are unsubscribed if user state changes to non-admin
             return;
         }
 
@@ -482,12 +490,11 @@ export const AdminData = {
      * Opens the country add/edit modal.
      */
     openCountryModal: function(mode, id = null, name = '', states = []) {
-        // --- NEW: Login/Admin Requirement Check for modals ---
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+        // Use Auth.isLoggedIn() and Utils.isAdmin() for real-time check when modal is opened
+        if (!Auth.isLoggedIn() || !Utils.isAdmin()) {
             this.Utils.showMessage('You do not have permission to add/edit countries.', 'error');
             return;
         }
-        // --- END NEW ---
 
         const modal = document.getElementById('country-state-modal');
         const title = document.getElementById('country-modal-title');
@@ -520,13 +527,12 @@ export const AdminData = {
      * Saves a new country or updates an existing one.
      */
     saveCountry: async function() {
-        // --- NEW: Login/Admin Requirement Check for save ---
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+        // Use Auth.isLoggedIn() and Utils.isAdmin() for real-time check when saving
+        if (!Auth.isLoggedIn() || !Utils.isAdmin()) {
             this.Utils.showMessage('You do not have permission to save countries.', 'error');
             this.closeCountryModal();
             return;
         }
-        // --- END NEW ---
 
         const name = document.getElementById('country-name').value.trim();
         const statesString = document.getElementById('country-states').value.trim();
@@ -560,12 +566,11 @@ export const AdminData = {
      * Deletes a country from Firestore.
      */
     deleteCountry: async function(id, name) {
-        // --- NEW: Login/Admin Requirement Check for delete ---
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+        // Use Auth.isLoggedIn() and Utils.isAdmin() for real-time check when deleting
+        if (!Auth.isLoggedIn() || !Utils.isAdmin()) {
             this.Utils.showMessage('You do not have permission to delete countries.', 'error');
             return;
         }
-        // --- END NEW ---
 
         this.Utils.showMessage(`Are you sure you want to delete country "${name}"?`, 'warning', 0);
         const messageModalContainer = document.getElementById('message-modal-container');
@@ -608,12 +613,11 @@ export const AdminData = {
      * Opens the currency add/edit modal.
      */
     openCurrencyModal: function(mode, id = null, code = '', name = '', symbol = '') {
-        // --- NEW: Login/Admin Requirement Check for modals ---
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+        // Use Auth.isLoggedIn() and Utils.isAdmin() for real-time check when modal is opened
+        if (!Auth.isLoggedIn() || !Utils.isAdmin()) {
             this.Utils.showMessage('You do not have permission to add/edit currencies.', 'error');
             return;
         }
-        // --- END NEW ---
 
         const modal = document.getElementById('currency-modal');
         const title = document.getElementById('currency-modal-title');
@@ -647,13 +651,12 @@ export const AdminData = {
      * Saves a new currency or updates an existing one.
      */
     saveCurrency: async function() {
-        // --- NEW: Login/Admin Requirement Check for save ---
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+        // Use Auth.isLoggedIn() and Utils.isAdmin() for real-time check when saving
+        if (!Auth.isLoggedIn() || !Utils.isAdmin()) {
             this.Utils.showMessage('You do not have permission to save currencies.', 'error');
             this.closeCurrencyModal();
             return;
         }
-        // --- END NEW ---
 
         const code = document.getElementById('currency-code').value.trim().toUpperCase();
         const name = document.getElementById('currency-name').value.trim();
@@ -687,12 +690,11 @@ export const AdminData = {
      * Deletes a currency from Firestore.
      */
     deleteCurrency: async function(id, code) {
-        // --- NEW: Login/Admin Requirement Check for delete ---
-        if (!Auth.isLoggedIn() || !this.Utils.isAdmin()) {
+        // Use Auth.isLoggedIn() and Utils.isAdmin() for real-time check when deleting
+        if (!Auth.isLoggedIn() || !Utils.isAdmin()) {
             this.Utils.showMessage('You do not have permission to delete currencies.', 'error');
             return;
         }
-        // --- END NEW ---
 
         this.Utils.showMessage(`Are you sure you want to delete currency "${code}"?`, 'warning', 0);
         const messageModalContainer = document.getElementById('message-modal-container');
@@ -753,7 +755,6 @@ export const AdminData = {
             this.currenciesGrid.destroy();
             this.currenciesGrid = null;
         }
-        // Main.js now handles clearing the innerHTML of the content area for this module.
         console.log("AdminData module destroyed.");
     }
 };
