@@ -27,19 +27,18 @@ export const Customers = {
         this.auth = firebaseAuth;
         this.Utils = utils;
         console.log("Customers module initialized.");
-
-        // We don't call renderCustomersUI or attachEventListeners here
-        // as they depend on the module's HTML being loaded into the DOM,
-        // which happens via Main.loadModule.
     },
 
     /**
      * Renders the main UI for the Customers module.
      * This is called by Main.js when the 'customers' module is activated.
+     *
      * @param {HTMLElement} moduleContentElement - The DOM element where the Customers UI should be rendered.
+     * @param {boolean} isLoggedIn - The current login status (true/false).
+     * @param {boolean} isAdmin - The current admin status (true/false).
+     * @param {object|null} currentUser - The current Firebase User object, or null if logged out.
      */
-    renderCustomersUI: function(moduleContentElement) {
-        // CRITICAL FIX: Use the passed moduleContentElement directly
+    renderCustomersUI: function(moduleContentElement, isLoggedIn, isAdmin, currentUser) {
         const customersModuleContent = moduleContentElement;
 
         if (!customersModuleContent) {
@@ -48,8 +47,8 @@ export const Customers = {
             return;
         }
 
-        // --- NEW: Login Requirement Check for the module itself ---
-        if (!Auth.isLoggedIn()) {
+        // Use the passed isLoggedIn directly for module access check
+        if (!isLoggedIn) {
             customersModuleContent.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
@@ -59,15 +58,13 @@ export const Customers = {
                     </button>
                 </div>
             `;
-            // Attach event listener for the new button
             document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
-                window.Main.loadModule('home'); // Redirect to home page
+                window.Main.loadModule('home', isLoggedIn, isAdmin, currentUser); // Redirect to home page
             });
             this.destroy(); // Clean up any previous grid/listeners
             this.Utils.showMessage("Access Denied: Please log in to view Customers.", "error");
-            return; // Stop execution if not logged in
+            return;
         }
-        // --- END NEW ---
 
         customersModuleContent.innerHTML = `
             <div class="bg-white p-6 rounded-lg shadow-md mb-6">
@@ -167,27 +164,31 @@ export const Customers = {
             </div>
         `;
         this.attachEventListeners();
-        this.setupRealtimeListener();
+        // Setup listener after HTML is rendered AND we know the login state is good
+        this.setupRealtimeListener(isLoggedIn, isAdmin, currentUser);
     },
 
     /**
      * Sets up the real-time listener for the 'customers' collection.
+     * @param {boolean} isLoggedIn - The current login status.
+     * @param {boolean} isAdmin - The current admin status.
+     * @param {object|null} currentUser - The current Firebase User object.
      */
-    setupRealtimeListener: function() {
+    setupRealtimeListener: function(isLoggedIn, isAdmin, currentUser) {
         if (this.unsubscribe) {
             this.unsubscribe(); // Detach existing listener if any
         }
 
-        const userId = this.auth.currentUser ? this.auth.currentUser.uid : null;
-        if (!userId) {
-            console.log("No user ID found, cannot set up customer listener. (User likely not logged in or session expired)");
+        const userId = currentUser ? currentUser.uid : null;
+        if (!isLoggedIn || !userId) { // Rely on passed isLoggedIn
+            console.log("Not logged in, cannot set up customer listener.");
             this.renderCustomersGrid([]); // Clear grid if not logged in
             return;
         }
 
         const customersCollectionRef = collection(this.db, "customers");
         let q;
-        if (this.Utils.isAdmin()) {
+        if (isAdmin) { // Rely on passed isAdmin
             q = query(customersCollectionRef); // Admins see all customers
             console.log("Admin user: Fetching all customers.");
         } else {
@@ -236,8 +237,9 @@ export const Customers = {
                     const customerId = row.cells[0].data; // Get customer ID
                     const customerData = customers.find(c => c.id === customerId); // Find full customer data
                     const creatorId = customerData?.creatorId; // Get creatorId from original data
-                    const isCurrentUserCreator = this.auth.currentUser && creatorId === this.auth.currentUser.uid;
-                    const canEditOrDelete = this.Utils.isAdmin() || isCurrentUserCreator;
+                    // Use Auth.getCurrentUser() and Utils.isAdmin() for permission checks at time of rendering actions
+                    const isCurrentUserCreator = Auth.getCurrentUser() && creatorId === Auth.getCurrentUser().uid;
+                    const canEditOrDelete = Utils.isAdmin() || isCurrentUserCreator;
 
                     if (!canEditOrDelete) {
                         return ''; // No actions if not allowed
@@ -340,12 +342,11 @@ export const Customers = {
      * @param {string|null} customerId - The ID of the customer to edit, if mode is 'edit'.
      */
     openCustomerModal: async function(mode, customerId = null) {
-        // --- NEW: Login Requirement Check for modals ---
+        // Use Auth.isLoggedIn() for real-time check when modal is opened
         if (!Auth.isLoggedIn()) {
             this.Utils.showMessage('You must be logged in to add/edit customers.', 'error');
             return;
         }
-        // --- END NEW ---
 
         const modal = document.getElementById('customer-modal');
         const title = document.getElementById('customer-modal-title');
@@ -362,14 +363,13 @@ export const Customers = {
                 const customerDoc = await getDoc(doc(this.db, 'customers', customerId));
                 if (customerDoc.exists()) {
                     const data = customerDoc.data();
-                    // --- NEW: Creator ID check for edit ---
-                    const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
-                    if (!this.Utils.isAdmin() && data.creatorId !== currentUserId) {
+                    // Use Utils.isAdmin() for real-time admin check
+                    const currentUserId = Auth.getCurrentUser() ? Auth.getCurrentUser().uid : null;
+                    if (!Utils.isAdmin() && data.creatorId !== currentUserId) {
                         this.Utils.showMessage('You do not have permission to edit this customer.', 'error');
                         this.closeCustomerModal();
                         return;
                     }
-                    // --- END NEW ---
                     document.getElementById('customer-name').value = data.name || ''; // Use 'name'
                     document.getElementById('contact-person').value = data.contactPerson || '';
                     document.getElementById('customer-email').value = data.email || '';
@@ -423,13 +423,12 @@ export const Customers = {
      * Saves a new customer or updates an existing one to Firestore.
      */
     saveCustomer: async function() {
-        // --- NEW: Login Requirement Check for save ---
+        // Use Auth.isLoggedIn() for real-time check when saving
         if (!Auth.isLoggedIn()) {
             this.Utils.showMessage('You must be logged in to save customers.', 'error');
             this.closeCustomerModal();
             return;
         }
-        // --- END NEW ---
 
         const name = document.getElementById('customer-name').value.trim(); // Changed to 'name'
         const contactPerson = document.getElementById('contact-person').value.trim();
@@ -468,23 +467,22 @@ export const Customers = {
             if (this.currentEditingCustomerId) {
                 // Update existing customer
                 const customerRef = doc(this.db, "customers", this.currentEditingCustomerId);
-                // --- NEW: Creator ID check for save update ---
+                // Use Utils.isAdmin() for real-time admin check
                 const existingDoc = await getDoc(customerRef);
                 if (existingDoc.exists()) {
                     const data = existingDoc.data();
-                    const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
-                    if (!this.Utils.isAdmin() && data.creatorId !== currentUserId) {
+                    const currentUserId = Auth.getCurrentUser() ? Auth.getCurrentUser().uid : null;
+                    if (!Utils.isAdmin() && data.creatorId !== currentUserId) {
                         this.Utils.showMessage('You do not have permission to update this customer.', 'error');
                         this.closeCustomerModal();
                         return;
                     }
                 }
-                // --- END NEW ---
                 await this.Utils.updateDoc(customerRef, customerData);
                 this.Utils.showMessage('Customer updated successfully!', 'success');
             } else {
                 // Add new customer
-                customerData.creatorId = this.auth.currentUser.uid; // Now guaranteed to be a logged-in user's UID
+                customerData.creatorId = Auth.getCurrentUser().uid; // Now guaranteed to be a logged-in user's UID
                 customerData.createdAt = new Date();
                 await addDoc(collection(this.db, "customers"), customerData);
                 this.Utils.showMessage('Customer added successfully!', 'success');
@@ -501,21 +499,20 @@ export const Customers = {
      * @param {string} customerName - The name of the customer for confirmation message.
      */
     deleteCustomer: async function(customerId, customerName) {
-        // --- NEW: Login Requirement Check for delete ---
+        // Use Auth.isLoggedIn() for real-time check when deleting
         if (!Auth.isLoggedIn()) {
             this.Utils.showMessage('You must be logged in to delete customers.', 'error');
             return;
         }
-        // --- END NEW ---
 
-        // --- NEW: Creator ID check for delete ---
         try {
             const customerRef = doc(this.db, "customers", customerId);
             const existingDoc = await getDoc(customerRef);
             if (existingDoc.exists()) {
                 const data = existingDoc.data();
-                const currentUserId = this.auth.currentUser ? this.auth.currentUser.uid : null;
-                if (!this.Utils.isAdmin() && data.creatorId !== currentUserId) {
+                // Use Utils.isAdmin() for real-time admin check
+                const currentUserId = Auth.getCurrentUser() ? Auth.getCurrentUser().uid : null;
+                if (!Utils.isAdmin() && data.creatorId !== currentUserId) {
                     this.Utils.showMessage('You do not have permission to delete this customer.', 'error');
                     return; // Prevent deletion
                 }
@@ -524,7 +521,6 @@ export const Customers = {
             this.Utils.handleError(error, "checking delete permission for customer");
             return; // Prevent deletion
         }
-        // --- END NEW ---
 
         this.Utils.showMessage(`Are you sure you want to delete customer "${customerName}"?`, 'warning', 0); // 0 duration for persistent
 
