@@ -69,6 +69,7 @@ const Main = {
         // This Auth.onAuthReady will now primarily handle the *initial* module load,
         // and subsequent auth state changes (login/logout).
         Auth.onAuthReady((isLoggedIn, isAdmin, currentUser) => {
+            console.log("Main: onAuthReady callback triggered."); // Added log
             if (!this._isInitialAuthReady) {
                 this._isInitialAuthReady = true; // Mark as done for first load
                 console.log("Main: onAuthReady (initial load) - isLoggedIn:", isLoggedIn, "isAdmin:", isAdmin, "currentUser:", currentUser ? currentUser.uid : "null");
@@ -90,10 +91,15 @@ const Main = {
                 }
             } else {
                 // For subsequent auth state changes (e.g., after user explicitly logs in/out),
-                // just update UI elements that depend on auth state.
+                // we need to *force reload* the current module (usually home) to reflect the new state.
                 console.log("Main: onAuthReady (subsequent change) - isLoggedIn:", isLoggedIn, "isAdmin:", isAdmin, "currentUser:", currentUser ? currentUser.uid : "null");
                 this.updateUserHeaderUI(currentUser);
                 this.updateNavAdminDropdown();
+
+                // *** CRITICAL FIX: Reload the current module to reflect the new auth state ***
+                // Ensure this is called with the LATEST determined state.
+                this.loadModule(this.currentModule || 'home', isLoggedIn, isAdmin, currentUser);
+                console.log(`Main: Reloaded module '${this.currentModule || 'home'}' due to auth state change.`);
             }
         });
 
