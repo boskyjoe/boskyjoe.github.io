@@ -106,7 +106,6 @@
         };
         // In a GitHub Pages environment, there is no '__app_id' global variable,
         // so we can define it or set a default if the app logic needs it.
-        // For this CRM, Main.init uses it but it's not strictly critical for basic Firebase connection.
         const appId = "shuttersync-crm"; // A suitable default for the app ID in this context
 
 
@@ -115,13 +114,16 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // Initialise Main module with Firebase instances and app ID
-        // Note: Auth.performInitialSignIn also has a check for __initial_auth_token.
-        // On GitHub, this will be undefined, so it will proceed as unauthenticated initially.
-        Main.init(app, db, auth, appId);
+        // Initialise Main module asynchronously using an IIFE
+        // This will now wait for Auth.init's promise to resolve before proceeding.
+        (async () => {
+            console.log("Starting Main initialization (will await Auth ready state)...");
+            await Main.init(app, db, auth, appId);
+            console.log("Main initialization complete and initial auth state processed.");
+        })();
 
-        // Set up module destroyers to clean up listeners/instances when modules are switched
-        // Each module's 'destroy' method is responsible for cleaning up its own listeners and resources.
+
+        // Set up module destroyers (can be here as they don't depend on auth state to be set)
         Main.setModuleDestroyers({
             home: Home.destroy,
             customers: Customers.destroy,
@@ -136,8 +138,7 @@
             link.addEventListener('click', (e) => {
                 e.preventDefault(); // Prevent default link behavior
                 const moduleName = e.target.dataset.module;
-                // Main.loadModule will internally ensure the correct authentication state
-                // is passed to the target module's render function.
+                // These calls will now use the already-resolved auth state from Main.init
                 window.Main.loadModule(moduleName);
             });
         });
