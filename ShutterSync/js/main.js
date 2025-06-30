@@ -44,7 +44,7 @@ const Main = {
         // Await Auth.init to ensure onAuthStateChanged has had a chance to fire at least once.
         // Auth.init now returns a promise that resolves when auth state is determined.
         await Auth.init(this.db, this.auth, Utils);
-        console.log("Auth module reports initial state ready. Proceeding with Main initialization.");
+        console.log("Main: Auth module reports initial state ready. Proceeding with Main initialization.");
 
         // Initialize other modules, passing their dependencies
         this.moduleInstances.home = Home;
@@ -71,6 +71,7 @@ const Main = {
         Auth.onAuthReady((isLoggedIn, isAdmin, currentUser) => {
             if (!this._isInitialAuthReady) {
                 this._isInitialAuthReady = true; // Mark as done for first load
+                console.log("Main: onAuthReady (initial load) - isLoggedIn:", isLoggedIn, "isAdmin:", isAdmin, "currentUser:", currentUser ? currentUser.uid : "null");
 
                 // Update header UI based on the resolved user
                 this.updateUserHeaderUI(currentUser);
@@ -90,6 +91,7 @@ const Main = {
             } else {
                 // For subsequent auth state changes (e.g., after user explicitly logs in/out),
                 // just update UI elements that depend on auth state.
+                console.log("Main: onAuthReady (subsequent change) - isLoggedIn:", isLoggedIn, "isAdmin:", isAdmin, "currentUser:", currentUser ? currentUser.uid : "null");
                 this.updateUserHeaderUI(currentUser);
                 this.updateNavAdminDropdown();
             }
@@ -97,16 +99,17 @@ const Main = {
 
         // Utils.onAdminStatusChange updates UI elements that depend on admin role
         // This is for dynamic changes *after* initial load (e.g., role change by another admin)
-        Utils.onAdminStatusChange(() => {
+        Utils.onAdminStatusChange((isAdminStatus) => {
+            console.log("Main: Utils.onAdminStatusChange - new isAdmin status:", isAdminStatus);
             this.updateNavAdminDropdown();
             // If the current module is admin-gated and role changed, re-render it
             if (this.currentModule && ['users', 'adminData', 'priceBook'].includes(this.currentModule)) {
-                if (!Utils.isAdmin()) {
+                if (!isAdminStatus) { // No longer admin
                      // If user was in an admin module and is no longer admin, redirect to home
-                    this.loadModule('home', Auth.isLoggedIn(), Utils.isAdmin(), Auth.getCurrentUser());
-                } else {
+                    this.loadModule('home', Auth.isLoggedIn(), isAdminStatus, Auth.getCurrentUser());
+                } else { // Became admin
                      // If user becomes admin while on an admin-related page, refresh it
-                    this.loadModule(this.currentModule, Auth.isLoggedIn(), Utils.isAdmin(), Auth.getCurrentUser());
+                    this.loadModule(this.currentModule, Auth.isLoggedIn(), isAdminStatus, Auth.getCurrentUser());
                 }
             }
         });
@@ -131,6 +134,8 @@ const Main = {
      * ensuring the module receives the definitive state. For subsequent calls, they will default to live Auth/Utils values.
      */
     loadModule: function(moduleName, isLoggedIn = Auth.isLoggedIn(), isAdmin = Utils.isAdmin(), currentUser = Auth.getCurrentUser()) {
+        console.log(`Main: Attempting to load module: ${moduleName} with isLoggedIn: ${isLoggedIn}, isAdmin: ${isAdmin}`);
+
         // Cleanup the previously loaded module if any
         if (this.currentModule && this.moduleDestroyers[this.currentModule]) {
             this.moduleDestroyers[this.currentModule]();
@@ -173,7 +178,7 @@ const Main = {
         if (this.moduleInstances[moduleName]) {
             this.currentModule = moduleName;
             localStorage.setItem('lastActiveModule', moduleName); // Remember for next session
-            console.log(`Loading module: ${moduleName}`);
+            console.log(`Main: Loading module: ${moduleName}`);
 
             // Get the specific module's content div
             const moduleContentDiv = document.getElementById(`${moduleName}-module-content`);
@@ -181,7 +186,7 @@ const Main = {
                 moduleContentDiv.classList.remove('hidden'); // Make the active module's div visible
                 moduleContentDiv.innerHTML = ''; // IMPORTANT: Clear only THIS specific div's content
             } else {
-                console.error(`Specific content div '${moduleName}-module-content' not found.`);
+                console.error(`Main: Specific content div '${moduleName}-module-content' not found.`);
                 Utils.showMessage("Internal error: Module content area missing. Redirected to Home.", "error");
                 this.loadModule('home', isLoggedIn, isAdmin, currentUser); // Recurse with home module
                 return;
@@ -199,12 +204,12 @@ const Main = {
                     currentUser
                 );
             } else {
-                console.error(`Render method "${renderMethodName}" not found for module "${moduleName}".`);
+                console.error(`Main: Render method "${renderMethodName}" not found for module "${moduleName}".`);
                 this.loadModule('home', isLoggedIn, isAdmin, currentUser); // Recurse with home module
                 Utils.showMessage("Error loading module. Redirected to Home.", "error");
             }
         } else {
-            console.error(`Module "${moduleName}" not found.`);
+            console.error(`Main: Module "${moduleName}" not found.`);
             this.loadModule('home', isLoggedIn, isAdmin, currentUser); // Recurse with home module
             Utils.showMessage("Module not found. Redirected to Home.", "error");
         }
@@ -219,18 +224,29 @@ const Main = {
         const loginRegisterPlaceholder = document.getElementById('login-register-placeholder');
         const logoutBtn = document.getElementById('logout-btn');
 
+        console.log("Main: updateUserHeaderUI called with currentUser:", currentUser ? currentUser.uid : "null");
+        console.log("Main: userInfoSpan element:", userInfoSpan);
+        console.log("Main: loginRegisterPlaceholder element:", loginRegisterPlaceholder);
+        console.log("Main: logoutBtn element:", logoutBtn);
+
+
         if (userInfoSpan && loginRegisterPlaceholder && logoutBtn) {
             if (currentUser) {
-                userInfoSpan.textContent = currentUser.displayName || currentUser.email || 'Logged In';
+                const userName = currentUser.displayName || currentUser.email || 'Logged In';
+                userInfoSpan.textContent = userName;
                 userInfoSpan.classList.remove('hidden');
                 loginRegisterPlaceholder.classList.add('hidden');
                 logoutBtn.classList.remove('hidden');
+                console.log(`Main: Header UI updated: Displaying "${userName}", hiding login placeholder, showing logout button.`);
             } else {
                 userInfoSpan.textContent = '';
-                userInfoSpan.classList.add('hidden');
+                userInfoSpan.classList.add('hidden'); // Ensure it's hidden if no user
                 loginRegisterPlaceholder.classList.remove('hidden');
                 logoutBtn.classList.add('hidden');
+                console.log("Main: Header UI updated: User logged out, showing login placeholder, hiding logout button.");
             }
+        } else {
+            console.error("Main: Header UI elements not found. Cannot update header.");
         }
     },
 
@@ -238,15 +254,25 @@ const Main = {
      * Updates the visibility of the Admin navigation dropdown based on user role.
      */
     updateNavAdminDropdown: function() {
-        const adminNavDropdown = document.getElementById('nav-admin-dropdown');
-        if (adminNavDropdown) {
-            if (Utils.isAdmin()) { // Utils.isAdmin() is already synchronized by Auth.onAuthStateChanged -> Utils.updateAdminStatus
+        const adminNavDropdown = document.querySelector('#nav-admin-dropdown'); // Select the button itself
+        const adminDropdownContent = adminNavDropdown ? adminNavDropdown.nextElementSibling : null; // The div containing admin links
+
+        console.log("Main: updateNavAdminDropdown called. Utils.isAdmin():", Utils.isAdmin());
+        console.log("Main: adminNavDropdown button element:", adminNavDropdown);
+        console.log("Main: adminDropdownContent element:", adminDropdownContent);
+
+
+        if (adminNavDropdown && adminDropdownContent) {
+            if (Utils.isAdmin()) {
                 adminNavDropdown.classList.remove('hidden');
+                console.log("Main: Admin dropdown button shown.");
             } else {
                 adminNavDropdown.classList.add('hidden');
+                adminDropdownContent.classList.add('hidden'); // Ensure content is also hidden if button is hidden
+                console.log("Main: Admin dropdown button hidden, content hidden.");
             }
         } else {
-            console.warn("Admin navigation dropdown element not found: #nav-admin-dropdown");
+            console.warn("Main: Admin navigation dropdown button or content element not found.");
         }
     },
 
@@ -254,6 +280,7 @@ const Main = {
      * Public method for logging out, exposed globally via window.Main.logout.
      */
     logout: async function() {
+        console.log("Main: logout method called via window.Main.");
         await Auth.logout(); // Call the Auth module's logout function
     }
 };
