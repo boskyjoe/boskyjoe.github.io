@@ -2,7 +2,7 @@
 
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDoc, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { Utils } from './utils.js';
-import { Auth } from './auth.js'; // CORRECTED: Added Auth import
+import { Auth } from './auth.js';
 
 /**
  * The Opportunities module handles all functionality related to opportunity management.
@@ -86,7 +86,7 @@ export const Opportunities = {
                         <div class="grid grid-cols-1 gap-4 mb-4">
                             <div>
                                 <label for="opportunity-name" class="block text-sm font-medium text-gray-700 mb-1">Opportunity Name</label>
-                                <input type="text" id="opportunity-name" name="opportunityName" required
+                                <input type="text" id="opportunity-name" name="name" required
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             </div>
                             <div>
@@ -154,16 +154,16 @@ export const Opportunities = {
         const customersCollectionRef = collection(this.db, "customers");
         let q;
         if (this.Utils.isAdmin()) {
-            q = query(customersCollectionRef, orderBy('companyName'));
+            q = query(customersCollectionRef, orderBy('name')); // Use 'name' for ordering
         } else {
-            q = query(customersCollectionRef, where("creatorId", "==", userId), orderBy('companyName'));
+            q = query(customersCollectionRef, where("creatorId", "==", userId), orderBy('name')); // Use 'name' for ordering
         }
 
         try {
             const querySnapshot = await getDocs(q);
             querySnapshot.forEach((docSnap) => {
                 const customerData = docSnap.data();
-                this._customerNamesMap.set(docSnap.id, customerData.companyName || 'N/A');
+                this._customerNamesMap.set(docSnap.id, customerData.name || 'N/A'); // Use 'name'
             });
             console.log("Customers cached:", this._customerNamesMap);
             // Re-populate dropdown if modal is open, or ensure it's ready for next open
@@ -252,7 +252,7 @@ export const Opportunities = {
 
         const columns = [
             { id: 'id', name: 'ID', hidden: true },
-            { id: 'opportunityName', name: 'Opportunity Name', sort: true, width: 'auto' },
+            { id: 'name', name: 'Opportunity Name', sort: true, width: 'auto' }, // Use 'name'
             { id: 'customerName', name: 'Customer', sort: true, width: 'auto' }, // Display customer name
             { id: 'amount', name: 'Amount', sort: true, width: '100px', formatter: (cell) => `$${parseFloat(cell).toLocaleString()}` },
             { id: 'stage', name: 'Stage', sort: true, width: '120px' },
@@ -282,7 +282,7 @@ export const Opportunities = {
                         gridjs.h('button', {
                             className: 'p-1 rounded-md text-gray-600 hover:bg-red-100 hover:text-red-600 transition-colors duration-200',
                             title: 'Delete Opportunity',
-                            onClick: () => this.deleteOpportunity(opportunityId, row.cells[1].data)
+                            onClick: () => this.deleteOpportunity(opportunityId, opportunityData.name) // Use opportunityData.name
                         }, gridjs.h('i', { className: 'fas fa-trash-alt text-lg' }))
                     ]);
                 }
@@ -291,7 +291,7 @@ export const Opportunities = {
 
         const mappedData = opportunities.map(o => [
             o.id,
-            o.opportunityName || '',
+            o.name || '', // Use 'name'
             o.customerName || '',
             o.amount || 0,
             o.stage || '',
@@ -395,7 +395,7 @@ export const Opportunities = {
                         return;
                     }
                     // --- END NEW ---
-                    document.getElementById('opportunity-name').value = data.opportunityName || '';
+                    document.getElementById('opportunity-name').value = data.name || ''; // Use 'name'
                     document.getElementById('amount').value = data.amount || 0;
                     document.getElementById('stage-select').value = data.stage || 'Prospecting';
                     document.getElementById('close-date').value = data.expectedCloseDate ? new Date(data.expectedCloseDate.toDate()).toISOString().split('T')[0] : '';
@@ -448,23 +448,23 @@ export const Opportunities = {
         }
         // --- END NEW ---
 
-        const opportunityName = document.getElementById('opportunity-name').value.trim();
+        const name = document.getElementById('opportunity-name').value.trim(); // Changed to 'name'
         const customerId = document.getElementById('customer-select').value;
         const amount = parseFloat(document.getElementById('amount').value);
         const stage = document.getElementById('stage-select').value;
-        const closeDate = document.getElementById('close-date').value;
+        const expectedCloseDate = document.getElementById('close-date').value;
 
-        if (!opportunityName || !customerId || isNaN(amount) || amount < 0) { // Added amount < 0 validation
+        if (!name || !customerId || isNaN(amount) || amount < 0) { // Added amount < 0 validation
             this.Utils.showMessage('Opportunity Name, Customer, and a valid positive Amount are required.', 'warning');
             return;
         }
 
         const opportunityData = {
-            opportunityName: opportunityName,
+            name: name, // Changed to 'name'
             customerId: customerId,
             amount: amount,
             stage: stage,
-            expectedCloseDate: closeDate ? new Date(closeDate) : null,
+            expectedCloseDate: expectedCloseDate ? new Date(expectedCloseDate) : null,
             updatedAt: new Date()
         };
 
