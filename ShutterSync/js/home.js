@@ -78,7 +78,7 @@ export const Home = {
                         <p class="text-gray-600">Monitor your sales pipeline and potential deals.</p>
                     </div>
                     <!-- My Profile Card -->
-                    <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 transform hover:scale-105 cursor-pointer" data-action="profile">
+                    <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 transform hover:scale-105 cursor-pointer" data-action="users">
                         <h4 class="text-xl font-semibold text-gray-800 mb-3"><i class="fas fa-user-circle text-yellow-500 mr-2"></i> My Profile</h4>
                         <p class="text-gray-600">View and update your personal information.</p>
                     </div>
@@ -140,11 +140,7 @@ export const Home = {
             parentElement.querySelectorAll('[data-action]').forEach(card => {
                 card.addEventListener('click', (e) => {
                     const action = e.currentTarget.dataset.action;
-                    if (action === 'profile') {
-                        // For 'profile', we direct to the 'users' module and potentially focus on current user
-                        this.loadModuleCallback('users');
-                        // Future: could add logic to pre-select/focus on current user's profile in the Users module
-                    } else if (this.loadModuleCallback) {
+                    if (this.loadModuleCallback) {
                         this.loadModuleCallback(action);
                     }
                 });
