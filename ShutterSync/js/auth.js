@@ -55,13 +55,14 @@ export const Auth = {
         // On GitHub, __initial_auth_token will be undefined, so this block will be skipped.
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
             try {
+                console.log("Auth: Attempting signInWithCustomToken...");
                 await signInWithCustomToken(this.auth, __initial_auth_token);
-                console.log("Signed in with custom token.");
+                console.log("Auth: signInWithCustomToken successful.");
             } catch (error) {
-                console.warn("Error signing in with custom token. User will remain unauthenticated.", error);
+                console.warn("Auth: Error signing in with custom token. User will remain unauthenticated.", error);
             }
         } else {
-            console.log("No custom auth token provided. User will start unauthenticated.");
+            console.log("Auth: No custom auth token provided. User will start unauthenticated.");
         }
     },
 
@@ -73,20 +74,21 @@ export const Auth = {
         // This listener fires immediately upon registration with the current auth state,
         // and then again on any subsequent changes (login, logout, token refresh).
         onAuthStateChanged(this.auth, async (user) => {
-            console.log("Auth state changed. Current user:", user ? user.uid : "No user");
+            console.log("Auth: onAuthStateChanged - Current user:", user ? user.uid : "No user");
 
             let currentIsAdmin = false; // Default to false
             if (user) {
                 // User is signed in. Fetch or create user_data document.
                 const userDocRef = doc(this.db, 'users_data', user.uid);
                 try {
+                    console.log("Auth: Fetching user data for:", user.uid);
                     const docSnap = await this.Utils.getDoc(userDocRef); // Use Utils.getDoc
 
                     if (docSnap.exists()) {
                         const userData = docSnap.data();
                         currentIsAdmin = userData.role === 'Admin';
                         this.Utils.updateAdminStatus(userData.role); // Notify Utils of role
-                        console.log(`User data loaded. Role: ${userData.role}, IsAdmin: ${currentIsAdmin}`);
+                        console.log(`Auth: User data loaded. Role: ${userData.role}, IsAdmin: ${currentIsAdmin}`);
                     } else {
                         // User's first Google login, create their user_data document.
                         const defaultUserData = {
@@ -96,10 +98,11 @@ export const Auth = {
                             createdAt: new Date(),
                             lastLogin: new Date()
                         };
+                        console.log("Auth: Creating new user data for first-time Google login:", user.uid);
                         await this.Utils.setDoc(userDocRef, defaultUserData); // Use Utils.setDoc
                         currentIsAdmin = false; // Newly created user is Standard
                         this.Utils.updateAdminStatus('Standard'); // Notify Utils of default role
-                        console.log("New user data created with Standard role for Google login.");
+                        console.log("Auth: New user data created with Standard role for Google login.");
                     }
                 } catch (error) {
                     this.Utils.handleError(error, "fetching/creating user data");
@@ -108,6 +111,7 @@ export const Auth = {
                 }
             } else {
                 // User is signed out or never authenticated.
+                console.log("Auth: User is not authenticated.");
                 currentIsAdmin = false;
                 this.Utils.updateAdminStatus('Standard'); // User is no longer admin (or never was)
             }
@@ -118,6 +122,7 @@ export const Auth = {
             // If the _authReadyPromise has not been resolved yet, resolve it now.
             // This happens only once, on the very first auth state determination.
             if (this._authReadyResolver) {
+                console.log("Auth: Resolving _authReadyPromise.");
                 this._authReadyResolver(); // Resolve the promise (no value needed, just signal completion)
                 this._authReadyResolver = null; // Clear the resolver to prevent multiple resolutions
             }
@@ -131,15 +136,24 @@ export const Auth = {
      * isLoggedIn (boolean), isAdmin (boolean), and currentUser (object|null).
      */
     onAuthReady: function(callback) {
-        // If the promise is already resolved, call the callback immediately.
-        // This._authReadyResolver being null means the promise has already been resolved.
         if (this._authReadyPromise && this._authReadyResolver === null) {
+            // Promise is already resolved, call callback immediately.
+            console.log("Auth: onAuthReady called, auth state already determined. Calling callback immediately.");
             callback(!!this.auth.currentUser, this._isAdmin, this.auth.currentUser);
-        } else {
-            // Otherwise, wait for the promise to resolve, then call the callback.
+        } else if (this._authReadyPromise) {
+            // Promise exists but not resolved, wait for it.
+            console.log("Auth: onAuthReady called, auth state not yet determined. Adding callback to promise chain.");
             this._authReadyPromise.then(() => {
                 callback(!!this.auth.currentUser, this._isAdmin, this.auth.currentUser);
             });
+        } else {
+            // Should ideally not happen if init is called first, but fallback
+            console.warn("Auth: _authReadyPromise not initialized when onAuthReady was called. This might indicate an out-of-order init/call.");
+            // If the promise somehow wasn't set up, attempt to resolve it by waiting for the next state change
+            // This is a defensive measure and suggests an issue in the init sequence.
+            setTimeout(() => { // Give onAuthStateChanged a moment to fire
+                 callback(!!this.auth.currentUser, this._isAdmin, this.auth.currentUser);
+            }, 100);
         }
     },
 
@@ -149,18 +163,28 @@ export const Auth = {
     loginWithGoogle: async function() {
         const provider = new GoogleAuthProvider();
         try {
-            console.log("Attempting Google login popup...");
-            await signInWithPopup(this.auth, provider);
-            console.log("Google login successful!");
+            console.log("Auth: Attempting Google login popup...");
+            // CRITICAL: Ensure this.auth is available
+            if (!this.auth) {
+                console.error("Auth: Firebase auth instance is not initialized. Cannot perform Google login.");
+                this.Utils.showMessage('Login failed: Authentication service not ready.', 'error');
+                return;
+            }
+            const result = await signInWithPopup(this.auth, provider);
+            console.log("Auth: Google login successful! User:", result.user.uid, result.user.displayName);
             this.Utils.showMessage('Successfully logged in with Google!', 'success');
             // onAuthStateChanged listener will handle subsequent UI updates and module loading.
         } catch (error) {
-            console.error("Google login error details:", error); // Detailed error log
+            console.error("Auth: Google login error details:", error); // Detailed error log
             this.Utils.handleError(error, "Google login");
             if (error.code === 'auth/popup-closed-by-user') {
                 this.Utils.showMessage('Login cancelled by user.', 'info');
             } else if (error.code === 'auth/cancelled-popup-request') {
                 this.Utils.showMessage('Another login request is already in progress.', 'warning');
+            } else if (error.code === 'auth/network-request-failed') {
+                this.Utils.showMessage('Network error during login. Please check your connection.', 'error');
+            } else {
+                this.Utils.showMessage(`Login error: ${error.message || 'An unknown error occurred.'}`, 'error');
             }
         }
     },
@@ -171,17 +195,21 @@ export const Auth = {
     logout: async function() {
         try {
             if (!this.auth) {
-                console.error("Auth instance is null. Cannot log out.");
+                console.error("Auth: Auth instance is null. Cannot log out.");
                 this.Utils.showMessage('Logout failed: Authentication service not initialized.', 'error');
                 return;
             }
-            console.log("Attempting Firebase signOut...");
+            console.log("Auth: Attempting Firebase signOut...");
             await signOut(this.auth);
-            console.log("Firebase signOut successful!");
+            console.log("Auth: Firebase signOut successful!");
             this.Utils.showMessage('Successfully logged out.', 'success');
             // onAuthStateChanged listener will handle subsequent UI updates and module loading.
+            // After logout, typically the app should return to an unauthenticated state,
+            // which onAuthStateChanged will handle. For the Home module, it will re-render
+            // to show the login button.
+            window.Main.loadModule('home', false, false, null); // Force load home in logged-out state
         } catch (error) {
-            console.error("Logout error details:", error); // Detailed error log for logout
+            console.error("Auth: Logout error details:", error); // Detailed error log for logout
             this.Utils.handleError(error, "logout");
         }
     },
