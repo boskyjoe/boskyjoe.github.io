@@ -108,11 +108,13 @@
         // so we can define it or set a default if the app logic needs it.
         const appId = "shuttersync-crm"; // A suitable default for the app ID in this context
 
-
         // Initialize Firebase services
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+
+        // *** CRITICAL FIX: Expose Main globally BEFORE any global event listeners use it ***
+        window.Main = Main;
 
         // Initialise Main module asynchronously using an IIFE
         // This will now wait for Auth.init's promise to resolve before proceeding.
@@ -124,6 +126,7 @@
 
 
         // Set up module destroyers (can be here as they don't depend on auth state to be set)
+        // Ensure Main is available when setModuleDestroyers is called.
         Main.setModuleDestroyers({
             home: Home.destroy,
             customers: Customers.destroy,
@@ -162,7 +165,7 @@
             });
         }
 
-        // Logout button listener - NOW CALLS window.Main.logout()
+        // Logout button listener - NOW window.Main.logout() is guaranteed to exist
         document.getElementById('logout-btn')?.addEventListener('click', (e) => {
             e.preventDefault();
             window.Main.logout(); // Call Main's public logout method
