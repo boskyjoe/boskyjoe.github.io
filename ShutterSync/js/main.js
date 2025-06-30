@@ -1,7 +1,6 @@
 // js/main.js
 
 // Import all application modules.
-// These modules should be designed with named exports (e.g., export const Auth = { ... })
 import { Auth } from './auth.js';
 import { Utils } from './utils.js';
 import { Home } from './home.js';
@@ -13,9 +12,7 @@ import { PriceBook } from './price_book.js';
 
 /**
  * The main application controller.
- * This module orchestrates Firebase setup (receiving initialized instances),
- * module loading, and global UI updates.
- * It is designed to be imported as a default ES module by index.html.
+ * This module orchestrates Firebase setup, module loading, and global UI updates.
  */
 const Main = {
     firebaseApp: null,
@@ -28,9 +25,6 @@ const Main = {
 
     /**
      * Initializes the Main application controller.
-     * This method is called by the inline script in index.html,
-     * passing the initialized Firebase instances and application ID.
-     *
      * @param {object} firebaseApp - The Firebase App instance.
      * @param {object} firestoreDb - The Firestore database instance.
      * @param {object} firebaseAuth - The Firebase Auth instance.
@@ -51,8 +45,7 @@ const Main = {
         // Initialize other modules, passing their dependencies
         this.moduleInstances.home = Home;
         Home.init(this.db, this.auth, Utils);
-        // Home module needs a way to trigger Main's loadModule
-        Home.loadModuleCallback = this.loadModule.bind(this);
+        Home.loadModuleCallback = this.loadModule.bind(this); // Pass loadModule for Home's internal navigation
 
         this.moduleInstances.customers = Customers;
         Customers.init(this.db, this.auth, Utils);
@@ -69,45 +62,49 @@ const Main = {
         this.moduleInstances.priceBook = PriceBook;
         PriceBook.init(this.db, this.auth, Utils);
 
-        // Ensure global UI elements are updated when auth status or admin status changes
-        // Auth.onAuthReady ensures initial setup after Firebase Auth has determined user state
+        // Auth.onAuthReady ensures initial setup after Firebase Auth has determined user state.
+        // This is the SOLE trigger for the initial module load based on auth status.
         Auth.onAuthReady(() => {
-            // This callback fires ONLY after the initial authentication state (logged in/out, role) is determined.
             if (!this._isInitialAuthReady) {
                 this._isInitialAuthReady = true; // Mark as done for first load
 
+                // Update header UI based on the resolved user
                 this.updateUserHeaderUI(this.auth.currentUser);
+                // Update nav dropdown based on resolved admin status
                 this.updateNavAdminDropdown();
 
-                // This is the SOLE place for the initial module load.
                 const lastActiveModule = localStorage.getItem('lastActiveModule');
                 if (Auth.isLoggedIn() && lastActiveModule && lastActiveModule !== 'home') {
-                     // Try to load it. If access is denied by module's own check, it will redirect to home.
+                    // If logged in and had a last module, try to load it.
+                    // The module itself will perform access checks.
                     this.loadModule(lastActiveModule);
                 } else {
+                    // Otherwise, load the home module.
                     this.loadModule('home');
                 }
             } else {
-                // For subsequent auth state changes (e.g., after login/logout), just update UI
+                // For subsequent auth state changes (e.g., after login/logout triggered by user actions),
+                // just update UI. The loadModule call above handles initial page logic.
                 this.updateUserHeaderUI(this.auth.currentUser);
                 this.updateNavAdminDropdown();
             }
         });
 
         // Utils.onAdminStatusChange updates UI elements that depend on admin role
+        // This is for dynamic changes *after* initial load (e.g., role change by another admin)
         Utils.onAdminStatusChange(() => {
             this.updateNavAdminDropdown();
             // If the current module is admin-gated and role changed, re-render it
-            // This ensures if an admin demotes themselves or is demoted by another admin,
-            // they are kicked out of admin modules.
-            if (this.currentModule && ['users', 'adminData', 'priceBook'].includes(this.currentModule) && !Utils.isAdmin()) {
-                this.loadModule('home'); // Redirect to home if admin privilege is lost
-            } else if (this.currentModule && ['users', 'adminData', 'priceBook'].includes(this.currentModule)) {
-                 // Re-render admin page if admin status changes (e.g. from standard to admin by another admin)
-                 this.loadModule(this.currentModule);
+            if (this.currentModule && ['users', 'adminData', 'priceBook'].includes(this.currentModule)) {
+                if (!Utils.isAdmin()) {
+                     // If user was in an admin module and is no longer admin, redirect to home
+                    this.loadModule('home');
+                } else {
+                     // If user becomes admin while on an admin-related page, refresh it
+                    this.loadModule(this.currentModule);
+                }
             }
         });
-        // Important: No direct loadModule call here, must wait for Auth.onAuthReady.
     },
 
     /**
@@ -182,12 +179,17 @@ const Main = {
             }
 
             // Construct the render method name (e.g., renderHomeUI, renderAdminDataUI)
-            // Special handling for 'admin-data' to remove hyphen for method name
             const renderMethodName = `render${moduleName.charAt(0).toUpperCase() + moduleName.slice(1).replace('-', '')}UI`;
 
             if (typeof this.moduleInstances[moduleName][renderMethodName] === 'function') {
-                // Pass the moduleContentDiv element directly to the render function
-                this.moduleInstances[moduleName][renderMethodName](moduleContentDiv);
+                // Pass the moduleContentDiv, current Auth state, and Admin status
+                // This ensures the modules render with the definitive, resolved state.
+                this.moduleInstances[moduleName][renderMethodName](
+                    moduleContentDiv,
+                    Auth.isLoggedIn(),
+                    Utils.isAdmin(),
+                    Auth.getCurrentUser() // Pass the actual user object
+                );
             } else {
                 console.error(`Render method "${renderMethodName}" not found for module "${moduleName}".`);
                 this.loadModule('home'); // Fallback to home if render method is missing
@@ -202,7 +204,7 @@ const Main = {
 
     /**
      * Updates the user info in the header (display name/email and logout button).
-     * This is called by Auth.onAuthReady and by Main's init.
+     * This is called by Auth.onAuthReady and by Utils.onAdminStatusChange.
      * @param {object|null} currentUser - The Firebase User object or null.
      */
     updateUserHeaderUI: function(currentUser) {
