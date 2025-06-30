@@ -44,7 +44,7 @@ export const Home = {
             return;
         }
 
-        // Use the passed isLoggedIn and isAdmin directly
+        // Use the passed isLoggedIn and isAdmin directly for rendering logic
         let welcomeMessage = "Welcome to ShutterSync CRM!";
         let actionCards = `
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -137,7 +137,8 @@ export const Home = {
                 card.addEventListener('click', (e) => {
                     const action = e.currentTarget.dataset.action;
                     if (this.loadModuleCallback) {
-                        this.loadModuleCallback(action);
+                        // When clicking a card, re-call loadModule with the current confirmed state
+                        this.loadModuleCallback(action, true, this.Utils.isAdmin(), this.auth.currentUser);
                     }
                 });
             });
@@ -149,6 +150,5 @@ export const Home = {
      */
     destroy: function() {
         console.log("Home module destroyed.");
-        // Main.js now handles clearing the innerHTML of the content area for this module.
     }
 };
