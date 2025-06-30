@@ -220,6 +220,27 @@ footer {
     transform: scale(0.95);
 }
 
+/* --- Grid.js Header Styling (Added/Updated) --- */
+/* This ensures that column headers in Grid.js tables wrap text and do not truncate with ellipsis. */
+.gridjs-th {
+    white-space: normal !important; /* Allow text to wrap onto multiple lines */
+    overflow: visible !important;   /* Ensure content is not hidden by overflow */
+    text-overflow: clip !important; /* Prevent the "..." truncation */
+    word-break: break-word !important; /* Break long words if they don't fit on a line */
+    /* Add padding or height if needed to accommodate multiple lines */
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+    height: auto !important; /* Allow height to expand based on content */
+}
+
+/* Optional: Adjust Grid.js cell styling for better word wrapping */
+.gridjs-td {
+    white-space: normal !important; /* Allow cell content to wrap */
+    word-break: break-word !important; /* Break long words if they don't fit */
+}
+/* ----------------------------------------------------------- */
+
+
 .pointer-events-none {
     pointer-events: none;
 }
