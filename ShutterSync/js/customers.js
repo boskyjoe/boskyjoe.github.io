@@ -289,7 +289,7 @@ export const Customers = {
                 },
                 className: {
                     table: 'min-w-full divide-y divide-gray-200',
-                    th: 'px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-normal break-words',
+                    th: 'px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     td: 'px-6 py-4 text-sm text-gray-900 whitespace-normal break-words',
                     footer: 'flex items-center justify-between px-6 py-3',
                     paginationButton: 'px-3 py-1 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100',
