@@ -64,28 +64,29 @@ const Main = {
 
         // Auth.onAuthReady ensures initial setup after Firebase Auth has determined user state.
         // This is the SOLE trigger for the initial module load based on auth status.
-        Auth.onAuthReady(() => {
+        Auth.onAuthReady((isLoggedIn, isAdmin, currentUser) => {
             if (!this._isInitialAuthReady) {
                 this._isInitialAuthReady = true; // Mark as done for first load
 
                 // Update header UI based on the resolved user
-                this.updateUserHeaderUI(this.auth.currentUser);
+                this.updateUserHeaderUI(currentUser);
                 // Update nav dropdown based on resolved admin status
-                this.updateNavAdminDropdown();
+                this.updateNavAdminDropdown(); // This uses Utils.isAdmin() which is set by Auth.onAuthStateChanged
 
                 const lastActiveModule = localStorage.getItem('lastActiveModule');
-                if (Auth.isLoggedIn() && lastActiveModule && lastActiveModule !== 'home') {
+                if (isLoggedIn && lastActiveModule && lastActiveModule !== 'home') {
                     // If logged in and had a last module, try to load it.
-                    // The module itself will perform access checks.
-                    this.loadModule(lastActiveModule);
+                    // Pass the definitive state here.
+                    this.loadModule(lastActiveModule, isLoggedIn, isAdmin, currentUser);
                 } else {
                     // Otherwise, load the home module.
-                    this.loadModule('home');
+                    // Pass the definitive state here.
+                    this.loadModule('home', isLoggedIn, isAdmin, currentUser);
                 }
             } else {
                 // For subsequent auth state changes (e.g., after login/logout triggered by user actions),
                 // just update UI. The loadModule call above handles initial page logic.
-                this.updateUserHeaderUI(this.auth.currentUser);
+                this.updateUserHeaderUI(currentUser);
                 this.updateNavAdminDropdown();
             }
         });
@@ -98,13 +99,14 @@ const Main = {
             if (this.currentModule && ['users', 'adminData', 'priceBook'].includes(this.currentModule)) {
                 if (!Utils.isAdmin()) {
                      // If user was in an admin module and is no longer admin, redirect to home
-                    this.loadModule('home');
+                    this.loadModule('home', Auth.isLoggedIn(), Utils.isAdmin(), Auth.getCurrentUser());
                 } else {
                      // If user becomes admin while on an admin-related page, refresh it
-                    this.loadModule(this.currentModule);
+                    this.loadModule(this.currentModule, Auth.isLoggedIn(), Utils.isAdmin(), Auth.getCurrentUser());
                 }
             }
         });
+        // Important: No direct loadModule call here, must wait for Auth.onAuthReady.
     },
 
     /**
@@ -117,9 +119,14 @@ const Main = {
 
     /**
      * Loads a specified application module into the content area.
+     *
      * @param {string} moduleName - The name of the module to load ('home', 'customers', etc.).
+     * @param {boolean} [isLoggedIn] - Optional: The current login status.
+     * @param {boolean} [isAdmin] - Optional: The current admin status.
+     * @param {object|null} [currentUser] - Optional: The current Firebase User object.
+     * These optional parameters are primarily passed from Auth.onAuthReady for the initial load.
      */
-    loadModule: function(moduleName) {
+    loadModule: function(moduleName, isLoggedIn = Auth.isLoggedIn(), isAdmin = Utils.isAdmin(), currentUser = Auth.getCurrentUser()) {
         // Cleanup the previously loaded module if any
         if (this.currentModule && this.moduleDestroyers[this.currentModule]) {
             this.moduleDestroyers[this.currentModule]();
@@ -128,8 +135,6 @@ const Main = {
         // Hide all module content areas first
         document.querySelectorAll('.module-content-area').forEach(div => {
             div.classList.add('hidden'); // Hide all module divs
-            // IMPORTANT: Do NOT clear innerHTML of ALL divs here.
-            // Only the *currently active* module's div will be cleared below.
         });
 
         // Deactivate all nav links first (removes active styling)
@@ -174,7 +179,7 @@ const Main = {
             } else {
                 console.error(`Specific content div '${moduleName}-module-content' not found.`);
                 Utils.showMessage("Internal error: Module content area missing. Redirected to Home.", "error");
-                this.loadModule('home');
+                this.loadModule('home', isLoggedIn, isAdmin, currentUser); // Recurse with home module
                 return;
             }
 
@@ -182,29 +187,27 @@ const Main = {
             const renderMethodName = `render${moduleName.charAt(0).toUpperCase() + moduleName.slice(1).replace('-', '')}UI`;
 
             if (typeof this.moduleInstances[moduleName][renderMethodName] === 'function') {
-                // Pass the moduleContentDiv, current Auth state, and Admin status
-                // This ensures the modules render with the definitive, resolved state.
+                // Pass the moduleContentDiv, and the explicit Auth state to the module's render function
                 this.moduleInstances[moduleName][renderMethodName](
                     moduleContentDiv,
-                    Auth.isLoggedIn(),
-                    Utils.isAdmin(),
-                    Auth.getCurrentUser() // Pass the actual user object
+                    isLoggedIn,
+                    isAdmin,
+                    currentUser
                 );
             } else {
                 console.error(`Render method "${renderMethodName}" not found for module "${moduleName}".`);
-                this.loadModule('home'); // Fallback to home if render method is missing
+                this.loadModule('home', isLoggedIn, isAdmin, currentUser); // Recurse with home module
                 Utils.showMessage("Error loading module. Redirected to Home.", "error");
             }
         } else {
             console.error(`Module "${moduleName}" not found.`);
-            this.loadModule('home'); // Fallback to home if module doesn't exist
+            this.loadModule('home', isLoggedIn, isAdmin, currentUser); // Recurse with home module
             Utils.showMessage("Module not found. Redirected to Home.", "error");
         }
     },
 
     /**
      * Updates the user info in the header (display name/email and logout button).
-     * This is called by Auth.onAuthReady and by Utils.onAdminStatusChange.
      * @param {object|null} currentUser - The Firebase User object or null.
      */
     updateUserHeaderUI: function(currentUser) {
@@ -229,12 +232,11 @@ const Main = {
 
     /**
      * Updates the visibility of the Admin navigation dropdown based on user role.
-     * This is called by Auth.onAuthReady and by Utils.onAdminStatusChange.
      */
     updateNavAdminDropdown: function() {
         const adminNavDropdown = document.getElementById('nav-admin-dropdown');
         if (adminNavDropdown) {
-            if (Utils.isAdmin()) {
+            if (Utils.isAdmin()) { // Utils.isAdmin() is already synchronized by Auth.onAuthStateChanged -> Utils.updateAdminStatus
                 adminNavDropdown.classList.remove('hidden');
             } else {
                 adminNavDropdown.classList.add('hidden');
