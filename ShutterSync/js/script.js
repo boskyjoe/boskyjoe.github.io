@@ -212,25 +212,21 @@ function showModule(moduleName) {
 
     // Load data specific to the module when it becomes active
     if (moduleName === 'customers') {
-        initializeCustomersTabulator(); // Ensure Tabulator is initialized
-        loadCustomers();
+        initializeCustomersTabulator(); // This will now handle triggering loadCustomers via tableBuilt
     } else if (moduleName === 'opportunities') {
-        initializeOpportunitiesTabulator(); // Ensure Tabulator is initialized
-        loadOpportunities();
+        initializeOpportunitiesTabulator(); // This will now handle triggering loadOpportunities via tableBuilt
     } else if (moduleName === 'dashboard') {
         loadDashboardStats();
     } else if (moduleName === 'admin') {
         // By default, show countriesStatesSection in admin
         showAdminSubsection('countriesStates');
-        // Initialize Tabulators for admin sections *before* loading data
+        // Initialize Tabulators for admin sections
+        // These calls will now indirectly trigger their respective load functions via tableBuilt
         initializeCountriesStatesTabulator();
         initializeCurrenciesTabulator();
         initializePriceBooksTabulator();
 
-        loadCountriesStates();
-        loadCurrencies();
-        loadPriceBooks();
-        loadAppSettings();
+        loadAppSettings(); // This one doesn't use a Tabulator, so it's fine
     }
 }
 
@@ -431,6 +427,11 @@ function initializeCustomersTabulator() {
             // console.log("Row Clicked:", row.getData());
             // You could open a detailed view modal here if needed
         },
+        // *** ADD THIS tableBuilt CALLBACK ***
+        tableBuilt: function() {
+            console.log("Customers Tabulator built, loading data...");
+            loadCustomers(); // Now safely load data after table is built
+        }
     });
 }
 
@@ -631,6 +632,11 @@ function initializeOpportunitiesTabulator() {
             },
         ],
         placeholder: "No Opportunity Data Available",
+        // *** ADD THIS tableBuilt CALLBACK ***
+        tableBuilt: function() {
+            console.log("Opportunities Tabulator built, loading data...");
+            loadOpportunities(); // Now safely load data after table is built
+        }
     });
 }
 
@@ -882,6 +888,11 @@ function initializeCountriesStatesTabulator() {
             },
         ],
         placeholder: "No Countries & States Data Available",
+        // *** ADD THIS tableBuilt CALLBACK ***
+        tableBuilt: function() {
+            console.log("Countries & States Tabulator built, loading data...");
+            loadCountriesStates(); // Now safely load data after table is built
+        }
     });
 }
 
@@ -1034,6 +1045,11 @@ function initializeCurrenciesTabulator() {
             },
         ],
         placeholder: "No Currencies Data Available",
+        // *** ADD THIS tableBuilt CALLBACK ***
+        tableBuilt: function() {
+            console.log("Currencies Tabulator built, loading data...");
+            loadCurrencies(); // Now safely load data after table is built
+        }
     });
 }
 
@@ -1169,6 +1185,11 @@ function initializePriceBooksTabulator() {
             },
         ],
         placeholder: "No Price Books Data Available",
+        // *** ADD THIS tableBuilt CALLBACK ***
+        tableBuilt: function() {
+            console.log("Price Books Tabulator built, loading data...");
+            loadPriceBooks(); // Now safely load data after table is built
+        }
     });
 }
 
@@ -1313,5 +1334,6 @@ document.addEventListener('DOMContentLoaded', () => {
     adminOnlyElements.forEach(el => el.style.display = 'none'); // Hide admin elements initially
     
     // NO LONGER call initializeTabulator functions here.
-    // They will be called by showModule when their respective sections are activated.
+    // They will be called by showModule when their respective sections are activated,
+    // and then the load functions will be triggered by tableBuilt.
 });
