@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShutterSync CRM</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Grid.js CSS -->
+    <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+    <!-- Custom Stylesheet - CRITICAL: Ensure this path is correct -->
+    <link rel="stylesheet" href="./css/style.css">
+    <style>
+        body {
+            /* font-family and background-color moved to css/style.css */
+        }
+        /* Custom styles for dropdown to ensure it's above other content */
+        .relative.group:hover .absolute {
+            display: block;
+        }
+        /* Grid.js header styling is now in css/style.css */
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <!-- Header -->
+    <header class="bg-gray-800 text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">ShutterSync CRM</h1>
+            <nav>
+                <ul class="flex space-x-4 items-center">
+                    <li><a href="#" data-module="home" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">Home</a></li>
+                    <li><a href="#" data-module="customers" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">Customers</a></li>
+                    <li><a href="#" data-module="opportunities" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">Opportunities</a></li>
+                    <!-- User & Admin Dropdown -->
+                    <li class="relative group">
+                        <button id="nav-admin-dropdown" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center">
+                            <i class="fas fa-tools mr-2"></i> Admin Tools <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                        </button>
+                        <div class="absolute hidden bg-gray-800 text-white mt-2 py-2 rounded-md shadow-lg z-50">
+                            <a href="#" data-module="users" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">User Management</a>
+                            <a href="#" data-module="adminData" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">App Metadata</a>
+                            <a href="#" data-module="priceBook" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Price Book</a>
+                        </div>
+                    </li>
+                </ul>
+            </nav>
+            <div class="flex items-center space-x-4">
+                <span id="user-info-span" class="text-gray-300 text-sm hidden"></span>
+                <div id="login-register-placeholder">
+                    <!-- This will be dynamically controlled by JS. The login button is on the home page. -->
+                </div>
+                <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors duration-200 hidden">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="container mx-auto p-6 flex-grow">
+        <!-- Module content will be loaded dynamically here -->
+        <div id="home-module-content" class="module-content-area hidden"></div>
+        <div id="customers-module-content" class="module-content-area hidden"></div>
+        <div id="opportunities-module-content" class="module-content-area hidden"></div>
+        <div id="users-module-content" class="module-content-area hidden"></div>
+        <div id="adminData-module-content" class="module-content-area hidden"></div>
+        <div id="priceBook-module-content" class="module-content-area hidden"></div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white p-4 text-center text-sm shadow-inner">
+        <div class="container mx-auto">
+            &copy; 2025 ShutterSync CRM. All rights reserved.
+        </div>
+    </footer>
+
+    <!-- Grid.js JavaScript -->
+    <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
+
+    <!-- Firebase SDK (Version aligned with Auth, Firestore imports) -->
+    <script type="module">
+        // Import all necessary JS modules
+        import Main from './js/main.js'; // Ensure this path is correct relative to index.html
+        import { Home } from './js/home.js';
+        import { Customers } from './js/customers.js';
+        import { Opportunities } from './js/opportunities.js';
+        import { Users } from './js/users.js';
+        import { AdminData } from './js/admin_data.js';
+        import { PriceBook } from './js/price_book.js';
+
+        // Firebase JS SDK libraries
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // IMPORTANT: Firebase configuration - Hardcoded for GitHub/standard web environments
+        // Use the config details you retrieved from your Firebase project settings
+        const firebaseConfig = {
+            apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
+            authDomain: "shuttersync-96971.firebaseapp.com",
+            projectId: "shuttersync-96971",
+            storageBucket: "shuttersync-96971.firebasestorage.app",
+            messagingSenderId: "10782416018",
+            appId: "1:10782416018:web:361db5572882a62f291a4b",
+            measurementId: "G-T0W9CES4D3"
+        };
+        // In a GitHub Pages environment, there is no '__app_id' global variable,
+        // so we can define it or set a default if the app logic needs it.
+        const appId = "shuttersync-crm"; // A suitable default for the app ID in this context
+
+
+        // Initialize Firebase services
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // *** CRITICAL FIX: Expose Main globally BEFORE any global event listeners use it ***
+        window.Main = Main;
+
+        // Initialise Main module asynchronously using an IIFE
+        // This will now wait for Auth.init's promise to resolve before proceeding.
+        (async () => {
+            console.log("Starting Main initialization (will await Auth ready state)...");
+            await Main.init(app, db, auth, appId);
+            console.log("Main initialization complete and initial auth state processed.");
+        })();
+
+
+        // Set up module destroyers (can be here as they don't depend on auth state to be set)
+        // Ensure Main is available when setModuleDestroyers is called.
+        Main.setModuleDestroyers({
+            home: Home.destroy,
+            customers: Customers.destroy,
+            opportunities: Opportunities.destroy,
+            users: Users.destroy,
+            adminData: AdminData.destroy,
+            priceBook: PriceBook.destroy
+        });
+
+        // Add event listeners for main navigation links
+        document.querySelectorAll('nav a[data-module]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                const moduleName = e.target.dataset.module;
+                // These calls will now use the already-resolved auth state from Main.init
+                window.Main.loadModule(moduleName);
+            });
+        });
+
+        // Toggle admin dropdown visibility
+        const adminDropdownButton = document.querySelector('#nav-admin-dropdown');
+        if (adminDropdownButton) {
+            adminDropdownButton.addEventListener('click', function(event) {
+                event.stopPropagation(); // Prevent click from bubbling up and immediately closing
+                const dropdownContent = this.nextElementSibling;
+                if (dropdownContent && dropdownContent.classList.contains('absolute')) {
+                    dropdownContent.classList.toggle('hidden');
+                }
+            });
+            // Close dropdown if clicked anywhere outside of it
+            document.addEventListener('click', function(event) {
+                const dropdownContent = adminDropdownButton.nextElementSibling;
+                if (dropdownContent && dropdownContent.classList.contains('absolute') && !adminDropdownButton.contains(event.target) && !dropdownContent.contains(event.target)) {
+                    dropdownContent.classList.add('hidden');
+                }
+            });
+        }
+
+        // Logout button listener - NOW window.Main.logout() is guaranteed to exist
+        document.getElementById('logout-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.Main.logout(); // Call Main's public logout method
+        });
+    </script>
+</body>
+</html>
