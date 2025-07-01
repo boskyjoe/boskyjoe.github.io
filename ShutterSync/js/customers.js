@@ -16,6 +16,7 @@ export const Customers = {
     // Bound event handlers for grid buttons to allow proper removal
     handleEditButtonClickBound: null,
     handleDeleteButtonClickBound: null,
+    countriesCache: new Map(), // Cache for countries from app_metadata
 
     /**
      * Initializes the Customers module.
@@ -32,7 +33,8 @@ export const Customers = {
         // Ensure grid and listener references are null on init for a clean slate
         this.customersGrid = null;
         this.unsubscribeCustomersSnapshot = null;
-        console.log("Customers module initialized. customersGrid and unsubscribeCustomersSnapshot reset to null.");
+        this.countriesCache = new Map(); // Initialize countriesCache here
+        console.log("Customers module initialized. customersGrid, unsubscribeCustomersSnapshot, and countriesCache reset.");
     },
 
     /**
@@ -42,7 +44,7 @@ export const Customers = {
      * @param {boolean} isAdmin - The current admin status.
      * @param {object|null} currentUser - The current Firebase User object, or null if logged out.
      */
-    renderCustomersUI: function(moduleContentElement, isLoggedIn, isAdmin, currentUser) {
+    renderCustomersUI: async function(moduleContentElement, isLoggedIn, isAdmin, currentUser) { // Made async to await populateCountrySelect
         console.log("Customers: renderCustomersUI called. isLoggedIn:", isLoggedIn, "isAdmin:", isAdmin);
         if (!isLoggedIn) {
             moduleContentElement.innerHTML = this.Utils.getNotLoggedInHtml();
@@ -124,6 +126,12 @@ export const Customers = {
                             <input type="text" id="zip" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                         </div>
                         <div class="mb-4">
+                            <label for="country-select" class="block text-gray-700 text-sm font-bold mb-2">Country:</label>
+                            <select id="country-select" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                                <option value="">Select Country</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
                             <label for="additional-details" class="block text-gray-700 text-sm font-bold mb-2">Additional Details:</label>
                             <textarea id="additional-details" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" rows="3"></textarea>
                         </div>
@@ -166,8 +174,48 @@ export const Customers = {
             </div>
         `;
 
+        await this.populateCountrySelect(); // Populate country dropdown
         this.attachEventListeners(isAdmin);
         this.setupRealtimeCustomersListener(isAdmin, currentUser); // Pass isAdmin and currentUser
+    },
+
+    /**
+     * Populates the country select dropdown from Firestore.
+     */
+    populateCountrySelect: async function() {
+        console.log("Customers: Populating country select dropdown.");
+        const countrySelect = document.getElementById('country-select');
+        if (!countrySelect) return;
+
+        countrySelect.innerHTML = '<option value="">Select Country</option>'; // Clear existing options
+
+        try {
+            const appMetadataRef = this.Utils.getAppMetadataCollectionRef();
+            const countriesStatesDocRef = this.Utils.doc(appMetadataRef, 'countries_states');
+            const docSnap = await this.Utils.getDoc(countriesStatesDocRef);
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (data && data.countries && Array.isArray(data.countries)) {
+                    this.countriesCache.clear(); // Clear cache before repopulating
+                    data.countries.forEach(country => {
+                        const option = document.createElement('option');
+                        option.value = country;
+                        option.textContent = country;
+                        countrySelect.appendChild(option);
+                        this.countriesCache.set(country, country); // Cache country name
+                    });
+                    console.log(`Customers: Populated country select with ${data.countries.length} countries.`);
+                } else {
+                    console.warn("Customers: 'countries' array not found in app_metadata/countries_states document.");
+                }
+            } else {
+                console.warn("Customers: app_metadata/countries_states document not found. Cannot populate countries.");
+                this.Utils.showMessage("Country data not available. Please ensure '/app_metadata/countries_states' exists in Firestore.", "warning");
+            }
+        } catch (error) {
+            this.Utils.handleError(error, "populating country select");
+        }
     },
 
     /**
@@ -253,6 +301,7 @@ export const Customers = {
             { id: 'city', name: 'City' },
             { id: 'state', name: 'State' },
             { id: 'zip', name: 'Zip Code' },
+            { id: 'country', name: 'Country' }, // New column
             { id: 'additionalDetails', name: 'Additional Details' },
             { id: 'customerSource', name: 'Customer Source' },
             { id: 'activeStatus', name: 'Active' },
@@ -261,7 +310,7 @@ export const Customers = {
                 formatter: (cell, row) => {
                     const customerId = row.cells[0].data; // Assuming ID is the first cell
                     // Adjust index for createdBy UID based on new columns
-                    const createdById = row.cells[14].data; // Now at index 14 (0-indexed)
+                    const createdById = row.cells[15].data; // Now at index 15 (0-indexed)
 
                     // Check if the current user created this customer or is an admin
                     const isCreatorOrAdmin = isAdmin || (currentUser && createdById === currentUser.uid);
@@ -291,6 +340,7 @@ export const Customers = {
             c.city,
             c.state,
             c.zip,
+            c.country, // New field
             c.additionalDetails,
             c.customerSource,
             c.activeStatus,
@@ -417,6 +467,7 @@ export const Customers = {
                 document.getElementById('city').value = data.city || '';
                 document.getElementById('state').value = data.state || '';
                 document.getElementById('zip').value = data.zip || '';
+                document.getElementById('country-select').value = data.country || ''; // New field
                 document.getElementById('additional-details').value = data.additionalDetails || '';
                 document.getElementById('customer-source').value = data.customerSource || '';
                 document.getElementById('active-status').value = data.activeStatus || 'Active';
@@ -457,6 +508,7 @@ export const Customers = {
         const city = document.getElementById('city').value;
         const state = document.getElementById('state').value;
         const zip = document.getElementById('zip').value;
+        const country = document.getElementById('country-select').value; // New field
         const additionalDetails = document.getElementById('additional-details').value;
         const customerSource = document.getElementById('customer-source').value;
         const activeStatus = document.getElementById('active-status').value;
@@ -479,6 +531,7 @@ export const Customers = {
             city,
             state,
             zip,
+            country, // New field
             additionalDetails,
             customerSource,
             activeStatus,
@@ -572,6 +625,15 @@ export const Customers = {
             console.log("Customers: Grid.js instance destroyed and reference nulled.");
         } else {
             console.log("Customers: No Grid.js instance to destroy.");
+        }
+
+        // Clear countries cache
+        console.log("Customers: Checking countriesCache before clear. Is it defined?", !!this.countriesCache);
+        if (this.countriesCache) {
+            this.countriesCache.clear();
+            console.log("Customers: Countries cache cleared.");
+        } else {
+            console.warn("Customers: countriesCache was undefined during destroy. Cannot clear.");
         }
 
         // Remove event listeners from static elements that might persist
