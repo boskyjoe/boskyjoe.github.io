@@ -13,6 +13,8 @@ export const Customers = {
     customersGrid: null, // Stores the Grid.js instance
     customersCollectionRef: null,
     unsubscribeCustomersSnapshot: null, // To store the unsubscribe function for real-time listener
+    // No need to declare handleEditButtonClickBound/handleDeleteButtonClickBound here,
+    // as they are defined within attachGridButtonListeners.
 
     /**
      * Initializes the Customers module.
@@ -25,7 +27,11 @@ export const Customers = {
         this.auth = firebaseAuth;
         this.Utils = utils;
         this.customersCollectionRef = this.Utils.getCustomersCollectionRef();
-        console.log("Customers module initialized.");
+
+        // *** CRITICAL FIX: Ensure grid and listener references are null on init ***
+        this.customersGrid = null;
+        this.unsubscribeCustomersSnapshot = null;
+        console.log("Customers module initialized. customersGrid and unsubscribeCustomersSnapshot reset to null.");
     },
 
     /**
