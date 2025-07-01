@@ -1,9 +1,9 @@
-// Firebase configuration: (from your input)
+// Firebase configuration:
 const firebaseConfig = {
     apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
-    storageBucket: "shuttersync-96971.firebasestorage.app",
+    storageBucket: "shuttersync-96971.firebase-storage.app",
     messagingSenderId: "10782416018",
     appId: "1:10782416018:web:361db5572882a62f291a4b",
     measurementId: "G-T0W9CES4D3"
@@ -14,7 +14,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Firestore Collection References (matching your rules)
+// Firestore Collection References
 const usersCollection = db.collection('users_data');
 const customersCollection = db.collection('customers');
 const opportunitiesCollection = db.collection('opportunities');
@@ -134,6 +134,14 @@ auth.onAuthStateChanged(async (user) => {
             }
         });
 
+        // Initialize ALL Tabulators as soon as the user is authenticated.
+        // This ensures the global variables are set up.
+        initializeCustomersTabulator();
+        initializeOpportunitiesTabulator();
+        initializeCountriesStatesTabulator();
+        initializeCurrenciesTabulator();
+        initializePriceBooksTabulator();
+
         // Load initial data for the default module (Dashboard)
         showModule('dashboard');
         loadDashboardStats();
@@ -210,23 +218,20 @@ function showModule(moduleName) {
         }
     });
 
-    // Load data specific to the module when it becomes active
+    // Load data specific to the module when it becomes active.
+    // Tabulators are already initialized from onAuthStateChanged.
     if (moduleName === 'customers') {
-        initializeCustomersTabulator(); // This will now handle triggering loadCustomers via tableBuilt
+        loadCustomers();
     } else if (moduleName === 'opportunities') {
-        initializeOpportunitiesTabulator(); // This will now handle triggering loadOpportunities via tableBuilt
+        loadOpportunities();
     } else if (moduleName === 'dashboard') {
         loadDashboardStats();
     } else if (moduleName === 'admin') {
-        // By default, show countriesStatesSection in admin
-        showAdminSubsection('countriesStates');
-        // Initialize Tabulators for admin sections
-        // These calls will now indirectly trigger their respective load functions via tableBuilt
-        initializeCountriesStatesTabulator();
-        initializeCurrenciesTabulator();
-        initializePriceBooksTabulator();
-
-        loadAppSettings(); // This one doesn't use a Tabulator, so it's fine
+        showAdminSubsection('countriesStates'); // Default admin subsection
+        loadCountriesStates(); // Load data for the default subsection
+        loadCurrencies(); // Load data for currencies (in case user switches to it)
+        loadPriceBooks(); // Load data for price books (in case user switches to it)
+        loadAppSettings();
     }
 }
 
@@ -357,7 +362,7 @@ customerForm.addEventListener('submit', async (e) => {
             alert('Customer added successfully!');
         }
         customerModal.style.display = 'none';
-        loadCustomers(); // Reload list
+        loadCustomers(); // Reload list after save
         loadDashboardStats(); // Update dashboard
     } catch (error) {
         console.error('Error saving customer:', error);
@@ -367,10 +372,11 @@ customerForm.addEventListener('submit', async (e) => {
 
 /**
  * Initializes the Tabulator grid for Customers.
- * This should be called once after user authentication.
+ * This should be called once (e.g., onAuthStateChanged).
  */
 function initializeCustomersTabulator() {
     if (customersTabulator) return; // Prevent re-initialization
+    console.log("Initializing Customers Tabulator..."); // For debugging
 
     customersTabulator = new Tabulator("#customersTable", {
         layout: "fitColumns", // Adjust columns to fit table width
@@ -427,23 +433,20 @@ function initializeCustomersTabulator() {
             // console.log("Row Clicked:", row.getData());
             // You could open a detailed view modal here if needed
         },
-        // *** ADD THIS tableBuilt CALLBACK ***
-        tableBuilt: function() {
-            console.log("Customers Tabulator built, loading data...");
-            loadCustomers(); // Now safely load data after table is built
-        }
+        // tableBuilt is not needed here as initialization is done early and load is called explicitly
     });
 }
 
 
 async function loadCustomers() {
-    if (!currentUser || !customersTabulator) {
-        console.warn("Customers Tabulator not initialized or user not logged in. Skipping load.");
+    // Robust check: Ensure currentUser exists, customersTabulator is assigned, and it has Tabulator methods.
+    if (!currentUser || !customersTabulator || typeof customersTabulator.showLoader !== 'function') {
+        console.warn("Customers Tabulator not fully initialized or user not logged in. Skipping load.");
         return;
     }
     
     customersTabulator.setData([]); // Clear data first
-    customersTabulator.showLoader();
+    customersTabulator.showLoader(); // Show loader while fetching
 
     try {
         let query = customersCollection;
@@ -461,11 +464,7 @@ async function loadCustomers() {
         });
 
         customersTabulator.setData(customerData); // Load data into Tabulator
-        customersTabulator.hideLoader();
-
-        if (customerData.length === 0) {
-            // Tabulator automatically handles the "No Data" message via its placeholder option
-        }
+        customersTabulator.hideLoader(); // Hide loader
 
     } catch (error) {
         console.error('Error loading customers:', error);
@@ -515,7 +514,7 @@ async function deleteCustomer(id) {
     }
 }
 
-// --- Opportunity Module Functions (Initial Placeholder - will be converted to Tabulator similarly) ---
+// --- Opportunity Module Functions ---
 addOpportunityBtn.addEventListener('click', () => {
     if (!currentUser) {
         alert('Please sign in to add opportunities.');
@@ -568,7 +567,7 @@ opportunityForm.addEventListener('submit', async (e) => {
             alert('Opportunity added successfully!');
         }
         opportunityModal.style.display = 'none';
-        loadOpportunities(); // Reload list
+        loadOpportunities(); // Reload list after save
         loadDashboardStats(); // Update dashboard
     } catch (error) {
         console.error('Error saving opportunity:', error);
@@ -578,10 +577,11 @@ opportunityForm.addEventListener('submit', async (e) => {
 
 /**
  * Initializes the Tabulator grid for Opportunities.
- * This should be called once after user authentication.
+ * This should be called once (e.g., onAuthStateChanged).
  */
 function initializeOpportunitiesTabulator() {
     if (opportunitiesTabulator) return; // Prevent re-initialization
+    console.log("Initializing Opportunities Tabulator..."); // For debugging
 
     opportunitiesTabulator = new Tabulator("#opportunitiesTable", {
         layout: "fitColumns", // Adjust columns to fit table width
@@ -632,21 +632,18 @@ function initializeOpportunitiesTabulator() {
             },
         ],
         placeholder: "No Opportunity Data Available",
-        // *** ADD THIS tableBuilt CALLBACK ***
-        tableBuilt: function() {
-            console.log("Opportunities Tabulator built, loading data...");
-            loadOpportunities(); // Now safely load data after table is built
-        }
+        // tableBuilt is not needed here as initialization is done early and load is called explicitly
     });
 }
 
 async function loadOpportunities() {
-    if (!currentUser || !opportunitiesTabulator) {
-        console.warn("Opportunities Tabulator not initialized or user not logged in. Skipping load.");
+    // Robust check: Ensure currentUser exists, opportunitiesTabulator is assigned, and it has Tabulator methods.
+    if (!currentUser || !opportunitiesTabulator || typeof opportunitiesTabulator.showLoader !== 'function') {
+        console.warn("Opportunities Tabulator not fully initialized or user not logged in. Skipping load.");
         return;
     }
-    opportunitiesTabulator.setData([]);
-    opportunitiesTabulator.showLoader();
+    opportunitiesTabulator.setData([]); // Clear data first
+    opportunitiesTabulator.showLoader(); // Show loader while fetching
 
     try {
         let query = opportunitiesCollection;
@@ -656,7 +653,7 @@ async function loadOpportunities() {
 
         const snapshot = await query.orderBy('expectedCloseDate').get();
         
-        // Fetch customer names for display
+        // Fetch customer names for display to denormalize the data for the table
         const customerDocs = await customersCollection.get();
         const customersMap = new Map();
         customerDocs.forEach(doc => {
@@ -674,14 +671,14 @@ async function loadOpportunities() {
             });
         });
 
-        opportunitiesTabulator.setData(opportunityData);
-        opportunitiesTabulator.hideLoader();
+        opportunitiesTabulator.setData(opportunityData); // Load data into Tabulator
+        opportunitiesTabulator.hideLoader(); // Hide loader
 
     } catch (error) {
         console.error('Error loading opportunities:', error);
-        opportunitiesTabulator.setData([]);
+        opportunitiesTabulator.setData([]); // Clear data on error
         opportunitiesTabulator.hideLoader();
-        opportunitiesTabulator.showLoader("Error loading data: " + error.message, "error");
+        opportunitiesTabulator.showLoader("Error loading data: " + error.message, "error"); // Show error message in loader
     }
 }
 
@@ -834,10 +831,11 @@ document.querySelectorAll('.admin-form .cancel-edit-btn').forEach(button => {
 // Countries & States Management
 /**
  * Initializes the Tabulator grid for Countries & States.
- * This should be called once after user authentication.
+ * This should be called once (e.g., onAuthStateChanged).
  */
 function initializeCountriesStatesTabulator() {
     if (countriesStatesTabulator) return; // Prevent re-initialization
+    console.log("Initializing Countries & States Tabulator..."); // For debugging
 
     countriesStatesTabulator = new Tabulator("#countriesStatesTable", {
         layout: "fitColumns",
@@ -866,14 +864,14 @@ function initializeCountriesStatesTabulator() {
                     const editBtn = document.createElement('span');
                     editBtn.innerHTML = editIcon;
                     editBtn.addEventListener('click', (event) => {
-                        event.stopPropagation();
+                        event.stopPropagation(); // Prevent row click from firing
                         editCountryState(index, data); // Pass index and data
                     });
 
                     const deleteBtn = document.createElement('span');
                     deleteBtn.innerHTML = deleteIcon;
                     deleteBtn.addEventListener('click', (event) => {
-                        event.stopPropagation();
+                        event.stopPropagation(); // Prevent row click from firing
                         deleteCountryState(index);
                     });
 
@@ -888,38 +886,35 @@ function initializeCountriesStatesTabulator() {
             },
         ],
         placeholder: "No Countries & States Data Available",
-        // *** ADD THIS tableBuilt CALLBACK ***
-        tableBuilt: function() {
-            console.log("Countries & States Tabulator built, loading data...");
-            loadCountriesStates(); // Now safely load data after table is built
-        }
+        // tableBuilt is not needed here as initialization is done early and load is called explicitly
     });
 }
 
 async function loadCountriesStates() {
-    if (currentUserRole !== 'Admin' || !countriesStatesTabulator) {
-        console.warn("Countries States Tabulator not initialized or user not admin. Skipping load.");
+    // Robust check: Ensure currentUserRole is Admin, countriesStatesTabulator is assigned, and it has Tabulator methods.
+    if (currentUserRole !== 'Admin' || !countriesStatesTabulator || typeof countriesStatesTabulator.showLoader !== 'function') {
+        console.warn("Countries States Tabulator not fully initialized or user not admin. Skipping load.");
         return;
     }
-    countriesStatesTabulator.setData([]);
-    countriesStatesTabulator.showLoader();
+    countriesStatesTabulator.setData([]); // Clear data first
+    countriesStatesTabulator.showLoader(); // Show loader while fetching
 
     try {
         const doc = await countriesStatesCollection.get();
         const countriesData = doc.data();
         let dataForTabulator = [];
         if (countriesData && countriesData.countries && countriesData.countries.length > 0) {
-            // Add a temporary index to each item for Tabulator to refer back to
+            // Add a temporary index to each item for Tabulator to refer back to when editing/deleting
             dataForTabulator = countriesData.countries.map((country, idx) => ({ ...country, _index: idx }));
         }
-        countriesStatesTabulator.setData(dataForTabulator);
-        countriesStatesTabulator.hideLoader();
+        countriesStatesTabulator.setData(dataForTabulator); // Load data into Tabulator
+        countriesStatesTabulator.hideLoader(); // Hide loader
 
     } catch (error) {
         console.error('Error loading countries and states:', error);
-        countriesStatesTabulator.setData([]);
+        countriesStatesTabulator.setData([]); // Clear data on error
         countriesStatesTabulator.hideLoader();
-        countriesStatesTabulator.showLoader("Error loading data: " + error.message, "error");
+        countriesStatesTabulator.showLoader("Error loading data: " + error.message, "error"); // Show error message in loader
     }
 }
 
@@ -952,7 +947,7 @@ countryStateForm.addEventListener('submit', async (e) => {
         await countriesStatesCollection.set({ countries: countriesArray }); // Overwrite the entire array
         countryStateForm.reset();
         countryStateIdInput.value = '';
-        loadCountriesStates();
+        loadCountriesStates(); // Reload list after save
         populateCountriesDropdown(); // Refresh customer country dropdown
     } catch (error) {
         console.error('Error saving country/state:', error);
@@ -982,7 +977,7 @@ async function deleteCountryState(index) {
 
             await countriesStatesCollection.set({ countries: countriesArray });
             alert('Country deleted successfully!');
-            loadCountriesStates();
+            loadCountriesStates(); // Reload list after delete
             populateCountriesDropdown(); // Refresh customer country dropdown
         } catch (error) {
             console.error('Error deleting country/state:', error);
@@ -995,10 +990,11 @@ async function deleteCountryState(index) {
 // Currencies Management
 /**
  * Initializes the Tabulator grid for Currencies.
- * This should be called once after user authentication.
+ * This should be called once (e.g., onAuthStateChanged).
  */
 function initializeCurrenciesTabulator() {
     if (currenciesTabulator) return; // Prevent re-initialization
+    console.log("Initializing Currencies Tabulator..."); // For debugging
 
     currenciesTabulator = new Tabulator("#currenciesTable", {
         layout: "fitColumns",
@@ -1045,21 +1041,18 @@ function initializeCurrenciesTabulator() {
             },
         ],
         placeholder: "No Currencies Data Available",
-        // *** ADD THIS tableBuilt CALLBACK ***
-        tableBuilt: function() {
-            console.log("Currencies Tabulator built, loading data...");
-            loadCurrencies(); // Now safely load data after table is built
-        }
+        // tableBuilt is not needed here as initialization is done early and load is called explicitly
     });
 }
 
 async function loadCurrencies() {
-    if (currentUserRole !== 'Admin' || !currenciesTabulator) {
-        console.warn("Currencies Tabulator not initialized or user not admin. Skipping load.");
+    // Robust check: Ensure currentUserRole is Admin, currenciesTabulator is assigned, and it has Tabulator methods.
+    if (currentUserRole !== 'Admin' || !currenciesTabulator || typeof currenciesTabulator.showLoader !== 'function') {
+        console.warn("Currencies Tabulator not fully initialized or user not admin. Skipping load.");
         return;
     }
-    currenciesTabulator.setData([]);
-    currenciesTabulator.showLoader();
+    currenciesTabulator.setData([]); // Clear data first
+    currenciesTabulator.showLoader(); // Show loader while fetching
 
     try {
         const snapshot = await currenciesCollection.orderBy('name').get();
@@ -1067,13 +1060,13 @@ async function loadCurrencies() {
         snapshot.forEach(doc => {
             dataForTabulator.push({ id: doc.id, ...doc.data() });
         });
-        currenciesTabulator.setData(dataForTabulator);
-        currenciesTabulator.hideLoader();
+        currenciesTabulator.setData(dataForTabulator); // Load data into Tabulator
+        currenciesTabulator.hideLoader(); // Hide loader
     } catch (error) {
         console.error('Error loading currencies:', error);
-        currenciesTabulator.setData([]);
+        currenciesTabulator.setData([]); // Clear data on error
         currenciesTabulator.hideLoader();
-        currenciesTabulator.showLoader("Error loading data: " + error.message, "error");
+        currenciesTabulator.showLoader("Error loading data: " + error.message, "error"); // Show error message in loader
     }
 }
 
@@ -1098,7 +1091,7 @@ currencyForm.addEventListener('submit', async (e) => {
         }
         currencyForm.reset();
         currencyIdInput.value = '';
-        loadCurrencies();
+        loadCurrencies(); // Reload list after save
         populateCurrencyDropdown(); // Refresh opportunity currency dropdown
     } catch (error) {
         console.error('Error saving currency:', error);
@@ -1121,8 +1114,8 @@ async function deleteCurrency(id) {
         try {
             await currenciesCollection.doc(id).delete();
             alert('Currency deleted successfully!');
-            loadCurrencies();
-            populateCurrencyDropdown(); // Refresh opportunity currency dropdown
+            loadCurrencies(); // Reload list after delete
+            populateCurrencyDropdown();
         } catch (error) {
             console.error('Error deleting currency:', error);
             alert('Error deleting currency: ' + error.message);
@@ -1133,10 +1126,11 @@ async function deleteCurrency(id) {
 // Price Books Management
 /**
  * Initializes the Tabulator grid for Price Books.
- * This should be called once after user authentication.
+ * This should be called once (e.g., onAuthStateChanged).
  */
 function initializePriceBooksTabulator() {
     if (priceBooksTabulator) return; // Prevent re-initialization
+    console.log("Initializing Price Books Tabulator..."); // For debugging
 
     priceBooksTabulator = new Tabulator("#priceBooksTable", {
         layout: "fitColumns",
@@ -1185,21 +1179,18 @@ function initializePriceBooksTabulator() {
             },
         ],
         placeholder: "No Price Books Data Available",
-        // *** ADD THIS tableBuilt CALLBACK ***
-        tableBuilt: function() {
-            console.log("Price Books Tabulator built, loading data...");
-            loadPriceBooks(); // Now safely load data after table is built
-        }
+        // tableBuilt is not needed here as initialization is done early and load is called explicitly
     });
 }
 
 async function loadPriceBooks() {
-    if (currentUserRole !== 'Admin' || !priceBooksTabulator) {
-        console.warn("Price Books Tabulator not initialized or user not admin. Skipping load.");
+    // Robust check: Ensure currentUserRole is Admin, priceBooksTabulator is assigned, and it has Tabulator methods.
+    if (currentUserRole !== 'Admin' || !priceBooksTabulator || typeof priceBooksTabulator.showLoader !== 'function') {
+        console.warn("Price Books Tabulator not fully initialized or user not admin. Skipping load.");
         return;
     }
-    priceBooksTabulator.setData([]);
-    priceBooksTabulator.showLoader();
+    priceBooksTabulator.setData([]); // Clear data first
+    priceBooksTabulator.showLoader(); // Show loader while fetching
 
     try {
         const snapshot = await priceBooksCollection.orderBy('name').get();
@@ -1207,13 +1198,13 @@ async function loadPriceBooks() {
         snapshot.forEach(doc => {
             dataForTabulator.push({ id: doc.id, ...doc.data() });
         });
-        priceBooksTabulator.setData(dataForTabulator);
-        priceBooksTabulator.hideLoader();
+        priceBooksTabulator.setData(dataForTabulator); // Load data into Tabulator
+        priceBooksTabulator.hideLoader(); // Hide loader
     } catch (error) {
         console.error('Error loading price books:', error);
-        priceBooksTabulator.setData([]);
+        priceBooksTabulator.setData([]); // Clear data on error
         priceBooksTabulator.hideLoader();
-        priceBooksTabulator.showLoader("Error loading data: " + error.message, "error");
+        priceBooksTabulator.showLoader("Error loading data: " + error.message, "error"); // Show error message in loader
     }
 }
 
@@ -1238,7 +1229,7 @@ priceBookForm.addEventListener('submit', async (e) => {
         }
         priceBookForm.reset();
         priceBookIdInput.value = '';
-        loadPriceBooks();
+        loadPriceBooks(); // Reload list after save
         populatePriceBookDropdown(); // Refresh opportunity price book dropdown
     } catch (error) {
         console.error('Error saving price book:', error);
@@ -1261,8 +1252,8 @@ async function deletePriceBook(id) {
         try {
             await priceBooksCollection.doc(id).delete();
             alert('Price Book deleted successfully!');
-            loadPriceBooks();
-            populatePriceBookDropdown(); // Refresh opportunity price book dropdown
+            loadPriceBooks(); // Reload list after delete
+            populatePriceBookDropdown();
         } catch (error) {
             console.error('Error deleting price book:', error);
             alert('Error deleting price book: ' + error.message);
@@ -1333,7 +1324,7 @@ document.addEventListener('DOMContentLoaded', () => {
     userInfoDisplay.style.display = 'none'; // Hide user info until signed in
     adminOnlyElements.forEach(el => el.style.display = 'none'); // Hide admin elements initially
     
-    // NO LONGER call initializeTabulator functions here.
-    // They will be called by showModule when their respective sections are activated,
-    // and then the load functions will be triggered by tableBuilt.
+    // Tabulator initialization functions are now called in onAuthStateChanged
+    // to ensure they are available as soon as a user logs in,
+    // before any specific module is navigated to or form is submitted.
 });
