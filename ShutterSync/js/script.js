@@ -42,7 +42,6 @@ const addCustomerBtn = document.getElementById('addCustomerBtn');
 const customerForm = document.getElementById('customerForm');
 const customerModalTitle = document.getElementById('customerModalTitle');
 const customerIdInput = document.getElementById('customerId');
-// Removed: customersTableBody - Tabulator handles this
 const customerCountrySelect = document.getElementById('customerCountry');
 
 // Opportunity Module Elements
@@ -50,7 +49,6 @@ const addOpportunityBtn = document.getElementById('addOpportunityBtn');
 const opportunityForm = document.getElementById('opportunityForm');
 const opportunityModalTitle = document.getElementById('opportunityModalTitle');
 const opportunityIdInput = document.getElementById('opportunityId');
-// Removed: opportunitiesTableBody - Tabulator handles this
 const opportunityCustomerSelect = document.getElementById('opportunityCustomer');
 const opportunityCurrencySelect = document.getElementById('opportunityCurrency');
 const opportunityPriceBookSelect = document.getElementById('opportunityPriceBook');
@@ -68,17 +66,14 @@ const adminSubsections = document.querySelectorAll('.admin-subsection');
 const countriesStatesSection = document.getElementById('countriesStatesSection');
 const countryStateForm = document.getElementById('countryStateForm');
 const countryStateIdInput = document.getElementById('countryStateId');
-// Removed: countriesStatesTableBody - Tabulator handles this
 
 const currenciesSection = document.getElementById('currenciesSection');
 const currencyForm = document.getElementById('currencyForm');
 const currencyIdInput = document.getElementById('currencyId');
-// Removed: currenciesTableBody - Tabulator handles this
 
 const priceBooksSection = document.getElementById('priceBooksSection');
 const priceBookForm = document.getElementById('priceBookForm');
 const priceBookIdInput = document.getElementById('priceBookId');
-// Removed: priceBooksTableBody - Tabulator handles this
 
 const settingsSection = document.getElementById('settingsSection');
 const appSettingsForm = document.getElementById('appSettingsForm');
@@ -89,6 +84,7 @@ let currentUser = null; // Stores current authenticated user object
 let currentUserRole = 'Guest'; // Stores current user's role
 
 // --- Tabulator Grid Instances ---
+// Declare these globally, but assign them within the initialization functions
 let customersTabulator;
 let opportunitiesTabulator;
 let countriesStatesTabulator;
@@ -137,15 +133,6 @@ auth.onAuthStateChanged(async (user) => {
                 el.style.display = 'none';
             }
         });
-
-        // Initialize Tabulator tables (if not already initialized)
-        // This ensures tables are ready when user logs in
-        initializeCustomersTabulator();
-        initializeOpportunitiesTabulator();
-        initializeCountriesStatesTabulator();
-        initializeCurrenciesTabulator();
-        initializePriceBooksTabulator();
-
 
         // Load initial data for the default module (Dashboard)
         showModule('dashboard');
@@ -442,9 +429,11 @@ function initializeCustomersTabulator() {
 
 
 async function loadCustomers() {
-    if (!currentUser || !customersTabulator) return; // Ensure Tabulator is initialized
+    if (!currentUser || !customersTabulator) {
+        console.warn("Customers Tabulator not initialized or user not logged in. Skipping load.");
+        return;
+    }
     
-    // Show loading placeholder directly in Tabulator
     customersTabulator.setData([]); // Clear data first
     customersTabulator.showLoader();
 
@@ -639,7 +628,10 @@ function initializeOpportunitiesTabulator() {
 }
 
 async function loadOpportunities() {
-    if (!currentUser || !opportunitiesTabulator) return;
+    if (!currentUser || !opportunitiesTabulator) {
+        console.warn("Opportunities Tabulator not initialized or user not logged in. Skipping load.");
+        return;
+    }
     opportunitiesTabulator.setData([]);
     opportunitiesTabulator.showLoader();
 
@@ -887,7 +879,10 @@ function initializeCountriesStatesTabulator() {
 }
 
 async function loadCountriesStates() {
-    if (currentUserRole !== 'Admin' || !countriesStatesTabulator) return;
+    if (currentUserRole !== 'Admin' || !countriesStatesTabulator) {
+        console.warn("Countries States Tabulator not initialized or user not admin. Skipping load.");
+        return;
+    }
     countriesStatesTabulator.setData([]);
     countriesStatesTabulator.showLoader();
 
@@ -1036,7 +1031,10 @@ function initializeCurrenciesTabulator() {
 }
 
 async function loadCurrencies() {
-    if (currentUserRole !== 'Admin' || !currenciesTabulator) return;
+    if (currentUserRole !== 'Admin' || !currenciesTabulator) {
+        console.warn("Currencies Tabulator not initialized or user not admin. Skipping load.");
+        return;
+    }
     currenciesTabulator.setData([]);
     currenciesTabulator.showLoader();
 
@@ -1168,7 +1166,10 @@ function initializePriceBooksTabulator() {
 }
 
 async function loadPriceBooks() {
-    if (currentUserRole !== 'Admin' || !priceBooksTabulator) return;
+    if (currentUserRole !== 'Admin' || !priceBooksTabulator) {
+        console.warn("Price Books Tabulator not initialized or user not admin. Skipping load.");
+        return;
+    }
     priceBooksTabulator.setData([]);
     priceBooksTabulator.showLoader();
 
@@ -1304,11 +1305,14 @@ document.addEventListener('DOMContentLoaded', () => {
     userInfoDisplay.style.display = 'none'; // Hide user info until signed in
     adminOnlyElements.forEach(el => el.style.display = 'none'); // Hide admin elements initially
     
-    // Initialize all Tabulator instances
-    // They are initialized here but populated with data only after user login
+    // Initialize ALL Tabulator instances here, unconditionally.
+    // Their internal `if (tabulatorVariable) return;` will prevent re-creation.
     initializeCustomersTabulator();
     initializeOpportunitiesTabulator();
     initializeCountriesStatesTabulator();
     initializeCurrenciesTabulator();
     initializePriceBooksTabulator();
+
+    // Now that Tabulator instances are guaranteed to be created,
+    // the auth.onAuthStateChanged listener will handle subsequent data loading.
 });
