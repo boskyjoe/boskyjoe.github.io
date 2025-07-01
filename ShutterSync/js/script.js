@@ -212,14 +212,21 @@ function showModule(moduleName) {
 
     // Load data specific to the module when it becomes active
     if (moduleName === 'customers') {
+        initializeCustomersTabulator(); // Ensure Tabulator is initialized
         loadCustomers();
     } else if (moduleName === 'opportunities') {
+        initializeOpportunitiesTabulator(); // Ensure Tabulator is initialized
         loadOpportunities();
     } else if (moduleName === 'dashboard') {
         loadDashboardStats();
     } else if (moduleName === 'admin') {
         // By default, show countriesStatesSection in admin
         showAdminSubsection('countriesStates');
+        // Initialize Tabulators for admin sections *before* loading data
+        initializeCountriesStatesTabulator();
+        initializeCurrenciesTabulator();
+        initializePriceBooksTabulator();
+
         loadCountriesStates();
         loadCurrencies();
         loadPriceBooks();
@@ -1298,21 +1305,13 @@ appSettingsForm.addEventListener('submit', async (e) => {
 });
 
 
-// Initial load and Tabulator initialization on DOMContentLoaded
+// Initial load and DOMContentLoaded handler
 document.addEventListener('DOMContentLoaded', () => {
     // Hide all modules until authentication state is known
     modules.forEach(module => module.classList.remove('active'));
     userInfoDisplay.style.display = 'none'; // Hide user info until signed in
     adminOnlyElements.forEach(el => el.style.display = 'none'); // Hide admin elements initially
     
-    // Initialize ALL Tabulator instances here, unconditionally.
-    // Their internal `if (tabulatorVariable) return;` will prevent re-creation.
-    initializeCustomersTabulator();
-    initializeOpportunitiesTabulator();
-    initializeCountriesStatesTabulator();
-    initializeCurrenciesTabulator();
-    initializePriceBooksTabulator();
-
-    // Now that Tabulator instances are guaranteed to be created,
-    // the auth.onAuthStateChanged listener will handle subsequent data loading.
+    // NO LONGER call initializeTabulator functions here.
+    // They will be called by showModule when their respective sections are activated.
 });
