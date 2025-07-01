@@ -1,255 +1,240 @@
 // js/opportunities.js
 
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDoc, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { Utils } from './utils.js';
-import { Auth } from './auth.js';
+import { Utils } from './utils.js'; // Assuming Utils is imported
+import { Auth } from './auth.js'; // Assuming Auth is imported
 
 /**
- * The Opportunities module handles all functionality related to opportunity management.
+ * The Opportunities module handles displaying and managing sales opportunities.
  */
 export const Opportunities = {
     db: null,
     auth: null,
     Utils: null,
-    unsubscribe: null, // To store the unsubscribe function for the real-time listener
-    currentEditingOpportunityId: null, // Stores the ID of the opportunity being edited
-    opportunitiesGrid: null, // Grid.js instance for the opportunities table
-    _customerNamesMap: new Map(), // Map to store customer IDs to names for quick lookup
+    opportunitiesGrid: null, // Stores the Grid.js instance for opportunities
+    opportunitiesCollectionRef: null,
+    unsubscribeOpportunitiesSnapshot: null, // To store the unsubscribe function for real-time listener
+    customersCache: null, // Will be initialized in init()
+    // Bound event handlers for grid buttons to allow proper removal
+    handleEditButtonClickBound: null,
+    handleDeleteButtonClickBound: null,
 
     /**
      * Initializes the Opportunities module.
      * @param {object} firestoreDb - The Firestore database instance.
      * @param {object} firebaseAuth - The Firebase Auth instance.
-     * @param {object} utils - The Utils object for common functionalities.
+     * @param {object} utils - The Utils module instance.
      */
     init: function(firestoreDb, firebaseAuth, utils) {
         this.db = firestoreDb;
         this.auth = firebaseAuth;
         this.Utils = utils;
-        console.log("Opportunities module initialized.");
+        this.opportunitiesCollectionRef = this.Utils.getOpportunitiesCollectionRef();
+        
+        // *** CRITICAL FIX: Ensure cache, grid, and listener references are null on init for a clean slate ***
+        this.customersCache = new Map(); // Initialize customersCache here
+        this.opportunitiesGrid = null;
+        this.unsubscribeOpportunitiesSnapshot = null;
+        console.log("Opportunities module initialized. customersCache is now a Map:", this.customersCache instanceof Map);
+        console.log("Opportunities: opportunitiesGrid and unsubscribeOpportunitiesSnapshot reset to null on init.");
     },
 
     /**
-     * Renders the main UI for the Opportunities module.
-     * This is called by Main.js when the 'opportunities' module is activated.
-     *
+     * Renders the Opportunities UI into the provided content area element.
      * @param {HTMLElement} moduleContentElement - The DOM element where the Opportunities UI should be rendered.
-     * @param {boolean} isLoggedIn - The current login status (true/false).
-     * @param {boolean} isAdmin - The current admin status (true/false).
+     * @param {boolean} isLoggedIn - The current login status.
+     * @param {boolean} isAdmin - The current admin status.
      * @param {object|null} currentUser - The current Firebase User object, or null if logged out.
      */
-    renderOpportunitiesUI: function(moduleContentElement, isLoggedIn, isAdmin, currentUser) {
-        const opportunitiesModuleContent = moduleContentElement;
-
-        if (!opportunitiesModuleContent) {
-            console.error("Opportunities module: Target content element was not provided or is null.");
-            this.Utils.showMessage("Error: Opportunities module could not find its content area.", "error");
-            return;
-        }
-
-        // Use the passed isLoggedIn directly for module access check
+    renderOpportunitiesUI: async function(moduleContentElement, isLoggedIn, isAdmin, currentUser) {
+        console.log("Opportunities: renderOpportunitiesUI called.");
         if (!isLoggedIn) {
-            opportunitiesModuleContent.innerHTML = `
-                <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">Access Denied</h3>
-                    <p class="text-gray-600 mb-4">You must be logged in to view opportunity data.</p>
-                    <button id="go-to-home-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
-                        Go to Home / Login
-                    </button>
-                </div>
-            `;
-            document.getElementById('go-to-home-btn')?.addEventListener('click', () => {
-                window.Main.loadModule('home', isLoggedIn, isAdmin, currentUser); // Redirect to home page
-            });
-            this.destroy(); // Clean up any previous grid/listeners
-            this.Utils.showMessage("Access Denied: Please log in to view Opportunities.", "error");
+            moduleContentElement.innerHTML = this.Utils.getNotLoggedInHtml();
             return;
         }
 
-        opportunitiesModuleContent.innerHTML = `
-            <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-semibold text-gray-800">Opportunity Management</h3>
-                    <button id="add-opportunity-btn"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-200">
-                        <i class="fas fa-plus mr-2"></i> Add Opportunity
+        moduleContentElement.innerHTML = `
+            <div class="p-6 bg-white rounded-lg shadow-md">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Sales Opportunities</h2>
+                <div class="mb-6 flex justify-between items-center">
+                    <button id="add-opportunity-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-200 flex items-center">
+                        <i class="fas fa-plus mr-2"></i> Add New Opportunity
                     </button>
                 </div>
-                <p class="text-sm text-gray-600 mb-4">Track potential sales and their progress.</p>
-                <div id="opportunity-grid-container" class="border border-gray-200 rounded-lg overflow-hidden"></div>
+                <div id="opportunity-grid-container"></div>
             </div>
-
-            <!-- Opportunity Modal (Add/Edit Form) -->
-            <div id="opportunity-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[900] hidden">
-                <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full transform transition-all duration-300 scale-95 opacity-0">
-                    <h4 id="opportunity-modal-title" class="text-2xl font-bold text-gray-800 mb-6">Add New Opportunity</h4>
+            <!-- Opportunity Modal -->
+            <div id="opportunity-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+                <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+                    <h3 id="opportunity-modal-title" class="text-xl font-bold mb-4">Add New Opportunity</h3>
                     <form id="opportunity-form">
-                        <div class="grid grid-cols-1 gap-4 mb-4">
-                            <div>
-                                <label for="opportunity-name" class="block text-sm font-medium text-gray-700 mb-1">Opportunity Name</label>
-                                <input type="text" id="opportunity-name" name="name" required
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            </div>
-                            <div>
-                                <label for="customer-select" class="block text-sm font-medium text-gray-700 mb-1">Related Customer</label>
-                                <select id="customer-select" name="customerId" required
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white">
-                                    </select>
-                            </div>
-                            <div>
-                                <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-                                <input type="number" id="amount" name="amount" step="0.01" min="0" required
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            </div>
-                            <div>
-                                <label for="stage-select" class="block text-sm font-medium text-gray-700 mb-1">Stage</label>
-                                <select id="stage-select" name="stage" required
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white">
-                                    <option value="Prospecting">Prospecting</option>
-                                    <option value="Qualification">Qualification</option>
-                                    <option value="Proposal">Proposal</option>
-                                    <option value="Negotiation">Negotiation</option>
-                                    <option value="Closed Won">Closed Won</option>
-                                    <option value="Closed Lost">Closed Lost</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="close-date" class="block text-sm font-medium text-gray-700 mb-1">Expected Close Date</label>
-                                <input type="date" id="close-date" name="expectedCloseDate"
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            </div>
+                        <input type="hidden" id="opportunity-id">
+                        <div class="mb-4">
+                            <label for="opportunity-name" class="block text-gray-700 text-sm font-bold mb-2">Opportunity Name:</label>
+                            <input type="text" id="opportunity-name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
                         </div>
-                        <div class="flex justify-end space-x-3 mt-6">
-                            <button type="button" id="cancel-opportunity-btn"
-                                class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors duration-200">
-                                Cancel
-                            </button>
-                            <button type="submit" id="save-opportunity-btn"
-                                class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
-                                Save Opportunity
-                            </button>
+                        <div class="mb-4">
+                            <label for="customer-select" class="block text-gray-700 text-sm font-bold mb-2">Customer:</label>
+                            <select id="customer-select" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                                <option value="">Select a Customer</option>
+                            </option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="stage" class="block text-gray-700 text-sm font-bold mb-2">Stage:</label>
+                            <select id="stage" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                                <option value="Prospecting">Prospecting</option>
+                                <option value="Qualification">Qualification</option>
+                                <option value="Proposal">Proposal</option>
+                                <option value="Negotiation">Negotiation</option>
+                                <option value="Closed Won">Closed Won</option>
+                                <option value="Closed Lost">Closed Lost</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="value" class="block text-gray-700 text-sm font-bold mb-2">Value ($):</label>
+                            <input type="number" id="value" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" min="0" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="close-date" class="block text-gray-700 text-sm font-bold mb-2">Expected Close Date:</label>
+                            <input type="date" id="close-date" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="probability" class="block text-gray-700 text-sm font-bold mb-2">Probability (%):</label>
+                            <input type="number" id="probability" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" min="0" max="100" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="notes" class="block text-gray-700 text-sm font-bold mb-2">Notes:</label>
+                            <textarea id="notes" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline rows="3"></textarea>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-200">Save Opportunity</button>
+                            <button type="button" id="cancel-opportunity-btn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-200">Cancel</button>
                         </div>
                     </form>
                 </div>
             </div>
+            <!-- Delete Confirmation Modal -->
+            <div id="delete-confirmation-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+                <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
+                    <h3 class="text-xl font-bold mb-4">Confirm Deletion</h3>
+                    <p class="mb-4">Are you sure you want to delete this opportunity? This action cannot be undone.</p>
+                    <div class="flex justify-end space-x-4">
+                        <button id="confirm-delete-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-200">Delete</button>
+                        <button id="cancel-delete-btn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-200">Cancel</button>
+                    </div>
+                </div>
+            </div>
         `;
-        this.attachEventListeners();
-        // Pass the resolved auth state to fetchAndCacheCustomers and setupRealtimeListener
-        this.fetchAndCacheCustomers(isLoggedIn, isAdmin, currentUser).then(() => {
-            this.setupRealtimeListener(isLoggedIn, isAdmin, currentUser);
-        });
+
+        await this.populateCustomerSelect(); // Populate customer dropdown
+        this.attachEventListeners(isAdmin); // Attach event listeners
+        this.setupRealtimeOpportunitiesListener(isAdmin, currentUser); // Set up real-time listener
     },
 
     /**
-     * Fetches all customers and caches their names for quick lookup.
-     * @param {boolean} isLoggedIn - The current login status.
-     * @param {boolean} isAdmin - The current admin status.
-     * @param {object|null} currentUser - The current Firebase User object.
-     * @returns {Promise<void>} A promise that resolves when customers are fetched and cached.
+     * Populates the customer select dropdown in the opportunity form.
      */
-    fetchAndCacheCustomers: async function(isLoggedIn, isAdmin, currentUser) {
-        this._customerNamesMap.clear(); // Clear existing map
-        const userId = currentUser ? currentUser.uid : null;
-        if (!isLoggedIn || !userId) {
-            console.log("Not logged in, cannot fetch customers for dropdown.");
-            return;
-        }
-
-        const customersCollectionRef = collection(this.db, "customers");
-        let q;
-        if (isAdmin) {
-            q = query(customersCollectionRef, orderBy('name')); // Use 'name' for ordering
-        } else {
-            q = query(customersCollectionRef, where("creatorId", "==", userId), orderBy('name')); // Use 'name' for ordering
-        }
-
-        try {
-            const querySnapshot = await getDocs(q);
-            querySnapshot.forEach((docSnap) => {
-                const customerData = docSnap.data();
-                this._customerNamesMap.set(docSnap.id, customerData.name || 'N/A'); // Use 'name'
-            });
-            console.log("Customers cached:", this._customerNamesMap);
-            this.populateCustomerDropdown(); // Populate dropdown immediately after fetching
-        } catch (error) {
-            this.Utils.handleError(error, "fetching customers for opportunity dropdown");
-        }
-    },
-
-
-    /**
-     * Populates the customer dropdown in the opportunity modal.
-     * @param {string|null} selectedCustomerId - The ID of the customer to pre-select.
-     */
-    populateCustomerDropdown: function(selectedCustomerId = null) {
+    populateCustomerSelect: async function() {
+        console.log("Opportunities: Populating customer select dropdown.");
         const customerSelect = document.getElementById('customer-select');
         if (!customerSelect) return;
 
-        customerSelect.innerHTML = '<option value="">Select a Customer</option>'; // Default option
+        // Clear existing options except the default
+        customerSelect.innerHTML = '<option value="">Select a Customer</option>';
 
-        // Sort customers by name for display
-        const sortedCustomers = Array.from(this._customerNamesMap.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+        try {
+            const customersCollectionRef = this.Utils.getCustomersCollectionRef();
+            // Use Utils.query, Utils.orderBy, Utils.getDocs
+            const q = this.Utils.query(customersCollectionRef, this.Utils.orderBy('customerName'));
+            const querySnapshot = await this.Utils.getDocs(q);
 
-        sortedCustomers.forEach(([id, name]) => {
-            const option = document.createElement('option');
-            option.value = id;
-            option.textContent = name;
-            if (id === selectedCustomerId) {
-                option.selected = true;
-            }
-            customerSelect.appendChild(option);
-        });
+            this.customersCache.clear(); // Clear cache before repopulating
+            querySnapshot.forEach(doc => {
+                const customer = doc.data();
+                const option = document.createElement('option');
+                option.value = doc.id;
+                option.textContent = customer.customerName;
+                customerSelect.appendChild(option);
+                this.customersCache.set(doc.id, customer.customerName); // Cache customer name
+            });
+            console.log(`Opportunities: Populated customer select with ${querySnapshot.size} customers.`);
+            console.log("Opportunities: customersCache size after populating:", this.customersCache.size);
+
+        } catch (error) {
+            this.Utils.handleError(error, "populating customer select");
+        }
     },
 
     /**
-     * Sets up the real-time listener for the 'opportunities' collection.
-     * @param {boolean} isLoggedIn - The current login status.
-     * @param {boolean} isAdmin - The current admin status.
+     * Attaches event listeners for the Opportunities UI.
+     * @param {boolean} isAdmin - Whether the current user is an admin.
+     */
+    attachEventListeners: function(isAdmin) {
+        console.log("Opportunities: Attaching event listeners.");
+        document.getElementById('add-opportunity-btn')?.addEventListener('click', () => this.openOpportunityModal());
+        document.getElementById('cancel-opportunity-btn')?.addEventListener('click', () => this.closeOpportunityModal());
+        document.getElementById('opportunity-form')?.addEventListener('submit', (e) => this.handleOpportunityFormSubmit(e));
+        document.getElementById('cancel-delete-btn')?.addEventListener('click', () => this.closeDeleteConfirmationModal());
+        document.getElementById('confirm-delete-btn')?.addEventListener('click', () => this.handleConfirmDelete()); // Ensure this is attached
+    },
+
+    /**
+     * Sets up a real-time listener for opportunities data.
+     * @param {boolean} isAdmin - Whether the current user is an admin.
      * @param {object|null} currentUser - The current Firebase User object.
      */
-    setupRealtimeListener: function(isLoggedIn, isAdmin, currentUser) {
-        if (this.unsubscribe) {
-            this.unsubscribe(); // Detach existing listener if any
+    setupRealtimeOpportunitiesListener: function(isAdmin, currentUser) {
+        console.log("Opportunities: Setting up real-time listener.");
+        // Unsubscribe from previous listener if exists
+        if (this.unsubscribeOpportunitiesSnapshot) {
+            this.unsubscribeOpportunitiesSnapshot();
+            console.log("Opportunities: Unsubscribed from previous real-time listener.");
         }
 
-        const userId = currentUser ? currentUser.uid : null;
-        if (!isLoggedIn || !userId) {
-            console.log("Not logged in, cannot set up opportunity listener.");
-            this.renderOpportunitiesGrid([]);
+        let q;
+        if (isAdmin) {
+            console.log("Admin user: Fetching all opportunities.");
+            q = this.Utils.query(this.opportunitiesCollectionRef, this.Utils.orderBy('closeDate', 'desc'));
+        } else if (currentUser) {
+            console.log(`Standard user: Fetching opportunities for user ${currentUser.uid}.`);
+            q = this.Utils.query(this.opportunitiesCollectionRef,
+                this.Utils.where('createdBy', '==', currentUser.uid),
+                this.Utils.orderBy('closeDate', 'desc')
+            );
+        } else {
+            console.log("No user authenticated. Not fetching opportunities.");
+            this.renderOpportunitiesGrid([]); // Render empty grid if no user
             return;
         }
 
-        const opportunitiesCollectionRef = collection(this.db, "opportunities");
-        let q;
-        if (isAdmin) {
-            q = query(opportunitiesCollectionRef); // Admins see all opportunities
-            console.log("Admin user: Fetching all opportunities.");
-        } else {
-            q = query(opportunitiesCollectionRef, where("creatorId", "==", userId)); // Standard users see only their own
-            console.log("Standard user: Fetching opportunities created by:", userId);
-        }
+        this.unsubscribeOpportunitiesSnapshot = this.Utils.onSnapshot(q, (querySnapshot) => {
+            // *** NEW DIAGNOSTIC LOGS ***
+            console.log(`Opportunities: Real-time snapshot received. Number of documents: ${querySnapshot.size}`);
+            // **************************
 
-        this.unsubscribe = onSnapshot(q, (snapshot) => {
             const opportunities = [];
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                // Use the cached _customerNamesMap for lookup
-                const customerName = this._customerNamesMap.get(data.customerId) || 'Unknown Customer';
-                opportunities.push({ id: doc.id, customerName: customerName, ...data });
+            querySnapshot.forEach(doc => {
+                opportunities.push({ id: doc.id, ...doc.data() });
             });
-            this.renderOpportunitiesGrid(opportunities);
-            console.log("Opportunities data updated:", opportunities);
+
+            // *** NEW DIAGNOSTIC LOG ***
+            console.log(`Opportunities: Array populated with ${opportunities.length} items from snapshot.`);
+            // **************************
+
+            this.renderOpportunitiesGrid(opportunities, isAdmin);
         }, (error) => {
-            this.Utils.handleError(error, "fetching opportunities data");
-            this.renderOpportunitiesGrid([]);
+            this.Utils.handleError(error, "fetching real-time opportunities");
+            this.Utils.showMessage("Error loading opportunities data.", "error");
         });
     },
 
     /**
-     * Renders or updates the Grid.js table with the provided opportunity data.
+     * Renders or updates the Grid.js table with the provided opportunities data.
      * @param {Array<object>} opportunities - An array of opportunity objects.
+     * @param {boolean} isAdmin - Whether the current user is an admin.
      */
-    renderOpportunitiesGrid: function(opportunities) {
+    renderOpportunitiesGrid: function(opportunities, isAdmin) {
+        console.log(`Opportunities: Rendering grid with ${opportunities.length} opportunities. IsAdmin: ${isAdmin}`);
         const gridContainer = document.getElementById('opportunity-grid-container');
         if (!gridContainer) {
             console.error("Opportunity grid container not found.");
@@ -257,59 +242,78 @@ export const Opportunities = {
         }
 
         const columns = [
-            { id: 'id', name: 'ID', hidden: true },
-            { id: 'name', name: 'Opportunity Name', sort: true, width: 'auto' }, // Use 'name'
-            { id: 'customerName', name: 'Customer', sort: true, width: 'auto' }, // Display customer name
-            { id: 'amount', name: 'Amount', sort: true, width: '100px', formatter: (cell) => `$${parseFloat(cell).toLocaleString()}` },
-            { id: 'stage', name: 'Stage', sort: true, width: '120px' },
-            { id: 'expectedCloseDate', name: 'Close Date', sort: true, width: '120px', formatter: (cell) => cell ? new Date(cell.toDate()).toLocaleDateString() : 'N/A' },
+            { id: 'opportunityName', name: 'Opportunity Name' },
+            {
+                id: 'customerName',
+                name: 'Customer',
+                formatter: (cell, row) => {
+                    // Use cached customer name or fallback to ID
+                    const customerId = row.cells[2].data; // Assuming Customer ID is at index 2
+                    return this.customersCache.get(customerId) || `ID: ${customerId}`;
+                }
+            },
+            { id: 'customerId', name: 'Customer ID', hidden: true }, // Hidden column for customer ID
+            { id: 'stage', name: 'Stage' },
+            {
+                id: 'value',
+                name: 'Value ($)',
+                formatter: (cell) => `$${cell.toLocaleString()}`
+            },
+            {
+                id: 'closeDate',
+                name: 'Expected Close Date',
+                formatter: (cell) => {
+                    if (cell instanceof this.Utils.Timestamp) {
+                        return cell.toDate().toLocaleDateString();
+                    }
+                    return cell; // Already a string or other format
+                }
+            },
+            { id: 'probability', name: 'Probability (%)' },
+            { id: 'notes', name: 'Notes' },
             {
                 name: 'Actions',
-                width: '100px',
                 formatter: (cell, row) => {
-                    const opportunityId = row.cells[0].data; // Get opportunity ID
-                    const opportunityData = opportunities.find(o => o.id === opportunityId);
-                    const creatorId = opportunityData?.creatorId;
-                    // Use Auth.getCurrentUser() and Utils.isAdmin() for permission checks at time of rendering actions
-                    const isCurrentUserCreator = Auth.getCurrentUser() && creatorId === Auth.getCurrentUser().uid;
-                    const canEditOrDelete = Utils.isAdmin() || isCurrentUserCreator;
+                    const opportunityId = row.cells[0].data; // Assuming ID is the first cell
+                    // Assuming createdBy UID is at index 8 based on new columns
+                    const createdById = row.cells[8].data;
+                    // Check if the current user created this opportunity or is an admin
+                    const isCreatorOrAdmin = isAdmin || (Auth.getCurrentUser() && createdById === Auth.getCurrentUser().uid);
 
-                    if (!canEditOrDelete) {
-                        return ''; // No actions if not allowed
+                    if (isCreatorOrAdmin) {
+                        return this.Utils.html(`
+                            <button class="edit-opportunity-btn bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-md text-sm mr-2" data-id="${opportunityId}">Edit</button>
+                            <button class="delete-opportunity-btn bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm" data-id="${opportunityId}">Delete</button>
+                        `);
                     }
-
-                    return gridjs.h('div', {
-                        className: 'flex items-center justify-center space-x-2'
-                    }, [
-                        gridjs.h('button', {
-                            className: 'p-1 rounded-md text-gray-600 hover:bg-yellow-100 hover:text-yellow-600 transition-colors duration-200',
-                            title: 'Edit Opportunity',
-                            onClick: () => this.openOpportunityModal('edit', opportunityId)
-                        }, gridjs.h('i', { className: 'fas fa-edit text-lg' })),
-                        gridjs.h('button', {
-                            className: 'p-1 rounded-md text-gray-600 hover:bg-red-100 hover:text-red-600 transition-colors duration-200',
-                            title: 'Delete Opportunity',
-                            onClick: () => this.deleteOpportunity(opportunityId, opportunityData.name) // Use opportunityData.name
-                        }, gridjs.h('i', { className: 'fas fa-trash-alt text-lg' }))
-                    ]);
+                    return this.Utils.html('<span></span>'); // Empty span if no actions
                 }
-            }
+            },
+            { id: 'createdBy', name: 'Created By', hidden: true } // Hidden column for createdBy UID
         ];
 
-        const mappedData = opportunities.map(o => [
-            o.id,
-            o.name || '', // Use 'name'
-            o.customerName || '',
-            o.amount || 0,
-            o.stage || '',
-            o.expectedCloseDate || ''
+        const mappedData = opportunities.map(opp => [
+            opp.id,
+            opp.opportunityName,
+            opp.customerId, // Pass customerId here
+            opp.stage,
+            opp.value,
+            opp.closeDate,
+            opp.probability,
+            opp.notes,
+            opp.createdBy // Pass createdBy UID here
         ]);
 
         if (this.opportunitiesGrid) {
             this.opportunitiesGrid.updateConfig({
                 data: mappedData
             }).forceRender();
+            console.log("Opportunities: Grid.js instance updated and re-rendered.");
         } else {
+            console.log("Opportunities: Creating new Grid.js instance. Clearing container first.");
+            // *** CRITICAL FIX: Ensure the container is empty before rendering a new grid ***
+            gridContainer.innerHTML = ''; // Clear any previous Grid.js remnants
+
             this.opportunitiesGrid = new gridjs.Grid({
                 columns: columns,
                 data: mappedData,
@@ -320,7 +324,7 @@ export const Opportunities = {
                 },
                 className: {
                     table: 'min-w-full divide-y divide-gray-200',
-                    th: 'px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-normal break-words',
+                    th: 'px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     td: 'px-6 py-4 text-sm text-gray-900 whitespace-normal break-words',
                     footer: 'flex items-center justify-between px-6 py-3',
                     paginationButton: 'px-3 py-1 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100',
@@ -328,262 +332,263 @@ export const Opportunities = {
                     search: 'p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
                     container: 'shadow-md rounded-lg overflow-hidden'
                 }
-            }).render(gridContainer);
+            });
+            this.opportunitiesGrid.render(gridContainer);
+            console.log("Opportunities: Grid.js instance created and rendered.");
         }
+
+        // Attach event listeners to dynamically created grid buttons
+        this.attachGridButtonListeners();
     },
 
     /**
-     * Attaches event listeners for UI interactions within the Opportunities module.
+     * Attaches event listeners to the Edit and Delete buttons within the Grid.js table.
      */
-    attachEventListeners: function() {
-        const addOpportunityBtn = document.getElementById('add-opportunity-btn');
-        if (addOpportunityBtn) {
-            addOpportunityBtn.addEventListener('click', () => this.openOpportunityModal('add'));
+    attachGridButtonListeners: function() {
+        // We need to ensure we remove old listeners before adding new ones
+        // to prevent multiple listeners on the same button.
+        // Store bound functions to correctly remove them.
+        if (!this.handleEditButtonClickBound) {
+            this.handleEditButtonClickBound = this.handleEditButtonClick.bind(this);
+        }
+        if (!this.handleDeleteButtonClickBound) {
+            this.handleDeleteButtonClickBound = this.handleDeleteButtonClick.bind(this);
         }
 
-        const opportunityForm = document.getElementById('opportunity-form');
-        if (opportunityForm) {
-            opportunityForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.saveOpportunity();
-            });
-        }
-
-        const cancelOpportunityBtn = document.getElementById('cancel-opportunity-btn');
-        if (cancelOpportunityBtn) {
-            cancelOpportunityBtn.addEventListener('click', () => this.closeOpportunityModal());
-        }
-
-        const opportunityModal = document.getElementById('opportunity-modal');
-        if (opportunityModal) {
-            opportunityModal.addEventListener('click', (e) => {
-                if (e.target === opportunityModal) {
-                    this.closeOpportunityModal();
-                }
-            });
-        }
+        document.querySelectorAll('.edit-opportunity-btn').forEach(btn => {
+            btn.removeEventListener('click', this.handleEditButtonClickBound); // Remove old
+            btn.addEventListener('click', this.handleEditButtonClickBound); // Add new
+        });
+        document.querySelectorAll('.delete-opportunity-btn').forEach(btn => {
+            btn.removeEventListener('click', this.handleDeleteButtonClickBound); // Remove old
+            btn.addEventListener('click', this.handleDeleteButtonClickBound); // Add new
+        });
+        console.log("Opportunities: Attached grid button listeners.");
     },
 
     /**
-     * Opens the opportunity add/edit modal.
-     * @param {string} mode - 'add' or 'edit'.
-     * @param {string|null} opportunityId - The ID of the opportunity to edit, if mode is 'edit'.
+     * Handles the click event for the Edit button in the grid.
+     * @param {Event} event - The click event.
      */
-    openOpportunityModal: async function(mode, opportunityId = null) {
-        // Use Auth.isLoggedIn() for real-time check when modal is opened
-        if (!Auth.isLoggedIn()) {
-            this.Utils.showMessage('You must be logged in to add/edit opportunities.', 'error');
-            return;
-        }
-
-        const modal = document.getElementById('opportunity-modal');
-        const title = document.getElementById('opportunity-modal-title');
-        const form = document.getElementById('opportunity-form');
-
-        form.reset();
-        this.currentEditingOpportunityId = null;
-
-        // Fetch customers always (it uses Auth.isLoggedIn/Utils.isAdmin internally)
-        await this.fetchAndCacheCustomers(Auth.isLoggedIn(), Utils.isAdmin(), Auth.getCurrentUser());
-        this.populateCustomerDropdown();
-
-        if (mode === 'edit' && opportunityId) {
-            title.textContent = 'Edit Opportunity';
-            this.currentEditingOpportunityId = opportunityId;
-            try {
-                const opportunityDoc = await getDoc(doc(this.db, 'opportunities', opportunityId));
-                if (opportunityDoc.exists()) {
-                    const data = opportunityDoc.data();
-                    // Use Utils.isAdmin() for real-time admin check
-                    const currentUserId = Auth.getCurrentUser() ? Auth.getCurrentUser().uid : null;
-                    if (!Utils.isAdmin() && data.creatorId !== currentUserId) {
-                        this.Utils.showMessage('You do not have permission to edit this opportunity.', 'error');
-                        this.closeOpportunityModal();
-                        return;
-                    }
-                    document.getElementById('opportunity-name').value = data.name || ''; // Use 'name'
-                    document.getElementById('amount').value = data.amount || 0;
-                    document.getElementById('stage-select').value = data.stage || 'Prospecting';
-                    document.getElementById('close-date').value = data.expectedCloseDate ? new Date(data.expectedCloseDate.toDate()).toISOString().split('T')[0] : '';
-                    this.populateCustomerDropdown(data.customerId); // Pre-select customer
-                } else {
-                    this.Utils.showMessage('Opportunity not found for editing.', 'error');
-                    this.closeOpportunityModal();
-                    return;
-                }
-            } catch (error) {
-                this.Utils.handleError(error, "fetching opportunity for edit");
-                this.closeOpportunityModal();
-                return;
+    handleEditButtonClick: async function(event) {
+        const opportunityId = event.target.dataset.id;
+        console.log(`Opportunities: Edit button clicked for ID: ${opportunityId}`);
+        try {
+            const docRef = this.Utils.doc(this.db, 'opportunities', opportunityId);
+            const docSnap = await this.Utils.getDoc(docRef);
+            if (docSnap.exists()) {
+                const opportunityData = docSnap.data();
+                this.openOpportunityModal(opportunityId, opportunityData);
+            } else {
+                this.Utils.showMessage('Opportunity not found.', 'error');
             }
-        } else {
-            title.textContent = 'Add New Opportunity';
-            document.getElementById('stage-select').value = 'Prospecting'; // Default for new
-            document.getElementById('close-date').valueAsDate = new Date(); // Default to today
+        } catch (error) {
+            this.Utils.handleError(error, "fetching opportunity for edit");
         }
+    },
 
-        modal.classList.remove('hidden');
-        setTimeout(() => {
-            modal.querySelector('div').classList.remove('opacity-0', 'scale-95');
-        }, 10);
+    /**
+     * Handles the click event for the Delete button in the grid.
+     * @param {Event} event - The click event.
+     */
+    handleDeleteButtonClick: function(event) {
+        const opportunityId = event.target.dataset.id;
+        console.log(`Opportunities: Delete button clicked for ID: ${opportunityId}`);
+        this.openDeleteConfirmationModal(opportunityId);
+    },
+
+    /**
+     * Opens the opportunity modal for adding or editing.
+     * @param {string} [id] - The ID of the opportunity if editing.
+     * @param {object} [data] - The opportunity data if editing.
+     */
+    openOpportunityModal: function(id = '', data = {}) {
+        console.log(`Opportunities: Opening opportunity modal for ID: ${id}`);
+        const modal = document.getElementById('opportunity-modal');
+        const form = document.getElementById('opportunity-form');
+        const title = document.getElementById('opportunity-modal-title');
+
+        if (form && title && modal) {
+            form.reset(); // Clear form fields
+            document.getElementById('opportunity-id').value = id;
+            title.textContent = id ? 'Edit Opportunity' : 'Add New Opportunity';
+
+            if (id && data) {
+                document.getElementById('opportunity-name').value = data.opportunityName || '';
+                document.getElementById('customer-select').value = data.customerId || '';
+                document.getElementById('stage').value = data.stage || 'Prospecting';
+                document.getElementById('value').value = data.value || '';
+                document.getElementById('close-date').value = data.closeDate instanceof this.Utils.Timestamp ? data.closeDate.toDate().toISOString().split('T')[0] : data.closeDate || '';
+                document.getElementById('probability').value = data.probability || '';
+                document.getElementById('notes').value = data.notes || '';
+            }
+            modal.classList.remove('hidden');
+        } else {
+            console.error("Opportunities: Opportunity modal elements not found.");
+        }
     },
 
     /**
      * Closes the opportunity modal.
      */
     closeOpportunityModal: function() {
-        const modal = document.getElementById('opportunity-modal');
-        if (modal) {
-            modal.querySelector('div').classList.add('opacity-0', 'scale-95');
-            modal.addEventListener('transitionend', () => {
-                modal.classList.add('hidden');
-                this.currentEditingOpportunityId = null; // Reset ID on close
-            }, { once: true });
-        }
+        console.log("Opportunities: Closing opportunity modal.");
+        document.getElementById('opportunity-modal')?.classList.add('hidden');
+        document.getElementById('opportunity-form')?.reset();
+        document.getElementById('opportunity-id').value = ''; // Clear hidden ID
     },
 
     /**
-     * Saves a new opportunity or updates an existing one to Firestore.
+     * Handles the submission of the opportunity form.
+     * @param {Event} e - The form submit event.
      */
-    saveOpportunity: async function() {
-        // Use Auth.isLoggedIn() for real-time check when saving
-        if (!Auth.isLoggedIn()) {
-            this.Utils.showMessage('You must be logged in to save opportunities.', 'error');
-            this.closeOpportunityModal();
-            return;
-        }
+    handleOpportunityFormSubmit: async function(e) {
+        e.preventDefault();
+        console.log("Opportunities: Opportunity form submitted.");
 
-        const name = document.getElementById('opportunity-name').value.trim(); // Changed to 'name'
+        const opportunityId = document.getElementById('opportunity-id').value;
+        const opportunityName = document.getElementById('opportunity-name').value;
         const customerId = document.getElementById('customer-select').value;
-        const amount = parseFloat(document.getElementById('amount').value);
-        const stage = document.getElementById('stage-select').value;
-        const expectedCloseDate = document.getElementById('close-date').value;
+        const stage = document.getElementById('stage').value;
+        const value = parseFloat(document.getElementById('value').value);
+        const closeDate = document.getElementById('close-date').value;
+        const probability = parseFloat(document.getElementById('probability').value);
+        const notes = document.getElementById('notes').value;
+        const createdBy = Auth.getCurrentUser()?.uid; // Get current user's UID
 
-        if (!name || !customerId || isNaN(amount) || amount < 0) { // Added amount < 0 validation
-            this.Utils.showMessage('Opportunity Name, Customer, and a valid positive Amount are required.', 'warning');
+        if (!createdBy) {
+            this.Utils.showMessage('Error: User not authenticated. Cannot save opportunity.', 'error');
             return;
         }
 
         const opportunityData = {
-            name: name, // Changed to 'name'
-            customerId: customerId,
-            amount: amount,
-            stage: stage,
-            expectedCloseDate: expectedCloseDate ? new Date(expectedCloseDate) : null,
-            updatedAt: new Date()
+            opportunityName,
+            customerId,
+            stage,
+            value,
+            closeDate: this.Utils.Timestamp.fromDate(new Date(closeDate)), // Convert date string to Timestamp
+            probability,
+            notes,
+            createdBy,
+            updatedAt: this.Utils.Timestamp.now()
         };
 
         try {
-            if (this.currentEditingOpportunityId) {
+            if (opportunityId) {
                 // Update existing opportunity
-                const opportunityRef = doc(this.db, "opportunities", this.currentEditingOpportunityId);
-                // Use Utils.isAdmin() for real-time admin check
-                const existingDoc = await getDoc(opportunityRef);
-                if (existingDoc.exists()) {
-                    const data = existingDoc.data();
-                    const currentUserId = Auth.getCurrentUser() ? Auth.getCurrentUser().uid : null;
-                    if (!Utils.isAdmin() && data.creatorId !== currentUserId) {
-                        this.Utils.showMessage('You do not have permission to update this opportunity.', 'error');
-                        this.closeOpportunityModal();
-                        return;
-                    }
-                }
-                await this.Utils.updateDoc(opportunityRef, opportunityData);
+                const docRef = this.Utils.doc(this.db, 'opportunities', opportunityId);
+                await this.Utils.updateDoc(docRef, opportunityData);
                 this.Utils.showMessage('Opportunity updated successfully!', 'success');
+                console.log(`Opportunities: Opportunity ${opportunityId} updated.`);
             } else {
                 // Add new opportunity
-                opportunityData.creatorId = Auth.getCurrentUser().uid; // Now guaranteed to be a logged-in user's UID
-                opportunityData.createdAt = new Date();
-                await addDoc(collection(this.db, "opportunities"), opportunityData);
+                opportunityData.createdAt = this.Utils.Timestamp.now();
+                await this.Utils.addDoc(this.opportunitiesCollectionRef, opportunityData);
                 this.Utils.showMessage('Opportunity added successfully!', 'success');
+                console.log("Opportunities: New opportunity added.");
             }
             this.closeOpportunityModal();
         } catch (error) {
-            this.Utils.handleError(error, "saving opportunity");
+            this.Utils.handleError(error, opportunityId ? "updating opportunity" : "adding opportunity");
         }
     },
 
     /**
-     * Deletes an opportunity from Firestore.
+     * Opens the delete confirmation modal.
      * @param {string} opportunityId - The ID of the opportunity to delete.
-     * @param {string} opportunityName - The name of the opportunity for confirmation message.
      */
-    deleteOpportunity: async function(opportunityId, opportunityName) {
-        // Use Auth.isLoggedIn() for real-time check when deleting
-        if (!Auth.isLoggedIn()) {
-            this.Utils.showMessage('You must be logged in to delete opportunities.', 'error');
+    openDeleteConfirmationModal: function(opportunityId) {
+        console.log(`Opportunities: Opening delete confirmation modal for ID: ${opportunityId}`);
+        const modal = document.getElementById('delete-confirmation-modal');
+        const confirmBtn = document.getElementById('confirm-delete-btn');
+        if (modal && confirmBtn) {
+            confirmBtn.dataset.id = opportunityId; // Store ID on the confirm button
+            modal.classList.remove('hidden');
+        } else {
+            console.error("Opportunities: Delete confirmation modal elements not found.");
+        }
+    },
+
+    /**
+     * Closes the delete confirmation modal.
+     */
+    closeDeleteConfirmationModal: function() {
+        console.log("Opportunities: Closing delete confirmation modal.");
+        document.getElementById('delete-confirmation-modal')?.classList.add('hidden');
+        document.getElementById('confirm-delete-btn')?.removeAttribute('data-id');
+    },
+
+    /**
+     * Handles the confirmation of opportunity deletion.
+     */
+    handleConfirmDelete: async function() {
+        const opportunityId = document.getElementById('confirm-delete-btn')?.dataset.id;
+        if (!opportunityId) {
+            this.Utils.showMessage('Error: No opportunity selected for deletion.', 'error');
             return;
         }
-
+        console.log(`Opportunities: Confirming deletion for ID: ${opportunityId}`);
         try {
-            const opportunityRef = doc(this.db, "opportunities", opportunityId);
-            const existingDoc = await getDoc(opportunityRef);
-            if (existingDoc.exists()) {
-                const data = existingDoc.data();
-                // Use Utils.isAdmin() for real-time admin check
-                const currentUserId = Auth.getCurrentUser() ? Auth.getCurrentUser().uid : null;
-                if (!Utils.isAdmin() && data.creatorId !== currentUserId) {
-                    this.Utils.showMessage('You do not have permission to delete this opportunity.', 'error');
-                    return; // Prevent deletion
-                }
-            }
+            const docRef = this.Utils.doc(this.db, 'opportunities', opportunityId);
+            await this.Utils.deleteDoc(docRef);
+            this.Utils.showMessage('Opportunity deleted successfully!', 'success');
+            console.log(`Opportunities: Opportunity ${opportunityId} deleted.`);
+            this.closeDeleteConfirmationModal();
         } catch (error) {
-            this.Utils.handleError(error, "checking delete permission for opportunity");
-            return; // Prevent deletion
-        }
-
-        this.Utils.showMessage(`Are you sure you want to delete opportunity "${opportunityName}"? This action cannot be undone.`, 'warning', 0);
-
-        const messageModalContainer = document.getElementById('message-modal-container');
-        if (messageModalContainer) {
-            const messageBox = messageModalContainer.querySelector('div');
-            const existingButtons = messageBox.querySelectorAll('button:not(#message-close-btn)');
-            existingButtons.forEach(btn => btn.remove());
-
-            const confirmBtn = document.createElement('button');
-            confirmBtn.textContent = 'Confirm Delete';
-            confirmBtn.className = 'bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg mt-4 mr-2 transition-colors duration-200';
-            confirmBtn.onclick = async () => {
-                try {
-                    await deleteDoc(doc(this.db, "opportunities", opportunityId));
-                    this.Utils.showMessage('Opportunity deleted successfully!', 'success');
-                    messageModalContainer.classList.add('hidden');
-                } catch (error) {
-                    this.Utils.handleError(error, "deleting opportunity");
-                    messageModalContainer.classList.add('hidden');
-                }
-            };
-            const cancelBtn = document.createElement('button');
-            cancelBtn.textContent = 'Cancel';
-            cancelBtn.className = 'bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg mt-4 transition-colors duration-200';
-            cancelBtn.onclick = () => {
-                messageModalContainer.classList.add('hidden');
-                this.Utils.showMessage('Deletion cancelled.', 'info');
-            };
-
-            const buttonContainer = document.createElement('div');
-            buttonContainer.className = 'flex justify-end pt-4 border-t border-gray-200 mt-4';
-            buttonContainer.appendChild(cancelBtn);
-            buttonContainer.appendChild(confirmBtn);
-            messageBox.appendChild(buttonContainer);
+            this.Utils.handleError(error, "deleting opportunity");
         }
     },
 
     /**
-     * Detaches the real-time listener when the module is no longer active.
+     * Cleans up any resources used by the Opportunities module when it's unloaded.
      */
     destroy: function() {
-        if (this.unsubscribe) {
-            this.unsubscribe();
-            this.unsubscribe = null;
-            console.log("Opportunities module listener unsubscribed.");
+        console.log("Opportunities: Destroy method called.");
+        // Unsubscribe from the real-time listener if it exists
+        if (this.unsubscribeOpportunitiesSnapshot) {
+            this.unsubscribeOpportunitiesSnapshot();
+            this.unsubscribeOpportunitiesSnapshot = null;
+            console.log("Opportunities: Real-time listener unsubscribed.");
         }
+
+        // Destroy the Grid.js instance if it exists
+        console.log("Opportunities: Checking opportunitiesGrid before destroy. Is it defined?", !!this.opportunitiesGrid);
         if (this.opportunitiesGrid) {
-            this.opportunitiesGrid.destroy();
-            this.opportunitiesGrid = null;
+            this.opportunitiesGrid.destroy(); // Properly destroy the Grid.js instance
+            this.opportunitiesGrid = null; // Nullify the reference so a new one is created next time
+            console.log("Opportunities: Grid.js instance destroyed and reference nulled.");
+        } else {
+            console.log("Opportunities: No Grid.js instance to destroy.");
         }
-        this._customerNamesMap.clear(); // Clear cached customer names
-        // Main.js now handles clearing the innerHTML of the content area for this module.
+
+        // Clear customers cache
+        console.log("Opportunities: Checking customersCache before clear. Is it defined?", !!this.customersCache);
+        if (this.customersCache) { // This check is now mostly for safety, as init() will re-create it.
+            this.customersCache.clear();
+            console.log("Opportunities: Customers cache cleared.");
+        } else {
+            console.warn("Opportunities: customersCache was undefined during destroy. Cannot clear.");
+        }
+
+        // Remove event listeners from static elements if necessary (though often not needed for full module re-render)
+        document.getElementById('add-opportunity-btn')?.removeEventListener('click', this.openOpportunityModal);
+        document.getElementById('cancel-opportunity-btn')?.removeEventListener('click', this.closeOpportunityModal);
+        document.getElementById('opportunity-form')?.removeEventListener('submit', this.handleOpportunityFormSubmit);
+        document.getElementById('confirm-delete-btn')?.removeEventListener('click', this.handleConfirmDelete);
+        document.getElementById('cancel-delete-btn')?.removeEventListener('click', this.closeDeleteConfirmationModal);
+
+        // Also remove the bound event listeners for grid buttons
+        document.querySelectorAll('.edit-opportunity-btn').forEach(btn => {
+            if (this.handleEditButtonClickBound) {
+                btn.removeEventListener('click', this.handleEditButtonClickBound);
+            }
+        });
+        document.querySelectorAll('.delete-opportunity-btn').forEach(btn => {
+            if (this.handleDeleteButtonClickBound) {
+                btn.removeEventListener('click', this.handleDeleteButtonClickBound);
+            }
+        });
+
         console.log("Opportunities module destroyed.");
     }
 };
