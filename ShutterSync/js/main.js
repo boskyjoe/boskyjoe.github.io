@@ -7,7 +7,7 @@ import { Home } from './home.js';
 import { Customers } from './customers.js';
 import { Opportunities } from './opportunities.js';
 import { Users } from './users.js';
-import { AdminData } from './admin_data.js'; // *** FIXED: Changed '=' to 'from' ***
+import { AdminData } from './admin_data.js';
 import { PriceBook } from './price_book.js';
 
 /**
@@ -80,23 +80,16 @@ const Main = {
 
             if (!this._isInitialAuthReady) {
                 this._isInitialAuthReady = true; // Mark as done for first load
-                console.log("Main: onAuthReady (initial load path) - Determining module to load...");
-
-                const lastActiveModule = localStorage.getItem('lastActiveModule');
-                if (isLoggedIn && lastActiveModule && lastActiveModule !== 'home') {
-                    console.log(`Main: Initial load - User is logged in, loading last active module: ${lastActiveModule}`);
-                    this.loadModule(lastActiveModule, isLoggedIn, isAdmin, currentUser);
-                } else {
-                    console.log("Main: Initial load - Loading home module (either logged out or no last module).");
-                    this.loadModule('home', isLoggedIn, isAdmin, currentUser);
-                }
+                console.log("Main: onAuthReady (initial load path) - Always loading home module.");
+                // *** CRITICAL FIX: Always load 'home' on initial app load, regardless of localStorage. ***
+                this.loadModule('home', isLoggedIn, isAdmin, currentUser);
             } else {
                 // For subsequent auth state changes (e.g., after user explicitly logs in/out),
                 // we need to *force reload* the current module to reflect the new state.
                 console.log("Main: onAuthReady (subsequent change path) - Reloading current module.");
 
-                // *** CRITICAL FIX: Always reload the currently active module (or home)
-                // after a subsequent auth state change to ensure UI reflects the new state. ***
+                // Always reload the currently active module (or home)
+                // after a subsequent auth state change to ensure UI reflects the new state.
                 this.loadModule(this.currentModule || 'home', isLoggedIn, isAdmin, currentUser);
                 console.log(`Main: Reloaded module '${this.currentModule || 'home'}' due to auth state change.`);
             }
