@@ -208,7 +208,10 @@ export const Customers = {
                 data: mappedData
             }).forceRender();
         } else {
-            console.log("Customers: Creating new Grid.js instance.");
+            console.log("Customers: Creating new Grid.js instance. Clearing container first.");
+            // *** CRITICAL FIX: Ensure the container is empty before rendering a new grid ***
+            gridContainer.innerHTML = ''; // Clear any previous Grid.js remnants
+
             this.customersGrid = new gridjs.Grid({
                 columns: columns,
                 data: mappedData,
@@ -440,7 +443,7 @@ export const Customers = {
         console.log("Customers: Checking customersGrid before destroy. Is it defined?", !!this.customersGrid);
         if (this.customersGrid) {
             this.customersGrid.destroy(); // Properly destroy the Grid.js instance
-            this.customersGrid = null; // *** CRITICAL FIX: Nullify the reference ***
+            this.customersGrid = null; // Nullify the reference so a new one is created next time
             console.log("Customers: Grid.js instance destroyed and reference nulled.");
         } else {
             console.log("Customers: No Grid.js instance to destroy.");
