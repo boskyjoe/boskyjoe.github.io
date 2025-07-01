@@ -7,7 +7,7 @@ import { Home } from './home.js';
 import { Customers } from './customers.js';
 import { Opportunities } from './opportunities.js';
 import { Users } from './users.js';
-import { AdminData } = './admin_data.js';
+import { AdminData } from './admin_data.js'; // *** FIXED: Changed '=' to 'from' ***
 import { PriceBook } from './price_book.js';
 
 /**
