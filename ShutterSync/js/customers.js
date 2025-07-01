@@ -459,7 +459,46 @@ export const Customers = {
             this.Utils.showMessage('Company Name and Contact Person are required.', 'warning');
             return;
         }
+        
+        if (!name || !email || !phone || !status || !assignedTo || !source || !industry || !address) {
+            this.Utils.showMessage('Please fill in all required customer fields (Name, Email, Phone, Address, Status, Source, Industry).', 'warning');
+            return;
+        }
+        
+        // --- START: Unique Record Check Implementation (Conditional) ---
+        // Only perform duplicate email check if customerType is 'Individual'
+        if (customerType === 'Individual') {
+            const customersCollectionRef = collection(this.db, 'customers');
+            const emailQuery = query(customersCollectionRef, where("email", "==", email));
+    
+            try {
+                const querySnapshot = await getDocs(emailQuery);
+    
+                const isEditing = !!this.currentEditingCustomerId;
+                let isDuplicate = false;
+    
+                querySnapshot.forEach(doc => {
+                    if (isEditing) {
+                        if (doc.id !== this.currentEditingCustomerId) {
+                            isDuplicate = true;
+                        }
+                    } else {
+                        isDuplicate = true;
+                    }
+                });
+    
+                if (isDuplicate) {
+                    this.Utils.showMessage('A customer with this email already exists!', 'error');
+                    return; // Stop the save process
+                }
+            } catch (error) {
+                this.Utils.handleError(error, "checking for duplicate customer email");
+                return; // Stop the save process if the check fails
+            }
+        }
+        // --- END: Unique Record Check Implementation (Conditional) ---
 
+        
         const customerData = {
             name: name, // Changed to 'name'
             contactPerson: contactPerson,
