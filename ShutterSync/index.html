@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShutterSync CRM</title>
     <link rel="stylesheet" href="css/style.css">
+
+    <link href="https://unpkg.com/tabulator-tables@6.2.0/dist/css/tabulator.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
@@ -54,41 +58,13 @@
             <section id="customersModule" class="module">
                 <h2>Customers</h2>
                 <button id="addCustomerBtn" class="add-button">Add New Customer</button>
-                <div class="table-container">
-                    <table id="customersTable">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Phone</th>
-                                <th>Type</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            </tbody>
-                    </table>
-                </div>
+                <div id="customersTable" class="tabulator-table-container"></div>
             </section>
 
             <section id="opportunitiesModule" class="module">
                 <h2>Opportunities</h2>
                 <button id="addOpportunityBtn" class="add-button">Add New Opportunity</button>
-                <div class="table-container">
-                    <table id="opportunitiesTable">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Customer</th>
-                                <th>Stage</th>
-                                <th>Value</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            </tbody>
-                    </table>
-                </div>
+                 <div id="opportunitiesTable" class="tabulator-table-container"></div>
             </section>
 
             <section id="adminModule" class="module admin-only">
@@ -113,20 +89,7 @@
                         <button type="submit">Save Country</button>
                         <button type="button" class="cancel-edit-btn">Cancel</button>
                     </form>
-                    <div class="table-container">
-                        <table id="countriesStatesTable">
-                            <thead>
-                                <tr>
-                                    <th>Country</th>
-                                    <th>Code</th>
-                                    <th>States</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                </tbody>
-                        </table>
-                    </div>
+                    <div id="countriesStatesTable" class="tabulator-table-container"></div>
                 </div>
 
                 <div id="currenciesSection" class="admin-subsection">
@@ -140,19 +103,7 @@
                         <button type="submit">Save Currency</button>
                         <button type="button" class="cancel-edit-btn">Cancel</button>
                     </form>
-                    <div class="table-container">
-                        <table id="currenciesTable">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Symbol</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                </tbody>
-                        </table>
-                    </div>
+                     <div id="currenciesTable" class="tabulator-table-container"></div>
                 </div>
 
                 <div id="priceBooksSection" class="admin-subsection">
@@ -166,19 +117,7 @@
                         <button type="submit">Save Price Book</button>
                         <button type="button" class="cancel-edit-btn">Cancel</button>
                     </form>
-                    <div class="table-container">
-                        <table id="priceBooksTable">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Description</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                </tbody>
-                        </table>
-                    </div>
+                    <div id="priceBooksTable" class="tabulator-table-container"></div>
                 </div>
 
                 <div id="settingsSection" class="admin-subsection">
@@ -328,6 +267,7 @@
         </div>
     </div>
 
+    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@6.2.0/dist/js/tabulator.min.js"></script>
     <script src="js/script.js"></script>
 </body>
 </html>
