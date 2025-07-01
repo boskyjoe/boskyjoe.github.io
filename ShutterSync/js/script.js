@@ -42,7 +42,7 @@ const addCustomerBtn = document.getElementById('addCustomerBtn');
 const customerForm = document.getElementById('customerForm');
 const customerModalTitle = document.getElementById('customerModalTitle');
 const customerIdInput = document.getElementById('customerId');
-const customersTableBody = document.querySelector('#customersTable tbody');
+// Removed: customersTableBody - Tabulator handles this
 const customerCountrySelect = document.getElementById('customerCountry');
 
 // Opportunity Module Elements
@@ -50,7 +50,7 @@ const addOpportunityBtn = document.getElementById('addOpportunityBtn');
 const opportunityForm = document.getElementById('opportunityForm');
 const opportunityModalTitle = document.getElementById('opportunityModalTitle');
 const opportunityIdInput = document.getElementById('opportunityId');
-const opportunitiesTableBody = document.querySelector('#opportunitiesTable tbody');
+// Removed: opportunitiesTableBody - Tabulator handles this
 const opportunityCustomerSelect = document.getElementById('opportunityCustomer');
 const opportunityCurrencySelect = document.getElementById('opportunityCurrency');
 const opportunityPriceBookSelect = document.getElementById('opportunityPriceBook');
@@ -68,17 +68,17 @@ const adminSubsections = document.querySelectorAll('.admin-subsection');
 const countriesStatesSection = document.getElementById('countriesStatesSection');
 const countryStateForm = document.getElementById('countryStateForm');
 const countryStateIdInput = document.getElementById('countryStateId');
-const countriesStatesTableBody = document.querySelector('#countriesStatesTable tbody');
+// Removed: countriesStatesTableBody - Tabulator handles this
 
 const currenciesSection = document.getElementById('currenciesSection');
 const currencyForm = document.getElementById('currencyForm');
 const currencyIdInput = document.getElementById('currencyId');
-const currenciesTableBody = document.querySelector('#currenciesTable tbody');
+// Removed: currenciesTableBody - Tabulator handles this
 
 const priceBooksSection = document.getElementById('priceBooksSection');
 const priceBookForm = document.getElementById('priceBookForm');
 const priceBookIdInput = document.getElementById('priceBookId');
-const priceBooksTableBody = document.querySelector('#priceBooksTable tbody');
+// Removed: priceBooksTableBody - Tabulator handles this
 
 const settingsSection = document.getElementById('settingsSection');
 const appSettingsForm = document.getElementById('appSettingsForm');
@@ -87,6 +87,14 @@ const settingsDocIdInput = document.getElementById('settingsDocId');
 
 let currentUser = null; // Stores current authenticated user object
 let currentUserRole = 'Guest'; // Stores current user's role
+
+// --- Tabulator Grid Instances ---
+let customersTabulator;
+let opportunitiesTabulator;
+let countriesStatesTabulator;
+let currenciesTabulator;
+let priceBooksTabulator;
+
 
 // --- Firebase Authentication ---
 auth.onAuthStateChanged(async (user) => {
@@ -129,6 +137,15 @@ auth.onAuthStateChanged(async (user) => {
                 el.style.display = 'none';
             }
         });
+
+        // Initialize Tabulator tables (if not already initialized)
+        // This ensures tables are ready when user logs in
+        initializeCustomersTabulator();
+        initializeOpportunitiesTabulator();
+        initializeCountriesStatesTabulator();
+        initializeCurrenciesTabulator();
+        initializePriceBooksTabulator();
+
 
         // Load initial data for the default module (Dashboard)
         showModule('dashboard');
@@ -358,9 +375,78 @@ customerForm.addEventListener('submit', async (e) => {
     }
 });
 
+/**
+ * Initializes the Tabulator grid for Customers.
+ * This should be called once after user authentication.
+ */
+function initializeCustomersTabulator() {
+    if (customersTabulator) return; // Prevent re-initialization
+
+    customersTabulator = new Tabulator("#customersTable", {
+        layout: "fitColumns", // Adjust columns to fit table width
+        responsiveLayout: "hide", // Hide data that doesn't fit
+        pagination: "local", // Enable local pagination
+        paginationSize: 10, // Show 10 rows per page
+        paginationSizeSelector: [5, 10, 20, 50, 100], // Options for page size
+        movableColumns: true, // Allow users to re-order columns
+        columns: [
+            { title: "Name", field: "customerName", headerFilter: "input" },
+            { title: "Email", field: "email", headerFilter: "input" },
+            { title: "Phone", field: "phone", headerFilter: "input" },
+            { title: "Type", field: "customerType", headerFilter: "select", headerFilterParams: { "Individual": "Individual", "Company": "Company", "": "All" } },
+            {
+                title: "Actions",
+                formatter: function (cell, formatterParams, onRendered) {
+                    const data = cell.getRow().getData();
+                    const docId = data.id; // Tabulator uses 'id' for the row data ID
+
+                    const editIcon = `<i class="fa-solid fa-edit" title="Edit"></i>`;
+                    const deleteIcon = `<i class="fa-solid fa-trash" title="Delete"></i>`;
+
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.classList.add('action-icons');
+
+                    const editBtn = document.createElement('span');
+                    editBtn.innerHTML = editIcon;
+                    editBtn.addEventListener('click', (event) => {
+                        event.stopPropagation(); // Prevent row click from firing
+                        editCustomer(docId, data);
+                    });
+
+                    const deleteBtn = document.createElement('span');
+                    deleteBtn.innerHTML = deleteIcon;
+                    deleteBtn.addEventListener('click', (event) => {
+                        event.stopPropagation(); // Prevent row click from firing
+                        deleteCustomer(docId);
+                    });
+
+                    actionsDiv.appendChild(editBtn);
+                    actionsDiv.appendChild(deleteBtn);
+                    return actionsDiv;
+                },
+                width: 100, // Fixed width for action icons
+                hozAlign: "center",
+                headerSort: false, // Prevent sorting on action column
+                resizable: false, // Prevent resizing action column
+            },
+        ],
+        // Optional: Add a placeholder when no data
+        placeholder: "No Customer Data Available",
+        // Row click event (optional, useful if you want to view full details)
+        rowClick: function(e, row) {
+            // console.log("Row Clicked:", row.getData());
+            // You could open a detailed view modal here if needed
+        },
+    });
+}
+
+
 async function loadCustomers() {
-    if (!currentUser) return;
-    customersTableBody.innerHTML = '<tr><td colspan="5">Loading customers...</td></tr>';
+    if (!currentUser || !customersTabulator) return; // Ensure Tabulator is initialized
+    
+    // Show loading placeholder directly in Tabulator
+    customersTabulator.setData([]); // Clear data first
+    customersTabulator.showLoader();
 
     try {
         let query = customersCollection;
@@ -370,39 +456,26 @@ async function loadCustomers() {
         }
 
         const snapshot = await query.orderBy('customerName').get();
-        customersTableBody.innerHTML = ''; // Clear previous rows
+        
+        const customerData = [];
+        snapshot.forEach(doc => {
+            // Add doc.id to the data object, which Tabulator uses by default for row ID
+            customerData.push({ id: doc.id, ...doc.data() });
+        });
 
-        if (snapshot.empty) {
-            customersTableBody.innerHTML = '<tr><td colspan="5">No customers found.</td></tr>';
-            return;
+        customersTabulator.setData(customerData); // Load data into Tabulator
+        customersTabulator.hideLoader();
+
+        if (customerData.length === 0) {
+            // Tabulator automatically handles the "No Data" message via its placeholder option
         }
 
-        snapshot.forEach(doc => {
-            const customer = doc.data();
-            const row = customersTableBody.insertRow();
-            row.insertCell(0).textContent = customer.customerName;
-            row.insertCell(1).textContent = customer.email;
-            row.insertCell(2).textContent = customer.phone;
-            row.insertCell(3).textContent = customer.customerType;
-
-            const actionsCell = row.insertCell(4);
-            const editBtn = document.createElement('button');
-            editBtn.textContent = 'Edit';
-            editBtn.classList.add('edit-btn');
-            editBtn.addEventListener('click', () => editCustomer(doc.id, customer));
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = 'Delete';
-            deleteBtn.classList.add('delete-btn');
-            deleteBtn.addEventListener('click', () => deleteCustomer(doc.id));
-
-            actionsCell.classList.add('action-buttons');
-            actionsCell.appendChild(editBtn);
-            actionsCell.appendChild(deleteBtn);
-        });
     } catch (error) {
         console.error('Error loading customers:', error);
-        customersTableBody.innerHTML = `<tr><td colspan="5">Error loading customers: ${error.message}</td></tr>`;
+        customersTabulator.setData([]); // Clear data on error
+        customersTabulator.hideLoader();
+        // You might want to display a more prominent error message here
+        customersTabulator.showLoader("Error loading data: " + error.message, "error");
     }
 }
 
@@ -445,7 +518,7 @@ async function deleteCustomer(id) {
     }
 }
 
-// --- Opportunity Module Functions ---
+// --- Opportunity Module Functions (Initial Placeholder - will be converted to Tabulator similarly) ---
 addOpportunityBtn.addEventListener('click', () => {
     if (!currentUser) {
         alert('Please sign in to add opportunities.');
@@ -506,25 +579,78 @@ opportunityForm.addEventListener('submit', async (e) => {
     }
 });
 
+/**
+ * Initializes the Tabulator grid for Opportunities.
+ * This should be called once after user authentication.
+ */
+function initializeOpportunitiesTabulator() {
+    if (opportunitiesTabulator) return; // Prevent re-initialization
+
+    opportunitiesTabulator = new Tabulator("#opportunitiesTable", {
+        layout: "fitColumns", // Adjust columns to fit table width
+        responsiveLayout: "hide", // Hide data that doesn't fit
+        pagination: "local", // Enable local pagination
+        paginationSize: 10, // Show 10 rows per page
+        paginationSizeSelector: [5, 10, 20, 50, 100], // Options for page size
+        movableColumns: true, // Allow users to re-order columns
+        columns: [
+            { title: "Name", field: "opportunityName", headerFilter: "input" },
+            { title: "Customer", field: "customerName", headerFilter: "input" }, // 'customerName' will be added during data loading
+            { title: "Stage", field: "salesStage", headerFilter: "select", headerFilterParams: { "Prospect": "Prospect", "Qualified": "Qualified", "Proposal": "Proposal", "Negotiation": "Negotiation", "Won": "Won", "Lost": "Lost", "": "All" } },
+            { title: "Value", field: "value", hozAlign: "right", formatter: "money", formatterParams: { decimal: ".", thousand: ",", symbol: "$", precision: 0 }, headerFilter: "input" },
+            {
+                title: "Actions",
+                formatter: function (cell, formatterParams, onRendered) {
+                    const data = cell.getRow().getData();
+                    const docId = data.id;
+
+                    const editIcon = `<i class="fa-solid fa-edit" title="Edit"></i>`;
+                    const deleteIcon = `<i class="fa-solid fa-trash" title="Delete"></i>`;
+
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.classList.add('action-icons');
+
+                    const editBtn = document.createElement('span');
+                    editBtn.innerHTML = editIcon;
+                    editBtn.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        editOpportunity(docId, data);
+                    });
+
+                    const deleteBtn = document.createElement('span');
+                    deleteBtn.innerHTML = deleteIcon;
+                    deleteBtn.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        deleteOpportunity(docId);
+                    });
+
+                    actionsDiv.appendChild(editBtn);
+                    actionsDiv.appendChild(deleteBtn);
+                    return actionsDiv;
+                },
+                width: 100,
+                hozAlign: "center",
+                headerSort: false,
+                resizable: false,
+            },
+        ],
+        placeholder: "No Opportunity Data Available",
+    });
+}
+
 async function loadOpportunities() {
-    if (!currentUser) return;
-    opportunitiesTableBody.innerHTML = '<tr><td colspan="5">Loading opportunities...</td></tr>';
+    if (!currentUser || !opportunitiesTabulator) return;
+    opportunitiesTabulator.setData([]);
+    opportunitiesTabulator.showLoader();
 
     try {
         let query = opportunitiesCollection;
-        // Standard users only see opportunities they created (frontend filter based on rule)
         if (currentUserRole !== 'Admin') {
             query = query.where('creatorId', '==', currentUser.uid);
         }
 
         const snapshot = await query.orderBy('expectedCloseDate').get();
-        opportunitiesTableBody.innerHTML = ''; // Clear previous rows
-
-        if (snapshot.empty) {
-            opportunitiesTableBody.innerHTML = '<tr><td colspan="5">No opportunities found.</td></tr>';
-            return;
-        }
-
+        
         // Fetch customer names for display
         const customerDocs = await customersCollection.get();
         const customersMap = new Map();
@@ -532,34 +658,28 @@ async function loadOpportunities() {
             customersMap.set(doc.id, doc.data().customerName);
         });
 
+        const opportunityData = [];
         snapshot.forEach(doc => {
             const opportunity = doc.data();
-            const row = opportunitiesTableBody.insertRow();
-            row.insertCell(0).textContent = opportunity.opportunityName;
-            row.insertCell(1).textContent = customersMap.get(opportunity.customer) || 'N/A'; // Display customer name
-            row.insertCell(2).textContent = opportunity.salesStage;
-            row.insertCell(3).textContent = `$${opportunity.value}`; // Format value
-
-            const actionsCell = row.insertCell(4);
-            const editBtn = document.createElement('button');
-            editBtn.textContent = 'Edit';
-            editBtn.classList.add('edit-btn');
-            editBtn.addEventListener('click', () => editOpportunity(doc.id, opportunity));
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = 'Delete';
-            deleteBtn.classList.add('delete-btn');
-            deleteBtn.addEventListener('click', () => deleteOpportunity(doc.id));
-
-            actionsCell.classList.add('action-buttons');
-            actionsCell.appendChild(editBtn);
-            actionsCell.appendChild(deleteBtn);
+            // Add customerName and id to the data object
+            opportunityData.push({ 
+                id: doc.id,
+                customerName: customersMap.get(opportunity.customer) || 'N/A', // Denormalize customer name for display
+                ...opportunity 
+            });
         });
+
+        opportunitiesTabulator.setData(opportunityData);
+        opportunitiesTabulator.hideLoader();
+
     } catch (error) {
         console.error('Error loading opportunities:', error);
-        opportunitiesTableBody.innerHTML = `<tr><td colspan="5">Error loading opportunities: ${error.message}</td></tr>`;
+        opportunitiesTabulator.setData([]);
+        opportunitiesTabulator.hideLoader();
+        opportunitiesTabulator.showLoader("Error loading data: " + error.message, "error");
     }
 }
+
 
 async function editOpportunity(id, opportunity) {
     if (!currentUser) {
@@ -707,41 +827,86 @@ document.querySelectorAll('.admin-form .cancel-edit-btn').forEach(button => {
 
 
 // Countries & States Management
+/**
+ * Initializes the Tabulator grid for Countries & States.
+ * This should be called once after user authentication.
+ */
+function initializeCountriesStatesTabulator() {
+    if (countriesStatesTabulator) return; // Prevent re-initialization
+
+    countriesStatesTabulator = new Tabulator("#countriesStatesTable", {
+        layout: "fitColumns",
+        pagination: "local",
+        paginationSize: 10,
+        movableColumns: true,
+        columns: [
+            { title: "Country", field: "name", headerFilter: "input" },
+            { title: "Code", field: "code", headerFilter: "input", width: 100 },
+            { title: "States", field: "states", formatter: function(cell) {
+                const states = cell.getValue();
+                return states && Array.isArray(states) ? states.join(', ') : 'N/A';
+            }},
+            {
+                title: "Actions",
+                formatter: function (cell, formatterParams, onRendered) {
+                    const data = cell.getRow().getData(); // Tabulator row data, contains `_index`
+                    const index = data._index; // The index we stored in the data
+
+                    const editIcon = `<i class="fa-solid fa-edit" title="Edit"></i>`;
+                    const deleteIcon = `<i class="fa-solid fa-trash" title="Delete"></i>`;
+
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.classList.add('action-icons');
+
+                    const editBtn = document.createElement('span');
+                    editBtn.innerHTML = editIcon;
+                    editBtn.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        editCountryState(index, data); // Pass index and data
+                    });
+
+                    const deleteBtn = document.createElement('span');
+                    deleteBtn.innerHTML = deleteIcon;
+                    deleteBtn.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        deleteCountryState(index);
+                    });
+
+                    actionsDiv.appendChild(editBtn);
+                    actionsDiv.appendChild(deleteBtn);
+                    return actionsDiv;
+                },
+                width: 100,
+                hozAlign: "center",
+                headerSort: false,
+                resizable: false,
+            },
+        ],
+        placeholder: "No Countries & States Data Available",
+    });
+}
+
 async function loadCountriesStates() {
-    if (currentUserRole !== 'Admin') return;
-    countriesStatesTableBody.innerHTML = '<tr><td colspan="4">Loading countries...</td></tr>';
+    if (currentUserRole !== 'Admin' || !countriesStatesTabulator) return;
+    countriesStatesTabulator.setData([]);
+    countriesStatesTabulator.showLoader();
+
     try {
         const doc = await countriesStatesCollection.get();
         const countriesData = doc.data();
-        countriesStatesTableBody.innerHTML = '';
+        let dataForTabulator = [];
         if (countriesData && countriesData.countries && countriesData.countries.length > 0) {
-            countriesData.countries.forEach((country, index) => {
-                const row = countriesStatesTableBody.insertRow();
-                row.insertCell(0).textContent = country.name;
-                row.insertCell(1).textContent = country.code;
-                row.insertCell(2).textContent = country.states ? country.states.join(', ') : 'N/A';
-
-                const actionsCell = row.insertCell(3);
-                const editBtn = document.createElement('button');
-                editBtn.textContent = 'Edit';
-                editBtn.classList.add('edit-btn');
-                editBtn.addEventListener('click', () => editCountryState(index, country)); // Pass index and data
-
-                const deleteBtn = document.createElement('button');
-                deleteBtn.textContent = 'Delete';
-                deleteBtn.classList.add('delete-btn');
-                deleteBtn.addEventListener('click', () => deleteCountryState(index));
-
-                actionsCell.classList.add('action-buttons');
-                actionsCell.appendChild(editBtn);
-                actionsCell.appendChild(deleteBtn);
-            });
-        } else {
-            countriesStatesTableBody.innerHTML = '<tr><td colspan="4">No countries and states found.</td></tr>';
+            // Add a temporary index to each item for Tabulator to refer back to
+            dataForTabulator = countriesData.countries.map((country, idx) => ({ ...country, _index: idx }));
         }
+        countriesStatesTabulator.setData(dataForTabulator);
+        countriesStatesTabulator.hideLoader();
+
     } catch (error) {
         console.error('Error loading countries and states:', error);
-        countriesStatesTableBody.innerHTML = `<tr><td colspan="4">Error loading: ${error.message}</td></tr>`;
+        countriesStatesTabulator.setData([]);
+        countriesStatesTabulator.hideLoader();
+        countriesStatesTabulator.showLoader("Error loading data: " + error.message, "error");
     }
 }
 
@@ -815,37 +980,79 @@ async function deleteCountryState(index) {
 
 
 // Currencies Management
+/**
+ * Initializes the Tabulator grid for Currencies.
+ * This should be called once after user authentication.
+ */
+function initializeCurrenciesTabulator() {
+    if (currenciesTabulator) return; // Prevent re-initialization
+
+    currenciesTabulator = new Tabulator("#currenciesTable", {
+        layout: "fitColumns",
+        pagination: "local",
+        paginationSize: 10,
+        movableColumns: true,
+        columns: [
+            { title: "Name", field: "name", headerFilter: "input" },
+            { title: "Symbol", field: "symbol", headerFilter: "input", width: 100 },
+            {
+                title: "Actions",
+                formatter: function (cell, formatterParams, onRendered) {
+                    const data = cell.getRow().getData();
+                    const docId = data.id;
+
+                    const editIcon = `<i class="fa-solid fa-edit" title="Edit"></i>`;
+                    const deleteIcon = `<i class="fa-solid fa-trash" title="Delete"></i>`;
+
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.classList.add('action-icons');
+
+                    const editBtn = document.createElement('span');
+                    editBtn.innerHTML = editIcon;
+                    editBtn.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        editCurrency(docId, data);
+                    });
+
+                    const deleteBtn = document.createElement('span');
+                    deleteBtn.innerHTML = deleteIcon;
+                    deleteBtn.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        deleteCurrency(docId);
+                    });
+
+                    actionsDiv.appendChild(editBtn);
+                    actionsDiv.appendChild(deleteBtn);
+                    return actionsDiv;
+                },
+                width: 100,
+                hozAlign: "center",
+                headerSort: false,
+                resizable: false,
+            },
+        ],
+        placeholder: "No Currencies Data Available",
+    });
+}
+
 async function loadCurrencies() {
-    if (currentUserRole !== 'Admin') return;
-    currenciesTableBody.innerHTML = '<tr><td colspan="3">Loading currencies...</td></tr>';
+    if (currentUserRole !== 'Admin' || !currenciesTabulator) return;
+    currenciesTabulator.setData([]);
+    currenciesTabulator.showLoader();
+
     try {
         const snapshot = await currenciesCollection.orderBy('name').get();
-        currenciesTableBody.innerHTML = '';
-        if (snapshot.empty) {
-            currenciesTableBody.innerHTML = '<tr><td colspan="3">No currencies found.</td></tr>';
-            return;
-        }
+        const dataForTabulator = [];
         snapshot.forEach(doc => {
-            const currency = doc.data();
-            const row = currenciesTableBody.insertRow();
-            row.insertCell(0).textContent = currency.name;
-            row.insertCell(1).textContent = currency.symbol;
-            const actionsCell = row.insertCell(2);
-            const editBtn = document.createElement('button');
-            editBtn.textContent = 'Edit';
-            editBtn.classList.add('edit-btn');
-            editBtn.addEventListener('click', () => editCurrency(doc.id, currency));
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = 'Delete';
-            deleteBtn.classList.add('delete-btn');
-            deleteBtn.addEventListener('click', () => deleteCurrency(doc.id));
-            actionsCell.classList.add('action-buttons');
-            actionsCell.appendChild(editBtn);
-            actionsCell.appendChild(deleteBtn);
+            dataForTabulator.push({ id: doc.id, ...doc.data() });
         });
+        currenciesTabulator.setData(dataForTabulator);
+        currenciesTabulator.hideLoader();
     } catch (error) {
         console.error('Error loading currencies:', error);
-        currenciesTableBody.innerHTML = `<tr><td colspan="3">Error loading currencies: ${error.message}</td></tr>`;
+        currenciesTabulator.setData([]);
+        currenciesTabulator.hideLoader();
+        currenciesTabulator.showLoader("Error loading data: " + error.message, "error");
     }
 }
 
@@ -903,37 +1110,81 @@ async function deleteCurrency(id) {
 }
 
 // Price Books Management
+/**
+ * Initializes the Tabulator grid for Price Books.
+ * This should be called once after user authentication.
+ */
+function initializePriceBooksTabulator() {
+    if (priceBooksTabulator) return; // Prevent re-initialization
+
+    priceBooksTabulator = new Tabulator("#priceBooksTable", {
+        layout: "fitColumns",
+        pagination: "local",
+        paginationSize: 10,
+        movableColumns: true,
+        columns: [
+            { title: "Name", field: "name", headerFilter: "input" },
+            { title: "Description", field: "description", headerFilter: "input",
+                formatter: function(cell) { return cell.getValue() || 'N/A'; }
+            },
+            {
+                title: "Actions",
+                formatter: function (cell, formatterParams, onRendered) {
+                    const data = cell.getRow().getData();
+                    const docId = data.id;
+
+                    const editIcon = `<i class="fa-solid fa-edit" title="Edit"></i>`;
+                    const deleteIcon = `<i class="fa-solid fa-trash" title="Delete"></i>`;
+
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.classList.add('action-icons');
+
+                    const editBtn = document.createElement('span');
+                    editBtn.innerHTML = editIcon;
+                    editBtn.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        editPriceBook(docId, data);
+                    });
+
+                    const deleteBtn = document.createElement('span');
+                    deleteBtn.innerHTML = deleteIcon;
+                    deleteBtn.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        deletePriceBook(docId);
+                    });
+
+                    actionsDiv.appendChild(editBtn);
+                    actionsDiv.appendChild(deleteBtn);
+                    return actionsDiv;
+                },
+                width: 100,
+                hozAlign: "center",
+                headerSort: false,
+                resizable: false,
+            },
+        ],
+        placeholder: "No Price Books Data Available",
+    });
+}
+
 async function loadPriceBooks() {
-    if (currentUserRole !== 'Admin') return;
-    priceBooksTableBody.innerHTML = '<tr><td colspan="3">Loading price books...</td></tr>';
+    if (currentUserRole !== 'Admin' || !priceBooksTabulator) return;
+    priceBooksTabulator.setData([]);
+    priceBooksTabulator.showLoader();
+
     try {
         const snapshot = await priceBooksCollection.orderBy('name').get();
-        priceBooksTableBody.innerHTML = '';
-        if (snapshot.empty) {
-            priceBooksTableBody.innerHTML = '<tr><td colspan="3">No price books found.</td></tr>';
-            return;
-        }
+        const dataForTabulator = [];
         snapshot.forEach(doc => {
-            const priceBook = doc.data();
-            const row = priceBooksTableBody.insertRow();
-            row.insertCell(0).textContent = priceBook.name;
-            row.insertCell(1).textContent = priceBook.description || 'N/A';
-            const actionsCell = row.insertCell(2);
-            const editBtn = document.createElement('button');
-            editBtn.textContent = 'Edit';
-            editBtn.classList.add('edit-btn');
-            editBtn.addEventListener('click', () => editPriceBook(doc.id, priceBook));
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = 'Delete';
-            deleteBtn.classList.add('delete-btn');
-            deleteBtn.addEventListener('click', () => deletePriceBook(doc.id));
-            actionsCell.classList.add('action-buttons');
-            actionsCell.appendChild(editBtn);
-            actionsCell.appendChild(deleteBtn);
+            dataForTabulator.push({ id: doc.id, ...doc.data() });
         });
+        priceBooksTabulator.setData(dataForTabulator);
+        priceBooksTabulator.hideLoader();
     } catch (error) {
         console.error('Error loading price books:', error);
-        priceBooksTableBody.innerHTML = `<tr><td colspan="3">Error loading price books: ${error.message}</td></tr>`;
+        priceBooksTabulator.setData([]);
+        priceBooksTabulator.hideLoader();
+        priceBooksTabulator.showLoader("Error loading data: " + error.message, "error");
     }
 }
 
@@ -1045,12 +1296,19 @@ appSettingsForm.addEventListener('submit', async (e) => {
     }
 });
 
-// Initial load (if already authenticated)
-// This will be handled by the auth.onAuthStateChanged listener,
-// but for direct page load, we want to ensure basic UI is ready.
+
+// Initial load and Tabulator initialization on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
     // Hide all modules until authentication state is known
     modules.forEach(module => module.classList.remove('active'));
     userInfoDisplay.style.display = 'none'; // Hide user info until signed in
     adminOnlyElements.forEach(el => el.style.display = 'none'); // Hide admin elements initially
+    
+    // Initialize all Tabulator instances
+    // They are initialized here but populated with data only after user login
+    initializeCustomersTabulator();
+    initializeOpportunitiesTabulator();
+    initializeCountriesStatesTabulator();
+    initializeCurrenciesTabulator();
+    initializePriceBooksTabulator();
 });
