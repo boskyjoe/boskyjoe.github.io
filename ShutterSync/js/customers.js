@@ -128,11 +128,26 @@ export const Customers = {
                                     <option value="Mail">Mail</option>
                                 </select>
                             </div>
+                            
                             <div class="md:col-span-2">
                                 <label for="industry" class="block text-sm font-medium text-gray-700 mb-1">Industry</label>
                                 <input type="text" id="industry" name="industry"
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             </div>
+
+                            <!-- Changed Industry to Dropdow -->
+                            <div class="md:col-span-2">
+                                <label for="industry" class="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+                                <select id="industry" name="industry"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <option value="">Select an Industry</option>
+                                    <option value="Technology">Technology</option>
+                                    <option value="Finance">Finance</option>
+                                    <option value="Healthcare">Healthcare</option>
+                                    <option value="Others">Others</option>
+                                </select>
+                            </div>
+                            
                              <div class="md:col-span-2">
                                 <label for="customer-source" class="block text-sm font-medium text-gray-700 mb-1">Customer Source</label>
                                 <input type="text" id="customer-source" name="customerSource"
