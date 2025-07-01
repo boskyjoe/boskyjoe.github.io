@@ -29,7 +29,7 @@ export const Customers = {
         this.Utils = utils;
         this.customersCollectionRef = this.Utils.getCustomersCollectionRef();
 
-        // *** CRITICAL FIX: Ensure grid and listener references are null on init for a clean slate ***
+        // Ensure grid and listener references are null on init for a clean slate
         this.customersGrid = null;
         this.unsubscribeCustomersSnapshot = null;
         console.log("Customers module initialized. customersGrid and unsubscribeCustomersSnapshot reset to null.");
@@ -82,8 +82,34 @@ export const Customers = {
                             <input type="tel" id="phone" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                         </div>
                         <div class="mb-4">
+                            <label for="customer-type" class="block text-gray-700 text-sm font-bold mb-2">Customer Type:</label>
+                            <select id="customer-type" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                                <option value="">Select Type</option>
+                                <option value="Individual">Individual</option>
+                                <option value="Company">Company</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="preferred-contact-method" class="block text-gray-700 text-sm font-bold mb-2">Preferred Contact Method:</label>
+                            <select id="preferred-contact-method" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                                <option value="">Select Method</option>
+                                <option value="Email">Email</option>
+                                <option value="Phone">Phone</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="industry" class="block text-gray-700 text-sm font-bold mb-2">Industry:</label>
+                            <select id="industry" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                                <option value="">Select Industry</option>
+                                <option value="Technology">Technology</option>
+                                <option value="Finance">Finance</option>
+                                <option value="Healthcare">Healthcare</option>
+                                <option value="Others">Others</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
                             <label for="address" class="block text-gray-700 text-sm font-bold mb-2">Address:</label>
-                            <input type="text" id="address" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                            <textarea id="address" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" rows="3"></textarea>
                         </div>
                         <div class="mb-4">
                             <label for="city" class="block text-gray-700 text-sm font-bold mb-2">City:</label>
@@ -96,6 +122,29 @@ export const Customers = {
                         <div class="mb-4">
                             <label for="zip" class="block text-gray-700 text-sm font-bold mb-2">Zip Code:</label>
                             <input type="text" id="zip" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        </div>
+                        <div class="mb-4">
+                            <label for="additional-details" class="block text-gray-700 text-sm font-bold mb-2">Additional Details:</label>
+                            <textarea id="additional-details" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" rows="3"></textarea>
+                        </div>
+                        <div class="mb-4">
+                            <label for="customer-source" class="block text-gray-700 text-sm font-bold mb-2">Customer Source:</label>
+                            <select id="customer-source" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                                <option value="">Select Source</option>
+                                <option value="Website">Website</option>
+                                <option value="Referral">Referral</option>
+                                <option value="Social Media">Social Media</option>
+                                <option value="Advertisement">Advertisement</option>
+                                <option value="Event">Event</option>
+                                <option value="Others">Others</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="active-status" class="block text-gray-700 text-sm font-bold mb-2">Active Status:</label>
+                            <select id="active-status" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
                         </div>
                         <div class="flex items-center justify-between">
                             <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-200">Save Customer</button>
@@ -164,18 +213,12 @@ export const Customers = {
         }
 
         this.unsubscribeCustomersSnapshot = this.Utils.onSnapshot(q, (querySnapshot) => {
-            // *** NEW DIAGNOSTIC LOGS ***
             console.log(`Customers: Real-time snapshot received. Number of documents: ${querySnapshot.size}`);
-            // **************************
-
             const customers = [];
             querySnapshot.forEach(doc => {
                 customers.push({ id: doc.id, ...doc.data() });
             });
-
-            // *** NEW DIAGNOSTIC LOG ***
             console.log(`Customers: Array populated with ${customers.length} items from snapshot.`);
-            // **************************
 
             this.renderCustomersGrid(customers, isAdmin, currentUser); // Pass isAdmin and currentUser
         }, (error) => {
@@ -203,16 +246,22 @@ export const Customers = {
             { id: 'contactPerson', name: 'Contact Person' },
             { id: 'email', name: 'Email' },
             { id: 'phone', name: 'Phone' },
+            { id: 'customerType', name: 'Customer Type' },
+            { id: 'preferredContactMethod', name: 'Preferred Contact Method' },
+            { id: 'industry', name: 'Industry' },
             { id: 'address', name: 'Address' },
             { id: 'city', name: 'City' },
             { id: 'state', name: 'State' },
             { id: 'zip', name: 'Zip Code' },
+            { id: 'additionalDetails', name: 'Additional Details' },
+            { id: 'customerSource', name: 'Customer Source' },
+            { id: 'activeStatus', name: 'Active' },
             {
                 name: 'Actions',
                 formatter: (cell, row) => {
                     const customerId = row.cells[0].data; // Assuming ID is the first cell
-                    // Assuming createdBy UID is at index 8 based on new columns
-                    const createdById = row.cells[8].data;
+                    // Adjust index for createdBy UID based on new columns
+                    const createdById = row.cells[14].data; // Now at index 14 (0-indexed)
 
                     // Check if the current user created this customer or is an admin
                     const isCreatorOrAdmin = isAdmin || (currentUser && createdById === currentUser.uid);
@@ -235,10 +284,16 @@ export const Customers = {
             c.contactPerson,
             c.email,
             c.phone,
+            c.customerType,
+            c.preferredContactMethod,
+            c.industry,
             c.address,
             c.city,
             c.state,
             c.zip,
+            c.additionalDetails,
+            c.customerSource,
+            c.activeStatus,
             c.createdBy // Pass createdBy UID here
         ]);
 
@@ -249,8 +304,8 @@ export const Customers = {
             }).forceRender();
         } else {
             console.log("Customers: Creating new Grid.js instance. Clearing container first.");
-            // *** CRITICAL FIX: Ensure the container is empty before rendering a new grid ***
-            gridContainer.innerHTML = ''; // Clear any previous Grid.js remnants
+            // Ensure the container is empty before rendering a new grid
+            gridContainer.innerHTML = '';
 
             this.customersGrid = new gridjs.Grid({
                 columns: columns,
@@ -355,10 +410,16 @@ export const Customers = {
                 document.getElementById('contact-person').value = data.contactPerson || '';
                 document.getElementById('email').value = data.email || '';
                 document.getElementById('phone').value = data.phone || '';
-                document.getElementById('address').value = data.address || '';
+                document.getElementById('customer-type').value = data.customerType || '';
+                document.getElementById('preferred-contact-method').value = data.preferredContactMethod || '';
+                document.getElementById('industry').value = data.industry || '';
+                document.getElementById('address').value = data.address || ''; // Now a textarea
                 document.getElementById('city').value = data.city || '';
                 document.getElementById('state').value = data.state || '';
                 document.getElementById('zip').value = data.zip || '';
+                document.getElementById('additional-details').value = data.additionalDetails || '';
+                document.getElementById('customer-source').value = data.customerSource || '';
+                document.getElementById('active-status').value = data.activeStatus || 'Active';
             }
             modal.classList.remove('hidden');
         } else {
@@ -389,10 +450,16 @@ export const Customers = {
         const contactPerson = document.getElementById('contact-person').value;
         const email = document.getElementById('email').value;
         const phone = document.getElementById('phone').value;
-        const address = document.getElementById('address').value;
+        const customerType = document.getElementById('customer-type').value;
+        const preferredContactMethod = document.getElementById('preferred-contact-method').value;
+        const industry = document.getElementById('industry').value;
+        const address = document.getElementById('address').value; // Get value from textarea
         const city = document.getElementById('city').value;
         const state = document.getElementById('state').value;
         const zip = document.getElementById('zip').value;
+        const additionalDetails = document.getElementById('additional-details').value;
+        const customerSource = document.getElementById('customer-source').value;
+        const activeStatus = document.getElementById('active-status').value;
         const createdBy = Auth.getCurrentUser()?.uid; // Get current user's UID
 
         if (!createdBy) {
@@ -405,10 +472,16 @@ export const Customers = {
             contactPerson,
             email,
             phone,
+            customerType,
+            preferredContactMethod,
+            industry,
             address,
             city,
             state,
             zip,
+            additionalDetails,
+            customerSource,
+            activeStatus,
             createdBy,
             updatedAt: this.Utils.Timestamp.now()
         };
