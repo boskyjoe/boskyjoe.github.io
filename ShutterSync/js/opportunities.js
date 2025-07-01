@@ -13,7 +13,7 @@ export const Opportunities = {
     opportunitiesGrid: null, // Stores the Grid.js instance for opportunities
     opportunitiesCollectionRef: null,
     unsubscribeOpportunitiesSnapshot: null, // To store the unsubscribe function for real-time listener
-    // customersCache: new Map(), // REMOVED from top-level, will be initialized in init()
+    customersCache: null, // Initialized in init()
 
     /**
      * Initializes the Opportunities module.
@@ -280,6 +280,10 @@ export const Opportunities = {
             }).forceRender();
             console.log("Opportunities: Grid.js instance updated and re-rendered.");
         } else {
+            console.log("Opportunities: Creating new Grid.js instance. Clearing container first.");
+            // *** CRITICAL FIX: Ensure the container is empty before rendering a new grid ***
+            gridContainer.innerHTML = ''; // Clear any previous Grid.js remnants
+
             this.opportunitiesGrid = new gridjs.Grid({
                 columns: columns,
                 data: mappedData,
@@ -515,7 +519,7 @@ export const Opportunities = {
         console.log("Opportunities: Checking opportunitiesGrid before destroy. Is it defined?", !!this.opportunitiesGrid);
         if (this.opportunitiesGrid) {
             this.opportunitiesGrid.destroy(); // Properly destroy the Grid.js instance
-            this.opportunitiesGrid = null; // *** CRITICAL FIX: Nullify the reference ***
+            this.opportunitiesGrid = null; // Nullify the reference so a new one is created next time
             console.log("Opportunities: Grid.js instance destroyed and reference nulled.");
         } else {
             console.log("Opportunities: No Grid.js instance to destroy.");
