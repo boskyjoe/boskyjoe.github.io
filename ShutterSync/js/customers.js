@@ -147,11 +147,19 @@ export const Customers = {
         }
 
         this.unsubscribeCustomersSnapshot = this.Utils.onSnapshot(q, (querySnapshot) => {
-            console.log("Customers: Real-time snapshot received.");
+            // *** NEW DIAGNOSTIC LOGS ***
+            console.log(`Customers: Real-time snapshot received. Number of documents: ${querySnapshot.size}`);
+            // **************************
+
             const customers = [];
             querySnapshot.forEach(doc => {
                 customers.push({ id: doc.id, ...doc.data() });
             });
+
+            // *** NEW DIAGNOSTIC LOG ***
+            console.log(`Customers: Array populated with ${customers.length} items from snapshot.`);
+            // **************************
+
             this.renderCustomersGrid(customers, isAdmin, currentUser); // Pass isAdmin and currentUser
         }, (error) => {
             this.Utils.handleError(error, "fetching real-time customers");
