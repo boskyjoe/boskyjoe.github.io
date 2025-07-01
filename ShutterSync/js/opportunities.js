@@ -97,7 +97,7 @@ export const Opportunities = {
                 </div>
             </div>
             <!-- Delete Confirmation Modal -->
-            <div id="delete-confirmation-modal" class="fixed inset-0 bg-gray-600 bg-opacity50 flex items-center justify-center hidden z-50">
+            <div id="delete-confirmation-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
                 <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
                     <h3 class="text-xl font-bold mb-4">Confirm Deletion</h3>
                     <p class="mb-4">Are you sure you want to delete this opportunity? This action cannot be undone.</p>
@@ -311,26 +311,23 @@ export const Opportunities = {
      * Attaches event listeners to the Edit and Delete buttons within the Grid.js table.
      */
     attachGridButtonListeners: function() {
-        // Remove existing listeners to prevent duplicates
-        // It's safer to re-attach listeners after each render, ensuring they apply to new DOM elements.
-        // The previous approach of removing specific listeners might be tricky if elements are fully replaced.
-        // A simpler way for Grid.js is often to rely on event delegation if possible,
-        // but for direct button clicks, re-attaching is common.
-        // For now, we'll ensure the current approach is safe with the destroy method.
-        // We ensure `handleEditButtonClick` and `handleDeleteButtonClick` are bound to `this` when added.
-
-        // Add new listeners
-        document.querySelectorAll('.edit-opportunity-btn').forEach(btn => {
-            // Remove existing listener first to prevent duplicates, if any were previously attached
-            btn.removeEventListener('click', this.handleEditButtonClickBound);
+        // We need to ensure we remove old listeners before adding new ones
+        // to prevent multiple listeners on the same button.
+        // Store bound functions to correctly remove them.
+        if (!this.handleEditButtonClickBound) {
             this.handleEditButtonClickBound = this.handleEditButtonClick.bind(this);
-            btn.addEventListener('click', this.handleEditButtonClickBound);
+        }
+        if (!this.handleDeleteButtonClickBound) {
+            this.handleDeleteButtonClickBound = this.handleDeleteButtonClick.bind(this);
+        }
+
+        document.querySelectorAll('.edit-opportunity-btn').forEach(btn => {
+            btn.removeEventListener('click', this.handleEditButtonClickBound); // Remove old
+            btn.addEventListener('click', this.handleEditButtonClickBound); // Add new
         });
         document.querySelectorAll('.delete-opportunity-btn').forEach(btn => {
-            // Remove existing listener first
-            btn.removeEventListener('click', this.handleDeleteButtonClickBound);
-            this.handleDeleteButtonClickBound = this.handleDeleteButtonClick.bind(this);
-            btn.addEventListener('click', this.handleDeleteButtonClickBound);
+            btn.removeEventListener('click', this.handleDeleteButtonClickBound); // Remove old
+            btn.addEventListener('click', this.handleDeleteButtonClickBound); // Add new
         });
         console.log("Opportunities: Attached grid button listeners.");
     },
@@ -514,18 +511,19 @@ export const Opportunities = {
             console.log("Opportunities: Real-time listener unsubscribed.");
         }
 
-        // Clear the Grid.js instance if it exists
+        // Destroy the Grid.js instance if it exists
+        console.log("Opportunities: Checking opportunitiesGrid before destroy. Is it defined?", !!this.opportunitiesGrid);
         if (this.opportunitiesGrid) {
-            this.opportunitiesGrid.destroy(); // Use destroy() to properly clean up Grid.js
-            this.opportunitiesGrid = null;
-            console.log("Opportunities: Grid.js instance destroyed.");
+            this.opportunitiesGrid.destroy(); // Properly destroy the Grid.js instance
+            this.opportunitiesGrid = null; // *** CRITICAL FIX: Nullify the reference ***
+            console.log("Opportunities: Grid.js instance destroyed and reference nulled.");
         } else {
             console.log("Opportunities: No Grid.js instance to destroy.");
         }
 
-        // Add null-check for customersCache before clearing
+        // Clear customers cache
         console.log("Opportunities: Checking customersCache before clear. Is it defined?", !!this.customersCache);
-        if (this.customersCache) {
+        if (this.customersCache) { // This check is now mostly for safety, as init() will re-create it.
             this.customersCache.clear();
             console.log("Opportunities: Customers cache cleared.");
         } else {
@@ -536,7 +534,7 @@ export const Opportunities = {
         document.getElementById('add-opportunity-btn')?.removeEventListener('click', this.openOpportunityModal);
         document.getElementById('cancel-opportunity-btn')?.removeEventListener('click', this.closeOpportunityModal);
         document.getElementById('opportunity-form')?.removeEventListener('submit', this.handleOpportunityFormSubmit);
-        document.getElementById('confirm-delete-btn')?.removeEventListener('click', this.handleConfirmDelete); // Ensure this listener is removed
+        document.getElementById('confirm-delete-btn')?.removeEventListener('click', this.handleConfirmDelete);
         document.getElementById('cancel-delete-btn')?.removeEventListener('click', this.closeDeleteConfirmationModal);
 
         // Also remove the bound event listeners for grid buttons
@@ -550,7 +548,6 @@ export const Opportunities = {
                 btn.removeEventListener('click', this.handleDeleteButtonClickBound);
             }
         });
-
 
         console.log("Opportunities module destroyed.");
     }
