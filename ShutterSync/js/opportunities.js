@@ -126,6 +126,7 @@ export const Opportunities = {
 
         try {
             const customersCollectionRef = this.Utils.getCustomersCollectionRef();
+            // Use Utils.query, Utils.orderBy, Utils.getDocs
             const q = this.Utils.query(customersCollectionRef, this.Utils.orderBy('customerName'));
             const querySnapshot = await this.Utils.getDocs(q);
 
@@ -139,6 +140,8 @@ export const Opportunities = {
                 this.customersCache.set(doc.id, customer.customerName); // Cache customer name
             });
             console.log(`Opportunities: Populated customer select with ${querySnapshot.size} customers.`);
+            console.log("Opportunities: customersCache size after populating:", this.customersCache.size);
+
         } catch (error) {
             this.Utils.handleError(error, "populating customer select");
         }
@@ -154,6 +157,7 @@ export const Opportunities = {
         document.getElementById('cancel-opportunity-btn')?.addEventListener('click', () => this.closeOpportunityModal());
         document.getElementById('opportunity-form')?.addEventListener('submit', (e) => this.handleOpportunityFormSubmit(e));
         document.getElementById('cancel-delete-btn')?.addEventListener('click', () => this.closeDeleteConfirmationModal());
+        document.getElementById('confirm-delete-btn')?.addEventListener('click', () => this.handleConfirmDelete()); // Ensure this is attached
     },
 
     /**
@@ -218,7 +222,8 @@ export const Opportunities = {
                 name: 'Customer',
                 formatter: (cell, row) => {
                     // Use cached customer name or fallback to ID
-                    return this.customersCache.get(row.cells[2].data) || row.cells[2].data;
+                    const customerId = row.cells[2].data; // Assuming Customer ID is at index 2
+                    return this.customersCache.get(customerId) || `ID: ${customerId}`;
                 }
             },
             { id: 'customerId', name: 'Customer ID', hidden: true }, // Hidden column for customer ID
@@ -242,8 +247,9 @@ export const Opportunities = {
                 name: 'Actions',
                 formatter: (cell, row) => {
                     const opportunityId = row.cells[0].data; // Assuming ID is the first cell
+                    const createdById = row.cells[6].data; // Assuming createdBy UID is at index 6
                     // Check if the current user created this opportunity or is an admin
-                    const isCreatorOrAdmin = isAdmin || (Auth.getCurrentUser() && row.cells[6].data === Auth.getCurrentUser().uid);
+                    const isCreatorOrAdmin = isAdmin || (Auth.getCurrentUser() && createdById === Auth.getCurrentUser().uid);
 
                     if (isCreatorOrAdmin) {
                         return this.Utils.html(`
@@ -271,6 +277,7 @@ export const Opportunities = {
             this.opportunitiesGrid.updateConfig({
                 data: mappedData
             }).forceRender();
+            console.log("Opportunities: Grid.js instance updated and re-rendered.");
         } else {
             this.opportunitiesGrid = new gridjs.Grid({
                 columns: columns,
@@ -304,19 +311,25 @@ export const Opportunities = {
      */
     attachGridButtonListeners: function() {
         // Remove existing listeners to prevent duplicates
-        document.querySelectorAll('.edit-opportunity-btn').forEach(btn => {
-            btn.removeEventListener('click', this.handleEditButtonClick);
-        });
-        document.querySelectorAll('.delete-opportunity-btn').forEach(btn => {
-            btn.removeEventListener('click', this.handleDeleteButtonClick);
-        });
+        // It's safer to re-attach listeners after each render, ensuring they apply to new DOM elements.
+        // The previous approach of removing specific listeners might be tricky if elements are fully replaced.
+        // A simpler way for Grid.js is often to rely on event delegation if possible,
+        // but for direct button clicks, re-attaching is common.
+        // For now, we'll ensure the current approach is safe with the destroy method.
+        // We ensure `handleEditButtonClick` and `handleDeleteButtonClick` are bound to `this` when added.
 
         // Add new listeners
         document.querySelectorAll('.edit-opportunity-btn').forEach(btn => {
-            btn.addEventListener('click', this.handleEditButtonClick.bind(this));
+            // Remove existing listener first to prevent duplicates, if any were previously attached
+            btn.removeEventListener('click', this.handleEditButtonClickBound);
+            this.handleEditButtonClickBound = this.handleEditButtonClick.bind(this);
+            btn.addEventListener('click', this.handleEditButtonClickBound);
         });
         document.querySelectorAll('.delete-opportunity-btn').forEach(btn => {
-            btn.addEventListener('click', this.handleDeleteButtonClick.bind(this));
+            // Remove existing listener first
+            btn.removeEventListener('click', this.handleDeleteButtonClickBound);
+            this.handleDeleteButtonClickBound = this.handleDeleteButtonClick.bind(this);
+            btn.addEventListener('click', this.handleDeleteButtonClickBound);
         });
         console.log("Opportunities: Attached grid button listeners.");
     },
@@ -501,7 +514,6 @@ export const Opportunities = {
         }
 
         // Clear the Grid.js instance if it exists
-        // *** CRITICAL FIX: Add null-check before calling clear() ***
         if (this.opportunitiesGrid) {
             this.opportunitiesGrid.destroy(); // Use destroy() to properly clean up Grid.js
             this.opportunitiesGrid = null;
@@ -510,9 +522,14 @@ export const Opportunities = {
             console.log("Opportunities: No Grid.js instance to destroy.");
         }
 
-        // Clear customers cache
-        this.customersCache.clear();
-        console.log("Opportunities: Customers cache cleared.");
+        // *** CRITICAL FIX: Add null-check for customersCache before clearing ***
+        console.log("Opportunities: Checking customersCache before clear. Is it defined?", !!this.customersCache);
+        if (this.customersCache) {
+            this.customersCache.clear();
+            console.log("Opportunities: Customers cache cleared.");
+        } else {
+            console.warn("Opportunities: customersCache was undefined during destroy. Cannot clear.");
+        }
 
         // Remove event listeners from static elements if necessary (though often not needed for full module re-render)
         document.getElementById('add-opportunity-btn')?.removeEventListener('click', this.openOpportunityModal);
@@ -520,6 +537,19 @@ export const Opportunities = {
         document.getElementById('opportunity-form')?.removeEventListener('submit', this.handleOpportunityFormSubmit);
         document.getElementById('confirm-delete-btn')?.removeEventListener('click', this.handleConfirmDelete); // Ensure this listener is removed
         document.getElementById('cancel-delete-btn')?.removeEventListener('click', this.closeDeleteConfirmationModal);
+
+        // Also remove the bound event listeners for grid buttons
+        document.querySelectorAll('.edit-opportunity-btn').forEach(btn => {
+            if (this.handleEditButtonClickBound) {
+                btn.removeEventListener('click', this.handleEditButtonClickBound);
+            }
+        });
+        document.querySelectorAll('.delete-opportunity-btn').forEach(btn => {
+            if (this.handleDeleteButtonClickBound) {
+                btn.removeEventListener('click', this.handleDeleteButtonClickBound);
+            }
+        });
+
 
         console.log("Opportunities module destroyed.");
     }
