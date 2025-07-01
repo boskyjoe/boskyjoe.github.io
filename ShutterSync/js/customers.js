@@ -85,6 +85,16 @@ export const Customers = {
                     <h4 id="customer-modal-title" class="text-2xl font-bold text-gray-800 mb-6">Add New Customer</h4>
                     <form id="customer-form">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <!-- New Fields for strict rule validation -->
+                            <div class="md:col-span-2">
+                                <label for="customer-type" class="block text-sm font-medium text-gray-700 mb-1">Customer Type</label>
+                                <select id="customer-type" name="customerType"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white">
+                                    <option value="Individual">Individual</option>
+                                    <option value="Business">Business</option>
+                                </select>
+                            </div>
+                            
                             <div>
                                 <label for="customer-name" class="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
                                 <input type="text" id="customer-name" name="companyName" required
@@ -110,15 +120,7 @@ export const Customers = {
                                 <textarea id="customer-address" name="address" rows="2"
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                             </div>
-                            <!-- New Fields for strict rule validation -->
-                            <div class="md:col-span-2">
-                                <label for="customer-type" class="block text-sm font-medium text-gray-700 mb-1">Customer Type</label>
-                                <select id="customer-type" name="customerType"
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white">
-                                    <option value="Individual">Individual</option>
-                                    <option value="Business">Business</option>
-                                </select>
-                            </div>
+
                             <div class="md:col-span-2">
                                 <label for="preferred-contact-method" class="block text-sm font-medium text-gray-700 mb-1">Preferred Contact Method</label>
                                 <select id="preferred-contact-method" name="preferredContactMethod"
@@ -129,12 +131,6 @@ export const Customers = {
                                 </select>
                             </div>
                             
-                            <div class="md:col-span-2">
-                                <label for="industry" class="block text-sm font-medium text-gray-700 mb-1">Industry</label>
-                                <input type="text" id="industry" name="industry"
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            </div>
-
                             <!-- Changed Industry to Dropdow -->
                             <div class="md:col-span-2">
                                 <label for="industry" class="block text-sm font-medium text-gray-700 mb-1">Industry</label>
@@ -153,6 +149,7 @@ export const Customers = {
                                 <input type="text" id="customer-source" name="customerSource"
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             </div>
+                            
                             <div class="md:col-span-2">
                                 <label for="additional-details" class="block text-sm font-medium text-gray-700 mb-1">Additional Details</label>
                                 <textarea id="additional-details" name="additionalDetails" rows="2"
