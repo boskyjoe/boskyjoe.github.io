@@ -160,10 +160,37 @@ h2 {
     margin: 10px 0 0;
 }
 
-/* Tables Styling */
-.table-container {
+/* Tabulator Container Styling (added) */
+.tabulator-table-container {
     margin-top: 20px;
-    overflow-x: auto; /* Enables horizontal scrolling for small screens */
+    /* You can add specific height if needed, e.g., height: 400px; */
+}
+
+/* Styles for the action icons within Tabulator (added) */
+.tabulator-cell .action-icons i {
+    cursor: pointer;
+    margin: 0 5px;
+    font-size: 1.1em;
+    transition: color 0.2s ease;
+}
+
+.tabulator-cell .action-icons .fa-edit {
+    color: #27ae60; /* Green for edit */
+}
+
+.tabulator-cell .action-icons .fa-trash {
+    color: #e74c3c; /* Red for delete */
+}
+
+.tabulator-cell .action-icons i:hover {
+    filter: brightness(1.2); /* Slightly brighter on hover */
+}
+
+
+/* Old Tables Styling (no longer used by Tabulator but kept for other sections) */
+/* .table-container {
+    margin-top: 20px;
+    overflow-x: auto;
 }
 
 table {
@@ -194,31 +221,8 @@ tr:nth-child(even) {
 
 tr:hover {
     background-color: #eef;
-}
+} */
 
-.action-buttons button {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    margin: 0 5px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: background-color 0.3s ease;
-}
-
-.action-buttons button.edit-btn {
-    background-color: #27ae60;
-}
-
-.action-buttons button.delete-btn {
-    background-color: #e74c3c;
-}
-
-.action-buttons button:hover {
-    opacity: 0.9;
-}
 
 /* Add Button Styling */
 .add-button {
