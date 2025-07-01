@@ -13,7 +13,7 @@ export const Opportunities = {
     opportunitiesGrid: null, // Stores the Grid.js instance for opportunities
     opportunitiesCollectionRef: null,
     unsubscribeOpportunitiesSnapshot: null, // To store the unsubscribe function for real-time listener
-    customersCache: new Map(), // Cache for customer names
+    // customersCache: new Map(), // REMOVED from top-level, will be initialized in init()
 
     /**
      * Initializes the Opportunities module.
@@ -26,7 +26,8 @@ export const Opportunities = {
         this.auth = firebaseAuth;
         this.Utils = utils;
         this.opportunitiesCollectionRef = this.Utils.getOpportunitiesCollectionRef();
-        console.log("Opportunities module initialized.");
+        this.customersCache = new Map(); // *** CRITICAL FIX: Initialize customersCache here ***
+        console.log("Opportunities module initialized. customersCache is now a Map:", this.customersCache instanceof Map);
     },
 
     /**
@@ -96,7 +97,7 @@ export const Opportunities = {
                 </div>
             </div>
             <!-- Delete Confirmation Modal -->
-            <div id="delete-confirmation-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+            <div id="delete-confirmation-modal" class="fixed inset-0 bg-gray-600 bg-opacity50 flex items-center justify-center hidden z-50">
                 <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
                     <h3 class="text-xl font-bold mb-4">Confirm Deletion</h3>
                     <p class="mb-4">Are you sure you want to delete this opportunity? This action cannot be undone.</p>
@@ -522,7 +523,7 @@ export const Opportunities = {
             console.log("Opportunities: No Grid.js instance to destroy.");
         }
 
-        // *** CRITICAL FIX: Add null-check for customersCache before clearing ***
+        // Add null-check for customersCache before clearing
         console.log("Opportunities: Checking customersCache before clear. Is it defined?", !!this.customersCache);
         if (this.customersCache) {
             this.customersCache.clear();
