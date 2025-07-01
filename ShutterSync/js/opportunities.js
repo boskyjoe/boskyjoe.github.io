@@ -13,7 +13,7 @@ export const Opportunities = {
     opportunitiesGrid: null, // Stores the Grid.js instance for opportunities
     opportunitiesCollectionRef: null,
     unsubscribeOpportunitiesSnapshot: null, // To store the unsubscribe function for real-time listener
-    customersCache: null, // Initialized in init()
+    customersCache: null, // Will be initialized in init()
 
     /**
      * Initializes the Opportunities module.
@@ -27,7 +27,11 @@ export const Opportunities = {
         this.Utils = utils;
         this.opportunitiesCollectionRef = this.Utils.getOpportunitiesCollectionRef();
         this.customersCache = new Map(); // *** CRITICAL FIX: Initialize customersCache here ***
+        // Also ensure grid and listener references are null on init for a clean slate
+        this.opportunitiesGrid = null;
+        this.unsubscribeOpportunitiesSnapshot = null;
         console.log("Opportunities module initialized. customersCache is now a Map:", this.customersCache instanceof Map);
+        console.log("Opportunities: opportunitiesGrid and unsubscribeOpportunitiesSnapshot reset to null on init.");
     },
 
     /**
