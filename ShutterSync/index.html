@@ -245,15 +245,16 @@
     </div>
 
 
-    <!-- Firebase SDKs - MOVED TO TOP OF BODY -->
-    <script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js"></script>
+    <!-- Firebase SDKs -->
+    <!-- These are the modular SDKs, they don't create a global 'firebase' object -->
+    <script type="module" src="https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js"></script>
 
     <!-- Grid.js JS -->
     <script src="https://unpkg.com/gridjs/6.2.0/dist/gridjs.umd.js"></script>
     
-    <!-- Your main application script - NOW AFTER FIREBASE -->
-    <script src="js/script.js"></script>
+    <!-- Your main application script - MUST BE type="module" to use Firebase imports -->
+    <script type="module" src="js/script.js"></script>
 </body>
 </html>
