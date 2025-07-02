@@ -1,3 +1,8 @@
+// Firebase SDK Imports (Modular API)
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
+import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, FieldValue, Timestamp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
+
 // Firebase configuration:
 const firebaseConfig = {
     apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
@@ -9,10 +14,10 @@ const firebaseConfig = {
     measurementId: "G-T0W9CES4D3"
 };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+// Initialize Firebase App
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app); // Get Auth service
+const db = getFirestore(app); // Get Firestore service
 
 // Global variables
 let currentUser = null;
@@ -128,25 +133,17 @@ function formatDateForDisplay(timestamp) {
 }
 
 // Function to populate select dropdowns
-async function populateSelect(selectElement, collectionRef, valueField, textField, selectedValue = null) {
+async function populateSelect(selectElement, collectionName, valueField, textField, selectedValue = null) {
     selectElement.innerHTML = '<option value="">Select...</option>';
     let snapshot;
     try {
-        if (typeof collectionRef === 'string') {
-            // If a string is passed, assume it's a collection name
-            snapshot = await db.collection(collectionRef).orderBy(textField).get();
-        } else if (collectionRef.get) {
-            // If a Firestore CollectionReference or Query is passed
-            snapshot = await collectionRef.orderBy(textField).get();
-        } else {
-            console.error("Invalid collectionRef provided to populateSelect:", collectionRef);
-            return;
-        }
+        // Use collection() to get a CollectionReference, then query
+        const collectionRef = collection(db, collectionName);
+        snapshot = await getDocs(query(collectionRef, orderBy(textField)));
     } catch (error) {
         console.error("Error fetching data for dropdown:", error);
         return;
     }
-
 
     snapshot.forEach(doc => {
         const data = doc.data();
@@ -163,7 +160,7 @@ async function populateSelect(selectElement, collectionRef, valueField, textFiel
 
 // --- Authentication ---
 
-auth.onAuthStateChanged(async (user) => {
+onAuthStateChanged(auth, async (user) => { // Use onAuthStateChanged from modular SDK
     currentUser = user;
     if (user) {
         authButtonSignOut.textContent = 'Sign Out';
@@ -173,23 +170,23 @@ auth.onAuthStateChanged(async (user) => {
         // Fetch user's custom claims for role
         try {
             const idTokenResult = await user.getIdTokenResult(true);
-            const userDocRef = db.collection('users_data').doc(user.uid);
-            const userDoc = await userDocRef.get();
+            const userDocRef = doc(db, 'users_data', user.uid); // Use doc() from modular SDK
+            const userDoc = await getDoc(userDocRef); // Use getDoc() from modular SDK
 
             if (!userDoc.exists) {
                 // New user, create their profile with 'Standard' role
-                await userDocRef.set({
+                await setDoc(userDocRef, { // Use setDoc() from modular SDK
                     displayName: user.displayName || 'New User',
                     email: user.email,
                     role: 'Standard', // Default role
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                    createdAt: FieldValue.serverTimestamp(), // Use FieldValue from modular SDK
+                    lastLogin: FieldValue.serverTimestamp()
                 });
                 currentUserRole = 'Standard';
             } else {
                 // Existing user, update last login and get role
-                await userDocRef.update({
-                    lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                await updateDoc(userDocRef, { // Use updateDoc() from modular SDK
+                    lastLogin: FieldValue.serverTimestamp()
                 });
                 currentUserRole = userDoc.data().role;
             }
@@ -268,8 +265,7 @@ auth.onAuthStateChanged(async (user) => {
 
 authButtonSignOut.addEventListener('click', () => {
     if (currentUser) {
-        // Sign Out
-        auth.signOut().then(() => {
+        signOut(auth).then(() => { // Use signOut from modular SDK
             alert('Signed out successfully!');
         }).catch((error) => {
             console.error('Sign Out Error:', error);
@@ -279,8 +275,8 @@ authButtonSignOut.addEventListener('click', () => {
 });
 
 authButtonSignIn.addEventListener('click', () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).then((result) => {
+    const provider = new GoogleAuthProvider(); // Use GoogleAuthProvider from modular SDK
+    signInWithPopup(auth, provider).then((result) => { // Use signInWithPopup from modular SDK
         console.log('Signed in as:', result.user.displayName);
     }).catch((error) => {
         console.error('Sign In Error:', error);
@@ -342,18 +338,18 @@ async function updateDashboardStats() {
     if (!currentUser) return;
 
     try {
-        let customerQuery = db.collection('customers');
+        let customerQuery = query(collection(db, 'customers')); // Use collection() and query()
         if (currentUserRole !== 'Admin') {
-            customerQuery = customerQuery.where('creatorId', '==', currentUser.uid);
+            customerQuery = query(customerQuery, where('creatorId', '==', currentUser.uid)); // Use query() and where()
         }
-        const customersSnapshot = await customerQuery.get();
+        const customersSnapshot = await getDocs(customerQuery); // Use getDocs()
         totalCustomersCount.textContent = customersSnapshot.size;
 
-        let opportunityQuery = db.collection('opportunities');
+        let opportunityQuery = query(collection(db, 'opportunities')); // Use collection() and query()
         if (currentUserRole !== 'Admin') {
-            opportunityQuery = opportunityQuery.where('creatorId', '==', currentUser.uid);
+            opportunityQuery = query(opportunityQuery, where('creatorId', '==', currentUser.uid)); // Use query() and where()
         }
-        const opportunitiesSnapshot = await opportunityQuery.get();
+        const opportunitiesSnapshot = await getDocs(opportunityQuery); // Use getDocs()
         totalOpportunitiesCount.textContent = opportunitiesSnapshot.size;
 
         const openOpportunities = opportunitiesSnapshot.docs.filter(doc =>
@@ -431,7 +427,7 @@ function resetForms() {
 // Populate Customer Country Dropdown
 async function populateCustomerCountryDropdown(selectedCountry = null) {
     if (!currentUser) return;
-    await populateSelect(customerCountrySelect, db.collection('countries'), 'name', 'name', selectedCountry);
+    await populateSelect(customerCountrySelect, 'countries', 'name', 'name', selectedCountry); // Pass collection name as string
 }
 
 // Open Customer Modal
@@ -468,19 +464,19 @@ customerForm.addEventListener('submit', async (e) => {
         additionalDetails: customerAdditionalDetailsTextarea.value,
         source: customerSourceSelect.value, // Read from select
         active: customerActiveSelect.value === 'Yes', // Convert to boolean
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        updatedAt: FieldValue.serverTimestamp() // Use FieldValue from modular SDK
     };
 
     try {
         if (customerIdInput.value) {
             // Update existing customer
-            await db.collection('customers').doc(customerIdInput.value).update(customerData);
+            await updateDoc(doc(db, 'customers', customerIdInput.value), customerData); // Use doc() and updateDoc()
             alert('Customer updated successfully!');
         } else {
             // Add new customer
-            customerData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            customerData.createdAt = FieldValue.serverTimestamp(); // Use FieldValue from modular SDK
             customerData.creatorId = currentUser.uid; // Assign creator
-            await db.collection('customers').add(customerData);
+            await addDoc(collection(db, 'customers'), customerData); // Use collection() and addDoc()
             alert('Customer added successfully!');
         }
         customerModal.style.display = 'none';
@@ -496,13 +492,13 @@ customerForm.addEventListener('submit', async (e) => {
 async function renderCustomersGrid() {
     if (!currentUser) return; // Only render if authenticated
 
-    let customersRef = db.collection('customers');
+    let customersRef = query(collection(db, 'customers')); // Use collection() and query()
     if (currentUserRole !== 'Admin') {
-        customersRef = customersRef.where('creatorId', '==', currentUser.uid);
+        customersRef = query(customersRef, where('creatorId', '==', currentUser.uid)); // Use query() and where()
     }
     const customerData = [];
 
-    const snapshot = await customersRef.orderBy('name').get();
+    const snapshot = await getDocs(query(customersRef, orderBy('name'))); // Use getDocs() and orderBy()
     snapshot.forEach(doc => {
         const data = doc.data();
         customerData.push([
@@ -610,16 +606,16 @@ async function editCustomer(customerId) {
     if (currentUserRole !== 'Admin' && currentUserRole !== 'Standard') { alert('You do not have permission to edit customers.'); return; }
 
     try {
-        const doc = await db.collection('customers').doc(customerId).get();
-        if (doc.exists) {
-            const data = doc.data();
+        const docSnap = await getDoc(doc(db, 'customers', customerId)); // Use doc() and getDoc()
+        if (docSnap.exists()) {
+            const data = docSnap.data();
             // Ensure the user is authorized to edit this customer if not admin
             if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
                 alert('You can only edit customers you have created.');
                 return;
             }
 
-            customerIdInput.value = doc.id;
+            customerIdInput.value = docSnap.id;
             customerModalTitle.textContent = 'Edit Customer';
 
             customerTypeSelect.value = data.type || '';
@@ -653,13 +649,13 @@ async function deleteCustomer(customerId) {
     if (confirm('Are you sure you want to delete this customer? This action cannot be undone.')) {
         try {
             // Check if there are any opportunities linked to this customer
-            const opportunitiesSnapshot = await db.collection('opportunities').where('customerId', '==', customerId).get();
+            const opportunitiesSnapshot = await getDocs(query(collection(db, 'opportunities'), where('customerId', '==', customerId))); // Use collection(), query(), where(), getDocs()
             if (!opportunitiesSnapshot.empty) {
                 alert('Cannot delete customer: There are existing opportunities linked to this customer. Please delete the opportunities first.');
                 return;
             }
 
-            await db.collection('customers').doc(customerId).delete();
+            await deleteDoc(doc(db, 'customers', customerId)); // Use doc() and deleteDoc()
             alert('Customer deleted successfully!');
             renderCustomersGrid(); // Refresh the table
             updateDashboardStats(); // Update dashboard counts
@@ -678,7 +674,7 @@ async function populateOpportunityCustomerDropdown(selectedCustomerId = null) {
     if (!currentUser) return;
     const selectElement = opportunityCustomerSelect;
     selectElement.innerHTML = '<option value="">Select a Customer</option>';
-    const snapshot = await db.collection('customers').orderBy('name').get();
+    const snapshot = await getDocs(query(collection(db, 'customers'), orderBy('name'))); // Use collection(), query(), orderBy(), getDocs()
     snapshot.forEach(doc => {
         const data = doc.data();
         const option = document.createElement('option');
@@ -694,7 +690,7 @@ async function populateOpportunityCustomerDropdown(selectedCustomerId = null) {
 // Populate Opportunity Currency Dropdown
 async function populateOpportunityCurrencyDropdown(selectedCurrencySymbol = null) {
     if (!currentUser) return;
-    await populateSelect(opportunityCurrencySelect, db.collection('currencies'), 'symbol', 'name', selectedCurrencySymbol);
+    await populateSelect(opportunityCurrencySelect, 'currencies', 'symbol', 'name', selectedCurrencySymbol); // Pass collection name as string
 }
 
 // Populate Opportunity Price Book Dropdown
@@ -702,7 +698,7 @@ async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null) 
     if (!currentUser) return;
     const selectElement = opportunityPriceBookSelect;
     selectElement.innerHTML = '<option value="">Select a Price Book</option>';
-    const snapshot = await db.collection('priceBooks').orderBy('name').get();
+    const snapshot = await getDocs(query(collection(db, 'priceBooks'), orderBy('name'))); // Use collection(), query(), orderBy(), getDocs()
     snapshot.forEach(doc => {
         const data = doc.data();
         const option = document.createElement('option');
@@ -745,25 +741,25 @@ opportunityForm.addEventListener('submit', async (e) => {
         customerName: customerName, // Store customer name for easier display/search
         currency: opportunityCurrencySelect.value, // This is the symbol
         priceBookId: opportunityPriceBookSelect.value, // Store price book ID
-        expectedStartDate: opportunityExpectedStartDateInput.value ? firebase.firestore.Timestamp.fromDate(new Date(opportunityExpectedStartDateInput.value)) : null,
-        expectedCloseDate: opportunityExpectedCloseDateInput.value ? firebase.firestore.Timestamp.fromDate(new Date(opportunityExpectedCloseDateInput.value)) : null,
+        expectedStartDate: opportunityExpectedStartDateInput.value ? Timestamp.fromDate(new Date(opportunityExpectedStartDateInput.value)) : null, // Use Timestamp from modular SDK
+        expectedCloseDate: opportunityExpectedCloseDateInput.value ? Timestamp.fromDate(new Date(opportunityExpectedCloseDateInput.value)) : null, // Use Timestamp from modular SDK
         salesStage: opportunitySalesStageSelect.value,
         probability: parseInt(opportunityProbabilityInput.value, 10),
         value: parseFloat(opportunityValueInput.value),
         notes: opportunityNotesTextarea.value,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        updatedAt: FieldValue.serverTimestamp() // Use FieldValue from modular SDK
     };
 
     try {
         if (opportunityIdInput.value) {
             // Update existing opportunity
-            await db.collection('opportunities').doc(opportunityIdInput.value).update(opportunityData);
+            await updateDoc(doc(db, 'opportunities', opportunityIdInput.value), opportunityData); // Use doc() and updateDoc()
             alert('Opportunity updated successfully!');
         } else {
             // Add new opportunity
-            opportunityData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            opportunityData.createdAt = FieldValue.serverTimestamp(); // Use FieldValue from modular SDK
             opportunityData.creatorId = currentUser.uid; // Assign creator
-            await db.collection('opportunities').add(opportunityData);
+            await addDoc(collection(db, 'opportunities'), opportunityData); // Use collection() and addDoc()
             alert('Opportunity added successfully!');
         }
         opportunityModal.style.display = 'none';
@@ -779,13 +775,13 @@ opportunityForm.addEventListener('submit', async (e) => {
 async function renderOpportunitiesGrid() {
     if (!currentUser) return;
 
-    let opportunitiesRef = db.collection('opportunities');
+    let opportunitiesRef = query(collection(db, 'opportunities')); // Use collection() and query()
     if (currentUserRole !== 'Admin') {
-        opportunitiesRef = opportunitiesRef.where('creatorId', '==', currentUser.uid);
+        opportunitiesRef = query(opportunitiesRef, where('creatorId', '==', currentUser.uid)); // Use query() and where()
     }
     const opportunityData = [];
 
-    const snapshot = await opportunitiesRef.orderBy('expectedCloseDate').get();
+    const snapshot = await getDocs(query(opportunitiesRef, orderBy('expectedCloseDate'))); // Use getDocs() and orderBy()
     snapshot.forEach(doc => {
         const data = doc.data();
         opportunityData.push([
@@ -887,16 +883,16 @@ async function editOpportunity(opportunityId) {
     if (currentUserRole !== 'Admin' && currentUserRole !== 'Standard') { alert('You do not have permission to edit opportunities.'); return; }
 
     try {
-        const doc = await db.collection('opportunities').doc(opportunityId).get();
-        if (doc.exists) {
-            const data = doc.data();
+        const docSnap = await getDoc(doc(db, 'opportunities', opportunityId)); // Use doc() and getDoc()
+        if (docSnap.exists()) {
+            const data = docSnap.data();
             // Ensure the user is authorized to edit this opportunity if not admin
             if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
                 alert('You can only edit opportunities you have created.');
                 return;
             }
 
-            opportunityIdInput.value = doc.id;
+            opportunityIdInput.value = docSnap.id;
             opportunityModalTitle.textContent = 'Edit Opportunity';
 
             opportunityNameInput.value = data.name || '';
@@ -927,7 +923,7 @@ async function deleteOpportunity(opportunityId) {
 
     if (confirm('Are you sure you want to delete this opportunity? This action cannot be undone.')) {
         try {
-            await db.collection('opportunities').doc(opportunityId).delete();
+            await deleteDoc(doc(db, 'opportunities', opportunityId)); // Use doc() and deleteDoc()
             alert('Opportunity deleted successfully!');
             renderOpportunitiesGrid(); // Refresh the table
             updateDashboardStats(); // Update dashboard counts
@@ -981,10 +977,10 @@ document.querySelectorAll('.admin-form .cancel-edit-btn').forEach(button => {
 async function renderCountriesStatesGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return;
 
-    const countriesRef = db.collection('countries');
+    const countriesRef = collection(db, 'countries'); // Use collection()
     const data = [];
 
-    const snapshot = await countriesRef.orderBy('name').get();
+    const snapshot = await getDocs(query(countriesRef, orderBy('name'))); // Use getDocs() and orderBy()
     snapshot.forEach(doc => {
         const country = doc.data();
         data.push([
@@ -1060,10 +1056,10 @@ async function renderCountriesStatesGrid() {
 async function editCountryState(id) {
     if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
     try {
-        const doc = await db.collection('countries').doc(id).get();
-        if (doc.exists) {
-            const data = doc.data();
-            countryStateIdInput.value = doc.id;
+        const docSnap = await getDoc(doc(db, 'countries', id)); // Use doc() and getDoc()
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            countryStateIdInput.value = docSnap.id;
             countryNameInput.value = data.name || '';
             countryCodeInput.value = data.code || '';
             countryStatesInput.value = data.states ? data.states.join(', ') : '';
@@ -1078,7 +1074,7 @@ async function deleteCountryState(id) {
     if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
     if (confirm('Are you sure you want to delete this country?')) {
         try {
-            await db.collection('countries').doc(id).delete();
+            await deleteDoc(doc(db, 'countries', id)); // Use doc() and deleteDoc()
             alert('Country deleted!');
             renderCountriesStatesGrid();
             populateCustomerCountryDropdown(); // Refresh customer dropdown
@@ -1103,10 +1099,10 @@ countryStateForm.addEventListener('submit', async (e) => {
 
     try {
         if (countryStateIdInput.value) {
-            await db.collection('countries').doc(countryStateIdInput.value).update(countryData);
+            await updateDoc(doc(db, 'countries', countryStateIdInput.value), countryData); // Use doc() and updateDoc()
             alert('Country updated!');
         } else {
-            await db.collection('countries').add(countryData);
+            await addDoc(collection(db, 'countries'), countryData); // Use collection() and addDoc()
             alert('Country added!');
         }
         countryStateForm.reset();
@@ -1132,10 +1128,10 @@ cancelCountryStateEditBtn.addEventListener('click', () => {
 async function renderCurrenciesGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return;
 
-    const currenciesRef = db.collection('currencies');
+    const currenciesRef = collection(db, 'currencies'); // Use collection()
     const data = [];
 
-    const snapshot = await currenciesRef.orderBy('name').get();
+    const snapshot = await getDocs(query(currenciesRef, orderBy('name'))); // Use getDocs() and orderBy()
     snapshot.forEach(doc => {
         const currency = doc.data();
         data.push([
@@ -1209,10 +1205,10 @@ async function renderCurrenciesGrid() {
 async function editCurrency(id) {
     if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
     try {
-        const doc = await db.collection('currencies').doc(id).get();
-        if (doc.exists) {
-            const data = doc.data();
-            currencyIdInput.value = doc.id;
+        const docSnap = await getDoc(doc(db, 'currencies', id)); // Use doc() and getDoc()
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            currencyIdInput.value = docSnap.id;
             currencyNameInput.value = data.name || '';
             currencySymbolInput.value = data.symbol || '';
         }
@@ -1226,7 +1222,7 @@ async function deleteCurrency(id) {
     if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
     if (confirm('Are you sure you want to delete this currency?')) {
         try {
-            await db.collection('currencies').doc(id).delete();
+            await deleteDoc(doc(db, 'currencies', id)); // Use doc() and deleteDoc()
             alert('Currency deleted!');
             renderCurrenciesGrid();
             populateOpportunityCurrencyDropdown(); // Refresh opportunity dropdown
@@ -1251,10 +1247,10 @@ currencyForm.addEventListener('submit', async (e) => {
 
     try {
         if (currencyIdInput.value) {
-            await db.collection('currencies').doc(currencyIdInput.value).update(currencyData);
+            await updateDoc(doc(db, 'currencies', currencyIdInput.value), currencyData); // Use doc() and updateDoc()
             alert('Currency updated!');
         } else {
-            await db.collection('currencies').add(currencyData);
+            await addDoc(collection(db, 'currencies'), currencyData); // Use collection() and addDoc()
             alert('Currency added!');
         }
         currencyForm.reset();
@@ -1280,7 +1276,7 @@ cancelCurrencyEditBtn.addEventListener('click', () => {
 // NEW: Populate Price Book Currency Dropdown
 async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
-    await populateSelect(priceBookCurrencySelect, db.collection('currencies'), 'symbol', 'name', selectedCurrencySymbol);
+    await populateSelect(priceBookCurrencySelect, 'currencies', 'symbol', 'name', selectedCurrencySymbol); // Pass collection name as string
 }
 
 
@@ -1288,10 +1284,10 @@ async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null) 
 async function renderPriceBooksGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return;
 
-    const priceBooksRef = db.collection('priceBooks');
+    const priceBooksRef = collection(db, 'priceBooks'); // Use collection()
     const data = [];
 
-    const snapshot = await priceBooksRef.orderBy('name').get();
+    const snapshot = await getDocs(query(priceBooksRef, orderBy('name'))); // Use getDocs() and orderBy()
     snapshot.forEach(doc => {
         const priceBook = doc.data();
         data.push([
@@ -1367,10 +1363,10 @@ async function renderPriceBooksGrid() {
 async function editPriceBook(id) {
     if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
     try {
-        const doc = await db.collection('priceBooks').doc(id).get();
-        if (doc.exists) {
-            const data = doc.data();
-            priceBookIdInput.value = doc.id;
+        const docSnap = await getDoc(doc(db, 'priceBooks', id)); // Use doc() and getDoc()
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            priceBookIdInput.value = docSnap.id;
             priceBookNameInput.value = data.name || '';
             priceBookDescriptionTextarea.value = data.description || '';
             await populatePriceBookCurrencyDropdown(data.currency); // NEW: Pre-select currency
@@ -1385,7 +1381,7 @@ async function deletePriceBook(id) {
     if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
     if (confirm('Are you sure you want to delete this price book?')) {
         try {
-            await db.collection('priceBooks').doc(id).delete();
+            await deleteDoc(doc(db, 'priceBooks', id)); // Use doc() and deleteDoc()
             alert('Price Book deleted!');
             renderPriceBooksGrid();
             populateOpportunityPriceBookDropdown(); // Refresh opportunity dropdown
@@ -1409,10 +1405,10 @@ priceBookForm.addEventListener('submit', async (e) => {
 
     try {
         if (priceBookIdInput.value) {
-            await db.collection('priceBooks').doc(priceBookIdInput.value).update(priceBookData);
+            await updateDoc(doc(db, 'priceBooks', priceBookIdInput.value), priceBookData); // Use doc() and updateDoc()
             alert('Price Book updated!');
         } else {
-            await db.collection('priceBooks').add(priceBookData);
+            await addDoc(collection(db, 'priceBooks'), priceBookData); // Use collection() and addDoc()
             alert('Price Book added!');
         }
         priceBookForm.reset();
@@ -1436,25 +1432,25 @@ cancelPriceBookEditBtn.addEventListener('click', () => {
 // Populate Default Currency Dropdown
 async function populateDefaultCurrencyDropdown(selectedCurrencySymbol = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
-    await populateSelect(defaultCurrencySelect, db.collection('currencies'), 'symbol', 'name', selectedCurrencySymbol);
+    await populateSelect(defaultCurrencySelect, 'currencies', 'symbol', 'name', selectedCurrencySymbol); // Pass collection name as string
 }
 
 // Populate Default Country Dropdown
 async function populateDefaultCountryDropdown(selectedCountryName = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
-    await populateSelect(defaultCountrySelect, db.collection('countries'), 'name', 'name', selectedCountryName);
+    await populateSelect(defaultCountrySelect, 'countries', 'name', 'name', selectedCountryName); // Pass collection name as string
 }
 
 // Load App Settings
 async function loadAppSettings() {
     if (!currentUser || currentUserRole !== 'Admin') return;
     try {
-        const settingsRef = db.collection('settings').doc('appSettings'); // Assuming a single settings document
-        const doc = await settingsRef.get();
+        const settingsRef = doc(db, 'settings', 'appSettings'); // Use doc()
+        const docSnap = await getDoc(settingsRef); // Use getDoc()
 
-        if (doc.exists) {
-            const data = doc.data();
-            settingsDocIdInput.value = doc.id;
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            settingsDocIdInput.value = docSnap.id;
             await populateDefaultCurrencyDropdown(data.defaultCurrency);
             await populateDefaultCountryDropdown(data.defaultCountry);
         } else {
@@ -1478,16 +1474,16 @@ appSettingsForm.addEventListener('submit', async (e) => {
     const settingsData = {
         defaultCurrency: defaultCurrencySelect.value,
         defaultCountry: defaultCountrySelect.value,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        updatedAt: FieldValue.serverTimestamp() // Use FieldValue from modular SDK
     };
 
     try {
-        const settingsDocRef = db.collection('settings').doc('appSettings');
+        const settingsDocRef = doc(db, 'settings', 'appSettings'); // Use doc()
         if (settingsDocIdInput.value) {
-            await settingsDocRef.update(settingsData);
+            await updateDoc(settingsDocRef, settingsData); // Use updateDoc()
         } else {
-            settingsData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-            await settingsDocRef.set(settingsData);
+            settingsData.createdAt = FieldValue.serverTimestamp(); // Use FieldValue from modular SDK
+            await setDoc(settingsDocRef, settingsData); // Use setDoc()
             settingsDocIdInput.value = 'appSettings'; // Set the ID after creation
         }
         alert('App settings saved successfully!');
