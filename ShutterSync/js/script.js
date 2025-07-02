@@ -1,12 +1,11 @@
 // Firebase configuration:
 const firebaseConfig = {
-    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
-    authDomain: "shuttersync-96971.firebaseapp.com",
-    projectId: "shuttersync-96971",
-    storageBucket: "shuttersync-96971.firebase-storage.app",
-    messagingSenderId: "10782416018",
-    appId: "1:10782416018:web:361db5572882a62f291a4b",
-    measurementId: "G-T0W9CES4D3"
+    apiKey: "YOUR_API_KEY", // Replace with your actual API Key
+    authDomain: "YOUR_AUTH_DOMAIN", // Replace with your actual Auth Domain
+    projectId: "YOUR_PROJECT_ID", // Replace with your actual Project ID
+    storageBucket: "YOUR_STORAGE_BUCKET", // Replace with your actual Storage Bucket
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Replace with your actual Messaging Sender ID
+    appId: "YOUR_APP_ID" // Replace with your actual App ID
 };
 
 // Initialize Firebase
@@ -14,44 +13,60 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Firestore Collection References
-const usersCollection = db.collection('users_data');
-const customersCollection = db.collection('customers');
-const opportunitiesCollection = db.collection('opportunities');
-const countriesStatesCollection = db.collection('app_metadata').doc('countries_states'); // This is a single document
-const currenciesCollection = db.collection('app_metadata').doc('app_settings').collection('currencies_data');
-const priceBooksCollection = db.collection('app_metadata').doc('app_settings').collection('price_books_data');
-const appSettingsDoc = db.collection('app_metadata').doc('settings'); // Single settings document
+// Global variables
+let currentUser = null;
+let currentUserRole = 'Guest'; // Default role
+let customersGrid = null; // To hold the Grid.js instance for customers
+let opportunitiesGrid = null; // To hold the Grid.js instance for opportunities
+let countriesStatesGrid = null; // To hold the Grid.js instance for countries & states
+let currenciesGrid = null; // To hold the Grid.js instance for currencies
+let priceBooksGrid = null; // To hold the Grid.js instance for price books
 
 // UI Elements
-const authButton = document.getElementById('authButton');
+const navButtons = document.querySelectorAll('.nav-button');
+const modules = document.querySelectorAll('.module');
+const authButtonSignOut = document.getElementById('authButton'); // For the "Sign Out" button inside user-info
+const authButtonSignIn = document.getElementById('authButtonAnon'); // For the "Sign In with Google" button
 const userInfoDisplay = document.getElementById('userInfoDisplay');
 const userNameSpan = document.getElementById('userName');
 const userRoleSpan = document.getElementById('userRole');
-const navButtons = document.querySelectorAll('.nav-button');
-const modules = document.querySelectorAll('.module');
-const adminOnlyElements = document.querySelectorAll('.admin-only');
 
-// Modals
-const customerModal = document.getElementById('customerModal');
-const opportunityModal = document.getElementById('opportunityModal');
-const closeButtons = document.querySelectorAll('.close-button');
-
-// Customer Module Elements
+// Customer Modal Elements
 const addCustomerBtn = document.getElementById('addCustomerBtn');
-const customerForm = document.getElementById('customerForm');
+const customerModal = document.getElementById('customerModal');
 const customerModalTitle = document.getElementById('customerModalTitle');
+const closeCustomerModalBtn = customerModal.querySelector('.close-button');
+const customerForm = document.getElementById('customerForm');
 const customerIdInput = document.getElementById('customerId');
+const customerTypeSelect = document.getElementById('customerType');
+const customerNameInput = document.getElementById('customerName');
+const customerEmailInput = document.getElementById('customerEmail');
+const customerPhoneInput = document.getElementById('customerPhone');
+const customerAddressInput = document.getElementById('customerAddress');
 const customerCountrySelect = document.getElementById('customerCountry');
+const customerPreferredContactMethodSelect = document.getElementById('customerPreferredContactMethod');
+const customerIndustryInput = document.getElementById('customerIndustry');
+const customerAdditionalDetailsTextarea = document.getElementById('customerAdditionalDetails');
+const customerSourceInput = document.getElementById('customerSource');
+const customerActiveSelect = document.getElementById('customerActive');
 
-// Opportunity Module Elements
+// Opportunity Modal Elements
 const addOpportunityBtn = document.getElementById('addOpportunityBtn');
-const opportunityForm = document.getElementById('opportunityForm');
+const opportunityModal = document.getElementById('opportunityModal');
 const opportunityModalTitle = document.getElementById('opportunityModalTitle');
+const closeOpportunityModalBtn = opportunityModal.querySelector('.close-button');
+const opportunityForm = document.getElementById('opportunityForm');
 const opportunityIdInput = document.getElementById('opportunityId');
+const opportunityNameInput = document.getElementById('opportunityName');
 const opportunityCustomerSelect = document.getElementById('opportunityCustomer');
 const opportunityCurrencySelect = document.getElementById('opportunityCurrency');
 const opportunityPriceBookSelect = document.getElementById('opportunityPriceBook');
+const opportunityExpectedStartDateInput = document.getElementById('opportunityExpectedStartDate');
+const opportunityExpectedCloseDateInput = document.getElementById('opportunityExpectedCloseDate');
+const opportunitySalesStageSelect = document.getElementById('opportunitySalesStage');
+const opportunityProbabilityInput = document.getElementById('opportunityProbability');
+const opportunityValueInput = document.getElementById('opportunityValue');
+const opportunityNotesTextarea = document.getElementById('opportunityNotes');
 
 // Dashboard Elements
 const totalCustomersCount = document.getElementById('totalCustomersCount');
@@ -59,114 +74,194 @@ const totalOpportunitiesCount = document.getElementById('totalOpportunitiesCount
 const openOpportunitiesCount = document.getElementById('openOpportunitiesCount');
 const wonOpportunitiesCount = document.getElementById('wonOpportunitiesCount');
 
-// Admin Module Elements
-const adminSectionButtons = document.querySelectorAll('.admin-section-btn');
+// Admin Panel Elements
+const adminOnlyElements = document.querySelectorAll('.admin-only'); // Ensure this is defined
+const adminSectionBtns = document.querySelectorAll('.admin-section-btn');
 const adminSubsections = document.querySelectorAll('.admin-subsection');
 
-const countriesStatesSection = document.getElementById('countriesStatesSection');
+// Countries & States Elements
 const countryStateForm = document.getElementById('countryStateForm');
 const countryStateIdInput = document.getElementById('countryStateId');
+const countryNameInput = document.getElementById('countryName');
+const countryCodeInput = document.getElementById('countryCode');
+const countryStatesInput = document.getElementById('countryStates');
+const cancelCountryStateEditBtn = countryStateForm.querySelector('.cancel-edit-btn');
 
-const currenciesSection = document.getElementById('currenciesSection');
+// Currencies Elements
 const currencyForm = document.getElementById('currencyForm');
 const currencyIdInput = document.getElementById('currencyId');
+const currencyNameInput = document.getElementById('currencyName');
+const currencySymbolInput = document.getElementById('currencySymbol');
+const cancelCurrencyEditBtn = currencyForm.querySelector('.cancel-edit-btn');
 
-const priceBooksSection = document.getElementById('priceBooksSection');
+// Price Books Elements
 const priceBookForm = document.getElementById('priceBookForm');
 const priceBookIdInput = document.getElementById('priceBookId');
+const priceBookNameInput = document.getElementById('priceBookName');
+const priceBookDescriptionTextarea = document.getElementById('priceBookDescription');
+const cancelPriceBookEditBtn = priceBookForm.querySelector('.cancel-edit-btn');
 
-const settingsSection = document.getElementById('settingsSection');
+// App Settings Elements
 const appSettingsForm = document.getElementById('appSettingsForm');
 const settingsDocIdInput = document.getElementById('settingsDocId');
+const defaultCurrencySelect = document.getElementById('defaultCurrency');
+const defaultCountrySelect = document.getElementById('defaultCountry');
+const cancelSettingsEditBtn = appSettingsForm.querySelector('.cancel-edit-btn');
 
 
-let currentUser = null; // Stores current authenticated user object
-let currentUserRole = 'Guest'; // Stores current user's role
+// --- Utility Functions ---
 
-// --- Grid.js Grid Instances ---
-// Declare these globally, they will hold the Grid.js instances
-let customersGrid;
-let opportunitiesGrid; // Will be Grid.js instance later
-let countriesStatesGrid; // Will be Grid.js instance later
-let currenciesGrid; // Will be Grid.js instance later
-let priceBooksGrid; // Will be Grid.js instance later
+// Function to format date for display
+function formatDateForDisplay(timestamp) {
+    if (!timestamp) return '';
+    // Check if it's a Firestore Timestamp object
+    if (typeof timestamp.toDate === 'function') {
+        const date = timestamp.toDate();
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    // If it's already a Date object or a string that can be parsed
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) return ''; // Invalid date
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// Function to populate select dropdowns
+async function populateSelect(selectElement, collectionRef, valueField, textField, selectedValue = null) {
+    selectElement.innerHTML = '<option value="">Select...</option>';
+    let snapshot;
+    try {
+        if (typeof collectionRef === 'string') {
+            // If a string is passed, assume it's a collection name
+            snapshot = await db.collection(collectionRef).orderBy(textField).get();
+        } else if (collectionRef.get) {
+            // If a Firestore CollectionReference or Query is passed
+            snapshot = await collectionRef.orderBy(textField).get();
+        } else {
+            console.error("Invalid collectionRef provided to populateSelect:", collectionRef);
+            return;
+        }
+    } catch (error) {
+        console.error("Error fetching data for dropdown:", error);
+        return;
+    }
 
 
-// --- Firebase Authentication ---
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        const option = document.createElement('option');
+        option.value = data[valueField];
+        option.textContent = data[textField];
+        if (selectedValue && data[valueField] === selectedValue) {
+            option.selected = true;
+        }
+        option.dataset.id = doc.id; // Store Firestore ID for reference
+        selectElement.appendChild(option);
+    });
+}
+
+// --- Authentication ---
+
 auth.onAuthStateChanged(async (user) => {
     currentUser = user;
     if (user) {
-        authButton.textContent = 'Sign Out';
-        authButton.classList.remove('sign-in');
+        authButtonSignOut.textContent = 'Sign Out';
         userInfoDisplay.style.display = 'block';
+        authButtonSignIn.style.display = 'none';
 
-        // Check/Create user_data document and get role
-        const userDocRef = usersCollection.doc(user.uid);
-        const userDoc = await userDocRef.get();
+        // Fetch user's custom claims for role
+        try {
+            const idTokenResult = await user.getIdTokenResult(true);
+            const userDocRef = db.collection('users_data').doc(user.uid);
+            const userDoc = await userDocRef.get();
 
-        if (!userDoc.exists) {
-            // New user, create their profile with 'Standard' role
-            await userDocRef.set({
-                displayName: user.displayName || 'New User',
-                email: user.email,
-                role: 'Standard', // Default role
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            currentUserRole = 'Standard';
-        } else {
-            // Existing user, update last login and get role
-            await userDocRef.update({
-                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            currentUserRole = userDoc.data().role;
+            if (!userDoc.exists) {
+                // New user, create their profile with 'Standard' role
+                await userDocRef.set({
+                    displayName: user.displayName || 'New User',
+                    email: user.email,
+                    role: 'Standard', // Default role
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                currentUserRole = 'Standard';
+            } else {
+                // Existing user, update last login and get role
+                await userDocRef.update({
+                    lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                currentUserRole = userDoc.data().role;
+            }
+        } catch (error) {
+            console.error("Error fetching user role or creating user doc:", error);
+            currentUserRole = 'Standard'; // Fallback to standard if error
         }
+
 
         userNameSpan.textContent = user.displayName || user.email;
         userRoleSpan.textContent = currentUserRole;
 
-        // Show/hide admin specific elements
-        adminOnlyElements.forEach(el => {
-            if (currentUserRole === 'Admin') {
-                el.style.display = 'block';
-            } else {
-                el.style.display = 'none';
-            }
-        });
+        // Show/hide admin module based on role
+        if (currentUserRole === 'Admin') {
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+        } else {
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+        }
 
-        // Initialize ALL Grids here
-        initializeCustomersGrid(); // Initialize the Customers Grid.js table
-        // initializeOpportunitiesGrid(); // Will be Grid.js instance later
-        // initializeCountriesStatesGrid(); // Will be Grid.js instance later
-        // initializeCurrenciesGrid(); // Will be Grid.js instance later
-        // initializePriceBooksGrid(); // Will be Grid.js instance later
+        // Initialize and render all grids after user is logged in
+        // These functions will check if the grid already exists before re-rendering
+        renderCustomersGrid();
+        renderOpportunitiesGrid();
+        renderCountriesStatesGrid();
+        renderCurrenciesGrid();
+        renderPriceBooksGrid();
 
-        // Load initial data for the default module (Dashboard)
-        showModule('dashboard');
-        loadDashboardStats();
-        populateCustomerDropdown(); // Populate customer dropdown for opportunities
-        populateCurrencyDropdown(); // Populate currency dropdown for opportunities
-        populatePriceBookDropdown(); // Populate price book dropdown for opportunities
-        populateCountriesDropdown(); // Populate countries dropdown for customers
+        // Populate dynamic data for forms
+        populateCustomerCountryDropdown();
+        populateOpportunityCustomerDropdown();
+        populateOpportunityCurrencyDropdown();
+        populateOpportunityPriceBookDropdown();
+        populateDefaultCurrencyDropdown();
+        populateDefaultCountryDropdown();
+        loadAppSettings(); // Load app settings for admin panel
+
+        // Set initial module to dashboard
+        document.querySelector('.nav-button[data-module="dashboard"]').click();
 
 
     } else {
         // User is signed out
-        authButton.textContent = 'Sign In with Google';
-        authButton.classList.add('sign-in');
+        authButtonSignIn.textContent = 'Sign In with Google';
+        authButtonSignIn.classList.add('sign-in');
+        authButtonSignIn.style.display = 'block';
         userInfoDisplay.style.display = 'none';
         userNameSpan.textContent = 'Guest';
         userRoleSpan.textContent = 'N/A';
         currentUserRole = 'Guest';
 
-        // Hide all modules and admin elements
-        modules.forEach(module => module.classList.remove('active'));
-        adminOnlyElements.forEach(el => el.style.display = 'none');
-        // Optionally, show a "Please sign in" message or redirect to a login page
+        // Hide admin module if user signs out
+        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+
+        // Clear grids or show empty state if not logged in
+        if (customersGrid) customersGrid.updateConfig({ data: [] }).forceRender();
+        if (opportunitiesGrid) opportunitiesGrid.updateConfig({ data: [] }).forceRender();
+        if (countriesStatesGrid) countriesStatesGrid.updateConfig({ data: [] }).forceRender();
+        if (currenciesGrid) currenciesGrid.updateConfig({ data: [] }).forceRender();
+        if (priceBooksGrid) priceBooksGrid.updateConfig({ data: [] }).forceRender();
+
+        // Clear dropdowns
+        customerCountrySelect.innerHTML = '<option value="">Select...</option>';
+        opportunityCustomerSelect.innerHTML = '<option value="">Select...</option>';
+        opportunityCurrencySelect.innerHTML = '<option value="">Select...</option>';
+        opportunityPriceBookSelect.innerHTML = '<option value="">Select...</option>';
+        defaultCurrencySelect.innerHTML = '<option value="">Select...</option>';
+        defaultCountrySelect.innerHTML = '<option value="">Select...</option>';
+
+        // Hide all modules
+        modules.forEach(mod => mod.classList.remove('active'));
     }
 });
 
-authButton.addEventListener('click', () => {
+authButtonSignOut.addEventListener('click', () => {
     if (currentUser) {
         // Sign Out
         auth.signOut().then(() => {
@@ -175,118 +270,125 @@ authButton.addEventListener('click', () => {
             console.error('Sign Out Error:', error);
             alert('Error signing out.');
         });
-    } else {
-        // Sign In with Google
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).then((result) => {
-            // User signed in
-            console.log('Signed in as:', result.user.displayName);
-        }).catch((error) => {
-            console.error('Sign In Error:', error);
-            alert('Error signing in: ' + error.message);
-        });
     }
 });
+
+authButtonSignIn.addEventListener('click', () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).then((result) => {
+        console.log('Signed in as:', result.user.displayName);
+    }).catch((error) => {
+        console.error('Sign In Error:', error);
+        alert('Error signing in: ' + error.message);
+    });
+});
+
 
 // --- Navigation ---
+
 navButtons.forEach(button => {
-    button.addEventListener('click', (e) => {
-        const moduleName = e.target.dataset.module;
-        if (moduleName === 'admin' && currentUserRole !== 'Admin') {
-            alert('Access Denied: You must be an Admin to access this section.');
+    button.addEventListener('click', () => {
+        // Remove 'active' from all nav buttons and hide all modules
+        navButtons.forEach(btn => btn.classList.remove('active'));
+        modules.forEach(mod => mod.classList.remove('active'));
+
+        // Add 'active' to clicked button and show corresponding module
+        button.classList.add('active');
+        const moduleToShow = document.getElementById(`${button.dataset.module}Module`);
+
+        // Check if module is admin-only and user is not admin
+        if (moduleToShow.classList.contains('admin-only') && currentUserRole !== 'Admin') {
+            alert('You do not have permission to access this module.');
+            // Optionally, redirect to dashboard or previous module
+            document.querySelector('.nav-button[data-module="dashboard"]').click();
             return;
         }
-        showModule(moduleName);
+
+        moduleToShow.classList.add('active');
+
+        // Special actions for modules
+        if (button.dataset.module === 'dashboard') {
+            updateDashboardStats();
+        } else if (button.dataset.module === 'customers') {
+            renderCustomersGrid(); // Re-render to ensure data is fresh
+        } else if (button.dataset.module === 'opportunities') {
+            renderOpportunitiesGrid(); // Re-render to ensure data is fresh
+        } else if (button.dataset.module === 'admin') {
+            // Ensure first admin subsection is active and load its data
+            adminSectionBtns.forEach(btn => btn.classList.remove('active'));
+            adminSubsections.forEach(sub => sub.classList.remove('active'));
+            const defaultAdminBtn = document.querySelector('.admin-section-btn[data-admin-target="countriesStates"]');
+            const defaultAdminSection = document.getElementById('countriesStatesSection');
+
+            if (defaultAdminBtn) defaultAdminBtn.classList.add('active');
+            if (defaultAdminSection) defaultAdminSection.classList.add('active');
+
+            renderCountriesStatesGrid(); // Load data for the default subsection
+            // Other admin grids will be loaded when their respective buttons are clicked
+            loadAppSettings(); // Load app settings for admin panel
+        }
     });
 });
 
-function showModule(moduleName) {
-    navButtons.forEach(button => {
-        if (button.dataset.module === moduleName) {
-            button.classList.add('active');
-        } else {
-            button.classList.remove('active');
-        }
-    });
 
-    modules.forEach(module => {
-        if (module.id === `${moduleName}Module`) {
-            module.classList.add('active');
-        } else {
-            module.classList.remove('active');
-        }
-    });
+// --- Dashboard Module ---
 
-    // Load data specific to the module when it becomes active.
-    // Grids are already initialized from onAuthStateChanged.
-    if (moduleName === 'customers') {
-        loadCustomers(); // This will now load data into customersGrid
-    } else if (moduleName === 'opportunities') {
-        loadOpportunities();
-    } else if (moduleName === 'dashboard') {
-        loadDashboardStats();
-    } else if (moduleName === 'admin') {
-        showAdminSubsection('countriesStates'); // Default admin subsection
-        loadCountriesStates();
-        loadCurrencies();
-        loadPriceBooks();
-        loadAppSettings();
-    }
-}
+const totalCustomersCount = document.getElementById('totalCustomersCount');
+const totalOpportunitiesCount = document.getElementById('totalOpportunitiesCount');
+const openOpportunitiesCount = document.getElementById('openOpportunitiesCount');
+const wonOpportunitiesCount = document.getElementById('wonOpportunitiesCount');
 
-// --- Dashboard Module Functions ---
-async function loadDashboardStats() {
+async function updateDashboardStats() {
     if (!currentUser) return;
 
     try {
-        // Total Customers (filtered by creator for standard users, all for admin in frontend display)
-        let customerQuery = customersCollection;
+        let customerQuery = db.collection('customers');
         if (currentUserRole !== 'Admin') {
             customerQuery = customerQuery.where('creatorId', '==', currentUser.uid);
         }
         const customersSnapshot = await customerQuery.get();
         totalCustomersCount.textContent = customersSnapshot.size;
 
-        // Total Opportunities (filtered by creator for standard users, all for admin)
-        let opportunityQuery = opportunitiesCollection;
+        let opportunityQuery = db.collection('opportunities');
         if (currentUserRole !== 'Admin') {
             opportunityQuery = opportunityQuery.where('creatorId', '==', currentUser.uid);
         }
         const opportunitiesSnapshot = await opportunityQuery.get();
         totalOpportunitiesCount.textContent = opportunitiesSnapshot.size;
 
-        // Open Opportunities
         const openOpportunities = opportunitiesSnapshot.docs.filter(doc =>
             doc.data().salesStage !== 'Won' && doc.data().salesStage !== 'Lost'
         );
         openOpportunitiesCount.textContent = openOpportunities.length;
 
-        // Won Opportunities
         const wonOpportunities = opportunitiesSnapshot.docs.filter(doc =>
             doc.data().salesStage === 'Won'
         );
         wonOpportunitiesCount.textContent = wonOpportunities.length;
 
     } catch (error) {
-        console.error("Error loading dashboard stats:", error);
+        console.error("Error updating dashboard stats:", error);
     }
 }
 
 
 // --- Modals General Logic ---
-closeButtons.forEach(button => {
+
+// Close buttons for all modals
+document.querySelectorAll('.modal .close-button').forEach(button => {
     button.addEventListener('click', (e) => {
         e.target.closest('.modal').style.display = 'none';
-        resetForms(); // Reset forms when closing modals
+        resetForms();
     });
 });
 
+// Close modal on outside click
 window.addEventListener('click', (event) => {
-    if (event.target == customerModal) {
+    if (event.target === customerModal) {
         customerModal.style.display = 'none';
         resetForms();
     }
-    if (event.target == opportunityModal) {
+    if (event.target === opportunityModal) {
         opportunityModal.style.display = 'none';
         resetForms();
     }
@@ -304,760 +406,1061 @@ function resetForms() {
     priceBookForm.reset();
     priceBookIdInput.value = '';
     appSettingsForm.reset();
-    settingsDocIdInput.value = ''; // Ensure this is cleared
+    settingsDocIdInput.value = '';
 }
 
-// --- Customer Module Functions ---
+
+// --- Customers Module ---
+
+// Populate Customer Country Dropdown
+async function populateCustomerCountryDropdown(selectedCountry = null) {
+    if (!currentUser) return;
+    await populateSelect(customerCountrySelect, db.collection('countries'), 'name', 'name', selectedCountry);
+}
+
+// Open Customer Modal
 addCustomerBtn.addEventListener('click', () => {
-    if (!currentUser) {
-        alert('Please sign in to add customers.');
-        return;
-    }
-    customerModalTitle.textContent = 'Add New Customer';
-    customerIdInput.value = ''; // Clear ID for new
     customerForm.reset();
+    customerIdInput.value = ''; // Clear ID for new customer
+    customerModalTitle.textContent = 'Add New Customer';
+    populateCustomerCountryDropdown(); // Repopulate to ensure fresh data
     customerModal.style.display = 'flex';
 });
 
+// Save Customer
 customerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!currentUser) {
-        alert('You must be signed in to perform this action.');
-        return;
-    }
+    if (!currentUser) { alert('Please sign in to perform this action.'); return; }
 
     const customerData = {
-        customerType: document.getElementById('customerType').value,
-        customerName: document.getElementById('customerName').value,
-        email: document.getElementById('customerEmail').value,
-        phone: document.getElementById('customerPhone').value,
-        address: document.getElementById('customerAddress').value,
-        country: document.getElementById('customerCountry').value,
-        preferredContactMethod: document.getElementById('customerPreferredContactMethod').value,
-        industry: document.getElementById('customerIndustry').value,
-        additionalDetails: document.getElementById('customerAdditionalDetails').value,
-        customerSource: document.getElementById('customerSource').value,
-        active: document.getElementById('customerActive').value,
+        type: customerTypeSelect.value,
+        name: customerNameInput.value,
+        email: customerEmailInput.value,
+        phone: customerPhoneInput.value,
+        address: customerAddressInput.value,
+        country: customerCountrySelect.value,
+        preferredContactMethod: customerPreferredContactMethodSelect.value,
+        industry: customerIndustryInput.value,
+        additionalDetails: customerAdditionalDetailsTextarea.value,
+        source: customerSourceInput.value,
+        active: customerActiveSelect.value === 'Yes',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
-    const docId = customerIdInput.value;
-
     try {
-        if (docId) {
+        if (customerIdInput.value) {
             // Update existing customer
-            await customersCollection.doc(docId).update({
-                ...customerData,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            await db.collection('customers').doc(customerIdInput.value).update(customerData);
             alert('Customer updated successfully!');
         } else {
             // Add new customer
-            await customersCollection.add({
-                ...customerData,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                creatorId: currentUser.uid // Set creator ID
-            });
+            customerData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            customerData.creatorId = currentUser.uid; // Assign creator
+            await db.collection('customers').add(customerData);
             alert('Customer added successfully!');
         }
         customerModal.style.display = 'none';
-        loadCustomers(); // Reload list after save (will now update Grid.js)
-        loadDashboardStats(); // Update dashboard
+        renderCustomersGrid(); // Refresh the table
+        updateDashboardStats(); // Update dashboard counts
     } catch (error) {
-        console.error('Error saving customer:', error);
+        console.error("Error saving customer:", error);
         alert('Error saving customer: ' + error.message);
     }
 });
 
-/**
- * Initializes the Grid.js table for Customers.
- * This should be called once (e.g., onAuthStateChanged).
- */
-function initializeCustomersGrid() {
-    if (customersGrid) return; // Prevent re-initialization
-    console.log("Initializing Customers Grid.js..."); // For debugging
+// Grid.js for Customers
+async function renderCustomersGrid() {
+    if (!currentUser) return; // Only render if authenticated
 
-    customersGrid = new gridjs.Grid({
-        columns: [
-            { id: 'customerName', name: 'Name', sort: true, filter: true },
-            { id: 'email', name: 'Email', sort: true, filter: true },
-            { id: 'phone', name: 'Phone', sort: true, filter: true },
-            { id: 'customerType', name: 'Type', sort: true, filter: true },
-            { 
-                name: 'Actions',
-                formatter: (cell, row) => {
-                    const docId = row.cells[0].data; // Assuming 'id' is the first hidden column
-                    const data = row.cells.reduce((obj, cell, index) => {
-                        // Reconstruct the full data object from the row's cells for edit
-                        // This assumes a consistent order with the data loaded by loadCustomers
-                        // For a robust solution, you might store the full row object as a hidden column or in a map
-                        const columnIds = ['id', 'customerName', 'email', 'phone', 'customerType', 'address', 'country', 'preferredContactMethod', 'industry', 'additionalDetails', 'customerSource', 'active']; // Adjust based on your actual data structure
-                        obj[columnIds[index]] = cell.data;
-                        return obj;
-                    }, {});
+    let customersRef = db.collection('customers');
+    if (currentUserRole !== 'Admin') {
+        customersRef = customersRef.where('creatorId', '==', currentUser.uid);
+    }
+    const customerData = [];
 
-                    return gridjs.h('div', { className: 'action-icons' },
-                        gridjs.h('span', {
-                            className: 'fa-solid fa-edit',
-                            title: 'Edit',
-                            onClick: () => editCustomer(docId, data)
-                        }),
-                        gridjs.h('span', {
-                            className: 'fa-solid fa-trash',
-                            title: 'Delete',
-                            onClick: () => deleteCustomer(docId)
-                        })
-                    );
-                },
-                sort: false,
-                filter: false
-            }
-        ],
-        search: true, // Global search
-        pagination: {
-            enabled: true,
-            limit: 10,
-            summary: true // Shows summary like "1-10 of 50"
-        },
-        sort: true,
-        data: [], // Initial empty data
-        style: {
-            table: {
-                width: '100%',
-                'min-width': '600px' // Ensure minimum width for responsiveness
-            }
-        },
-        language: { // Customizing Grid.js text
-            'search': {
-                'placeholder': 'Search customers...'
-            },
-            'pagination': {
-                'previous': 'Prev',
-                'next': 'Next',
-                'showing': 'Showing',
-                'of': 'of',
-                'results': 'results',
-                'to': 'to'
-            },
-            'noRecordsFound': 'No Customer Data Available',
-        }
-    }).render(document.getElementById('customersTable')); // Render into the container
-
-    // Optional: Add a listener for when data is loaded, if needed, though loadCustomers directly updates it
-    customersGrid.on('ready', () => {
-        console.log('Customers Grid.js is ready.');
+    const snapshot = await customersRef.orderBy('name').get();
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        customerData.push([
+            doc.id, // Hidden ID for actions
+            data.name,
+            data.type,
+            data.email,
+            data.phone,
+            data.country,
+            data.active,
+            data.createdAt // Firestore Timestamp
+        ]);
     });
+
+    if (customersGrid) {
+        customersGrid.updateConfig({ data: customerData }).forceRender();
+    } else {
+        customersGrid = new gridjs.Grid({
+            columns: [
+                { id: 'id', name: 'ID', hidden: true }, // Hidden column for document ID
+                { id: 'name', name: 'Name', sort: true, filter: true },
+                { id: 'type', name: 'Type', sort: true, filter: true },
+                { id: 'email', name: 'Email', sort: true, filter: true },
+                { id: 'phone', name: 'Phone', sort: true, filter: true },
+                { id: 'country', name: 'Country', sort: true, filter: true },
+                { id: 'active', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
+                { id: 'createdAt', name: 'Created At', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
+                {
+                    name: 'Actions',
+                    sort: false,
+                    filter: false,
+                    formatter: (cell, row) => {
+                        const docId = row.cells[0].data; // Get ID from the first hidden cell
+                        return gridjs.h('div', { className: 'action-icons' },
+                            gridjs.h('span', {
+                                className: 'fa-solid fa-edit',
+                                title: 'Edit Customer',
+                                onClick: () => editCustomer(docId)
+                            }),
+                            gridjs.h('span', {
+                                className: 'fa-solid fa-trash',
+                                title: 'Delete Customer',
+                                onClick: () => deleteCustomer(docId)
+                            })
+                        );
+                    }
+                }
+            ],
+            data: customerData,
+            search: true, // Global search
+            pagination: {
+                enabled: true,
+                limit: 10,
+                summary: true // Shows summary like "1-10 of 50"
+            },
+            sort: true,
+            resizable: true,
+            className: {
+                container: 'gridjs-container',
+                table: 'gridjs-table',
+                thead: 'gridjs-thead',
+                th: 'gridjs-th',
+                td: 'gridjs-td',
+                tr: 'gridjs-tr',
+                footer: 'gridjs-footer',
+                pagination: 'gridjs-pagination',
+                'pagination-summary': 'gridjs-pagination-summary',
+                'pagination-gap': 'gridjs-pagination-gap',
+                'pagination-nav': 'gridjs-pagination-nav',
+                'pagination-nav-prev': 'gridjs-pagination-nav-prev',
+                'pagination-nav-next': 'gridjs-pagination-nav-next',
+                'pagination-btn': 'gridjs-pagination-btn',
+                'pagination-btn-current': 'gridjs-currentPage',
+            },
+            language: { // Customizing Grid.js text
+                'search': {
+                    'placeholder': 'Search customers...'
+                },
+                'pagination': {
+                    'previous': 'Prev',
+                    'next': 'Next',
+                    'showing': 'Showing',
+                    'of': 'of',
+                    'results': 'results',
+                    'to': 'to'
+                },
+                'noRecordsFound': 'No Customer Data Available',
+            }
+        }).render(document.getElementById('customersTable'));
+    }
 }
 
-
-async function loadCustomers() {
-    // Robust check: Ensure currentUser exists and customersGrid is initialized.
-    if (!currentUser || !customersGrid) {
-        console.warn("Customers Grid.js not initialized or user not logged in. Skipping load.");
-        return;
-    }
-    
-    // Grid.js handles loading state internally if data is provided.
-    // For manual loading indication or errors, you might need to show/hide a custom loader.
+// Edit Customer
+async function editCustomer(customerId) {
+    if (!currentUser) { alert('Please sign in to perform this action.'); return; }
+    // Role check for editing
+    if (currentUserRole !== 'Admin' && currentUserRole !== 'Standard') { alert('You do not have permission to edit customers.'); return; }
 
     try {
-        let query = customersCollection;
-        // Standard users only see customers they created (frontend filter based on rule)
-        if (currentUserRole !== 'Admin') {
-            query = query.where('creatorId', '==', currentUser.uid);
+        const doc = await db.collection('customers').doc(customerId).get();
+        if (doc.exists) {
+            const data = doc.data();
+            // Ensure the user is authorized to edit this customer if not admin
+            if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
+                alert('You can only edit customers you have created.');
+                return;
+            }
+
+            customerIdInput.value = doc.id;
+            customerModalTitle.textContent = 'Edit Customer';
+
+            customerTypeSelect.value = data.type || '';
+            customerNameInput.value = data.name || '';
+            customerEmailInput.value = data.email || '';
+            customerPhoneInput.value = data.phone || '';
+            customerAddressInput.value = data.address || '';
+            await populateCustomerCountryDropdown(data.country); // Pre-select country
+            customerPreferredContactMethodSelect.value = data.preferredContactMethod || '';
+            customerIndustryInput.value = data.industry || '';
+            customerAdditionalDetailsTextarea.value = data.additionalDetails || '';
+            customerSourceInput.value = data.source || '';
+            customerActiveSelect.value = data.active ? 'Yes' : 'No';
+
+            customerModal.style.display = 'flex';
+        } else {
+            alert('Customer not found!');
         }
-
-        const snapshot = await query.orderBy('customerName').get();
-        
-        const customerData = [];
-        snapshot.forEach(doc => {
-            // Grid.js expects data as an array of arrays or array of objects.
-            // Using array of arrays is often simpler for direct data.
-            // Ensure the order matches your column definition.
-            customerData.push([
-                doc.id, // Keep ID as the first (potentially hidden) column for actions
-                doc.data().customerName,
-                doc.data().email,
-                doc.data().phone,
-                doc.data().customerType,
-                doc.data().address, // Include all fields needed for editCustomer
-                doc.data().country,
-                doc.data().preferredContactMethod,
-                doc.data().industry,
-                doc.data().additionalDetails,
-                doc.data().customerSource,
-                doc.data().active
-            ]);
-        });
-
-        // Update Grid.js data
-        // Grid.js doesn't have a direct .setData() like Tabulator.
-        // You update its config and then force a re-render.
-        // For large datasets, consider server-side pagination/filtering or a more advanced approach.
-        customersGrid.updateConfig({
-            data: customerData
-        }).forceRender();
-
     } catch (error) {
-        console.error('Error loading customers:', error);
-        // You can update the Grid.js config to show an error message or empty data
-        customersGrid.updateConfig({
-            data: [],
-            // You might want a custom message or error indicator here
-            noRecordsFound: 'Error loading data: ' + error.message
-        }).forceRender();
+        console.error("Error editing customer:", error);
+        alert('Error loading customer for edit: ' + error.message);
     }
 }
 
-async function editCustomer(id, customer) {
-    if (!currentUser) {
-        alert('You must be signed in to perform this action.');
-        return;
-    }
-    customerModalTitle.textContent = 'Edit Customer';
-    customerIdInput.value = id;
-    document.getElementById('customerType').value = customer.customerType;
-    document.getElementById('customerName').value = customer.customerName;
-    document.getElementById('customerEmail').value = customer.email;
-    document.getElementById('customerPhone').value = customer.phone;
-    document.getElementById('customerAddress').value = customer.address;
-    document.getElementById('customerCountry').value = customer.country;
-    document.getElementById('customerPreferredContactMethod').value = customer.preferredContactMethod;
-    document.getElementById('customerIndustry').value = customer.industry;
-    document.getElementById('customerAdditionalDetails').value = customer.additionalDetails;
-    document.getElementById('customerSource').value = customer.customerSource;
-    document.getElementById('customerActive').value = customer.active;
-    customerModal.style.display = 'flex';
-}
+// Delete Customer
+async function deleteCustomer(customerId) {
+    if (!currentUser) { alert('Please sign in to perform this action.'); return; }
+    // Role check for deleting
+    if (currentUserRole !== 'Admin') { alert('You do not have permission to delete customers.'); return; }
 
-async function deleteCustomer(id) {
-    if (!currentUser) {
-        alert('You must be signed in to perform this action.');
-        return;
-    }
-    if (confirm('Are you sure you want to delete this customer?')) {
+    if (confirm('Are you sure you want to delete this customer? This action cannot be undone.')) {
         try {
-            await customersCollection.doc(id).delete();
+            // Check if there are any opportunities linked to this customer
+            const opportunitiesSnapshot = await db.collection('opportunities').where('customerId', '==', customerId).get();
+            if (!opportunitiesSnapshot.empty) {
+                alert('Cannot delete customer: There are existing opportunities linked to this customer. Please delete the opportunities first.');
+                return;
+            }
+
+            await db.collection('customers').doc(customerId).delete();
             alert('Customer deleted successfully!');
-            loadCustomers(); // Reload list (will now update Grid.js)
-            loadDashboardStats(); // Update dashboard
+            renderCustomersGrid(); // Refresh the table
+            updateDashboardStats(); // Update dashboard counts
         } catch (error) {
-            console.error('Error deleting customer:', error);
+            console.error("Error deleting customer:", error);
             alert('Error deleting customer: ' + error.message);
         }
     }
 }
 
-// --- Opportunity Module Functions ---
+
+// --- Opportunities Module ---
+
+// Populate Opportunity Customers Dropdown
+async function populateOpportunityCustomerDropdown(selectedCustomerId = null) {
+    if (!currentUser) return;
+    const selectElement = opportunityCustomerSelect;
+    selectElement.innerHTML = '<option value="">Select a Customer</option>';
+    const snapshot = await db.collection('customers').orderBy('name').get();
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        const option = document.createElement('option');
+        option.value = doc.id; // Use Firestore doc ID as value
+        option.textContent = data.name;
+        if (selectedCustomerId && doc.id === selectedCustomerId) {
+            option.selected = true;
+        }
+        selectElement.appendChild(option);
+    });
+}
+
+// Populate Opportunity Currency Dropdown
+async function populateOpportunityCurrencyDropdown(selectedCurrencySymbol = null) {
+    if (!currentUser) return;
+    await populateSelect(opportunityCurrencySelect, db.collection('currencies'), 'symbol', 'name', selectedCurrencySymbol);
+}
+
+// Populate Opportunity Price Book Dropdown
+async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null) {
+    if (!currentUser) return;
+    const selectElement = opportunityPriceBookSelect;
+    selectElement.innerHTML = '<option value="">Select a Price Book</option>';
+    const snapshot = await db.collection('priceBooks').orderBy('name').get();
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        const option = document.createElement('option');
+        option.value = doc.id; // Use Firestore doc ID as value
+        option.textContent = data.name;
+        if (selectedPriceBookId && doc.id === selectedPriceBookId) {
+            option.selected = true;
+        }
+        selectElement.appendChild(option);
+    });
+}
+
+// Open Opportunity Modal
 addOpportunityBtn.addEventListener('click', () => {
-    if (!currentUser) {
-        alert('Please sign in to add opportunities.');
-        return;
-    }
-    opportunityModalTitle.textContent = 'Add New Opportunity';
-    opportunityIdInput.value = ''; // Clear ID for new
     opportunityForm.reset();
+    opportunityIdInput.value = ''; // Clear ID for new opportunity
+    opportunityModalTitle.textContent = 'Add New Opportunity';
+    populateOpportunityCustomerDropdown(); // Repopulate
+    populateOpportunityCurrencyDropdown(); // Repopulate
+    populateOpportunityPriceBookDropdown(); // Repopulate
     opportunityModal.style.display = 'flex';
 });
 
+closeOpportunityModalBtn.addEventListener('click', () => {
+    opportunityModal.style.display = 'none';
+});
+
+// Save Opportunity
 opportunityForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!currentUser) {
-        alert('You must be signed in to perform this action.');
-        return;
-    }
+    if (!currentUser) { alert('Please sign in to perform this action.'); return; }
+
+    // Get the display name of the selected customer for storage
+    const selectedCustomerOption = opportunityCustomerSelect.options[opportunityCustomerSelect.selectedIndex];
+    const customerName = selectedCustomerOption ? selectedCustomerOption.textContent : '';
 
     const opportunityData = {
-        opportunityName: document.getElementById('opportunityName').value,
-        customer: document.getElementById('opportunityCustomer').value, // This is the Customer Document ID
-        currency: document.getElementById('opportunityCurrency').value, // This is the Currency Document ID
-        priceBook: document.getElementById('opportunityPriceBook').value, // This is the Price Book Document ID
-        expectedStartDate: document.getElementById('opportunityExpectedStartDate').value,
-        expectedCloseDate: document.getElementById('opportunityExpectedCloseDate').value,
-        salesStage: document.getElementById('opportunitySalesStage').value,
-        probability: parseInt(document.getElementById('opportunityProbability').value, 10),
-        value: parseInt(document.getElementById('opportunityValue').value, 10),
-        notes: document.getElementById('opportunityNotes').value,
+        name: opportunityNameInput.value,
+        customerId: opportunityCustomerSelect.value, // Store customer ID
+        customerName: customerName, // Store customer name for easier display/search
+        currency: opportunityCurrencySelect.value, // This is the symbol
+        priceBookId: opportunityPriceBookSelect.value, // Store price book ID
+        expectedStartDate: opportunityExpectedStartDateInput.value ? firebase.firestore.Timestamp.fromDate(new Date(opportunityExpectedStartDateInput.value)) : null,
+        expectedCloseDate: opportunityExpectedCloseDateInput.value ? firebase.firestore.Timestamp.fromDate(new Date(opportunityExpectedCloseDateInput.value)) : null,
+        salesStage: opportunitySalesStageSelect.value,
+        probability: parseInt(opportunityProbabilityInput.value, 10),
+        value: parseFloat(opportunityValueInput.value),
+        notes: opportunityNotesTextarea.value,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
-    const docId = opportunityIdInput.value;
-
     try {
-        if (docId) {
+        if (opportunityIdInput.value) {
             // Update existing opportunity
-            await opportunitiesCollection.doc(docId).update({
-                ...opportunityData,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            await db.collection('opportunities').doc(opportunityIdInput.value).update(opportunityData);
             alert('Opportunity updated successfully!');
         } else {
             // Add new opportunity
-            await opportunitiesCollection.add({
-                ...opportunityData,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                creatorId: currentUser.uid // Set creator ID
-            });
+            opportunityData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            opportunityData.creatorId = currentUser.uid; // Assign creator
+            await db.collection('opportunities').add(opportunityData);
             alert('Opportunity added successfully!');
         }
         opportunityModal.style.display = 'none';
-        loadOpportunities(); // Reload list after save
-        loadDashboardStats(); // Update dashboard
+        renderOpportunitiesGrid(); // Refresh the table
+        updateDashboardStats(); // Update dashboard counts
     } catch (error) {
-        console.error('Error saving opportunity:', error);
+        console.error("Error saving opportunity:", error);
         alert('Error saving opportunity: ' + error.message);
     }
 });
 
-// Placeholder for Opportunities Grid.js initialization
-function initializeOpportunitiesGrid() {
-    // This will be implemented in a future step.
-    // For now, no grid is initialized for Opportunities.
-    console.log("Opportunities Grid.js initialization placeholder.");
-}
+// Grid.js for Opportunities
+async function renderOpportunitiesGrid() {
+    if (!currentUser) return;
 
-async function loadOpportunities() {
-    // Current placeholder, will be updated to use Grid.js later
-    console.warn("loadOpportunities function is a placeholder. Grid.js for Opportunities not yet implemented.");
-
-    // Implement actual Grid.js loading here later
-    // if (!currentUser || !opportunitiesGrid) { ... }
-    // opportunitiesGrid.updateConfig({ data: [...] }).forceRender();
-}
-
-
-async function editOpportunity(id, opportunity) {
-    if (!currentUser) {
-        alert('You must be signed in to perform this action.');
-        return;
+    let opportunitiesRef = db.collection('opportunities');
+    if (currentUserRole !== 'Admin') {
+        opportunitiesRef = opportunitiesRef.where('creatorId', '==', currentUser.uid);
     }
-    opportunityModalTitle.textContent = 'Edit Opportunity';
-    opportunityIdInput.value = id;
-    document.getElementById('opportunityName').value = opportunity.opportunityName;
-    document.getElementById('opportunityCustomer').value = opportunity.customer;
-    document.getElementById('opportunityCurrency').value = opportunity.currency;
-    document.getElementById('opportunityPriceBook').value = opportunity.priceBook;
-    document.getElementById('opportunityExpectedStartDate').value = opportunity.expectedStartDate;
-    document.getElementById('opportunityExpectedCloseDate').value = opportunity.expectedCloseDate;
-    document.getElementById('opportunitySalesStage').value = opportunity.salesStage;
-    document.getElementById('opportunityProbability').value = opportunity.probability;
-    document.getElementById('opportunityValue').value = opportunity.value;
-    document.getElementById('opportunityNotes').value = opportunity.notes;
-    opportunityModal.style.display = 'flex';
+    const opportunityData = [];
+
+    const snapshot = await opportunitiesRef.orderBy('expectedCloseDate').get();
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        opportunityData.push([
+            doc.id, // Hidden ID
+            data.name,
+            data.customerName, // Display customer name
+            data.salesStage,
+            data.probability,
+            data.value,
+            data.currency, // Currency symbol
+            data.expectedCloseDate,
+            data.createdAt
+        ]);
+    });
+
+    if (opportunitiesGrid) {
+        opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender();
+    } else {
+        opportunitiesGrid = new gridjs.Grid({
+            columns: [
+                { id: 'id', name: 'ID', hidden: true },
+                { id: 'name', name: 'Opportunity Name', sort: true, filter: true },
+                { id: 'customerName', name: 'Customer', sort: true, filter: true },
+                { id: 'salesStage', name: 'Stage', sort: true, filter: true },
+                { id: 'probability', name: 'Probability (%)', sort: true, filter: true },
+                { 
+                    id: 'value', 
+                    name: 'Value', 
+                    sort: true, 
+                    filter: true, 
+                    formatter: (cell, row) => {
+                        const currencySymbol = row.cells[6].data; // Assuming currency symbol is at index 6
+                        return cell.toLocaleString('en-US', { style: 'currency', currency: currencySymbol || 'USD' });
+                    }
+                },
+                { id: 'currency', name: 'Currency', sort: true, filter: true },
+                { id: 'expectedCloseDate', name: 'Close Date', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
+                { id: 'createdAt', name: 'Created At', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
+                {
+                    name: 'Actions',
+                    sort: false,
+                    filter: false,
+                    formatter: (cell, row) => {
+                        const docId = row.cells[0].data;
+                        return gridjs.h('div', { className: 'action-icons' },
+                            gridjs.h('span', {
+                                className: 'fa-solid fa-edit',
+                                title: 'Edit Opportunity',
+                                onClick: () => editOpportunity(docId)
+                            }),
+                            gridjs.h('span', {
+                                className: 'fa-solid fa-trash',
+                                title: 'Delete Opportunity',
+                                onClick: () => deleteOpportunity(docId)
+                            })
+                        );
+                    }
+                }
+            ],
+            data: opportunityData,
+            search: true,
+            pagination: {
+                enabled: true,
+                limit: 10,
+                summary: true
+            },
+            sort: true,
+            resizable: true,
+            className: {
+                container: 'gridjs-container',
+                table: 'gridjs-table',
+                thead: 'gridjs-thead',
+                th: 'gridjs-th',
+                td: 'gridjs-td',
+                tr: 'gridjs-tr',
+                footer: 'gridjs-footer',
+                pagination: 'gridjs-pagination',
+                'pagination-summary': 'gridjs-pagination-summary',
+                'pagination-gap': 'gridjs-pagination-gap',
+                'pagination-nav': 'gridjs-pagination-nav',
+                'pagination-nav-prev': 'gridjs-pagination-nav-prev',
+                'pagination-nav-next': 'gridjs-pagination-nav-next',
+                'pagination-btn': 'gridjs-pagination-btn',
+                'pagination-btn-current': 'gridjs-currentPage',
+            },
+            language: {
+                'search': { 'placeholder': 'Search opportunities...' },
+                'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
+                'noRecordsFound': 'No Opportunity Data Available',
+            }
+        }).render(document.getElementById('opportunitiesTable'));
+    }
 }
 
-async function deleteOpportunity(id) {
-    if (!currentUser) {
-        alert('You must be signed in to perform this action.');
-        return;
+
+// Edit Opportunity
+async function editOpportunity(opportunityId) {
+    if (!currentUser) { alert('Please sign in to perform this action.'); return; }
+    if (currentUserRole !== 'Admin' && currentUserRole !== 'Standard') { alert('You do not have permission to edit opportunities.'); return; }
+
+    try {
+        const doc = await db.collection('opportunities').doc(opportunityId).get();
+        if (doc.exists) {
+            const data = doc.data();
+            // Ensure the user is authorized to edit this opportunity if not admin
+            if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
+                alert('You can only edit opportunities you have created.');
+                return;
+            }
+
+            opportunityIdInput.value = doc.id;
+            opportunityModalTitle.textContent = 'Edit Opportunity';
+
+            opportunityNameInput.value = data.name || '';
+            await populateOpportunityCustomerDropdown(data.customerId);
+            await populateOpportunityCurrencyDropdown(data.currency);
+            await populateOpportunityPriceBookDropdown(data.priceBookId);
+            opportunityExpectedStartDateInput.value = data.expectedStartDate ? data.expectedStartDate.toDate().toISOString().split('T')[0] : '';
+            opportunityExpectedCloseDateInput.value = data.expectedCloseDate ? data.expectedCloseDate.toDate().toISOString().split('T')[0] : '';
+            opportunitySalesStageSelect.value = data.salesStage || '';
+            opportunityProbabilityInput.value = data.probability || 0;
+            opportunityValueInput.value = data.value || 0;
+            opportunityNotesTextarea.value = data.notes || '';
+
+            opportunityModal.style.display = 'flex';
+        } else {
+            alert('Opportunity not found!');
+        }
+    } catch (error) {
+        console.error("Error editing opportunity:", error);
+        alert('Error loading opportunity for edit: ' + error.message);
     }
-    if (confirm('Are you sure you want to delete this opportunity?')) {
+}
+
+// Delete Opportunity
+async function deleteOpportunity(opportunityId) {
+    if (!currentUser) { alert('Please sign in to perform this action.'); return; }
+    if (currentUserRole !== 'Admin') { alert('You do not have permission to delete opportunities.'); return; }
+
+    if (confirm('Are you sure you want to delete this opportunity? This action cannot be undone.')) {
         try {
-            await opportunitiesCollection.doc(id).delete();
+            await db.collection('opportunities').doc(opportunityId).delete();
             alert('Opportunity deleted successfully!');
-            loadOpportunities(); // Reload list
-            loadDashboardStats(); // Update dashboard
+            renderOpportunitiesGrid(); // Refresh the table
+            updateDashboardStats(); // Update dashboard counts
         } catch (error) {
-            console.error('Error deleting opportunity:', error);
+            console.error("Error deleting opportunity:", error);
             alert('Error deleting opportunity: ' + error.message);
         }
     }
 }
 
-// --- Dropdown Population Functions (for Modals) ---
-async function populateCountriesDropdown() {
-    try {
-        const doc = await countriesStatesCollection.get();
-        const countriesData = doc.data(); // Assuming it's a single doc with an object of countries
-        customerCountrySelect.innerHTML = '<option value="">Select Country</option>';
-        if (countriesData && countriesData.countries) {
-            // Assuming countriesData.countries is an array of objects like { name: "USA", code: "US", states: [...] }
-            countriesData.countries.sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
-            countriesData.countries.forEach(country => {
-                const option = document.createElement('option');
-                option.value = country.name; // Use country name as value
-                option.textContent = country.name;
-                customerCountrySelect.appendChild(option);
-            });
+
+// --- Admin Panel ---
+
+adminSectionBtns.forEach(button => {
+    button.addEventListener('click', () => {
+        adminSectionBtns.forEach(btn => btn.classList.remove('active'));
+        adminSubsections.forEach(sub => sub.classList.remove('active'));
+
+        button.classList.add('active');
+        document.getElementById(`${button.dataset.adminTarget}Section`).classList.add('active');
+
+        // Render specific grids when their section is active
+        if (button.dataset.adminTarget === 'countriesStates') {
+            renderCountriesStatesGrid();
+        } else if (button.dataset.adminTarget === 'currencies') {
+            renderCurrenciesGrid();
+        } else if (button.dataset.adminTarget === 'priceBooks') {
+            renderPriceBooksGrid();
+        } else if (button.dataset.adminTarget === 'settings') {
+            loadAppSettings();
+            populateDefaultCurrencyDropdown();
+            populateDefaultCountryDropdown();
         }
-    } catch (error) {
-        console.error("Error populating countries dropdown:", error);
-    }
-}
-
-async function populateCustomerDropdown() {
-    try {
-        // As per rules, any authenticated user can read all customers for selection purposes.
-        const snapshot = await customersCollection.orderBy('customerName').get();
-        opportunityCustomerSelect.innerHTML = '<option value="">Select Customer</option>';
-        snapshot.forEach(doc => {
-            const customer = doc.data();
-            const option = document.createElement('option');
-            option.value = doc.id; // Use customer document ID as value
-            option.textContent = customer.customerName;
-            opportunityCustomerSelect.appendChild(option);
-        });
-    } catch (error) {
-        console.error("Error populating customer dropdown:", error);
-    }
-}
-
-async function populateCurrencyDropdown() {
-    try {
-        const snapshot = await currenciesCollection.orderBy('name').get();
-        opportunityCurrencySelect.innerHTML = '<option value="">Select Currency</option>';
-        snapshot.forEach(doc => {
-            const currency = doc.data();
-            const option = document.createElement('option');
-            option.value = doc.id; // Use currency document ID as value
-            option.textContent = `${currency.name} (${currency.symbol})`;
-            opportunityCurrencySelect.appendChild(option);
-        });
-    } catch (error) {
-        console.error("Error populating currency dropdown:", error);
-    }
-}
-
-async function populatePriceBookDropdown() {
-    try {
-        const snapshot = await priceBooksCollection.orderBy('name').get();
-        opportunityPriceBookSelect.innerHTML = '<option value="">Select Price Book</option>';
-        snapshot.forEach(doc => {
-            const priceBook = doc.data();
-            const option = document.createElement('option');
-            option.value = doc.id; // Use price book document ID as value
-            option.textContent = priceBook.name;
-            opportunityPriceBookSelect.appendChild(option);
-        });
-    } catch (error) {
-        console.error("Error populating price book dropdown:", error);
-    }
-}
-
-
-// --- Admin Module Functions ---
-adminSectionButtons.forEach(button => {
-    button.addEventListener('click', (e) => {
-        const target = e.target.dataset.adminTarget;
-        showAdminSubsection(target);
     });
 });
-
-function showAdminSubsection(targetName) {
-    adminSubsections.forEach(section => {
-        if (section.id === `${targetName}Section`) {
-            section.classList.add('active');
-        } else {
-            section.classList.remove('active');
-        }
-    });
-
-    adminSectionButtons.forEach(button => {
-        if (button.dataset.adminTarget === targetName) {
-            button.classList.add('active');
-        } else {
-            button.classList.remove('active');
-        }
-    });
-    resetForms(); // Reset forms when switching admin sections
-}
 
 // Admin Cancel Buttons
 document.querySelectorAll('.admin-form .cancel-edit-btn').forEach(button => {
     button.addEventListener('click', (e) => {
         e.target.closest('form').reset();
-        e.target.closest('form').querySelector('input[type="hidden"]').value = '';
+        // Specific reset for hidden ID fields
+        const hiddenInput = e.target.closest('form').querySelector('input[type="hidden"]');
+        if (hiddenInput) hiddenInput.value = '';
     });
 });
 
+// --- Countries & States Management ---
 
-// Countries & States Management
-// Placeholder for Countries & States Grid.js initialization
-function initializeCountriesStatesGrid() {
-    // This will be implemented in a future step.
-    console.log("Countries & States Grid.js initialization placeholder.");
-}
+// Render Grid for Countries & States
+async function renderCountriesStatesGrid() {
+    if (!currentUser || currentUserRole !== 'Admin') return;
 
-async function loadCountriesStates() {
-    // Current placeholder, will be updated to use Grid.js later
-    console.warn("loadCountriesStates function is a placeholder. Grid.js for Countries & States not yet implemented.");
+    const countriesRef = db.collection('countries');
+    const data = [];
 
-    // Implement actual Grid.js loading here later
-    // if (currentUserRole !== 'Admin' || !countriesStatesGrid) { ... }
-    // countriesStatesGrid.updateConfig({ data: [...] }).forceRender();
-}
+    const snapshot = await countriesRef.orderBy('name').get();
+    snapshot.forEach(doc => {
+        const country = doc.data();
+        data.push([
+            doc.id, // Hidden ID for actions
+            country.name,
+            country.code,
+            country.states ? country.states.join(', ') : ''
+        ]);
+    });
 
-countryStateForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (currentUserRole !== 'Admin') {
-        alert('Access Denied: Only Admins can manage countries and states.');
-        return;
+    if (countriesStatesGrid) {
+        countriesStatesGrid.updateConfig({ data: data }).forceRender();
+    } else {
+        countriesStatesGrid = new gridjs.Grid({
+            columns: [
+                { id: 'id', name: 'ID', hidden: true },
+                { id: 'name', name: 'Country Name', sort: true, filter: true },
+                { id: 'code', name: 'Code', sort: true, filter: true },
+                { id: 'states', name: 'States', sort: false, filter: false },
+                {
+                    name: 'Actions',
+                    sort: false,
+                    filter: false,
+                    formatter: (cell, row) => {
+                        const docId = row.cells[0].data;
+                        return gridjs.h('div', { className: 'action-icons' },
+                            gridjs.h('span', {
+                                className: 'fa-solid fa-edit',
+                                title: 'Edit Country',
+                                onClick: () => editCountryState(docId)
+                            }),
+                            gridjs.h('span', {
+                                className: 'fa-solid fa-trash',
+                                title: 'Delete Country',
+                                onClick: () => deleteCountryState(docId)
+                            })
+                        );
+                    }
+                }
+            ],
+            data: data,
+            search: true,
+            pagination: { enabled: true, limit: 5, summary: true },
+            sort: true,
+            resizable: true,
+            className: {
+                container: 'gridjs-container',
+                table: 'gridjs-table',
+                thead: 'gridjs-thead',
+                th: 'gridjs-th',
+                td: 'gridjs-td',
+                tr: 'gridjs-tr',
+                footer: 'gridjs-footer',
+                pagination: 'gridjs-pagination',
+                'pagination-summary': 'gridjs-pagination-summary',
+                'pagination-gap': 'gridjs-pagination-gap',
+                'pagination-nav': 'gridjs-pagination-nav',
+                'pagination-nav-prev': 'gridjs-pagination-nav-prev',
+                'pagination-nav-next': 'gridjs-pagination-nav-next',
+                'pagination-btn': 'gridjs-pagination-btn',
+                'pagination-btn-current': 'gridjs-currentPage',
+            },
+            language: {
+                'search': { 'placeholder': 'Search countries...' },
+                'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
+                'noRecordsFound': 'No Countries & States Data Available',
+            }
+        }).render(document.getElementById('countriesStatesTable'));
     }
+}
 
-    const countryName = document.getElementById('countryName').value;
-    const countryCode = document.getElementById('countryCode').value;
-    const countryStates = document.getElementById('countryStates').value.split(',').map(s => s.trim()).filter(s => s);
-    const editIndex = countryStateIdInput.value; // Re-using hidden input for array index
-
+// Edit Country/State
+async function editCountryState(id) {
+    if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
     try {
-        const doc = await countriesStatesCollection.get();
-        let countriesData = doc.data() || { countries: [] };
-        let countriesArray = countriesData.countries || [];
-
-        if (editIndex !== '') {
-            // Update existing entry
-            countriesArray[parseInt(editIndex, 10)] = { name: countryName, code: countryCode, states: countryStates };
-            alert('Country updated successfully!');
-        } else {
-            // Add new entry
-            countriesArray.push({ name: countryName, code: countryCode, states: countryStates });
-            alert('Country added successfully!');
+        const doc = await db.collection('countries').doc(id).get();
+        if (doc.exists) {
+            const data = doc.data();
+            countryStateIdInput.value = doc.id;
+            countryNameInput.value = data.name || '';
+            countryCodeInput.value = data.code || '';
+            countryStatesInput.value = data.states ? data.states.join(', ') : '';
         }
-        await countriesStatesCollection.set({ countries: countriesArray }); // Overwrite the entire array
-        countryStateForm.reset();
-        countryStateIdInput.value = '';
-        loadCountriesStates(); // Reload list after save
-        populateCountriesDropdown(); // Refresh customer country dropdown
     } catch (error) {
-        console.error('Error saving country/state:', error);
-        alert('Error saving country/state: ' + error.message);
+        console.error("Error loading country for edit:", error);
     }
-});
-
-function editCountryState(index, country) {
-    document.getElementById('countryName').value = country.name;
-    document.getElementById('countryCode').value = country.code;
-    document.getElementById('countryStates').value = country.states ? country.states.join(', ') : '';
-    countryStateIdInput.value = index; // Store array index for update
 }
 
-async function deleteCountryState(index) {
-    if (currentUserRole !== 'Admin') {
-        alert('Access Denied: Only Admins can manage countries and states.');
-        return;
-    }
+// Delete Country/State
+async function deleteCountryState(id) {
+    if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
     if (confirm('Are you sure you want to delete this country?')) {
         try {
-            const doc = await countriesStatesCollection.get();
-            let countriesData = doc.data() || { countries: [] };
-            let countriesArray = countriesData.countries || [];
-
-            countriesArray.splice(index, 1); // Remove from array
-
-            await countriesStatesCollection.set({ countries: countriesArray });
-            alert('Country deleted successfully!');
-            loadCountriesStates(); // Reload list after delete
-            populateCountriesDropdown(); // Refresh customer country dropdown
+            await db.collection('countries').doc(id).delete();
+            alert('Country deleted!');
+            renderCountriesStatesGrid();
+            populateCustomerCountryDropdown(); // Refresh customer dropdown
+            populateDefaultCountryDropdown(); // Refresh settings dropdown
         } catch (error) {
-            console.error('Error deleting country/state:', error);
-            alert('Error deleting country/state: ' + error.message);
+            console.error("Error deleting country:", error);
+            alert('Error deleting country: ' + error.message);
         }
     }
 }
 
-
-// Currencies Management
-// Placeholder for Currencies Grid.js initialization
-function initializeCurrenciesGrid() {
-    // This will be implemented in a future step.
-    console.log("Currencies Grid.js initialization placeholder.");
-}
-
-async function loadCurrencies() {
-    // Current placeholder, will be updated to use Grid.js later
-    console.warn("loadCurrencies function is a placeholder. Grid.js for Currencies not yet implemented.");
-
-    // Implement actual Grid.js loading here later
-    // if (currentUserRole !== 'Admin' || !currenciesGrid) { ... }
-    // currenciesGrid.updateConfig({ data: [...] }).forceRender();
-}
-
-currencyForm.addEventListener('submit', async (e) => {
+// Save Country/State
+countryStateForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (currentUserRole !== 'Admin') {
-        alert('Access Denied: Only Admins can manage currencies.');
-        return;
-    }
+    if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
 
-    const name = document.getElementById('currencyName').value;
-    const symbol = document.getElementById('currencySymbol').value;
-    const docId = currencyIdInput.value;
+    const countryData = {
+        name: countryNameInput.value.trim(),
+        code: countryCodeInput.value.trim().toUpperCase(),
+        states: countryStatesInput.value.split(',').map(s => s.trim()).filter(s => s !== '')
+    };
 
     try {
-        if (docId) {
-            await currenciesCollection.doc(docId).update({ name, symbol });
-            alert('Currency updated successfully!');
+        if (countryStateIdInput.value) {
+            await db.collection('countries').doc(countryStateIdInput.value).update(countryData);
+            alert('Country updated!');
         } else {
-            await currenciesCollection.add({ name, symbol });
-            alert('Currency added successfully!');
+            await db.collection('countries').add(countryData);
+            alert('Country added!');
         }
-        currencyForm.reset();
-        currencyIdInput.value = '';
-        loadCurrencies(); // Reload list after save
-        populateCurrencyDropdown(); // Refresh opportunity currency dropdown
+        countryStateForm.reset();
+        countryStateIdInput.value = '';
+        renderCountriesStatesGrid();
+        populateCustomerCountryDropdown(); // Refresh customer dropdown
+        populateDefaultCountryDropdown(); // Refresh settings dropdown
     } catch (error) {
-        console.error('Error saving currency:', error);
-        alert('Error saving currency: ' + error.message);
+        console.error("Error saving country:", error);
+        alert('Error saving country: ' + error.message);
     }
 });
 
-function editCurrency(id, currency) {
-    document.getElementById('currencyName').value = currency.name;
-    document.getElementById('currencySymbol').value = currency.symbol;
-    currencyIdInput.value = id;
+cancelCountryStateEditBtn.addEventListener('click', () => {
+    countryStateForm.reset();
+    countryStateIdInput.value = '';
+});
+
+
+// --- Currencies Management ---
+
+// Render Grid for Currencies
+async function renderCurrenciesGrid() {
+    if (!currentUser || currentUserRole !== 'Admin') return;
+
+    const currenciesRef = db.collection('currencies');
+    const data = [];
+
+    const snapshot = await currenciesRef.orderBy('name').get();
+    snapshot.forEach(doc => {
+        const currency = doc.data();
+        data.push([
+            doc.id, // Hidden ID for actions
+            currency.name,
+            currency.symbol
+        ]);
+    });
+
+    if (currenciesGrid) {
+        currenciesGrid.updateConfig({ data: data }).forceRender();
+    } else {
+        currenciesGrid = new gridjs.Grid({
+            columns: [
+                { id: 'id', name: 'ID', hidden: true },
+                { id: 'name', name: 'Currency Name', sort: true, filter: true },
+                { id: 'symbol', name: 'Symbol', sort: true, filter: true },
+                {
+                    name: 'Actions',
+                    sort: false,
+                    filter: false,
+                    formatter: (cell, row) => {
+                        const docId = row.cells[0].data;
+                        return gridjs.h('div', { className: 'action-icons' },
+                            gridjs.h('span', {
+                                className: 'fa-solid fa-edit',
+                                title: 'Edit Currency',
+                                onClick: () => editCurrency(docId)
+                            }),
+                            gridjs.h('span', {
+                                className: 'fa-solid fa-trash',
+                                title: 'Delete Currency',
+                                onClick: () => deleteCurrency(docId)
+                            })
+                        );
+                    }
+                }
+            ],
+            data: data,
+            search: true,
+            pagination: { enabled: true, limit: 5, summary: true },
+            sort: true,
+            resizable: true,
+            className: {
+                container: 'gridjs-container',
+                table: 'gridjs-table',
+                thead: 'gridjs-thead',
+                th: 'gridjs-th',
+                td: 'gridjs-td',
+                tr: 'gridjs-tr',
+                footer: 'gridjs-footer',
+                pagination: 'gridjs-pagination',
+                'pagination-summary': 'gridjs-pagination-summary',
+                'pagination-gap': 'gridjs-pagination-gap',
+                'pagination-nav': 'gridjs-pagination-nav',
+                'pagination-nav-prev': 'gridjs-pagination-nav-prev',
+                'pagination-nav-next': 'gridjs-pagination-nav-next',
+                'pagination-btn': 'gridjs-pagination-btn',
+                'pagination-btn-current': 'gridjs-currentPage',
+            },
+            language: {
+                'search': { 'placeholder': 'Search currencies...' },
+                'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
+                'noRecordsFound': 'No Currencies Data Available',
+            }
+        }).render(document.getElementById('currenciesTable'));
+    }
 }
 
-async function deleteCurrency(id) {
-    if (currentUserRole !== 'Admin') {
-        alert('Access Denied: Only Admins can manage currencies.');
-        return;
+// Edit Currency
+async function editCurrency(id) {
+    if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
+    try {
+        const doc = await db.collection('currencies').doc(id).get();
+        if (doc.exists) {
+            const data = doc.data();
+            currencyIdInput.value = doc.id;
+            currencyNameInput.value = data.name || '';
+            currencySymbolInput.value = data.symbol || '';
+        }
+    } catch (error) {
+        console.error("Error loading currency for edit:", error);
     }
+}
+
+// Delete Currency
+async function deleteCurrency(id) {
+    if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
     if (confirm('Are you sure you want to delete this currency?')) {
         try {
-            await currenciesCollection.doc(id).delete();
-            alert('Currency deleted successfully!');
-            loadCurrencies(); // Reload list after delete
-            populateCurrencyDropdown();
+            await db.collection('currencies').doc(id).delete();
+            alert('Currency deleted!');
+            renderCurrenciesGrid();
+            populateOpportunityCurrencyDropdown(); // Refresh opportunity dropdown
+            populateDefaultCurrencyDropdown(); // Refresh settings dropdown
         } catch (error) {
-            console.error('Error deleting currency:', error);
+            console.error("Error deleting currency:", error);
             alert('Error deleting currency: ' + error.message);
         }
     }
 }
 
-// Price Books Management
-// Placeholder for Price Books Grid.js initialization
-function initializePriceBooksGrid() {
-    // This will be implemented in a future step.
-    console.log("Price Books Grid.js initialization placeholder.");
-}
-
-async function loadPriceBooks() {
-    // Current placeholder, will be updated to use Grid.js later
-    console.warn("loadPriceBooks function is a placeholder. Grid.js for Price Books not yet implemented.");
-
-    // Implement actual Grid.js loading here later
-    // if (currentUserRole !== 'Admin' || !priceBooksGrid) { ... }
-    // priceBooksGrid.updateConfig({ data: [...] }).forceRender();
-}
-
-priceBookForm.addEventListener('submit', async (e) => {
+// Save Currency
+currencyForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (currentUserRole !== 'Admin') {
-        alert('Access Denied: Only Admins can manage price books.');
-        return;
-    }
+    if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
 
-    const name = document.getElementById('priceBookName').value;
-    const description = document.getElementById('priceBookDescription').value;
-    const docId = priceBookIdInput.value;
+    const currencyData = {
+        name: currencyNameInput.value.trim(),
+        symbol: currencySymbolInput.value.trim()
+    };
 
     try {
-        if (docId) {
-            await priceBooksCollection.doc(docId).update({ name, description });
-            alert('Price Book updated successfully!');
+        if (currencyIdInput.value) {
+            await db.collection('currencies').doc(currencyIdInput.value).update(currencyData);
+            alert('Currency updated!');
         } else {
-            await priceBooksCollection.add({ name, description });
-            alert('Price Book added successfully!');
+            await db.collection('currencies').add(currencyData);
+            alert('Currency added!');
         }
-        priceBookForm.reset();
-        priceBookIdInput.value = '';
-        loadPriceBooks(); // Reload list after save
-        populatePriceBookDropdown(); // Refresh opportunity price book dropdown
+        currencyForm.reset();
+        currencyIdInput.value = '';
+        renderCurrenciesGrid();
+        populateOpportunityCurrencyDropdown(); // Refresh opportunity dropdown
+        populateDefaultCurrencyDropdown(); // Refresh settings dropdown
     } catch (error) {
-        console.error('Error saving price book:', error);
-        alert('Error saving price book: ' + error.message);
+        console.error("Error saving currency:", error);
+        alert('Error saving currency: ' + error.message);
     }
 });
 
-function editPriceBook(id, priceBook) {
-    document.getElementById('priceBookName').value = priceBook.name;
-    document.getElementById('priceBookDescription').value = priceBook.description;
-    priceBookIdInput.value = id;
+cancelCurrencyEditBtn.addEventListener('click', () => {
+    currencyForm.reset();
+    currencyIdInput.value = '';
+});
+
+
+// --- Price Books Management ---
+
+// Render Grid for Price Books
+async function renderPriceBooksGrid() {
+    if (!currentUser || currentUserRole !== 'Admin') return;
+
+    const priceBooksRef = db.collection('priceBooks');
+    const data = [];
+
+    const snapshot = await priceBooksRef.orderBy('name').get();
+    snapshot.forEach(doc => {
+        const priceBook = doc.data();
+        data.push([
+            doc.id, // Hidden ID for actions
+            priceBook.name,
+            priceBook.description
+        ]);
+    });
+
+    if (priceBooksGrid) {
+        priceBooksGrid.updateConfig({ data: data }).forceRender();
+    } else {
+        priceBooksGrid = new gridjs.Grid({
+            columns: [
+                { id: 'id', name: 'ID', hidden: true },
+                { id: 'name', name: 'Price Book Name', sort: true, filter: true },
+                { id: 'description', name: 'Description', sort: true, filter: true },
+                {
+                    name: 'Actions',
+                    sort: false,
+                    filter: false,
+                    formatter: (cell, row) => {
+                        const docId = row.cells[0].data;
+                        return gridjs.h('div', { className: 'action-icons' },
+                            gridjs.h('span', {
+                                className: 'fa-solid fa-edit',
+                                title: 'Edit Price Book',
+                                onClick: () => editPriceBook(docId)
+                            }),
+                            gridjs.h('span', {
+                                className: 'fa-solid fa-trash',
+                                title: 'Delete Price Book',
+                                onClick: () => deletePriceBook(docId)
+                            })
+                        );
+                    }
+                }
+            ],
+            data: data,
+            search: true,
+            pagination: { enabled: true, limit: 5, summary: true },
+            sort: true,
+            resizable: true,
+            className: {
+                container: 'gridjs-container',
+                table: 'gridjs-table',
+                thead: 'gridjs-thead',
+                th: 'gridjs-th',
+                td: 'gridjs-td',
+                tr: 'gridjs-tr',
+                footer: 'gridjs-footer',
+                pagination: 'gridjs-pagination',
+                'pagination-summary': 'gridjs-pagination-summary',
+                'pagination-gap': 'gridjs-pagination-gap',
+                'pagination-nav': 'gridjs-pagination-nav',
+                'pagination-nav-prev': 'gridjs-pagination-nav-prev',
+                'pagination-nav-next': 'gridjs-pagination-nav-next',
+                'pagination-btn': 'gridjs-pagination-btn',
+                'pagination-btn-current': 'gridjs-currentPage',
+            },
+            language: {
+                'search': { 'placeholder': 'Search price books...' },
+                'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
+                'noRecordsFound': 'No Price Books Data Available',
+            }
+        }).render(document.getElementById('priceBooksTable'));
+    }
 }
 
-async function deletePriceBook(id) {
-    if (currentUserRole !== 'Admin') {
-        alert('Access Denied: Only Admins can manage price books.');
-        return;
+// Edit Price Book
+async function editPriceBook(id) {
+    if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
+    try {
+        const doc = await db.collection('priceBooks').doc(id).get();
+        if (doc.exists) {
+            const data = doc.data();
+            priceBookIdInput.value = doc.id;
+            priceBookNameInput.value = data.name || '';
+            priceBookDescriptionTextarea.value = data.description || '';
+        }
+    } catch (error) {
+        console.error("Error loading price book for edit:", error);
     }
+}
+
+// Delete Price Book
+async function deletePriceBook(id) {
+    if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
     if (confirm('Are you sure you want to delete this price book?')) {
         try {
-            await priceBooksCollection.doc(id).delete();
-            alert('Price Book deleted successfully!');
-            loadPriceBooks(); // Reload list after delete
-            populatePriceBookDropdown();
+            await db.collection('priceBooks').doc(id).delete();
+            alert('Price Book deleted!');
+            renderPriceBooksGrid();
+            populateOpportunityPriceBookDropdown(); // Refresh opportunity dropdown
         } catch (error) {
-            console.error('Error deleting price book:', error);
+            console.error("Error deleting price book:", error);
             alert('Error deleting price book: ' + error.message);
         }
     }
 }
 
-// App Settings Management (Single Document)
-async function loadAppSettings() {
-    if (currentUserRole !== 'Admin') return;
+// Save Price Book
+priceBookForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
+
+    const priceBookData = {
+        name: priceBookNameInput.value.trim(),
+        description: priceBookDescriptionTextarea.value.trim()
+    };
+
     try {
-        const doc = await appSettingsDoc.get();
-        if (doc.exists) {
-            const settings = doc.data();
-            settingsDocIdInput.value = doc.id; // Store the document ID
-            document.getElementById('defaultCurrency').value = settings.defaultCurrency || '';
-            document.getElementById('defaultCountry').value = settings.defaultCountry || '';
+        if (priceBookIdInput.value) {
+            await db.collection('priceBooks').doc(priceBookIdInput.value).update(priceBookData);
+            alert('Price Book updated!');
         } else {
-            // If settings document doesn't exist, clear fields and indicate it's new
-            settingsDocIdInput.value = '';
+            await db.collection('priceBooks').add(priceBookData);
+            alert('Price Book added!');
+        }
+        priceBookForm.reset();
+        priceBookIdInput.value = '';
+        renderPriceBooksGrid();
+        populateOpportunityPriceBookDropdown(); // Refresh opportunity dropdown
+    } catch (error) {
+        console.error("Error saving price book:", error);
+        alert('Error saving price book: ' + error.message);
+    }
+});
+
+cancelPriceBookEditBtn.addEventListener('click', () => {
+    priceBookForm.reset();
+    priceBookIdInput.value = '';
+});
+
+
+// --- App Settings Management ---
+
+// Populate Default Currency Dropdown
+async function populateDefaultCurrencyDropdown(selectedCurrencySymbol = null) {
+    if (!currentUser || currentUserRole !== 'Admin') return;
+    await populateSelect(defaultCurrencySelect, db.collection('currencies'), 'symbol', 'name', selectedCurrencySymbol);
+}
+
+// Populate Default Country Dropdown
+async function populateDefaultCountryDropdown(selectedCountryName = null) {
+    if (!currentUser || currentUserRole !== 'Admin') return;
+    await populateSelect(defaultCountrySelect, db.collection('countries'), 'name', 'name', selectedCountryName);
+}
+
+// Load App Settings
+async function loadAppSettings() {
+    if (!currentUser || currentUserRole !== 'Admin') return;
+    try {
+        const settingsRef = db.collection('settings').doc('appSettings'); // Assuming a single settings document
+        const doc = await settingsRef.get();
+
+        if (doc.exists) {
+            const data = doc.data();
+            settingsDocIdInput.value = doc.id;
+            await populateDefaultCurrencyDropdown(data.defaultCurrency);
+            await populateDefaultCountryDropdown(data.defaultCountry);
+        } else {
+            // No settings document yet, reset form
             appSettingsForm.reset();
+            settingsDocIdInput.value = '';
+            populateDefaultCurrencyDropdown();
+            populateDefaultCountryDropdown();
         }
     } catch (error) {
-        console.error('Error loading app settings:', error);
+        console.error("Error loading app settings:", error);
         alert('Error loading app settings: ' + error.message);
     }
 }
 
+// Save App Settings
 appSettingsForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (currentUserRole !== 'Admin') {
-        alert('Access Denied: Only Admins can manage app settings.');
-        return;
-    }
+    if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
 
-    const defaultCurrency = document.getElementById('defaultCurrency').value;
-    const defaultCountry = document.getElementById('defaultCountry').value;
-    const docId = settingsDocIdInput.value;
+    const settingsData = {
+        defaultCurrency: defaultCurrencySelect.value,
+        defaultCountry: defaultCountrySelect.value,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
 
     try {
-        if (docId) {
-            // Update existing settings document
-            await appSettingsDoc.update({
-                defaultCurrency: defaultCurrency,
-                defaultCountry: defaultCountry
-            });
-            alert('App Settings updated successfully!');
+        const settingsDocRef = db.collection('settings').doc('appSettings');
+        if (settingsDocIdInput.value) {
+            await settingsDocRef.update(settingsData);
         } else {
-            // Create new settings document (using set with merge: true for safety, or direct set)
-            await appSettingsDoc.set({
-                defaultCurrency: defaultCurrency,
-                defaultCountry: defaultCountry
-            }, { merge: true }); // Use merge:true to avoid overwriting other potential fields
-            alert('App Settings saved successfully!');
-            settingsDocIdInput.value = appSettingsDoc.id; // Store ID for future updates
+            settingsData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            await settingsDocRef.set(settingsData);
+            settingsDocIdInput.value = 'appSettings'; // Set the ID after creation
         }
+        alert('App settings saved successfully!');
+        loadAppSettings(); // Reload to confirm
     } catch (error) {
-        console.error('Error saving app settings:', error);
+        console.error("Error saving app settings:", error);
         alert('Error saving app settings: ' + error.message);
     }
 });
 
+cancelSettingsEditBtn.addEventListener('click', () => {
+    loadAppSettings(); // Revert to current settings
+});
 
-// Initial load and DOMContentLoaded handler
+
+// --- Initial Load ---
+// This will trigger authentication check and subsequent data loading
 document.addEventListener('DOMContentLoaded', () => {
-    // Hide all modules until authentication state is known
-    modules.forEach(module => module.classList.remove('active'));
-    userInfoDisplay.style.display = 'none'; // Hide user info until signed in
-    adminOnlyElements.forEach(el => el.style.display = 'none'); // Hide admin elements initially
-    
-    // Grid.js initialization functions are now called in onAuthStateChanged
-    // to ensure they are available as soon as a user logs in,
-    // before any specific module is navigated to or form is submitted.
+    // Manually trigger the active class on the dashboard button
+    // This will initiate the auth check and subsequent grid rendering
+    document.querySelector('.nav-button[data-module="dashboard"]').click();
 });
