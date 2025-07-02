@@ -43,12 +43,12 @@ const customerTypeSelect = document.getElementById('customerType');
 const customerNameInput = document.getElementById('customerName');
 const customerEmailInput = document.getElementById('customerEmail');
 const customerPhoneInput = document.getElementById('customerPhone');
-const customerAddressInput = document.getElementById('customerAddress');
+const customerAddressTextarea = document.getElementById('customerAddress'); // Changed to Textarea
 const customerCountrySelect = document.getElementById('customerCountry');
 const customerPreferredContactMethodSelect = document.getElementById('customerPreferredContactMethod');
-const customerIndustryInput = document.getElementById('customerIndustry');
+const customerIndustrySelect = document.getElementById('customerIndustry'); // Changed to Select
 const customerAdditionalDetailsTextarea = document.getElementById('customerAdditionalDetails');
-const customerSourceInput = document.getElementById('customerSource');
+const customerSourceSelect = document.getElementById('customerSource'); // Changed to Select
 const customerActiveSelect = document.getElementById('customerActive');
 
 // Opportunity Modal Elements
@@ -70,7 +70,6 @@ const opportunityValueInput = document.getElementById('opportunityValue');
 const opportunityNotesTextarea = document.getElementById('opportunityNotes');
 
 // Dashboard Elements
-// These are declared once globally at the top
 const totalCustomersCount = document.getElementById('totalCustomersCount');
 const totalOpportunitiesCount = document.getElementById('totalOpportunitiesCount');
 const openOpportunitiesCount = document.getElementById('openOpportunitiesCount');
@@ -252,6 +251,8 @@ auth.onAuthStateChanged(async (user) => {
 
         // Clear dropdowns
         customerCountrySelect.innerHTML = '<option value="">Select...</option>';
+        customerIndustrySelect.innerHTML = '<option value="">Select Industry</option>'; // Reset for Industry
+        customerSourceSelect.innerHTML = '<option value="">Select Source</option>'; // Reset for Source
         opportunityCustomerSelect.innerHTML = '<option value="">Select...</option>';
         opportunityCurrencySelect.innerHTML = '<option value="">Select...</option>';
         opportunityPriceBookSelect.innerHTML = '<option value="">Select...</option>';
@@ -335,8 +336,6 @@ navButtons.forEach(button => {
 
 // --- Dashboard Module ---
 
-// Removed duplicate declarations here, variables are already declared globally at the top.
-
 async function updateDashboardStats() {
     if (!currentUser) return;
 
@@ -406,6 +405,20 @@ function resetForms() {
     priceBookIdInput.value = '';
     appSettingsForm.reset();
     settingsDocIdInput.value = '';
+
+    // Manually reset dropdowns that don't have a default "Select..." option or need repopulation
+    customerTypeSelect.value = 'Individual'; // Or your desired default
+    customerPreferredContactMethodSelect.value = 'Email'; // Or your desired default
+    customerActiveSelect.value = 'Yes'; // Or your desired default
+    opportunitySalesStageSelect.value = 'Prospect'; // Or your desired default
+    
+    // Repopulate dynamic dropdowns to ensure initial "Select..." option is present
+    populateCustomerCountryDropdown();
+    populateOpportunityCustomerDropdown();
+    populateOpportunityCurrencyDropdown();
+    populateOpportunityPriceBookDropdown();
+    populateDefaultCurrencyDropdown();
+    populateDefaultCountryDropdown();
 }
 
 
@@ -422,6 +435,14 @@ addCustomerBtn.addEventListener('click', () => {
     customerForm.reset();
     customerIdInput.value = ''; // Clear ID for new customer
     customerModalTitle.textContent = 'Add New Customer';
+    
+    // Set default values for new entry
+    customerTypeSelect.value = 'Individual';
+    customerPreferredContactMethodSelect.value = 'Email';
+    customerActiveSelect.value = 'Yes';
+    customerIndustrySelect.value = ''; // Clear for new entry
+    customerSourceSelect.value = ''; // Clear for new entry
+
     populateCustomerCountryDropdown(); // Repopulate to ensure fresh data
     customerModal.style.display = 'flex';
 });
@@ -436,13 +457,13 @@ customerForm.addEventListener('submit', async (e) => {
         name: customerNameInput.value,
         email: customerEmailInput.value,
         phone: customerPhoneInput.value,
-        address: customerAddressInput.value,
+        address: customerAddressTextarea.value, // Read from textarea
         country: customerCountrySelect.value,
         preferredContactMethod: customerPreferredContactMethodSelect.value,
-        industry: customerIndustryInput.value,
+        industry: customerIndustrySelect.value, // Read from select
         additionalDetails: customerAdditionalDetailsTextarea.value,
-        source: customerSourceInput.value,
-        active: customerActiveSelect.value === 'Yes',
+        source: customerSourceSelect.value, // Read from select
+        active: customerActiveSelect.value === 'Yes', // Convert to boolean
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
@@ -486,7 +507,11 @@ async function renderCustomersGrid() {
             data.type,
             data.email,
             data.phone,
+            data.address, // Display address
             data.country,
+            data.preferredContactMethod,
+            data.industry, // Display industry
+            data.source, // Display source
             data.active,
             data.createdAt // Firestore Timestamp
         ]);
@@ -502,7 +527,11 @@ async function renderCustomersGrid() {
                 { id: 'type', name: 'Type', sort: true, filter: true },
                 { id: 'email', name: 'Email', sort: true, filter: true },
                 { id: 'phone', name: 'Phone', sort: true, filter: true },
+                { id: 'address', name: 'Address', sort: true, filter: true }, // Display address
                 { id: 'country', name: 'Country', sort: true, filter: true },
+                { id: 'preferredContactMethod', name: 'Preferred Contact', sort: true, filter: true },
+                { id: 'industry', name: 'Industry', sort: true, filter: true }, // Display industry
+                { id: 'source', name: 'Source', sort: true, filter: true }, // Display source
                 { id: 'active', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
                 { id: 'createdAt', name: 'Created At', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
                 {
@@ -593,12 +622,12 @@ async function editCustomer(customerId) {
             customerNameInput.value = data.name || '';
             customerEmailInput.value = data.email || '';
             customerPhoneInput.value = data.phone || '';
-            customerAddressInput.value = data.address || '';
+            customerAddressTextarea.value = data.address || ''; // Set textarea value
             await populateCustomerCountryDropdown(data.country); // Pre-select country
             customerPreferredContactMethodSelect.value = data.preferredContactMethod || '';
-            customerIndustryInput.value = data.industry || '';
+            customerIndustrySelect.value = data.industry || ''; // Set select value
             customerAdditionalDetailsTextarea.value = data.additionalDetails || '';
-            customerSourceInput.value = data.source || '';
+            customerSourceSelect.value = data.source || ''; // Set select value
             customerActiveSelect.value = data.active ? 'Yes' : 'No';
 
             customerModal.style.display = 'flex';
