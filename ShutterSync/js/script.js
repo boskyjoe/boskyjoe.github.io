@@ -3,8 +3,8 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
 
-// Grid.js ES Module Import - NEW!
-import { Grid, h } from 'https://unpkg.com/gridjs/6.2.0/dist/gridjs.es.js';
+// Grid.js ES Module Import - CORRECTED PATH!
+import { Grid, h } from 'https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gridjs.module.min.js';
 
 
 // Firebase configuration:
@@ -68,7 +68,7 @@ const opportunityModalTitle = document.getElementById('opportunityModalTitle');
 const closeOpportunityModalBtn = opportunityModal.querySelector('.close-button');
 const opportunityForm = document.getElementById('opportunityForm');
 const opportunityIdInput = document.getElementById('opportunityId');
-const opportunityNameInput = document.getElementById('opportunityName');
+const opportunityNameInput = document = document.getElementById('opportunityName');
 const opportunityCustomerSelect = document.getElementById('opportunityCustomer');
 const opportunityCurrencySelect = document.getElementById('opportunityCurrency');
 const opportunityPriceBookSelect = document.getElementById('opportunityPriceBook');
@@ -1070,8 +1070,7 @@ async function editCountryState(id) {
         const docSnap = await getDoc(doc(db, 'countries', id)); // Use doc() and getDoc()
         if (docSnap.exists()) {
             const data = docSnap.data();
-            countryStateIdInput.value = docSnap.id;
-            countryNameInput.value = data.name || '';
+            countryStateIdInput.value = data.name || '';
             countryCodeInput.value = data.code || '';
             countryStatesInput.value = data.states ? data.states.join(', ') : '';
         }
@@ -1221,8 +1220,7 @@ async function editCurrency(id) {
         const docSnap = await getDoc(doc(db, 'currencies', id)); // Use doc() and getDoc()
         if (docSnap.exists()) {
             const data = docSnap.data();
-            currencyIdInput.value = docSnap.id;
-            currencyNameInput.value = data.name || '';
+            currencyIdInput.value = data.name || '';
             currencySymbolInput.value = data.symbol || '';
         }
     } catch (error) {
@@ -1381,8 +1379,7 @@ async function editPriceBook(id) {
         const docSnap = await getDoc(doc(db, 'priceBooks', id)); // Use doc() and getDoc()
         if (docSnap.exists()) {
             const data = docSnap.data();
-            priceBookIdInput.value = docSnap.id;
-            priceBookNameInput.value = data.name || '';
+            priceBookIdInput.value = data.name || '';
             priceBookDescriptionTextarea.value = data.description || '';
             await populatePriceBookCurrencyDropdown(data.currency); // NEW: Pre-select currency
         }
