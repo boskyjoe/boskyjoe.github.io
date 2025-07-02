@@ -1,7 +1,8 @@
 // Firebase SDK Imports (Modular API)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
-import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, FieldValue, Timestamp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
+// Corrected import: serverTimestamp is now imported directly, not from FieldValue
+import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
 
 // Firebase configuration:
 const firebaseConfig = {
@@ -179,14 +180,14 @@ onAuthStateChanged(auth, async (user) => { // Use onAuthStateChanged from modula
                     displayName: user.displayName || 'New User',
                     email: user.email,
                     role: 'Standard', // Default role
-                    createdAt: FieldValue.serverTimestamp(), // Use FieldValue from modular SDK
-                    lastLogin: FieldValue.serverTimestamp()
+                    createdAt: serverTimestamp(), // Corrected: Use serverTimestamp() directly
+                    lastLogin: serverTimestamp() // Corrected: Use serverTimestamp() directly
                 });
                 currentUserRole = 'Standard';
             } else {
                 // Existing user, update last login and get role
                 await updateDoc(userDocRef, { // Use updateDoc() from modular SDK
-                    lastLogin: FieldValue.serverTimestamp()
+                    lastLogin: serverTimestamp() // Corrected: Use serverTimestamp() directly
                 });
                 currentUserRole = userDoc.data().role;
             }
@@ -464,7 +465,7 @@ customerForm.addEventListener('submit', async (e) => {
         additionalDetails: customerAdditionalDetailsTextarea.value,
         source: customerSourceSelect.value, // Read from select
         active: customerActiveSelect.value === 'Yes', // Convert to boolean
-        updatedAt: FieldValue.serverTimestamp() // Use FieldValue from modular SDK
+        updatedAt: serverTimestamp() // Corrected: Use serverTimestamp() directly
     };
 
     try {
@@ -474,7 +475,7 @@ customerForm.addEventListener('submit', async (e) => {
             alert('Customer updated successfully!');
         } else {
             // Add new customer
-            customerData.createdAt = FieldValue.serverTimestamp(); // Use FieldValue from modular SDK
+            customerData.createdAt = serverTimestamp(); // Corrected: Use serverTimestamp() directly
             customerData.creatorId = currentUser.uid; // Assign creator
             await addDoc(collection(db, 'customers'), customerData); // Use collection() and addDoc()
             alert('Customer added successfully!');
@@ -747,7 +748,7 @@ opportunityForm.addEventListener('submit', async (e) => {
         probability: parseInt(opportunityProbabilityInput.value, 10),
         value: parseFloat(opportunityValueInput.value),
         notes: opportunityNotesTextarea.value,
-        updatedAt: FieldValue.serverTimestamp() // Use FieldValue from modular SDK
+        updatedAt: serverTimestamp() // Corrected: Use serverTimestamp() directly
     };
 
     try {
@@ -757,7 +758,7 @@ opportunityForm.addEventListener('submit', async (e) => {
             alert('Opportunity updated successfully!');
         } else {
             // Add new opportunity
-            opportunityData.createdAt = FieldValue.serverTimestamp(); // Use FieldValue from modular SDK
+            opportunityData.createdAt = serverTimestamp(); // Corrected: Use serverTimestamp() directly
             opportunityData.creatorId = currentUser.uid; // Assign creator
             await addDoc(collection(db, 'opportunities'), opportunityData); // Use collection() and addDoc()
             alert('Opportunity added successfully!');
@@ -1464,7 +1465,7 @@ async function loadAppSettings() {
         console.error("Error loading app settings:", error);
         alert('Error loading app settings: ' + error.message);
     }
-}
+});
 
 // Save App Settings
 appSettingsForm.addEventListener('submit', async (e) => {
@@ -1474,7 +1475,7 @@ appSettingsForm.addEventListener('submit', async (e) => {
     const settingsData = {
         defaultCurrency: defaultCurrencySelect.value,
         defaultCountry: defaultCountrySelect.value,
-        updatedAt: FieldValue.serverTimestamp() // Use FieldValue from modular SDK
+        updatedAt: serverTimestamp() // Corrected: Use serverTimestamp() directly
     };
 
     try {
@@ -1482,7 +1483,7 @@ appSettingsForm.addEventListener('submit', async (e) => {
         if (settingsDocIdInput.value) {
             await updateDoc(settingsDocRef, settingsData); // Use updateDoc()
         } else {
-            settingsData.createdAt = FieldValue.serverTimestamp(); // Use FieldValue from modular SDK
+            settingsData.createdAt = serverTimestamp(); // Corrected: Use serverTimestamp() directly
             await setDoc(settingsDocRef, settingsData); // Use setDoc()
             settingsDocIdInput.value = 'appSettings'; // Set the ID after creation
         }
