@@ -1297,7 +1297,7 @@ async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null) 
 
 // Render Grid for Price Books
 async function renderPriceBooksGrid() {
-    if (!currentUser || currentUser Role !== 'Admin') return;
+    if (!currentUser || currentUserRole !== 'Admin') return; // FIX: Corrected typo here
 
     const priceBooksRef = collection(db, 'priceBooks'); // Use collection()
     const data = [];
