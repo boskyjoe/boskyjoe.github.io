@@ -41,6 +41,8 @@ const authButtonSignIn = document.getElementById('authButtonAnon'); // For the "
 const userInfoDisplay = document.getElementById('userInfoDisplay');
 const userNameSpan = document.getElementById('userName');
 const userRoleSpan = document.getElementById('userRole');
+const adminNavButton = document.querySelector('.nav-button[data-module="admin"]'); // Get the Admin nav button
+
 
 // Customer Modal Elements
 const addCustomerBtn = document.getElementById('addCustomerBtn');
@@ -68,8 +70,7 @@ const opportunityModalTitle = document.getElementById('opportunityModalTitle');
 const closeOpportunityModalBtn = opportunityModal.querySelector('.close-button');
 const opportunityForm = document.getElementById('opportunityForm');
 const opportunityIdInput = document.getElementById('opportunityId');
-// FIX: Removed accidental assignment to 'document'
-const opportunityNameInput = document.getElementById('opportunityName');
+const opportunityNameInput = document.getElementById('opportunityName'); // FIX: Corrected this line
 const opportunityCustomerSelect = document.getElementById('opportunityCustomer');
 const opportunityCurrencySelect = document.getElementById('opportunityCurrency');
 const opportunityPriceBookSelect = document.getElementById('opportunityPriceBook');
@@ -205,11 +206,11 @@ onAuthStateChanged(auth, async (user) => { // Use onAuthStateChanged from modula
         userNameSpan.textContent = user.displayName || user.email;
         userRoleSpan.textContent = currentUserRole;
 
-        // Show/hide admin module based on role
+        // Show/hide admin nav button based on role
         if (currentUserRole === 'Admin') {
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+            adminNavButton.style.display = 'block'; // Only show the nav button
         } else {
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+            adminNavButton.style.display = 'none';
         }
 
         // Initialize and render all grids after user is logged in
@@ -243,8 +244,8 @@ onAuthStateChanged(auth, async (user) => { // Use onAuthStateChanged from modula
         userRoleSpan.textContent = 'N/A';
         currentUserRole = 'Guest';
 
-        // Hide admin module if user signs out
-        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+        // Hide admin nav button if user signs out
+        adminNavButton.style.display = 'none';
 
         // Clear grids or show empty state if not logged in
         if (customersGrid) customersGrid.updateConfig({ data: [] }).forceRender();
@@ -1222,7 +1223,8 @@ async function editCurrency(id) {
         const docSnap = await getDoc(doc(db, 'currencies', id)); // Use doc() and getDoc()
         if (docSnap.exists()) {
             const data = docSnap.data();
-            currencyIdInput.value = data.name || '';
+            currencyIdInput.value = docSnap.id;
+            currencyNameInput.value = data.name || '';
             currencySymbolInput.value = data.symbol || '';
         }
     } catch (error) {
@@ -1480,7 +1482,7 @@ async function loadAppSettings() {
         console.error("Error loading app settings:", error);
         alert('Error loading app settings: ' + error.message);
     }
-}
+});
 
 // Save App Settings
 appSettingsForm.addEventListener('submit', async (e) => {
