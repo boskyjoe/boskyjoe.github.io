@@ -100,6 +100,7 @@ const priceBookForm = document.getElementById('priceBookForm');
 const priceBookIdInput = document.getElementById('priceBookId');
 const priceBookNameInput = document.getElementById('priceBookName');
 const priceBookDescriptionTextarea = document.getElementById('priceBookDescription');
+const priceBookCurrencySelect = document.getElementById('priceBookCurrency'); // NEW: Price Book Currency Select
 const cancelPriceBookEditBtn = priceBookForm.querySelector('.cancel-edit-btn');
 
 // App Settings Elements
@@ -214,7 +215,7 @@ auth.onAuthStateChanged(async (user) => {
         renderOpportunitiesGrid();
         renderCountriesStatesGrid();
         renderCurrenciesGrid();
-        renderPriceBooksGrid();
+        renderPriceBooksGrid(); // This will now also populate priceBookCurrencySelect
 
         // Populate dynamic data for forms
         populateCustomerCountryDropdown();
@@ -256,6 +257,7 @@ auth.onAuthStateChanged(async (user) => {
         opportunityCustomerSelect.innerHTML = '<option value="">Select...</option>';
         opportunityCurrencySelect.innerHTML = '<option value="">Select...</option>';
         opportunityPriceBookSelect.innerHTML = '<option value="">Select...</option>';
+        priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>'; // NEW: Clear price book currency
         defaultCurrencySelect.innerHTML = '<option value="">Select...</option>';
         defaultCountrySelect.innerHTML = '<option value="">Select...</option>';
 
@@ -414,9 +416,11 @@ function resetForms() {
     
     // Repopulate dynamic dropdowns to ensure initial "Select..." option is present
     populateCustomerCountryDropdown();
+    // No need to populate Industry/Source here, as their options are static in HTML
     populateOpportunityCustomerDropdown();
     populateOpportunityCurrencyDropdown();
     populateOpportunityPriceBookDropdown();
+    populatePriceBookCurrencyDropdown(); // NEW: Repopulate price book currency
     populateDefaultCurrencyDropdown();
     populateDefaultCountryDropdown();
 }
@@ -952,6 +956,7 @@ adminSectionBtns.forEach(button => {
             renderCurrenciesGrid();
         } else if (button.dataset.adminTarget === 'priceBooks') {
             renderPriceBooksGrid();
+            populatePriceBookCurrencyDropdown(); // NEW: Populate currency dropdown for price book form
         } else if (button.dataset.adminTarget === 'settings') {
             loadAppSettings();
             populateDefaultCurrencyDropdown();
@@ -1226,6 +1231,7 @@ async function deleteCurrency(id) {
             renderCurrenciesGrid();
             populateOpportunityCurrencyDropdown(); // Refresh opportunity dropdown
             populateDefaultCurrencyDropdown(); // Refresh settings dropdown
+            populatePriceBookCurrencyDropdown(); // NEW: Refresh price book currency dropdown
         } catch (error) {
             console.error("Error deleting currency:", error);
             alert('Error deleting currency: ' + error.message);
@@ -1256,6 +1262,7 @@ currencyForm.addEventListener('submit', async (e) => {
         renderCurrenciesGrid();
         populateOpportunityCurrencyDropdown(); // Refresh opportunity dropdown
         populateDefaultCurrencyDropdown(); // Refresh settings dropdown
+        populatePriceBookCurrencyDropdown(); // NEW: Refresh price book currency dropdown
     } catch (error) {
         console.error("Error saving currency:", error);
         alert('Error saving currency: ' + error.message);
@@ -1270,6 +1277,13 @@ cancelCurrencyEditBtn.addEventListener('click', () => {
 
 // --- Price Books Management ---
 
+// NEW: Populate Price Book Currency Dropdown
+async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null) {
+    if (!currentUser || currentUserRole !== 'Admin') return;
+    await populateSelect(priceBookCurrencySelect, db.collection('currencies'), 'symbol', 'name', selectedCurrencySymbol);
+}
+
+
 // Render Grid for Price Books
 async function renderPriceBooksGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return;
@@ -1283,7 +1297,8 @@ async function renderPriceBooksGrid() {
         data.push([
             doc.id, // Hidden ID for actions
             priceBook.name,
-            priceBook.description
+            priceBook.description,
+            priceBook.currency || '' // NEW: Display currency
         ]);
     });
 
@@ -1295,6 +1310,7 @@ async function renderPriceBooksGrid() {
                 { id: 'id', name: 'ID', hidden: true },
                 { id: 'name', name: 'Price Book Name', sort: true, filter: true },
                 { id: 'description', name: 'Description', sort: true, filter: true },
+                { id: 'currency', name: 'Currency', sort: true, filter: true }, // NEW: Currency column
                 {
                     name: 'Actions',
                     sort: false,
@@ -1357,6 +1373,7 @@ async function editPriceBook(id) {
             priceBookIdInput.value = doc.id;
             priceBookNameInput.value = data.name || '';
             priceBookDescriptionTextarea.value = data.description || '';
+            await populatePriceBookCurrencyDropdown(data.currency); // NEW: Pre-select currency
         }
     } catch (error) {
         console.error("Error loading price book for edit:", error);
@@ -1386,7 +1403,8 @@ priceBookForm.addEventListener('submit', async (e) => {
 
     const priceBookData = {
         name: priceBookNameInput.value.trim(),
-        description: priceBookDescriptionTextarea.value.trim()
+        description: priceBookDescriptionTextarea.value.trim(),
+        currency: priceBookCurrencySelect.value // NEW: Save selected currency
     };
 
     try {
