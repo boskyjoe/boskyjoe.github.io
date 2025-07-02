@@ -4,38 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShutterSync CRM</title>
-    <link rel="stylesheet" href="css/style.css">
-
-    <link href="https://unpkg.com/tabulator-tables@6.2.0/dist/css/tabulator.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
-    <script type="text/javascript" src="https://unpkg.com/tabulator-tables/dist/js/tabulator.min.js"></script>
-    <script type="text/javascript" src="https://unpkg.com/tabulator-tables/dist/js/tabulator-all.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
 
 </head>
 <body>
     <div class="container">
-        <aside class="sidebar">
-            <h1 class="logo">ShutterSync CRM</h1>
-            <nav class="main-nav">
-                <button id="dashboardBtn" class="nav-button active" data-module="dashboard">Dashboard</button>
-                <button id="customersBtn" class="nav-button" data-module="customers">Customers</button>
-                <button id="opportunitiesBtn" class="nav-button" data-module="opportunities">Opportunities</button>
-                <button id="adminBtn" class="nav-button admin-only" data-module="admin">Admin</button>
+        <header>
+            <div class="logo">ShutterSync CRM</div>
+            <nav>
+                <button class="nav-button active" data-module="dashboard">Dashboard</button>
+                <button class="nav-button" data-module="customers">Customers</button>
+                <button class="nav-button" data-module="opportunities">Opportunities</button>
+                <button class="nav-button admin-only" data-module="admin">Admin</button>
             </nav>
-            <div class="user-info">
-                <div id="userInfoDisplay" class="user-details">
-                    <p>Welcome, <span id="userName">Guest</span>!</p>
-                    <p>Role: <span id="userRole">N/A</span></p>
-                </div>
-                <button id="authButton" class="auth-button">Sign In with Google</button>
+            <div class="user-info" id="userInfoDisplay">
+                Welcome, <span id="userName"></span> (<span id="userRole"></span>)
+                <button id="authButton" class="sign-out">Sign Out</button>
             </div>
-        </aside>
+            <button id="authButton" class="sign-in">Sign In with Google</button>
+        </header>
 
-        <main class="content-area">
+        <main>
             <section id="dashboardModule" class="module active">
                 <h2>Dashboard</h2>
                 <div class="dashboard-stats">
@@ -61,39 +53,36 @@
             <section id="customersModule" class="module">
                 <h2>Customers</h2>
                 <button id="addCustomerBtn" class="add-button">Add New Customer</button>
-                <div id="customersTable" class="tabulator-table-container"></div>
-            </section>
+                <div id="customersTable"></div> </section>
 
             <section id="opportunitiesModule" class="module">
                 <h2>Opportunities</h2>
                 <button id="addOpportunityBtn" class="add-button">Add New Opportunity</button>
-                 <div id="opportunitiesTable" class="tabulator-table-container"></div>
-            </section>
+                <div id="opportunitiesTable"></div> </section>
 
             <section id="adminModule" class="module admin-only">
                 <h2>Admin Panel</h2>
-                <div class="admin-sections">
-                    <button class="admin-section-btn" data-admin-target="countriesStates">Countries & States</button>
+                <div class="admin-nav">
+                    <button class="admin-section-btn active" data-admin-target="countriesStates">Countries & States</button>
                     <button class="admin-section-btn" data-admin-target="currencies">Currencies</button>
                     <button class="admin-section-btn" data-admin-target="priceBooks">Price Books</button>
                     <button class="admin-section-btn" data-admin-target="settings">App Settings</button>
                 </div>
 
-                <div id="countriesStatesSection" class="admin-subsection">
+                <div id="countriesStatesSection" class="admin-subsection active">
                     <h3>Manage Countries & States</h3>
                     <form id="countryStateForm" class="admin-form">
                         <input type="hidden" id="countryStateId">
                         <label for="countryName">Country Name:</label>
                         <input type="text" id="countryName" required>
                         <label for="countryCode">Country Code:</label>
-                        <input type="text" id="countryCode" required>
+                        <input type="text" id="countryCode" maxlength="2" required>
                         <label for="countryStates">States (comma-separated):</label>
                         <input type="text" id="countryStates">
-                        <button type="submit">Save Country</button>
+                        <button type="submit" class="save-button">Save Country</button>
                         <button type="button" class="cancel-edit-btn">Cancel</button>
                     </form>
-                    <div id="countriesStatesTable" class="tabulator-table-container"></div>
-                </div>
+                    <div id="countriesStatesTable"></div> </div>
 
                 <div id="currenciesSection" class="admin-subsection">
                     <h3>Manage Currencies</h3>
@@ -102,12 +91,11 @@
                         <label for="currencyName">Currency Name:</label>
                         <input type="text" id="currencyName" required>
                         <label for="currencySymbol">Symbol:</label>
-                        <input type="text" id="currencySymbol" required>
-                        <button type="submit">Save Currency</button>
+                        <input type="text" id="currencySymbol" maxlength="5" required>
+                        <button type="submit" class="save-button">Save Currency</button>
                         <button type="button" class="cancel-edit-btn">Cancel</button>
                     </form>
-                     <div id="currenciesTable" class="tabulator-table-container"></div>
-                </div>
+                    <div id="currenciesTable"></div> </div>
 
                 <div id="priceBooksSection" class="admin-subsection">
                     <h3>Manage Price Books</h3>
@@ -117,21 +105,18 @@
                         <input type="text" id="priceBookName" required>
                         <label for="priceBookDescription">Description:</label>
                         <textarea id="priceBookDescription"></textarea>
-                        <button type="submit">Save Price Book</button>
+                        <button type="submit" class="save-button">Save Price Book</button>
                         <button type="button" class="cancel-edit-btn">Cancel</button>
                     </form>
-                    <div id="priceBooksTable" class="tabulator-table-container"></div>
-                </div>
+                    <div id="priceBooksTable"></div> </div>
 
                 <div id="settingsSection" class="admin-subsection">
                     <h3>App Settings</h3>
                     <form id="appSettingsForm" class="admin-form">
                         <input type="hidden" id="settingsDocId">
-                        <label for="defaultCurrency">Default Currency (ID):</label>
-                        <input type="text" id="defaultCurrency" placeholder="Enter Currency Document ID">
-                        <label for="defaultCountry">Default Country (ID):</label>
-                        <input type="text" id="defaultCountry" placeholder="Enter Country Document ID">
-                        <button type="submit">Save Settings</button>
+                        <label for="defaultCurrency">Default Currency:</label>
+                        <select id="defaultCurrency"></select> <label for="defaultCountry">Default Country:</label>
+                        <select id="defaultCountry"></select> <button type="submit" class="save-button">Save Settings</button>
                         <button type="button" class="cancel-edit-btn">Cancel</button>
                     </form>
                 </div>
@@ -142,75 +127,42 @@
     <div id="customerModal" class="modal">
         <div class="modal-content">
             <span class="close-button">&times;</span>
-            <h3 id="customerModalTitle">Add New Customer</h3>
+            <h3 id="customerModalTitle">Add/Edit Customer</h3>
             <form id="customerForm">
                 <input type="hidden" id="customerId">
                 <label for="customerType">Customer Type:</label>
                 <select id="customerType" required>
-                    <option value="">Select Type</option>
                     <option value="Individual">Individual</option>
                     <option value="Company">Company</option>
                 </select>
-
-                <label for="customerName">Customer Name:</label>
+                <label for="customerName">Name:</label>
                 <input type="text" id="customerName" required>
-
                 <label for="customerEmail">Email:</label>
-                <input type="email" id="customerEmail" required>
-
+                <input type="email" id="customerEmail">
                 <label for="customerPhone">Phone:</label>
-                <input type="tel" id="customerPhone" required>
-
+                <input type="tel" id="customerPhone">
                 <label for="customerAddress">Address:</label>
-                <textarea id="customerAddress" rows="3"></textarea>
-
+                <input type="text" id="customerAddress">
                 <label for="customerCountry">Country:</label>
-                <select id="customerCountry" required>
-                    <option value="">Select Country</option>
-                    </select>
-
+                <select id="customerCountry"></select>
                 <label for="customerPreferredContactMethod">Preferred Contact Method:</label>
-                <select id="customerPreferredContactMethod" required>
-                    <option value="">Select Method</option>
+                <select id="customerPreferredContactMethod">
                     <option value="Email">Email</option>
                     <option value="Phone">Phone</option>
+                    <option value="Mail">Mail</option>
                 </select>
-
                 <label for="customerIndustry">Industry:</label>
-                <select id="customerIndustry" required>
-                    <option value="">Select Industry</option>
-                    <option value="Technology">Technology</option>
-                    <option value="Finance">Finance</option>
-                    <option value="Healthcare">Healthcare</option>
-                    <option value="Retail">Retail</option>
-                    <option value="Manufacturing">Manufacturing</option>
-                    <option value="Education">Education</option>
-                    <option value="Hospitality">Hospitality</option>
-                    <option value="Other">Other</option>
-                </select>
-
+                <input type="text" id="customerIndustry">
                 <label for="customerAdditionalDetails">Additional Details:</label>
-                <textarea id="customerAdditionalDetails" rows="3"></textarea>
-
-                <label for="customerSource">Customer Source:</label>
-                <select id="customerSource" required>
-                    <option value="">Select Source</option>
-                    <option value="Website">Website</option>
-                    <option value="Referral">Referral</option>
-                    <option value="Social Media">Social Media</option>
-                    <option value="Advertisement">Advertisement</option>
-                    <option value="Event">Event</option>
-                    <option value="Word of Mouth">Word of Mouth</option>
-                    <option value="Other">Other</option>
+                <textarea id="customerAdditionalDetails"></textarea>
+                <label for="customerSource">Source:</label>
+                <input type="text" id="customerSource">
+                <label for="customerActive">Active:</label>
+                <select id="customerActive">
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
                 </select>
-
-                <label for="customerActive">Status:</label>
-                <select id="customerActive" required>
-                    <option value="Active">Active</option>
-                    <option value="InActive">Inactive</option>
-                </select>
-
-                <button type="submit" id="saveCustomerBtn">Save Customer</button>
+                <button type="submit">Save Customer</button>
             </form>
         </div>
     </div>
@@ -218,36 +170,23 @@
     <div id="opportunityModal" class="modal">
         <div class="modal-content">
             <span class="close-button">&times;</span>
-            <h3 id="opportunityModalTitle">Add New Opportunity</h3>
+            <h3 id="opportunityModalTitle">Add/Edit Opportunity</h3>
             <form id="opportunityForm">
                 <input type="hidden" id="opportunityId">
                 <label for="opportunityName">Opportunity Name:</label>
                 <input type="text" id="opportunityName" required>
-
                 <label for="opportunityCustomer">Customer:</label>
-                <select id="opportunityCustomer" required>
-                    <option value="">Select Customer</option>
-                    </select>
-
+                <select id="opportunityCustomer" required></select>
                 <label for="opportunityCurrency">Currency:</label>
-                <select id="opportunityCurrency" required>
-                    <option value="">Select Currency</option>
-                    </select>
-
+                <select id="opportunityCurrency"></select>
                 <label for="opportunityPriceBook">Price Book:</label>
-                <select id="opportunityPriceBook" required>
-                    <option value="">Select Price Book</option>
-                    </select>
-
+                <select id="opportunityPriceBook"></select>
                 <label for="opportunityExpectedStartDate">Expected Start Date:</label>
-                <input type="date" id="opportunityExpectedStartDate" required>
-
+                <input type="date" id="opportunityExpectedStartDate">
                 <label for="opportunityExpectedCloseDate">Expected Close Date:</label>
-                <input type="date" id="opportunityExpectedCloseDate" required>
-
+                <input type="date" id="opportunityExpectedCloseDate">
                 <label for="opportunitySalesStage">Sales Stage:</label>
-                <select id="opportunitySalesStage" required>
-                    <option value="">Select Stage</option>
+                <select id="opportunitySalesStage">
                     <option value="Prospect">Prospect</option>
                     <option value="Qualified">Qualified</option>
                     <option value="Proposal">Proposal</option>
@@ -255,22 +194,24 @@
                     <option value="Won">Won</option>
                     <option value="Lost">Lost</option>
                 </select>
-
                 <label for="opportunityProbability">Probability (%):</label>
-                <input type="number" id="opportunityProbability" min="0" max="100" required>
-
+                <input type="number" id="opportunityProbability" min="0" max="100" step="1">
                 <label for="opportunityValue">Value:</label>
-                <input type="number" id="opportunityValue" min="0" required>
-
+                <input type="number" id="opportunityValue" min="0">
                 <label for="opportunityNotes">Notes:</label>
-                <textarea id="opportunityNotes" rows="3"></textarea>
-
-                <button type="submit" id="saveOpportunityBtn">Save Opportunity</button>
+                <textarea id="opportunityNotes"></textarea>
+                <button type="submit">Save Opportunity</button>
             </form>
         </div>
     </div>
 
-    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@6.2.0/dist/js/tabulator.min.js"></script>
-    <script src="js/script.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+    <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
+    
+    <script src="script.js"></script>
 </body>
 </html>
