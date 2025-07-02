@@ -1,12 +1,14 @@
 // Firebase configuration:
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY", // Replace with your actual API Key
-    authDomain: "YOUR_AUTH_DOMAIN", // Replace with your actual Auth Domain
-    projectId: "YOUR_PROJECT_ID", // Replace with your actual Project ID
-    storageBucket: "YOUR_STORAGE_BUCKET", // Replace with your actual Storage Bucket
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Replace with your actual Messaging Sender ID
-    appId: "YOUR_APP_ID" // Replace with your actual App ID
+    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
+    authDomain: "shuttersync-96971.firebaseapp.com",
+    projectId: "shuttersync-96971",
+    storageBucket: "shuttersync-96971.firebase-storage.app",
+    messagingSenderId: "10782416018",
+    appId: "1:10782416018:web:361db5572882a62f291a4b",
+    measurementId: "G-T0W9CES4D3"
 };
+
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
