@@ -4,14 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShutterSync CRM</title>
+    <!-- Corrected path for style.css -->
     <link rel="stylesheet" href="css/style.css"> 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
-    <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+    <!-- Grid.js CSS -->
+    <link href="https://unpkg.com/gridjs/6.2.0/dist/theme/mermaid.min.css" rel="stylesheet" />
 
 </head>
 <body>
+    <!-- The overall container wrapping everything -->
     <div class="container">
+        <!-- Sidebar content, based on your CSS -->
         <aside class="sidebar">
             <div>
                 <div class="logo">ShutterSync CRM</div>
@@ -28,10 +32,13 @@
                 </div>
                 <button id="authButton" class="auth-button sign-out">Sign Out</button>
             </div>
+            <!-- Auth button for when signed out, positioned correctly by flexbox in sidebar -->
             <button id="authButtonAnon" class="auth-button sign-in" style="display:none;">Sign In with Google</button>
         </aside>
 
+        <!-- Main content area -->
         <main class="content-area">
+            <!-- Dashboard Module -->
             <section id="dashboardModule" class="module active">
                 <h2>Dashboard</h2>
                 <div class="dashboard-stats">
@@ -54,16 +61,21 @@
                 </div>
             </section>
 
+            <!-- Customers Module -->
             <section id="customersModule" class="module">
                 <h2>Customers</h2>
                 <button id="addCustomerBtn" class="add-button">Add New Customer</button>
-                <div id="customersTable"></div> </section>
+                <div id="customersTable"></div> <!-- This will be the Grid.js container -->
+            </section>
 
+            <!-- Opportunities Module -->
             <section id="opportunitiesModule" class="module">
                 <h2>Opportunities</h2>
                 <button id="addOpportunityBtn" class="add-button">Add New Opportunity</button>
-                <div id="opportunitiesTable"></div> </section>
+                <div id="opportunitiesTable"></div> <!-- This will be the Grid.js container -->
+            </section>
 
+            <!-- Admin Module -->
             <section id="adminModule" class="module admin-only">
                 <h2>Admin Panel</h2>
                 <div class="admin-nav">
@@ -86,7 +98,8 @@
                         <button type="submit" class="save-button">Save Country</button>
                         <button type="button" class="cancel-edit-btn">Cancel</button>
                     </form>
-                    <div id="countriesStatesTable"></div> </div>
+                    <div id="countriesStatesTable"></div> <!-- This will be the Grid.js container -->
+                </div>
 
                 <div id="currenciesSection" class="admin-subsection">
                     <h3>Manage Currencies</h3>
@@ -99,7 +112,8 @@
                         <button type="submit" class="save-button">Save Currency</button>
                         <button type="button" class="cancel-edit-btn">Cancel</button>
                     </form>
-                    <div id="currenciesTable"></div> </div>
+                    <div id="currenciesTable"></div> <!-- This will be the Grid.js container -->
+                </div>
 
                 <div id="priceBooksSection" class="admin-subsection">
                     <h3>Manage Price Books</h3>
@@ -112,15 +126,18 @@
                         <button type="submit" class="save-button">Save Price Book</button>
                         <button type="button" class="cancel-edit-btn">Cancel</button>
                     </form>
-                    <div id="priceBooksTable"></div> </div>
+                    <div id="priceBooksTable"></div> <!-- This will be the Grid.js container -->
+                </div>
 
                 <div id="settingsSection" class="admin-subsection">
                     <h3>App Settings</h3>
                     <form id="appSettingsForm" class="admin-form">
                         <input type="hidden" id="settingsDocId">
                         <label for="defaultCurrency">Default Currency:</label>
-                        <select id="defaultCurrency"></select> <label for="defaultCountry">Default Country:</label>
-                        <select id="defaultCountry"></select> <button type="submit" class="save-button">Save Settings</button>
+                        <select id="defaultCurrency"></select> <!-- Populate from currencies -->
+                        <label for="defaultCountry">Default Country:</label>
+                        <select id="defaultCountry"></select> <!-- Populate from countries -->
+                        <button type="submit" class="save-button">Save Settings</button>
                         <button type="button" class="cancel-edit-btn">Cancel</button>
                     </form>
                 </div>
@@ -128,6 +145,7 @@
         </main>
     </div>
 
+    <!-- Customer Modal -->
     <div id="customerModal" class="modal">
         <div class="modal-content">
             <span class="close-button">&times;</span>
@@ -146,7 +164,7 @@
                 <label for="customerPhone">Phone:</label>
                 <input type="tel" id="customerPhone">
                 <label for="customerAddress">Address:</label>
-                <input type="text" id="customerAddress">
+                <textarea id="customerAddress" rows="3"></textarea> <!-- Changed to textarea -->
                 <label for="customerCountry">Country:</label>
                 <select id="customerCountry"></select>
                 <label for="customerPreferredContactMethod">Preferred Contact Method:</label>
@@ -156,11 +174,25 @@
                     <option value="Mail">Mail</option>
                 </select>
                 <label for="customerIndustry">Industry:</label>
-                <input type="text" id="customerIndustry">
+                <select id="customerIndustry"> <!-- Changed to select dropdown -->
+                    <option value="">Select Industry</option>
+                    <option value="Technology">Technology</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Other">Other</option>
+                </select>
                 <label for="customerAdditionalDetails">Additional Details:</label>
                 <textarea id="customerAdditionalDetails"></textarea>
                 <label for="customerSource">Source:</label>
-                <input type="text" id="customerSource">
+                <select id="customerSource"> <!-- Changed to select dropdown -->
+                    <option value="">Select Source</option>
+                    <option value="Website">Website</option>
+                    <option value="Referral">Referral</option>
+                    <option value="Social Media">Social Media</option>
+                    <option value="Advertisement">Advertisement</option>
+                    <option value="Event">Event</option>
+                    <option value="Others">Others</option>
+                </select>
                 <label for="customerActive">Active:</label>
                 <select id="customerActive">
                     <option value="Yes">Yes</option>
@@ -171,6 +203,7 @@
         </div>
     </div>
 
+    <!-- Opportunity Modal -->
     <div id="opportunityModal" class="modal">
         <div class="modal-content">
             <span class="close-button">&times;</span>
@@ -210,12 +243,15 @@
     </div>
 
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js"></script>
 
-    <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
+    <!-- Grid.js JS -->
+    <script src="https://unpkg.com/gridjs/6.2.0/dist/gridjs.umd.js"></script>
     
+    <!-- Your main application script with corrected path -->
     <script src="js/script.js"></script>
 </body>
 </html>
