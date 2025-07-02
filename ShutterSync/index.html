@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="css/style.css"> 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
-    <!-- Grid.js CSS -->
+    <!-- Grid.js CSS - KEEP THIS, it's just for styling -->
     <link href="https://unpkg.com/gridjs/6.2.0/dist/theme/mermaid.min.css" rel="stylesheet" />
 
 </head>
@@ -246,15 +246,11 @@
 
 
     <!-- Firebase SDKs -->
-    <!-- These are the modular SDKs, they don't create a global 'firebase' object -->
     <script type="module" src="https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js"></script>
 
-    <!-- Grid.js JS -->
-    <script src="https://unpkg.com/gridjs/6.2.0/dist/gridjs.umd.js"></script>
-    
-    <!-- Your main application script - MUST BE type="module" to use Firebase imports -->
+    <!-- Your main application script - NOW IMPORTS GRID.JS DIRECTLY -->
     <script type="module" src="js/script.js"></script>
 </body>
 </html>
