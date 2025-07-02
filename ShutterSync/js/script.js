@@ -3,7 +3,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
 
-// Grid.js ES Module Import - CORRECTED PATH!
+// Grid.js ES Module Import
 import { Grid, h } from 'https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gridjs.module.min.js';
 
 
@@ -68,7 +68,8 @@ const opportunityModalTitle = document.getElementById('opportunityModalTitle');
 const closeOpportunityModalBtn = opportunityModal.querySelector('.close-button');
 const opportunityForm = document.getElementById('opportunityForm');
 const opportunityIdInput = document.getElementById('opportunityId');
-const opportunityNameInput = document = document.getElementById('opportunityName');
+// FIX: Removed accidental assignment to 'document'
+const opportunityNameInput = document.getElementById('opportunityName');
 const opportunityCustomerSelect = document.getElementById('opportunityCustomer');
 const opportunityCurrencySelect = document.getElementById('opportunityCurrency');
 const opportunityPriceBookSelect = document.getElementById('opportunityPriceBook');
@@ -1070,7 +1071,8 @@ async function editCountryState(id) {
         const docSnap = await getDoc(doc(db, 'countries', id)); // Use doc() and getDoc()
         if (docSnap.exists()) {
             const data = docSnap.data();
-            countryStateIdInput.value = data.name || '';
+            countryStateIdInput.value = docSnap.id;
+            countryNameInput.value = data.name || '';
             countryCodeInput.value = data.code || '';
             countryStatesInput.value = data.states ? data.states.join(', ') : '';
         }
@@ -1379,7 +1381,8 @@ async function editPriceBook(id) {
         const docSnap = await getDoc(doc(db, 'priceBooks', id)); // Use doc() and getDoc()
         if (docSnap.exists()) {
             const data = docSnap.data();
-            priceBookIdInput.value = data.name || '';
+            priceBookIdInput.value = docSnap.id;
+            priceBookNameInput.value = data.name || '';
             priceBookDescriptionTextarea.value = data.description || '';
             await populatePriceBookCurrencyDropdown(data.currency); // NEW: Pre-select currency
         }
