@@ -1,8 +1,11 @@
 // Firebase SDK Imports (Modular API)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
-// Corrected import: serverTimestamp is now imported directly, not from FieldValue
 import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
+
+// Grid.js ES Module Import - NEW!
+import { Grid, h } from 'https://unpkg.com/gridjs/6.2.0/dist/gridjs.es.js';
+
 
 // Firebase configuration:
 const firebaseConfig = {
@@ -23,12 +26,12 @@ const db = getFirestore(app); // Get Firestore service
 // Global variables
 let currentUser = null;
 let currentUserRole = 'Guest'; // Default role
-// Changed to use window.gridjs
-let customersGrid = null; // To hold the Grid.js instance for customers
-let opportunitiesGrid = null; // To hold the Grid.js instance for opportunities
-let countriesStatesGrid = null; // To hold the Grid.js instance for countries & states
-let currenciesGrid = null; // To hold the Grid.js instance for currencies
-let priceBooksGrid = null; // To hold the Grid.js instance for price books
+// Grid.js instances - now directly accessible without window.
+let customersGrid = null;
+let opportunitiesGrid = null;
+let countriesStatesGrid = null;
+let currenciesGrid = null;
+let priceBooksGrid = null;
 
 // UI Elements
 const navButtons = document.querySelectorAll('.nav-button');
@@ -522,8 +525,8 @@ async function renderCustomersGrid() {
     if (customersGrid) {
         customersGrid.updateConfig({ data: customerData }).forceRender();
     } else {
-        // Use window.gridjs here
-        customersGrid = new window.gridjs.Grid({
+        // Use Grid and h directly from import
+        customersGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true }, // Hidden column for document ID
                 { id: 'name', name: 'Name', sort: true, filter: true },
@@ -543,14 +546,14 @@ async function renderCustomersGrid() {
                     filter: false,
                     formatter: (cell, row) => {
                         const docId = row.cells[0].data; // Get ID from the first hidden cell
-                        // Use window.gridjs.h here
-                        return window.gridjs.h('div', { className: 'action-icons' },
-                            window.gridjs.h('span', {
+                        // Use h directly from import
+                        return h('div', { className: 'action-icons' },
+                            h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Customer',
                                 onClick: () => editCustomer(docId)
                             }),
-                            window.gridjs.h('span', {
+                            h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Customer',
                                 onClick: () => deleteCustomer(docId)
@@ -804,8 +807,8 @@ async function renderOpportunitiesGrid() {
     if (opportunitiesGrid) {
         opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender();
     } else {
-        // Use window.gridjs here
-        opportunitiesGrid = new window.gridjs.Grid({
+        // Use Grid and h directly from import
+        opportunitiesGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
                 { id: 'name', name: 'Opportunity Name', sort: true, filter: true },
@@ -831,14 +834,14 @@ async function renderOpportunitiesGrid() {
                     filter: false,
                     formatter: (cell, row) => {
                         const docId = row.cells[0].data;
-                        // Use window.gridjs.h here
-                        return window.gridjs.h('div', { className: 'action-icons' },
-                            window.gridjs.h('span', {
+                        // Use h directly from import
+                        return h('div', { className: 'action-icons' },
+                            h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Opportunity',
                                 onClick: () => editOpportunity(docId)
                             }),
-                            window.gridjs.h('span', {
+                            h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Opportunity',
                                 onClick: () => deleteOpportunity(docId)
@@ -1000,8 +1003,8 @@ async function renderCountriesStatesGrid() {
     if (countriesStatesGrid) {
         countriesStatesGrid.updateConfig({ data: data }).forceRender();
     } else {
-        // Use window.gridjs here
-        countriesStatesGrid = new window.gridjs.Grid({
+        // Use Grid and h directly from import
+        countriesStatesGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
                 { id: 'name', name: 'Country Name', sort: true, filter: true },
@@ -1013,14 +1016,14 @@ async function renderCountriesStatesGrid() {
                     filter: false,
                     formatter: (cell, row) => {
                         const docId = row.cells[0].data;
-                        // Use window.gridjs.h here
-                        return window.gridjs.h('div', { className: 'action-icons' },
-                            window.gridjs.h('span', {
+                        // Use h directly from import
+                        return h('div', { className: 'action-icons' },
+                            h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Country',
                                 onClick: () => editCountryState(docId)
                             }),
-                            window.gridjs.h('span', {
+                            h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Country',
                                 onClick: () => deleteCountryState(docId)
@@ -1152,8 +1155,8 @@ async function renderCurrenciesGrid() {
     if (currenciesGrid) {
         currenciesGrid.updateConfig({ data: data }).forceRender();
     } else {
-        // Use window.gridjs here
-        currenciesGrid = new window.gridjs.Grid({
+        // Use Grid and h directly from import
+        currenciesGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
                 { id: 'name', name: 'Currency Name', sort: true, filter: true },
@@ -1164,14 +1167,14 @@ async function renderCurrenciesGrid() {
                     filter: false,
                     formatter: (cell, row) => {
                         const docId = row.cells[0].data;
-                        // Use window.gridjs.h here
-                        return window.gridjs.h('div', { className: 'action-icons' },
-                            window.gridjs.h('span', {
+                        // Use h directly from import
+                        return h('div', { className: 'action-icons' },
+                            h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Currency',
                                 onClick: () => editCurrency(docId)
                             }),
-                            window.gridjs.h('span', {
+                            h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Currency',
                                 onClick: () => deleteCurrency(docId)
@@ -1311,8 +1314,8 @@ async function renderPriceBooksGrid() {
     if (priceBooksGrid) {
         priceBooksGrid.updateConfig({ data: data }).forceRender();
     } else {
-        // Use window.gridjs here
-        priceBooksGrid = new window.gridjs.Grid({
+        // Use Grid and h directly from import
+        priceBooksGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
                 { id: 'name', name: 'Price Book Name', sort: true, filter: true },
@@ -1324,14 +1327,14 @@ async function renderPriceBooksGrid() {
                     filter: false,
                     formatter: (cell, row) => {
                         const docId = row.cells[0].data;
-                        // Use window.gridjs.h here
-                        return window.gridjs.h('div', { className: 'action-icons' },
-                            window.gridjs.h('span', {
+                        // Use h directly from import
+                        return h('div', { className: 'action-icons' },
+                            h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Price Book',
                                 onClick: () => editPriceBook(docId)
                             }),
-                            window.gridjs.h('span', {
+                            h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Price Book',
                                 onClick: () => deletePriceBook(docId)
@@ -1397,7 +1400,8 @@ async function deletePriceBook(id) {
             alert('Price Book deleted!');
             renderPriceBooksGrid();
             populateOpportunityPriceBookDropdown(); // Refresh opportunity dropdown
-        } catch (error) {
+        }
+        catch (error) {
             console.error("Error deleting price book:", error);
             alert('Error deleting price book: ' + error.message);
         }
