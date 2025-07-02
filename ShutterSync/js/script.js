@@ -83,13 +83,13 @@ const settingsDocIdInput = document.getElementById('settingsDocId');
 let currentUser = null; // Stores current authenticated user object
 let currentUserRole = 'Guest'; // Stores current user's role
 
-// --- Tabulator Grid Instances ---
-// Declare these globally, but assign them within the initialization functions
-let customersTabulator;
-let opportunitiesTabulator;
-let countriesStatesTabulator;
-let currenciesTabulator;
-let priceBooksTabulator;
+// --- Grid.js Grid Instances ---
+// Declare these globally, they will hold the Grid.js instances
+let customersGrid;
+let opportunitiesGrid; // Will be Grid.js instance later
+let countriesStatesGrid; // Will be Grid.js instance later
+let currenciesGrid; // Will be Grid.js instance later
+let priceBooksGrid; // Will be Grid.js instance later
 
 
 // --- Firebase Authentication ---
@@ -134,13 +134,12 @@ auth.onAuthStateChanged(async (user) => {
             }
         });
 
-        // Initialize ALL Tabulators as soon as the user is authenticated.
-        // This ensures the global variables are set up.
-        initializeCustomersTabulator();
-        initializeOpportunitiesTabulator();
-        initializeCountriesStatesTabulator();
-        initializeCurrenciesTabulator();
-        initializePriceBooksTabulator();
+        // Initialize ALL Grids here
+        initializeCustomersGrid(); // Initialize the Customers Grid.js table
+        // initializeOpportunitiesGrid(); // Will be Grid.js instance later
+        // initializeCountriesStatesGrid(); // Will be Grid.js instance later
+        // initializeCurrenciesGrid(); // Will be Grid.js instance later
+        // initializePriceBooksGrid(); // Will be Grid.js instance later
 
         // Load initial data for the default module (Dashboard)
         showModule('dashboard');
@@ -219,18 +218,18 @@ function showModule(moduleName) {
     });
 
     // Load data specific to the module when it becomes active.
-    // Tabulators are already initialized from onAuthStateChanged.
+    // Grids are already initialized from onAuthStateChanged.
     if (moduleName === 'customers') {
-        loadCustomers();
+        loadCustomers(); // This will now load data into customersGrid
     } else if (moduleName === 'opportunities') {
         loadOpportunities();
     } else if (moduleName === 'dashboard') {
         loadDashboardStats();
     } else if (moduleName === 'admin') {
         showAdminSubsection('countriesStates'); // Default admin subsection
-        loadCountriesStates(); // Load data for the default subsection
-        loadCurrencies(); // Load data for currencies (in case user switches to it)
-        loadPriceBooks(); // Load data for price books (in case user switches to it)
+        loadCountriesStates();
+        loadCurrencies();
+        loadPriceBooks();
         loadAppSettings();
     }
 }
@@ -362,7 +361,7 @@ customerForm.addEventListener('submit', async (e) => {
             alert('Customer added successfully!');
         }
         customerModal.style.display = 'none';
-        loadCustomers(); // Reload list after save
+        loadCustomers(); // Reload list after save (will now update Grid.js)
         loadDashboardStats(); // Update dashboard
     } catch (error) {
         console.error('Error saving customer:', error);
@@ -371,82 +370,95 @@ customerForm.addEventListener('submit', async (e) => {
 });
 
 /**
- * Initializes the Tabulator grid for Customers.
+ * Initializes the Grid.js table for Customers.
  * This should be called once (e.g., onAuthStateChanged).
  */
-function initializeCustomersTabulator() {
-    if (customersTabulator) return; // Prevent re-initialization
-    console.log("Initializing Customers Tabulator..."); // For debugging
+function initializeCustomersGrid() {
+    if (customersGrid) return; // Prevent re-initialization
+    console.log("Initializing Customers Grid.js..."); // For debugging
 
-    customersTabulator = new Tabulator("#customersTable", {
-        layout: "fitColumns", // Adjust columns to fit table width
-        responsiveLayout: "hide", // Hide data that doesn't fit
-        pagination: "local", // Enable local pagination
-        paginationSize: 10, // Show 10 rows per page
-        paginationSizeSelector: [5, 10, 20, 50, 100], // Options for page size
-        movableColumns: true, // Allow users to re-order columns
+    customersGrid = new gridjs.Grid({
         columns: [
-            { title: "Name", field: "customerName", headerFilter: "input" },
-            { title: "Email", field: "email", headerFilter: "input" },
-            { title: "Phone", field: "phone", headerFilter: "input" },
-            { title: "Type", field: "customerType", headerFilter: "select", headerFilterParams: { "Individual": "Individual", "Company": "Company", "": "All" } },
-            {
-                title: "Actions",
-                formatter: function (cell, formatterParams, onRendered) {
-                    const data = cell.getRow().getData();
-                    const docId = data.id; // Tabulator uses 'id' for the row data ID
+            { id: 'customerName', name: 'Name', sort: true, filter: true },
+            { id: 'email', name: 'Email', sort: true, filter: true },
+            { id: 'phone', name: 'Phone', sort: true, filter: true },
+            { id: 'customerType', name: 'Type', sort: true, filter: true },
+            { 
+                name: 'Actions',
+                formatter: (cell, row) => {
+                    const docId = row.cells[0].data; // Assuming 'id' is the first hidden column
+                    const data = row.cells.reduce((obj, cell, index) => {
+                        // Reconstruct the full data object from the row's cells for edit
+                        // This assumes a consistent order with the data loaded by loadCustomers
+                        // For a robust solution, you might store the full row object as a hidden column or in a map
+                        const columnIds = ['id', 'customerName', 'email', 'phone', 'customerType', 'address', 'country', 'preferredContactMethod', 'industry', 'additionalDetails', 'customerSource', 'active']; // Adjust based on your actual data structure
+                        obj[columnIds[index]] = cell.data;
+                        return obj;
+                    }, {});
 
-                    const editIcon = `<i class="fa-solid fa-edit" title="Edit"></i>`;
-                    const deleteIcon = `<i class="fa-solid fa-trash" title="Delete"></i>`;
-
-                    const actionsDiv = document.createElement('div');
-                    actionsDiv.classList.add('action-icons');
-
-                    const editBtn = document.createElement('span');
-                    editBtn.innerHTML = editIcon;
-                    editBtn.addEventListener('click', (event) => {
-                        event.stopPropagation(); // Prevent row click from firing
-                        editCustomer(docId, data);
-                    });
-
-                    const deleteBtn = document.createElement('span');
-                    deleteBtn.innerHTML = deleteIcon;
-                    deleteBtn.addEventListener('click', (event) => {
-                        event.stopPropagation(); // Prevent row click from firing
-                        deleteCustomer(docId);
-                    });
-
-                    actionsDiv.appendChild(editBtn);
-                    actionsDiv.appendChild(deleteBtn);
-                    return actionsDiv;
+                    return gridjs.h('div', { className: 'action-icons' },
+                        gridjs.h('span', {
+                            className: 'fa-solid fa-edit',
+                            title: 'Edit',
+                            onClick: () => editCustomer(docId, data)
+                        }),
+                        gridjs.h('span', {
+                            className: 'fa-solid fa-trash',
+                            title: 'Delete',
+                            onClick: () => deleteCustomer(docId)
+                        })
+                    );
                 },
-                width: 100, // Fixed width for action icons
-                hozAlign: "center",
-                headerSort: false, // Prevent sorting on action column
-                resizable: false, // Prevent resizing action column
-            },
+                sort: false,
+                filter: false
+            }
         ],
-        // Optional: Add a placeholder when no data
-        placeholder: "No Customer Data Available",
-        // Row click event (optional, useful if you want to view full details)
-        rowClick: function(e, row) {
-            // console.log("Row Clicked:", row.getData());
-            // You could open a detailed view modal here if needed
+        search: true, // Global search
+        pagination: {
+            enabled: true,
+            limit: 10,
+            summary: true // Shows summary like "1-10 of 50"
         },
-        // tableBuilt is not needed here as initialization is done early and load is called explicitly
+        sort: true,
+        data: [], // Initial empty data
+        style: {
+            table: {
+                width: '100%',
+                'min-width': '600px' // Ensure minimum width for responsiveness
+            }
+        },
+        language: { // Customizing Grid.js text
+            'search': {
+                'placeholder': 'Search customers...'
+            },
+            'pagination': {
+                'previous': 'Prev',
+                'next': 'Next',
+                'showing': 'Showing',
+                'of': 'of',
+                'results': 'results',
+                'to': 'to'
+            },
+            'noRecordsFound': 'No Customer Data Available',
+        }
+    }).render(document.getElementById('customersTable')); // Render into the container
+
+    // Optional: Add a listener for when data is loaded, if needed, though loadCustomers directly updates it
+    customersGrid.on('ready', () => {
+        console.log('Customers Grid.js is ready.');
     });
 }
 
 
 async function loadCustomers() {
-    // Robust check: Ensure currentUser exists, customersTabulator is assigned, and it has Tabulator methods.
-    if (!currentUser || !customersTabulator || typeof customersTabulator.showLoader !== 'function') {
-        console.warn("Customers Tabulator not fully initialized or user not logged in. Skipping load.");
+    // Robust check: Ensure currentUser exists and customersGrid is initialized.
+    if (!currentUser || !customersGrid) {
+        console.warn("Customers Grid.js not initialized or user not logged in. Skipping load.");
         return;
     }
     
-    customersTabulator.setData([]); // Clear data first
-    customersTabulator.showLoader(); // Show loader while fetching
+    // Grid.js handles loading state internally if data is provided.
+    // For manual loading indication or errors, you might need to show/hide a custom loader.
 
     try {
         let query = customersCollection;
@@ -459,19 +471,41 @@ async function loadCustomers() {
         
         const customerData = [];
         snapshot.forEach(doc => {
-            // Add doc.id to the data object, which Tabulator uses by default for row ID
-            customerData.push({ id: doc.id, ...doc.data() });
+            // Grid.js expects data as an array of arrays or array of objects.
+            // Using array of arrays is often simpler for direct data.
+            // Ensure the order matches your column definition.
+            customerData.push([
+                doc.id, // Keep ID as the first (potentially hidden) column for actions
+                doc.data().customerName,
+                doc.data().email,
+                doc.data().phone,
+                doc.data().customerType,
+                doc.data().address, // Include all fields needed for editCustomer
+                doc.data().country,
+                doc.data().preferredContactMethod,
+                doc.data().industry,
+                doc.data().additionalDetails,
+                doc.data().customerSource,
+                doc.data().active
+            ]);
         });
 
-        customersTabulator.setData(customerData); // Load data into Tabulator
-        customersTabulator.hideLoader(); // Hide loader
+        // Update Grid.js data
+        // Grid.js doesn't have a direct .setData() like Tabulator.
+        // You update its config and then force a re-render.
+        // For large datasets, consider server-side pagination/filtering or a more advanced approach.
+        customersGrid.updateConfig({
+            data: customerData
+        }).forceRender();
 
     } catch (error) {
         console.error('Error loading customers:', error);
-        customersTabulator.setData([]); // Clear data on error
-        customersTabulator.hideLoader();
-        // You might want to display a more prominent error message here
-        customersTabulator.showLoader("Error loading data: " + error.message, "error");
+        // You can update the Grid.js config to show an error message or empty data
+        customersGrid.updateConfig({
+            data: [],
+            // You might want a custom message or error indicator here
+            noRecordsFound: 'Error loading data: ' + error.message
+        }).forceRender();
     }
 }
 
@@ -505,7 +539,7 @@ async function deleteCustomer(id) {
         try {
             await customersCollection.doc(id).delete();
             alert('Customer deleted successfully!');
-            loadCustomers(); // Reload list
+            loadCustomers(); // Reload list (will now update Grid.js)
             loadDashboardStats(); // Update dashboard
         } catch (error) {
             console.error('Error deleting customer:', error);
@@ -575,111 +609,20 @@ opportunityForm.addEventListener('submit', async (e) => {
     }
 });
 
-/**
- * Initializes the Tabulator grid for Opportunities.
- * This should be called once (e.g., onAuthStateChanged).
- */
-function initializeOpportunitiesTabulator() {
-    if (opportunitiesTabulator) return; // Prevent re-initialization
-    console.log("Initializing Opportunities Tabulator..."); // For debugging
-
-    opportunitiesTabulator = new Tabulator("#opportunitiesTable", {
-        layout: "fitColumns", // Adjust columns to fit table width
-        responsiveLayout: "hide", // Hide data that doesn't fit
-        pagination: "local", // Enable local pagination
-        paginationSize: 10, // Show 10 rows per page
-        paginationSizeSelector: [5, 10, 20, 50, 100], // Options for page size
-        movableColumns: true, // Allow users to re-order columns
-        columns: [
-            { title: "Name", field: "opportunityName", headerFilter: "input" },
-            { title: "Customer", field: "customerName", headerFilter: "input" }, // 'customerName' will be added during data loading
-            { title: "Stage", field: "salesStage", headerFilter: "select", headerFilterParams: { "Prospect": "Prospect", "Qualified": "Qualified", "Proposal": "Proposal", "Negotiation": "Negotiation", "Won": "Won", "Lost": "Lost", "": "All" } },
-            { title: "Value", field: "value", hozAlign: "right", formatter: "money", formatterParams: { decimal: ".", thousand: ",", symbol: "$", precision: 0 }, headerFilter: "input" },
-            {
-                title: "Actions",
-                formatter: function (cell, formatterParams, onRendered) {
-                    const data = cell.getRow().getData();
-                    const docId = data.id;
-
-                    const editIcon = `<i class="fa-solid fa-edit" title="Edit"></i>`;
-                    const deleteIcon = `<i class="fa-solid fa-trash" title="Delete"></i>`;
-
-                    const actionsDiv = document.createElement('div');
-                    actionsDiv.classList.add('action-icons');
-
-                    const editBtn = document.createElement('span');
-                    editBtn.innerHTML = editIcon;
-                    editBtn.addEventListener('click', (event) => {
-                        event.stopPropagation();
-                        editOpportunity(docId, data);
-                    });
-
-                    const deleteBtn = document.createElement('span');
-                    deleteBtn.innerHTML = deleteIcon;
-                    deleteBtn.addEventListener('click', (event) => {
-                        event.stopPropagation();
-                        deleteOpportunity(docId);
-                    });
-
-                    actionsDiv.appendChild(editBtn);
-                    actionsDiv.appendChild(deleteBtn);
-                    return actionsDiv;
-                },
-                width: 100,
-                hozAlign: "center",
-                headerSort: false,
-                resizable: false,
-            },
-        ],
-        placeholder: "No Opportunity Data Available",
-        // tableBuilt is not needed here as initialization is done early and load is called explicitly
-    });
+// Placeholder for Opportunities Grid.js initialization
+function initializeOpportunitiesGrid() {
+    // This will be implemented in a future step.
+    // For now, no grid is initialized for Opportunities.
+    console.log("Opportunities Grid.js initialization placeholder.");
 }
 
 async function loadOpportunities() {
-    // Robust check: Ensure currentUser exists, opportunitiesTabulator is assigned, and it has Tabulator methods.
-    if (!currentUser || !opportunitiesTabulator || typeof opportunitiesTabulator.showLoader !== 'function') {
-        console.warn("Opportunities Tabulator not fully initialized or user not logged in. Skipping load.");
-        return;
-    }
-    opportunitiesTabulator.setData([]); // Clear data first
-    opportunitiesTabulator.showLoader(); // Show loader while fetching
+    // Current placeholder, will be updated to use Grid.js later
+    console.warn("loadOpportunities function is a placeholder. Grid.js for Opportunities not yet implemented.");
 
-    try {
-        let query = opportunitiesCollection;
-        if (currentUserRole !== 'Admin') {
-            query = query.where('creatorId', '==', currentUser.uid);
-        }
-
-        const snapshot = await query.orderBy('expectedCloseDate').get();
-        
-        // Fetch customer names for display to denormalize the data for the table
-        const customerDocs = await customersCollection.get();
-        const customersMap = new Map();
-        customerDocs.forEach(doc => {
-            customersMap.set(doc.id, doc.data().customerName);
-        });
-
-        const opportunityData = [];
-        snapshot.forEach(doc => {
-            const opportunity = doc.data();
-            // Add customerName and id to the data object
-            opportunityData.push({ 
-                id: doc.id,
-                customerName: customersMap.get(opportunity.customer) || 'N/A', // Denormalize customer name for display
-                ...opportunity 
-            });
-        });
-
-        opportunitiesTabulator.setData(opportunityData); // Load data into Tabulator
-        opportunitiesTabulator.hideLoader(); // Hide loader
-
-    } catch (error) {
-        console.error('Error loading opportunities:', error);
-        opportunitiesTabulator.setData([]); // Clear data on error
-        opportunitiesTabulator.hideLoader();
-        opportunitiesTabulator.showLoader("Error loading data: " + error.message, "error"); // Show error message in loader
-    }
+    // Implement actual Grid.js loading here later
+    // if (!currentUser || !opportunitiesGrid) { ... }
+    // opportunitiesGrid.updateConfig({ data: [...] }).forceRender();
 }
 
 
@@ -829,93 +772,19 @@ document.querySelectorAll('.admin-form .cancel-edit-btn').forEach(button => {
 
 
 // Countries & States Management
-/**
- * Initializes the Tabulator grid for Countries & States.
- * This should be called once (e.g., onAuthStateChanged).
- */
-function initializeCountriesStatesTabulator() {
-    if (countriesStatesTabulator) return; // Prevent re-initialization
-    console.log("Initializing Countries & States Tabulator..."); // For debugging
-
-    countriesStatesTabulator = new Tabulator("#countriesStatesTable", {
-        layout: "fitColumns",
-        pagination: "local",
-        paginationSize: 10,
-        movableColumns: true,
-        columns: [
-            { title: "Country", field: "name", headerFilter: "input" },
-            { title: "Code", field: "code", headerFilter: "input", width: 100 },
-            { title: "States", field: "states", formatter: function(cell) {
-                const states = cell.getValue();
-                return states && Array.isArray(states) ? states.join(', ') : 'N/A';
-            }},
-            {
-                title: "Actions",
-                formatter: function (cell, formatterParams, onRendered) {
-                    const data = cell.getRow().getData(); // Tabulator row data, contains `_index`
-                    const index = data._index; // The index we stored in the data
-
-                    const editIcon = `<i class="fa-solid fa-edit" title="Edit"></i>`;
-                    const deleteIcon = `<i class="fa-solid fa-trash" title="Delete"></i>`;
-
-                    const actionsDiv = document.createElement('div');
-                    actionsDiv.classList.add('action-icons');
-
-                    const editBtn = document.createElement('span');
-                    editBtn.innerHTML = editIcon;
-                    editBtn.addEventListener('click', (event) => {
-                        event.stopPropagation(); // Prevent row click from firing
-                        editCountryState(index, data); // Pass index and data
-                    });
-
-                    const deleteBtn = document.createElement('span');
-                    deleteBtn.innerHTML = deleteIcon;
-                    deleteBtn.addEventListener('click', (event) => {
-                        event.stopPropagation(); // Prevent row click from firing
-                        deleteCountryState(index);
-                    });
-
-                    actionsDiv.appendChild(editBtn);
-                    actionsDiv.appendChild(deleteBtn);
-                    return actionsDiv;
-                },
-                width: 100,
-                hozAlign: "center",
-                headerSort: false,
-                resizable: false,
-            },
-        ],
-        placeholder: "No Countries & States Data Available",
-        // tableBuilt is not needed here as initialization is done early and load is called explicitly
-    });
+// Placeholder for Countries & States Grid.js initialization
+function initializeCountriesStatesGrid() {
+    // This will be implemented in a future step.
+    console.log("Countries & States Grid.js initialization placeholder.");
 }
 
 async function loadCountriesStates() {
-    // Robust check: Ensure currentUserRole is Admin, countriesStatesTabulator is assigned, and it has Tabulator methods.
-    if (currentUserRole !== 'Admin' || !countriesStatesTabulator || typeof countriesStatesTabulator.showLoader !== 'function') {
-        console.warn("Countries States Tabulator not fully initialized or user not admin. Skipping load.");
-        return;
-    }
-    countriesStatesTabulator.setData([]); // Clear data first
-    countriesStatesTabulator.showLoader(); // Show loader while fetching
+    // Current placeholder, will be updated to use Grid.js later
+    console.warn("loadCountriesStates function is a placeholder. Grid.js for Countries & States not yet implemented.");
 
-    try {
-        const doc = await countriesStatesCollection.get();
-        const countriesData = doc.data();
-        let dataForTabulator = [];
-        if (countriesData && countriesData.countries && countriesData.countries.length > 0) {
-            // Add a temporary index to each item for Tabulator to refer back to when editing/deleting
-            dataForTabulator = countriesData.countries.map((country, idx) => ({ ...country, _index: idx }));
-        }
-        countriesStatesTabulator.setData(dataForTabulator); // Load data into Tabulator
-        countriesStatesTabulator.hideLoader(); // Hide loader
-
-    } catch (error) {
-        console.error('Error loading countries and states:', error);
-        countriesStatesTabulator.setData([]); // Clear data on error
-        countriesStatesTabulator.hideLoader();
-        countriesStatesTabulator.showLoader("Error loading data: " + error.message, "error"); // Show error message in loader
-    }
+    // Implement actual Grid.js loading here later
+    // if (currentUserRole !== 'Admin' || !countriesStatesGrid) { ... }
+    // countriesStatesGrid.updateConfig({ data: [...] }).forceRender();
 }
 
 countryStateForm.addEventListener('submit', async (e) => {
@@ -988,86 +857,19 @@ async function deleteCountryState(index) {
 
 
 // Currencies Management
-/**
- * Initializes the Tabulator grid for Currencies.
- * This should be called once (e.g., onAuthStateChanged).
- */
-function initializeCurrenciesTabulator() {
-    if (currenciesTabulator) return; // Prevent re-initialization
-    console.log("Initializing Currencies Tabulator..."); // For debugging
-
-    currenciesTabulator = new Tabulator("#currenciesTable", {
-        layout: "fitColumns",
-        pagination: "local",
-        paginationSize: 10,
-        movableColumns: true,
-        columns: [
-            { title: "Name", field: "name", headerFilter: "input" },
-            { title: "Symbol", field: "symbol", headerFilter: "input", width: 100 },
-            {
-                title: "Actions",
-                formatter: function (cell, formatterParams, onRendered) {
-                    const data = cell.getRow().getData();
-                    const docId = data.id;
-
-                    const editIcon = `<i class="fa-solid fa-edit" title="Edit"></i>`;
-                    const deleteIcon = `<i class="fa-solid fa-trash" title="Delete"></i>`;
-
-                    const actionsDiv = document.createElement('div');
-                    actionsDiv.classList.add('action-icons');
-
-                    const editBtn = document.createElement('span');
-                    editBtn.innerHTML = editIcon;
-                    editBtn.addEventListener('click', (event) => {
-                        event.stopPropagation();
-                        editCurrency(docId, data);
-                    });
-
-                    const deleteBtn = document.createElement('span');
-                    deleteBtn.innerHTML = deleteIcon;
-                    deleteBtn.addEventListener('click', (event) => {
-                        event.stopPropagation();
-                        deleteCurrency(docId);
-                    });
-
-                    actionsDiv.appendChild(editBtn);
-                    actionsDiv.appendChild(deleteBtn);
-                    return actionsDiv;
-                },
-                width: 100,
-                hozAlign: "center",
-                headerSort: false,
-                resizable: false,
-            },
-        ],
-        placeholder: "No Currencies Data Available",
-        // tableBuilt is not needed here as initialization is done early and load is called explicitly
-    });
+// Placeholder for Currencies Grid.js initialization
+function initializeCurrenciesGrid() {
+    // This will be implemented in a future step.
+    console.log("Currencies Grid.js initialization placeholder.");
 }
 
 async function loadCurrencies() {
-    // Robust check: Ensure currentUserRole is Admin, currenciesTabulator is assigned, and it has Tabulator methods.
-    if (currentUserRole !== 'Admin' || !currenciesTabulator || typeof currenciesTabulator.showLoader !== 'function') {
-        console.warn("Currencies Tabulator not fully initialized or user not admin. Skipping load.");
-        return;
-    }
-    currenciesTabulator.setData([]); // Clear data first
-    currenciesTabulator.showLoader(); // Show loader while fetching
+    // Current placeholder, will be updated to use Grid.js later
+    console.warn("loadCurrencies function is a placeholder. Grid.js for Currencies not yet implemented.");
 
-    try {
-        const snapshot = await currenciesCollection.orderBy('name').get();
-        const dataForTabulator = [];
-        snapshot.forEach(doc => {
-            dataForTabulator.push({ id: doc.id, ...doc.data() });
-        });
-        currenciesTabulator.setData(dataForTabulator); // Load data into Tabulator
-        currenciesTabulator.hideLoader(); // Hide loader
-    } catch (error) {
-        console.error('Error loading currencies:', error);
-        currenciesTabulator.setData([]); // Clear data on error
-        currenciesTabulator.hideLoader();
-        currenciesTabulator.showLoader("Error loading data: " + error.message, "error"); // Show error message in loader
-    }
+    // Implement actual Grid.js loading here later
+    // if (currentUserRole !== 'Admin' || !currenciesGrid) { ... }
+    // currenciesGrid.updateConfig({ data: [...] }).forceRender();
 }
 
 currencyForm.addEventListener('submit', async (e) => {
@@ -1124,88 +926,19 @@ async function deleteCurrency(id) {
 }
 
 // Price Books Management
-/**
- * Initializes the Tabulator grid for Price Books.
- * This should be called once (e.g., onAuthStateChanged).
- */
-function initializePriceBooksTabulator() {
-    if (priceBooksTabulator) return; // Prevent re-initialization
-    console.log("Initializing Price Books Tabulator..."); // For debugging
-
-    priceBooksTabulator = new Tabulator("#priceBooksTable", {
-        layout: "fitColumns",
-        pagination: "local",
-        paginationSize: 10,
-        movableColumns: true,
-        columns: [
-            { title: "Name", field: "name", headerFilter: "input" },
-            { title: "Description", field: "description", headerFilter: "input",
-                formatter: function(cell) { return cell.getValue() || 'N/A'; }
-            },
-            {
-                title: "Actions",
-                formatter: function (cell, formatterParams, onRendered) {
-                    const data = cell.getRow().getData();
-                    const docId = data.id;
-
-                    const editIcon = `<i class="fa-solid fa-edit" title="Edit"></i>`;
-                    const deleteIcon = `<i class="fa-solid fa-trash" title="Delete"></i>`;
-
-                    const actionsDiv = document.createElement('div');
-                    actionsDiv.classList.add('action-icons');
-
-                    const editBtn = document.createElement('span');
-                    editBtn.innerHTML = editIcon;
-                    editBtn.addEventListener('click', (event) => {
-                        event.stopPropagation();
-                        editPriceBook(docId, data);
-                    });
-
-                    const deleteBtn = document.createElement('span');
-                    deleteBtn.innerHTML = deleteIcon;
-                    deleteBtn.addEventListener('click', (event) => {
-                        event.stopPropagation();
-                        deletePriceBook(docId);
-                    });
-
-                    actionsDiv.appendChild(editBtn);
-                    actionsDiv.appendChild(deleteBtn);
-                    return actionsDiv;
-                },
-                width: 100,
-                hozAlign: "center",
-                headerSort: false,
-                resizable: false,
-            },
-        ],
-        placeholder: "No Price Books Data Available",
-        // tableBuilt is not needed here as initialization is done early and load is called explicitly
-    });
+// Placeholder for Price Books Grid.js initialization
+function initializePriceBooksGrid() {
+    // This will be implemented in a future step.
+    console.log("Price Books Grid.js initialization placeholder.");
 }
 
 async function loadPriceBooks() {
-    // Robust check: Ensure currentUserRole is Admin, priceBooksTabulator is assigned, and it has Tabulator methods.
-    if (currentUserRole !== 'Admin' || !priceBooksTabulator || typeof priceBooksTabulator.showLoader !== 'function') {
-        console.warn("Price Books Tabulator not fully initialized or user not admin. Skipping load.");
-        return;
-    }
-    priceBooksTabulator.setData([]); // Clear data first
-    priceBooksTabulator.showLoader(); // Show loader while fetching
+    // Current placeholder, will be updated to use Grid.js later
+    console.warn("loadPriceBooks function is a placeholder. Grid.js for Price Books not yet implemented.");
 
-    try {
-        const snapshot = await priceBooksCollection.orderBy('name').get();
-        const dataForTabulator = [];
-        snapshot.forEach(doc => {
-            dataForTabulator.push({ id: doc.id, ...doc.data() });
-        });
-        priceBooksTabulator.setData(dataForTabulator); // Load data into Tabulator
-        priceBooksTabulator.hideLoader(); // Hide loader
-    } catch (error) {
-        console.error('Error loading price books:', error);
-        priceBooksTabulator.setData([]); // Clear data on error
-        priceBooksTabulator.hideLoader();
-        priceBooksTabulator.showLoader("Error loading data: " + error.message, "error"); // Show error message in loader
-    }
+    // Implement actual Grid.js loading here later
+    // if (currentUserRole !== 'Admin' || !priceBooksGrid) { ... }
+    // priceBooksGrid.updateConfig({ data: [...] }).forceRender();
 }
 
 priceBookForm.addEventListener('submit', async (e) => {
@@ -1291,7 +1024,7 @@ appSettingsForm.addEventListener('submit', async (e) => {
 
     const defaultCurrency = document.getElementById('defaultCurrency').value;
     const defaultCountry = document.getElementById('defaultCountry').value;
-    const docId = settingsDocIdInput.value; // Will be empty if creating, ID if updating
+    const docId = settingsDocIdInput.value;
 
     try {
         if (docId) {
@@ -1324,7 +1057,7 @@ document.addEventListener('DOMContentLoaded', () => {
     userInfoDisplay.style.display = 'none'; // Hide user info until signed in
     adminOnlyElements.forEach(el => el.style.display = 'none'); // Hide admin elements initially
     
-    // Tabulator initialization functions are now called in onAuthStateChanged
+    // Grid.js initialization functions are now called in onAuthStateChanged
     // to ensure they are available as soon as a user logs in,
     // before any specific module is navigated to or form is submitted.
 });
