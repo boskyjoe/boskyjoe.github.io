@@ -70,6 +70,7 @@ const opportunityValueInput = document.getElementById('opportunityValue');
 const opportunityNotesTextarea = document.getElementById('opportunityNotes');
 
 // Dashboard Elements
+// These are declared once globally at the top
 const totalCustomersCount = document.getElementById('totalCustomersCount');
 const totalOpportunitiesCount = document.getElementById('totalOpportunitiesCount');
 const openOpportunitiesCount = document.getElementById('openOpportunitiesCount');
@@ -334,10 +335,7 @@ navButtons.forEach(button => {
 
 // --- Dashboard Module ---
 
-const totalCustomersCount = document.getElementById('totalCustomersCount');
-const totalOpportunitiesCount = document.getElementById('totalOpportunitiesCount');
-const openOpportunitiesCount = document.getElementById('openOpportunitiesCount');
-const wonOpportunitiesCount = document.getElementById('wonOpportunitiesCount');
+// Removed duplicate declarations here, variables are already declared globally at the top.
 
 async function updateDashboardStats() {
     if (!currentUser) return;
