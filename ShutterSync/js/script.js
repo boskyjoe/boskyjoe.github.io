@@ -23,6 +23,7 @@ const db = getFirestore(app); // Get Firestore service
 // Global variables
 let currentUser = null;
 let currentUserRole = 'Guest'; // Default role
+// Changed to use window.gridjs
 let customersGrid = null; // To hold the Grid.js instance for customers
 let opportunitiesGrid = null; // To hold the Grid.js instance for opportunities
 let countriesStatesGrid = null; // To hold the Grid.js instance for countries & states
@@ -521,7 +522,8 @@ async function renderCustomersGrid() {
     if (customersGrid) {
         customersGrid.updateConfig({ data: customerData }).forceRender();
     } else {
-        customersGrid = new gridjs.Grid({
+        // Use window.gridjs here
+        customersGrid = new window.gridjs.Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true }, // Hidden column for document ID
                 { id: 'name', name: 'Name', sort: true, filter: true },
@@ -541,13 +543,14 @@ async function renderCustomersGrid() {
                     filter: false,
                     formatter: (cell, row) => {
                         const docId = row.cells[0].data; // Get ID from the first hidden cell
-                        return gridjs.h('div', { className: 'action-icons' },
-                            gridjs.h('span', {
+                        // Use window.gridjs.h here
+                        return window.gridjs.h('div', { className: 'action-icons' },
+                            window.gridjs.h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Customer',
                                 onClick: () => editCustomer(docId)
                             }),
-                            gridjs.h('span', {
+                            window.gridjs.h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Customer',
                                 onClick: () => deleteCustomer(docId)
@@ -801,7 +804,8 @@ async function renderOpportunitiesGrid() {
     if (opportunitiesGrid) {
         opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender();
     } else {
-        opportunitiesGrid = new gridjs.Grid({
+        // Use window.gridjs here
+        opportunitiesGrid = new window.gridjs.Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
                 { id: 'name', name: 'Opportunity Name', sort: true, filter: true },
@@ -827,13 +831,14 @@ async function renderOpportunitiesGrid() {
                     filter: false,
                     formatter: (cell, row) => {
                         const docId = row.cells[0].data;
-                        return gridjs.h('div', { className: 'action-icons' },
-                            gridjs.h('span', {
+                        // Use window.gridjs.h here
+                        return window.gridjs.h('div', { className: 'action-icons' },
+                            window.gridjs.h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Opportunity',
                                 onClick: () => editOpportunity(docId)
                             }),
-                            gridjs.h('span', {
+                            window.gridjs.h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Opportunity',
                                 onClick: () => deleteOpportunity(docId)
@@ -995,7 +1000,8 @@ async function renderCountriesStatesGrid() {
     if (countriesStatesGrid) {
         countriesStatesGrid.updateConfig({ data: data }).forceRender();
     } else {
-        countriesStatesGrid = new gridjs.Grid({
+        // Use window.gridjs here
+        countriesStatesGrid = new window.gridjs.Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
                 { id: 'name', name: 'Country Name', sort: true, filter: true },
@@ -1007,13 +1013,14 @@ async function renderCountriesStatesGrid() {
                     filter: false,
                     formatter: (cell, row) => {
                         const docId = row.cells[0].data;
-                        return gridjs.h('div', { className: 'action-icons' },
-                            gridjs.h('span', {
+                        // Use window.gridjs.h here
+                        return window.gridjs.h('div', { className: 'action-icons' },
+                            window.gridjs.h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Country',
                                 onClick: () => editCountryState(docId)
                             }),
-                            gridjs.h('span', {
+                            window.gridjs.h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Country',
                                 onClick: () => deleteCountryState(docId)
@@ -1145,7 +1152,8 @@ async function renderCurrenciesGrid() {
     if (currenciesGrid) {
         currenciesGrid.updateConfig({ data: data }).forceRender();
     } else {
-        currenciesGrid = new gridjs.Grid({
+        // Use window.gridjs here
+        currenciesGrid = new window.gridjs.Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
                 { id: 'name', name: 'Currency Name', sort: true, filter: true },
@@ -1156,13 +1164,14 @@ async function renderCurrenciesGrid() {
                     filter: false,
                     formatter: (cell, row) => {
                         const docId = row.cells[0].data;
-                        return gridjs.h('div', { className: 'action-icons' },
-                            gridjs.h('span', {
+                        // Use window.gridjs.h here
+                        return window.gridjs.h('div', { className: 'action-icons' },
+                            window.gridjs.h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Currency',
                                 onClick: () => editCurrency(docId)
                             }),
-                            gridjs.h('span', {
+                            window.gridjs.h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Currency',
                                 onClick: () => deleteCurrency(docId)
@@ -1302,7 +1311,8 @@ async function renderPriceBooksGrid() {
     if (priceBooksGrid) {
         priceBooksGrid.updateConfig({ data: data }).forceRender();
     } else {
-        priceBooksGrid = new gridjs.Grid({
+        // Use window.gridjs here
+        priceBooksGrid = new window.gridjs.Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
                 { id: 'name', name: 'Price Book Name', sort: true, filter: true },
@@ -1314,13 +1324,14 @@ async function renderPriceBooksGrid() {
                     filter: false,
                     formatter: (cell, row) => {
                         const docId = row.cells[0].data;
-                        return gridjs.h('div', { className: 'action-icons' },
-                            gridjs.h('span', {
+                        // Use window.gridjs.h here
+                        return window.gridjs.h('div', { className: 'action-icons' },
+                            window.gridjs.h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Price Book',
                                 onClick: () => editPriceBook(docId)
                             }),
-                            gridjs.h('span', {
+                            window.gridjs.h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Price Book',
                                 onClick: () => deletePriceBook(docId)
