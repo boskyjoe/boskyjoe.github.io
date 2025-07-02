@@ -12,22 +12,26 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <div class="logo">ShutterSync CRM</div>
-            <nav>
-                <button class="nav-button active" data-module="dashboard">Dashboard</button>
-                <button class="nav-button" data-module="customers">Customers</button>
-                <button class="nav-button" data-module="opportunities">Opportunities</button>
-                <button class="nav-button admin-only" data-module="admin">Admin</button>
-            </nav>
-            <div class="user-info" id="userInfoDisplay">
-                Welcome, <span id="userName"></span> (<span id="userRole"></span>)
-                <button id="authButton" class="sign-out">Sign Out</button>
+        <aside class="sidebar">
+            <div>
+                <div class="logo">ShutterSync CRM</div>
+                <nav class="main-nav">
+                    <button class="nav-button active" data-module="dashboard">Dashboard</button>
+                    <button class="nav-button" data-module="customers">Customers</button>
+                    <button class="nav-button" data-module="opportunities">Opportunities</button>
+                    <button class="nav-button admin-only" data-module="admin">Admin</button>
+                </nav>
             </div>
-            <button id="authButton" class="sign-in">Sign In with Google</button>
-        </header>
+            <div class="user-info" id="userInfoDisplay">
+                <div class="user-details">
+                    Welcome, <span id="userName"></span> (<span id="userRole"></span>)
+                </div>
+                <button id="authButton" class="auth-button sign-out">Sign Out</button>
+            </div>
+            <button id="authButtonAnon" class="auth-button sign-in" style="display:none;">Sign In with Google</button>
+        </aside>
 
-        <main>
+        <main class="content-area">
             <section id="dashboardModule" class="module active">
                 <h2>Dashboard</h2>
                 <div class="dashboard-stats">
