@@ -97,7 +97,7 @@
                 <section id="customersModule" class="module hidden">
                     <h2 class="text-3xl font-semibold text-gray-800 mb-6">Customer Management</h2>
 
-                    <!-- Customer Management Introduction (NEW) -->
+                    <!-- Customer Management Introduction -->
                     <div class="bg-white p-6 rounded-lg shadow-md mb-6">
                         <h3 class="text-2xl font-semibold text-gray-800 mb-3">Manage Your Customer Relationships</h3>
                         <p class="text-gray-700 leading-relaxed">
@@ -120,7 +120,7 @@
                 <section id="opportunitiesModule" class="module hidden">
                     <h2 class="text-3xl font-semibold text-gray-800 mb-6">Opportunity Management</h2>
 
-                    <!-- Opportunity Management Introduction (NEW) -->
+                    <!-- Opportunity Management Introduction -->
                     <div class="bg-white p-6 rounded-lg shadow-md mb-6">
                         <h3 class="2xl font-semibold text-gray-800 mb-3">Track and Close Your Deals</h3>
                         <p class="text-gray-700 leading-relaxed">
@@ -229,6 +229,23 @@
                                 <label for="priceBookDescription" class="block text-sm font-medium text-gray-700">Description</label>
                                 <textarea id="priceBookDescription" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
                             </div>
+                            <!-- NEW FIELDS FOR PRICE BOOK -->
+                            <div>
+                                <label for="priceBookIsActive" class="block text-sm font-medium text-gray-700">Is Active</label>
+                                <select id="priceBookIsActive" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                                    <option value="Yes">Yes</option>
+                                    <option value="No">No</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="priceBookValidFrom" class="block text-sm font-medium text-gray-700">Valid From</label>
+                                <input type="date" id="priceBookValidFrom" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                            </div>
+                            <div>
+                                <label for="priceBookValidTo" class="block text-sm font-medium text-gray-700">Valid To</label>
+                                <input type="date" id="priceBookValidTo" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                            </div>
+                            <!-- END NEW FIELDS -->
                             <div class="md:col-span-2 flex justify-end space-x-3">
                                 <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition duration-300">Save Price Book</button>
                                 <button type="button" class="cancel-edit-btn bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-md transition duration-300">Cancel</button>
