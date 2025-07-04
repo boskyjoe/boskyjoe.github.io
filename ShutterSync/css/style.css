@@ -1,4 +1,4 @@
-/* Custom CSS for ShutterSync CRM - Salesforce Color Scheme */
+/* Custom CSS for ShutterSync CRM - Minimal Salesforce Color Scheme */
 
 /* Define Salesforce-like CSS Variables */
 :root {
@@ -14,25 +14,28 @@
     --sf-shadow: rgba(0, 0, 0, 0.05); /* Subtle shadow */
 }
 
+/* Apply colors to elements based on their existing Tailwind classes or direct selectors */
+
+/* Body background */
 body {
-    font-family: 'Inter', sans-serif; /* Keep Inter as per instructions, but consider Lato/Open Sans for closer match */
     background-color: var(--sf-gray-bg);
 }
 
-/* Header Styling */
+/* Header background and text */
 header {
     background-color: var(--sf-blue);
     color: var(--sf-white);
     box-shadow: 0 2px 4px var(--sf-shadow);
 }
 
-/* Navigation Sidebar */
+/* Navigation Sidebar background and text */
 nav {
     background-color: var(--sf-gray-text-dark); /* Darker sidebar background */
     color: var(--sf-white);
     box-shadow: 2px 0 4px var(--sf-shadow);
 }
 
+/* Navigation Buttons */
 .nav-button {
     color: var(--sf-white);
     transition: background-color 0.2s ease-in-out;
@@ -48,26 +51,17 @@ nav {
     font-weight: 600; /* Slightly bolder for active */
 }
 
-/* Module Content Area */
-main {
-    background-color: var(--sf-gray-bg);
-}
-
-h2, h3 {
-    color: var(--sf-gray-text-dark);
-}
-
 /* General Card/Panel Styling (e.g., for dashboard stats, admin sections) */
-.bg-white { /* Targeting elements that use Tailwind's bg-white */
-    background-color: var(--sf-white);
+/* These target elements that already have bg-white from Tailwind */
+.bg-white {
+    background-color: var(--sf-white); /* Ensure white background */
     border: 1px solid var(--sf-gray-border);
     border-radius: 0.25rem; /* Consistent rounded corners */
     box-shadow: 0 1px 2px var(--sf-shadow);
 }
 
-/* Buttons */
-/* Primary Blue Buttons */
-.bg-blue-600 { /* Targeting Tailwind's bg-blue-600 */
+/* Primary Blue Buttons (e.g., Add Customer, Save Customer) */
+.bg-blue-600 {
     background-color: var(--sf-blue);
     border-color: var(--sf-blue);
     color: var(--sf-white);
@@ -80,8 +74,8 @@ h2, h3 {
     border-color: var(--sf-blue-dark);
 }
 
-/* Green Save Buttons */
-.bg-green-500 { /* Targeting Tailwind's bg-green-500 */
+/* Green Save Buttons (e.g., Save Country, Save Currency) */
+.bg-green-500 {
     background-color: var(--sf-success);
     border-color: var(--sf-success);
     color: var(--sf-white);
@@ -90,13 +84,12 @@ h2, h3 {
 }
 
 .bg-green-500:hover {
-    background-color: darken(var(--sf-success), 10%); /* Placeholder for darken, use a direct hex if no preprocessor */
     background-color: #3aa666; /* A slightly darker green */
     border-color: #3aa666;
 }
 
 /* Gray Cancel Buttons */
-.bg-gray-400 { /* Targeting Tailwind's bg-gray-400 */
+.bg-gray-400 {
     background-color: var(--sf-gray-border);
     border-color: var(--sf-gray-border);
     color: var(--sf-gray-text-dark);
@@ -127,7 +120,7 @@ h2, h3 {
     font-weight: 600;
 }
 
-/* Form Elements */
+/* Form Labels and Inputs */
 label {
     color: var(--sf-gray-text-medium);
 }
@@ -158,15 +151,83 @@ select:focus {
     outline: none;
 }
 
-/* Modals */
-.modal-content {
-    background-color: var(--sf-white);
-    border-radius: 0.25rem;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+/* Modal Specific Styling (from previous working version) */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
 }
 
-.modal-content h2 {
-    color: var(--sf-gray-text-dark);
+.modal-content {
+    background-color: var(--sf-white); /* Use SFDC white */
+    margin: auto; /* Centered */
+    padding: 20px;
+    border: 1px solid var(--sf-gray-border); /* Use SFDC border color */
+    width: 80%; /* Could be responsive */
+    max-width: 800px; /* Max width */
+    border-radius: 0.25rem; /* Consistent rounded corners */
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); /* SFDC-like shadow */
+    position: relative;
+}
+
+.close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: var(--sf-gray-text-dark); /* Darker on hover */
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Action Icons in Grid.js */
+.action-icons span {
+    cursor: pointer;
+    margin-right: 0.75rem; /* Use rem for consistency */
+    font-size: 1.1rem;
+    color: var(--sf-gray-text-medium); /* Medium gray for default icons */
+    transition: color 0.2s ease-in-out;
+}
+
+.action-icons .fa-edit:hover {
+    color: var(--sf-blue); /* SFDC blue for edit */
+}
+
+.action-icons .fa-trash:hover {
+    color: var(--sf-error); /* SFDC error red for delete */
+}
+
+/* Admin Panel - Sub-section buttons (from previous working version) */
+.admin-section-btn.active {
+    background-color: var(--sf-blue); /* Use SFDC blue */
+    color: var(--sf-white);
+}
+.admin-section-btn:not(.active):hover {
+    background-color: #e5e7eb; /* Tailwind gray-200, or a slightly darker SFDC gray */
+}
+
+/* Admin Subsections (from previous working version) */
+.admin-subsection {
+    display: none;
+}
+
+.admin-subsection.active {
+    display: block;
 }
 
 /* Grid.js Overrides (to match SFDC table aesthetics) */
@@ -175,6 +236,7 @@ select:focus {
     border: 1px solid var(--sf-gray-border);
     border-radius: 0.25rem;
     box-shadow: 0 1px 2px var(--sf-shadow);
+    background-color: var(--sf-white); /* Ensure grid background is white */
 }
 
 .gridjs-table {
@@ -193,7 +255,7 @@ select:focus {
 
 .gridjs-tbody td {
     padding: 0.6rem 1rem;
-    border-bottom: 1px solid var(--sf-gray-border);
+    border-bottom: 1px solid var(--sf-gray-border); /* Use SFDC border for rows */
     color: var(--sf-gray-text-dark);
 }
 
@@ -201,25 +263,9 @@ select:focus {
     background-color: rgba(0, 112, 210, 0.05); /* Light blue hover */
 }
 
-/* Specific styling for action icons */
-.action-icons .fa-solid {
-    cursor: pointer;
-    margin-right: 0.75rem;
-    font-size: 1.1rem;
-    color: var(--sf-gray-text-medium);
-    transition: color 0.2s ease-in-out;
-}
-
-.action-icons .fa-edit:hover {
-    color: var(--sf-blue);
-}
-
-.action-icons .fa-trash:hover {
-    color: var(--sf-error);
-}
-
 /* Dashboard Stat Cards */
-.dashboard-card { /* Assuming you add this class to your dashboard divs */
+/* These target elements that already have bg-white from Tailwind */
+.dashboard-card {
     background-color: var(--sf-white);
     border: 1px solid var(--sf-gray-border);
     border-radius: 0.25rem;
@@ -240,11 +286,4 @@ select:focus {
 .fa-handshake { color: var(--sf-success); }
 .fa-folder-open { color: #f29a00; /* A warm orange for open/pending */ }
 .fa-trophy { color: #6e6e6e; /* A neutral gray for won, or could be a darker green */ }
-
-/* General utility classes if needed */
-.text-sf-blue { color: var(--sf-blue); }
-.text-sf-gray-dark { color: var(--sf-gray-text-dark); }
-.text-sf-gray-medium { color: var(--sf-gray-text-medium); }
-.text-sf-success { color: var(--sf-success); }
-.text-sf-error { color: var(--sf-error); }
 
