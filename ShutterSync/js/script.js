@@ -9,12 +9,11 @@ import { Grid, h } from 'https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gri
 
 
 // Firebase configuration:
-// IMPORTANT: Replace with your actual Firebase project configuration
 const firebaseConfig = {
     apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo", // Your actual API Key - PRESERVED
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
-    storageBucket: "shuttersync-99999.appspot.com", // Corrected storageBucket if it was a typo
+    storageBucket: "shuttersync-96971.appspot.com", // Corrected storageBucket
     messagingSenderId: "10782416018",
     appId: "1:10782416018:web:361db5572882a62f291a4b",
     measurementId: "G-T0W9CES4D3"
@@ -59,7 +58,7 @@ const customerEmailInput = document.getElementById('customerEmail');
 const customerPhoneInput = document.getElementById('customerPhone');
 const customerAddressTextarea = document.getElementById('customerAddress');
 const customerCountrySelect = document.getElementById('customerCountry');
-// FIX: Corrected typo here - removed 'document ='
+// FIX: Corrected typo - removed 'document ='
 const customerPreferredContactMethodSelect = document.getElementById('customerPreferredContactMethod');
 const customerIndustrySelect = document.getElementById('customerIndustry');
 const customerAdditionalDetailsTextarea = document.getElementById('customerAdditionalDetails');
@@ -1049,6 +1048,7 @@ async function editOpportunity(opportunityId) {
  * Deletes an opportunity document from Firestore.
  * Requires Admin role or creator.
  * @param {string} opportunityId - The ID of the opportunity document to delete.
+
  */
 async function deleteOpportunity(opportunityId) {
     if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
@@ -1599,7 +1599,7 @@ async function editPriceBook(id) {
  * @param {string} id - The ID of the price book document to delete.
  */
 async function deletePriceBook(id) {
-    if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
+    if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
     
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this price book? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
