@@ -105,6 +105,7 @@ const currencyForm = document.getElementById('currencyForm');
 const currencyIdInput = document.getElementById('currencyId');
 const currencyNameInput = document.getElementById('currencyName');
 const currencySymbolInput = document.getElementById('currencySymbol');
+const currencyCountrySelect = document.getElementById('currencyCountry'); // NEW: Get the currency country select
 const cancelCurrencyEditBtn = currencyForm.querySelector('.cancel-edit-btn');
 
 // Price Books Elements
@@ -262,6 +263,7 @@ onAuthStateChanged(auth, async (user) => { // Use onAuthStateChanged from modula
         opportunityCurrencySelect.innerHTML = '<option value="">Select...</option>';
         opportunityPriceBookSelect.innerHTML = '<option value="">Select...</option>';
         priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>'; // NEW: Clear price book currency
+        currencyCountrySelect.innerHTML = '<option value="">Select Country</option>'; // NEW: Clear currency country dropdown
         defaultCurrencySelect.innerHTML = '<option value="">Select...</option>';
         defaultCountrySelect.innerHTML = '<option value="">Select...</option>';
 
@@ -424,6 +426,7 @@ function resetForms() {
     populateOpportunityCurrencyDropdown();
     populateOpportunityPriceBookDropdown();
     populatePriceBookCurrencyDropdown(); // NEW: Repopulate price book currency
+    populateCurrencyCountryDropdown(); // NEW: Repopulate currency country dropdown
     populateDefaultCurrencyDropdown();
     populateDefaultCountryDropdown();
 }
@@ -961,6 +964,7 @@ adminSectionBtns.forEach(button => {
             renderCountriesStatesGrid();
         } else if (button.dataset.adminTarget === 'currencies') {
             renderCurrenciesGrid();
+            populateCurrencyCountryDropdown(); // NEW: Populate currency country dropdown when section is active
         } else if (button.dataset.adminTarget === 'priceBooks') {
             renderPriceBooksGrid();
             populatePriceBookCurrencyDropdown(); // NEW: Populate currency dropdown for price book form
@@ -1092,6 +1096,7 @@ async function deleteCountryState(id) {
             renderCountriesStatesGrid();
             populateCustomerCountryDropdown(); // Refresh customer dropdown
             populateDefaultCountryDropdown(); // Refresh settings dropdown
+            populateCurrencyCountryDropdown(); // NEW: Refresh currency country dropdown
         } catch (error) {
             console.error("Error deleting country:", error);
             alert('Error deleting country: ' + error.message);
@@ -1123,6 +1128,7 @@ countryStateForm.addEventListener('submit', async (e) => {
         renderCountriesStatesGrid();
         populateCustomerCountryDropdown(); // Refresh customer dropdown
         populateDefaultCountryDropdown(); // Refresh settings dropdown
+        populateCurrencyCountryDropdown(); // NEW: Refresh currency country dropdown
     } catch (error) {
         console.error("Error saving country:", error);
         alert('Error saving country: ' + error.message);
@@ -1137,6 +1143,12 @@ cancelCountryStateEditBtn.addEventListener('click', () => {
 
 // --- Currencies Management ---
 
+// NEW: Populate Currency Country Dropdown
+async function populateCurrencyCountryDropdown(selectedCountry = null) {
+    if (!currentUser || currentUserRole !== 'Admin') return;
+    await populateSelect(currencyCountrySelect, 'countries', 'name', 'name', selectedCountry); // Pass collection name as string
+}
+
 // Render Grid for Currencies
 async function renderCurrenciesGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return;
@@ -1150,7 +1162,8 @@ async function renderCurrenciesGrid() {
         data.push([
             doc.id, // Hidden ID for actions
             currency.name,
-            currency.symbol
+            currency.symbol,
+            currency.country || '' // NEW: Display country
         ]);
     });
 
@@ -1163,6 +1176,7 @@ async function renderCurrenciesGrid() {
                 { id: 'id', name: 'ID', hidden: true },
                 { id: 'name', name: 'Currency Name', sort: true, filter: true },
                 { id: 'symbol', name: 'Symbol', sort: true, filter: true },
+                { id: 'country', name: 'Country', sort: true, filter: true }, // NEW: Country column
                 {
                     name: 'Actions',
                     sort: false,
@@ -1226,6 +1240,7 @@ async function editCurrency(id) {
             currencyIdInput.value = docSnap.id;
             currencyNameInput.value = data.name || '';
             currencySymbolInput.value = data.symbol || '';
+            await populateCurrencyCountryDropdown(data.country); // NEW: Pre-select country
         }
     } catch (error) {
         console.error("Error loading currency for edit:", error);
@@ -1257,7 +1272,8 @@ currencyForm.addEventListener('submit', async (e) => {
 
     const currencyData = {
         name: currencyNameInput.value.trim(),
-        symbol: currencySymbolInput.value.trim()
+        symbol: currencySymbolInput.value.trim(),
+        country: currencyCountrySelect.value // NEW: Save selected country
     };
 
     try {
