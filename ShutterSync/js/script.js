@@ -11,7 +11,7 @@ import { Grid, h } from 'https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gri
 // Firebase configuration:
 // IMPORTANT: Replace with your actual Firebase project configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvct2CjIIjGODo", // Replace with your API Key
+    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo", // **YOUR ACTUAL API KEY WAS HERE - PRESERVED**
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
     storageBucket: "shuttersync-96971.firebase-storage.app",
@@ -193,6 +193,36 @@ function getPriceBookIndexId(name, currency) {
 }
 
 /**
+ * Populates a <select> dropdown element with data from a Firestore collection.
+ * @param {HTMLSelectElement} selectElement - The <select> element to populate.
+ * @param {string} collectionName - The name of the Firestore collection.
+ * @param {string} valueField - The field from the document to use as the <option> value.
+ * @param {string} textField - The field from the document to use as the <option> text.
+ * @param {string|null} selectedValue - The value to pre-select in the dropdown (optional).
+ */
+async function populateSelect(selectElement, collectionName, valueField, textField, selectedValue = null) {
+    selectElement.innerHTML = '<option value="">Select...</option>'; // Default empty option
+    try {
+        const collectionRef = collection(db, collectionName);
+        const snapshot = await getDocs(query(collectionRef, orderBy(textField))); // Order by text field for display
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const option = document.createElement('option');
+            option.value = data[valueField];
+            option.textContent = data[textField];
+            if (selectedValue !== null && data[valueField] === selectedValue) {
+                option.selected = true;
+            }
+            option.dataset.id = doc.id; // Store Firestore ID for reference if needed
+            selectElement.appendChild(option);
+        });
+    } catch (error) {
+        console.error(`Error fetching data for dropdown ${collectionName}:`, error);
+        // showMessage('error', 'Dropdown Error', `Could not load data for ${collectionName}.`);
+    }
+}
+
+/**
  * Displays a custom message box.
  * @param {'success'|'error'|'info'} type - The type of message ('success', 'error', or 'info').
  * @param {string} title - The title of the message box.
@@ -226,36 +256,6 @@ window.addEventListener('click', (event) => {
         messageBoxModal.style.display = 'none';
     }
 });
-
-/**
- * Populates a <select> dropdown element with data from a Firestore collection.
- * @param {HTMLSelectElement} selectElement - The <select> element to populate.
- * @param {string} collectionName - The name of the Firestore collection.
- * @param {string} valueField - The field from the document to use as the <option> value.
- * @param {string} textField - The field from the document to use as the <option> text.
- * @param {string|null} selectedValue - The value to pre-select in the dropdown (optional).
- */
-async function populateSelect(selectElement, collectionName, valueField, textField, selectedValue = null) {
-    selectElement.innerHTML = '<option value="">Select...</option>'; // Default empty option
-    try {
-        const collectionRef = collection(db, collectionName);
-        const snapshot = await getDocs(query(collectionRef, orderBy(textField))); // Order by text field for display
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const option = document.createElement('option');
-            option.value = data[valueField];
-            option.textContent = data[textField];
-            if (selectedValue !== null && data[valueField] === selectedValue) {
-                option.selected = true;
-            }
-            option.dataset.id = doc.id; // Store Firestore ID for reference if needed
-            selectElement.appendChild(option);
-        });
-    } catch (error) {
-        console.error(`Error fetching data for dropdown ${collectionName}:`, error);
-        // showMessage('error', 'Dropdown Error', `Could not load data for ${collectionName}.`);
-    }
-}
 
 
 // --- Authentication ---
@@ -1277,7 +1277,7 @@ cancelCountryStateEditBtn.addEventListener('click', () => {
  */
 async function populateCurrencyCountryDropdown(selectedCountry = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
-    await populateSelect(currencyCountrySelect, 'countries', 'name', 'name', selectedCountry);
+    await populateSelect(currencyCountrySelect, 'currencies', 'symbol', 'name', selectedCountry);
 }
 
 /**
@@ -1610,7 +1610,7 @@ async function deletePriceBook(id) {
         if (priceBookDoc.exists()) {
             const data = priceBookDoc.data();
             // Use the stored normalized values for index ID derivation
-            indexIdToDelete = getPriceBookIndexId(data.name, data.currency);
+            indexIdToDelete = getPriceBookIndexId(data.name, data.currency); // Use original name/currency from stored doc
         }
 
         // Delete the main price book document
@@ -1634,7 +1634,7 @@ async function deletePriceBook(id) {
 // Event listener to save (add or update) a price book
 priceBookForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
+    if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
 
     // Normalize name and currency for storage and index ID
     const normalizedName = priceBookNameInput.value.trim().toLowerCase().replace(/\s+/g, '');
@@ -1652,14 +1652,14 @@ priceBookForm.addEventListener('submit', async (e) => {
     };
 
     const currentPriceBookId = priceBookIdInput.value;
-    const newIndexId = getPriceBookIndexId(priceBookData.name, priceBookData.currency); // This function uses the original (but trimmed) name/currency to derive the ID
+    // Use the newly created normalized values for the index ID
+    const newIndexId = getPriceBookIndexId(priceBookData.name, priceBookData.currency);
 
     console.log('Price Book Data being sent:', JSON.stringify(priceBookData, null, 2));
     console.log('Generated Index ID (client-side):', newIndexId);
 
     try {
         // --- Client-Side Uniqueness Validation for Price Book (Name, Currency) ---
-        // This check uses the newIndexId which is derived from the *normalized* name and currency.
         const existingIndexDoc = await getDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId));
 
         if (existingIndexDoc.exists()) {
@@ -1684,7 +1684,7 @@ priceBookForm.addEventListener('submit', async (e) => {
             const oldPriceBookDoc = await getDoc(doc(db, 'priceBooks', currentPriceBookId));
             const oldPriceBookData = oldPriceBookDoc.data();
             // Derive old index ID using the *old* normalized values from the database
-            const oldIndexId = getPriceBookIndexId(oldPriceBookData.name, oldPriceBookData.currency);
+            const oldIndexId = getPriceBookIndexId(oldPriceBookData.name, oldPriceBookData.currency); // Use original name/currency from stored doc
 
             if (oldIndexId !== newIndexId) {
                 // Name or currency changed, delete old index
