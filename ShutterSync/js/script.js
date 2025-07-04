@@ -11,7 +11,7 @@ import { Grid, h } from 'https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gri
 // Firebase configuration:
 // IMPORTANT: Replace with your actual Firebase project configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo", // Replace with your API Key
+    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvct2CjIIjGODo", // Replace with your API Key
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
     storageBucket: "shuttersync-96971.firebase-storage.app",
@@ -177,11 +177,12 @@ function formatDateForInput(timestamp) {
 }
 
 /**
- * Generates a consistent unique index ID for price books based on name and currency.
- * This function MUST EXACTLY match the logic in Firestore Security Rules.
- * @param {string} name - The name of the price book.
- * @param {string} currency - The currency symbol of the price book.
- * @returns {string} The normalized unique index ID.
+ * Generates a consistent unique index ID for price books based on normalized name and currency.
+ * This function is used client-side to create the ID for the priceBookNameCurrencyIndexes document.
+ * The output of this function is what the Firestore Rules will expect as the document ID.
+ * @param {string} name - The raw name of the price book.
+ * @param {string} currency - The raw currency symbol of the price book.
+ * @returns {string} The normalized unique index ID (lowercase, no whitespace).
  */
 function getPriceBookIndexId(name, currency) {
     // Normalize name and currency: convert to lowercase and remove all whitespace characters.
@@ -189,36 +190,6 @@ function getPriceBookIndexId(name, currency) {
     const normalizedName = name.trim().toLowerCase().replace(/\s+/g, '');
     const normalizedCurrency = currency.trim().toLowerCase().replace(/\s+/g, '');
     return `${normalizedName}_${normalizedCurrency}`;
-}
-
-/**
- * Populates a <select> dropdown element with data from a Firestore collection.
- * @param {HTMLSelectElement} selectElement - The <select> element to populate.
- * @param {string} collectionName - The name of the Firestore collection.
- * @param {string} valueField - The field from the document to use as the <option> value.
- * @param {string} textField - The field from the document to use as the <option> text.
- * @param {string|null} selectedValue - The value to pre-select in the dropdown (optional).
- */
-async function populateSelect(selectElement, collectionName, valueField, textField, selectedValue = null) {
-    selectElement.innerHTML = '<option value="">Select...</option>'; // Default empty option
-    try {
-        const collectionRef = collection(db, collectionName);
-        const snapshot = await getDocs(query(collectionRef, orderBy(textField))); // Order by text field for display
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const option = document.createElement('option');
-            option.value = data[valueField];
-            option.textContent = data[textField];
-            if (selectedValue !== null && data[valueField] === selectedValue) {
-                option.selected = true;
-            }
-            option.dataset.id = doc.id; // Store Firestore ID for reference if needed
-            selectElement.appendChild(option);
-        });
-    } catch (error) {
-        console.error(`Error fetching data for dropdown ${collectionName}:`, error);
-        // showMessage('error', 'Dropdown Error', `Could not load data for ${collectionName}.`);
-    }
 }
 
 /**
@@ -255,6 +226,36 @@ window.addEventListener('click', (event) => {
         messageBoxModal.style.display = 'none';
     }
 });
+
+/**
+ * Populates a <select> dropdown element with data from a Firestore collection.
+ * @param {HTMLSelectElement} selectElement - The <select> element to populate.
+ * @param {string} collectionName - The name of the Firestore collection.
+ * @param {string} valueField - The field from the document to use as the <option> value.
+ * @param {string} textField - The field from the document to use as the <option> text.
+ * @param {string|null} selectedValue - The value to pre-select in the dropdown (optional).
+ */
+async function populateSelect(selectElement, collectionName, valueField, textField, selectedValue = null) {
+    selectElement.innerHTML = '<option value="">Select...</option>'; // Default empty option
+    try {
+        const collectionRef = collection(db, collectionName);
+        const snapshot = await getDocs(query(collectionRef, orderBy(textField))); // Order by text field for display
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const option = document.createElement('option');
+            option.value = data[valueField];
+            option.textContent = data[textField];
+            if (selectedValue !== null && data[valueField] === selectedValue) {
+                option.selected = true;
+            }
+            option.dataset.id = doc.id; // Store Firestore ID for reference if needed
+            selectElement.appendChild(option);
+        });
+    } catch (error) {
+        console.error(`Error fetching data for dropdown ${collectionName}:`, error);
+        // showMessage('error', 'Dropdown Error', `Could not load data for ${collectionName}.`);
+    }
+}
 
 
 // --- Authentication ---
@@ -1608,6 +1609,7 @@ async function deletePriceBook(id) {
         let indexIdToDelete = null;
         if (priceBookDoc.exists()) {
             const data = priceBookDoc.data();
+            // Use the stored normalized values for index ID derivation
             indexIdToDelete = getPriceBookIndexId(data.name, data.currency);
         }
 
@@ -1634,24 +1636,30 @@ priceBookForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
 
+    // Normalize name and currency for storage and index ID
+    const normalizedName = priceBookNameInput.value.trim().toLowerCase().replace(/\s+/g, '');
+    const normalizedCurrency = priceBookCurrencySelect.value.trim().toLowerCase().replace(/\s+/g, '');
+
     const priceBookData = {
-        name: priceBookNameInput.value.trim(),
+        name: priceBookNameInput.value.trim(), // Keep original name for display
+        normalizedName: normalizedName, // Store normalized name for rules validation
         description: priceBookDescriptionTextarea.value.trim(),
-        currency: priceBookCurrencySelect.value,
+        currency: priceBookCurrencySelect.value, // Keep original currency for display
+        normalizedCurrency: normalizedCurrency, // Store normalized currency for rules validation
         isActive: priceBookIsActiveSelect.value === 'Yes', // Convert to boolean
         validFrom: priceBookValidFromInput.value ? Timestamp.fromDate(new Date(priceBookValidFromInput.value)) : null,
         validTo: priceBookValidToInput.value ? Timestamp.fromDate(new Date(priceBookValidToInput.value)) : null,
     };
 
     const currentPriceBookId = priceBookIdInput.value;
-    const newIndexId = getPriceBookIndexId(priceBookData.name, priceBookData.currency);
+    const newIndexId = getPriceBookIndexId(priceBookData.name, priceBookData.currency); // This function uses the original (but trimmed) name/currency to derive the ID
 
-    // ADD THESE TWO LINES:
     console.log('Price Book Data being sent:', JSON.stringify(priceBookData, null, 2));
     console.log('Generated Index ID (client-side):', newIndexId);
 
     try {
         // --- Client-Side Uniqueness Validation for Price Book (Name, Currency) ---
+        // This check uses the newIndexId which is derived from the *normalized* name and currency.
         const existingIndexDoc = await getDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId));
 
         if (existingIndexDoc.exists()) {
@@ -1672,10 +1680,10 @@ priceBookForm.addEventListener('submit', async (e) => {
             showMessage('success', 'Success', 'Price Book updated!');
 
             // Update the index document:
-            // If name/currency changed, delete old index and create new one.
-            // Otherwise, no need to update the index document itself as its content is just the ID.
+            // If normalized name/currency changed, delete old index and create new one.
             const oldPriceBookDoc = await getDoc(doc(db, 'priceBooks', currentPriceBookId));
             const oldPriceBookData = oldPriceBookDoc.data();
+            // Derive old index ID using the *old* normalized values from the database
             const oldIndexId = getPriceBookIndexId(oldPriceBookData.name, oldPriceBookData.currency);
 
             if (oldIndexId !== newIndexId) {
@@ -1684,8 +1692,8 @@ priceBookForm.addEventListener('submit', async (e) => {
                 // Create new index with the new combination
                 await setDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId), {
                     priceBookId: currentPriceBookId, // Still points to the same main price book document
-                    priceBookName: priceBookData.name,
-                    priceBookCurrency: priceBookData.currency
+                    priceBookName: priceBookData.normalizedName, // Use normalized name for index
+                    priceBookCurrency: priceBookData.normalizedCurrency // Use normalized currency for index
                 });
             }
         } else {
@@ -1701,8 +1709,8 @@ priceBookForm.addEventListener('submit', async (e) => {
             // Create corresponding index document
             await setDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId), {
                 priceBookId: docRef.id, // Use the ID of the newly created price book
-                priceBookName: priceBookData.name,
-                priceBookCurrency: priceBookData.currency
+                priceBookName: priceBookData.normalizedName, // Use normalized name for index
+                priceBookCurrency: priceBookData.normalizedCurrency // Use normalized currency for index
             });
         }
         priceBookForm.reset();
