@@ -1,5 +1,5 @@
 // Firebase SDK Imports (Modular API)
-// Changed Firebase SDK version to 10.0.0 for potentially better compatibility.
+// Using Firebase SDK version 10.0.0 for compatibility.
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js';
 import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, serverTimestamp, Timestamp, setDoc } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js';
@@ -9,8 +9,9 @@ import { Grid, h } from 'https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gri
 
 
 // Firebase configuration:
+// IMPORTANT: Replace with your actual Firebase project configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
+    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo", // Replace with your API Key
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
     storageBucket: "shuttersync-96971.firebase-storage.app",
@@ -54,14 +55,14 @@ const customerForm = document.getElementById('customerForm');
 const customerIdInput = document.getElementById('customerId');
 const customerTypeSelect = document.getElementById('customerType');
 const customerNameInput = document.getElementById('customerName');
-const customerEmailInput = document.getElementById('customerEmail'); // FIX: Corrected this line
+const customerEmailInput = document.getElementById('customerEmail');
 const customerPhoneInput = document.getElementById('customerPhone');
-const customerAddressTextarea = document.getElementById('customerAddress'); // Changed to Textarea
+const customerAddressTextarea = document.getElementById('customerAddress');
 const customerCountrySelect = document.getElementById('customerCountry');
 const customerPreferredContactMethodSelect = document.getElementById('customerPreferredContactMethod');
-const customerIndustrySelect = document.getElementById('customerIndustry'); // Changed to Select
+const customerIndustrySelect = document.getElementById('customerIndustry');
 const customerAdditionalDetailsTextarea = document.getElementById('customerAdditionalDetails');
-const customerSourceSelect = document.getElementById('customerSource'); // Changed to Select
+const customerSourceSelect = document.getElementById('customerSource');
 const customerActiveSelect = document.getElementById('customerActive');
 
 // Opportunity Modal Elements
@@ -89,7 +90,7 @@ const openOpportunitiesCount = document.getElementById('openOpportunitiesCount')
 const wonOpportunitiesCount = document.getElementById('wonOpportunitiesCount');
 
 // Admin Panel Elements
-const adminOnlyElements = document.querySelectorAll('.admin-only'); // Ensure this is defined
+const adminOnlyElements = document.querySelectorAll('.admin-only');
 const adminSectionBtns = document.querySelectorAll('.admin-section-btn');
 const adminSubsections = document.querySelectorAll('.admin-subsection');
 
@@ -106,7 +107,7 @@ const currencyForm = document.getElementById('currencyForm');
 const currencyIdInput = document.getElementById('currencyId');
 const currencyNameInput = document.getElementById('currencyName');
 const currencySymbolInput = document.getElementById('currencySymbol');
-const currencyCountrySelect = document.getElementById('currencyCountry'); // NEW: Get the currency country select
+const currencyCountrySelect = document.getElementById('currencyCountry');
 const cancelCurrencyEditBtn = currencyForm.querySelector('.cancel-edit-btn');
 
 // Price Books Elements
@@ -114,8 +115,7 @@ const priceBookForm = document.getElementById('priceBookForm');
 const priceBookIdInput = document.getElementById('priceBookId');
 const priceBookNameInput = document.getElementById('priceBookName');
 const priceBookDescriptionTextarea = document.getElementById('priceBookDescription');
-const priceBookCurrencySelect = document.getElementById('priceBookCurrency'); // NEW: Price Book Currency Select
-// NEW: Price Book fields
+const priceBookCurrencySelect = document.getElementById('priceBookCurrency');
 const priceBookIsActiveSelect = document.getElementById('priceBookIsActive');
 const priceBookValidFromInput = document.getElementById('priceBookValidFrom');
 const priceBookValidToInput = document.getElementById('priceBookValidTo');
@@ -128,7 +128,7 @@ const defaultCurrencySelect = document.getElementById('defaultCurrency');
 const defaultCountrySelect = document.getElementById('defaultCountry');
 const cancelSettingsEditBtn = appSettingsForm.querySelector('.cancel-edit-btn');
 
-// NEW: Message Box Elements
+// Custom Message Box Elements
 const messageBoxModal = document.getElementById('messageBoxModal');
 const messageBoxTitle = document.getElementById('messageBoxTitle');
 const messageBoxMessage = document.getElementById('messageBoxMessage');
@@ -138,73 +138,92 @@ const messageBoxOkBtn = document.getElementById('messageBoxOkBtn');
 
 // --- Utility Functions ---
 
-// Function to format date for display
+/**
+ * Formats a Firestore Timestamp or Date object for display in a user-friendly format.
+ * @param {firebase.firestore.Timestamp|Date|null} timestamp - The timestamp or date to format.
+ * @returns {string} The formatted date string, or empty string if null/invalid.
+ */
 function formatDateForDisplay(timestamp) {
     if (!timestamp) return '';
-    // Check if it's a Firestore Timestamp object
-    if (typeof timestamp.toDate === 'function') {
-        const date = timestamp.toDate();
-        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    let date;
+    if (typeof timestamp.toDate === 'function') { // Check if it's a Firestore Timestamp
+        date = timestamp.toDate();
+    } else if (timestamp instanceof Date) { // Check if it's a native Date object
+        date = timestamp;
+    } else { // Attempt to parse if it's a string or other format
+        date = new Date(timestamp);
     }
-    // If it's already a Date object or a string that can be parsed
-    const date = new Date(timestamp);
     if (isNaN(date.getTime())) return ''; // Invalid date
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-// Function to format date for input (YYYY-MM-DD)
+/**
+ * Formats a Firestore Timestamp or Date object for use in an HTML date input (YYYY-MM-DD).
+ * @param {firebase.firestore.Timestamp|Date|null} timestamp - The timestamp or date to format.
+ * @returns {string} The formatted date string (YYYY-MM-DD), or empty string if null/invalid.
+ */
 function formatDateForInput(timestamp) {
     if (!timestamp) return '';
     let date;
-    if (typeof timestamp.toDate === 'function') {
+    if (typeof timestamp.toDate === 'function') { // Check if it's a Firestore Timestamp
         date = timestamp.toDate();
-    } else {
+    } else if (timestamp instanceof Date) { // Check if it's a native Date object
+        date = timestamp;
+    } else { // Attempt to parse if it's a string or other format
         date = new Date(timestamp);
     }
-    if (isNaN(date.getTime())) return '';
+    if (isNaN(date.getTime())) return ''; // Invalid date
     return date.toISOString().split('T')[0];
 }
 
-// NEW: Helper function to generate a consistent index ID for price books
+/**
+ * Generates a consistent unique index ID for price books based on name and currency.
+ * This function MUST EXACTLY match the logic in Firestore Security Rules.
+ * @param {string} name - The name of the price book.
+ * @param {string} currency - The currency symbol of the price book.
+ * @returns {string} The normalized unique index ID.
+ */
 function getPriceBookIndexId(name, currency) {
-    // Normalize name and currency to ensure consistent ID generation
-    // Convert to lowercase and remove spaces for robustness
+    // Normalize name and currency: convert to lowercase and remove all whitespace characters.
+    // The regex /\s+/g matches one or more whitespace characters (space, tab, newline, etc.) globally.
     const normalizedName = name.trim().toLowerCase().replace(/\s+/g, '');
     const normalizedCurrency = currency.trim().toLowerCase().replace(/\s+/g, '');
     return `${normalizedName}_${normalizedCurrency}`;
 }
 
-
-// Function to populate select dropdowns
+/**
+ * Populates a <select> dropdown element with data from a Firestore collection.
+ * @param {HTMLSelectElement} selectElement - The <select> element to populate.
+ * @param {string} collectionName - The name of the Firestore collection.
+ * @param {string} valueField - The field from the document to use as the <option> value.
+ * @param {string} textField - The field from the document to use as the <option> text.
+ * @param {string|null} selectedValue - The value to pre-select in the dropdown (optional).
+ */
 async function populateSelect(selectElement, collectionName, valueField, textField, selectedValue = null) {
-    selectElement.innerHTML = '<option value="">Select...</option>';
-    let snapshot;
+    selectElement.innerHTML = '<option value="">Select...</option>'; // Default empty option
     try {
-        // Use collection() to get a CollectionReference, then query
         const collectionRef = collection(db, collectionName);
-        snapshot = await getDocs(query(collectionRef, orderBy(textField)));
+        const snapshot = await getDocs(query(collectionRef, orderBy(textField))); // Order by text field for display
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const option = document.createElement('option');
+            option.value = data[valueField];
+            option.textContent = data[textField];
+            if (selectedValue !== null && data[valueField] === selectedValue) {
+                option.selected = true;
+            }
+            option.dataset.id = doc.id; // Store Firestore ID for reference if needed
+            selectElement.appendChild(option);
+        });
     } catch (error) {
-        console.error("Error fetching data for dropdown:", error);
-        return;
+        console.error(`Error fetching data for dropdown ${collectionName}:`, error);
+        // showMessage('error', 'Dropdown Error', `Could not load data for ${collectionName}.`);
     }
-
-    snapshot.forEach(doc => {
-        const data = doc.data();
-        const option = document.createElement('option');
-        option.value = data[valueField];
-        option.textContent = data[textField];
-        if (selectedValue && data[valueField] === selectedValue) {
-            option.selected = true;
-        }
-        option.dataset.id = doc.id; // Store Firestore ID for reference
-        selectElement.appendChild(option);
-    });
 }
 
-// --- NEW: Custom Message Box Function ---
 /**
  * Displays a custom message box.
- * @param {string} type - 'success', 'error', or 'info'
+ * @param {'success'|'error'|'info'} type - The type of message ('success', 'error', or 'info').
  * @param {string} title - The title of the message box.
  * @param {string} message - The message content.
  */
@@ -240,48 +259,49 @@ window.addEventListener('click', (event) => {
 
 // --- Authentication ---
 
-onAuthStateChanged(auth, async (user) => { // Use onAuthStateChanged from modular SDK
+// Listens for Firebase authentication state changes
+onAuthStateChanged(auth, async (user) => {
     currentUser = user;
     if (user) {
+        // User is signed in
         authButtonSignOut.textContent = 'Sign Out';
         userInfoDisplay.style.display = 'block';
         authButtonSignIn.style.display = 'none';
 
-        // Fetch user's custom claims for role
         try {
-            const idTokenResult = await user.getIdTokenResult(true);
-            const userDocRef = doc(db, 'users_data', user.uid); // Use doc() from modular SDK
-            const userDoc = await getDoc(userDocRef); // Use getDoc() from modular SDK
+            // Fetch user's custom claims for role from Firestore
+            const userDocRef = doc(db, 'users_data', user.uid);
+            const userDoc = await getDoc(userDocRef);
 
-            if (!userDoc.exists) {
+            if (!userDoc.exists()) {
                 // New user, create their profile with 'Standard' role
-                await setDoc(userDocRef, { // Use setDoc() from modular SDK
+                await setDoc(userDocRef, {
                     displayName: user.displayName || 'New User',
                     email: user.email,
-                    role: 'Standard', // Default role
-                    createdAt: serverTimestamp(), // Corrected: Use serverTimestamp() directly
-                    lastLogin: serverTimestamp() // Corrected: Use serverTimestamp() directly
+                    role: 'Standard', // Default role for new users
+                    createdAt: serverTimestamp(),
+                    lastLogin: serverTimestamp()
                 });
                 currentUserRole = 'Standard';
             } else {
                 // Existing user, update last login and get role
-                await updateDoc(userDocRef, { // Use updateDoc() from modular SDK
-                    lastLogin: serverTimestamp() // Corrected: Use serverTimestamp() directly
+                await updateDoc(userDocRef, {
+                    lastLogin: serverTimestamp()
                 });
                 currentUserRole = userDoc.data().role;
             }
         } catch (error) {
             console.error("Error fetching user role or creating user doc:", error);
-            currentUserRole = 'Standard'; // Fallback to standard if error
+            currentUserRole = 'Standard'; // Fallback to standard if error occurs
+            showMessage('error', 'Profile Error', 'Could not load user profile. Defaulting to Standard role.');
         }
-
 
         userNameSpan.textContent = user.displayName || user.email;
         userRoleSpan.textContent = currentUserRole;
 
-        // Show/hide admin nav button based on role
+        // Show/hide admin navigation button based on role
         if (currentUserRole === 'Admin') {
-            adminNavButton.style.display = 'block'; // Only show the nav button
+            adminNavButton.style.display = 'block';
         } else {
             adminNavButton.style.display = 'none';
         }
@@ -292,9 +312,9 @@ onAuthStateChanged(auth, async (user) => { // Use onAuthStateChanged from modula
         renderOpportunitiesGrid();
         renderCountriesStatesGrid();
         renderCurrenciesGrid();
-        renderPriceBooksGrid(); // This will now also populate priceBookCurrencySelect
+        renderPriceBooksGrid();
 
-        // Populate dynamic data for forms
+        // Populate dynamic data for forms (e.g., dropdowns)
         populateCustomerCountryDropdown();
         populateOpportunityCustomerDropdown();
         populateOpportunityCurrencyDropdown();
@@ -305,7 +325,6 @@ onAuthStateChanged(auth, async (user) => { // Use onAuthStateChanged from modula
 
         // Set initial module to dashboard
         document.querySelector('.nav-button[data-module="dashboard"]').click();
-
 
     } else {
         // User is signed out
@@ -329,13 +348,13 @@ onAuthStateChanged(auth, async (user) => { // Use onAuthStateChanged from modula
 
         // Clear dropdowns
         customerCountrySelect.innerHTML = '<option value="">Select...</option>';
-        customerIndustrySelect.innerHTML = '<option value="">Select Industry</option>'; // Reset for Industry
-        customerSourceSelect.innerHTML = '<option value="">Select Source</option>'; // Reset for Source
+        customerIndustrySelect.innerHTML = '<option value="">Select Industry</option>';
+        customerSourceSelect.innerHTML = '<option value="">Select Source</option>';
         opportunityCustomerSelect.innerHTML = '<option value="">Select...</option>';
         opportunityCurrencySelect.innerHTML = '<option value="">Select...</option>';
         opportunityPriceBookSelect.innerHTML = '<option value="">Select...</option>';
-        priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>'; // NEW: Clear price book currency
-        currencyCountrySelect.innerHTML = '<option value="">Select Country</option>'; // NEW: Clear currency country dropdown
+        priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>';
+        currencyCountrySelect.innerHTML = '<option value="">Select Country</option>';
         defaultCurrencySelect.innerHTML = '<option value="">Select...</option>';
         defaultCountrySelect.innerHTML = '<option value="">Select...</option>';
 
@@ -344,9 +363,10 @@ onAuthStateChanged(auth, async (user) => { // Use onAuthStateChanged from modula
     }
 });
 
+// Event listener for Sign Out button
 authButtonSignOut.addEventListener('click', () => {
     if (currentUser) {
-        signOut(auth).then(() => { // Use signOut from modular SDK
+        signOut(auth).then(() => {
             showMessage('success', 'Signed Out', 'Signed out successfully!');
         }).catch((error) => {
             console.error('Sign Out Error:', error);
@@ -355,9 +375,10 @@ authButtonSignOut.addEventListener('click', () => {
     }
 });
 
+// Event listener for Sign In with Google button
 authButtonSignIn.addEventListener('click', () => {
-    const provider = new GoogleAuthProvider(); // Use GoogleAuthProvider from modular SDK
-    signInWithPopup(auth, provider).then((result) => { // Use signInWithPopup from modular SDK
+    const provider = new GoogleAuthProvider();
+    signInWithPopup(auth, provider).then((result) => {
         console.log('Signed in as:', result.user.displayName);
         showMessage('success', 'Signed In', `Welcome, ${result.user.displayName || result.user.email}!`);
     }).catch((error) => {
@@ -371,25 +392,25 @@ authButtonSignIn.addEventListener('click', () => {
 
 navButtons.forEach(button => {
     button.addEventListener('click', () => {
-        // Remove 'active' from all nav buttons and hide all modules
+        // Remove 'active' class from all nav buttons and hide all modules
         navButtons.forEach(btn => btn.classList.remove('active'));
         modules.forEach(mod => mod.classList.remove('active'));
 
-        // Add 'active' to clicked button and show corresponding module
+        // Add 'active' class to clicked button and show corresponding module
         button.classList.add('active');
         const moduleToShow = document.getElementById(`${button.dataset.module}Module`);
 
-        // Check if module is admin-only and user is not admin
+        // Check if module is admin-only and current user is not an admin
         if (moduleToShow.classList.contains('admin-only') && currentUserRole !== 'Admin') {
             showMessage('error', 'Access Denied', 'You do not have permission to access this module.');
-            // Optionally, redirect to dashboard or previous module
+            // Redirect to dashboard or previous module if access is denied
             document.querySelector('.nav-button[data-module="dashboard"]').click();
             return;
         }
 
         moduleToShow.classList.add('active');
 
-        // Special actions for modules
+        // Perform specific actions when a module is activated
         if (button.dataset.module === 'dashboard') {
             updateDashboardStats();
         } else if (button.dataset.module === 'customers') {
@@ -397,7 +418,7 @@ navButtons.forEach(button => {
         } else if (button.dataset.module === 'opportunities') {
             renderOpportunitiesGrid(); // Re-render to ensure data is fresh
         } else if (button.dataset.module === 'admin') {
-            // Ensure first admin subsection is active and load its data
+            // Ensure the first admin subsection is active and load its data
             adminSectionBtns.forEach(btn => btn.classList.remove('active'));
             adminSubsections.forEach(sub => sub.classList.remove('active'));
             const defaultAdminBtn = document.querySelector('.admin-section-btn[data-admin-target="countriesStates"]');
@@ -407,7 +428,6 @@ navButtons.forEach(button => {
             if (defaultAdminSection) defaultAdminSection.classList.add('active');
 
             renderCountriesStatesGrid(); // Load data for the default subsection
-            // Other admin grids will be loaded when their respective buttons are clicked
             loadAppSettings(); // Load app settings for admin panel
         }
     });
@@ -416,22 +436,28 @@ navButtons.forEach(button => {
 
 // --- Dashboard Module ---
 
+/**
+ * Updates the statistics displayed on the dashboard.
+ * Fetches counts for total customers, total opportunities, open opportunities, and won opportunities.
+ */
 async function updateDashboardStats() {
-    if (!currentUser) return;
+    if (!currentUser) return; // Ensure user is authenticated
 
     try {
-        let customerQuery = query(collection(db, 'customers')); // Use collection() and query()
+        let customerQuery = query(collection(db, 'customers'));
+        // Filter customers by creatorId if not an Admin
         if (currentUserRole !== 'Admin') {
-            customerQuery = query(customerQuery, where('creatorId', '==', currentUser.uid)); // Use query() and where()
+            customerQuery = query(customerQuery, where('creatorId', '==', currentUser.uid));
         }
-        const customersSnapshot = await getDocs(customerQuery); // Use getDocs()
+        const customersSnapshot = await getDocs(customerQuery);
         totalCustomersCount.textContent = customersSnapshot.size;
 
-        let opportunityQuery = query(collection(db, 'opportunities')); // Use collection() and query()
+        let opportunityQuery = query(collection(db, 'opportunities'));
+        // Filter opportunities by creatorId if not an Admin
         if (currentUserRole !== 'Admin') {
-            opportunityQuery = query(opportunityQuery, where('creatorId', '==', currentUser.uid)); // Use query() and where()
+            opportunityQuery = query(opportunityQuery, where('creatorId', '==', currentUser.uid));
         }
-        const opportunitiesSnapshot = await getDocs(opportunityQuery); // Use getDocs()
+        const opportunitiesSnapshot = await getDocs(opportunityQuery);
         totalOpportunitiesCount.textContent = opportunitiesSnapshot.size;
 
         const openOpportunities = opportunitiesSnapshot.docs.filter(doc =>
@@ -446,21 +472,22 @@ async function updateDashboardStats() {
 
     } catch (error) {
         console.error("Error updating dashboard stats:", error);
+        showMessage('error', 'Dashboard Error', 'Could not load dashboard statistics.');
     }
 }
 
 
 // --- Modals General Logic ---
 
-// Close buttons for all modals
+// Event listeners for closing all modals using the close button
 document.querySelectorAll('.modal .close-button').forEach(button => {
     button.addEventListener('click', (e) => {
         e.target.closest('.modal').style.display = 'none';
-        resetForms();
+        resetForms(); // Reset forms when modal is closed
     });
 });
 
-// Close modal on outside click
+// Event listener for closing modals by clicking outside the modal content
 window.addEventListener('click', (event) => {
     if (event.target === customerModal) {
         customerModal.style.display = 'none';
@@ -470,8 +497,13 @@ window.addEventListener('click', (event) => {
         opportunityModal.style.display = 'none';
         resetForms();
     }
+    // Add other modals here if they are not children of the main window click listener
 });
 
+/**
+ * Resets all form fields and hidden IDs in the application.
+ * Also repopulates dynamic dropdowns to their default state.
+ */
 function resetForms() {
     customerForm.reset();
     customerIdInput.value = '';
@@ -486,25 +518,26 @@ function resetForms() {
     appSettingsForm.reset();
     settingsDocIdInput.value = '';
 
-    // NEW: Reset Price Book specific fields
+    // Reset Price Book specific fields to their default values
     priceBookIsActiveSelect.value = 'Yes'; // Default to Yes
     priceBookValidFromInput.value = '';
     priceBookValidToInput.value = '';
 
-    // Manually reset dropdowns that don't have a default "Select..." option or need repopulation
-    customerTypeSelect.value = 'Individual'; // Or your desired default
-    customerPreferredContactMethodSelect.value = 'Email'; // Or your desired default
-    customerActiveSelect.value = 'Yes'; // Or your desired default
-    opportunitySalesStageSelect.value = 'Prospect'; // Or your desired default
+    // Manually reset other dropdowns to their initial "Select..." or default option
+    customerTypeSelect.value = 'Individual';
+    customerPreferredContactMethodSelect.value = 'Email';
+    customerActiveSelect.value = 'Yes';
+    customerIndustrySelect.value = ''; // Clear for new entry
+    customerSourceSelect.value = ''; // Clear for new entry
+    opportunitySalesStageSelect.value = 'Prospect';
     
-    // Repopulate dynamic dropdowns to ensure initial "Select..." option is present
+    // Repopulate dynamic dropdowns to ensure initial "Select..." option is present and data is fresh
     populateCustomerCountryDropdown();
-    // No need to populate Industry/Source here, as their options are static in HTML
     populateOpportunityCustomerDropdown();
     populateOpportunityCurrencyDropdown();
     populateOpportunityPriceBookDropdown();
-    populatePriceBookCurrencyDropdown(); // NEW: Repopulate price book currency
-    populateCurrencyCountryDropdown(); // NEW: Repopulate currency country dropdown
+    populatePriceBookCurrencyDropdown();
+    populateCurrencyCountryDropdown();
     populateDefaultCurrencyDropdown();
     populateDefaultCountryDropdown();
 }
@@ -512,13 +545,16 @@ function resetForms() {
 
 // --- Customers Module ---
 
-// Populate Customer Country Dropdown
+/**
+ * Populates the customer country dropdown with data from the 'countries' collection.
+ * @param {string|null} selectedCountry - The country name to pre-select (optional).
+ */
 async function populateCustomerCountryDropdown(selectedCountry = null) {
     if (!currentUser) return;
-    await populateSelect(customerCountrySelect, 'countries', 'name', 'name', selectedCountry); // Pass collection name as string
+    await populateSelect(customerCountrySelect, 'countries', 'name', 'name', selectedCountry);
 }
 
-// Open Customer Modal
+// Event listener to open the Customer Modal for adding a new customer
 addCustomerBtn.addEventListener('click', () => {
     customerForm.reset();
     customerIdInput.value = ''; // Clear ID for new customer
@@ -528,47 +564,47 @@ addCustomerBtn.addEventListener('click', () => {
     customerTypeSelect.value = 'Individual';
     customerPreferredContactMethodSelect.value = 'Email';
     customerActiveSelect.value = 'Yes';
-    customerIndustrySelect.value = ''; // Clear for new entry
-    customerSourceSelect.value = ''; // Clear for new entry
+    customerIndustrySelect.value = '';
+    customerSourceSelect.value = '';
 
     populateCustomerCountryDropdown(); // Repopulate to ensure fresh data
     customerModal.style.display = 'flex';
 });
 
-// Save Customer
+// Event listener to save (add or update) a customer
 customerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
 
     const customerData = {
         type: customerTypeSelect.value,
-        name: customerNameInput.value,
-        email: customerEmailInput.value,
-        phone: customerPhoneInput.value,
-        address: customerAddressTextarea.value, // Read from textarea
+        name: customerNameInput.value.trim(),
+        email: customerEmailInput.value.trim(),
+        phone: customerPhoneInput.value.trim(),
+        address: customerAddressTextarea.value.trim(),
         country: customerCountrySelect.value,
         preferredContactMethod: customerPreferredContactMethodSelect.value,
-        industry: customerIndustrySelect.value, // Read from select
-        additionalDetails: customerAdditionalDetailsTextarea.value,
-        source: customerSourceSelect.value, // Read from select
-        active: customerActiveSelect.value === 'Yes', // Convert to boolean
-        updatedAt: serverTimestamp() // Corrected: Use serverTimestamp() directly
+        industry: customerIndustrySelect.value,
+        additionalDetails: customerAdditionalDetailsTextarea.value.trim(),
+        source: customerSourceSelect.value,
+        active: customerActiveSelect.value === 'Yes', // Convert string 'Yes'/'No' to boolean
+        updatedAt: serverTimestamp() // Set or update timestamp
     };
 
     try {
         if (customerIdInput.value) {
             // Update existing customer
-            await updateDoc(doc(db, 'customers', customerIdInput.value), customerData); // Use doc() and updateDoc()
+            await updateDoc(doc(db, 'customers', customerIdInput.value), customerData);
             showMessage('success', 'Success', 'Customer updated successfully!');
         } else {
             // Add new customer
-            customerData.createdAt = serverTimestamp(); // Corrected: Use serverTimestamp() directly
-            customerData.creatorId = currentUser.uid; // Assign creator
-            await addDoc(collection(db, 'customers'), customerData); // Use collection() and addDoc()
+            customerData.createdAt = serverTimestamp(); // Set creation timestamp for new record
+            customerData.creatorId = currentUser.uid; // Assign current user as creator
+            await addDoc(collection(db, 'customers'), customerData);
             showMessage('success', 'Success', 'Customer added successfully!');
         }
         customerModal.style.display = 'none';
-        renderCustomersGrid(); // Refresh the table
+        renderCustomersGrid(); // Refresh the customers table
         updateDashboardStats(); // Update dashboard counts
     } catch (error) {
         console.error("Error saving customer:", error);
@@ -576,17 +612,21 @@ customerForm.addEventListener('submit', async (e) => {
     }
 });
 
-// Grid.js for Customers
+/**
+ * Renders or updates the Grid.js table for customers.
+ * Fetches customer data from Firestore and displays it.
+ */
 async function renderCustomersGrid() {
-    if (!currentUser) return; // Only render if authenticated
+    if (!currentUser) return;
 
-    let customersRef = query(collection(db, 'customers')); // Use collection() and query()
+    let customersRef = query(collection(db, 'customers'));
+    // Filter customers by creatorId if not an Admin
     if (currentUserRole !== 'Admin') {
-        customersRef = query(customersRef, where('creatorId', '==', currentUser.uid)); // Use query() and where()
+        customersRef = query(customersRef, where('creatorId', '==', currentUser.uid));
     }
     const customerData = [];
 
-    const snapshot = await getDocs(query(customersRef, orderBy('name'))); // Use getDocs() and orderBy()
+    const snapshot = await getDocs(query(customersRef, orderBy('name'))); // Order by name for consistent display
     snapshot.forEach(doc => {
         const data = doc.data();
         customerData.push([
@@ -595,36 +635,35 @@ async function renderCustomersGrid() {
             data.type,
             data.email,
             data.phone,
-            data.address, // Display address
+            data.address,
             data.country,
             data.preferredContactMethod,
-            data.industry, // Display industry
-            data.source, // Display source
+            data.industry,
+            data.source,
             data.active,
             data.createdAt // Firestore Timestamp
         ]);
     });
 
     if (customersGrid) {
-        customersGrid.updateConfig({ data: customerData }).forceRender();
+        customersGrid.updateConfig({ data: customerData }).forceRender(); // Update existing grid
     } else {
         const containerElement = document.getElementById('customersTable');
         if (containerElement) {
-            containerElement.innerHTML = ''; // Clear existing content
+            containerElement.innerHTML = ''; // Clear existing content before rendering new grid
         }
-        // Use Grid and h directly from import
         customersGrid = new Grid({
             columns: [
-                { id: 'id', name: 'ID', hidden: true }, // Hidden column for document ID
+                { id: 'id', name: 'ID', hidden: true },
                 { id: 'name', name: 'Name', sort: true, filter: true },
                 { id: 'type', name: 'Type', sort: true, filter: true },
                 { id: 'email', name: 'Email', sort: true, filter: true },
                 { id: 'phone', name: 'Phone', sort: true, filter: true },
-                { id: 'address', name: 'Address', sort: true, filter: true }, // Display address
+                { id: 'address', name: 'Address', sort: true, filter: true },
                 { id: 'country', name: 'Country', sort: true, filter: true },
                 { id: 'preferredContactMethod', name: 'Preferred Contact', sort: true, filter: true },
-                { id: 'industry', name: 'Industry', sort: true, filter: true }, // Display industry
-                { id: 'source', name: 'Source', sort: true, filter: true }, // Display source
+                { id: 'industry', name: 'Industry', sort: true, filter: true },
+                { id: 'source', name: 'Source', sort: true, filter: true },
                 { id: 'active', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
                 { id: 'createdAt', name: 'Created At', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
                 {
@@ -632,8 +671,7 @@ async function renderCustomersGrid() {
                     sort: false,
                     filter: false,
                     formatter: (cell, row) => {
-                        const docId = row.cells[0].data; // Get ID from the first hidden cell
-                        // Use h directly from import
+                        const docId = row.cells[0].data; // Get document ID from the first hidden cell
                         return h('div', { className: 'action-icons' },
                             h('span', {
                                 className: 'fa-solid fa-edit',
@@ -651,59 +689,40 @@ async function renderCustomersGrid() {
             ],
             data: customerData,
             search: true, // Global search
-            pagination: {
-                enabled: true,
-                limit: 10,
-                summary: true // Shows summary like "1-10 of 50"
-            },
+            pagination: { enabled: true, limit: 10, summary: true },
             sort: true,
             resizable: true,
-            className: {
-                container: 'gridjs-container',
-                table: 'gridjs-table',
-                thead: 'gridjs-thead',
-                th: 'gridjs-th',
-                td: 'gridjs-td',
-                tr: 'gridjs-tr',
-                footer: 'gridjs-footer',
-                pagination: 'gridjs-pagination',
-                'pagination-summary': 'gridjs-pagination-summary',
-                'pagination-gap': 'gridjs-pagination-gap',
-                'pagination-nav': 'gridjs-pagination-nav',
-                'pagination-nav-prev': 'gridjs-pagination-nav-prev',
-                'pagination-nav-next': 'gridjs-pagination-nav-next',
-                'pagination-btn': 'gridjs-pagination-btn',
+            className: { // Custom CSS classes for Grid.js elements
+                container: 'gridjs-container', table: 'gridjs-table', thead: 'gridjs-thead', th: 'gridjs-th',
+                td: 'gridjs-td', tr: 'gridjs-tr', footer: 'gridjs-footer', pagination: 'gridjs-pagination',
+                'pagination-summary': 'gridjs-pagination-summary', 'pagination-gap': 'gridjs-pagination-gap',
+                'pagination-nav': 'gridjs-pagination-nav', 'pagination-nav-prev': 'gridjs-pagination-nav-prev',
+                'pagination-nav-next': 'gridjs-pagination-nav-next', 'pagination-btn': 'gridjs-pagination-btn',
                 'pagination-btn-current': 'gridjs-currentPage',
             },
             language: { // Customizing Grid.js text
-                'search': {
-                    'placeholder': 'Search customers...'
-                },
-                'pagination': {
-                    'previous': 'Prev',
-                    'next': 'Next',
-                    'showing': 'Showing',
-                    'of': 'of',
-                    'results': 'results',
-                    'to': 'to'
-                },
+                'search': { 'placeholder': 'Search customers...' },
+                'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
                 'noRecordsFound': 'No Customer Data Available',
             }
         }).render(containerElement);
     }
 }
 
-// Edit Customer
+/**
+ * Populates the customer modal with existing data for editing.
+ * @param {string} customerId - The ID of the customer document to edit.
+ */
 async function editCustomer(customerId) {
     if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
-    // Role check for editing
+    // Role check for editing - only Admin or creator can edit
     if (currentUserRole !== 'Admin' && currentUserRole !== 'Standard') { showMessage('error', 'Access Denied', 'You do not have permission to edit customers.'); return; }
 
     try {
-        const docSnap = await getDoc(doc(db, 'customers', customerId)); // Use doc() and getDoc()
+        const docSnap = await getDoc(doc(db, 'customers', customerId));
         if (docSnap.exists()) {
             const data = docSnap.data();
-            // Ensure the user is authorized to edit this customer if not admin
+            // Further check if the current user is the creator (if not admin)
             if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
                 showMessage('error', 'Access Denied', 'You can only edit customers you have created.');
                 return;
@@ -716,12 +735,12 @@ async function editCustomer(customerId) {
             customerNameInput.value = data.name || '';
             customerEmailInput.value = data.email || '';
             customerPhoneInput.value = data.phone || '';
-            customerAddressTextarea.value = data.address || ''; // Set textarea value
+            customerAddressTextarea.value = data.address || '';
             await populateCustomerCountryDropdown(data.country); // Pre-select country
             customerPreferredContactMethodSelect.value = data.preferredContactMethod || '';
-            customerIndustrySelect.value = data.industry || ''; // Set select value
+            customerIndustrySelect.value = data.industry || '';
             customerAdditionalDetailsTextarea.value = data.additionalDetails || '';
-            customerSourceSelect.value = data.source || ''; // Set select value
+            customerSourceSelect.value = data.source || '';
             customerActiveSelect.value = data.active ? 'Yes' : 'No';
 
             customerModal.style.display = 'flex';
@@ -734,32 +753,26 @@ async function editCustomer(customerId) {
     }
 }
 
-// Delete Customer
+/**
+ * Deletes a customer document from Firestore.
+ * Requires Admin role. Includes a check for linked opportunities.
+ * @param {string} customerId - The ID of the customer document to delete.
+ */
 async function deleteCustomer(customerId) {
     if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
-    // Role check for deleting
     if (currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'You do not have permission to delete customers.'); return; }
 
-    // Using custom message box as a "confirmation" (it's a notification, not a true confirm)
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this customer? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
-    // For a true confirmation, you'd need a more complex modal with Yes/No buttons and a callback.
-    // For now, if they click OK on the info message, they'll just have to click delete again.
-    // This is a simplification to avoid complex modal logic for now.
-    // If you need actual confirmation, let me know.
-
-    // Proceed with deletion if the user confirms (this is a placeholder for actual confirmation logic)
-    // In a real app, you'd show a custom confirm modal and only proceed after a "Yes" click.
-    // For now, we'll assume the user understands the implications from the message.
     try {
         // Check if there are any opportunities linked to this customer
-        const opportunitiesSnapshot = await getDocs(query(collection(db, 'opportunities'), where('customerId', '==', customerId))); // Use collection(), query(), where(), getDocs()
+        const opportunitiesSnapshot = await getDocs(query(collection(db, 'opportunities'), where('customerId', '==', customerId)));
         if (!opportunitiesSnapshot.empty) {
             showMessage('error', 'Cannot Delete', 'Cannot delete customer: There are existing opportunities linked to this customer. Please delete the opportunities first.');
             return;
         }
 
-        await deleteDoc(doc(db, 'customers', customerId)); // Use doc() and deleteDoc()
+        await deleteDoc(doc(db, 'customers', customerId));
         showMessage('success', 'Success', 'Customer deleted successfully!');
         renderCustomersGrid(); // Refresh the table
         updateDashboardStats(); // Update dashboard counts
@@ -772,12 +785,20 @@ async function deleteCustomer(customerId) {
 
 // --- Opportunities Module ---
 
-// Populate Opportunity Customers Dropdown
+/**
+ * Populates the opportunity customer dropdown with data from the 'customers' collection.
+ * @param {string|null} selectedCustomerId - The customer ID to pre-select (optional).
+ */
 async function populateOpportunityCustomerDropdown(selectedCustomerId = null) {
     if (!currentUser) return;
     const selectElement = opportunityCustomerSelect;
     selectElement.innerHTML = '<option value="">Select a Customer</option>';
-    const snapshot = await getDocs(query(collection(db, 'customers'), orderBy('name'))); // Use collection(), query(), orderBy(), getDocs()
+    let customerQuery = query(collection(db, 'customers'), orderBy('name'));
+    // Filter customers by creatorId if not an Admin, so users only see their own customers
+    if (currentUserRole !== 'Admin') {
+        customerQuery = query(customerQuery, where('creatorId', '==', currentUser.uid));
+    }
+    const snapshot = await getDocs(customerQuery);
     snapshot.forEach(doc => {
         const data = doc.data();
         const option = document.createElement('option');
@@ -790,18 +811,24 @@ async function populateOpportunityCustomerDropdown(selectedCustomerId = null) {
     });
 }
 
-// Populate Opportunity Currency Dropdown
+/**
+ * Populates the opportunity currency dropdown with data from the 'currencies' collection.
+ * @param {string|null} selectedCurrencySymbol - The currency symbol to pre-select (optional).
+ */
 async function populateOpportunityCurrencyDropdown(selectedCurrencySymbol = null) {
     if (!currentUser) return;
-    await populateSelect(opportunityCurrencySelect, 'currencies', 'symbol', 'name', selectedCurrencySymbol); // Pass collection name as string
+    await populateSelect(opportunityCurrencySelect, 'currencies', 'symbol', 'name', selectedCurrencySymbol);
 }
 
-// Populate Opportunity Price Book Dropdown
+/**
+ * Populates the opportunity price book dropdown with data from the 'priceBooks' collection.
+ * @param {string|null} selectedPriceBookId - The price book ID to pre-select (optional).
+ */
 async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null) {
     if (!currentUser) return;
     const selectElement = opportunityPriceBookSelect;
     selectElement.innerHTML = '<option value="">Select a Price Book</option>';
-    const snapshot = await getDocs(query(collection(db, 'priceBooks'), orderBy('name'))); // Use collection(), query(), orderBy(), getDocs()
+    const snapshot = await getDocs(query(collection(db, 'priceBooks'), orderBy('name')));
     snapshot.forEach(doc => {
         const data = doc.data();
         const option = document.createElement('option');
@@ -814,59 +841,60 @@ async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null) 
     });
 }
 
-// Open Opportunity Modal
+// Event listener to open the Opportunity Modal for adding a new opportunity
 addOpportunityBtn.addEventListener('click', () => {
     opportunityForm.reset();
     opportunityIdInput.value = ''; // Clear ID for new opportunity
     opportunityModalTitle.textContent = 'Add New Opportunity';
-    populateOpportunityCustomerDropdown(); // Repopulate
-    populateOpportunityCurrencyDropdown(); // Repopulate
-    populateOpportunityPriceBookDropdown(); // Repopulate
+    populateOpportunityCustomerDropdown(); // Repopulate customer dropdown
+    populateOpportunityCurrencyDropdown(); // Repopulate currency dropdown
+    populateOpportunityPriceBookDropdown(); // Repopulate price book dropdown
     opportunityModal.style.display = 'flex';
 });
 
+// Event listener to close the Opportunity Modal
 closeOpportunityModalBtn.addEventListener('click', () => {
     opportunityModal.style.display = 'none';
 });
 
-// Save Opportunity
+// Event listener to save (add or update) an opportunity
 opportunityForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
 
-    // Get the display name of the selected customer for storage
+    // Get the display name of the selected customer for storage (denormalization)
     const selectedCustomerOption = opportunityCustomerSelect.options[opportunityCustomerSelect.selectedIndex];
     const customerName = selectedCustomerOption ? selectedCustomerOption.textContent : '';
 
     const opportunityData = {
-        name: opportunityNameInput.value,
+        name: opportunityNameInput.value.trim(),
         customerId: opportunityCustomerSelect.value, // Store customer ID
         customerName: customerName, // Store customer name for easier display/search
         currency: opportunityCurrencySelect.value, // This is the symbol
         priceBookId: opportunityPriceBookSelect.value, // Store price book ID
-        expectedStartDate: opportunityExpectedStartDateInput.value ? Timestamp.fromDate(new Date(opportunityExpectedStartDateInput.value)) : null, // Use Timestamp from modular SDK
-        expectedCloseDate: opportunityExpectedCloseDateInput.value ? Timestamp.fromDate(new Date(opportunityExpectedCloseDateInput.value)) : null, // Use Timestamp from modular SDK
+        expectedStartDate: opportunityExpectedStartDateInput.value ? Timestamp.fromDate(new Date(opportunityExpectedStartDateInput.value)) : null,
+        expectedCloseDate: opportunityExpectedCloseDateInput.value ? Timestamp.fromDate(new Date(opportunityExpectedCloseDateInput.value)) : null,
         salesStage: opportunitySalesStageSelect.value,
-        probability: parseInt(opportunityProbabilityInput.value, 10),
-        value: parseFloat(opportunityValueInput.value),
-        notes: opportunityNotesTextarea.value,
-        updatedAt: serverTimestamp() // Corrected: Use serverTimestamp() directly
+        probability: parseInt(opportunityProbabilityInput.value, 10), // Ensure it's an integer
+        value: parseFloat(opportunityValueInput.value), // Ensure it's a float
+        notes: opportunityNotesTextarea.value.trim(),
+        updatedAt: serverTimestamp()
     };
 
     try {
         if (opportunityIdInput.value) {
             // Update existing opportunity
-            await updateDoc(doc(db, 'opportunities', opportunityIdInput.value), opportunityData); // Use doc() and updateDoc()
+            await updateDoc(doc(db, 'opportunities', opportunityIdInput.value), opportunityData);
             showMessage('success', 'Success', 'Opportunity updated successfully!');
         } else {
             // Add new opportunity
-            opportunityData.createdAt = serverTimestamp(); // Corrected: Use serverTimestamp() directly
-            opportunityData.creatorId = currentUser.uid; // Assign creator
-            await addDoc(collection(db, 'opportunities'), opportunityData); // Use collection() and addDoc()
+            opportunityData.createdAt = serverTimestamp();
+            opportunityData.creatorId = currentUser.uid; // Assign current user as creator
+            await addDoc(collection(db, 'opportunities'), opportunityData);
             showMessage('success', 'Success', 'Opportunity added successfully!');
         }
         opportunityModal.style.display = 'none';
-        renderOpportunitiesGrid(); // Refresh the table
+        renderOpportunitiesGrid(); // Refresh the opportunities table
         updateDashboardStats(); // Update dashboard counts
     } catch (error) {
         console.error("Error saving opportunity:", error);
@@ -874,17 +902,21 @@ opportunityForm.addEventListener('submit', async (e) => {
     }
 });
 
-// Grid.js for Opportunities
+/**
+ * Renders or updates the Grid.js table for opportunities.
+ * Fetches opportunity data from Firestore and displays it.
+ */
 async function renderOpportunitiesGrid() {
     if (!currentUser) return;
 
-    let opportunitiesRef = query(collection(db, 'opportunities')); // Use collection() and query()
+    let opportunitiesRef = query(collection(db, 'opportunities'));
+    // Filter opportunities by creatorId if not an Admin
     if (currentUserRole !== 'Admin') {
-        opportunitiesRef = query(opportunitiesRef, where('creatorId', '==', currentUser.uid)); // Use query() and where()
+        opportunitiesRef = query(opportunitiesRef, where('creatorId', '==', currentUser.uid));
     }
     const opportunityData = [];
 
-    const snapshot = await getDocs(query(opportunitiesRef, orderBy('expectedCloseDate'))); // Use getDocs() and orderBy()
+    const snapshot = await getDocs(query(opportunitiesRef, orderBy('expectedCloseDate'))); // Order by expected close date
     snapshot.forEach(doc => {
         const data = doc.data();
         opportunityData.push([
@@ -901,13 +933,12 @@ async function renderOpportunitiesGrid() {
     });
 
     if (opportunitiesGrid) {
-        opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender();
+        opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender(); // Update existing grid
     } else {
         const containerElement = document.getElementById('opportunitiesTable');
         if (containerElement) {
-            containerElement.innerHTML = ''; // Clear existing content
+            containerElement.innerHTML = ''; // Clear existing content before rendering new grid
         }
-        // Use Grid and h directly from import
         opportunitiesGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
@@ -934,7 +965,6 @@ async function renderOpportunitiesGrid() {
                     filter: false,
                     formatter: (cell, row) => {
                         const docId = row.cells[0].data;
-                        // Use h directly from import
                         return h('div', { className: 'action-icons' },
                             h('span', {
                                 className: 'fa-solid fa-edit',
@@ -952,28 +982,15 @@ async function renderOpportunitiesGrid() {
             ],
             data: opportunityData,
             search: true,
-            pagination: {
-                enabled: true,
-                limit: 10,
-                summary: true
-            },
+            pagination: { enabled: true, limit: 10, summary: true },
             sort: true,
             resizable: true,
             className: {
-                container: 'gridjs-container',
-                table: 'gridjs-table',
-                thead: 'gridjs-thead',
-                th: 'gridjs-th',
-                td: 'gridjs-td',
-                tr: 'gridjs-tr',
-                footer: 'gridjs-footer',
-                pagination: 'gridjs-pagination',
-                'pagination-summary': 'gridjs-pagination-summary',
-                'pagination-gap': 'gridjs-pagination-gap',
-                'pagination-nav': 'gridjs-pagination-nav',
-                'pagination-nav-prev': 'gridjs-pagination-nav-prev',
-                'pagination-nav-next': 'gridjs-pagination-nav-next',
-                'pagination-btn': 'gridjs-pagination-btn',
+                container: 'gridjs-container', table: 'gridjs-table', thead: 'gridjs-thead', th: 'gridjs-th',
+                td: 'gridjs-td', tr: 'gridjs-tr', footer: 'gridjs-footer', pagination: 'gridjs-pagination',
+                'pagination-summary': 'gridjs-pagination-summary', 'pagination-gap': 'gridjs-pagination-gap',
+                'pagination-nav': 'gridjs-pagination-nav', 'pagination-nav-prev': 'gridjs-pagination-nav-prev',
+                'pagination-nav-next': 'gridjs-pagination-nav-next', 'pagination-btn': 'gridjs-pagination-btn',
                 'pagination-btn-current': 'gridjs-currentPage',
             },
             language: {
@@ -985,17 +1002,19 @@ async function renderOpportunitiesGrid() {
     }
 }
 
-
-// Edit Opportunity
+/**
+ * Populates the opportunity modal with existing data for editing.
+ * @param {string} opportunityId - The ID of the opportunity document to edit.
+ */
 async function editOpportunity(opportunityId) {
     if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
     if (currentUserRole !== 'Admin' && currentUserRole !== 'Standard') { showMessage('error', 'Access Denied', 'You do not have permission to edit opportunities.'); return; }
 
     try {
-        const docSnap = await getDoc(doc(db, 'opportunities', opportunityId)); // Use doc() and getDoc()
+        const docSnap = await getDoc(doc(db, 'opportunities', opportunityId));
         if (docSnap.exists()) {
             const data = docSnap.data();
-            // Ensure the user is authorized to edit this opportunity if not admin
+            // Further check if the current user is the creator (if not admin)
             if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
                 showMessage('error', 'Access Denied', 'You can only edit opportunities you have created.');
                 return;
@@ -1008,8 +1027,8 @@ async function editOpportunity(opportunityId) {
             await populateOpportunityCustomerDropdown(data.customerId);
             await populateOpportunityCurrencyDropdown(data.currency);
             await populateOpportunityPriceBookDropdown(data.priceBookId);
-            opportunityExpectedStartDateInput.value = data.expectedStartDate ? data.expectedStartDate.toDate().toISOString().split('T')[0] : '';
-            opportunityExpectedCloseDateInput.value = data.expectedCloseDate ? data.expectedCloseDate.toDate().toISOString().split('T')[0] : '';
+            opportunityExpectedStartDateInput.value = formatDateForInput(data.expectedStartDate);
+            opportunityExpectedCloseDateInput.value = formatDateForInput(data.expectedCloseDate);
             opportunitySalesStageSelect.value = data.salesStage || '';
             opportunityProbabilityInput.value = data.probability || 0;
             opportunityValueInput.value = data.value || 0;
@@ -1025,7 +1044,11 @@ async function editOpportunity(opportunityId) {
     }
 }
 
-// Delete Opportunity
+/**
+ * Deletes an opportunity document from Firestore.
+ * Requires Admin role or creator.
+ * @param {string} opportunityId - The ID of the opportunity document to delete.
+ */
 async function deleteOpportunity(opportunityId) {
     if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
     if (currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'You do not have permission to delete opportunities.'); return; }
@@ -1033,7 +1056,7 @@ async function deleteOpportunity(opportunityId) {
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this opportunity? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
-        await deleteDoc(doc(db, 'opportunities', opportunityId)); // Use doc() and deleteDoc()
+        await deleteDoc(doc(db, 'opportunities', opportunityId));
         showMessage('success', 'Success', 'Opportunity deleted successfully!');
         renderOpportunitiesGrid(); // Refresh the table
         updateDashboardStats(); // Update dashboard counts
@@ -1046,6 +1069,7 @@ async function deleteOpportunity(opportunityId) {
 
 // --- Admin Panel ---
 
+// Event listeners for switching between admin subsections
 adminSectionBtns.forEach(button => {
     button.addEventListener('click', () => {
         adminSectionBtns.forEach(btn => btn.classList.remove('active'));
@@ -1054,15 +1078,15 @@ adminSectionBtns.forEach(button => {
         button.classList.add('active');
         document.getElementById(`${button.dataset.adminTarget}Section`).classList.add('active');
 
-        // Render specific grids when their section is active
+        // Render specific grids and populate dropdowns when their section is active
         if (button.dataset.adminTarget === 'countriesStates') {
             renderCountriesStatesGrid();
         } else if (button.dataset.adminTarget === 'currencies') {
             renderCurrenciesGrid();
-            populateCurrencyCountryDropdown(); // NEW: Populate currency country dropdown when section is active
+            populateCurrencyCountryDropdown();
         } else if (button.dataset.adminTarget === 'priceBooks') {
             renderPriceBooksGrid();
-            populatePriceBookCurrencyDropdown(); // NEW: Populate currency dropdown for price book form
+            populatePriceBookCurrencyDropdown();
         } else if (button.dataset.adminTarget === 'settings') {
             loadAppSettings();
             populateDefaultCurrencyDropdown();
@@ -1071,26 +1095,29 @@ adminSectionBtns.forEach(button => {
     });
 });
 
-// Admin Cancel Buttons
+// Event listeners for admin form cancel buttons to reset forms
 document.querySelectorAll('.admin-form .cancel-edit-btn').forEach(button => {
     button.addEventListener('click', (e) => {
         e.target.closest('form').reset();
-        // Specific reset for hidden ID fields
         const hiddenInput = e.target.closest('form').querySelector('input[type="hidden"]');
         if (hiddenInput) hiddenInput.value = '';
     });
 });
 
+
 // --- Countries & States Management ---
 
-// Render Grid for Countries & States
+/**
+ * Renders or updates the Grid.js table for countries and their states.
+ * Fetches data from the 'countries' collection.
+ */
 async function renderCountriesStatesGrid() {
-    if (!currentUser || currentUserRole !== 'Admin') return;
+    if (!currentUser || currentUserRole !== 'Admin') return; // Only Admins can view/manage
 
-    const countriesRef = collection(db, 'countries'); // Use collection()
+    const countriesRef = collection(db, 'countries');
     const data = [];
 
-    const snapshot = await getDocs(query(countriesRef, orderBy('name'))); // Use getDocs() and orderBy()
+    const snapshot = await getDocs(query(countriesRef, orderBy('name')));
     snapshot.forEach(doc => {
         const country = doc.data();
         data.push([
@@ -1106,9 +1133,8 @@ async function renderCountriesStatesGrid() {
     } else {
         const containerElement = document.getElementById('countriesStatesTable');
         if (containerElement) {
-            containerElement.innerHTML = ''; // Clear existing content
+            containerElement.innerHTML = '';
         }
-        // Use Grid and h directly from import
         countriesStatesGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
@@ -1121,7 +1147,6 @@ async function renderCountriesStatesGrid() {
                     filter: false,
                     formatter: (cell, row) => {
                         const docId = row.cells[0].data;
-                        // Use h directly from import
                         return h('div', { className: 'action-icons' },
                             h('span', {
                                 className: 'fa-solid fa-edit',
@@ -1143,20 +1168,11 @@ async function renderCountriesStatesGrid() {
             sort: true,
             resizable: true,
             className: {
-                container: 'gridjs-container',
-                table: 'gridjs-table',
-                thead: 'gridjs-thead',
-                th: 'gridjs-th',
-                td: 'gridjs-td',
-                tr: 'gridjs-tr',
-                footer: 'gridjs-footer',
-                pagination: 'gridjs-pagination',
-                'pagination-summary': 'gridjs-pagination-summary',
-                'pagination-gap': 'gridjs-pagination-gap',
-                'pagination-nav': 'gridjs-pagination-nav',
-                'pagination-nav-prev': 'gridjs-pagination-nav-prev',
-                'pagination-nav-next': 'gridjs-pagination-nav-next',
-                'pagination-btn': 'gridjs-pagination-btn',
+                container: 'gridjs-container', table: 'gridjs-table', thead: 'gridjs-thead', th: 'gridjs-th',
+                td: 'gridjs-td', tr: 'gridjs-tr', footer: 'gridjs-footer', pagination: 'gridjs-pagination',
+                'pagination-summary': 'gridjs-pagination-summary', 'pagination-gap': 'gridjs-pagination-gap',
+                'pagination-nav': 'gridjs-pagination-nav', 'pagination-nav-prev': 'gridjs-pagination-nav-prev',
+                'pagination-nav-next': 'gridjs-pagination-nav-next', 'pagination-btn': 'gridjs-pagination-btn',
                 'pagination-btn-current': 'gridjs-currentPage',
             },
             language: {
@@ -1168,43 +1184,53 @@ async function renderCountriesStatesGrid() {
     }
 }
 
-// Edit Country/State
+/**
+ * Populates the country/state form with existing data for editing.
+ * @param {string} id - The ID of the country document to edit.
+ */
 async function editCountryState(id) {
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     try {
-        const docSnap = await getDoc(doc(db, 'countries', id)); // Use doc() and getDoc()
+        const docSnap = await getDoc(doc(db, 'countries', id));
         if (docSnap.exists()) {
             const data = docSnap.data();
             countryStateIdInput.value = docSnap.id;
             countryNameInput.value = data.name || '';
             countryCodeInput.value = data.code || '';
             countryStatesInput.value = data.states ? data.states.join(', ') : '';
+        } else {
+            showMessage('error', 'Not Found', 'Country not found!');
         }
     } catch (error) {
         console.error("Error loading country for edit:", error);
+        showMessage('error', 'Error Loading Country', 'Error loading country for edit: ' + error.message);
     }
 }
 
-// Delete Country/State
+/**
+ * Deletes a country document from Firestore.
+ * Requires Admin role.
+ * @param {string} id - The ID of the country document to delete.
+ */
 async function deleteCountryState(id) {
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     
-    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this country? If you are sure, click OK and then click the trash icon again.');
+    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this country? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
-        await deleteDoc(doc(db, 'countries', id)); // Use doc() and deleteDoc()
+        await deleteDoc(doc(db, 'countries', id));
         showMessage('success', 'Success', 'Country deleted!');
-        renderCountriesStatesGrid();
+        renderCountriesStatesGrid(); // Refresh grid
         populateCustomerCountryDropdown(); // Refresh customer dropdown
         populateDefaultCountryDropdown(); // Refresh settings dropdown
-        populateCurrencyCountryDropdown(); // NEW: Refresh currency country dropdown
+        populateCurrencyCountryDropdown(); // Refresh currency country dropdown
     } catch (error) {
         console.error("Error deleting country:", error);
         showMessage('error', 'Error Deleting Country', 'Error deleting country: ' + error.message);
     }
 }
 
-// Save Country/State
+// Event listener to save (add or update) a country/state
 countryStateForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
@@ -1212,29 +1238,30 @@ countryStateForm.addEventListener('submit', async (e) => {
     const countryData = {
         name: countryNameInput.value.trim(),
         code: countryCodeInput.value.trim().toUpperCase(),
-        states: countryStatesInput.value.split(',').map(s => s.trim()).filter(s => s !== '')
+        states: countryStatesInput.value.split(',').map(s => s.trim()).filter(s => s !== '') // Split by comma, trim, filter empty strings
     };
 
     try {
         if (countryStateIdInput.value) {
-            await updateDoc(doc(db, 'countries', countryStateIdInput.value), countryData); // Use doc() and updateDoc()
+            await updateDoc(doc(db, 'countries', countryStateIdInput.value), countryData);
             showMessage('success', 'Success', 'Country updated!');
         } else {
-            await addDoc(collection(db, 'countries'), countryData); // Use collection() and addDoc()
+            await addDoc(collection(db, 'countries'), countryData);
             showMessage('success', 'Success', 'Country added!');
         }
         countryStateForm.reset();
         countryStateIdInput.value = '';
-        renderCountriesStatesGrid();
+        renderCountriesStatesGrid(); // Refresh grid
         populateCustomerCountryDropdown(); // Refresh customer dropdown
         populateDefaultCountryDropdown(); // Refresh settings dropdown
-        populateCurrencyCountryDropdown(); // NEW: Refresh currency country dropdown
+        populateCurrencyCountryDropdown(); // Refresh currency country dropdown
     } catch (error) {
         console.error("Error saving country:", error);
         showMessage('error', 'Error Saving Country', 'Error saving country: ' + error.message);
     }
 });
 
+// Event listener for the cancel button on the country/state form
 cancelCountryStateEditBtn.addEventListener('click', () => {
     countryStateForm.reset();
     countryStateIdInput.value = '';
@@ -1243,25 +1270,31 @@ cancelCountryStateEditBtn.addEventListener('click', () => {
 
 // --- Currencies Management ---
 
-// NEW: Populate Currency Country Dropdown
+/**
+ * Populates the currency country dropdown with data from the 'countries' collection.
+ * @param {string|null} selectedCountry - The country name to pre-select (optional).
+ */
 async function populateCurrencyCountryDropdown(selectedCountry = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
-    await populateSelect(currencyCountrySelect, 'countries', 'name', 'name', selectedCountry); // Pass collection name as string
+    await populateSelect(currencyCountrySelect, 'countries', 'name', 'name', selectedCountry);
 }
 
-// Render Grid for Currencies
+/**
+ * Renders or updates the Grid.js table for currencies.
+ * Fetches data from the 'currencies' collection.
+ */
 async function renderCurrenciesGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return;
 
-    const currenciesRef = collection(db, 'currencies'); // Use collection()
+    const currenciesRef = collection(db, 'currencies');
     const data = [];
 
-    const snapshot = await getDocs(query(currenciesRef, orderBy('country'), orderBy('name'))); // Use getDocs() and orderBy()
+    const snapshot = await getDocs(query(currenciesRef, orderBy('country'), orderBy('name'))); // Order by country then name
     snapshot.forEach(doc => {
         const currency = doc.data();
         data.push([
             doc.id, // Hidden ID for actions
-            currency.country || '', // NEW: Display country first
+            currency.country || '',
             currency.name,
             currency.symbol
         ]);
@@ -1272,13 +1305,12 @@ async function renderCurrenciesGrid() {
     } else {
         const containerElement = document.getElementById('currenciesTable');
         if (containerElement) {
-            containerElement.innerHTML = ''; // Clear existing content
+            containerElement.innerHTML = '';
         }
-        // Use Grid and h directly from import
         currenciesGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
-                { id: 'country', name: 'Country', sort: true, filter: true }, // NEW: Country column first
+                { id: 'country', name: 'Country', sort: true, filter: true },
                 { id: 'name', name: 'Currency Name', sort: true, filter: true },
                 { id: 'symbol', name: 'Symbol', sort: true, filter: true },
                 {
@@ -1287,7 +1319,6 @@ async function renderCurrenciesGrid() {
                     filter: false,
                     formatter: (cell, row) => {
                         const docId = row.cells[0].data;
-                        // Use h directly from import
                         return h('div', { className: 'action-icons' },
                             h('span', {
                                 className: 'fa-solid fa-edit',
@@ -1309,20 +1340,11 @@ async function renderCurrenciesGrid() {
             sort: true,
             resizable: true,
             className: {
-                container: 'gridjs-container',
-                table: 'gridjs-table',
-                thead: 'gridjs-thead',
-                th: 'gridjs-th',
-                td: 'gridjs-td',
-                tr: 'gridjs-tr',
-                footer: 'gridjs-footer',
-                pagination: 'gridjs-pagination',
-                'pagination-summary': 'gridjs-pagination-summary',
-                'pagination-gap': 'gridjs-pagination-gap',
-                'pagination-nav': 'gridjs-pagination-nav',
-                'pagination-nav-prev': 'gridjs-pagination-nav-prev',
-                'pagination-nav-next': 'gridjs-pagination-nav-next',
-                'pagination-btn': 'gridjs-pagination-btn',
+                container: 'gridjs-container', table: 'gridjs-table', thead: 'gridjs-thead', th: 'gridjs-th',
+                td: 'gridjs-td', tr: 'gridjs-tr', footer: 'gridjs-footer', pagination: 'gridjs-pagination',
+                'pagination-summary': 'gridjs-pagination-summary', 'pagination-gap': 'gridjs-pagination-gap',
+                'pagination-nav': 'gridjs-pagination-nav', 'pagination-nav-prev': 'gridjs-pagination-nav-prev',
+                'pagination-nav-next': 'gridjs-pagination-nav-next', 'pagination-btn': 'gridjs-pagination-btn',
                 'pagination-btn-current': 'gridjs-currentPage',
             },
             language: {
@@ -1334,55 +1356,65 @@ async function renderCurrenciesGrid() {
     }
 }
 
-// Edit Currency
+/**
+ * Populates the currency form with existing data for editing.
+ * @param {string} id - The ID of the currency document to edit.
+ */
 async function editCurrency(id) {
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     try {
-        const docSnap = await getDoc(doc(db, 'currencies', id)); // Use doc() and getDoc()
+        const docSnap = await getDoc(doc(db, 'currencies', id));
         if (docSnap.exists()) {
             const data = docSnap.data();
             currencyIdInput.value = docSnap.id;
             currencyNameInput.value = data.name || '';
             currencySymbolInput.value = data.symbol || '';
-            await populateCurrencyCountryDropdown(data.country); // NEW: Pre-select country
+            await populateCurrencyCountryDropdown(data.country); // Pre-select country
+        } else {
+            showMessage('error', 'Not Found', 'Currency not found!');
         }
     } catch (error) {
         console.error("Error loading currency for edit:", error);
+        showMessage('error', 'Error Loading Currency', 'Error loading currency for edit: ' + error.message);
     }
 }
 
-// Delete Currency
+/**
+ * Deletes a currency document from Firestore.
+ * Requires Admin role.
+ * @param {string} id - The ID of the currency document to delete.
+ */
 async function deleteCurrency(id) {
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     
-    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this currency? If you are sure, click OK and then click the trash icon again.');
+    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this currency? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
-        await deleteDoc(doc(db, 'currencies', id)); // Use doc() and deleteDoc()
+        await deleteDoc(doc(db, 'currencies', id));
         showMessage('success', 'Success', 'Currency deleted!');
-        renderCurrenciesGrid();
+        renderCurrenciesGrid(); // Refresh grid
         populateOpportunityCurrencyDropdown(); // Refresh opportunity dropdown
         populateDefaultCurrencyDropdown(); // Refresh settings dropdown
-        populatePriceBookCurrencyDropdown(); // NEW: Refresh price book currency dropdown
+        populatePriceBookCurrencyDropdown(); // Refresh price book currency dropdown
     } catch (error) {
         console.error("Error deleting currency:", error);
         showMessage('error', 'Error Deleting Currency', 'Error deleting currency: ' + error.message);
     }
 }
 
-// Save Currency
+// Event listener to save (add or update) a currency
 currencyForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
 
     const currencyData = {
-        country: currencyCountrySelect.value, // NEW: Save selected country
+        country: currencyCountrySelect.value,
         name: currencyNameInput.value.trim(),
         symbol: currencySymbolInput.value.trim()
     };
 
     try {
-        // --- Duplicate Validation (Client-Side) ---
+        // --- Client-Side Uniqueness Validation for Currency (Country, Name, Symbol) ---
         let q = query(
             collection(db, 'currencies'),
             where('country', '==', currencyData.country),
@@ -1394,7 +1426,7 @@ currencyForm.addEventListener('submit', async (e) => {
 
         let isDuplicate = false;
         if (currencyIdInput.value) {
-            // Editing existing currency: check if duplicate exists excluding current doc
+            // Editing existing currency: check if duplicate exists excluding the current document being edited
             existingCurrenciesSnapshot.forEach(doc => {
                 if (doc.id !== currencyIdInput.value) {
                     isDuplicate = true;
@@ -1409,29 +1441,30 @@ currencyForm.addEventListener('submit', async (e) => {
 
         if (isDuplicate) {
             showMessage('error', 'Duplicate Entry', 'A currency with this Country, Name, and Symbol already exists. Please ensure the combination is unique.');
-            return; // Stop the function if duplicate
+            return; // Stop the function if duplicate is found
         }
         // --- End Duplicate Validation ---
 
         if (currencyIdInput.value) {
-            await updateDoc(doc(db, 'currencies', currencyIdInput.value), currencyData); // Use doc() and updateDoc()
+            await updateDoc(doc(db, 'currencies', currencyIdInput.value), currencyData);
             showMessage('success', 'Success', 'Currency updated!');
         } else {
-            await addDoc(collection(db, 'currencies'), currencyData); // Use collection() and addDoc()
+            await addDoc(collection(db, 'currencies'), currencyData);
             showMessage('success', 'Success', 'Currency added!');
         }
         currencyForm.reset();
         currencyIdInput.value = '';
-        renderCurrenciesGrid();
+        renderCurrenciesGrid(); // Refresh grid
         populateOpportunityCurrencyDropdown(); // Refresh opportunity dropdown
         populateDefaultCurrencyDropdown(); // Refresh settings dropdown
-        populatePriceBookCurrencyDropdown(); // NEW: Refresh price book currency dropdown
+        populatePriceBookCurrencyDropdown(); // Refresh price book currency dropdown
     } catch (error) {
         console.error("Error saving currency:", error);
         showMessage('error', 'Error Saving Currency', 'Error saving currency: ' + error.message);
     }
 });
 
+// Event listener for the cancel button on the currency form
 cancelCurrencyEditBtn.addEventListener('click', () => {
     currencyForm.reset();
     currencyIdInput.value = '';
@@ -1440,31 +1473,37 @@ cancelCurrencyEditBtn.addEventListener('click', () => {
 
 // --- Price Books Management ---
 
-// NEW: Populate Price Book Currency Dropdown
+/**
+ * Populates the price book currency dropdown with data from the 'currencies' collection.
+ * @param {string|null} selectedCurrencySymbol - The currency symbol to pre-select (optional).
+ */
 async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
-    await populateSelect(priceBookCurrencySelect, 'currencies', 'symbol', 'name', selectedCurrencySymbol); // Pass collection name as string
+    await populateSelect(priceBookCurrencySelect, 'currencies', 'symbol', 'name', selectedCurrencySymbol);
 }
 
 
-// Render Grid for Price Books
+/**
+ * Renders or updates the Grid.js table for price books.
+ * Fetches data from the 'priceBooks' collection.
+ */
 async function renderPriceBooksGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return;
 
-    const priceBooksRef = collection(db, 'priceBooks'); // Use collection()
+    const priceBooksRef = collection(db, 'priceBooks');
     const data = [];
 
-    const snapshot = await getDocs(query(priceBooksRef, orderBy('name'))); // Use getDocs() and orderBy()
+    const snapshot = await getDocs(query(priceBooksRef, orderBy('name'))); // Order by name
     snapshot.forEach(doc => {
         const priceBook = doc.data();
         data.push([
             doc.id, // Hidden ID for actions
             priceBook.name,
             priceBook.description,
-            priceBook.currency || '', // Display currency
-            priceBook.isActive, // New field
-            priceBook.validFrom, // New field
-            priceBook.validTo // New field
+            priceBook.currency || '',
+            priceBook.isActive,
+            priceBook.validFrom,
+            priceBook.validTo
         ]);
     });
 
@@ -1473,25 +1512,23 @@ async function renderPriceBooksGrid() {
     } else {
         const containerElement = document.getElementById('priceBooksTable');
         if (containerElement) {
-            containerElement.innerHTML = ''; // Clear existing content
+            containerElement.innerHTML = '';
         }
-        // Use Grid and h directly from import
         priceBooksGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
                 { id: 'name', name: 'Price Book Name', sort: true, filter: true },
                 { id: 'description', name: 'Description', sort: true, filter: true },
-                { id: 'currency', name: 'Currency', sort: true, filter: true }, // Currency column
-                { id: 'isActive', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' }, // New column
-                { id: 'validFrom', name: 'Valid From', sort: true, formatter: (cell) => formatDateForDisplay(cell) }, // New column
-                { id: 'validTo', name: 'Valid To', sort: true, formatter: (cell) => formatDateForDisplay(cell) }, // New column
+                { id: 'currency', name: 'Currency', sort: true, filter: true },
+                { id: 'isActive', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
+                { id: 'validFrom', name: 'Valid From', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
+                { id: 'validTo', name: 'Valid To', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
                 {
                     name: 'Actions',
                     sort: false,
                     filter: false,
                     formatter: (cell, row) => {
                         const docId = row.cells[0].data;
-                        // Use h directly from import
                         return h('div', { className: 'action-icons' },
                             h('span', {
                                 className: 'fa-solid fa-edit',
@@ -1513,20 +1550,11 @@ async function renderPriceBooksGrid() {
             sort: true,
             resizable: true,
             className: {
-                container: 'gridjs-container',
-                table: 'gridjs-table',
-                thead: 'gridjs-thead',
-                th: 'gridjs-th',
-                td: 'gridjs-td',
-                tr: 'gridjs-tr',
-                footer: 'gridjs-footer',
-                pagination: 'gridjs-pagination',
-                'pagination-summary': 'gridjs-pagination-summary',
-                'pagination-gap': 'gridjs-pagination-gap',
-                'pagination-nav': 'gridjs-pagination-nav',
-                'pagination-nav-prev': 'gridjs-pagination-nav-prev',
-                'pagination-nav-next': 'gridjs-pagination-nav-next',
-                'pagination-btn': 'gridjs-pagination-btn',
+                container: 'gridjs-container', table: 'gridjs-table', thead: 'gridjs-thead', th: 'gridjs-th',
+                td: 'gridjs-td', tr: 'gridjs-tr', footer: 'gridjs-footer', pagination: 'gridjs-pagination',
+                'pagination-summary': 'gridjs-pagination-summary', 'pagination-gap': 'gridjs-pagination-gap',
+                'pagination-nav': 'gridjs-pagination-nav', 'pagination-nav-prev': 'gridjs-pagination-nav-prev',
+                'pagination-nav-next': 'gridjs-pagination-nav-next', 'pagination-btn': 'gridjs-pagination-btn',
                 'pagination-btn-current': 'gridjs-currentPage',
             },
             language: {
@@ -1538,35 +1566,44 @@ async function renderPriceBooksGrid() {
     }
 }
 
-// Edit Price Book
+/**
+ * Populates the price book form with existing data for editing.
+ * @param {string} id - The ID of the price book document to edit.
+ */
 async function editPriceBook(id) {
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     try {
-        const docSnap = await getDoc(doc(db, 'priceBooks', id)); // Use doc() and getDoc()
+        const docSnap = await getDoc(doc(db, 'priceBooks', id));
         if (docSnap.exists()) {
             const data = docSnap.data();
             priceBookIdInput.value = docSnap.id;
             priceBookNameInput.value = data.name || '';
             priceBookDescriptionTextarea.value = data.description || '';
             await populatePriceBookCurrencyDropdown(data.currency); // Pre-select currency
-            // NEW: Populate new fields
             priceBookIsActiveSelect.value = data.isActive ? 'Yes' : 'No';
             priceBookValidFromInput.value = formatDateForInput(data.validFrom);
             priceBookValidToInput.value = formatDateForInput(data.validTo);
+        } else {
+            showMessage('error', 'Not Found', 'Price Book not found!');
         }
     } catch (error) {
         console.error("Error loading price book for edit:", error);
+        showMessage('error', 'Error Loading Price Book', 'Error loading price book for edit: ' + error.message);
     }
 }
 
-// Delete Price Book
+/**
+ * Deletes a price book document and its corresponding uniqueness index document.
+ * Requires Admin role.
+ * @param {string} id - The ID of the price book document to delete.
+ */
 async function deletePriceBook(id) {
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this price book? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
-        // Get the price book data to construct the index ID *before* deleting the main doc
+        // First, retrieve the price book data to get name and currency for the index ID
         const priceBookDoc = await getDoc(doc(db, 'priceBooks', id));
         let indexIdToDelete = null;
         if (priceBookDoc.exists()) {
@@ -1577,13 +1614,13 @@ async function deletePriceBook(id) {
         // Delete the main price book document
         await deleteDoc(doc(db, 'priceBooks', id));
 
-        // Delete the corresponding index document if it was found
+        // If an index ID was successfully derived, delete the corresponding index document
         if (indexIdToDelete) {
             await deleteDoc(doc(db, 'priceBookNameCurrencyIndexes', indexIdToDelete));
         }
 
         showMessage('success', 'Success', 'Price Book deleted!');
-        renderPriceBooksGrid();
+        renderPriceBooksGrid(); // Refresh the grid
         populateOpportunityPriceBookDropdown(); // Refresh opportunity dropdown
     }
     catch (error) {
@@ -1592,7 +1629,7 @@ async function deletePriceBook(id) {
     }
 }
 
-// Save Price Book
+// Event listener to save (add or update) a price book
 priceBookForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
@@ -1600,7 +1637,7 @@ priceBookForm.addEventListener('submit', async (e) => {
     const priceBookData = {
         name: priceBookNameInput.value.trim(),
         description: priceBookDescriptionTextarea.value.trim(),
-        currency: priceBookCurrencySelect.value, // Save selected currency
+        currency: priceBookCurrencySelect.value,
         isActive: priceBookIsActiveSelect.value === 'Yes', // Convert to boolean
         validFrom: priceBookValidFromInput.value ? Timestamp.fromDate(new Date(priceBookValidFromInput.value)) : null,
         validTo: priceBookValidToInput.value ? Timestamp.fromDate(new Date(priceBookValidToInput.value)) : null,
@@ -1610,7 +1647,7 @@ priceBookForm.addEventListener('submit', async (e) => {
     const newIndexId = getPriceBookIndexId(priceBookData.name, priceBookData.currency);
 
     try {
-        // --- Client-Side Uniqueness Validation ---
+        // --- Client-Side Uniqueness Validation for Price Book (Name, Currency) ---
         const existingIndexDoc = await getDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId));
 
         if (existingIndexDoc.exists()) {
@@ -1618,7 +1655,7 @@ priceBookForm.addEventListener('submit', async (e) => {
             // Check if it's the *same* document being edited.
             if (existingIndexDoc.data().priceBookId !== currentPriceBookId) {
                 showMessage('error', 'Duplicate Entry', 'A price book with this Name and Currency already exists. Please choose a unique combination.');
-                return; // Stop the function if duplicate
+                return; // Stop the function if duplicate is found
             }
         }
         // --- End Client-Side Uniqueness Validation ---
@@ -1632,7 +1669,7 @@ priceBookForm.addEventListener('submit', async (e) => {
 
             // Update the index document:
             // If name/currency changed, delete old index and create new one.
-            // Otherwise, just update the existing index (though no data changes for it).
+            // Otherwise, no need to update the index document itself as its content is just the ID.
             const oldPriceBookDoc = await getDoc(doc(db, 'priceBooks', currentPriceBookId));
             const oldPriceBookData = oldPriceBookDoc.data();
             const oldIndexId = getPriceBookIndexId(oldPriceBookData.name, oldPriceBookData.currency);
@@ -1640,9 +1677,9 @@ priceBookForm.addEventListener('submit', async (e) => {
             if (oldIndexId !== newIndexId) {
                 // Name or currency changed, delete old index
                 await deleteDoc(doc(db, 'priceBookNameCurrencyIndexes', oldIndexId));
-                // Create new index
+                // Create new index with the new combination
                 await setDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId), {
-                    priceBookId: currentPriceBookId,
+                    priceBookId: currentPriceBookId, // Still points to the same main price book document
                     priceBookName: priceBookData.name,
                     priceBookCurrency: priceBookData.currency
                 });
@@ -1651,9 +1688,9 @@ priceBookForm.addEventListener('submit', async (e) => {
             // Add new price book
             // Set defaults for new records if not provided
             if (priceBookData.isActive === null) priceBookData.isActive = true; // Default to true if not explicitly set
-            if (!priceBookData.validFrom) priceBookData.validFrom = serverTimestamp(); // Default to sysdate if empty for new records
+            if (!priceBookData.validFrom) priceBookData.validFrom = serverTimestamp(); // Default to server timestamp if empty for new records
 
-            const newDocRef = await addDoc(collection(db, 'priceBooks'), priceBookData); // Use addDoc() to get new docRef
+            const newDocRef = await addDoc(collection(db, 'priceBooks'), priceBookData);
             docRef = newDocRef; // Assign to docRef for index creation
             showMessage('success', 'Success', 'Price Book added!');
 
@@ -1666,7 +1703,7 @@ priceBookForm.addEventListener('submit', async (e) => {
         }
         priceBookForm.reset();
         priceBookIdInput.value = '';
-        renderPriceBooksGrid();
+        renderPriceBooksGrid(); // Refresh grid
         populateOpportunityPriceBookDropdown(); // Refresh opportunity dropdown
     } catch (error) {
         console.error("Error saving price book:", error);
@@ -1674,10 +1711,11 @@ priceBookForm.addEventListener('submit', async (e) => {
     }
 });
 
+// Event listener for the cancel button on the price book form
 cancelPriceBookEditBtn.addEventListener('click', () => {
     priceBookForm.reset();
     priceBookIdInput.value = '';
-    // NEW: Reset Price Book specific fields on cancel
+    // Reset Price Book specific fields to their defaults on cancel
     priceBookIsActiveSelect.value = 'Yes';
     priceBookValidFromInput.value = '';
     priceBookValidToInput.value = '';
@@ -1686,24 +1724,33 @@ cancelPriceBookEditBtn.addEventListener('click', () => {
 
 // --- App Settings Management ---
 
-// Populate Default Currency Dropdown
+/**
+ * Populates the default currency dropdown with data from the 'currencies' collection.
+ * @param {string|null} selectedCurrencySymbol - The currency symbol to pre-select (optional).
+ */
 async function populateDefaultCurrencyDropdown(selectedCurrencySymbol = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
-    await populateSelect(defaultCurrencySelect, 'currencies', 'symbol', 'name', selectedCurrencySymbol); // Pass collection name as string
+    await populateSelect(defaultCurrencySelect, 'currencies', 'symbol', 'name', selectedCurrencySymbol);
 }
 
-// Populate Default Country Dropdown
+/**
+ * Populates the default country dropdown with data from the 'countries' collection.
+ * @param {string|null} selectedCountryName - The country name to pre-select (optional).
+ */
 async function populateDefaultCountryDropdown(selectedCountryName = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
-    await populateSelect(defaultCountrySelect, 'countries', 'name', 'name', selectedCountryName); // Pass collection name as string
+    await populateSelect(defaultCountrySelect, 'countries', 'name', 'name', selectedCountryName);
 }
 
-// Load App Settings
+/**
+ * Loads and displays the application settings from Firestore.
+ * Requires Admin role.
+ */
 async function loadAppSettings() {
     if (!currentUser || currentUserRole !== 'Admin') return;
     try {
-        const settingsRef = doc(db, 'settings', 'appSettings'); // Use doc()
-        const docSnap = await getDoc(settingsRef); // Use getDoc()
+        const settingsRef = doc(db, 'settings', 'appSettings'); // Assuming a single document for app settings
+        const docSnap = await getDoc(settingsRef);
 
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -1711,7 +1758,7 @@ async function loadAppSettings() {
             await populateDefaultCurrencyDropdown(data.defaultCurrency);
             await populateDefaultCountryDropdown(data.defaultCountry);
         } else {
-            // No settings document yet, reset form
+            // No settings document yet, reset form and dropdowns to default "Select..."
             appSettingsForm.reset();
             settingsDocIdInput.value = '';
             populateDefaultCurrencyDropdown();
@@ -1723,7 +1770,7 @@ async function loadAppSettings() {
     }
 }
 
-// Save App Settings
+// Event listener to save application settings
 appSettingsForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
@@ -1731,34 +1778,37 @@ appSettingsForm.addEventListener('submit', async (e) => {
     const settingsData = {
         defaultCurrency: defaultCurrencySelect.value,
         defaultCountry: defaultCountrySelect.value,
-        updatedAt: serverTimestamp() // Corrected: Use serverTimestamp() directly
+        updatedAt: serverTimestamp() // Set or update timestamp
     };
 
     try {
-        const settingsDocRef = doc(db, 'settings', 'appSettings'); // Use doc()
+        const settingsDocRef = doc(db, 'settings', 'appSettings'); // Reference to the specific settings document
         if (settingsDocIdInput.value) {
-            await updateDoc(settingsDocRef, settingsData); // Use updateDoc()
-            showMessage('success', 'Success', 'App settings saved successfully!');
+            // Update existing settings document
+            await updateDoc(settingsDocRef, settingsData);
         } else {
-            settingsData.createdAt = serverTimestamp(); // Corrected: Use serverTimestamp() directly
-            await setDoc(settingsDocRef, settingsData); // Use setDoc()
+            // Create new settings document (if it doesn't exist)
+            settingsData.createdAt = serverTimestamp(); // Set creation timestamp for new record
+            await setDoc(settingsDocRef, settingsData); // Use setDoc to create with a specific ID
             settingsDocIdInput.value = 'appSettings'; // Set the ID after creation
         }
         showMessage('success', 'Success', 'App settings saved successfully!');
-        loadAppSettings(); // Reload to confirm
+        loadAppSettings(); // Reload to confirm changes
     } catch (error) {
         console.error("Error saving app settings:", error);
         showMessage('error', 'Error Saving Settings', 'Error saving app settings: ' + error.message);
     }
 });
 
+// Event listener for the cancel button on the app settings form
 cancelSettingsEditBtn.addEventListener('click', () => {
-    loadAppSettings(); // Revert to current settings
+    loadAppSettings(); // Revert to current settings by reloading them
 });
 
 
 // --- Initial Load ---
-// This will trigger authentication check and subsequent data loading
+// This will trigger the authentication check and subsequent data loading and UI rendering.
+// It ensures that the app initializes correctly after the DOM is fully loaded.
 document.addEventListener('DOMContentLoaded', () => {
     // Manually trigger the active class on the dashboard button
     // This will initiate the auth check and subsequent grid rendering
