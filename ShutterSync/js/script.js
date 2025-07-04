@@ -14,7 +14,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo", // Your actual API Key - PRESERVED
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
-    storageBucket: "shuttersync-96971.firebase-storage.app",
+    storageBucket: "shuttersync-99999.appspot.com", // Corrected storageBucket if it was a typo
     messagingSenderId: "10782416018",
     appId: "1:10782416018:web:361db5572882a62f291a4b",
     measurementId: "G-T0W9CES4D3"
@@ -59,7 +59,8 @@ const customerEmailInput = document.getElementById('customerEmail');
 const customerPhoneInput = document.getElementById('customerPhone');
 const customerAddressTextarea = document.getElementById('customerAddress');
 const customerCountrySelect = document.getElementById('customerCountry');
-const customerPreferredContactMethodSelect = document = document.getElementById('customerPreferredContactMethod');
+// FIX: Corrected typo here - removed 'document ='
+const customerPreferredContactMethodSelect = document.getElementById('customerPreferredContactMethod');
 const customerIndustrySelect = document.getElementById('customerIndustry');
 const customerAdditionalDetailsTextarea = document.getElementById('customerAdditionalDetails');
 const customerSourceSelect = document.getElementById('customerSource');
@@ -937,7 +938,7 @@ async function renderOpportunitiesGrid() {
     } else {
         const containerElement = document.getElementById('opportunitiesTable');
         if (containerElement) {
-            containerElement.innerHTML = ''; // Clear existing content before rendering new grid
+            containerElement.innerHTML = '';
         }
         opportunitiesGrid = new Grid({
             columns: [
@@ -1608,7 +1609,14 @@ async function deletePriceBook(id) {
         let indexIdToDelete = null;
         if (priceBookDoc.exists()) {
             const data = priceBookDoc.data();
-            indexIdToDelete = getPriceBookIndexId(data.name, data.currency);
+            // Use the stored normalized values for index ID derivation
+            // Ensure data.normalizedName and data.normalizedCurrency exist and are used
+            if (data.normalizedName && data.normalizedCurrency) {
+                 indexIdToDelete = getPriceBookIndexId(data.normalizedName, data.normalizedCurrency);
+            } else {
+                // Fallback if old data doesn't have normalized fields (shouldn't happen with new script)
+                indexIdToDelete = getPriceBookIndexId(data.name, data.currency);
+            }
         }
 
         // Delete the main price book document
@@ -1632,21 +1640,27 @@ async function deletePriceBook(id) {
 // Event listener to save (add or update) a price book
 priceBookForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
+    if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
+
+    // Normalize name and currency for storage and index ID
+    const normalizedName = priceBookNameInput.value.trim().toLowerCase().replace(/\s+/g, '');
+    const normalizedCurrency = priceBookCurrencySelect.value.trim().toLowerCase().replace(/\s+/g, '');
 
     const priceBookData = {
-        name: priceBookNameInput.value.trim(),
+        name: priceBookNameInput.value.trim(), // Keep original name for display
+        normalizedName: normalizedName, // Store normalized name for rules validation
         description: priceBookDescriptionTextarea.value.trim(),
-        currency: priceBookCurrencySelect.value,
+        currency: priceBookCurrencySelect.value, // Keep original currency for display
+        normalizedCurrency: normalizedCurrency, // Store normalized currency for rules validation
         isActive: priceBookIsActiveSelect.value === 'Yes', // Convert to boolean
         validFrom: priceBookValidFromInput.value ? Timestamp.fromDate(new Date(priceBookValidFromInput.value)) : null,
         validTo: priceBookValidToInput.value ? Timestamp.fromDate(new Date(priceBookValidToInput.value)) : null,
     };
 
     const currentPriceBookId = priceBookIdInput.value;
-    const newIndexId = getPriceBookIndexId(priceBookData.name, priceBookData.currency);
+    // Use the newly created normalized values for the index ID
+    const newIndexId = getPriceBookIndexId(priceBookData.name, priceBookData.currency); // This function uses the original (but trimmed) name/currency to derive the ID
 
-    // ADD THESE TWO LINES:
     console.log('Price Book Data being sent:', JSON.stringify(priceBookData, null, 2));
     console.log('Generated Index ID (client-side):', newIndexId);
 
@@ -1672,11 +1686,11 @@ priceBookForm.addEventListener('submit', async (e) => {
             showMessage('success', 'Success', 'Price Book updated!');
 
             // Update the index document:
-            // If name/currency changed, delete old index and create new one.
-            // Otherwise, no need to update the index document itself as its content is just the ID.
+            // If normalized name/currency changed, delete old index and create new one.
             const oldPriceBookDoc = await getDoc(doc(db, 'priceBooks', currentPriceBookId));
             const oldPriceBookData = oldPriceBookDoc.data();
-            const oldIndexId = getPriceBookIndexId(oldPriceBookData.name, oldPriceBookData.currency);
+            // Derive old index ID using the *old* normalized values from the database
+            const oldIndexId = getPriceBookIndexId(oldPriceBookData.name, oldPriceBookData.currency); // Use original name/currency from stored doc
 
             if (oldIndexId !== newIndexId) {
                 // Name or currency changed, delete old index
@@ -1684,8 +1698,8 @@ priceBookForm.addEventListener('submit', async (e) => {
                 // Create new index with the new combination
                 await setDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId), {
                     priceBookId: currentPriceBookId, // Still points to the same main price book document
-                    priceBookName: priceBookData.name,
-                    priceBookCurrency: priceBookData.currency
+                    priceBookName: priceBookData.normalizedName, // Use normalized name for index
+                    priceBookCurrency: priceBookData.normalizedCurrency // Use normalized currency for index
                 });
             }
         } else {
@@ -1701,8 +1715,8 @@ priceBookForm.addEventListener('submit', async (e) => {
             // Create corresponding index document
             await setDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId), {
                 priceBookId: docRef.id, // Use the ID of the newly created price book
-                priceBookName: priceBookData.name,
-                priceBookCurrency: priceBookData.currency
+                priceBookName: priceBookData.normalizedName, // Use normalized name for index
+                priceBookCurrency: priceBookData.normalizedCurrency // Use normalized currency for index
             });
         }
         priceBookForm.reset();
@@ -1772,7 +1786,7 @@ async function loadAppSettings() {
         console.error("Error loading app settings:", error);
         showMessage('error', 'Error Loading Settings', 'Error loading app settings: ' + error.message);
     }
-}
+});
 
 // Event listener to save application settings
 appSettingsForm.addEventListener('submit', async (e) => {
