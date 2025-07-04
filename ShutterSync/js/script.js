@@ -650,7 +650,7 @@ async function renderCustomersGrid() {
     } else {
         const containerElement = document.getElementById('customersTable');
         if (containerElement) {
-            containerElement.innerHTML = ''; // Clear existing content before rendering new grid
+            containerElement.innerHTML = '';
         }
         customersGrid = new Grid({
             columns: [
@@ -1048,7 +1048,6 @@ async function editOpportunity(opportunityId) {
  * Deletes an opportunity document from Firestore.
  * Requires Admin role or creator.
  * @param {string} opportunityId - The ID of the opportunity document to delete.
-
  */
 async function deleteOpportunity(opportunityId) {
     if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
@@ -1577,8 +1576,7 @@ async function editPriceBook(id) {
         const docSnap = await getDoc(doc(db, 'priceBooks', id));
         if (docSnap.exists()) {
             const data = docSnap.data();
-            priceBookIdInput.value = docSnap.id;
-            priceBookNameInput.value = data.name || '';
+            priceBookIdInput.value = data.name || '';
             priceBookDescriptionTextarea.value = data.description || '';
             await populatePriceBookCurrencyDropdown(data.currency); // Pre-select currency
             priceBookIsActiveSelect.value = data.isActive ? 'Yes' : 'No';
