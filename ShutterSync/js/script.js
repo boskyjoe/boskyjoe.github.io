@@ -53,7 +53,7 @@ const customerForm = document.getElementById('customerForm');
 const customerIdInput = document.getElementById('customerId');
 const customerTypeSelect = document.getElementById('customerType');
 const customerNameInput = document.getElementById('customerName');
-const customerEmailInput = document = document.getElementById('customerEmail');
+const customerEmailInput = document.getElementById('customerEmail'); // FIX: Corrected this line
 const customerPhoneInput = document.getElementById('customerPhone');
 const customerAddressTextarea = document.getElementById('customerAddress'); // Changed to Textarea
 const customerCountrySelect = document.getElementById('customerCountry');
@@ -70,7 +70,7 @@ const opportunityModalTitle = document.getElementById('opportunityModalTitle');
 const closeOpportunityModalBtn = opportunityModal.querySelector('.close-button');
 const opportunityForm = document.getElementById('opportunityForm');
 const opportunityIdInput = document.getElementById('opportunityId');
-const opportunityNameInput = document.getElementById('opportunityName'); // FIX: Corrected this line
+const opportunityNameInput = document.getElementById('opportunityName');
 const opportunityCustomerSelect = document.getElementById('opportunityCustomer');
 const opportunityCurrencySelect = document.getElementById('opportunityCurrency');
 const opportunityPriceBookSelect = document.getElementById('opportunityPriceBook');
@@ -1297,7 +1297,7 @@ async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null) 
 
 // Render Grid for Price Books
 async function renderPriceBooksGrid() {
-    if (!currentUser || currentUserRole !== 'Admin') return; // Corrected: Removed space in currentUserRole
+    if (!currentUser || currentUserRole !== 'Admin') return;
 
     const priceBooksRef = collection(db, 'priceBooks'); // Use collection()
     const data = [];
@@ -1482,7 +1482,7 @@ async function loadAppSettings() {
         console.error("Error loading app settings:", error);
         alert('Error loading app settings: ' + error.message);
     }
-});
+}
 
 // Save App Settings
 appSettingsForm.addEventListener('submit', async (e) => {
