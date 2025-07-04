@@ -114,6 +114,10 @@ const priceBookIdInput = document.getElementById('priceBookId');
 const priceBookNameInput = document.getElementById('priceBookName');
 const priceBookDescriptionTextarea = document.getElementById('priceBookDescription');
 const priceBookCurrencySelect = document.getElementById('priceBookCurrency'); // NEW: Price Book Currency Select
+// NEW: Price Book fields
+const priceBookIsActiveSelect = document.getElementById('priceBookIsActive');
+const priceBookValidFromInput = document.getElementById('priceBookValidFrom');
+const priceBookValidToInput = document.getElementById('priceBookValidTo');
 const cancelPriceBookEditBtn = priceBookForm.querySelector('.cancel-edit-btn');
 
 // App Settings Elements
@@ -146,6 +150,20 @@ function formatDateForDisplay(timestamp) {
     if (isNaN(date.getTime())) return ''; // Invalid date
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
+
+// Function to format date for input (YYYY-MM-DD)
+function formatDateForInput(timestamp) {
+    if (!timestamp) return '';
+    let date;
+    if (typeof timestamp.toDate === 'function') {
+        date = timestamp.toDate();
+    } else {
+        date = new Date(timestamp);
+    }
+    if (isNaN(date.getTime())) return '';
+    return date.toISOString().split('T')[0];
+}
+
 
 // Function to populate select dropdowns
 async function populateSelect(selectElement, collectionName, valueField, textField, selectedValue = null) {
@@ -458,6 +476,11 @@ function resetForms() {
     appSettingsForm.reset();
     settingsDocIdInput.value = '';
 
+    // NEW: Reset Price Book specific fields
+    priceBookIsActiveSelect.value = 'Yes'; // Default to Yes
+    priceBookValidFromInput.value = '';
+    priceBookValidToInput.value = '';
+
     // Manually reset dropdowns that don't have a default "Select..." option or need repopulation
     customerTypeSelect.value = 'Individual'; // Or your desired default
     customerPreferredContactMethodSelect.value = 'Email'; // Or your desired default
@@ -708,7 +731,7 @@ async function deleteCustomer(customerId) {
     if (currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'You do not have permission to delete customers.'); return; }
 
     // Using custom message box as a "confirmation" (it's a notification, not a true confirm)
-    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this customer? This action cannot be undone. If yes, click OK and then try deleting again.');
+    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this customer? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     // For a true confirmation, you'd need a more complex modal with Yes/No buttons and a callback.
     // For now, if they click OK on the info message, they'll just have to click delete again.
@@ -997,7 +1020,7 @@ async function deleteOpportunity(opportunityId) {
     if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
     if (currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'You do not have permission to delete opportunities.'); return; }
 
-    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this opportunity? This action cannot be undone. If yes, click OK and then try deleting again.');
+    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this opportunity? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
         await deleteDoc(doc(db, 'opportunities', opportunityId)); // Use doc() and deleteDoc()
@@ -1156,7 +1179,7 @@ async function editCountryState(id) {
 async function deleteCountryState(id) {
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     
-    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this country? If yes, click OK and then try deleting again.');
+    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this country? If you are sure, click OK and then click the trash icon again.');
 
     try {
         await deleteDoc(doc(db, 'countries', id)); // Use doc() and deleteDoc()
@@ -1322,7 +1345,7 @@ async function editCurrency(id) {
 async function deleteCurrency(id) {
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     
-    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this currency? If yes, click OK and then try deleting again.');
+    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this currency? If you are sure, click OK and then click the trash icon again.');
 
     try {
         await deleteDoc(doc(db, 'currencies', id)); // Use doc() and deleteDoc()
@@ -1428,7 +1451,10 @@ async function renderPriceBooksGrid() {
             doc.id, // Hidden ID for actions
             priceBook.name,
             priceBook.description,
-            priceBook.currency || '' // NEW: Display currency
+            priceBook.currency || '', // Display currency
+            priceBook.isActive, // New field
+            priceBook.validFrom, // New field
+            priceBook.validTo // New field
         ]);
     });
 
@@ -1445,7 +1471,10 @@ async function renderPriceBooksGrid() {
                 { id: 'id', name: 'ID', hidden: true },
                 { id: 'name', name: 'Price Book Name', sort: true, filter: true },
                 { id: 'description', name: 'Description', sort: true, filter: true },
-                { id: 'currency', name: 'Currency', sort: true, filter: true }, // NEW: Currency column
+                { id: 'currency', name: 'Currency', sort: true, filter: true }, // Currency column
+                { id: 'isActive', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' }, // New column
+                { id: 'validFrom', name: 'Valid From', sort: true, formatter: (cell) => formatDateForDisplay(cell) }, // New column
+                { id: 'validTo', name: 'Valid To', sort: true, formatter: (cell) => formatDateForDisplay(cell) }, // New column
                 {
                     name: 'Actions',
                     sort: false,
@@ -1509,7 +1538,11 @@ async function editPriceBook(id) {
             priceBookIdInput.value = docSnap.id;
             priceBookNameInput.value = data.name || '';
             priceBookDescriptionTextarea.value = data.description || '';
-            await populatePriceBookCurrencyDropdown(data.currency); // NEW: Pre-select currency
+            await populatePriceBookCurrencyDropdown(data.currency); // Pre-select currency
+            // NEW: Populate new fields
+            priceBookIsActiveSelect.value = data.isActive ? 'Yes' : 'No';
+            priceBookValidFromInput.value = formatDateForInput(data.validFrom);
+            priceBookValidToInput.value = formatDateForInput(data.validTo);
         }
     } catch (error) {
         console.error("Error loading price book for edit:", error);
@@ -1520,7 +1553,7 @@ async function editPriceBook(id) {
 async function deletePriceBook(id) {
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     
-    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this price book? If yes, click OK and then try deleting again.');
+    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this price book? If you are sure, click OK and then click the trash icon again.');
 
     try {
         await deleteDoc(doc(db, 'priceBooks', id)); // Use doc() and deleteDoc()
@@ -1542,7 +1575,11 @@ priceBookForm.addEventListener('submit', async (e) => {
     const priceBookData = {
         name: priceBookNameInput.value.trim(),
         description: priceBookDescriptionTextarea.value.trim(),
-        currency: priceBookCurrencySelect.value // NEW: Save selected currency
+        currency: priceBookCurrencySelect.value, // Save selected currency
+        // NEW: Save new fields
+        isActive: priceBookIsActiveSelect.value === 'Yes', // Convert to boolean
+        validFrom: priceBookValidFromInput.value ? Timestamp.fromDate(new Date(priceBookValidFromInput.value)) : null,
+        validTo: priceBookValidToInput.value ? Timestamp.fromDate(new Date(priceBookValidToInput.value)) : null,
     };
 
     try {
@@ -1550,6 +1587,10 @@ priceBookForm.addEventListener('submit', async (e) => {
             await updateDoc(doc(db, 'priceBooks', priceBookIdInput.value), priceBookData); // Use doc() and updateDoc()
             showMessage('success', 'Success', 'Price Book updated!');
         } else {
+            // Set defaults for new records if not provided
+            if (priceBookData.isActive === null) priceBookData.isActive = true; // Default to true if not explicitly set
+            if (!priceBookData.validFrom) priceBookData.validFrom = serverTimestamp(); // Default to sysdate if empty for new records
+
             await addDoc(collection(db, 'priceBooks'), priceBookData); // Use collection() and addDoc()
             showMessage('success', 'Success', 'Price Book added!');
         }
@@ -1566,6 +1607,10 @@ priceBookForm.addEventListener('submit', async (e) => {
 cancelPriceBookEditBtn.addEventListener('click', () => {
     priceBookForm.reset();
     priceBookIdInput.value = '';
+    // NEW: Reset Price Book specific fields on cancel
+    priceBookIsActiveSelect.value = 'Yes';
+    priceBookValidFromInput.value = '';
+    priceBookValidToInput.value = '';
 });
 
 
