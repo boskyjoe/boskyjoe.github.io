@@ -1168,14 +1168,14 @@ async function renderCurrenciesGrid() {
     const currenciesRef = collection(db, 'currencies'); // Use collection()
     const data = [];
 
-    const snapshot = await getDocs(query(currenciesRef, orderBy('name'))); // Use getDocs() and orderBy()
+    const snapshot = await getDocs(query(currenciesRef, orderBy('country'), orderBy('name'))); // Use getDocs() and orderBy()
     snapshot.forEach(doc => {
         const currency = doc.data();
         data.push([
             doc.id, // Hidden ID for actions
+            currency.country || '', // NEW: Display country first
             currency.name,
-            currency.symbol,
-            currency.country || '' // NEW: Display country
+            currency.symbol
         ]);
     });
 
@@ -1190,9 +1190,9 @@ async function renderCurrenciesGrid() {
         currenciesGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
+                { id: 'country', name: 'Country', sort: true, filter: true }, // NEW: Country column first
                 { id: 'name', name: 'Currency Name', sort: true, filter: true },
                 { id: 'symbol', name: 'Symbol', sort: true, filter: true },
-                { id: 'country', name: 'Country', sort: true, filter: true }, // NEW: Country column
                 {
                     name: 'Actions',
                     sort: false,
@@ -1287,12 +1287,43 @@ currencyForm.addEventListener('submit', async (e) => {
     if (!currentUser || currentUserRole !== 'Admin') { alert('Access Denied'); return; }
 
     const currencyData = {
+        country: currencyCountrySelect.value, // NEW: Save selected country
         name: currencyNameInput.value.trim(),
-        symbol: currencySymbolInput.value.trim(),
-        country: currencyCountrySelect.value // NEW: Save selected country
+        symbol: currencySymbolInput.value.trim()
     };
 
     try {
+        // --- Duplicate Validation ---
+        let q = query(
+            collection(db, 'currencies'),
+            where('country', '==', currencyData.country),
+            where('name', '==', currencyData.name),
+            where('symbol', '==', currencyData.symbol)
+        );
+
+        const existingCurrenciesSnapshot = await getDocs(q);
+
+        let isDuplicate = false;
+        if (currencyIdInput.value) {
+            // Editing existing currency: check if duplicate exists excluding current doc
+            existingCurrenciesSnapshot.forEach(doc => {
+                if (doc.id !== currencyIdInput.value) {
+                    isDuplicate = true;
+                }
+            });
+        } else {
+            // Adding new currency: check for any duplicate
+            if (!existingCurrenciesSnapshot.empty) {
+                isDuplicate = true;
+            }
+        }
+
+        if (isDuplicate) {
+            alert('A currency with this Country, Name, and Symbol already exists. Please ensure the combination is unique.');
+            return; // Stop the function if duplicate
+        }
+        // --- End Duplicate Validation ---
+
         if (currencyIdInput.value) {
             await updateDoc(doc(db, 'currencies', currencyIdInput.value), currencyData); // Use doc() and updateDoc()
             alert('Currency updated!');
