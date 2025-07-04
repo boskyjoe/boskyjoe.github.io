@@ -1,10 +1,10 @@
 // Firebase SDK Imports (Modular API)
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
-import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
+import { initializeApp } from '[https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js](https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js)';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from '[https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js](https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js)';
+import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, serverTimestamp, Timestamp, setDoc } from '[https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js](https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js)'; // Added setDoc
 
 // Grid.js ES Module Import
-import { Grid, h } from 'https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gridjs.module.min.js';
+import { Grid, h } from '[https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gridjs.module.min.js](https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gridjs.module.min.js)';
 
 
 // Firebase configuration:
@@ -162,6 +162,15 @@ function formatDateForInput(timestamp) {
     }
     if (isNaN(date.getTime())) return '';
     return date.toISOString().split('T')[0];
+}
+
+// NEW: Helper function to generate a consistent index ID for price books
+function getPriceBookIndexId(name, currency) {
+    // Normalize name and currency to ensure consistent ID generation
+    // Convert to lowercase and remove spaces for robustness
+    const normalizedName = name.trim().toLowerCase().replace(/\s+/g, '');
+    const normalizedCurrency = currency.trim().toLowerCase().replace(/\s+/g, '');
+    return `${normalizedName}_${normalizedCurrency}`;
 }
 
 
@@ -1372,7 +1381,7 @@ currencyForm.addEventListener('submit', async (e) => {
     };
 
     try {
-        // --- Duplicate Validation ---
+        // --- Duplicate Validation (Client-Side) ---
         let q = query(
             collection(db, 'currencies'),
             where('country', '==', currencyData.country),
@@ -1553,10 +1562,21 @@ async function editPriceBook(id) {
 async function deletePriceBook(id) {
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     
-    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this price book? If you are sure, click OK and then click the trash icon again.');
+    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this price book? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
-        await deleteDoc(doc(db, 'priceBooks', id)); // Use doc() and deleteDoc()
+        // Delete the main price book document
+        await deleteDoc(doc(db, 'priceBooks', id));
+
+        // Delete the corresponding index document
+        // First, get the price book data to construct the index ID
+        const priceBookDoc = await getDoc(doc(db, 'priceBooks', id));
+        if (priceBookDoc.exists()) {
+            const data = priceBookDoc.data();
+            const indexId = getPriceBookIndexId(data.name, data.currency);
+            await deleteDoc(doc(db, 'priceBookNameCurrencyIndexes', indexId));
+        }
+
         showMessage('success', 'Success', 'Price Book deleted!');
         renderPriceBooksGrid();
         populateOpportunityPriceBookDropdown(); // Refresh opportunity dropdown
@@ -1576,23 +1596,68 @@ priceBookForm.addEventListener('submit', async (e) => {
         name: priceBookNameInput.value.trim(),
         description: priceBookDescriptionTextarea.value.trim(),
         currency: priceBookCurrencySelect.value, // Save selected currency
-        // NEW: Save new fields
         isActive: priceBookIsActiveSelect.value === 'Yes', // Convert to boolean
         validFrom: priceBookValidFromInput.value ? Timestamp.fromDate(new Date(priceBookValidFromInput.value)) : null,
         validTo: priceBookValidToInput.value ? Timestamp.fromDate(new Date(priceBookValidToInput.value)) : null,
     };
 
+    const currentPriceBookId = priceBookIdInput.value;
+    const newIndexId = getPriceBookIndexId(priceBookData.name, priceBookData.currency);
+
     try {
-        if (priceBookIdInput.value) {
-            await updateDoc(doc(db, 'priceBooks', priceBookIdInput.value), priceBookData); // Use doc() and updateDoc()
+        // --- Client-Side Uniqueness Validation ---
+        const existingIndexDoc = await getDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId));
+
+        if (existingIndexDoc.exists()) {
+            // If an index exists, it means a price book with this name/currency already exists.
+            // Check if it's the *same* document being edited.
+            if (existingIndexDoc.data().priceBookId !== currentPriceBookId) {
+                showMessage('error', 'Duplicate Entry', 'A price book with this Name and Currency already exists. Please choose a unique combination.');
+                return; // Stop the function if duplicate
+            }
+        }
+        // --- End Client-Side Uniqueness Validation ---
+
+        let docRef;
+        if (currentPriceBookId) {
+            // Update existing price book
+            docRef = doc(db, 'priceBooks', currentPriceBookId);
+            await updateDoc(docRef, priceBookData);
             showMessage('success', 'Success', 'Price Book updated!');
+
+            // Update the index document:
+            // If name/currency changed, delete old index and create new one.
+            // Otherwise, just update the existing index (though no data changes for it).
+            const oldPriceBookDoc = await getDoc(doc(db, 'priceBooks', currentPriceBookId));
+            const oldPriceBookData = oldPriceBookDoc.data();
+            const oldIndexId = getPriceBookIndexId(oldPriceBookData.name, oldPriceBookData.currency);
+
+            if (oldIndexId !== newIndexId) {
+                // Name or currency changed, delete old index
+                await deleteDoc(doc(db, 'priceBookNameCurrencyIndexes', oldIndexId));
+                // Create new index
+                await setDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId), {
+                    priceBookId: currentPriceBookId,
+                    priceBookName: priceBookData.name,
+                    priceBookCurrency: priceBookData.currency
+                });
+            }
         } else {
+            // Add new price book
             // Set defaults for new records if not provided
             if (priceBookData.isActive === null) priceBookData.isActive = true; // Default to true if not explicitly set
             if (!priceBookData.validFrom) priceBookData.validFrom = serverTimestamp(); // Default to sysdate if empty for new records
 
-            await addDoc(collection(db, 'priceBooks'), priceBookData); // Use collection() and addDoc()
+            const newDocRef = await addDoc(collection(db, 'priceBooks'), priceBookData); // Use addDoc() to get new docRef
+            docRef = newDocRef; // Assign to docRef for index creation
             showMessage('success', 'Success', 'Price Book added!');
+
+            // Create corresponding index document
+            await setDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId), {
+                priceBookId: docRef.id, // Use the ID of the newly created price book
+                priceBookName: priceBookData.name,
+                priceBookCurrency: priceBookData.currency
+            });
         }
         priceBookForm.reset();
         priceBookIdInput.value = '';
