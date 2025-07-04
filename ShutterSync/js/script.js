@@ -53,7 +53,7 @@ const customerForm = document.getElementById('customerForm');
 const customerIdInput = document.getElementById('customerId');
 const customerTypeSelect = document.getElementById('customerType');
 const customerNameInput = document.getElementById('customerName');
-const customerEmailInput = document.getElementById('customerEmail');
+const customerEmailInput = document = document.getElementById('customerEmail');
 const customerPhoneInput = document.getElementById('customerPhone');
 const customerAddressTextarea = document.getElementById('customerAddress'); // Changed to Textarea
 const customerCountrySelect = document.getElementById('customerCountry');
@@ -1524,4 +1524,4 @@ document.addEventListener('DOMContentLoaded', () => {
     // This will initiate the auth check and subsequent grid rendering
     document.querySelector('.nav-button[data-module="dashboard"]').click();
 });
-// END OF FILE - DO NOT ADD ANYTHING AFTER THIS LINE
+// *** END OF SCRIPT - FINAL MARKER ***
