@@ -1646,6 +1646,10 @@ priceBookForm.addEventListener('submit', async (e) => {
     const currentPriceBookId = priceBookIdInput.value;
     const newIndexId = getPriceBookIndexId(priceBookData.name, priceBookData.currency);
 
+    // ADD THESE TWO LINES:
+    console.log('Price Book Data being sent:', JSON.stringify(priceBookData, null, 2));
+    console.log('Generated Index ID (client-side):', newIndexId);
+
     try {
         // --- Client-Side Uniqueness Validation for Price Book (Name, Currency) ---
         const existingIndexDoc = await getDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId));
