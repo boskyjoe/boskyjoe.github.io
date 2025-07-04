@@ -1,10 +1,11 @@
 // Firebase SDK Imports (Modular API)
-import { initializeApp } from '[https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js](https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js)';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from '[https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js](https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js)';
-import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, serverTimestamp, Timestamp, setDoc } from '[https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js](https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js)'; // Added setDoc
+// Changed Firebase SDK version to 10.0.0 for potentially better compatibility.
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js';
+import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, serverTimestamp, Timestamp, setDoc } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js';
 
 // Grid.js ES Module Import
-import { Grid, h } from '[https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gridjs.module.min.js](https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gridjs.module.min.js)';
+import { Grid, h } from 'https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gridjs.module.min.js';
 
 
 // Firebase configuration:
@@ -1565,16 +1566,20 @@ async function deletePriceBook(id) {
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this price book? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
+        // Get the price book data to construct the index ID *before* deleting the main doc
+        const priceBookDoc = await getDoc(doc(db, 'priceBooks', id));
+        let indexIdToDelete = null;
+        if (priceBookDoc.exists()) {
+            const data = priceBookDoc.data();
+            indexIdToDelete = getPriceBookIndexId(data.name, data.currency);
+        }
+
         // Delete the main price book document
         await deleteDoc(doc(db, 'priceBooks', id));
 
-        // Delete the corresponding index document
-        // First, get the price book data to construct the index ID
-        const priceBookDoc = await getDoc(doc(db, 'priceBooks', id));
-        if (priceBookDoc.exists()) {
-            const data = priceBookDoc.data();
-            const indexId = getPriceBookIndexId(data.name, data.currency);
-            await deleteDoc(doc(db, 'priceBookNameCurrencyIndexes', indexId));
+        // Delete the corresponding index document if it was found
+        if (indexIdToDelete) {
+            await deleteDoc(doc(db, 'priceBookNameCurrencyIndexes', indexIdToDelete));
         }
 
         showMessage('success', 'Success', 'Price Book deleted!');
