@@ -530,6 +530,10 @@ async function renderCustomersGrid() {
     if (customersGrid) {
         customersGrid.updateConfig({ data: customerData }).forceRender();
     } else {
+        const containerElement = document.getElementById('customersTable');
+        if (containerElement) {
+            containerElement.innerHTML = ''; // Clear existing content
+        }
         // Use Grid and h directly from import
         customersGrid = new Grid({
             columns: [
@@ -607,7 +611,7 @@ async function renderCustomersGrid() {
                 },
                 'noRecordsFound': 'No Customer Data Available',
             }
-        }).render(document.getElementById('customersTable'));
+        }).render(containerElement);
     }
 }
 
@@ -812,6 +816,10 @@ async function renderOpportunitiesGrid() {
     if (opportunitiesGrid) {
         opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender();
     } else {
+        const containerElement = document.getElementById('opportunitiesTable');
+        if (containerElement) {
+            containerElement.innerHTML = ''; // Clear existing content
+        }
         // Use Grid and h directly from import
         opportunitiesGrid = new Grid({
             columns: [
@@ -886,7 +894,7 @@ async function renderOpportunitiesGrid() {
                 'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
                 'noRecordsFound': 'No Opportunity Data Available',
             }
-        }).render(document.getElementById('opportunitiesTable'));
+        }).render(containerElement);
     }
 }
 
@@ -1009,6 +1017,10 @@ async function renderCountriesStatesGrid() {
     if (countriesStatesGrid) {
         countriesStatesGrid.updateConfig({ data: data }).forceRender();
     } else {
+        const containerElement = document.getElementById('countriesStatesTable');
+        if (containerElement) {
+            containerElement.innerHTML = ''; // Clear existing content
+        }
         // Use Grid and h directly from import
         countriesStatesGrid = new Grid({
             columns: [
@@ -1065,7 +1077,7 @@ async function renderCountriesStatesGrid() {
                 'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
                 'noRecordsFound': 'No Countries & States Data Available',
             }
-        }).render(document.getElementById('countriesStatesTable'));
+        }).render(containerElement);
     }
 }
 
@@ -1170,6 +1182,10 @@ async function renderCurrenciesGrid() {
     if (currenciesGrid) {
         currenciesGrid.updateConfig({ data: data }).forceRender();
     } else {
+        const containerElement = document.getElementById('currenciesTable');
+        if (containerElement) {
+            containerElement.innerHTML = ''; // Clear existing content
+        }
         // Use Grid and h directly from import
         currenciesGrid = new Grid({
             columns: [
@@ -1226,7 +1242,7 @@ async function renderCurrenciesGrid() {
                 'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
                 'noRecordsFound': 'No Currencies Data Available',
             }
-        }).render(document.getElementById('currenciesTable'));
+        }).render(containerElement);
     }
 }
 
@@ -1332,6 +1348,10 @@ async function renderPriceBooksGrid() {
     if (priceBooksGrid) {
         priceBooksGrid.updateConfig({ data: data }).forceRender();
     } else {
+        const containerElement = document.getElementById('priceBooksTable');
+        if (containerElement) {
+            containerElement.innerHTML = ''; // Clear existing content
+        }
         // Use Grid and h directly from import
         priceBooksGrid = new Grid({
             columns: [
@@ -1388,7 +1408,7 @@ async function renderPriceBooksGrid() {
                 'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
                 'noRecordsFound': 'No Price Books Data Available',
             }
-        }).render(document.getElementById('priceBooksTable'));
+        }).render(containerElement);
     }
 }
 
