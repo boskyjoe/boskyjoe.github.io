@@ -1,5 +1,5 @@
 // Firebase SDK Imports (Modular API)
-// Using Firebase SDK version 10.0.0 for compatibility.--new version
+// Using Firebase SDK version 10.0.0 for compatibility.
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js';
 import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, serverTimestamp, Timestamp, setDoc } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js';
@@ -42,7 +42,7 @@ const authButtonSignIn = document.getElementById('authButtonAnon'); // For the "
 const userInfoDisplay = document.getElementById('userInfoDisplay');
 const userNameSpan = document.getElementById('userName');
 const userRoleSpan = document.getElementById('userRole');
-const adminNavButton = document.querySelector('.nav-button[data-module="admin"]'); // Get the Admin nav button
+const adminNavButton = document.querySelector('.nav-button[data-module="admin']'); // Get the Admin nav button
 
 
 // Customer Modal Elements
@@ -107,6 +107,7 @@ const currencyForm = document.getElementById('currencyForm');
 const currencyIdInput = document.getElementById('currencyId');
 const currencyNameInput = document.getElementById('currencyName');
 const currencySymbolInput = document.getElementById('currencySymbol');
+// FIX: Corrected the second typo here - removed 'document ='
 const currencyCountrySelect = document.getElementById('currencyCountry');
 const cancelCurrencyEditBtn = currencyForm.querySelector('.cancel-edit-btn');
 
@@ -350,7 +351,7 @@ onAuthStateChanged(auth, async (user) => {
         customerCountrySelect.innerHTML = '<option value="">Select...</option>';
         customerIndustrySelect.innerHTML = '<option value="">Select Industry</option>';
         customerSourceSelect.innerHTML = '<option value="">Select Source</option>';
-        opportunityCustomerSelect.innerHTML = '<option value="">Select萝</option>';
+        opportunityCustomerSelect.innerHTML = '<option value="">Select a Customer</option>';
         opportunityCurrencySelect.innerHTML = '<option value="">Select...</option>';
         opportunityPriceBookSelect.innerHTML = '<option value="">Select...</option>';
         priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>';
@@ -933,7 +934,7 @@ async function renderOpportunitiesGrid() {
     });
 
     if (opportunitiesGrid) {
-        opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender(); // Update existing grid
+        opportunitiesGrid.updateConfig({ data: data }).forceRender(); // Update existing grid
     } else {
         const containerElement = document.getElementById('opportunitiesTable');
         if (containerElement) {
@@ -1271,7 +1272,7 @@ cancelCountryStateEditBtn.addEventListener('click', () => {
 // --- Currencies Management ---
 
 /**
- * Populates the currency country dropdown with data from the 'countries' collection.
+ * Populates the currency country dropdown with data from the 'currencies' collection.
  * @param {string|null} selectedCountry - The country name to pre-select (optional).
  */
 async function populateCurrencyCountryDropdown(selectedCountry = null) {
