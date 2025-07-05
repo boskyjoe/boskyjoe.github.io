@@ -1279,7 +1279,7 @@ cancelCountryStateEditBtn.addEventListener('click', () => {
 async function populateCurrencyCountryDropdown(selectedCountry = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
    // await populateSelect(currencyCountrySelect, 'currencies', 'symbol', 'name', selectedCountry);
-    await populateSelect(customerCountrySelect,'countries', 'name', 'name', selectedCountry);
+    await populateSelect(currencyCountrySelect,'countries', 'name', 'name', selectedCountry);
 }
 
 /**
