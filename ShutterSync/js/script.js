@@ -350,7 +350,7 @@ onAuthStateChanged(auth, async (user) => {
         customerCountrySelect.innerHTML = '<option value="">Select...</option>';
         customerIndustrySelect.innerHTML = '<option value="">Select Industry</option>';
         customerSourceSelect.innerHTML = '<option value="">Select Source</option>';
-        opportunityCustomerSelect.innerHTML = '<option value="">Select...</option>';
+        opportunityCustomerSelect.innerHTML = '<option value="">Select萝</option>';
         opportunityCurrencySelect.innerHTML = '<option value="">Select...</option>';
         opportunityPriceBookSelect.innerHTML = '<option value="">Select...</option>';
         priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>';
@@ -1385,7 +1385,7 @@ async function editCurrency(id) {
  * @param {string} id - The ID of the currency document to delete.
  */
 async function deleteCurrency(id) {
-    if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
+    if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
     
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this currency? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
@@ -1576,7 +1576,8 @@ async function editPriceBook(id) {
         const docSnap = await getDoc(doc(db, 'priceBooks', id));
         if (docSnap.exists()) {
             const data = docSnap.data();
-            priceBookIdInput.value = data.name || '';
+            priceBookIdInput.value = docSnap.id; // Corrected from data.name to docSnap.id
+            priceBookNameInput.value = data.name || '';
             priceBookDescriptionTextarea.value = data.description || '';
             await populatePriceBookCurrencyDropdown(data.currency); // Pre-select currency
             priceBookIsActiveSelect.value = data.isActive ? 'Yes' : 'No';
