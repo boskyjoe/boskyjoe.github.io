@@ -1787,7 +1787,7 @@ async function loadAppSettings() {
         console.error("Error loading app settings:", error);
         showMessage('error', 'Error Loading Settings', 'Error loading app settings: ' + error.message);
     }
-});
+};
 
 // Event listener to save application settings
 appSettingsForm.addEventListener('submit', async (e) => {
