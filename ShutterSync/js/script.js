@@ -1787,7 +1787,6 @@ async function loadAppSettings() {
     }
 });
 
-
 // Event listener to save application settings
 appSettingsForm.addEventListener('submit', async (e) => {
     e.preventDefault();
