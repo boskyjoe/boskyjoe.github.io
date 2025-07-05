@@ -1274,11 +1274,12 @@ cancelCountryStateEditBtn.addEventListener('click', () => {
 
 /**
  * Populates the currency country dropdown with data from the 'currencies' collection.
- * @param {string|null} selectedCountry - The country name to pre-select (optional).
+ * @param {string|null} selectedCountry - The country name to pre-select (optional). -bosky
  */
 async function populateCurrencyCountryDropdown(selectedCountry = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
-    await populateSelect(currencyCountrySelect, 'currencies', 'symbol', 'name', selectedCountry);
+   // await populateSelect(currencyCountrySelect, 'currencies', 'symbol', 'name', selectedCountry);
+    await populateSelect(customerCountrySelect,'countries', 'name', 'name', selectedCountry);
 }
 
 /**
