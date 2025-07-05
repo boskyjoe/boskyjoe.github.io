@@ -42,7 +42,8 @@ const authButtonSignIn = document.getElementById('authButtonAnon'); // For the "
 const userInfoDisplay = document.getElementById('userInfoDisplay');
 const userNameSpan = document.getElementById('userName');
 const userRoleSpan = document.getElementById('userRole');
-const adminNavButton = document.querySelector('.nav-button[data-module="admin']'); // Get the Admin nav button
+// FIX: Corrected the missing double quote here
+const adminNavButton = document.querySelector('.nav-button[data-module="admin"]');
 
 
 // Customer Modal Elements
