@@ -200,6 +200,11 @@ function getPriceBookIndexId(name, currency) {
  * @param {string|null} selectedValue - The value to pre-select in the dropdown (optional).
  */
 async function populateSelect(selectElement, collectionName, valueField, textField, selectedValue = null) {
+    // Ensure selectElement is not null before attempting to set innerHTML
+    if (!selectElement) {
+        console.error(`populateSelect: selectElement is null for collection ${collectionName}`);
+        return;
+    }
     selectElement.innerHTML = '<option value="">Select...</option>'; // Default empty option
     try {
         const collectionRef = collection(db, collectionName);
@@ -1091,8 +1096,8 @@ adminSectionBtns.forEach(button => {
             populateCurrencyCountryDropdown();
         } else if (button.dataset.adminTarget === 'priceBooks') {
             renderPriceBooksGrid();
-            populatePriceBookCurrencyDropdown();
-            populatePriceBookCountryDropdown(); // NEW: Populate country dropdown when price book section is active
+            populatePriceBookCountryDropdown(); // Populate country dropdown when price book section is active
+            // populatePriceBookCurrencyDropdown() will be called by the change event of priceBookCountrySelect
         } else if (button.dataset.adminTarget === 'settings') {
             loadAppSettings();
             populateDefaultCurrencyDropdown();
@@ -1491,14 +1496,22 @@ cancelCurrencyEditBtn.addEventListener('click', () => {
 async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null, filterCountry = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
     const selectElement = priceBookCurrencySelect;
+    
+    // Ensure selectElement is not null before attempting to set innerHTML
+    if (!selectElement) {
+        console.error(`populatePriceBookCurrencyDropdown: priceBookCurrencySelect is null.`);
+        return;
+    }
+
     selectElement.innerHTML = '<option value="">Select...</option>'; // Default empty option
 
     try {
         let currenciesRef = collection(db, 'currencies');
-        let q = query(currenciesRef, orderBy('name'));
-
+        let q;
         if (filterCountry) {
             q = query(currenciesRef, where('country', '==', filterCountry), orderBy('name'));
+        } else {
+            q = query(currenciesRef, orderBy('name'));
         }
         
         const snapshot = await getDocs(q);
@@ -1507,7 +1520,8 @@ async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null, 
             const option = document.createElement('option');
             option.value = data.symbol;
             option.textContent = `${data.name} (${data.symbol})`;
-            if (selectedValue !== null && data.symbol === selectedValue) {
+            // FIX: Corrected variable name from selectedValue to selectedCurrencySymbol
+            if (selectedCurrencySymbol !== null && data.symbol === selectedCurrencySymbol) {
                 option.selected = true;
             }
             selectElement.appendChild(option);
@@ -1527,21 +1541,8 @@ async function populatePriceBookCountryDropdown(selectedCountryName = null) {
 }
 
 // Event listener for priceBookCountrySelect change
-priceBookCountrySelect.addEventListener('change', async () => {
-    const selectedCountry = priceBookCountrySelect.value;
-    if (selectedCountry) {
-        // Fetch currencies for the selected country and populate the currency dropdown
-        await populatePriceBookCurrencyDropdown(null, selectedCountry);
-        // Attempt to auto-select the first currency if only one is available or a common one
-        if (priceBookCurrencySelect.options.length > 1) {
-            priceBookCurrencySelect.selectedIndex = 1; // Select the first actual currency
-        }
-    } else {
-        // If no country selected, clear and repopulate with all currencies
-        await populatePriceBookCurrencyDropdown();
-    }
-});
-
+// Moved inside DOMContentLoaded to ensure priceBookCountrySelect is not null
+// priceBookCountrySelect.addEventListener('change', async () => { ... }); // This was the problematic line 1530
 
 // Global variable for priceBooksGrid (already declared at the top)
 // let priceBooksGrid = null;
@@ -1646,6 +1647,8 @@ async function editPriceBook(id) {
             priceBookDescriptionTextarea.value = data.description || '';
             await populatePriceBookCountryDropdown(data.country); // NEW: Pre-select country
             // After country is set, populate currencies and then select the specific currency
+            // It's crucial to await the country dropdown population before populating the currency dropdown
+            // to ensure the country filter works correctly.
             await populatePriceBookCurrencyDropdown(data.currency, data.country); // Pass country to filter currencies
             priceBookIsActiveSelect.value = data.isActive ? 'Yes' : 'No';
             priceBookValidFromInput.value = formatDateForInput(data.validFrom);
@@ -1900,5 +1903,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Manually trigger the active class on the dashboard button
     // This will initiate the auth check and subsequent grid rendering
     document.querySelector('.nav-button[data-module="dashboard"]').click();
+
+    // Event listener for priceBookCountrySelect change
+    // Placed here to ensure priceBookCountrySelect is not null
+    if (priceBookCountrySelect) {
+        priceBookCountrySelect.addEventListener('change', async () => {
+            const selectedCountry = priceBookCountrySelect.value;
+            if (selectedCountry) {
+                // Fetch currencies for the selected country and populate the currency dropdown
+                await populatePriceBookCurrencyDropdown(null, selectedCountry);
+                // Attempt to auto-select the first currency if only one is available or a common one
+                if (priceBookCurrencySelect.options.length > 1) {
+                    priceBookCurrencySelect.selectedIndex = 1; // Select the first actual currency
+                }
+            } else {
+                // If no country selected, clear and repopulate with all currencies
+                await populatePriceBookCurrencyDropdown();
+            }
+        });
+    } else {
+        console.error("priceBookCountrySelect element not found. Cannot attach change listener.");
+    }
 });
 // *** END OF SCRIPT - FINAL MARKER ***
