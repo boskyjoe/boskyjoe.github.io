@@ -114,6 +114,7 @@ const priceBookForm = document.getElementById('priceBookForm');
 const priceBookIdInput = document.getElementById('priceBookId');
 const priceBookNameInput = document.getElementById('priceBookName');
 const priceBookDescriptionTextarea = document.getElementById('priceBookDescription');
+const priceBookCountrySelect = document.getElementById('priceBookCountry'); // NEW: Price Book Country Select
 const priceBookCurrencySelect = document.getElementById('priceBookCurrency');
 const priceBookIsActiveSelect = document.getElementById('priceBookIsActive');
 const priceBookValidFromInput = document.getElementById('priceBookValidFrom');
@@ -311,7 +312,7 @@ onAuthStateChanged(auth, async (user) => {
         renderOpportunitiesGrid();
         renderCountriesStatesGrid();
         renderCurrenciesGrid();
-        // renderPriceBooksGrid(); // Will be re-added later
+        renderPriceBooksGrid(); // Re-added
 
         // Populate dynamic data for forms (e.g., dropdowns)
         populateCustomerCountryDropdown();
@@ -320,7 +321,8 @@ onAuthStateChanged(auth, async (user) => {
         populateOpportunityPriceBookDropdown();
         populateDefaultCurrencyDropdown();
         populateDefaultCountryDropdown();
-        // populatePriceBookCurrencyDropdown(); // Will be re-added later
+        populatePriceBookCurrencyDropdown(); // Re-added
+        populatePriceBookCountryDropdown(); // NEW: Populate price book country dropdown
         loadAppSettings(); // Load app settings for admin panel
 
         // Set initial module to dashboard
@@ -354,6 +356,7 @@ onAuthStateChanged(auth, async (user) => {
         opportunityCurrencySelect.innerHTML = '<option value="">Select...</option>';
         opportunityPriceBookSelect.innerHTML = '<option value="">Select...</option>';
         priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>'; // Re-added clearing
+        priceBookCountrySelect.innerHTML = '<option value="">Select...</option>'; // NEW: Clear price book country dropdown
         currencyCountrySelect.innerHTML = '<option value="">Select Country</option>';
         defaultCurrencySelect.innerHTML = '<option value="">Select...</option>';
         defaultCountrySelect.innerHTML = '<option value="">Select...</option>';
@@ -537,6 +540,7 @@ function resetForms() {
     populateOpportunityCurrencyDropdown();
     populateOpportunityPriceBookDropdown();
     populatePriceBookCurrencyDropdown(); // Re-added
+    populatePriceBookCountryDropdown(); // NEW: Populate price book country dropdown
     populateCurrencyCountryDropdown();
     populateDefaultCurrencyDropdown();
     populateDefaultCountryDropdown();
@@ -1086,8 +1090,9 @@ adminSectionBtns.forEach(button => {
             renderCurrenciesGrid();
             populateCurrencyCountryDropdown();
         } else if (button.dataset.adminTarget === 'priceBooks') {
-            renderPriceBooksGrid(); // Will be re-added
-            populatePriceBookCurrencyDropdown(); // Re-added
+            renderPriceBooksGrid();
+            populatePriceBookCurrencyDropdown();
+            populatePriceBookCountryDropdown(); // NEW: Populate country dropdown when price book section is active
         } else if (button.dataset.adminTarget === 'settings') {
             loadAppSettings();
             populateDefaultCurrencyDropdown();
@@ -1225,6 +1230,7 @@ async function deleteCountryState(id) {
         populateCustomerCountryDropdown(); // Refresh customer dropdown
         populateDefaultCountryDropdown(); // Refresh settings dropdown
         populateCurrencyCountryDropdown(); // Refresh currency country dropdown
+        populatePriceBookCountryDropdown(); // NEW: Refresh price book country dropdown
     } catch (error) {
         console.error("Error deleting country:", error);
         showMessage('error', 'Error Deleting Country', 'Error deleting country: ' + error.message);
@@ -1256,6 +1262,7 @@ countryStateForm.addEventListener('submit', async (e) => {
         populateCustomerCountryDropdown(); // Refresh customer dropdown
         populateDefaultCountryDropdown(); // Refresh settings dropdown
         populateCurrencyCountryDropdown(); // Refresh currency country dropdown
+        populatePriceBookCountryDropdown(); // NEW: Refresh price book country dropdown
     } catch (error) {
         console.error("Error saving country:", error);
         showMessage('error', 'Error Saving Country', 'Error saving country: ' + error.message);
@@ -1397,6 +1404,7 @@ async function deleteCurrency(id) {
         populateOpportunityCurrencyDropdown(); // Refresh opportunity dropdown
         populateDefaultCurrencyDropdown(); // Refresh settings dropdown
         populatePriceBookCurrencyDropdown(); // Re-added
+        populatePriceBookCountryDropdown(); // NEW: Refresh price book country dropdown
     } catch (error) {
         console.error("Error deleting currency:", error);
         showMessage('error', 'Error Deleting Currency', 'Error deleting currency: ' + error.message);
@@ -1459,6 +1467,7 @@ currencyForm.addEventListener('submit', async (e) => {
         populateOpportunityCurrencyDropdown(); // Refresh opportunity dropdown
         populateDefaultCurrencyDropdown(); // Refresh settings dropdown
         populatePriceBookCurrencyDropdown(); // Re-added
+        populatePriceBookCountryDropdown(); // NEW: Refresh price book country dropdown
     } catch (error) {
         console.error("Error saving currency:", error);
         showMessage('error', 'Error Saving Currency', 'Error saving currency: ' + error.message);
@@ -1477,11 +1486,62 @@ cancelCurrencyEditBtn.addEventListener('click', () => {
 /**
  * Populates the price book currency dropdown with data from the 'currencies' collection.
  * @param {string|null} selectedCurrencySymbol - The currency symbol to pre-select (optional).
+ * @param {string|null} filterCountry - Optional country name to filter currencies by.
  */
-async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null) {
+async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null, filterCountry = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
-    await populateSelect(priceBookCurrencySelect, 'currencies', 'symbol', 'name', selectedCurrencySymbol);
+    const selectElement = priceBookCurrencySelect;
+    selectElement.innerHTML = '<option value="">Select...</option>'; // Default empty option
+
+    try {
+        let currenciesRef = collection(db, 'currencies');
+        let q = query(currenciesRef, orderBy('name'));
+
+        if (filterCountry) {
+            q = query(currenciesRef, where('country', '==', filterCountry), orderBy('name'));
+        }
+        
+        const snapshot = await getDocs(q);
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const option = document.createElement('option');
+            option.value = data.symbol;
+            option.textContent = `${data.name} (${data.symbol})`;
+            if (selectedValue !== null && data.symbol === selectedValue) {
+                option.selected = true;
+            }
+            selectElement.appendChild(option);
+        });
+    } catch (error) {
+        console.error(`Error fetching currencies for price book dropdown:`, error);
+    }
 }
+
+/**
+ * Populates the price book country dropdown with data from the 'countries' collection.
+ * @param {string|null} selectedCountryName - The country name to pre-select (optional).
+ */
+async function populatePriceBookCountryDropdown(selectedCountryName = null) {
+    if (!currentUser || currentUserRole !== 'Admin') return;
+    await populateSelect(priceBookCountrySelect, 'countries', 'name', 'name', selectedCountryName);
+}
+
+// Event listener for priceBookCountrySelect change
+priceBookCountrySelect.addEventListener('change', async () => {
+    const selectedCountry = priceBookCountrySelect.value;
+    if (selectedCountry) {
+        // Fetch currencies for the selected country and populate the currency dropdown
+        await populatePriceBookCurrencyDropdown(null, selectedCountry);
+        // Attempt to auto-select the first currency if only one is available or a common one
+        if (priceBookCurrencySelect.options.length > 1) {
+            priceBookCurrencySelect.selectedIndex = 1; // Select the first actual currency
+        }
+    } else {
+        // If no country selected, clear and repopulate with all currencies
+        await populatePriceBookCurrencyDropdown();
+    }
+});
+
 
 // Global variable for priceBooksGrid (already declared at the top)
 // let priceBooksGrid = null;
@@ -1503,6 +1563,7 @@ async function renderPriceBooksGrid() {
             doc.id, // Hidden ID for actions
             priceBook.name,
             priceBook.description,
+            priceBook.country || '', // NEW: Display country
             priceBook.currency || '',
             priceBook.isActive,
             priceBook.validFrom,
@@ -1522,6 +1583,7 @@ async function renderPriceBooksGrid() {
                 { id: 'id', name: 'ID', hidden: true },
                 { id: 'name', name: 'Price Book Name', sort: true, filter: true },
                 { id: 'description', name: 'Description', sort: true, filter: true },
+                { id: 'country', name: 'Country', sort: true, filter: true }, // NEW: Country column
                 { id: 'currency', name: 'Currency', sort: true, filter: true },
                 { id: 'isActive', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
                 { id: 'validFrom', name: 'Valid From', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
@@ -1582,7 +1644,9 @@ async function editPriceBook(id) {
             priceBookIdInput.value = docSnap.id;
             priceBookNameInput.value = data.name || '';
             priceBookDescriptionTextarea.value = data.description || '';
-            await populatePriceBookCurrencyDropdown(data.currency); // Pre-select currency
+            await populatePriceBookCountryDropdown(data.country); // NEW: Pre-select country
+            // After country is set, populate currencies and then select the specific currency
+            await populatePriceBookCurrencyDropdown(data.currency, data.country); // Pass country to filter currencies
             priceBookIsActiveSelect.value = data.isActive ? 'Yes' : 'No';
             priceBookValidFromInput.value = formatDateForInput(data.validFrom);
             priceBookValidToInput.value = formatDateForInput(data.validTo);
@@ -1652,6 +1716,7 @@ priceBookForm.addEventListener('submit', async (e) => {
         name: priceBookNameInput.value.trim(), // Keep original name for display
         normalizedName: normalizedName, // Store normalized name for rules validation
         description: priceBookDescriptionTextarea.value.trim(),
+        country: priceBookCountrySelect.value, // NEW: Store selected country
         currency: priceBookCurrencySelect.value, // Keep original currency for display
         normalizedCurrency: normalizedCurrency, // Store normalized currency for rules validation
         isActive: priceBookIsActiveSelect.value === 'Yes', // Convert to boolean
@@ -1739,6 +1804,8 @@ cancelPriceBookEditBtn.addEventListener('click', () => {
     priceBookIsActiveSelect.value = 'Yes';
     priceBookValidFromInput.value = '';
     priceBookValidToInput.value = '';
+    populatePriceBookCountryDropdown(); // NEW: Reset country dropdown on cancel
+    populatePriceBookCurrencyDropdown(); // NEW: Reset currency dropdown on cancel
 });
 
 
