@@ -34,7 +34,7 @@ let countriesStatesGrid = null;
 let currenciesGrid = null;
 let priceBooksGrid = null; // Re-declared for Price Books
 
-// UI Elements
+// UI Elements (declared as let to allow re-assignment within DOMContentLoaded)
 const navButtons = document.querySelectorAll('.nav-button');
 const modules = document.querySelectorAll('.module');
 const authButtonSignOut = document.getElementById('authButton'); // For the "Sign Out" button inside user-info
@@ -109,17 +109,17 @@ const currencySymbolInput = document.getElementById('currencySymbol');
 const currencyCountrySelect = document.getElementById('currencyCountry');
 const cancelCurrencyEditBtn = currencyForm.querySelector('.cancel-edit-btn');
 
-// Price Books Elements - RE-DECLARED
-const priceBookForm = document.getElementById('priceBookForm');
-const priceBookIdInput = document.getElementById('priceBookId');
-const priceBookNameInput = document.getElementById('priceBookName');
-const priceBookDescriptionTextarea = document.getElementById('priceBookDescription');
-const priceBookCountrySelect = document.getElementById('priceBookCountry'); // NEW: Price Book Country Select
-const priceBookCurrencySelect = document.getElementById('priceBookCurrency');
-const priceBookIsActiveSelect = document.getElementById('priceBookIsActive');
-const priceBookValidFromInput = document.getElementById('priceBookValidFrom');
-const priceBookValidToInput = document.getElementById('priceBookValidTo');
-const cancelPriceBookEditBtn = priceBookForm.querySelector('.cancel-edit-btn');
+// Price Books Elements - Changed to 'let' for later assignment in DOMContentLoaded
+let priceBookForm;
+let priceBookIdInput;
+let priceBookNameInput;
+let priceBookDescriptionTextarea;
+let priceBookCountrySelect; // Changed to let
+let priceBookCurrencySelect; // Changed to let
+let priceBookIsActiveSelect;
+let priceBookValidFromInput;
+let priceBookValidToInput;
+let cancelPriceBookEditBtn;
 
 // App Settings Elements
 const appSettingsForm = document.getElementById('appSettingsForm');
@@ -326,8 +326,8 @@ onAuthStateChanged(auth, async (user) => {
         populateOpportunityPriceBookDropdown();
         populateDefaultCurrencyDropdown();
         populateDefaultCountryDropdown();
-        populatePriceBookCurrencyDropdown(); // Re-added
-        populatePriceBookCountryDropdown(); // NEW: Populate price book country dropdown
+        // populatePriceBookCurrencyDropdown(); // Will be called by priceBookCountrySelect change listener or editPriceBook
+        // populatePriceBookCountryDropdown(); // Will be called by admin section change listener or editPriceBook
         loadAppSettings(); // Load app settings for admin panel
 
         // Set initial module to dashboard
@@ -360,8 +360,9 @@ onAuthStateChanged(auth, async (user) => {
         opportunityCustomerSelect.innerHTML = '<option value="">Select a Customer</option>';
         opportunityCurrencySelect.innerHTML = '<option value="">Select...</option>';
         opportunityPriceBookSelect.innerHTML = '<option value="">Select...</option>';
-        priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>'; // Re-added clearing
-        priceBookCountrySelect.innerHTML = '<option value="">Select...</option>'; // NEW: Clear price book country dropdown
+        // Check if priceBookCurrencySelect and priceBookCountrySelect are defined before accessing innerHTML
+        if (priceBookCurrencySelect) priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>';
+        if (priceBookCountrySelect) priceBookCountrySelect.innerHTML = '<option value="">Select...</option>';
         currencyCountrySelect.innerHTML = '<option value="">Select Country</option>';
         defaultCurrencySelect.innerHTML = '<option value="">Select...</option>';
         defaultCountrySelect.innerHTML = '<option value="">Select...</option>';
@@ -521,15 +522,19 @@ function resetForms() {
     countryStateIdInput.value = '';
     currencyForm.reset();
     currencyIdInput.value = '';
-    priceBookForm.reset(); // Re-added reset
-    priceBookIdInput.value = ''; // Re-added reset
+    // Only reset priceBookForm if it's been initialized
+    if (priceBookForm) {
+        priceBookForm.reset();
+        priceBookIdInput.value = '';
+        // Reset Price Book specific fields to their default values
+        priceBookIsActiveSelect.value = 'Yes'; // Default to Yes
+        priceBookValidFromInput.value = '';
+        priceBookValidToInput.value = '';
+        populatePriceBookCountryDropdown(); // Reset country dropdown on cancel
+        populatePriceBookCurrencyDropdown(); // Reset currency dropdown on cancel
+    }
     appSettingsForm.reset();
     settingsDocIdInput.value = '';
-
-    // Reset Price Book specific fields to their default values
-    priceBookIsActiveSelect.value = 'Yes'; // Default to Yes
-    priceBookValidFromInput.value = '';
-    priceBookValidToInput.value = '';
 
     // Manually reset other dropdowns to their initial "Select..." or default option
     customerTypeSelect.value = 'Individual';
@@ -544,8 +549,6 @@ function resetForms() {
     populateOpportunityCustomerDropdown();
     populateOpportunityCurrencyDropdown();
     populateOpportunityPriceBookDropdown();
-    populatePriceBookCurrencyDropdown(); // Re-added
-    populatePriceBookCountryDropdown(); // NEW: Populate price book country dropdown
     populateCurrencyCountryDropdown();
     populateDefaultCurrencyDropdown();
     populateDefaultCountryDropdown();
@@ -1235,7 +1238,8 @@ async function deleteCountryState(id) {
         populateCustomerCountryDropdown(); // Refresh customer dropdown
         populateDefaultCountryDropdown(); // Refresh settings dropdown
         populateCurrencyCountryDropdown(); // Refresh currency country dropdown
-        populatePriceBookCountryDropdown(); // NEW: Refresh price book country dropdown
+        // Only call populatePriceBookCountryDropdown if priceBookCountrySelect is defined
+        if (priceBookCountrySelect) populatePriceBookCountryDropdown();
     } catch (error) {
         console.error("Error deleting country:", error);
         showMessage('error', 'Error Deleting Country', 'Error deleting country: ' + error.message);
@@ -1267,7 +1271,8 @@ countryStateForm.addEventListener('submit', async (e) => {
         populateCustomerCountryDropdown(); // Refresh customer dropdown
         populateDefaultCountryDropdown(); // Refresh settings dropdown
         populateCurrencyCountryDropdown(); // Refresh currency country dropdown
-        populatePriceBookCountryDropdown(); // NEW: Refresh price book country dropdown
+        // Only call populatePriceBookCountryDropdown if priceBookCountrySelect is defined
+        if (priceBookCountrySelect) populatePriceBookCountryDropdown();
     } catch (error) {
         console.error("Error saving country:", error);
         showMessage('error', 'Error Saving Country', 'Error saving country: ' + error.message);
@@ -1408,8 +1413,9 @@ async function deleteCurrency(id) {
         renderCurrenciesGrid(); // Refresh grid
         populateOpportunityCurrencyDropdown(); // Refresh opportunity dropdown
         populateDefaultCurrencyDropdown(); // Refresh settings dropdown
-        populatePriceBookCurrencyDropdown(); // Re-added
-        populatePriceBookCountryDropdown(); // NEW: Refresh price book country dropdown
+        // Only call if elements are defined
+        if (priceBookCurrencySelect) populatePriceBookCurrencyDropdown();
+        if (priceBookCountrySelect) populatePriceBookCountryDropdown();
     } catch (error) {
         console.error("Error deleting currency:", error);
         showMessage('error', 'Error Deleting Currency', 'Error deleting currency: ' + error.message);
@@ -1471,8 +1477,9 @@ currencyForm.addEventListener('submit', async (e) => {
         renderCurrenciesGrid(); // Refresh grid
         populateOpportunityCurrencyDropdown(); // Refresh opportunity dropdown
         populateDefaultCurrencyDropdown(); // Refresh settings dropdown
-        populatePriceBookCurrencyDropdown(); // Re-added
-        populatePriceBookCountryDropdown(); // NEW: Refresh price book country dropdown
+        // Only call if elements are defined
+        if (priceBookCurrencySelect) populatePriceBookCurrencyDropdown();
+        if (priceBookCountrySelect) populatePriceBookCountryDropdown();
     } catch (error) {
         console.error("Error saving currency:", error);
         showMessage('error', 'Error Saving Currency', 'Error saving currency: ' + error.message);
@@ -1495,15 +1502,14 @@ cancelCurrencyEditBtn.addEventListener('click', () => {
  */
 async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null, filterCountry = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
-    const selectElement = priceBookCurrencySelect;
     
     // Ensure selectElement is not null before attempting to set innerHTML
-    if (!selectElement) {
+    if (!priceBookCurrencySelect) {
         console.error(`populatePriceBookCurrencyDropdown: priceBookCurrencySelect is null.`);
         return;
     }
 
-    selectElement.innerHTML = '<option value="">Select...</option>'; // Default empty option
+    priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>'; // Default empty option
 
     try {
         let currenciesRef = collection(db, 'currencies');
@@ -1524,7 +1530,7 @@ async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null, 
             if (selectedCurrencySymbol !== null && data.symbol === selectedCurrencySymbol) {
                 option.selected = true;
             }
-            selectElement.appendChild(option);
+            priceBookCurrencySelect.appendChild(option);
         });
     } catch (error) {
         console.error(`Error fetching currencies for price book dropdown:`, error);
@@ -1537,12 +1543,17 @@ async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null, 
  */
 async function populatePriceBookCountryDropdown(selectedCountryName = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
+    // Ensure priceBookCountrySelect is not null before calling populateSelect
+    if (!priceBookCountrySelect) {
+        console.error(`populatePriceBookCountryDropdown: priceBookCountrySelect is null.`);
+        return;
+    }
     await populateSelect(priceBookCountrySelect, 'countries', 'name', 'name', selectedCountryName);
 }
 
 // Event listener for priceBookCountrySelect change
-// Moved inside DOMContentLoaded to ensure priceBookCountrySelect is not null
-// priceBookCountrySelect.addEventListener('change', async () => { ... }); // This was the problematic line 1530
+// This listener will now be attached within DOMContentLoaded to ensure the element exists.
+// priceBookCountrySelect.addEventListener('change', async () => { ... }); // Original problematic line
 
 // Global variable for priceBooksGrid (already declared at the top)
 // let priceBooksGrid = null;
@@ -1645,7 +1656,7 @@ async function editPriceBook(id) {
             priceBookIdInput.value = docSnap.id;
             priceBookNameInput.value = data.name || '';
             priceBookDescriptionTextarea.value = data.description || '';
-            await populatePriceBookCountryDropdown(data.country); // NEW: Pre-select country
+            await populatePriceBookCountryDropdown(data.country); // Pre-select country
             // After country is set, populate currencies and then select the specific currency
             // It's crucial to await the country dropdown population before populating the currency dropdown
             // to ensure the country filter works correctly.
@@ -1807,8 +1818,8 @@ cancelPriceBookEditBtn.addEventListener('click', () => {
     priceBookIsActiveSelect.value = 'Yes';
     priceBookValidFromInput.value = '';
     priceBookValidToInput.value = '';
-    populatePriceBookCountryDropdown(); // NEW: Reset country dropdown on cancel
-    populatePriceBookCurrencyDropdown(); // NEW: Reset currency dropdown on cancel
+    populatePriceBookCountryDropdown(); // Reset country dropdown on cancel
+    populatePriceBookCurrencyDropdown(); // Reset currency dropdown on cancel
 });
 
 
@@ -1900,6 +1911,18 @@ cancelSettingsEditBtn.addEventListener('click', () => {
 // This will trigger the authentication check and subsequent data loading and UI rendering.
 // It ensures that the app initializes correctly after the DOM is fully loaded.
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize price book UI elements here to ensure they are available
+    priceBookForm = document.getElementById('priceBookForm');
+    priceBookIdInput = document.getElementById('priceBookId');
+    priceBookNameInput = document.getElementById('priceBookName');
+    priceBookDescriptionTextarea = document.getElementById('priceBookDescription');
+    priceBookCountrySelect = document.getElementById('priceBookCountry');
+    priceBookCurrencySelect = document.getElementById('priceBookCurrency');
+    priceBookIsActiveSelect = document.getElementById('priceBookIsActive');
+    priceBookValidFromInput = document.getElementById('priceBookValidFrom');
+    priceBookValidToInput = document.getElementById('priceBookValidTo');
+    cancelPriceBookEditBtn = priceBookForm.querySelector('.cancel-edit-btn'); // Ensure this is also initialized here
+
     // Manually trigger the active class on the dashboard button
     // This will initiate the auth check and subsequent grid rendering
     document.querySelector('.nav-button[data-module="dashboard"]').click();
@@ -1923,6 +1946,114 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     } else {
         console.error("priceBookCountrySelect element not found. Cannot attach change listener.");
+    }
+
+    // Attach event listeners for Price Book form and cancel button after elements are initialized
+    if (priceBookForm) {
+        priceBookForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
+
+            // Normalize name and currency for storage and index ID
+            const normalizedName = priceBookNameInput.value.trim().toLowerCase().replace(/\s+/g, '');
+            const normalizedCurrency = priceBookCurrencySelect.value.trim().toLowerCase().replace(/\s+/g, '');
+
+            const priceBookData = {
+                name: priceBookNameInput.value.trim(), // Keep original name for display
+                normalizedName: normalizedName, // Store normalized name for rules validation
+                description: priceBookDescriptionTextarea.value.trim(),
+                country: priceBookCountrySelect.value, // NEW: Store selected country
+                currency: priceBookCurrencySelect.value, // Keep original currency for display
+                normalizedCurrency: normalizedCurrency, // Store normalized currency for rules validation
+                isActive: priceBookIsActiveSelect.value === 'Yes', // Convert to boolean
+                validFrom: priceBookValidFromInput.value ? Timestamp.fromDate(new Date(priceBookValidFromInput.value)) : null,
+                validTo: priceBookValidToInput.value ? Timestamp.fromDate(new Date(priceBookValidToInput.value)) : null,
+            };
+
+            const currentPriceBookId = priceBookIdInput.value;
+            // Use the newly created normalized values for the index ID
+            const newIndexId = getPriceBookIndexId(priceBookData.name, priceBookData.currency); // This function uses the original (but trimmed) name/currency to derive the ID
+
+            console.log('Price Book Data being sent:', JSON.stringify(priceBookData, null, 2));
+            console.log('Generated Index ID (client-side):', newIndexId);
+
+            try {
+                // --- Client-Side Uniqueness Validation for Price Book (Name, Currency) ---
+                const existingIndexDoc = await getDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId));
+
+                if (existingIndexDoc.exists()) {
+                    // If an index exists, it means a price book with this name/currency already exists.
+                    // Check if it's the *same* document being edited.
+                    if (existingIndexDoc.data().priceBookId !== currentPriceBookId) {
+                        showMessage('error', 'Duplicate Entry', 'A price book with this Name and Currency already exists. Please choose a unique combination.');
+                        return; // Stop the function if duplicate is found
+                    }
+                }
+                // --- End Client-Side Uniqueness Validation ---
+
+                let docRef;
+                if (currentPriceBookId) {
+                    // Update existing price book
+                    docRef = doc(db, 'priceBooks', currentPriceBookId);
+                    await updateDoc(docRef, priceBookData);
+                    showMessage('success', 'Success', 'Price Book updated!');
+
+                    // Update the index document:
+                    // If normalized name/currency changed, delete old index and create new one.
+                    const oldPriceBookDoc = await getDoc(doc(db, 'priceBooks', currentPriceBookId));
+                    const oldPriceBookData = oldPriceBookDoc.data();
+                    // Derive old index ID using the *old* normalized values from the database
+                    const oldIndexId = getPriceBookIndexId(oldPriceBookData.name, oldPriceBookData.currency); // Use original name/currency from stored doc
+
+                    if (oldIndexId !== newIndexId) {
+                        // Name or currency changed, delete old index
+                        await deleteDoc(doc(db, 'priceBookNameCurrencyIndexes', oldIndexId));
+                        // Create new index with the new combination
+                        await setDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId), {
+                            priceBookId: currentPriceBookId, // Still points to the same main price book document
+                            priceBookName: priceBookData.normalizedName, // Use normalized name for index
+                            priceBookCurrency: priceBookData.normalizedCurrency // Use normalized currency for index
+                        });
+                    }
+                } else {
+                    // Add new price book
+                    // Set defaults for new records if not provided
+                    if (priceBookData.isActive === null) priceBookData.isActive = true; // Default to true if not explicitly set
+                    if (!priceBookData.validFrom) priceBookData.validFrom = serverTimestamp(); // Default to server timestamp if empty for new records
+
+                    const newDocRef = await addDoc(collection(db, 'priceBooks'), priceBookData);
+                    docRef = newDocRef; // Assign to docRef for index creation
+                    showMessage('success', 'Success', 'Price Book added!');
+
+                    // Create corresponding index document
+                    await setDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId), {
+                        priceBookId: docRef.id, // Use the ID of the newly created price book
+                        priceBookName: priceBookData.normalizedName, // Use normalized name for index
+                        priceBookCurrency: priceBookData.normalizedCurrency // Use normalized currency for index
+                    });
+                }
+                priceBookForm.reset();
+                priceBookIdInput.value = '';
+                renderPriceBooksGrid(); // Refresh grid
+                populateOpportunityPriceBookDropdown(); // Refresh opportunity dropdown
+            } catch (error) {
+                console.error("Error saving price book:", error);
+                showMessage('error', 'Error Saving Price Book', 'Error saving price book: ' + error.message);
+            }
+        });
+
+        cancelPriceBookEditBtn.addEventListener('click', () => {
+            priceBookForm.reset();
+            priceBookIdInput.value = '';
+            // Reset Price Book specific fields to their defaults on cancel
+            priceBookIsActiveSelect.value = 'Yes';
+            priceBookValidFromInput.value = '';
+            priceBookValidToInput.value = '';
+            populatePriceBookCountryDropdown(); // Reset country dropdown on cancel
+            populatePriceBookCurrencyDropdown(); // Reset currency dropdown on cancel
+        });
+    } else {
+        console.error("Price Book form elements not found. Cannot attach form listeners.");
     }
 });
 // *** END OF SCRIPT - FINAL MARKER ***
