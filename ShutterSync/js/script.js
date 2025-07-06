@@ -32,7 +32,7 @@ let customersGrid = null;
 let opportunitiesGrid = null;
 let countriesStatesGrid = null;
 let currenciesGrid = null;
-let priceBooksGrid = null;
+// priceBooksGrid removed
 
 // UI Elements
 const navButtons = document.querySelectorAll('.nav-button');
@@ -42,7 +42,6 @@ const authButtonSignIn = document.getElementById('authButtonAnon'); // For the "
 const userInfoDisplay = document.getElementById('userInfoDisplay');
 const userNameSpan = document.getElementById('userName');
 const userRoleSpan = document.getElementById('userRole');
-// FIX: Corrected the missing double quote here
 const adminNavButton = document.querySelector('.nav-button[data-module="admin"]');
 
 
@@ -59,7 +58,6 @@ const customerEmailInput = document.getElementById('customerEmail');
 const customerPhoneInput = document.getElementById('customerPhone');
 const customerAddressTextarea = document.getElementById('customerAddress');
 const customerCountrySelect = document.getElementById('customerCountry');
-// FIX: Corrected typo - removed 'document ='
 const customerPreferredContactMethodSelect = document.getElementById('customerPreferredContactMethod');
 const customerIndustrySelect = document.getElementById('customerIndustry');
 const customerAdditionalDetailsTextarea = document.getElementById('customerAdditionalDetails');
@@ -108,20 +106,19 @@ const currencyForm = document.getElementById('currencyForm');
 const currencyIdInput = document.getElementById('currencyId');
 const currencyNameInput = document.getElementById('currencyName');
 const currencySymbolInput = document.getElementById('currencySymbol');
-// FIX: Corrected the second typo here - removed 'document ='
 const currencyCountrySelect = document.getElementById('currencyCountry');
 const cancelCurrencyEditBtn = currencyForm.querySelector('.cancel-edit-btn');
 
-// Price Books Elements
-const priceBookForm = document.getElementById('priceBookForm');
-const priceBookIdInput = document.getElementById('priceBookId');
-const priceBookNameInput = document.getElementById('priceBookName');
-const priceBookDescriptionTextarea = document.getElementById('priceBookDescription');
-const priceBookCurrencySelect = document.getElementById('priceBookCurrency');
-const priceBookIsActiveSelect = document.getElementById('priceBookIsActive');
-const priceBookValidFromInput = document.getElementById('priceBookValidFrom');
-const priceBookValidToInput = document.getElementById('priceBookValidTo');
-const cancelPriceBookEditBtn = priceBookForm.querySelector('.cancel-edit-btn');
+// Price Books Elements - REMOVED
+// const priceBookForm = document.getElementById('priceBookForm');
+// const priceBookIdInput = document.getElementById('priceBookId');
+// const priceBookNameInput = document.getElementById('priceBookName');
+// const priceBookDescriptionTextarea = document.getElementById('priceBookDescription');
+// const priceBookCurrencySelect = document.getElementById('priceBookCurrency');
+// const priceBookIsActiveSelect = document.getElementById('priceBookIsActive');
+// const priceBookValidFromInput = document.getElementById('priceBookValidFrom');
+// const priceBookValidToInput = document.getElementById('priceBookValidTo');
+// const cancelPriceBookEditBtn = priceBookForm.querySelector('.cancel-edit-btn');
 
 // App Settings Elements
 const appSettingsForm = document.getElementById('appSettingsForm');
@@ -185,13 +182,7 @@ function formatDateForInput(timestamp) {
  * @param {string} currency - The currency symbol of the price book.
  * @returns {string} The normalized unique index ID.
  */
-function getPriceBookIndexId(name, currency) {
-    // Normalize name and currency: convert to lowercase and remove all whitespace characters.
-    // The regex /\s+/g matches one or more whitespace characters (space, tab, newline, etc.) globally.
-    const normalizedName = name.trim().toLowerCase().replace(/\s+/g, '');
-    const normalizedCurrency = currency.trim().toLowerCase().replace(/\s+/g, '');
-    return `${normalizedName}_${normalizedCurrency}`;
-}
+// getPriceBookIndexId removed
 
 /**
  * Populates a <select> dropdown element with data from a Firestore collection.
@@ -314,7 +305,7 @@ onAuthStateChanged(auth, async (user) => {
         renderOpportunitiesGrid();
         renderCountriesStatesGrid();
         renderCurrenciesGrid();
-        renderPriceBooksGrid();
+        // renderPriceBooksGrid(); // REMOVED
 
         // Populate dynamic data for forms (e.g., dropdowns)
         populateCustomerCountryDropdown();
@@ -346,7 +337,7 @@ onAuthStateChanged(auth, async (user) => {
         if (opportunitiesGrid) opportunitiesGrid.updateConfig({ data: [] }).forceRender();
         if (countriesStatesGrid) countriesStatesGrid.updateConfig({ data: [] }).forceRender();
         if (currenciesGrid) currenciesGrid.updateConfig({ data: [] }).forceRender();
-        if (priceBooksGrid) priceBooksGrid.updateConfig({ data: [] }).forceRender();
+        // if (priceBooksGrid) priceBooksGrid.updateConfig({ data: [] }).forceRender(); // REMOVED
 
         // Clear dropdowns
         customerCountrySelect.innerHTML = '<option value="">Select...</option>';
@@ -355,7 +346,7 @@ onAuthStateChanged(auth, async (user) => {
         opportunityCustomerSelect.innerHTML = '<option value="">Select a Customer</option>';
         opportunityCurrencySelect.innerHTML = '<option value="">Select...</option>';
         opportunityPriceBookSelect.innerHTML = '<option value="">Select...</option>';
-        priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>';
+        // priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>'; // REMOVED
         currencyCountrySelect.innerHTML = '<option value="">Select Country</option>';
         defaultCurrencySelect.innerHTML = '<option value="">Select...</option>';
         defaultCountrySelect.innerHTML = '<option value="">Select...</option>';
@@ -515,15 +506,15 @@ function resetForms() {
     countryStateIdInput.value = '';
     currencyForm.reset();
     currencyIdInput.value = '';
-    priceBookForm.reset();
-    priceBookIdInput.value = '';
+    // priceBookForm.reset(); // REMOVED
+    // priceBookIdInput.value = ''; // REMOVED
     appSettingsForm.reset();
     settingsDocIdInput.value = '';
 
-    // Reset Price Book specific fields to their default values
-    priceBookIsActiveSelect.value = 'Yes'; // Default to Yes
-    priceBookValidFromInput.value = '';
-    priceBookValidToInput.value = '';
+    // Reset Price Book specific fields to their default values - REMOVED
+    // priceBookIsActiveSelect.value = 'Yes'; // Default to Yes
+    // priceBookValidFromInput.value = '';
+    // priceBookValidToInput.value = '';
 
     // Manually reset other dropdowns to their initial "Select..." or default option
     customerTypeSelect.value = 'Individual';
@@ -538,7 +529,7 @@ function resetForms() {
     populateOpportunityCustomerDropdown();
     populateOpportunityCurrencyDropdown();
     populateOpportunityPriceBookDropdown();
-    populatePriceBookCurrencyDropdown();
+    // populatePriceBookCurrencyDropdown(); // REMOVED
     populateCurrencyCountryDropdown();
     populateDefaultCurrencyDropdown();
     populateDefaultCountryDropdown();
@@ -1087,8 +1078,8 @@ adminSectionBtns.forEach(button => {
             renderCurrenciesGrid();
             populateCurrencyCountryDropdown();
         } else if (button.dataset.adminTarget === 'priceBooks') {
-            renderPriceBooksGrid();
-            populatePriceBookCurrencyDropdown();
+            // renderPriceBooksGrid(); // REMOVED
+            // populatePriceBookCurrencyDropdown(); // REMOVED
         } else if (button.dataset.adminTarget === 'settings') {
             loadAppSettings();
             populateDefaultCurrencyDropdown();
@@ -1273,13 +1264,12 @@ cancelCountryStateEditBtn.addEventListener('click', () => {
 // --- Currencies Management ---
 
 /**
- * Populates the currency country dropdown with data from the 'currencies' collection.
- * @param {string|null} selectedCountry - The country name to pre-select (optional). -bosky
+ * Populates the currency country dropdown with data from the 'countries' collection.
+ * @param {string|null} selectedCountry - The country name to pre-select (optional).
  */
 async function populateCurrencyCountryDropdown(selectedCountry = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
-   // await populateSelect(currencyCountrySelect, 'currencies', 'symbol', 'name', selectedCountry);
-    await populateSelect(currencyCountrySelect,'countries', 'name', 'name', selectedCountry);
+    await populateSelect(currencyCountrySelect, 'countries', 'name', 'name', selectedCountry);
 }
 
 /**
@@ -1398,7 +1388,7 @@ async function deleteCurrency(id) {
         renderCurrenciesGrid(); // Refresh grid
         populateOpportunityCurrencyDropdown(); // Refresh opportunity dropdown
         populateDefaultCurrencyDropdown(); // Refresh settings dropdown
-        populatePriceBookCurrencyDropdown(); // Refresh price book currency dropdown
+        // populatePriceBookCurrencyDropdown(); // REMOVED
     } catch (error) {
         console.error("Error deleting currency:", error);
         showMessage('error', 'Error Deleting Currency', 'Error deleting currency: ' + error.message);
@@ -1460,7 +1450,7 @@ currencyForm.addEventListener('submit', async (e) => {
         renderCurrenciesGrid(); // Refresh grid
         populateOpportunityCurrencyDropdown(); // Refresh opportunity dropdown
         populateDefaultCurrencyDropdown(); // Refresh settings dropdown
-        populatePriceBookCurrencyDropdown(); // Refresh price book currency dropdown
+        // populatePriceBookCurrencyDropdown(); // REMOVED
     } catch (error) {
         console.error("Error saving currency:", error);
         showMessage('error', 'Error Saving Currency', 'Error saving currency: ' + error.message);
@@ -1475,271 +1465,8 @@ cancelCurrencyEditBtn.addEventListener('click', () => {
 
 
 // --- Price Books Management ---
-
-/**
- * Populates the price book currency dropdown with data from the 'currencies' collection.
- * @param {string|null} selectedCurrencySymbol - The currency symbol to pre-select (optional).
- */
-async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null) {
-    if (!currentUser || currentUserRole !== 'Admin') return;
-    await populateSelect(priceBookCurrencySelect, 'currencies', 'symbol', 'name', selectedCurrencySymbol);
-}
-
-
-/**
- * Renders or updates the Grid.js table for price books.
- * Fetches data from the 'priceBooks' collection.
- */
-async function renderPriceBooksGrid() {
-    if (!currentUser || currentUserRole !== 'Admin') return;
-
-    const priceBooksRef = collection(db, 'priceBooks');
-    const data = [];
-
-    const snapshot = await getDocs(query(priceBooksRef, orderBy('name'))); // Order by name
-    snapshot.forEach(doc => {
-        const priceBook = doc.data();
-        data.push([
-            doc.id, // Hidden ID for actions
-            priceBook.name,
-            priceBook.description,
-            priceBook.currency || '',
-            priceBook.isActive,
-            priceBook.validFrom,
-            priceBook.validTo
-        ]);
-    });
-
-    if (priceBooksGrid) {
-        priceBooksGrid.updateConfig({ data: data }).forceRender();
-    } else {
-        const containerElement = document.getElementById('priceBooksTable');
-        if (containerElement) {
-            containerElement.innerHTML = '';
-        }
-        priceBooksGrid = new Grid({
-            columns: [
-                { id: 'id', name: 'ID', hidden: true },
-                { id: 'name', name: 'Price Book Name', sort: true, filter: true },
-                { id: 'description', name: 'Description', sort: true, filter: true },
-                { id: 'currency', name: 'Currency', sort: true, filter: true },
-                { id: 'isActive', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
-                { id: 'validFrom', name: 'Valid From', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
-                { id: 'validTo', name: 'Valid To', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
-                {
-                    name: 'Actions',
-                    sort: false,
-                    filter: false,
-                    formatter: (cell, row) => {
-                        const docId = row.cells[0].data;
-                        return h('div', { className: 'action-icons' },
-                            h('span', {
-                                className: 'fa-solid fa-edit',
-                                title: 'Edit Price Book',
-                                onClick: () => editPriceBook(docId)
-                            }),
-                            h('span', {
-                                className: 'fa-solid fa-trash',
-                                title: 'Delete Price Book',
-                                onClick: () => deletePriceBook(docId)
-                            })
-                        );
-                    }
-                }
-            ],
-            data: data,
-            search: true,
-            pagination: { enabled: true, limit: 5, summary: true },
-            sort: true,
-            resizable: true,
-            className: {
-                container: 'gridjs-container', table: 'gridjs-table', thead: 'gridjs-thead', th: 'gridjs-th',
-                td: 'gridjs-td', tr: 'gridjs-tr', footer: 'gridjs-footer', pagination: 'gridjs-pagination',
-                'pagination-summary': 'gridjs-pagination-summary', 'pagination-gap': 'gridjs-pagination-gap',
-                'pagination-nav': 'gridjs-pagination-nav', 'pagination-nav-prev': 'gridjs-pagination-nav-prev',
-                'pagination-nav-next': 'gridjs-pagination-nav-next', 'pagination-btn': 'gridjs-pagination-btn',
-                'pagination-btn-current': 'gridjs-currentPage',
-            },
-            language: {
-                'search': { 'placeholder': 'Search price books...' },
-                'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
-                'noRecordsFound': 'No Price Books Data Available',
-            }
-        }).render(containerElement);
-    }
-}
-
-/**
- * Populates the price book form with existing data for editing.
- * @param {string} id - The ID of the price book document to edit.
- */
-async function editPriceBook(id) {
-    if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
-    try {
-        const docSnap = await getDoc(doc(db, 'priceBooks', id));
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            priceBookIdInput.value = docSnap.id; // Corrected from data.name to docSnap.id
-            priceBookNameInput.value = data.name || '';
-            priceBookDescriptionTextarea.value = data.description || '';
-            await populatePriceBookCurrencyDropdown(data.currency); // Pre-select currency
-            priceBookIsActiveSelect.value = data.isActive ? 'Yes' : 'No';
-            priceBookValidFromInput.value = formatDateForInput(data.validFrom);
-            priceBookValidToInput.value = formatDateForInput(data.validTo);
-        } else {
-            showMessage('error', 'Not Found', 'Price Book not found!');
-        }
-    } catch (error) {
-        console.error("Error loading price book for edit:", error);
-        showMessage('error', 'Error Loading Price Book', 'Error loading price book for edit: ' + error.message);
-    }
-}
-
-/**
- * Deletes a price book document and its corresponding uniqueness index document.
- * Requires Admin role.
- * @param {string} id - The ID of the price book document to delete.
- */
-async function deletePriceBook(id) {
-    if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
-    
-    showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this price book? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
-
-    try {
-        // First, retrieve the price book data to get name and currency for the index ID
-        const priceBookDoc = await getDoc(doc(db, 'priceBooks', id));
-        let indexIdToDelete = null;
-        if (priceBookDoc.exists()) {
-            const data = priceBookDoc.data();
-            // Use the stored normalized values for index ID derivation
-            // Ensure data.normalizedName and data.normalizedCurrency exist and are used
-            if (data.normalizedName && data.normalizedCurrency) {
-                 indexIdToDelete = getPriceBookIndexId(data.normalizedName, data.normalizedCurrency);
-            } else {
-                // Fallback if old data doesn't have normalized fields (shouldn't happen with new script)
-                indexIdToDelete = getPriceBookIndexId(data.name, data.currency);
-            }
-        }
-
-        // Delete the main price book document
-        await deleteDoc(doc(db, 'priceBooks', id));
-
-        // If an index ID was successfully derived, delete the corresponding index document
-        if (indexIdToDelete) {
-            await deleteDoc(doc(db, 'priceBookNameCurrencyIndexes', indexIdToDelete));
-        }
-
-        showMessage('success', 'Success', 'Price Book deleted!');
-        renderPriceBooksGrid(); // Refresh the grid
-        populateOpportunityPriceBookDropdown(); // Refresh opportunity dropdown
-    }
-    catch (error) {
-        console.error("Error deleting price book:", error);
-        showMessage('error', 'Error Deleting Price Book', 'Error deleting price book: ' + error.message);
-    }
-}
-
-// Event listener to save (add or update) a price book
-priceBookForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
-
-    // Normalize name and currency for storage and index ID
-    const normalizedName = priceBookNameInput.value.trim().toLowerCase().replace(/\s+/g, '');
-    const normalizedCurrency = priceBookCurrencySelect.value.trim().toLowerCase().replace(/\s+/g, '');
-
-    const priceBookData = {
-        name: priceBookNameInput.value.trim(), // Keep original name for display
-        normalizedName: normalizedName, // Store normalized name for rules validation
-        description: priceBookDescriptionTextarea.value.trim(),
-        currency: priceBookCurrencySelect.value, // Keep original currency for display
-        normalizedCurrency: normalizedCurrency, // Store normalized currency for rules validation
-        isActive: priceBookIsActiveSelect.value === 'Yes', // Convert to boolean
-        validFrom: priceBookValidFromInput.value ? Timestamp.fromDate(new Date(priceBookValidFromInput.value)) : null,
-        validTo: priceBookValidToInput.value ? Timestamp.fromDate(new Date(priceBookValidToInput.value)) : null,
-    };
-
-    const currentPriceBookId = priceBookIdInput.value;
-    // Use the newly created normalized values for the index ID
-    const newIndexId = getPriceBookIndexId(priceBookData.name, priceBookData.currency); // This function uses the original (but trimmed) name/currency to derive the ID
-
-    console.log('Price Book Data being sent:', JSON.stringify(priceBookData, null, 2));
-    console.log('Generated Index ID (client-side):', newIndexId);
-
-    try {
-        // --- Client-Side Uniqueness Validation for Price Book (Name, Currency) ---
-        const existingIndexDoc = await getDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId));
-
-        if (existingIndexDoc.exists()) {
-            // If an index exists, it means a price book with this name/currency already exists.
-            // Check if it's the *same* document being edited.
-            if (existingIndexDoc.data().priceBookId !== currentPriceBookId) {
-                showMessage('error', 'Duplicate Entry', 'A price book with this Name and Currency already exists. Please choose a unique combination.');
-                return; // Stop the function if duplicate is found
-            }
-        }
-        // --- End Client-Side Uniqueness Validation ---
-
-        let docRef;
-        if (currentPriceBookId) {
-            // Update existing price book
-            docRef = doc(db, 'priceBooks', currentPriceBookId);
-            await updateDoc(docRef, priceBookData);
-            showMessage('success', 'Success', 'Price Book updated!');
-
-            // Update the index document:
-            // If normalized name/currency changed, delete old index and create new one.
-            const oldPriceBookDoc = await getDoc(doc(db, 'priceBooks', currentPriceBookId));
-            const oldPriceBookData = oldPriceBookDoc.data();
-            // Derive old index ID using the *old* normalized values from the database
-            const oldIndexId = getPriceBookIndexId(oldPriceBookData.name, oldPriceBookData.currency); // Use original name/currency from stored doc
-
-            if (oldIndexId !== newIndexId) {
-                // Name or currency changed, delete old index
-                await deleteDoc(doc(db, 'priceBookNameCurrencyIndexes', oldIndexId));
-                // Create new index with the new combination
-                await setDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId), {
-                    priceBookId: currentPriceBookId, // Still points to the same main price book document
-                    priceBookName: priceBookData.normalizedName, // Use normalized name for index
-                    priceBookCurrency: priceBookData.normalizedCurrency // Use normalized currency for index
-                });
-            }
-        } else {
-            // Add new price book
-            // Set defaults for new records if not provided
-            if (priceBookData.isActive === null) priceBookData.isActive = true; // Default to true if not explicitly set
-            if (!priceBookData.validFrom) priceBookData.validFrom = serverTimestamp(); // Default to server timestamp if empty for new records
-
-            const newDocRef = await addDoc(collection(db, 'priceBooks'), priceBookData);
-            docRef = newDocRef; // Assign to docRef for index creation
-            showMessage('success', 'Success', 'Price Book added!');
-
-            // Create corresponding index document
-            await setDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId), {
-                priceBookId: docRef.id, // Use the ID of the newly created price book
-                priceBookName: priceBookData.normalizedName, // Use normalized name for index
-                priceBookCurrency: priceBookData.normalizedCurrency // Use normalized currency for index
-            });
-        }
-        priceBookForm.reset();
-        priceBookIdInput.value = '';
-        renderPriceBooksGrid(); // Refresh grid
-        populateOpportunityPriceBookDropdown(); // Refresh opportunity dropdown
-    } catch (error) {
-        console.error("Error saving price book:", error);
-        showMessage('error', 'Error Saving Price Book', 'Error saving price book: ' + error.message);
-    }
-});
-
-// Event listener for the cancel button on the price book form
-cancelPriceBookEditBtn.addEventListener('click', () => {
-    priceBookForm.reset();
-    priceBookIdInput.value = '';
-    // Reset Price Book specific fields to their defaults on cancel
-    priceBookIsActiveSelect.value = 'Yes';
-    priceBookValidFromInput.value = '';
-    priceBookValidToInput.value = '';
-});
+// ALL PRICE BOOK RELATED CODE HAS BEEN REMOVED FROM THIS SECTION.
+// This section is intentionally left blank for re-implementation.
 
 
 // --- App Settings Management ---
@@ -1788,7 +1515,7 @@ async function loadAppSettings() {
         console.error("Error loading app settings:", error);
         showMessage('error', 'Error Loading Settings', 'Error loading app settings: ' + error.message);
     }
-};
+}
 
 // Event listener to save application settings
 appSettingsForm.addEventListener('submit', async (e) => {
