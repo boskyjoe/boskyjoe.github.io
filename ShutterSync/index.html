@@ -119,11 +119,14 @@
                     <button id="addCustomerBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md mb-6 shadow-md transition duration-300" aria-label="Add New Customer">
                         <i class="fas fa-plus mr-2" aria-hidden="true"></i>Add New Customer
                     </button>
-                    <div id="customersTable" class="bg-white rounded-lg shadow-md p-4" role="table" aria-label="Customers List">
-                        <!-- Grid.js table will be rendered here -->
+                    <!-- Container for Customers Table and its Loading Indicator -->
+                    <div class="bg-white rounded-lg shadow-md p-4" role="table" aria-label="Customers List">
                         <div id="customersTableLoading" class="loading-indicator text-center py-8 hidden">
                             <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
                             <p class="text-gray-500 mt-2">Loading customers...</p>
+                        </div>
+                        <div id="customersGridTarget">
+                            <!-- Grid.js table will be rendered here -->
                         </div>
                     </div>
                 </section>
@@ -146,11 +149,14 @@
                     <button id="addOpportunityBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md mb-6 shadow-md transition duration-300" aria-label="Add New Opportunity">
                         <i class="fas fa-plus mr-2" aria-hidden="true"></i>Add New Opportunity
                     </button>
-                    <div id="opportunitiesTable" class="bg-white rounded-lg shadow-md p-4" role="table" aria-label="Opportunities List">
-                        <!-- Grid.js table will be rendered here -->
+                    <!-- Container for Opportunities Table and its Loading Indicator -->
+                    <div class="bg-white rounded-lg shadow-md p-4" role="table" aria-label="Opportunities List">
                         <div id="opportunitiesTableLoading" class="loading-indicator text-center py-8 hidden">
                             <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500 mx-auto"></div>
                             <p class="text-gray-500 mt-2">Loading opportunities...</p>
+                        </div>
+                        <div id="opportunitiesGridTarget">
+                            <!-- Grid.js table will be rendered here -->
                         </div>
                     </div>
                 </section>
@@ -198,10 +204,14 @@
                                 <button type="button" class="cancel-edit-btn bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-md transition duration-300" aria-label="Cancel Edit">Cancel</button>
                             </div>
                         </form>
-                        <div id="countriesStatesTable" class="bg-gray-50 p-4 rounded-lg" role="table" aria-label="Countries and States List">
+                        <!-- Container for Countries & States Table and its Loading Indicator -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
                             <div id="countriesStatesTableLoading" class="loading-indicator text-center py-8 hidden">
                                 <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
                                 <p class="text-gray-500 mt-2">Loading countries and states...</p>
+                            </div>
+                            <div id="countriesStatesGridTarget" role="table" aria-label="Countries and States List">
+                                <!-- Grid.js table will be rendered here -->
                             </div>
                         </div>
                     </div>
@@ -233,10 +243,14 @@
                                 <button type="button" class="cancel-edit-btn bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-md transition duration-300" aria-label="Cancel Edit">Cancel</button>
                             </div>
                         </form>
-                        <div id="currenciesTable" class="bg-gray-50 p-4 rounded-lg" role="table" aria-label="Currencies List">
+                        <!-- Container for Currencies Table and its Loading Indicator -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
                             <div id="currenciesTableLoading" class="loading-indicator text-center py-8 hidden">
                                 <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
                                 <p class="text-gray-500 mt-2">Loading currencies...</p>
+                            </div>
+                            <div id="currenciesGridTarget" role="table" aria-label="Currencies List">
+                                <!-- Grid.js table will be rendered here -->
                             </div>
                         </div>
                     </div>
@@ -298,10 +312,14 @@
                                 <button type="button" class="cancel-edit-btn bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-md transition duration-300" aria-label="Cancel Edit">Cancel</button>
                             </div>
                         </form>
-                        <div id="priceBooksTable" class="bg-gray-50 p-4 rounded-lg" role="table" aria-label="Price Books List">
+                        <!-- Container for Price Books Table and its Loading Indicator -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
                             <div id="priceBooksTableLoading" class="loading-indicator text-center py-8 hidden">
                                 <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
                                 <p class="text-gray-500 mt-2">Loading price books...</p>
+                            </div>
+                            <div id="priceBooksGridTarget" role="table" aria-label="Price Books List">
+                                <!-- Grid.js table will be rendered here -->
                             </div>
                         </div>
                     </div>
@@ -418,7 +436,7 @@
                     <label for="customerSource" class="block text-sm font-medium text-gray-700">Lead Source</label>
                     <select id="customerSource" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
                         <option value="">Select Source</option>
-                        <option value="Website">Website</p>
+                        <option value="Website">Website</option>
                         <option value="Referral">Referral</option>
                         <option value="Advertisement">Advertisement</option>
                         <option value="Social Media">Social Media</option>
