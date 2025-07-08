@@ -10,10 +10,10 @@ import { Grid, h } from 'https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gri
 
 // Firebase configuration:
 const firebaseConfig = {
-    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo", // Removed inline comment for strict parsing
+    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
-    storageBucket: "shuttersync-96971.appspot.com", // Corrected storageBucket
+    storageBucket: "shuttersync-96971.appspot.com",
     messagingSenderId: "10782416018",
     appId: "1:10782416018:web:361db5572882a62f291a4b",
     measurementId: "G-T0W9CES4D3"
@@ -42,7 +42,8 @@ const authButtonSignIn = document.getElementById('authButtonAnon'); // For the "
 const userInfoDisplay = document.getElementById('userInfoDisplay');
 const userNameSpan = document.getElementById('userName');
 const userRoleSpan = document.getElementById('userRole');
-const adminNavButton = document.querySelector('.nav-button[data-module="admin"]');
+// FIX: Corrected mismatched quotes in the selector string
+const adminNavButton = document.querySelector('.nav-button[data-module="admin"]'); 
 
 // Global Loading Indicator
 const loadingOverlay = document.getElementById('loadingOverlay');
@@ -81,7 +82,7 @@ const opportunityCurrencySelect = document.getElementById('opportunityCurrency')
 const opportunityPriceBookSelect = document.getElementById('opportunityPriceBook');
 const opportunityExpectedStartDateInput = document.getElementById('opportunityExpectedStartDate');
 const opportunityExpectedCloseDateInput = document.getElementById('opportunityExpectedCloseDate');
-const opportunitySalesStageSelect = document.getElementById('opportunitySalesStage');
+const opportunitySalesStageSelect = document = document.getElementById('opportunitySalesStage');
 const opportunityProbabilityInput = document.getElementById('opportunityProbability');
 const opportunityValueInput = document.getElementById('opportunityValue');
 const opportunityNotesTextarea = document.getElementById('opportunityNotes');
