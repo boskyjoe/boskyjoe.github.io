@@ -66,6 +66,7 @@ const customerAdditionalDetailsTextarea = document.getElementById('customerAddit
 const customerSourceSelect = document.getElementById('customerSource');
 const customerActiveSelect = document.getElementById('customerActive');
 const customersTableLoading = document.getElementById('customersTableLoading'); // Table loading indicator
+const customersGridTarget = document.getElementById('customersGridTarget'); // New Grid.js render target
 
 // Opportunity Modal Elements
 const addOpportunityBtn = document.getElementById('addOpportunityBtn');
@@ -85,6 +86,7 @@ const opportunityProbabilityInput = document.getElementById('opportunityProbabil
 const opportunityValueInput = document.getElementById('opportunityValue');
 const opportunityNotesTextarea = document.getElementById('opportunityNotes');
 const opportunitiesTableLoading = document.getElementById('opportunitiesTableLoading'); // Table loading indicator
+const opportunitiesGridTarget = document.getElementById('opportunitiesGridTarget'); // New Grid.js render target
 
 // Dashboard Elements
 const totalCustomersCount = document.getElementById('totalCustomersCount');
@@ -105,6 +107,7 @@ const countryCodeInput = document.getElementById('countryCode');
 const countryStatesInput = document.getElementById('countryStates');
 const cancelCountryStateEditBtn = countryStateForm.querySelector('.cancel-edit-btn');
 const countriesStatesTableLoading = document.getElementById('countriesStatesTableLoading'); // Table loading indicator
+const countriesStatesGridTarget = document.getElementById('countriesStatesGridTarget'); // New Grid.js render target
 
 // Currencies Elements
 const currencyForm = document.getElementById('currencyForm');
@@ -114,6 +117,7 @@ const currencySymbolInput = document.getElementById('currencySymbol');
 const currencyCountrySelect = document.getElementById('currencyCountry');
 const cancelCurrencyEditBtn = currencyForm.querySelector('.cancel-edit-btn');
 const currenciesTableLoading = document.getElementById('currenciesTableLoading'); // Table loading indicator
+const currenciesGridTarget = document.getElementById('currenciesGridTarget'); // New Grid.js render target
 
 // Price Books Elements - Declared with 'let' and initialized in DOMContentLoaded
 let priceBookForm;
@@ -127,6 +131,7 @@ let priceBookValidFromInput;
 let priceBookValidToInput;
 let cancelPriceBookEditBtn;
 const priceBooksTableLoading = document.getElementById('priceBooksTableLoading'); // Table loading indicator
+const priceBooksGridTarget = document.getElementById('priceBooksGridTarget'); // New Grid.js render target
 
 // App Settings Elements
 const appSettingsForm = document.getElementById('appSettingsForm');
@@ -160,26 +165,32 @@ function hideLoading() {
 }
 
 /**
- * Shows a table-specific loading indicator.
+ * Shows a table-specific loading indicator and hides the grid container.
  * @param {HTMLElement} indicatorElement - The loading indicator element to show.
+ * @param {HTMLElement} gridTargetElement - The Grid.js render target element.
  */
-function showTableLoading(indicatorElement) {
+function showTableLoading(indicatorElement, gridTargetElement) {
     if (indicatorElement) {
         indicatorElement.classList.remove('hidden');
+    }
+    if (gridTargetElement) {
         // Hide the grid container if it exists, to show only the spinner
-        indicatorElement.parentElement.querySelector('.gridjs-container')?.classList.add('hidden');
+        gridTargetElement.classList.add('hidden');
     }
 }
 
 /**
- * Hides a table-specific loading indicator.
+ * Hides a table-specific loading indicator and shows the grid container.
  * @param {HTMLElement} indicatorElement - The loading indicator element to hide.
+ * @param {HTMLElement} gridTargetElement - The Grid.js render target element.
  */
-function hideTableLoading(indicatorElement) {
+function hideTableLoading(indicatorElement, gridTargetElement) {
     if (indicatorElement) {
         indicatorElement.classList.add('hidden');
+    }
+    if (gridTargetElement) {
         // Show the grid container after loading
-        indicatorElement.parentElement.querySelector('.gridjs-container')?.classList.remove('hidden');
+        gridTargetElement.classList.remove('hidden');
     }
 }
 
@@ -310,6 +321,196 @@ window.addEventListener('click', (event) => {
 });
 
 
+// --- Form Validation Functions ---
+
+/**
+ * Displays an error message for a given input field.
+ * @param {HTMLElement} inputElement - The input, select, or textarea element.
+ * @param {string} message - The error message to display.
+ */
+function showError(inputElement, message) {
+    const errorSpan = document.getElementById(`${inputElement.id}Error`);
+    if (errorSpan) {
+        errorSpan.textContent = message;
+        errorSpan.classList.remove('hidden');
+    }
+    inputElement.classList.add('is-invalid');
+}
+
+/**
+ * Clears the error message for a given input field.
+ * @param {HTMLElement} inputElement - The input, select, or textarea element.
+ */
+function clearError(inputElement) {
+    const errorSpan = document.getElementById(`${inputElement.id}Error`);
+    if (errorSpan) {
+        errorSpan.textContent = '';
+        errorSpan.classList.add('hidden');
+    }
+    inputElement.classList.remove('is-invalid');
+}
+
+/**
+ * Validates a single input field based on its rules.
+ * @param {HTMLElement} inputElement - The input element to validate.
+ * @param {Object} rules - An object containing validation rules for the input.
+ * @returns {boolean} True if valid, false otherwise.
+ */
+function validateField(inputElement, rules) {
+    clearError(inputElement); // Clear previous errors first
+
+    const value = inputElement.value.trim();
+
+    if (rules.required && value === '') {
+        showError(inputElement, rules.required);
+        return false;
+    }
+
+    if (rules.email && value !== '' && !/\S+@\S+\.\S+/.test(value)) {
+        showError(inputElement, rules.email);
+        return false;
+    }
+
+    if (rules.phone && value !== '' && !/^\+?[0-9\s-()]{7,20}$/.test(value)) { // Basic phone number regex
+        showError(inputElement, rules.phone);
+        return false;
+    }
+
+    if (rules.minLength && value.length < rules.minLength.value && value !== '') {
+        showError(inputElement, rules.minLength.message);
+        return false;
+    }
+
+    if (rules.maxLength && value.length > rules.maxLength.value && value !== '') {
+        showError(inputElement, rules.maxLength.message);
+        return false;
+    }
+
+    if (rules.min && parseFloat(value) < rules.min.value && value !== '') {
+        showError(inputElement, rules.min.message);
+        return false;
+    }
+
+    if (rules.max && parseFloat(value) > rules.max.value && value !== '') {
+        showError(inputElement, rules.max.message);
+        return false;
+    }
+
+    if (rules.dateRange && value !== '') {
+        const startDate = rules.dateRange.startElement ? new Date(rules.dateRange.startElement.value) : null;
+        const endDate = rules.dateRange.endElement ? new Date(rules.dateRange.endElement.value) : null;
+
+        if (startDate && endDate && startDate > endDate) {
+            showError(inputElement, rules.dateRange.message);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+/**
+ * Validates an entire form based on a predefined set of rules.
+ * @param {HTMLFormElement} formElement - The form element to validate.
+ * @param {Object} validationConfig - An object where keys are input IDs and values are validation rules.
+ * @returns {boolean} True if the entire form is valid, false otherwise.
+ */
+function validateForm(formElement, validationConfig) {
+    let formIsValid = true;
+    for (const inputId in validationConfig) {
+        const inputElement = formElement.querySelector(`#${inputId}`);
+        if (inputElement) {
+            // Pass the entire validationConfig to validateField for cross-field rules like dateRange
+            const fieldIsValid = validateField(inputElement, validationConfig[inputId]);
+            if (!fieldIsValid) {
+                formIsValid = false;
+            }
+        }
+    }
+    return formIsValid;
+}
+
+/**
+ * Attaches real-time validation listeners to form inputs.
+ * @param {HTMLFormElement} formElement - The form element.
+ * @param {Object} validationConfig - The validation rules for the form.
+ */
+function attachValidationListeners(formElement, validationConfig) {
+    for (const inputId in validationConfig) {
+        const inputElement = formElement.querySelector(`#${inputId}`);
+        if (inputElement) {
+            // Clear error on input/change
+            inputElement.addEventListener('input', () => clearError(inputElement));
+            inputElement.addEventListener('change', () => clearError(inputElement)); // For select and date inputs
+
+            // Re-validate on blur for immediate feedback
+            inputElement.addEventListener('blur', () => validateField(inputElement, validationConfig[inputId]));
+        }
+    }
+}
+
+
+// --- Validation Rules Definitions ---
+
+const customerValidationRules = {
+    customerType: { required: 'Customer Type is required.' },
+    customerName: { required: 'Customer Name is required.', minLength: { value: 3, message: 'Name must be at least 3 characters.' } },
+    customerEmail: { email: 'Please enter a valid email address.' },
+    customerPhone: { phone: 'Please enter a valid phone number.' },
+    customerCountry: { required: 'Country is required.' },
+    customerPreferredContactMethod: { required: 'Preferred Contact Method is required.' },
+};
+
+const opportunityValidationRules = {
+    opportunityName: { required: 'Opportunity Name is required.', minLength: { value: 3, message: 'Name must be at least 3 characters.' } },
+    opportunityCustomer: { required: 'Customer is required.' },
+    opportunityCurrency: { required: 'Currency is required.' },
+    opportunityExpectedStartDate: {}, // No specific rules yet, but included for consistency
+    opportunityExpectedCloseDate: {
+        dateRange: {
+            startElement: () => opportunityExpectedStartDateInput, // Use a function to get current value
+            endElement: () => opportunityExpectedCloseDateInput,
+            message: 'Close Date cannot be before Start Date.'
+        }
+    },
+    opportunitySalesStage: { required: 'Sales Stage is required.' },
+    opportunityProbability: { required: 'Probability is required.', min: { value: 0, message: 'Probability cannot be negative.' }, max: { value: 100, message: 'Probability cannot exceed 100.' } },
+    opportunityValue: { required: 'Value is required.', min: { value: 0, message: 'Value cannot be negative.' } },
+};
+
+const countryStateValidationRules = {
+    countryName: { required: 'Country Name is required.', minLength: { value: 2, message: 'Country name must be at least 2 characters.' } },
+    countryCode: { required: 'Country Code is required.', minLength: { value: 2, message: 'Country code must be 2 characters.' }, maxLength: { value: 2, message: 'Country code must be 2 characters.' } },
+};
+
+const currencyValidationRules = {
+    currencyCountry: { required: 'Country is required.' },
+    currencyName: { required: 'Currency Name is required.', minLength: { value: 2, message: 'Currency name must be at least 2 characters.' } },
+    currencySymbol: { required: 'Currency Symbol is required.', minLength: { value: 1, message: 'Currency symbol is required.' } },
+};
+
+const priceBookValidationRules = {
+    priceBookName: { required: 'Price Book Name is required.', minLength: { value: 3, message: 'Price book name must be at least 3 characters.' } },
+    priceBookCountry: { required: 'Country is required.' },
+    priceBookCurrency: { required: 'Currency is required.' },
+    priceBookIsActive: { required: 'Active status is required.' },
+    priceBookValidFrom: {},
+    priceBookValidTo: {
+        dateRange: {
+            startElement: () => priceBookValidFromInput,
+            endElement: () => priceBookValidToInput,
+            message: 'Valid To date cannot be before Valid From date.'
+        }
+    }
+};
+
+const appSettingsValidationRules = {
+    defaultCurrency: { required: 'Default Currency is required.' },
+    defaultCountry: { required: 'Default Country is required.' },
+};
+
+
 // --- Authentication ---
 
 // Listens for Firebase authentication state changes
@@ -377,8 +578,6 @@ onAuthStateChanged(auth, async (user) => {
         populateOpportunityPriceBookDropdown();
         populateDefaultCurrencyDropdown();
         populateDefaultCountryDropdown();
-        // populatePriceBookCurrencyDropdown(); // Will be called by priceBookCountrySelect change listener or editPriceBook
-        // populatePriceBookCountryDropdown(); // Will be called by admin section change listener or editPriceBook
         loadAppSettings(); // Load app settings for admin panel
 
         // Set initial module to dashboard
@@ -577,12 +776,36 @@ window.addEventListener('click', (event) => {
 function resetForms() {
     customerForm.reset();
     customerIdInput.value = '';
+    // Clear all validation errors on customer form
+    for (const inputId in customerValidationRules) {
+        const inputElement = customerForm.querySelector(`#${inputId}`);
+        if (inputElement) clearError(inputElement);
+    }
+
     opportunityForm.reset();
     opportunityIdInput.value = '';
+    // Clear all validation errors on opportunity form
+    for (const inputId in opportunityValidationRules) {
+        const inputElement = opportunityForm.querySelector(`#${inputId}`);
+        if (inputElement) clearError(inputElement);
+    }
+
     countryStateForm.reset();
     countryStateIdInput.value = '';
+    // Clear all validation errors on country form
+    for (const inputId in countryStateValidationRules) {
+        const inputElement = countryStateForm.querySelector(`#${inputId}`);
+        if (inputElement) clearError(inputElement);
+    }
+
     currencyForm.reset();
     currencyIdInput.value = '';
+    // Clear all validation errors on currency form
+    for (const inputId in currencyValidationRules) {
+        const inputElement = currencyForm.querySelector(`#${inputId}`);
+        if (inputElement) clearError(inputElement);
+    }
+
     // Only reset priceBookForm if it's been initialized
     if (priceBookForm) {
         priceBookForm.reset();
@@ -593,9 +816,19 @@ function resetForms() {
         priceBookValidToInput.value = '';
         populatePriceBookCountryDropdown(); // Reset country dropdown on cancel
         populatePriceBookCurrencyDropdown(); // Reset currency dropdown on cancel
+        // Clear all validation errors on price book form
+        for (const inputId in priceBookValidationRules) {
+            const inputElement = priceBookForm.querySelector(`#${inputId}`);
+            if (inputElement) clearError(inputElement);
+        }
     }
     appSettingsForm.reset();
     settingsDocIdInput.value = '';
+    // Clear all validation errors on app settings form
+    for (const inputId in appSettingsValidationRules) {
+        const inputElement = appSettingsForm.querySelector(`#${inputId}`);
+        if (inputElement) clearError(inputElement);
+    }
 
     // Manually reset other dropdowns to their initial "Select..." or default option
     customerTypeSelect.value = 'Individual';
@@ -629,8 +862,8 @@ async function populateCustomerCountryDropdown(selectedCountry = null) {
 
 // Event listener to open the Customer Modal for adding a new customer
 addCustomerBtn.addEventListener('click', () => {
-    customerForm.reset();
-    customerIdInput.value = ''; // Clear ID for new customer
+    resetForms(); // Reset all forms, including customer form, before opening
+    customerIdInput.value = ''; // Ensure ID is clear for new customer
     customerModalTitle.textContent = 'Add New Customer';
     
     // Set default values for new entry
@@ -648,6 +881,12 @@ addCustomerBtn.addEventListener('click', () => {
 customerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
+
+    // Client-side validation
+    if (!validateForm(customerForm, customerValidationRules)) {
+        showMessage('error', 'Validation Error', 'Please correct the errors in the form.');
+        return;
+    }
 
     const customerData = {
         type: customerTypeSelect.value,
@@ -695,7 +934,8 @@ customerForm.addEventListener('submit', async (e) => {
 async function renderCustomersGrid() {
     if (!currentUser) return;
 
-    showTableLoading(customersTableLoading); // Show table-specific loading indicator
+    // Use the specific grid target element for show/hide
+    showTableLoading(customersTableLoading, customersGridTarget); 
 
     let customersRef = query(collection(db, 'customers'));
     // Filter customers by creatorId if not an Admin
@@ -730,19 +970,20 @@ async function renderCustomersGrid() {
         if (customersGrid) {
             customersGrid.updateConfig({ data: [] }).forceRender();
         } else {
-            const containerElement = document.getElementById('customersTable');
-            if (containerElement) {
-                containerElement.innerHTML = ''; // Clear container on error if grid not initialized
+            // If grid not initialized, just clear the target container
+            if (customersGridTarget) {
+                customersGridTarget.innerHTML = '';
             }
         }
         return; // Exit function on error
     } finally {
-        hideTableLoading(customersTableLoading); // Hide table-specific loading indicator
+        // Use the specific grid target element for show/hide
+        hideTableLoading(customersTableLoading, customersGridTarget); 
     }
 
-    const containerElement = document.getElementById('customersTable');
+    const containerElement = customersGridTarget; // Use the new target element directly
     if (!containerElement) {
-        console.error("Customers table container element not found!");
+        console.error("Customers table container element (customersGridTarget) not found!");
         return;
     }
 
@@ -966,7 +1207,7 @@ async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null) 
 
 // Event listener to open the Opportunity Modal for adding a new opportunity
 addOpportunityBtn.addEventListener('click', () => {
-    opportunityForm.reset();
+    resetForms(); // Reset all forms, including opportunity form, before opening
     opportunityIdInput.value = ''; // Clear ID for new opportunity
     opportunityModalTitle.textContent = 'Add New Opportunity';
     populateOpportunityCustomerDropdown(); // Repopulate customer dropdown
@@ -984,6 +1225,12 @@ closeOpportunityModalBtn.addEventListener('click', () => {
 opportunityForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
+
+    // Client-side validation
+    if (!validateForm(opportunityForm, opportunityValidationRules)) {
+        showMessage('error', 'Validation Error', 'Please correct the errors in the form.');
+        return;
+    }
 
     // Get the display name of the selected customer for storage (denormalization)
     const selectedCustomerOption = opportunityCustomerSelect.options[opportunityCustomerSelect.selectedIndex];
@@ -1035,7 +1282,7 @@ opportunityForm.addEventListener('submit', async (e) => {
 async function renderOpportunitiesGrid() {
     if (!currentUser) return;
 
-    showTableLoading(opportunitiesTableLoading); // Show table-specific loading indicator
+    showTableLoading(opportunitiesTableLoading, opportunitiesGridTarget); // Use specific grid target
 
     let opportunitiesRef = query(collection(db, 'opportunities'));
     // Filter opportunities by creatorId if not an Admin
@@ -1066,19 +1313,18 @@ async function renderOpportunitiesGrid() {
         if (opportunitiesGrid) {
             opportunitiesGrid.updateConfig({ data: [] }).forceRender();
         } else {
-            const containerElement = document.getElementById('opportunitiesTable');
-            if (containerElement) {
-                containerElement.innerHTML = '';
+            if (opportunitiesGridTarget) {
+                opportunitiesGridTarget.innerHTML = '';
             }
         }
         return; // Exit function on error
     } finally {
-        hideTableLoading(opportunitiesTableLoading); // Hide table-specific loading indicator
+        hideTableLoading(opportunitiesTableLoading, opportunitiesGridTarget); // Use specific grid target
     }
 
-    const containerElement = document.getElementById('opportunitiesTable');
+    const containerElement = opportunitiesGridTarget; // Use the new target element directly
     if (!containerElement) {
-        console.error("Opportunities table container element not found!");
+        console.error("Opportunities table container element (opportunitiesGridTarget) not found!");
         return;
     }
 
@@ -1269,13 +1515,22 @@ document.querySelectorAll('.admin-form .cancel-edit-btn').forEach(button => {
 // --- Countries & States Management ---
 
 /**
+ * Populates the country country dropdown with data from the 'countries' collection.
+ * @param {string|null} selectedCountry - The country name to pre-select (optional).
+ */
+async function populateCurrencyCountryDropdown(selectedCountry = null) {
+    if (!currentUser || currentUserRole !== 'Admin') return;
+    await populateSelect(currencyCountrySelect, 'countries', 'name', 'name', selectedCountry);
+}
+
+/**
  * Renders or updates the Grid.js table for countries and their states.
  * Fetches data from the 'countries' collection.
  */
 async function renderCountriesStatesGrid() {
-    if (!currentUser || currentUserRole !== 'Admin') return; // Only Admins can view/manage
+    if (!currentUser || currentUserRole !== 'Admin') return;
 
-    showTableLoading(countriesStatesTableLoading); // Show table-specific loading indicator
+    showTableLoading(countriesStatesTableLoading, countriesStatesGridTarget); // Use specific grid target
 
     const countriesRef = collection(db, 'countries');
     const data = [];
@@ -1297,19 +1552,18 @@ async function renderCountriesStatesGrid() {
         if (countriesStatesGrid) {
             countriesStatesGrid.updateConfig({ data: [] }).forceRender();
         } else {
-            const containerElement = document.getElementById('countriesStatesTable');
-            if (containerElement) {
-                containerElement.innerHTML = '';
+            if (countriesStatesGridTarget) {
+                countriesStatesGridTarget.innerHTML = '';
             }
         }
         return;
     } finally {
-        hideTableLoading(countriesStatesTableLoading); // Hide table-specific loading indicator
+        hideTableLoading(countriesStatesTableLoading, countriesStatesGridTarget); // Use specific grid target
     }
 
-    const containerElement = document.getElementById('countriesStatesTable');
+    const containerElement = countriesStatesGridTarget; // Use the new target element directly
     if (!containerElement) {
-        console.error("Countries & States table container element not found!");
+        console.error("Countries & States table container element (countriesStatesGridTarget) not found!");
         return;
     }
 
@@ -1429,6 +1683,12 @@ countryStateForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
 
+    // Client-side validation
+    if (!validateForm(countryStateForm, countryStateValidationRules)) {
+        showMessage('error', 'Validation Error', 'Please correct the errors in the form.');
+        return;
+    }
+
     const countryData = {
         name: countryNameInput.value.trim(),
         code: countryCodeInput.value.trim().toUpperCase(),
@@ -1464,6 +1724,11 @@ countryStateForm.addEventListener('submit', async (e) => {
 cancelCountryStateEditBtn.addEventListener('click', () => {
     countryStateForm.reset();
     countryStateIdInput.value = '';
+    // Clear validation errors on cancel
+    for (const inputId in countryStateValidationRules) {
+        const inputElement = countryStateForm.querySelector(`#${inputId}`);
+        if (inputElement) clearError(inputElement);
+    }
 });
 
 
@@ -1485,7 +1750,7 @@ async function populateCurrencyCountryDropdown(selectedCountry = null) {
 async function renderCurrenciesGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return;
 
-    showTableLoading(currenciesTableLoading); // Show table-specific loading indicator
+    showTableLoading(currenciesTableLoading, currenciesGridTarget); // Use specific grid target
 
     const currenciesRef = collection(db, 'currencies');
     const data = [];
@@ -1507,19 +1772,18 @@ async function renderCurrenciesGrid() {
         if (currenciesGrid) {
             currenciesGrid.updateConfig({ data: [] }).forceRender();
         } else {
-            const containerElement = document.getElementById('currenciesTable');
-            if (containerElement) {
-                containerElement.innerHTML = '';
+            if (currenciesGridTarget) {
+                currenciesGridTarget.innerHTML = '';
             }
         }
         return;
     } finally {
-        hideTableLoading(currenciesTableLoading); // Hide table-specific loading indicator
+        hideTableLoading(currenciesTableLoading, currenciesGridTarget); // Use specific grid target
     }
 
-    const containerElement = document.getElementById('currenciesTable');
+    const containerElement = currenciesGridTarget; // Use the new target element directly
     if (!containerElement) {
-        console.error("Currencies table container element not found!");
+        console.error("Currencies table container element (currenciesGridTarget) not found!");
         return;
     }
 
@@ -1639,6 +1903,12 @@ currencyForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
 
+    // Client-side validation
+    if (!validateForm(currencyForm, currencyValidationRules)) {
+        showMessage('error', 'Validation Error', 'Please correct the errors in the form.');
+        return;
+    }
+
     const currencyData = {
         country: currencyCountrySelect.value,
         name: currencyNameInput.value.trim(),
@@ -1705,6 +1975,11 @@ currencyForm.addEventListener('submit', async (e) => {
 cancelCurrencyEditBtn.addEventListener('click', () => {
     currencyForm.reset();
     currencyIdInput.value = '';
+    // Clear validation errors on cancel
+    for (const inputId in currencyValidationRules) {
+        const inputElement = currencyForm.querySelector(`#${inputId}`);
+        if (inputElement) clearError(inputElement);
+    }
 });
 
 
@@ -1783,7 +2058,7 @@ async function populatePriceBookCountryDropdown(selectedCountryName = null) {
 async function renderPriceBooksGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return;
 
-    showTableLoading(priceBooksTableLoading); // Show table-specific loading indicator
+    showTableLoading(priceBooksTableLoading, priceBooksGridTarget); // Use specific grid target
 
     const priceBooksRef = collection(db, 'priceBooks');
     const data = [];
@@ -1809,19 +2084,18 @@ async function renderPriceBooksGrid() {
         if (priceBooksGrid) {
             priceBooksGrid.updateConfig({ data: [] }).forceRender();
         } else {
-            const containerElement = document.getElementById('priceBooksTable');
-            if (containerElement) {
-                containerElement.innerHTML = '';
+            if (priceBooksGridTarget) {
+                priceBooksGridTarget.innerHTML = '';
             }
         }
         return;
     } finally {
-        hideTableLoading(priceBooksTableLoading); // Hide table-specific loading indicator
+        hideTableLoading(priceBooksTableLoading, priceBooksGridTarget); // Use specific grid target
     }
 
-    const containerElement = document.getElementById('priceBooksTable');
+    const containerElement = priceBooksGridTarget; // Use the new target element directly
     if (!containerElement) {
-        console.error("Price Books table container element not found!");
+        console.error("Price Books table container element (priceBooksGridTarget) not found!");
         return;
     }
 
@@ -2031,6 +2305,12 @@ appSettingsForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
 
+    // Client-side validation
+    if (!validateForm(appSettingsForm, appSettingsValidationRules)) {
+        showMessage('error', 'Validation Error', 'Please correct the errors in the form.');
+        return;
+    }
+
     const settingsData = {
         defaultCurrency: defaultCurrencySelect.value,
         defaultCountry: defaultCountrySelect.value,
@@ -2062,6 +2342,11 @@ appSettingsForm.addEventListener('submit', async (e) => {
 // Event listener for the cancel button on the app settings form
 cancelSettingsEditBtn.addEventListener('click', () => {
     loadAppSettings(); // Revert to current settings by reloading them
+    // Clear validation errors on cancel
+    for (const inputId in appSettingsValidationRules) {
+        const inputElement = appSettingsForm.querySelector(`#${inputId}`);
+        if (inputElement) clearError(inputElement);
+    }
 });
 
 
@@ -2115,6 +2400,12 @@ document.addEventListener('DOMContentLoaded', () => {
         priceBookForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
+
+            // Client-side validation
+            if (!validateForm(priceBookForm, priceBookValidationRules)) {
+                showMessage('error', 'Validation Error', 'Please correct the errors in the form.');
+                return;
+            }
 
             // Normalize name and currency for storage and index ID
             const normalizedName = priceBookNameInput.value.trim().toLowerCase().replace(/\s+/g, '');
@@ -2217,10 +2508,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 priceBookValidToInput.value = '';
                 populatePriceBookCountryDropdown(); // Reset country dropdown on cancel
                 populatePriceBookCurrencyDropdown(); // Reset currency dropdown on cancel
+                // Clear validation errors on cancel
+                for (const inputId in priceBookValidationRules) {
+                    const inputElement = priceBookForm.querySelector(`#${inputId}`);
+                    if (inputElement) clearError(inputElement);
+                }
             });
         }
     } else {
         console.error("Price Book form elements not found. Cannot attach form listeners.");
     }
+
+    // Attach validation listeners to all forms
+    attachValidationListeners(customerForm, customerValidationRules);
+    attachValidationListeners(opportunityForm, opportunityValidationRules);
+    attachValidationListeners(countryStateForm, countryStateValidationRules);
+    attachValidationListeners(currencyForm, currencyValidationRules);
+    if (priceBookForm) { // Check if initialized
+        attachValidationListeners(priceBookForm, priceBookValidationRules);
+    }
+    attachValidationListeners(appSettingsForm, appSettingsValidationRules);
 });
 // *** END OF SCRIPT - FINAL MARKER ***
