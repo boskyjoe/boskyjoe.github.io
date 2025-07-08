@@ -765,7 +765,8 @@ async function editCustomer(customerId) {
         } else {
             showMessage('error', 'Not Found', 'Customer not found!');
         }
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error editing customer:", error);
         showMessage('error', 'Error Loading Customer', 'Error loading customer for edit: ' + error.message);
     }
@@ -1060,7 +1061,8 @@ async function editOpportunity(opportunityId) {
         } else {
             showMessage('error', 'Not Found', 'Opportunity not found!');
         }
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error editing opportunity:", error);
         showMessage('error', 'Error Loading Opportunity', 'Error loading opportunity for edit: ' + error.message);
     }
@@ -1680,10 +1682,12 @@ async function editPriceBook(id) {
             priceBookValidFromInput.value = formatDateForInput(data.validFrom);
             priceBookValidToInput.value = formatDateForInput(data.validTo);
             console.log('Displaying Price Book Modal for edit.'); // NEW LOG
+            priceBookForm.parentElement.style.display = 'flex'; // Ensure the modal containing the form is shown
         } else {
             showMessage('error', 'Not Found', 'Price Book not found!');
         }
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error loading price book for edit:", error);
         showMessage('error', 'Error Loading Price Book', 'Error loading price book for edit: ' + error.message);
     }
@@ -1831,6 +1835,19 @@ cancelSettingsEditBtn.addEventListener('click', () => {
 // It ensures that the app initializes correctly after the DOM is fully loaded.
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOMContentLoaded fired.');
+
+    // --- NEW SAFEGUARD: Immediately hide all modals on page load ---
+    // This ensures they are hidden regardless of any external scripts or timing issues.
+    console.log('Applying modal safeguard: Hiding all modals.');
+    if (customerModal) customerModal.style.display = 'none';
+    if (opportunityModal) opportunityModal.style.display = 'none';
+    if (messageBoxModal) messageBoxModal.style.display = 'none';
+    // Ensure the price book modal is also hidden on load.
+    // The priceBookForm's parent element is the modal itself in your HTML structure.
+    if (priceBookForm && priceBookForm.parentElement) {
+        priceBookForm.parentElement.style.display = 'none';
+    }
+    // --- END NEW SAFEGUARD ---
 
     // Initialize ALL Price Book UI elements here to ensure they are available
     priceBookForm = document.getElementById('priceBookForm');
