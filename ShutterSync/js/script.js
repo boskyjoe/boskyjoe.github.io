@@ -42,7 +42,7 @@ const authButtonSignIn = document.getElementById('authButtonAnon'); // For the "
 const userInfoDisplay = document.getElementById('userInfoDisplay');
 const userNameSpan = document.getElementById('userName');
 const userRoleSpan = document.getElementById('userRole');
-const adminNavButton = document.querySelector('.nav-button[data-module="admin"]');
+const adminNavButton = document.querySelector('.nav-button[data-module="admin']');
 
 // Global Loading Indicator
 const loadingOverlay = document.getElementById('loadingOverlay');
@@ -170,11 +170,12 @@ function hideLoading() {
  * @param {HTMLElement} gridTargetElement - The Grid.js render target element.
  */
 function showTableLoading(indicatorElement, gridTargetElement) {
+    console.log(`[Loading] Showing indicator for: ${indicatorElement.id}`);
     if (indicatorElement) {
         indicatorElement.classList.remove('hidden');
     }
+    console.log(`[Loading] Hiding grid target for: ${gridTargetElement.id}`);
     if (gridTargetElement) {
-        // Hide the grid container if it exists, to show only the spinner
         gridTargetElement.classList.add('hidden');
     }
 }
@@ -185,11 +186,12 @@ function showTableLoading(indicatorElement, gridTargetElement) {
  * @param {HTMLElement} gridTargetElement - The Grid.js render target element.
  */
 function hideTableLoading(indicatorElement, gridTargetElement) {
+    console.log(`[Loading] Hiding indicator for: ${indicatorElement.id}`);
     if (indicatorElement) {
         indicatorElement.classList.add('hidden');
     }
+    console.log(`[Loading] Showing grid target for: ${gridTargetElement.id}`);
     if (gridTargetElement) {
-        // Show the grid container after loading
         gridTargetElement.classList.remove('hidden');
     }
 }
