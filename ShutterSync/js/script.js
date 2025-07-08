@@ -10,10 +10,10 @@ import { Grid, h } from 'https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gri
 
 // Firebase configuration:
 const firebaseConfig = {
-    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
+    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo", // Your actual API Key - PRESERVED
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
-    storageBucket: "shuttersync-96971.appspot.com",
+    storageBucket: "shuttersync-96971.appspot.com", // Corrected storageBucket
     messagingSenderId: "10782416018",
     appId: "1:10782416018:web:361db5572882a62f291a4b",
     measurementId: "G-T0W9CES4D3"
@@ -42,11 +42,8 @@ const authButtonSignIn = document.getElementById('authButtonAnon'); // For the "
 const userInfoDisplay = document.getElementById('userInfoDisplay');
 const userNameSpan = document.getElementById('userName');
 const userRoleSpan = document.getElementById('userRole');
-// FIX: Corrected mismatched quotes in the selector string
-const adminNavButton = document.querySelector('.nav-button[data-module="admin"]'); 
+const adminNavButton = document.querySelector('.nav-button[data-module="admin"]');
 
-// Global Loading Indicator
-const loadingOverlay = document.getElementById('loadingOverlay');
 
 // Customer Modal Elements
 const addCustomerBtn = document.getElementById('addCustomerBtn');
@@ -66,8 +63,6 @@ const customerIndustrySelect = document.getElementById('customerIndustry');
 const customerAdditionalDetailsTextarea = document.getElementById('customerAdditionalDetails');
 const customerSourceSelect = document.getElementById('customerSource');
 const customerActiveSelect = document.getElementById('customerActive');
-const customersTableLoading = document.getElementById('customersTableLoading'); // Table loading indicator
-const customersGridTarget = document.getElementById('customersGridTarget'); // New Grid.js render target
 
 // Opportunity Modal Elements
 const addOpportunityBtn = document.getElementById('addOpportunityBtn');
@@ -82,13 +77,10 @@ const opportunityCurrencySelect = document.getElementById('opportunityCurrency')
 const opportunityPriceBookSelect = document.getElementById('opportunityPriceBook');
 const opportunityExpectedStartDateInput = document.getElementById('opportunityExpectedStartDate');
 const opportunityExpectedCloseDateInput = document.getElementById('opportunityExpectedCloseDate');
-// FIX: Corrected the erroneous assignment here
 const opportunitySalesStageSelect = document.getElementById('opportunitySalesStage');
 const opportunityProbabilityInput = document.getElementById('opportunityProbability');
 const opportunityValueInput = document.getElementById('opportunityValue');
 const opportunityNotesTextarea = document.getElementById('opportunityNotes');
-const opportunitiesTableLoading = document.getElementById('opportunitiesTableLoading'); // Table loading indicator
-const opportunitiesGridTarget = document.getElementById('opportunitiesGridTarget'); // New Grid.js render target
 
 // Dashboard Elements
 const totalCustomersCount = document.getElementById('totalCustomersCount');
@@ -108,8 +100,6 @@ const countryNameInput = document.getElementById('countryName');
 const countryCodeInput = document.getElementById('countryCode');
 const countryStatesInput = document.getElementById('countryStates');
 const cancelCountryStateEditBtn = countryStateForm.querySelector('.cancel-edit-btn');
-const countriesStatesTableLoading = document.getElementById('countriesStatesTableLoading'); // Table loading indicator
-const countriesStatesGridTarget = document.getElementById('countriesStatesGridTarget'); // New Grid.js render target
 
 // Currencies Elements
 const currencyForm = document.getElementById('currencyForm');
@@ -118,8 +108,6 @@ const currencyNameInput = document.getElementById('currencyName');
 const currencySymbolInput = document.getElementById('currencySymbol');
 const currencyCountrySelect = document.getElementById('currencyCountry');
 const cancelCurrencyEditBtn = currencyForm.querySelector('.cancel-edit-btn');
-const currenciesTableLoading = document.getElementById('currenciesTableLoading'); // Table loading indicator
-const currenciesGridTarget = document.getElementById('currenciesGridTarget'); // New Grid.js render target
 
 // Price Books Elements - Declared with 'let' and initialized in DOMContentLoaded
 let priceBookForm;
@@ -132,8 +120,6 @@ let priceBookIsActiveSelect;
 let priceBookValidFromInput;
 let priceBookValidToInput;
 let cancelPriceBookEditBtn;
-const priceBooksTableLoading = document.getElementById('priceBooksTableLoading'); // Table loading indicator
-const priceBooksGridTarget = document.getElementById('priceBooksGridTarget'); // New Grid.js render target
 
 // App Settings Elements
 const appSettingsForm = document.getElementById('appSettingsForm');
@@ -151,58 +137,6 @@ const messageBoxOkBtn = document.getElementById('messageBoxOkBtn');
 
 
 // --- Utility Functions ---
-
-/**
- * Shows the global loading overlay.
- */
-function showLoading() {
-    loadingOverlay.classList.remove('hidden');
-    loadingOverlay.style.display = 'flex'; // Ensure it's visible
-}
-
-/**
- * Hides the global loading overlay.
- */
-function hideLoading() {
-    loadingOverlay.classList.add('hidden');
-    loadingOverlay.style.display = 'none'; // Ensure it's hidden
-}
-
-/**
- * Shows a table-specific loading indicator and hides the grid container.
- * @param {HTMLElement} indicatorElement - The loading indicator element to show.
- * @param {HTMLElement} gridTargetElement - The Grid.js render target element.
- */
-function showTableLoading(indicatorElement, gridTargetElement) {
-    console.log(`[Loading] Showing indicator for: ${indicatorElement.id}`);
-    if (indicatorElement) {
-        indicatorElement.classList.remove('hidden');
-        indicatorElement.style.display = 'block'; // Ensure it's visible
-    }
-    console.log(`[Loading] Hiding grid target for: ${gridTargetElement.id}`);
-    if (gridTargetElement) {
-        gridTargetElement.classList.add('hidden');
-        gridTargetElement.style.display = 'none'; // Ensure it's hidden
-    }
-}
-
-/**
- * Hides a table-specific loading indicator and shows the grid container.
- * @param {HTMLElement} indicatorElement - The loading indicator element to hide.
- * @param {HTMLElement} gridTargetElement - The Grid.js render target element.
- */
-function hideTableLoading(indicatorElement, gridTargetElement) {
-    console.log(`[Loading] Hiding indicator for: ${indicatorElement.id}`);
-    if (indicatorElement) {
-        indicatorElement.classList.add('hidden');
-        indicatorElement.style.display = 'none'; // Ensure it's hidden
-    }
-    console.log(`[Loading] Showing grid target for: ${gridTargetElement.id}`);
-    if (gridTargetElement) {
-        gridTargetElement.classList.remove('hidden');
-        gridTargetElement.style.display = 'block'; // Ensure it's visible
-    }
-}
 
 /**
  * Formats a Firestore Timestamp or Date object for display in a user-friendly format.
@@ -273,7 +207,6 @@ async function populateSelect(selectElement, collectionName, valueField, textFie
     }
     selectElement.innerHTML = '<option value="">Select...</option>'; // Default empty option
     try {
-        showLoading(); // Show global loading indicator
         const collectionRef = collection(db, collectionName);
         const snapshot = await getDocs(query(collectionRef, orderBy(textField))); // Order by text field for display
         snapshot.forEach(doc => {
@@ -289,9 +222,7 @@ async function populateSelect(selectElement, collectionName, valueField, textFie
         });
     } catch (error) {
         console.error(`Error fetching data for dropdown ${collectionName}:`, error);
-        showMessage('error', 'Dropdown Error', `Could not load data for ${collectionName}.`);
-    } finally {
-        hideLoading(); // Hide global loading indicator
+        // showMessage('error', 'Dropdown Error', `Could not load data for ${collectionName}.`);
     }
 }
 
@@ -331,200 +262,11 @@ window.addEventListener('click', (event) => {
 });
 
 
-// --- Form Validation Functions ---
-
-/**
- * Displays an error message for a given input field.
- * @param {HTMLElement} inputElement - The input, select, or textarea element.
- * @param {string} message - The error message to display.
- */
-function showError(inputElement, message) {
-    const errorSpan = document.getElementById(`${inputElement.id}Error`);
-    if (errorSpan) {
-        errorSpan.textContent = message;
-        errorSpan.classList.remove('hidden');
-    }
-    inputElement.classList.add('is-invalid');
-}
-
-/**
- * Clears the error message for a given input field.
- * @param {HTMLElement} inputElement - The input, select, or textarea element.
- */
-function clearError(inputElement) {
-    const errorSpan = document.getElementById(`${inputElement.id}Error`);
-    if (errorSpan) {
-        errorSpan.textContent = '';
-        errorSpan.classList.add('hidden');
-    }
-    inputElement.classList.remove('is-invalid');
-}
-
-/**
- * Validates a single input field based on its rules.
- * @param {HTMLElement} inputElement - The input element to validate.
- * @param {Object} rules - An object containing validation rules for the input.
- * @returns {boolean} True if valid, false otherwise.
- */
-function validateField(inputElement, rules) {
-    clearError(inputElement); // Clear previous errors first
-
-    const value = inputElement.value.trim();
-
-    if (rules.required && value === '') {
-        showError(inputElement, rules.required);
-        return false;
-    }
-
-    if (rules.email && value !== '' && !/\S+@\S+\.\S+/.test(value)) {
-        showError(inputElement, rules.email);
-        return false;
-    }
-
-    if (rules.phone && value !== '' && !/^\+?[0-9\s-()]{7,20}$/.test(value)) { // Basic phone number regex
-        showError(inputElement, rules.phone);
-        return false;
-    }
-
-    if (rules.minLength && value.length < rules.minLength.value && value !== '') {
-        showError(inputElement, rules.minLength.message);
-        return false;
-    }
-
-    if (rules.maxLength && value.length > rules.maxLength.value && value !== '') {
-        showError(inputElement, rules.maxLength.message);
-        return false;
-    }
-
-    if (rules.min && parseFloat(value) < rules.min.value && value !== '') {
-        showError(inputElement, rules.min.message);
-        return false;
-    }
-
-    if (rules.max && parseFloat(value) > rules.max.value && value !== '') {
-        showError(inputElement, rules.max.message);
-        return false;
-    }
-
-    if (rules.dateRange && value !== '') {
-        const startDate = rules.dateRange.startElement ? new Date(rules.dateRange.startElement.value) : null;
-        const endDate = rules.dateRange.endElement ? new Date(rules.dateRange.endElement.value) : null;
-
-        if (startDate && endDate && startDate > endDate) {
-            showError(inputElement, rules.dateRange.message);
-            return false;
-        }
-    }
-
-    return true;
-}
-
-
-/**
- * Validates an entire form based on a predefined set of rules.
- * @param {HTMLFormElement} formElement - The form element to validate.
- * @param {Object} validationConfig - An object where keys are input IDs and values are validation rules.
- * @returns {boolean} True if the entire form is valid, false otherwise.
- */
-function validateForm(formElement, validationConfig) {
-    let formIsValid = true;
-    for (const inputId in validationConfig) {
-        const inputElement = formElement.querySelector(`#${inputId}`);
-        if (inputElement) {
-            // Pass the entire validationConfig to validateField for cross-field rules like dateRange
-            const fieldIsValid = validateField(inputElement, validationConfig[inputId]);
-            if (!fieldIsValid) {
-                formIsValid = false;
-            }
-        }
-    }
-    return formIsValid;
-}
-
-/**
- * Attaches real-time validation listeners to form inputs.
- * @param {HTMLFormElement} formElement - The form element.
- * @param {Object} validationConfig - The validation rules for the form.
- */
-function attachValidationListeners(formElement, validationConfig) {
-    for (const inputId in validationConfig) {
-        const inputElement = formElement.querySelector(`#${inputId}`);
-        if (inputElement) {
-            // Clear error on input/change
-            inputElement.addEventListener('input', () => clearError(inputElement));
-            inputElement.addEventListener('change', () => clearError(inputElement)); // For select and date inputs
-
-            // Re-validate on blur for immediate feedback
-            inputElement.addEventListener('blur', () => validateField(inputElement, validationConfig[inputId]));
-        }
-    }
-}
-
-
-// --- Validation Rules Definitions ---
-
-const customerValidationRules = {
-    customerType: { required: 'Customer Type is required.' },
-    customerName: { required: 'Customer Name is required.', minLength: { value: 3, message: 'Name must be at least 3 characters.' } },
-    customerEmail: { email: 'Please enter a valid email address.' },
-    customerPhone: { phone: 'Please enter a valid phone number.' },
-    customerCountry: { required: 'Country is required.' },
-    customerPreferredContactMethod: { required: 'Preferred Contact Method is required.' },
-};
-
-const opportunityValidationRules = {
-    opportunityName: { required: 'Opportunity Name is required.', minLength: { value: 3, message: 'Name must be at least 3 characters.' } },
-    opportunityCustomer: { required: 'Customer is required.' },
-    opportunityCurrency: { required: 'Currency is required.' },
-    opportunityExpectedStartDate: {}, // No specific rules yet, but included for consistency
-    opportunityExpectedCloseDate: {
-        dateRange: {
-            startElement: () => opportunityExpectedStartDateInput, // Use a function to get current value
-            endElement: () => opportunityExpectedCloseDateInput,
-            message: 'Close Date cannot be before Start Date.'
-        }
-    },
-    opportunitySalesStage: { required: 'Sales Stage is required.' },
-    opportunityProbability: { required: 'Probability is required.', min: { value: 0, message: 'Probability cannot be negative.' }, max: { value: 100, message: 'Probability cannot exceed 100.' } },
-    opportunityValue: { required: 'Value is required.', min: { value: 0, message: 'Value cannot be negative.' } },
-};
-
-const countryStateValidationRules = {
-    countryName: { required: 'Country Name is required.', minLength: { value: 2, message: 'Country name must be at least 2 characters.' } },
-    countryCode: { required: 'Country Code is required.', minLength: { value: 2, message: 'Country code must be 2 characters.' }, maxLength: { value: 2, message: 'Country code must be 2 characters.' } },
-};
-
-const currencyValidationRules = {
-    currencyCountry: { required: 'Country is required.' },
-    currencyName: { required: 'Currency Name is required.', minLength: { value: 2, message: 'Currency name must be at least 2 characters.' } },
-    currencySymbol: { required: 'Currency Symbol is required.', minLength: { value: 1, message: 'Currency symbol is required.' } },
-};
-
-const priceBookValidationRules = {
-    priceBookName: { required: 'Price Book Name is required.', minLength: { value: 3, message: 'Price book name must be at least 3 characters.' } },
-    priceBookCountry: { required: 'Country is required.' },
-    priceBookCurrency: { required: 'Currency is required.' },
-    priceBookIsActive: { required: 'Active status is required.' },
-    priceBookValidFrom: {},
-    priceBookValidTo: {
-        dateRange: {
-            startElement: () => priceBookValidFromInput,
-            endElement: () => priceBookValidToInput,
-            message: 'Valid To date cannot be before Valid From date.'
-        }
-    }
-};
-
-const appSettingsValidationRules = {
-    defaultCurrency: { required: 'Default Currency is required.' },
-    defaultCountry: { required: 'Default Country is required.' },
-};
-
-
 // --- Authentication ---
 
 // Listens for Firebase authentication state changes
 onAuthStateChanged(auth, async (user) => {
+    console.log('onAuthStateChanged fired. User:', user ? user.uid : 'null');
     currentUser = user;
     if (user) {
         // User is signed in
@@ -533,7 +275,6 @@ onAuthStateChanged(auth, async (user) => {
         authButtonSignIn.style.display = 'none';
 
         try {
-            showLoading(); // Show global loading indicator
             // Fetch user's custom claims for role from Firestore
             const userDocRef = doc(db, 'users_data', user.uid);
             const userDoc = await getDoc(userDocRef);
@@ -559,8 +300,6 @@ onAuthStateChanged(auth, async (user) => {
             console.error("Error fetching user role or creating user doc:", error);
             currentUserRole = 'Standard'; // Fallback to standard if error occurs
             showMessage('error', 'Profile Error', 'Could not load user profile. Defaulting to Standard role.');
-        } finally {
-            hideLoading(); // Hide global loading indicator
         }
 
         userNameSpan.textContent = user.displayName || user.email;
@@ -617,7 +356,6 @@ onAuthStateChanged(auth, async (user) => {
         customerCountrySelect.innerHTML = '<option value="">Select...</option>';
         customerIndustrySelect.innerHTML = '<option value="">Select Industry</option>';
         customerSourceSelect.innerHTML = '<option value="">Select Source</option>';
-        customerActiveSelect.value = 'Yes'; // Reset to default
         opportunityCustomerSelect.innerHTML = '<option value="">Select a Customer</option>';
         opportunityCurrencySelect.innerHTML = '<option value="">Select...</option>';
         opportunityPriceBookSelect.innerHTML = '<option value="">Select...</option>';
@@ -635,22 +373,18 @@ onAuthStateChanged(auth, async (user) => {
 
 // Event listener for Sign Out button
 authButtonSignOut.addEventListener('click', () => {
-    showLoading(); // Show global loading indicator
     if (currentUser) {
         signOut(auth).then(() => {
             showMessage('success', 'Signed Out', 'Signed out successfully!');
         }).catch((error) => {
             console.error('Sign Out Error:', error);
             showMessage('error', 'Sign Out Error', 'Error signing out: ' + error.message);
-        }).finally(() => {
-            hideLoading(); // Hide global loading indicator
         });
     }
 });
 
 // Event listener for Sign In with Google button
 authButtonSignIn.addEventListener('click', () => {
-    showLoading(); // Show global loading indicator
     const provider = new GoogleAuthProvider();
     signInWithPopup(auth, provider).then((result) => {
         console.log('Signed in as:', result.user.displayName);
@@ -658,8 +392,6 @@ authButtonSignIn.addEventListener('click', () => {
     }).catch((error) => {
         console.error('Sign In Error:', error);
         showMessage('error', 'Sign In Error', 'Error signing in: ' + error.message);
-    }).finally(() => {
-        hideLoading(); // Hide global loading indicator
     });
 });
 
@@ -668,6 +400,7 @@ authButtonSignIn.addEventListener('click', () => {
 
 navButtons.forEach(button => {
     button.addEventListener('click', () => {
+        console.log(`Nav button clicked: ${button.dataset.module}`);
         // Remove 'active' class from all nav buttons and hide all modules
         navButtons.forEach(btn => btn.classList.remove('active'));
         modules.forEach(mod => mod.classList.remove('active'));
@@ -720,7 +453,6 @@ async function updateDashboardStats() {
     if (!currentUser) return; // Ensure user is authenticated
 
     try {
-        showLoading(); // Show global loading indicator
         let customerQuery = query(collection(db, 'customers'));
         // Filter customers by creatorId if not an Admin
         if (currentUserRole !== 'Admin') {
@@ -750,8 +482,6 @@ async function updateDashboardStats() {
     } catch (error) {
         console.error("Error updating dashboard stats:", error);
         showMessage('error', 'Dashboard Error', 'Could not load dashboard statistics.');
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -761,6 +491,7 @@ async function updateDashboardStats() {
 // Event listeners for closing all modals using the close button
 document.querySelectorAll('.modal .close-button').forEach(button => {
     button.addEventListener('click', (e) => {
+        console.log('Modal close button clicked.');
         e.target.closest('.modal').style.display = 'none';
         resetForms(); // Reset forms when modal is closed
     });
@@ -769,14 +500,19 @@ document.querySelectorAll('.modal .close-button').forEach(button => {
 // Event listener for closing modals by clicking outside the modal content
 window.addEventListener('click', (event) => {
     if (event.target === customerModal) {
+        console.log('Customer modal closed by outside click.');
         customerModal.style.display = 'none';
         resetForms();
     }
     if (event.target === opportunityModal) {
+        console.log('Opportunity modal closed by outside click.');
         opportunityModal.style.display = 'none';
         resetForms();
     }
-    // Add other modals here if they are not children of the main window click listener
+    if (event.target === messageBoxModal) {
+        console.log('Message box modal closed by outside click.');
+        messageBoxModal.style.display = 'none';
+    }
 });
 
 /**
@@ -784,38 +520,15 @@ window.addEventListener('click', (event) => {
  * Also repopulates dynamic dropdowns to their default state.
  */
 function resetForms() {
+    console.log('resetForms called.');
     customerForm.reset();
     customerIdInput.value = '';
-    // Clear all validation errors on customer form
-    for (const inputId in customerValidationRules) {
-        const inputElement = customerForm.querySelector(`#${inputId}`);
-        if (inputElement) clearError(inputElement);
-    }
-
     opportunityForm.reset();
     opportunityIdInput.value = '';
-    // Clear all validation errors on opportunity form
-    for (const inputId in opportunityValidationRules) {
-        const inputElement = opportunityForm.querySelector(`#${inputId}`);
-        if (inputElement) clearError(inputElement);
-    }
-
     countryStateForm.reset();
     countryStateIdInput.value = '';
-    // Clear all validation errors on country form
-    for (const inputId in countryStateValidationRules) {
-        const inputElement = countryStateForm.querySelector(`#${inputId}`);
-        if (inputElement) clearError(inputElement);
-    }
-
     currencyForm.reset();
     currencyIdInput.value = '';
-    // Clear all validation errors on currency form
-    for (const inputId in currencyValidationRules) {
-        const inputElement = currencyForm.querySelector(`#${inputId}`);
-        if (inputElement) clearError(inputElement);
-    }
-
     // Only reset priceBookForm if it's been initialized
     if (priceBookForm) {
         priceBookForm.reset();
@@ -826,19 +539,9 @@ function resetForms() {
         priceBookValidToInput.value = '';
         populatePriceBookCountryDropdown(); // Reset country dropdown on cancel
         populatePriceBookCurrencyDropdown(); // Reset currency dropdown on cancel
-        // Clear all validation errors on price book form
-        for (const inputId in priceBookValidationRules) {
-            const inputElement = priceBookForm.querySelector(`#${inputId}`);
-            if (inputElement) clearError(inputElement);
-        }
     }
     appSettingsForm.reset();
     settingsDocIdInput.value = '';
-    // Clear all validation errors on app settings form
-    for (const inputId in appSettingsValidationRules) {
-        const inputElement = appSettingsForm.querySelector(`#${inputId}`);
-        if (inputElement) clearError(inputElement);
-    }
 
     // Manually reset other dropdowns to their initial "Select..." or default option
     customerTypeSelect.value = 'Individual';
@@ -872,8 +575,9 @@ async function populateCustomerCountryDropdown(selectedCountry = null) {
 
 // Event listener to open the Customer Modal for adding a new customer
 addCustomerBtn.addEventListener('click', () => {
-    resetForms(); // Reset all forms, including customer form, before opening
-    customerIdInput.value = ''; // Ensure ID is clear for new customer
+    console.log('Add Customer button clicked.');
+    customerForm.reset();
+    customerIdInput.value = ''; // Clear ID for new customer
     customerModalTitle.textContent = 'Add New Customer';
     
     // Set default values for new entry
@@ -892,12 +596,6 @@ customerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
 
-    // Client-side validation
-    if (!validateForm(customerForm, customerValidationRules)) {
-        showMessage('error', 'Validation Error', 'Please correct the errors in the form.');
-        return;
-    }
-
     const customerData = {
         type: customerTypeSelect.value,
         name: customerNameInput.value.trim(),
@@ -914,7 +612,6 @@ customerForm.addEventListener('submit', async (e) => {
     };
 
     try {
-        showLoading(); // Show global loading indicator
         if (customerIdInput.value) {
             // Update existing customer
             await updateDoc(doc(db, 'customers', customerIdInput.value), customerData);
@@ -932,8 +629,6 @@ customerForm.addEventListener('submit', async (e) => {
     } catch (error) {
         console.error("Error saving customer:", error);
         showMessage('error', 'Error Saving Customer', 'Error saving customer: ' + error.message);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 });
 
@@ -944,9 +639,6 @@ customerForm.addEventListener('submit', async (e) => {
 async function renderCustomersGrid() {
     if (!currentUser) return;
 
-    // Use the specific grid target element for show/hide
-    showTableLoading(customersTableLoading, customersGridTarget); 
-
     let customersRef = query(collection(db, 'customers'));
     // Filter customers by creatorId if not an Admin
     if (currentUserRole !== 'Admin') {
@@ -954,54 +646,32 @@ async function renderCustomersGrid() {
     }
     const customerData = [];
 
-    try {
-        const snapshot = await getDocs(query(customersRef, orderBy('name'))); // Order by name for consistent display
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            customerData.push([
-                doc.id, // Hidden ID for actions
-                data.name,
-                data.type,
-                data.email,
-                data.phone,
-                data.address,
-                data.country,
-                data.preferredContactMethod,
-                data.industry,
-                data.source,
-                data.active,
-                data.createdAt // Firestore Timestamp
-            ]);
-        });
-    } catch (error) {
-        console.error("Error fetching customers:", error);
-        showMessage('error', 'Customer Load Error', 'Could not load customer data.');
-        // Ensure the grid is cleared or set to empty state on error
-        if (customersGrid) {
-            customersGrid.updateConfig({ data: [] }).forceRender();
-        } else {
-            // If grid not initialized, just clear the target container
-            if (customersGridTarget) {
-                customersGridTarget.innerHTML = '';
-            }
-        }
-        return; // Exit function on error
-    } finally {
-        // Use the specific grid target element for show/hide
-        hideTableLoading(customersTableLoading, customersGridTarget); 
-    }
-
-    const containerElement = customersGridTarget; // Use the new target element directly
-    if (!containerElement) {
-        console.error("Customers table container element (customersGridTarget) not found!");
-        return;
-    }
+    const snapshot = await getDocs(query(customersRef, orderBy('name'))); // Order by name for consistent display
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        customerData.push([
+            doc.id, // Hidden ID for actions
+            data.name,
+            data.type,
+            data.email,
+            data.phone,
+            data.address,
+            data.country,
+            data.preferredContactMethod,
+            data.industry,
+            data.source,
+            data.active,
+            data.createdAt // Firestore Timestamp
+        ]);
+    });
 
     if (customersGrid) {
         customersGrid.updateConfig({ data: customerData }).forceRender(); // Update existing grid
     } else {
-        // Clear the container before rendering a new grid instance
-        containerElement.innerHTML = '';
+        const containerElement = document.getElementById('customersTable');
+        if (containerElement) {
+            containerElement.innerHTML = '';
+        }
         customersGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
@@ -1026,15 +696,11 @@ async function renderCustomersGrid() {
                             h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Customer',
-                                role: 'button', // Added for accessibility
-                                'aria-label': `Edit customer ${row.cells[1].data}`, // Added for accessibility
                                 onClick: () => editCustomer(docId)
                             }),
                             h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Customer',
-                                role: 'button', // Added for accessibility
-                                'aria-label': `Delete customer ${row.cells[1].data}`, // Added for accessibility
                                 onClick: () => deleteCustomer(docId)
                             })
                         );
@@ -1068,12 +734,12 @@ async function renderCustomersGrid() {
  * @param {string} customerId - The ID of the customer document to edit.
  */
 async function editCustomer(customerId) {
+    console.log('editCustomer called for ID:', customerId);
     if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
     // Role check for editing - only Admin or creator can edit
     if (currentUserRole !== 'Admin' && currentUserRole !== 'Standard') { showMessage('error', 'Access Denied', 'You do not have permission to edit customers.'); return; }
 
     try {
-        showLoading(); // Show global loading indicator
         const docSnap = await getDoc(doc(db, 'customers', customerId));
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -1105,8 +771,6 @@ async function editCustomer(customerId) {
     } catch (error) {
         console.error("Error editing customer:", error);
         showMessage('error', 'Error Loading Customer', 'Error loading customer for edit: ' + error.message);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1122,7 +786,6 @@ async function deleteCustomer(customerId) {
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this customer? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
-        showLoading(); // Show global loading indicator
         // Check if there are any opportunities linked to this customer
         const opportunitiesSnapshot = await getDocs(query(collection(db, 'opportunities'), where('customerId', '==', customerId)));
         if (!opportunitiesSnapshot.empty) {
@@ -1137,8 +800,6 @@ async function deleteCustomer(customerId) {
     } catch (error) {
         console.error("Error deleting customer:", error);
         showMessage('error', 'Error Deleting Customer', 'Error deleting customer: ' + error.message);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1158,24 +819,17 @@ async function populateOpportunityCustomerDropdown(selectedCustomerId = null) {
     if (currentUserRole !== 'Admin') {
         customerQuery = query(customerQuery, where('creatorId', '==', currentUser.uid));
     }
-    try {
-        showLoading(); // Show global loading indicator
-        const snapshot = await getDocs(customerQuery);
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const option = document.createElement('option');
-            option.value = doc.id; // Use Firestore doc ID as value
-            option.textContent = data.name;
-            if (selectedCustomerId && doc.id === selectedCustomerId) {
-                option.selected = true;
-            }
-            selectElement.appendChild(option);
-        });
-    } catch (error) {
-        console.error(`Error fetching data for opportunity customer dropdown:`, error);
-    } finally {
-        hideLoading(); // Hide global loading indicator
-    }
+    const snapshot = await getDocs(customerQuery);
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        const option = document.createElement('option');
+        option.value = doc.id; // Use Firestore doc ID as value
+        option.textContent = data.name;
+        if (selectedCustomerId && doc.id === selectedCustomerId) {
+            option.selected = true;
+        }
+        selectElement.appendChild(option);
+    });
 }
 
 /**
@@ -1195,29 +849,23 @@ async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null) 
     if (!currentUser) return;
     const selectElement = opportunityPriceBookSelect;
     selectElement.innerHTML = '<option value="">Select a Price Book</option>';
-    try {
-        showLoading(); // Show global loading indicator
-        const snapshot = await getDocs(query(collection(db, 'priceBooks'), orderBy('name')));
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const option = document.createElement('option');
-            option.value = doc.id; // Use Firestore doc ID as value
-            option.textContent = data.name;
-            if (selectedPriceBookId && doc.id === selectedPriceBookId) {
-                option.selected = true;
-            }
-            selectElement.appendChild(option);
-        });
-    } catch (error) {
-        console.error(`Error fetching data for opportunity price book dropdown:`, error);
-    } finally {
-        hideLoading(); // Hide global loading indicator
-    }
+    const snapshot = await getDocs(query(collection(db, 'priceBooks'), orderBy('name')));
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        const option = document.createElement('option');
+        option.value = doc.id; // Use Firestore doc ID as value
+        option.textContent = data.name;
+        if (selectedPriceBookId && doc.id === selectedPriceBookId) {
+            option.selected = true;
+        }
+        selectElement.appendChild(option);
+    });
 }
 
 // Event listener to open the Opportunity Modal for adding a new opportunity
 addOpportunityBtn.addEventListener('click', () => {
-    resetForms(); // Reset all forms, including opportunity form, before opening
+    console.log('Add Opportunity button clicked.');
+    opportunityForm.reset();
     opportunityIdInput.value = ''; // Clear ID for new opportunity
     opportunityModalTitle.textContent = 'Add New Opportunity';
     populateOpportunityCustomerDropdown(); // Repopulate customer dropdown
@@ -1235,12 +883,6 @@ closeOpportunityModalBtn.addEventListener('click', () => {
 opportunityForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
-
-    // Client-side validation
-    if (!validateForm(opportunityForm, opportunityValidationRules)) {
-        showMessage('error', 'Validation Error', 'Please correct the errors in the form.');
-        return;
-    }
 
     // Get the display name of the selected customer for storage (denormalization)
     const selectedCustomerOption = opportunityCustomerSelect.options[opportunityCustomerSelect.selectedIndex];
@@ -1262,7 +904,6 @@ opportunityForm.addEventListener('submit', async (e) => {
     };
 
     try {
-        showLoading(); // Show global loading indicator
         if (opportunityIdInput.value) {
             // Update existing opportunity
             await updateDoc(doc(db, 'opportunities', opportunityIdInput.value), opportunityData);
@@ -1280,8 +921,6 @@ opportunityForm.addEventListener('submit', async (e) => {
     } catch (error) {
         console.error("Error saving opportunity:", error);
         showMessage('error', 'Error Saving Opportunity', 'Error saving opportunity: ' + error.message);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 });
 
@@ -1292,8 +931,6 @@ opportunityForm.addEventListener('submit', async (e) => {
 async function renderOpportunitiesGrid() {
     if (!currentUser) return;
 
-    showTableLoading(opportunitiesTableLoading, opportunitiesGridTarget); // Use specific grid target
-
     let opportunitiesRef = query(collection(db, 'opportunities'));
     // Filter opportunities by creatorId if not an Admin
     if (currentUserRole !== 'Admin') {
@@ -1301,47 +938,29 @@ async function renderOpportunitiesGrid() {
     }
     const opportunityData = [];
 
-    try {
-        const snapshot = await getDocs(query(opportunitiesRef, orderBy('expectedCloseDate'))); // Order by expected close date
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            opportunityData.push([
-                doc.id, // Hidden ID
-                data.name,
-                data.customerName, // Display customer name
-                data.salesStage,
-                data.probability,
-                data.value,
-                data.currency, // Currency symbol
-                data.expectedCloseDate,
-                data.createdAt
-            ]);
-        });
-    } catch (error) {
-        console.error("Error fetching opportunities:", error);
-        showMessage('error', 'Opportunity Load Error', 'Could not load opportunity data.');
-        if (opportunitiesGrid) {
-            opportunitiesGrid.updateConfig({ data: [] }).forceRender();
-        } else {
-            if (opportunitiesGridTarget) {
-                opportunitiesGridTarget.innerHTML = '';
-            }
-        }
-        return; // Exit function on error
-    } finally {
-        hideTableLoading(opportunitiesTableLoading, opportunitiesGridTarget); // Use specific grid target
-    }
-
-    const containerElement = opportunitiesGridTarget; // Use the new target element directly
-    if (!containerElement) {
-        console.error("Opportunities table container element (opportunitiesGridTarget) not found!");
-        return;
-    }
+    const snapshot = await getDocs(query(opportunitiesRef, orderBy('expectedCloseDate'))); // Order by expected close date
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        opportunityData.push([
+            doc.id, // Hidden ID
+            data.name,
+            data.customerName, // Display customer name
+            data.salesStage,
+            data.probability,
+            data.value,
+            data.currency, // Currency symbol
+            data.expectedCloseDate,
+            data.createdAt
+        ]);
+    });
 
     if (opportunitiesGrid) {
-        opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender(); // Update existing grid
+        opportunitiesGrid.updateConfig({ data: data }).forceRender(); // Update existing grid
     } else {
-        containerElement.innerHTML = ''; // Clear the container before rendering a new grid instance
+        const containerElement = document.getElementById('opportunitiesTable');
+        if (containerElement) {
+            containerElement.innerHTML = '';
+        }
         opportunitiesGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
@@ -1356,8 +975,6 @@ async function renderOpportunitiesGrid() {
                     filter: true, 
                     formatter: (cell, row) => {
                         const currencySymbol = row.cells[6].data; // Assuming currency symbol is at index 6
-                        // FIX: Use a mapping from symbol to ISO code if possible, or default to USD
-                        // For now, using symbol directly, which might not be universally supported by toLocaleString
                         return cell.toLocaleString('en-US', { style: 'currency', currency: currencySymbol || 'USD' });
                     }
                 },
@@ -1374,15 +991,11 @@ async function renderOpportunitiesGrid() {
                             h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Opportunity',
-                                role: 'button', // Added for accessibility
-                                'aria-label': `Edit opportunity ${row.cells[1].data}`, // Added for accessibility
                                 onClick: () => editOpportunity(docId)
                             }),
                             h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Opportunity',
-                                role: 'button', // Added for accessibility
-                                'aria-label': `Delete opportunity ${row.cells[1].data}`, // Added for accessibility
                                 onClick: () => deleteOpportunity(docId)
                             })
                         );
@@ -1416,11 +1029,11 @@ async function renderOpportunitiesGrid() {
  * @param {string} opportunityId - The ID of the opportunity document to edit.
  */
 async function editOpportunity(opportunityId) {
+    console.log('editOpportunity called for ID:', opportunityId);
     if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
     if (currentUserRole !== 'Admin' && currentUserRole !== 'Standard') { showMessage('error', 'Access Denied', 'You do not have permission to edit opportunities.'); return; }
 
     try {
-        showLoading(); // Show global loading indicator
         const docSnap = await getDoc(doc(db, 'opportunities', opportunityId));
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -1451,8 +1064,6 @@ async function editOpportunity(opportunityId) {
     } catch (error) {
         console.error("Error editing opportunity:", error);
         showMessage('error', 'Error Loading Opportunity', 'Error loading opportunity for edit: ' + error.message);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1468,7 +1079,6 @@ async function deleteOpportunity(opportunityId) {
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this opportunity? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
-        showLoading(); // Show global loading indicator
         await deleteDoc(doc(db, 'opportunities', opportunityId));
         showMessage('success', 'Success', 'Opportunity deleted successfully!');
         renderOpportunitiesGrid(); // Refresh the table
@@ -1476,8 +1086,6 @@ async function deleteOpportunity(opportunityId) {
     } catch (error) {
         console.error("Error deleting opportunity:", error);
         showMessage('error', 'Error Deleting Opportunity', 'Error deleting opportunity: ' + error.message);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1487,6 +1095,7 @@ async function deleteOpportunity(opportunityId) {
 // Event listeners for switching between admin subsections
 adminSectionBtns.forEach(button => {
     button.addEventListener('click', () => {
+        console.log(`Admin section button clicked: ${button.dataset.adminTarget}`);
         adminSectionBtns.forEach(btn => btn.classList.remove('active'));
         adminSubsections.forEach(sub => sub.classList.remove('active'));
 
@@ -1515,6 +1124,7 @@ adminSectionBtns.forEach(button => {
 // Event listeners for admin form cancel buttons to reset forms
 document.querySelectorAll('.admin-form .cancel-edit-btn').forEach(button => {
     button.addEventListener('click', (e) => {
+        console.log('Admin form cancel button clicked.');
         e.target.closest('form').reset();
         const hiddenInput = e.target.closest('form').querySelector('input[type="hidden"]');
         if (hiddenInput) hiddenInput.value = '';
@@ -1525,53 +1135,42 @@ document.querySelectorAll('.admin-form .cancel-edit-btn').forEach(button => {
 // --- Countries & States Management ---
 
 /**
+ * Populates the country country dropdown with data from the 'countries' collection.
+ * @param {string|null} selectedCountry - The country name to pre-select (optional).
+ */
+async function populateCurrencyCountryDropdown(selectedCountry = null) {
+    if (!currentUser) return;
+    await populateSelect(currencyCountrySelect, 'countries', 'name', 'name', selectedCountry);
+}
+
+/**
  * Renders or updates the Grid.js table for countries and their states.
  * Fetches data from the 'countries' collection.
  */
 async function renderCountriesStatesGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return; // Only Admins can view/manage
 
-    showTableLoading(countriesStatesTableLoading, countriesStatesGridTarget); // Use specific grid target
-
     const countriesRef = collection(db, 'countries');
     const data = [];
 
-    try {
-        const snapshot = await getDocs(query(countriesRef, orderBy('name')));
-        snapshot.forEach(doc => {
-            const country = doc.data();
-            data.push([
-                doc.id, // Hidden ID for actions
-                country.name,
-                country.code,
-                country.states ? country.states.join(', ') : ''
-            ]);
-        });
-    } catch (error) {
-        console.error("Error fetching countries:", error);
-        showMessage('error', 'Country Load Error', 'Could not load country data.');
-        if (countriesStatesGrid) {
-            countriesStatesGrid.updateConfig({ data: [] }).forceRender();
-        } else {
-            if (countriesStatesGridTarget) {
-                countriesStatesGridTarget.innerHTML = '';
-            }
-        }
-        return;
-    } finally {
-        hideTableLoading(countriesStatesTableLoading, countriesStatesGridTarget); // Use specific grid target
-    }
-
-    const containerElement = countriesStatesGridTarget; // Use the new target element directly
-    if (!containerElement) {
-        console.error("Countries & States table container element (countriesStatesGridTarget) not found!");
-        return;
-    }
+    const snapshot = await getDocs(query(countriesRef, orderBy('name')));
+    snapshot.forEach(doc => {
+        const country = doc.data();
+        data.push([
+            doc.id, // Hidden ID for actions
+            country.name,
+            country.code,
+            country.states ? country.states.join(', ') : ''
+        ]);
+    });
 
     if (countriesStatesGrid) {
         countriesStatesGrid.updateConfig({ data: data }).forceRender();
     } else {
-        containerElement.innerHTML = ''; // Clear the container before rendering a new grid instance
+        const containerElement = document.getElementById('countriesStatesTable');
+        if (containerElement) {
+            containerElement.innerHTML = '';
+        }
         countriesStatesGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
@@ -1588,15 +1187,11 @@ async function renderCountriesStatesGrid() {
                             h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Country',
-                                role: 'button', // Added for accessibility
-                                'aria-label': `Edit country ${row.cells[1].data}`, // Added for accessibility
                                 onClick: () => editCountryState(docId)
                             }),
                             h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Country',
-                                role: 'button', // Added for accessibility
-                                'aria-label': `Delete country ${row.cells[1].data}`, // Added for accessibility
                                 onClick: () => deleteCountryState(docId)
                             })
                         );
@@ -1630,9 +1225,9 @@ async function renderCountriesStatesGrid() {
  * @param {string} id - The ID of the country document to edit.
  */
 async function editCountryState(id) {
+    console.log('editCountryState called for ID:', id);
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     try {
-        showLoading(); // Show global loading indicator
         const docSnap = await getDoc(doc(db, 'countries', id));
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -1646,8 +1241,6 @@ async function editCountryState(id) {
     } catch (error) {
         console.error("Error loading country for edit:", error);
         showMessage('error', 'Error Loading Country', 'Error loading country for edit: ' + error.message);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1657,24 +1250,22 @@ async function editCountryState(id) {
  * @param {string} id - The ID of the country document to delete.
  */
 async function deleteCountryState(id) {
-    if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
+    if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this country? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
-        showLoading(); // Show global loading indicator
         await deleteDoc(doc(db, 'countries', id));
         showMessage('success', 'Success', 'Country deleted!');
         renderCountriesStatesGrid(); // Refresh grid
         populateCustomerCountryDropdown(); // Refresh customer dropdown
         populateDefaultCountryDropdown(); // Refresh settings dropdown
+        populateCurrencyCountryDropdown(); // Refresh currency country dropdown
         // Only call populatePriceBookCountryDropdown if priceBookCountrySelect is defined
         if (priceBookCountrySelect) populatePriceBookCountryDropdown();
     } catch (error) {
         console.error("Error deleting country:", error);
         showMessage('error', 'Error Deleting Country', 'Error deleting country: ' + error.message);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1683,12 +1274,6 @@ countryStateForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
 
-    // Client-side validation
-    if (!validateForm(countryStateForm, countryStateValidationRules)) {
-        showMessage('error', 'Validation Error', 'Please correct the errors in the form.');
-        return;
-    }
-
     const countryData = {
         name: countryNameInput.value.trim(),
         code: countryCodeInput.value.trim().toUpperCase(),
@@ -1696,7 +1281,6 @@ countryStateForm.addEventListener('submit', async (e) => {
     };
 
     try {
-        showLoading(); // Show global loading indicator
         if (countryStateIdInput.value) {
             await updateDoc(doc(db, 'countries', countryStateIdInput.value), countryData);
             showMessage('success', 'Success', 'Country updated!');
@@ -1709,13 +1293,12 @@ countryStateForm.addEventListener('submit', async (e) => {
         renderCountriesStatesGrid(); // Refresh grid
         populateCustomerCountryDropdown(); // Refresh customer dropdown
         populateDefaultCountryDropdown(); // Refresh settings dropdown
+        populateCurrencyCountryDropdown(); // Refresh currency country dropdown
         // Only call populatePriceBookCountryDropdown if priceBookCountrySelect is defined
         if (priceBookCountrySelect) populatePriceBookCountryDropdown();
     } catch (error) {
         console.error("Error saving country:", error);
         showMessage('error', 'Error Saving Country', 'Error saving country: ' + error.message);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 });
 
@@ -1723,11 +1306,6 @@ countryStateForm.addEventListener('submit', async (e) => {
 cancelCountryStateEditBtn.addEventListener('click', () => {
     countryStateForm.reset();
     countryStateIdInput.value = '';
-    // Clear validation errors on cancel
-    for (const inputId in countryStateValidationRules) {
-        const inputElement = countryStateForm.querySelector(`#${inputId}`);
-        if (inputElement) clearError(inputElement);
-    }
 });
 
 
@@ -1738,7 +1316,7 @@ cancelCountryStateEditBtn.addEventListener('click', () => {
  * @param {string|null} selectedCountry - The country name to pre-select (optional).
  */
 async function populateCurrencyCountryDropdown(selectedCountry = null) {
-    if (!currentUser || currentUserRole !== 'Admin') return;
+    if (!currentUser) return;
     await populateSelect(currencyCountrySelect, 'countries', 'name', 'name', selectedCountry);
 }
 
@@ -1749,47 +1327,27 @@ async function populateCurrencyCountryDropdown(selectedCountry = null) {
 async function renderCurrenciesGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return;
 
-    showTableLoading(currenciesTableLoading, currenciesGridTarget); // Use specific grid target
-
     const currenciesRef = collection(db, 'currencies');
     const data = [];
 
-    try {
-        const snapshot = await getDocs(query(currenciesRef, orderBy('country'), orderBy('name'))); // Order by country then name
-        snapshot.forEach(doc => {
-            const currency = doc.data();
-            data.push([
-                doc.id, // Hidden ID for actions
-                currency.country || '',
-                currency.name,
-                currency.symbol
-            ]);
-        });
-    } catch (error) {
-        console.error("Error fetching currencies:", error);
-        showMessage('error', 'Currency Load Error', 'Could not load currency data.');
-        if (currenciesGrid) {
-            currenciesGrid.updateConfig({ data: [] }).forceRender();
-        } else {
-            if (currenciesGridTarget) {
-                currenciesGridTarget.innerHTML = '';
-            }
-        }
-        return;
-    } finally {
-        hideTableLoading(currenciesTableLoading, currenciesGridTarget); // Use specific grid target
-    }
-
-    const containerElement = currenciesGridTarget; // Use the new target element directly
-    if (!containerElement) {
-        console.error("Currencies table container element (currenciesGridTarget) not found!");
-        return;
-    }
+    const snapshot = await getDocs(query(currenciesRef, orderBy('country'), orderBy('name'))); // Order by country then name
+    snapshot.forEach(doc => {
+        const currency = doc.data();
+        data.push([
+            doc.id, // Hidden ID for actions
+            currency.country || '',
+            currency.name,
+            currency.symbol
+        ]);
+    });
 
     if (currenciesGrid) {
         currenciesGrid.updateConfig({ data: data }).forceRender();
     } else {
-        containerElement.innerHTML = ''; // Clear the container before rendering a new grid instance
+        const containerElement = document.getElementById('currenciesTable');
+        if (containerElement) {
+            containerElement.innerHTML = '';
+        }
         currenciesGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
@@ -1806,15 +1364,11 @@ async function renderCurrenciesGrid() {
                             h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Currency',
-                                role: 'button', // Added for accessibility
-                                'aria-label': `Edit currency ${row.cells[2].data}`, // Added for accessibility
                                 onClick: () => editCurrency(docId)
                             }),
                             h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Currency',
-                                role: 'button', // Added for accessibility
-                                'aria-label': `Delete currency ${row.cells[2].data}`, // Added for accessibility
                                 onClick: () => deleteCurrency(docId)
                             })
                         );
@@ -1848,9 +1402,9 @@ async function renderCurrenciesGrid() {
  * @param {string} id - The ID of the currency document to edit.
  */
 async function editCurrency(id) {
+    console.log('editCurrency called for ID:', id);
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     try {
-        showLoading(); // Show global loading indicator
         const docSnap = await getDoc(doc(db, 'currencies', id));
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -1864,8 +1418,6 @@ async function editCurrency(id) {
     } catch (error) {
         console.error("Error loading currency for edit:", error);
         showMessage('error', 'Error Loading Currency', 'Error loading currency for edit: ' + error.message);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1880,7 +1432,6 @@ async function deleteCurrency(id) {
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this currency? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
-        showLoading(); // Show global loading indicator
         await deleteDoc(doc(db, 'currencies', id));
         showMessage('success', 'Success', 'Currency deleted!');
         renderCurrenciesGrid(); // Refresh grid
@@ -1892,8 +1443,6 @@ async function deleteCurrency(id) {
     } catch (error) {
         console.error("Error deleting currency:", error);
         showMessage('error', 'Error Deleting Currency', 'Error deleting currency: ' + error.message);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1902,12 +1451,6 @@ currencyForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
 
-    // Client-side validation
-    if (!validateForm(currencyForm, currencyValidationRules)) {
-        showMessage('error', 'Validation Error', 'Please correct the errors in the form.');
-        return;
-    }
-
     const currencyData = {
         country: currencyCountrySelect.value,
         name: currencyNameInput.value.trim(),
@@ -1915,7 +1458,6 @@ currencyForm.addEventListener('submit', async (e) => {
     };
 
     try {
-        showLoading(); // Show global loading indicator
         // --- Client-Side Uniqueness Validation for Currency (Country, Name, Symbol) ---
         let q = query(
             collection(db, 'currencies'),
@@ -1965,8 +1507,6 @@ currencyForm.addEventListener('submit', async (e) => {
     } catch (error) {
         console.error("Error saving currency:", error);
         showMessage('error', 'Error Saving Currency', 'Error saving currency: ' + error.message);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 });
 
@@ -1974,11 +1514,6 @@ currencyForm.addEventListener('submit', async (e) => {
 cancelCurrencyEditBtn.addEventListener('click', () => {
     currencyForm.reset();
     currencyIdInput.value = '';
-    // Clear validation errors on cancel
-    for (const inputId in currencyValidationRules) {
-        const inputElement = currencyForm.querySelector(`#${inputId}`);
-        if (inputElement) clearError(inputElement);
-    }
 });
 
 
@@ -2001,7 +1536,6 @@ async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null, 
     priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>'; // Default empty option
 
     try {
-        showLoading(); // Show global loading indicator
         let currenciesRef = collection(db, 'currencies');
         let q;
         if (filterCountry) {
@@ -2024,8 +1558,6 @@ async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null, 
         });
     } catch (error) {
         console.error(`Error fetching currencies for price book dropdown:`, error);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -2057,51 +1589,31 @@ async function populatePriceBookCountryDropdown(selectedCountryName = null) {
 async function renderPriceBooksGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return;
 
-    showTableLoading(priceBooksTableLoading, priceBooksGridTarget); // Use specific grid target
-
     const priceBooksRef = collection(db, 'priceBooks');
     const data = [];
 
-    try {
-        const snapshot = await getDocs(query(priceBooksRef, orderBy('name'))); // Order by name
-        snapshot.forEach(doc => {
-            const priceBook = doc.data();
-            data.push([
-                doc.id, // Hidden ID for actions
-                priceBook.name,
-                priceBook.description,
-                priceBook.country || '', // NEW: Display country
-                priceBook.currency || '',
-                priceBook.isActive,
-                priceBook.validFrom,
-                priceBook.validTo
-            ]);
-        });
-    } catch (error) {
-        console.error("Error fetching price books:", error);
-        showMessage('error', 'Price Book Load Error', 'Could not load price book data.');
-        if (priceBooksGrid) {
-            priceBooksGrid.updateConfig({ data: [] }).forceRender();
-        } else {
-            if (priceBooksGridTarget) {
-                priceBooksGridTarget.innerHTML = '';
-            }
-        }
-        return;
-    } finally {
-        hideTableLoading(priceBooksTableLoading, priceBooksGridTarget); // Use specific grid target
-    }
-
-    const containerElement = priceBooksGridTarget; // Use the new target element directly
-    if (!containerElement) {
-        console.error("Price Books table container element (priceBooksGridTarget) not found!");
-        return;
-    }
+    const snapshot = await getDocs(query(priceBooksRef, orderBy('name'))); // Order by name
+    snapshot.forEach(doc => {
+        const priceBook = doc.data();
+        data.push([
+            doc.id, // Hidden ID for actions
+            priceBook.name,
+            priceBook.description,
+            priceBook.country || '', // NEW: Display country
+            priceBook.currency || '',
+            priceBook.isActive,
+            priceBook.validFrom,
+            priceBook.validTo
+        ]);
+    });
 
     if (priceBooksGrid) {
         priceBooksGrid.updateConfig({ data: data }).forceRender();
     } else {
-        containerElement.innerHTML = ''; // Clear the container before rendering a new grid instance
+        const containerElement = document.getElementById('priceBooksTable');
+        if (containerElement) {
+            containerElement.innerHTML = '';
+        }
         priceBooksGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
@@ -2122,15 +1634,11 @@ async function renderPriceBooksGrid() {
                             h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Price Book',
-                                role: 'button', // Added for accessibility
-                                'aria-label': `Edit price book ${row.cells[1].data}`, // Added for accessibility
                                 onClick: () => editPriceBook(docId)
                             }),
                             h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Price Book',
-                                role: 'button', // Added for accessibility
-                                'aria-label': `Delete price book ${row.cells[1].data}`, // Added for accessibility
                                 onClick: () => deletePriceBook(docId)
                             })
                         );
@@ -2164,9 +1672,9 @@ async function renderPriceBooksGrid() {
  * @param {string} id - The ID of the price book document to edit.
  */
 async function editPriceBook(id) {
+    console.log('editPriceBook called for ID:', id);
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     try {
-        showLoading(); // Show global loading indicator
         const docSnap = await getDoc(doc(db, 'priceBooks', id));
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -2187,8 +1695,6 @@ async function editPriceBook(id) {
     } catch (error) {
         console.error("Error loading price book for edit:", error);
         showMessage('error', 'Error Loading Price Book', 'Error loading price book for edit: ' + error.message);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -2203,7 +1709,6 @@ async function deletePriceBook(id) {
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this price book? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
-        showLoading(); // Show global loading indicator
         // First, retrieve the price book data to get name and currency for the index ID
         const priceBookDoc = await getDoc(doc(db, 'priceBooks', id));
         let indexIdToDelete = null;
@@ -2234,8 +1739,6 @@ async function deletePriceBook(id) {
     catch (error) {
         console.error("Error deleting price book:", error);
         showMessage('error', 'Error Deleting Price Book', 'Error deleting price book: ' + error.message);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -2275,7 +1778,6 @@ async function populateDefaultCountryDropdown(selectedCountryName = null) {
 async function loadAppSettings() {
     if (!currentUser || currentUserRole !== 'Admin') return;
     try {
-        showLoading(); // Show global loading indicator
         const settingsRef = doc(db, 'settings', 'appSettings'); // Assuming a single document for app settings
         const docSnap = await getDoc(settingsRef);
 
@@ -2294,8 +1796,6 @@ async function loadAppSettings() {
     } catch (error) {
         console.error("Error loading app settings:", error);
         showMessage('error', 'Error Loading Settings', 'Error loading app settings: ' + error.message);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -2304,12 +1804,6 @@ appSettingsForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
 
-    // Client-side validation
-    if (!validateForm(appSettingsForm, appSettingsValidationRules)) {
-        showMessage('error', 'Validation Error', 'Please correct the errors in the form.');
-        return;
-    }
-
     const settingsData = {
         defaultCurrency: defaultCurrencySelect.value,
         defaultCountry: defaultCountrySelect.value,
@@ -2317,7 +1811,6 @@ appSettingsForm.addEventListener('submit', async (e) => {
     };
 
     try {
-        showLoading(); // Show global loading indicator
         const settingsDocRef = doc(db, 'settings', 'appSettings'); // Reference to the specific settings document
         if (settingsDocIdInput.value) {
             // Update existing settings document
@@ -2333,19 +1826,12 @@ appSettingsForm.addEventListener('submit', async (e) => {
     } catch (error) {
         console.error("Error saving app settings:", error);
         showMessage('error', 'Error Saving Settings', 'Error saving app settings: ' + error.message);
-    } finally {
-        hideLoading(); // Hide global loading indicator
     }
 });
 
 // Event listener for the cancel button on the app settings form
 cancelSettingsEditBtn.addEventListener('click', () => {
     loadAppSettings(); // Revert to current settings by reloading them
-    // Clear validation errors on cancel
-    for (const inputId in appSettingsValidationRules) {
-        const inputElement = appSettingsForm.querySelector(`#${inputId}`);
-        if (inputElement) clearError(inputElement);
-    }
 });
 
 
@@ -2353,6 +1839,8 @@ cancelSettingsEditBtn.addEventListener('click', () => {
 // This will trigger the authentication check and subsequent data loading and UI rendering.
 // It ensures that the app initializes correctly after the DOM is fully loaded.
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOMContentLoaded fired.');
+
     // Initialize ALL Price Book UI elements here to ensure they are available
     priceBookForm = document.getElementById('priceBookForm');
     priceBookIdInput = document.getElementById('priceBookId');
@@ -2363,6 +1851,7 @@ document.addEventListener('DOMContentLoaded', () => {
     priceBookIsActiveSelect = document.getElementById('priceBookIsActive');
     priceBookValidFromInput = document.getElementById('priceBookValidFrom');
     priceBookValidToInput = document.getElementById('priceBookValidTo');
+    
     // Ensure cancelPriceBookEditBtn is also initialized here
     if (priceBookForm) { // Only try to find the button if the form exists
         cancelPriceBookEditBtn = priceBookForm.querySelector('.cancel-edit-btn');
@@ -2377,6 +1866,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Placed here to ensure priceBookCountrySelect is not null
     if (priceBookCountrySelect) {
         priceBookCountrySelect.addEventListener('change', async () => {
+            console.log('priceBookCountrySelect changed.');
             const selectedCountry = priceBookCountrySelect.value;
             if (selectedCountry) {
                 // Fetch currencies for the selected country and populate the currency dropdown
@@ -2397,14 +1887,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Attach event listeners for Price Book form and cancel button after elements are initialized
     if (priceBookForm) {
         priceBookForm.addEventListener('submit', async (e) => {
+            console.log('Price Book form submitted.');
             e.preventDefault();
             if (!currentUser) { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
-
-            // Client-side validation
-            if (!validateForm(priceBookForm, priceBookValidationRules)) {
-                showMessage('error', 'Validation Error', 'Please correct the errors in the form.');
-                return;
-            }
 
             // Normalize name and currency for storage and index ID
             const normalizedName = priceBookNameInput.value.trim().toLowerCase().replace(/\s+/g, '');
@@ -2430,7 +1915,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Generated Index ID (client-side):', newIndexId);
 
             try {
-                showLoading(); // Show global loading indicator
                 // --- Client-Side Uniqueness Validation for Price Book (Name, Currency) ---
                 const existingIndexDoc = await getDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId));
 
@@ -2492,13 +1976,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error("Error saving price book:", error);
                 showMessage('error', 'Error Saving Price Book', 'Error saving price book: ' + error.message);
-            } finally {
-                hideLoading(); // Hide global loading indicator
             }
         });
 
         if (cancelPriceBookEditBtn) { // Added null check for cancel button
             cancelPriceBookEditBtn.addEventListener('click', () => {
+                console.log('Price Book cancel button clicked.');
                 priceBookForm.reset();
                 priceBookIdInput.value = '';
                 // Reset Price Book specific fields to their defaults on cancel
@@ -2507,25 +1990,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 priceBookValidToInput.value = '';
                 populatePriceBookCountryDropdown(); // Reset country dropdown on cancel
                 populatePriceBookCurrencyDropdown(); // Reset currency dropdown on cancel
-                // Clear validation errors on cancel
-                for (const inputId in priceBookValidationRules) {
-                    const inputElement = priceBookForm.querySelector(`#${inputId}`);
-                    if (inputElement) clearError(inputElement);
-                }
             });
         }
     } else {
         console.error("Price Book form elements not found. Cannot attach form listeners.");
     }
-
-    // Attach validation listeners to all forms
-    attachValidationListeners(customerForm, customerValidationRules);
-    attachValidationListeners(opportunityForm, opportunityValidationRules);
-    attachValidationListeners(countryStateForm, countryStateValidationRules);
-    attachValidationListeners(currencyForm, currencyValidationRules);
-    if (priceBookForm) { // Check if initialized
-        attachValidationListeners(priceBookForm, priceBookValidationRules);
-    }
-    attachValidationListeners(appSettingsForm, appSettingsValidationRules);
 });
 // *** END OF SCRIPT - FINAL MARKER ***
