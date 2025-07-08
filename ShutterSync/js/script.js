@@ -583,6 +583,7 @@ addCustomerBtn.addEventListener('click', () => {
     customerSourceSelect.value = '';
 
     populateCustomerCountryDropdown(); // Repopulate to ensure fresh data
+    console.log('Displaying Customer Modal.'); // NEW LOG
     customerModal.style.display = 'flex';
 });
 
@@ -759,6 +760,7 @@ async function editCustomer(customerId) {
             customerSourceSelect.value = data.source || '';
             customerActiveSelect.value = data.active ? 'Yes' : 'No';
 
+            console.log('Displaying Customer Modal for edit.'); // NEW LOG
             customerModal.style.display = 'flex';
         } else {
             showMessage('error', 'Not Found', 'Customer not found!');
@@ -866,6 +868,7 @@ addOpportunityBtn.addEventListener('click', () => {
     populateOpportunityCustomerDropdown(); // Repopulate customer dropdown
     populateOpportunityCurrencyDropdown(); // Repopulate currency dropdown
     populateOpportunityPriceBookDropdown(); // Repopulate price book dropdown
+    console.log('Displaying Opportunity Modal.'); // NEW LOG
     opportunityModal.style.display = 'flex';
 });
 
@@ -1052,6 +1055,7 @@ async function editOpportunity(opportunityId) {
             opportunityValueInput.value = data.value || 0;
             opportunityNotesTextarea.value = data.notes || '';
 
+            console.log('Displaying Opportunity Modal for edit.'); // NEW LOG
             opportunityModal.style.display = 'flex';
         } else {
             showMessage('error', 'Not Found', 'Opportunity not found!');
@@ -1675,6 +1679,7 @@ async function editPriceBook(id) {
             priceBookIsActiveSelect.value = data.isActive ? 'Yes' : 'No';
             priceBookValidFromInput.value = formatDateForInput(data.validFrom);
             priceBookValidToInput.value = formatDateForInput(data.validTo);
+            console.log('Displaying Price Book Modal for edit.'); // NEW LOG
         } else {
             showMessage('error', 'Not Found', 'Price Book not found!');
         }
