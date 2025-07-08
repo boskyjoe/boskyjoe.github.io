@@ -42,7 +42,7 @@ const authButtonSignIn = document.getElementById('authButtonAnon'); // For the "
 const userInfoDisplay = document.getElementById('userInfoDisplay');
 const userNameSpan = document.getElementById('userName');
 const userRoleSpan = document.getElementById('userRole');
-const adminNavButton = document.querySelector('.nav-button[data-module="admin']');
+const adminNavButton = document.querySelector('.nav-button[data-module="admin"]');
 
 // Global Loading Indicator
 const loadingOverlay = document.getElementById('loadingOverlay');
