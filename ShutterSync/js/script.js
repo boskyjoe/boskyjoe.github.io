@@ -166,7 +166,8 @@ function hideLoading() {
 function showTableLoading(indicatorElement) {
     if (indicatorElement) {
         indicatorElement.classList.remove('hidden');
-        indicatorElement.parentElement.querySelector('.gridjs-container')?.classList.add('hidden'); // Hide grid while loading
+        // Hide the grid container if it exists, to show only the spinner
+        indicatorElement.parentElement.querySelector('.gridjs-container')?.classList.add('hidden');
     }
 }
 
@@ -177,7 +178,8 @@ function showTableLoading(indicatorElement) {
 function hideTableLoading(indicatorElement) {
     if (indicatorElement) {
         indicatorElement.classList.add('hidden');
-        indicatorElement.parentElement.querySelector('.gridjs-container')?.classList.remove('hidden'); // Show grid after loading
+        // Show the grid container after loading
+        indicatorElement.parentElement.querySelector('.gridjs-container')?.classList.remove('hidden');
     }
 }
 
@@ -724,18 +726,31 @@ async function renderCustomersGrid() {
     } catch (error) {
         console.error("Error fetching customers:", error);
         showMessage('error', 'Customer Load Error', 'Could not load customer data.');
+        // Ensure the grid is cleared or set to empty state on error
+        if (customersGrid) {
+            customersGrid.updateConfig({ data: [] }).forceRender();
+        } else {
+            const containerElement = document.getElementById('customersTable');
+            if (containerElement) {
+                containerElement.innerHTML = ''; // Clear container on error if grid not initialized
+            }
+        }
+        return; // Exit function on error
     } finally {
         hideTableLoading(customersTableLoading); // Hide table-specific loading indicator
     }
 
+    const containerElement = document.getElementById('customersTable');
+    if (!containerElement) {
+        console.error("Customers table container element not found!");
+        return;
+    }
 
     if (customersGrid) {
         customersGrid.updateConfig({ data: customerData }).forceRender(); // Update existing grid
     } else {
-        const containerElement = document.getElementById('customersTable');
-        if (containerElement) {
-            containerElement.innerHTML = '';
-        }
+        // Clear the container before rendering a new grid instance
+        containerElement.innerHTML = '';
         customersGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
@@ -760,11 +775,15 @@ async function renderCustomersGrid() {
                             h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Customer',
+                                role: 'button', // Added for accessibility
+                                'aria-label': `Edit customer ${row.cells[1].data}`, // Added for accessibility
                                 onClick: () => editCustomer(docId)
                             }),
                             h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Customer',
+                                role: 'button', // Added for accessibility
+                                'aria-label': `Delete customer ${row.cells[1].data}`, // Added for accessibility
                                 onClick: () => deleteCustomer(docId)
                             })
                         );
@@ -1044,17 +1063,29 @@ async function renderOpportunitiesGrid() {
     } catch (error) {
         console.error("Error fetching opportunities:", error);
         showMessage('error', 'Opportunity Load Error', 'Could not load opportunity data.');
+        if (opportunitiesGrid) {
+            opportunitiesGrid.updateConfig({ data: [] }).forceRender();
+        } else {
+            const containerElement = document.getElementById('opportunitiesTable');
+            if (containerElement) {
+                containerElement.innerHTML = '';
+            }
+        }
+        return; // Exit function on error
     } finally {
         hideTableLoading(opportunitiesTableLoading); // Hide table-specific loading indicator
+    }
+
+    const containerElement = document.getElementById('opportunitiesTable');
+    if (!containerElement) {
+        console.error("Opportunities table container element not found!");
+        return;
     }
 
     if (opportunitiesGrid) {
         opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender(); // Update existing grid
     } else {
-        const containerElement = document.getElementById('opportunitiesTable');
-        if (containerElement) {
-            containerElement.innerHTML = '';
-        }
+        containerElement.innerHTML = ''; // Clear the container before rendering a new grid instance
         opportunitiesGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
@@ -1069,6 +1100,8 @@ async function renderOpportunitiesGrid() {
                     filter: true, 
                     formatter: (cell, row) => {
                         const currencySymbol = row.cells[6].data; // Assuming currency symbol is at index 6
+                        // FIX: Use a mapping from symbol to ISO code if possible, or default to USD
+                        // For now, using symbol directly, which might not be universally supported by toLocaleString
                         return cell.toLocaleString('en-US', { style: 'currency', currency: currencySymbol || 'USD' });
                     }
                 },
@@ -1085,11 +1118,15 @@ async function renderOpportunitiesGrid() {
                             h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Opportunity',
+                                role: 'button', // Added for accessibility
+                                'aria-label': `Edit opportunity ${row.cells[1].data}`, // Added for accessibility
                                 onClick: () => editOpportunity(docId)
                             }),
                             h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Opportunity',
+                                role: 'button', // Added for accessibility
+                                'aria-label': `Delete opportunity ${row.cells[1].data}`, // Added for accessibility
                                 onClick: () => deleteOpportunity(docId)
                             })
                         );
@@ -1257,17 +1294,29 @@ async function renderCountriesStatesGrid() {
     } catch (error) {
         console.error("Error fetching countries:", error);
         showMessage('error', 'Country Load Error', 'Could not load country data.');
+        if (countriesStatesGrid) {
+            countriesStatesGrid.updateConfig({ data: [] }).forceRender();
+        } else {
+            const containerElement = document.getElementById('countriesStatesTable');
+            if (containerElement) {
+                containerElement.innerHTML = '';
+            }
+        }
+        return;
     } finally {
         hideTableLoading(countriesStatesTableLoading); // Hide table-specific loading indicator
+    }
+
+    const containerElement = document.getElementById('countriesStatesTable');
+    if (!containerElement) {
+        console.error("Countries & States table container element not found!");
+        return;
     }
 
     if (countriesStatesGrid) {
         countriesStatesGrid.updateConfig({ data: data }).forceRender();
     } else {
-        const containerElement = document.getElementById('countriesStatesTable');
-        if (containerElement) {
-            containerElement.innerHTML = '';
-        }
+        containerElement.innerHTML = ''; // Clear the container before rendering a new grid instance
         countriesStatesGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
@@ -1284,11 +1333,15 @@ async function renderCountriesStatesGrid() {
                             h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Country',
+                                role: 'button', // Added for accessibility
+                                'aria-label': `Edit country ${row.cells[1].data}`, // Added for accessibility
                                 onClick: () => editCountryState(docId)
                             }),
                             h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Country',
+                                role: 'button', // Added for accessibility
+                                'aria-label': `Delete country ${row.cells[1].data}`, // Added for accessibility
                                 onClick: () => deleteCountryState(docId)
                             })
                         );
@@ -1349,7 +1402,7 @@ async function editCountryState(id) {
  * @param {string} id - The ID of the country document to delete.
  */
 async function deleteCountryState(id) {
-    if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
+    if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Authentication Required', 'Please sign in to perform this action.'); return; }
     
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this country? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
@@ -1451,17 +1504,29 @@ async function renderCurrenciesGrid() {
     } catch (error) {
         console.error("Error fetching currencies:", error);
         showMessage('error', 'Currency Load Error', 'Could not load currency data.');
+        if (currenciesGrid) {
+            currenciesGrid.updateConfig({ data: [] }).forceRender();
+        } else {
+            const containerElement = document.getElementById('currenciesTable');
+            if (containerElement) {
+                containerElement.innerHTML = '';
+            }
+        }
+        return;
     } finally {
         hideTableLoading(currenciesTableLoading); // Hide table-specific loading indicator
+    }
+
+    const containerElement = document.getElementById('currenciesTable');
+    if (!containerElement) {
+        console.error("Currencies table container element not found!");
+        return;
     }
 
     if (currenciesGrid) {
         currenciesGrid.updateConfig({ data: data }).forceRender();
     } else {
-        const containerElement = document.getElementById('currenciesTable');
-        if (containerElement) {
-            containerElement.innerHTML = '';
-        }
+        containerElement.innerHTML = ''; // Clear the container before rendering a new grid instance
         currenciesGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
@@ -1478,11 +1543,15 @@ async function renderCurrenciesGrid() {
                             h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Currency',
+                                role: 'button', // Added for accessibility
+                                'aria-label': `Edit currency ${row.cells[2].data}`, // Added for accessibility
                                 onClick: () => editCurrency(docId)
                             }),
                             h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Currency',
+                                role: 'button', // Added for accessibility
+                                'aria-label': `Delete currency ${row.cells[2].data}`, // Added for accessibility
                                 onClick: () => deleteCurrency(docId)
                             })
                         );
@@ -1737,17 +1806,29 @@ async function renderPriceBooksGrid() {
     } catch (error) {
         console.error("Error fetching price books:", error);
         showMessage('error', 'Price Book Load Error', 'Could not load price book data.');
+        if (priceBooksGrid) {
+            priceBooksGrid.updateConfig({ data: [] }).forceRender();
+        } else {
+            const containerElement = document.getElementById('priceBooksTable');
+            if (containerElement) {
+                containerElement.innerHTML = '';
+            }
+        }
+        return;
     } finally {
         hideTableLoading(priceBooksTableLoading); // Hide table-specific loading indicator
+    }
+
+    const containerElement = document.getElementById('priceBooksTable');
+    if (!containerElement) {
+        console.error("Price Books table container element not found!");
+        return;
     }
 
     if (priceBooksGrid) {
         priceBooksGrid.updateConfig({ data: data }).forceRender();
     } else {
-        const containerElement = document.getElementById('priceBooksTable');
-        if (containerElement) {
-            containerElement.innerHTML = '';
-        }
+        containerElement.innerHTML = ''; // Clear the container before rendering a new grid instance
         priceBooksGrid = new Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true },
@@ -1768,11 +1849,15 @@ async function renderPriceBooksGrid() {
                             h('span', {
                                 className: 'fa-solid fa-edit',
                                 title: 'Edit Price Book',
+                                role: 'button', // Added for accessibility
+                                'aria-label': `Edit price book ${row.cells[1].data}`, // Added for accessibility
                                 onClick: () => editPriceBook(docId)
                             }),
                             h('span', {
                                 className: 'fa-solid fa-trash',
                                 title: 'Delete Price Book',
+                                role: 'button', // Added for accessibility
+                                'aria-label': `Delete price book ${row.cells[1].data}`, // Added for accessibility
                                 onClick: () => deletePriceBook(docId)
                             })
                         );
