@@ -10,7 +10,7 @@ import { Grid, h } from 'https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gri
 
 // Firebase configuration:
 const firebaseConfig = {
-    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo", // Your actual API Key - PRESERVED
+    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo", // Removed inline comment for strict parsing
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
     storageBucket: "shuttersync-96971.appspot.com", // Corrected storageBucket
