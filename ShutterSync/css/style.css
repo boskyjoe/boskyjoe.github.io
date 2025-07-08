@@ -31,7 +31,15 @@ body {
 
 /* Global Loading Overlay */
 #loadingOverlay {
-    /* Tailwind classes handle most of this: fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-[2000] hidden */
+    /* Ensure these properties are explicitly set for robustness */
+    display: none; /* Hidden by default, JS will set to 'flex' */
+    position: fixed;
+    inset: 0; /* Equivalent to top:0; right:0; bottom:0; left:0; */
+    background-color: rgba(0, 0, 0, 0.75); /* bg-gray-800 bg-opacity-75 */
+    flex-direction: column; /* Added for content centering */
+    align-items: center;
+    justify-content: center;
+    z-index: 2000; /* Higher than modals */
     transition: opacity var(--transition-speed) ease-in-out;
     opacity: 1; /* Default visible, hidden by JS */
 }
@@ -242,8 +250,20 @@ nav {
 
 /* Modals */
 .modal {
-    /* Tailwind handles display: flex, fixed, inset-0, bg-opacity-40, justify-center, align-items-center, z-index */
+    /* Explicitly define these properties for robust modal behavior */
+    display: none; /* Hidden by default, JS will set to 'flex' */
+    position: fixed; /* Stay in place */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    z-index: 1000; /* Sit on top (should be higher than other content) */
     background-color: rgba(0,0,0,0.6); /* Slightly darker overlay */
+    /* Flexbox for centering modal content */
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: opacity var(--transition-speed) ease;
 }
 
@@ -256,15 +276,15 @@ nav {
     border-radius: var(--border-radius);
     box-shadow: 0 5px 20px rgba(0,0,0,0.35); /* Stronger shadow */
     position: relative;
-    animation-name: animatetop;
+    animation-name: animatetop; /* Assuming animatetop is defined elsewhere or meant to be fadeIn */
     animation-duration: 0.4s;
     box-sizing: border-box; /* Ensure padding doesn't overflow */
 }
 
-@media (min-width: 768px) { /* md breakpoint */
-    .modal-content {
-        width: 80%;
-    }
+/* Re-adding fadeIn for modal content as animatetop was not defined */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .close-button {
@@ -379,6 +399,12 @@ form button.cancel-edit-btn:hover {
 }
 
 /* Admin Module Specifics */
+.admin-sections {
+    /* Tailwind handles: flex gap-4 md:gap-6 mb-6 border-b pb-4 */
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+}
+
 .admin-section-btn {
     background-color: #556c80; /* A darker shade for admin nav */
     color: var(--text-light);
@@ -461,4 +487,3 @@ form button.cancel-edit-btn:hover {
         gap: 0.5rem;
     }
 }
-
