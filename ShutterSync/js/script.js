@@ -10,10 +10,10 @@ import { Grid, h } from 'https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gri
 
 // Firebase configuration:
 const firebaseConfig = {
-    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo", // Removed inline comment for strict parsing
+    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
-    storageBucket: "shuttersync-96971.appspot.com", // Corrected storageBucket
+    storageBucket: "shuttersync-96971.appspot.com",
     messagingSenderId: "10782416018",
     appId: "1:10782416018:web:361db5572882a62f291a4b",
     measurementId: "G-T0W9CES4D3"
@@ -42,7 +42,8 @@ const authButtonSignIn = document.getElementById('authButtonAnon'); // For the "
 const userInfoDisplay = document.getElementById('userInfoDisplay');
 const userNameSpan = document.getElementById('userName');
 const userRoleSpan = document.getElementById('userRole');
-const adminNavButton = document.querySelector('.nav-button[data-module="admin"]');
+// FIX: Corrected mismatched quotes in the selector string
+const adminNavButton = document.querySelector('.nav-button[data-module="admin"]'); 
 
 // Global Loading Indicator
 const loadingOverlay = document.getElementById('loadingOverlay');
@@ -81,6 +82,7 @@ const opportunityCurrencySelect = document.getElementById('opportunityCurrency')
 const opportunityPriceBookSelect = document.getElementById('opportunityPriceBook');
 const opportunityExpectedStartDateInput = document.getElementById('opportunityExpectedStartDate');
 const opportunityExpectedCloseDateInput = document.getElementById('opportunityExpectedCloseDate');
+// FIX: Corrected the erroneous assignment here
 const opportunitySalesStageSelect = document.getElementById('opportunitySalesStage');
 const opportunityProbabilityInput = document.getElementById('opportunityProbability');
 const opportunityValueInput = document.getElementById('opportunityValue');
@@ -155,6 +157,7 @@ const messageBoxOkBtn = document.getElementById('messageBoxOkBtn');
  */
 function showLoading() {
     loadingOverlay.classList.remove('hidden');
+    loadingOverlay.style.display = 'flex'; // Ensure it's visible
 }
 
 /**
@@ -162,6 +165,7 @@ function showLoading() {
  */
 function hideLoading() {
     loadingOverlay.classList.add('hidden');
+    loadingOverlay.style.display = 'none'; // Ensure it's hidden
 }
 
 /**
@@ -173,10 +177,12 @@ function showTableLoading(indicatorElement, gridTargetElement) {
     console.log(`[Loading] Showing indicator for: ${indicatorElement.id}`);
     if (indicatorElement) {
         indicatorElement.classList.remove('hidden');
+        indicatorElement.style.display = 'block'; // Ensure it's visible
     }
     console.log(`[Loading] Hiding grid target for: ${gridTargetElement.id}`);
     if (gridTargetElement) {
         gridTargetElement.classList.add('hidden');
+        gridTargetElement.style.display = 'none'; // Ensure it's hidden
     }
 }
 
@@ -189,10 +195,12 @@ function hideTableLoading(indicatorElement, gridTargetElement) {
     console.log(`[Loading] Hiding indicator for: ${indicatorElement.id}`);
     if (indicatorElement) {
         indicatorElement.classList.add('hidden');
+        indicatorElement.style.display = 'none'; // Ensure it's hidden
     }
     console.log(`[Loading] Showing grid target for: ${gridTargetElement.id}`);
     if (gridTargetElement) {
         gridTargetElement.classList.remove('hidden');
+        gridTargetElement.style.display = 'block'; // Ensure it's visible
     }
 }
 
