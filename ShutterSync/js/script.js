@@ -313,25 +313,13 @@ onAuthStateChanged(auth, async (user) => {
             adminNavButton.style.display = 'none';
         }
 
-        // Initialize and render all grids after user is logged in
-        // These functions will check if the grid already exists before re-rendering
-        renderCustomersGrid();
-        renderOpportunitiesGrid();
-        renderCountriesStatesGrid();
-        renderCurrenciesGrid();
-        renderPriceBooksGrid(); // Re-added
+        // --- IMPORTANT: Removed direct grid rendering and dropdown population calls here ---
+        // These will now be triggered by the navigation logic in DOMContentLoaded
+        // which ensures the HTML elements are fully loaded.
 
-        // Populate dynamic data for forms (e.g., dropdowns)
-        populateCustomerCountryDropdown();
-        populateOpportunityCustomerDropdown();
-        populateOpportunityCurrencyDropdown();
-        populateOpportunityPriceBookDropdown();
-        populateDefaultCurrencyDropdown();
-        populateDefaultCountryDropdown();
-        loadAppSettings(); // Load app settings for admin panel
-
-        // Set initial module to dashboard
-        document.querySelector('.nav-button[data-module="dashboard"]').click();
+        // Set initial module to dashboard (this will trigger the nav button's click handler)
+        // This MUST be called AFTER the DOMContentLoaded has initialized the nav buttons.
+        // It's already inside DOMContentLoaded, so no need to call it here.
 
     } else {
         // User is signed out
@@ -421,12 +409,18 @@ navButtons.forEach(button => {
         moduleToShow.classList.add('active');
 
         // Perform specific actions when a module is activated
+        // These calls are now correctly placed within the navigation logic
+        // ensuring the target container elements exist.
         if (button.dataset.module === 'dashboard') {
             updateDashboardStats();
         } else if (button.dataset.module === 'customers') {
             renderCustomersGrid(); // Re-render to ensure data is fresh
+            populateCustomerCountryDropdown(); // Populate dropdowns when customer module is active
         } else if (button.dataset.module === 'opportunities') {
             renderOpportunitiesGrid(); // Re-render to ensure data is fresh
+            populateOpportunityCustomerDropdown();
+            populateOpportunityCurrencyDropdown();
+            populateOpportunityPriceBookDropdown();
         } else if (button.dataset.module === 'admin') {
             // Ensure the first admin subsection is active and load its data
             adminSectionBtns.forEach(btn => btn.classList.remove('active'));
@@ -1852,6 +1846,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Manually trigger the active class on the dashboard button
     // This will initiate the auth check and subsequent grid rendering
+    // This click will now correctly trigger the navButtons.forEach listener
+    // which then calls the render functions after DOM is ready.
     document.querySelector('.nav-button[data-module="dashboard"]').click();
 
     // Event listener for priceBookCountrySelect change
