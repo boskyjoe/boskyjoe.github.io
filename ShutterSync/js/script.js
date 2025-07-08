@@ -1515,20 +1515,11 @@ document.querySelectorAll('.admin-form .cancel-edit-btn').forEach(button => {
 // --- Countries & States Management ---
 
 /**
- * Populates the country country dropdown with data from the 'countries' collection.
- * @param {string|null} selectedCountry - The country name to pre-select (optional).
- */
-async function populateCurrencyCountryDropdown(selectedCountry = null) {
-    if (!currentUser || currentUserRole !== 'Admin') return;
-    await populateSelect(currencyCountrySelect, 'countries', 'name', 'name', selectedCountry);
-}
-
-/**
  * Renders or updates the Grid.js table for countries and their states.
  * Fetches data from the 'countries' collection.
  */
 async function renderCountriesStatesGrid() {
-    if (!currentUser || currentUserRole !== 'Admin') return;
+    if (!currentUser || currentUserRole !== 'Admin') return; // Only Admins can view/manage
 
     showTableLoading(countriesStatesTableLoading, countriesStatesGridTarget); // Use specific grid target
 
@@ -1667,7 +1658,6 @@ async function deleteCountryState(id) {
         renderCountriesStatesGrid(); // Refresh grid
         populateCustomerCountryDropdown(); // Refresh customer dropdown
         populateDefaultCountryDropdown(); // Refresh settings dropdown
-        populateCurrencyCountryDropdown(); // Refresh currency country dropdown
         // Only call populatePriceBookCountryDropdown if priceBookCountrySelect is defined
         if (priceBookCountrySelect) populatePriceBookCountryDropdown();
     } catch (error) {
@@ -1709,7 +1699,6 @@ countryStateForm.addEventListener('submit', async (e) => {
         renderCountriesStatesGrid(); // Refresh grid
         populateCustomerCountryDropdown(); // Refresh customer dropdown
         populateDefaultCountryDropdown(); // Refresh settings dropdown
-        populateCurrencyCountryDropdown(); // Refresh currency country dropdown
         // Only call populatePriceBookCountryDropdown if priceBookCountrySelect is defined
         if (priceBookCountrySelect) populatePriceBookCountryDropdown();
     } catch (error) {
