@@ -44,6 +44,8 @@ const userNameSpan = document.getElementById('userName');
 const userRoleSpan = document.getElementById('userRole');
 const adminNavButton = document.querySelector('.nav-button[data-module="admin"]');
 
+// Global Loading Indicator
+const loadingOverlay = document.getElementById('loadingOverlay');
 
 // Customer Modal Elements
 const addCustomerBtn = document.getElementById('addCustomerBtn');
@@ -63,6 +65,7 @@ const customerIndustrySelect = document.getElementById('customerIndustry');
 const customerAdditionalDetailsTextarea = document.getElementById('customerAdditionalDetails');
 const customerSourceSelect = document.getElementById('customerSource');
 const customerActiveSelect = document.getElementById('customerActive');
+const customersTableLoading = document.getElementById('customersTableLoading'); // Table loading indicator
 
 // Opportunity Modal Elements
 const addOpportunityBtn = document.getElementById('addOpportunityBtn');
@@ -81,6 +84,7 @@ const opportunitySalesStageSelect = document.getElementById('opportunitySalesSta
 const opportunityProbabilityInput = document.getElementById('opportunityProbability');
 const opportunityValueInput = document.getElementById('opportunityValue');
 const opportunityNotesTextarea = document.getElementById('opportunityNotes');
+const opportunitiesTableLoading = document.getElementById('opportunitiesTableLoading'); // Table loading indicator
 
 // Dashboard Elements
 const totalCustomersCount = document.getElementById('totalCustomersCount');
@@ -100,6 +104,7 @@ const countryNameInput = document.getElementById('countryName');
 const countryCodeInput = document.getElementById('countryCode');
 const countryStatesInput = document.getElementById('countryStates');
 const cancelCountryStateEditBtn = countryStateForm.querySelector('.cancel-edit-btn');
+const countriesStatesTableLoading = document.getElementById('countriesStatesTableLoading'); // Table loading indicator
 
 // Currencies Elements
 const currencyForm = document.getElementById('currencyForm');
@@ -108,6 +113,7 @@ const currencyNameInput = document.getElementById('currencyName');
 const currencySymbolInput = document.getElementById('currencySymbol');
 const currencyCountrySelect = document.getElementById('currencyCountry');
 const cancelCurrencyEditBtn = currencyForm.querySelector('.cancel-edit-btn');
+const currenciesTableLoading = document.getElementById('currenciesTableLoading'); // Table loading indicator
 
 // Price Books Elements - Declared with 'let' and initialized in DOMContentLoaded
 let priceBookForm;
@@ -120,6 +126,7 @@ let priceBookIsActiveSelect;
 let priceBookValidFromInput;
 let priceBookValidToInput;
 let cancelPriceBookEditBtn;
+const priceBooksTableLoading = document.getElementById('priceBooksTableLoading'); // Table loading indicator
 
 // App Settings Elements
 const appSettingsForm = document.getElementById('appSettingsForm');
@@ -137,6 +144,42 @@ const messageBoxOkBtn = document.getElementById('messageBoxOkBtn');
 
 
 // --- Utility Functions ---
+
+/**
+ * Shows the global loading overlay.
+ */
+function showLoading() {
+    loadingOverlay.classList.remove('hidden');
+}
+
+/**
+ * Hides the global loading overlay.
+ */
+function hideLoading() {
+    loadingOverlay.classList.add('hidden');
+}
+
+/**
+ * Shows a table-specific loading indicator.
+ * @param {HTMLElement} indicatorElement - The loading indicator element to show.
+ */
+function showTableLoading(indicatorElement) {
+    if (indicatorElement) {
+        indicatorElement.classList.remove('hidden');
+        indicatorElement.parentElement.querySelector('.gridjs-container')?.classList.add('hidden'); // Hide grid while loading
+    }
+}
+
+/**
+ * Hides a table-specific loading indicator.
+ * @param {HTMLElement} indicatorElement - The loading indicator element to hide.
+ */
+function hideTableLoading(indicatorElement) {
+    if (indicatorElement) {
+        indicatorElement.classList.add('hidden');
+        indicatorElement.parentElement.querySelector('.gridjs-container')?.classList.remove('hidden'); // Show grid after loading
+    }
+}
 
 /**
  * Formats a Firestore Timestamp or Date object for display in a user-friendly format.
@@ -207,6 +250,7 @@ async function populateSelect(selectElement, collectionName, valueField, textFie
     }
     selectElement.innerHTML = '<option value="">Select...</option>'; // Default empty option
     try {
+        showLoading(); // Show global loading indicator
         const collectionRef = collection(db, collectionName);
         const snapshot = await getDocs(query(collectionRef, orderBy(textField))); // Order by text field for display
         snapshot.forEach(doc => {
@@ -222,7 +266,9 @@ async function populateSelect(selectElement, collectionName, valueField, textFie
         });
     } catch (error) {
         console.error(`Error fetching data for dropdown ${collectionName}:`, error);
-        // showMessage('error', 'Dropdown Error', `Could not load data for ${collectionName}.`);
+        showMessage('error', 'Dropdown Error', `Could not load data for ${collectionName}.`);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -274,6 +320,7 @@ onAuthStateChanged(auth, async (user) => {
         authButtonSignIn.style.display = 'none';
 
         try {
+            showLoading(); // Show global loading indicator
             // Fetch user's custom claims for role from Firestore
             const userDocRef = doc(db, 'users_data', user.uid);
             const userDoc = await getDoc(userDocRef);
@@ -299,6 +346,8 @@ onAuthStateChanged(auth, async (user) => {
             console.error("Error fetching user role or creating user doc:", error);
             currentUserRole = 'Standard'; // Fallback to standard if error occurs
             showMessage('error', 'Profile Error', 'Could not load user profile. Defaulting to Standard role.');
+        } finally {
+            hideLoading(); // Hide global loading indicator
         }
 
         userNameSpan.textContent = user.displayName || user.email;
@@ -357,6 +406,7 @@ onAuthStateChanged(auth, async (user) => {
         customerCountrySelect.innerHTML = '<option value="">Select...</option>';
         customerIndustrySelect.innerHTML = '<option value="">Select Industry</option>';
         customerSourceSelect.innerHTML = '<option value="">Select Source</option>';
+        customerActiveSelect.value = 'Yes'; // Reset to default
         opportunityCustomerSelect.innerHTML = '<option value="">Select a Customer</option>';
         opportunityCurrencySelect.innerHTML = '<option value="">Select...</option>';
         opportunityPriceBookSelect.innerHTML = '<option value="">Select...</option>';
@@ -374,18 +424,22 @@ onAuthStateChanged(auth, async (user) => {
 
 // Event listener for Sign Out button
 authButtonSignOut.addEventListener('click', () => {
+    showLoading(); // Show global loading indicator
     if (currentUser) {
         signOut(auth).then(() => {
             showMessage('success', 'Signed Out', 'Signed out successfully!');
         }).catch((error) => {
             console.error('Sign Out Error:', error);
             showMessage('error', 'Sign Out Error', 'Error signing out: ' + error.message);
+        }).finally(() => {
+            hideLoading(); // Hide global loading indicator
         });
     }
 });
 
 // Event listener for Sign In with Google button
 authButtonSignIn.addEventListener('click', () => {
+    showLoading(); // Show global loading indicator
     const provider = new GoogleAuthProvider();
     signInWithPopup(auth, provider).then((result) => {
         console.log('Signed in as:', result.user.displayName);
@@ -393,6 +447,8 @@ authButtonSignIn.addEventListener('click', () => {
     }).catch((error) => {
         console.error('Sign In Error:', error);
         showMessage('error', 'Sign In Error', 'Error signing in: ' + error.message);
+    }).finally(() => {
+        hideLoading(); // Hide global loading indicator
     });
 });
 
@@ -453,6 +509,7 @@ async function updateDashboardStats() {
     if (!currentUser) return; // Ensure user is authenticated
 
     try {
+        showLoading(); // Show global loading indicator
         let customerQuery = query(collection(db, 'customers'));
         // Filter customers by creatorId if not an Admin
         if (currentUserRole !== 'Admin') {
@@ -482,6 +539,8 @@ async function updateDashboardStats() {
     } catch (error) {
         console.error("Error updating dashboard stats:", error);
         showMessage('error', 'Dashboard Error', 'Could not load dashboard statistics.');
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -604,6 +663,7 @@ customerForm.addEventListener('submit', async (e) => {
     };
 
     try {
+        showLoading(); // Show global loading indicator
         if (customerIdInput.value) {
             // Update existing customer
             await updateDoc(doc(db, 'customers', customerIdInput.value), customerData);
@@ -621,6 +681,8 @@ customerForm.addEventListener('submit', async (e) => {
     } catch (error) {
         console.error("Error saving customer:", error);
         showMessage('error', 'Error Saving Customer', 'Error saving customer: ' + error.message);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 });
 
@@ -631,6 +693,8 @@ customerForm.addEventListener('submit', async (e) => {
 async function renderCustomersGrid() {
     if (!currentUser) return;
 
+    showTableLoading(customersTableLoading); // Show table-specific loading indicator
+
     let customersRef = query(collection(db, 'customers'));
     // Filter customers by creatorId if not an Admin
     if (currentUserRole !== 'Admin') {
@@ -638,24 +702,32 @@ async function renderCustomersGrid() {
     }
     const customerData = [];
 
-    const snapshot = await getDocs(query(customersRef, orderBy('name'))); // Order by name for consistent display
-    snapshot.forEach(doc => {
-        const data = doc.data();
-        customerData.push([
-            doc.id, // Hidden ID for actions
-            data.name,
-            data.type,
-            data.email,
-            data.phone,
-            data.address,
-            data.country,
-            data.preferredContactMethod,
-            data.industry,
-            data.source,
-            data.active,
-            data.createdAt // Firestore Timestamp
-        ]);
-    });
+    try {
+        const snapshot = await getDocs(query(customersRef, orderBy('name'))); // Order by name for consistent display
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            customerData.push([
+                doc.id, // Hidden ID for actions
+                data.name,
+                data.type,
+                data.email,
+                data.phone,
+                data.address,
+                data.country,
+                data.preferredContactMethod,
+                data.industry,
+                data.source,
+                data.active,
+                data.createdAt // Firestore Timestamp
+            ]);
+        });
+    } catch (error) {
+        console.error("Error fetching customers:", error);
+        showMessage('error', 'Customer Load Error', 'Could not load customer data.');
+    } finally {
+        hideTableLoading(customersTableLoading); // Hide table-specific loading indicator
+    }
+
 
     if (customersGrid) {
         customersGrid.updateConfig({ data: customerData }).forceRender(); // Update existing grid
@@ -731,6 +803,7 @@ async function editCustomer(customerId) {
     if (currentUserRole !== 'Admin' && currentUserRole !== 'Standard') { showMessage('error', 'Access Denied', 'You do not have permission to edit customers.'); return; }
 
     try {
+        showLoading(); // Show global loading indicator
         const docSnap = await getDoc(doc(db, 'customers', customerId));
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -762,6 +835,8 @@ async function editCustomer(customerId) {
     } catch (error) {
         console.error("Error editing customer:", error);
         showMessage('error', 'Error Loading Customer', 'Error loading customer for edit: ' + error.message);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -777,6 +852,7 @@ async function deleteCustomer(customerId) {
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this customer? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
+        showLoading(); // Show global loading indicator
         // Check if there are any opportunities linked to this customer
         const opportunitiesSnapshot = await getDocs(query(collection(db, 'opportunities'), where('customerId', '==', customerId)));
         if (!opportunitiesSnapshot.empty) {
@@ -791,6 +867,8 @@ async function deleteCustomer(customerId) {
     } catch (error) {
         console.error("Error deleting customer:", error);
         showMessage('error', 'Error Deleting Customer', 'Error deleting customer: ' + error.message);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -810,17 +888,24 @@ async function populateOpportunityCustomerDropdown(selectedCustomerId = null) {
     if (currentUserRole !== 'Admin') {
         customerQuery = query(customerQuery, where('creatorId', '==', currentUser.uid));
     }
-    const snapshot = await getDocs(customerQuery);
-    snapshot.forEach(doc => {
-        const data = doc.data();
-        const option = document.createElement('option');
-        option.value = doc.id; // Use Firestore doc ID as value
-        option.textContent = data.name;
-        if (selectedCustomerId && doc.id === selectedCustomerId) {
-            option.selected = true;
-        }
-        selectElement.appendChild(option);
-    });
+    try {
+        showLoading(); // Show global loading indicator
+        const snapshot = await getDocs(customerQuery);
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const option = document.createElement('option');
+            option.value = doc.id; // Use Firestore doc ID as value
+            option.textContent = data.name;
+            if (selectedCustomerId && doc.id === selectedCustomerId) {
+                option.selected = true;
+            }
+            selectElement.appendChild(option);
+        });
+    } catch (error) {
+        console.error(`Error fetching data for opportunity customer dropdown:`, error);
+    } finally {
+        hideLoading(); // Hide global loading indicator
+    }
 }
 
 /**
@@ -840,17 +925,24 @@ async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null) 
     if (!currentUser) return;
     const selectElement = opportunityPriceBookSelect;
     selectElement.innerHTML = '<option value="">Select a Price Book</option>';
-    const snapshot = await getDocs(query(collection(db, 'priceBooks'), orderBy('name')));
-    snapshot.forEach(doc => {
-        const data = doc.data();
-        const option = document.createElement('option');
-        option.value = doc.id; // Use Firestore doc ID as value
-        option.textContent = data.name;
-        if (selectedPriceBookId && doc.id === selectedPriceBookId) {
-            option.selected = true;
-        }
-        selectElement.appendChild(option);
-    });
+    try {
+        showLoading(); // Show global loading indicator
+        const snapshot = await getDocs(query(collection(db, 'priceBooks'), orderBy('name')));
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const option = document.createElement('option');
+            option.value = doc.id; // Use Firestore doc ID as value
+            option.textContent = data.name;
+            if (selectedPriceBookId && doc.id === selectedPriceBookId) {
+                option.selected = true;
+            }
+            selectElement.appendChild(option);
+        });
+    } catch (error) {
+        console.error(`Error fetching data for opportunity price book dropdown:`, error);
+    } finally {
+        hideLoading(); // Hide global loading indicator
+    }
 }
 
 // Event listener to open the Opportunity Modal for adding a new opportunity
@@ -894,6 +986,7 @@ opportunityForm.addEventListener('submit', async (e) => {
     };
 
     try {
+        showLoading(); // Show global loading indicator
         if (opportunityIdInput.value) {
             // Update existing opportunity
             await updateDoc(doc(db, 'opportunities', opportunityIdInput.value), opportunityData);
@@ -911,6 +1004,8 @@ opportunityForm.addEventListener('submit', async (e) => {
     } catch (error) {
         console.error("Error saving opportunity:", error);
         showMessage('error', 'Error Saving Opportunity', 'Error saving opportunity: ' + error.message);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 });
 
@@ -921,6 +1016,8 @@ opportunityForm.addEventListener('submit', async (e) => {
 async function renderOpportunitiesGrid() {
     if (!currentUser) return;
 
+    showTableLoading(opportunitiesTableLoading); // Show table-specific loading indicator
+
     let opportunitiesRef = query(collection(db, 'opportunities'));
     // Filter opportunities by creatorId if not an Admin
     if (currentUserRole !== 'Admin') {
@@ -928,24 +1025,31 @@ async function renderOpportunitiesGrid() {
     }
     const opportunityData = [];
 
-    const snapshot = await getDocs(query(opportunitiesRef, orderBy('expectedCloseDate'))); // Order by expected close date
-    snapshot.forEach(doc => {
-        const data = doc.data();
-        opportunityData.push([
-            doc.id, // Hidden ID
-            data.name,
-            data.customerName, // Display customer name
-            data.salesStage,
-            data.probability,
-            data.value,
-            data.currency, // Currency symbol
-            data.expectedCloseDate,
-            data.createdAt
-        ]);
-    });
+    try {
+        const snapshot = await getDocs(query(opportunitiesRef, orderBy('expectedCloseDate'))); // Order by expected close date
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            opportunityData.push([
+                doc.id, // Hidden ID
+                data.name,
+                data.customerName, // Display customer name
+                data.salesStage,
+                data.probability,
+                data.value,
+                data.currency, // Currency symbol
+                data.expectedCloseDate,
+                data.createdAt
+            ]);
+        });
+    } catch (error) {
+        console.error("Error fetching opportunities:", error);
+        showMessage('error', 'Opportunity Load Error', 'Could not load opportunity data.');
+    } finally {
+        hideTableLoading(opportunitiesTableLoading); // Hide table-specific loading indicator
+    }
 
     if (opportunitiesGrid) {
-        opportunitiesGrid.updateConfig({ data: data }).forceRender(); // Update existing grid
+        opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender(); // Update existing grid
     } else {
         const containerElement = document.getElementById('opportunitiesTable');
         if (containerElement) {
@@ -1023,6 +1127,7 @@ async function editOpportunity(opportunityId) {
     if (currentUserRole !== 'Admin' && currentUserRole !== 'Standard') { showMessage('error', 'Access Denied', 'You do not have permission to edit opportunities.'); return; }
 
     try {
+        showLoading(); // Show global loading indicator
         const docSnap = await getDoc(doc(db, 'opportunities', opportunityId));
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -1053,6 +1158,8 @@ async function editOpportunity(opportunityId) {
     } catch (error) {
         console.error("Error editing opportunity:", error);
         showMessage('error', 'Error Loading Opportunity', 'Error loading opportunity for edit: ' + error.message);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1068,6 +1175,7 @@ async function deleteOpportunity(opportunityId) {
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this opportunity? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
+        showLoading(); // Show global loading indicator
         await deleteDoc(doc(db, 'opportunities', opportunityId));
         showMessage('success', 'Success', 'Opportunity deleted successfully!');
         renderOpportunitiesGrid(); // Refresh the table
@@ -1075,6 +1183,8 @@ async function deleteOpportunity(opportunityId) {
     } catch (error) {
         console.error("Error deleting opportunity:", error);
         showMessage('error', 'Error Deleting Opportunity', 'Error deleting opportunity: ' + error.message);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1128,19 +1238,28 @@ document.querySelectorAll('.admin-form .cancel-edit-btn').forEach(button => {
 async function renderCountriesStatesGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return; // Only Admins can view/manage
 
+    showTableLoading(countriesStatesTableLoading); // Show table-specific loading indicator
+
     const countriesRef = collection(db, 'countries');
     const data = [];
 
-    const snapshot = await getDocs(query(countriesRef, orderBy('name')));
-    snapshot.forEach(doc => {
-        const country = doc.data();
-        data.push([
-            doc.id, // Hidden ID for actions
-            country.name,
-            country.code,
-            country.states ? country.states.join(', ') : ''
-        ]);
-    });
+    try {
+        const snapshot = await getDocs(query(countriesRef, orderBy('name')));
+        snapshot.forEach(doc => {
+            const country = doc.data();
+            data.push([
+                doc.id, // Hidden ID for actions
+                country.name,
+                country.code,
+                country.states ? country.states.join(', ') : ''
+            ]);
+        });
+    } catch (error) {
+        console.error("Error fetching countries:", error);
+        showMessage('error', 'Country Load Error', 'Could not load country data.');
+    } finally {
+        hideTableLoading(countriesStatesTableLoading); // Hide table-specific loading indicator
+    }
 
     if (countriesStatesGrid) {
         countriesStatesGrid.updateConfig({ data: data }).forceRender();
@@ -1205,6 +1324,7 @@ async function renderCountriesStatesGrid() {
 async function editCountryState(id) {
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     try {
+        showLoading(); // Show global loading indicator
         const docSnap = await getDoc(doc(db, 'countries', id));
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -1218,6 +1338,8 @@ async function editCountryState(id) {
     } catch (error) {
         console.error("Error loading country for edit:", error);
         showMessage('error', 'Error Loading Country', 'Error loading country for edit: ' + error.message);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1232,6 +1354,7 @@ async function deleteCountryState(id) {
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this country? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
+        showLoading(); // Show global loading indicator
         await deleteDoc(doc(db, 'countries', id));
         showMessage('success', 'Success', 'Country deleted!');
         renderCountriesStatesGrid(); // Refresh grid
@@ -1243,6 +1366,8 @@ async function deleteCountryState(id) {
     } catch (error) {
         console.error("Error deleting country:", error);
         showMessage('error', 'Error Deleting Country', 'Error deleting country: ' + error.message);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1258,6 +1383,7 @@ countryStateForm.addEventListener('submit', async (e) => {
     };
 
     try {
+        showLoading(); // Show global loading indicator
         if (countryStateIdInput.value) {
             await updateDoc(doc(db, 'countries', countryStateIdInput.value), countryData);
             showMessage('success', 'Success', 'Country updated!');
@@ -1276,6 +1402,8 @@ countryStateForm.addEventListener('submit', async (e) => {
     } catch (error) {
         console.error("Error saving country:", error);
         showMessage('error', 'Error Saving Country', 'Error saving country: ' + error.message);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 });
 
@@ -1304,19 +1432,28 @@ async function populateCurrencyCountryDropdown(selectedCountry = null) {
 async function renderCurrenciesGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return;
 
+    showTableLoading(currenciesTableLoading); // Show table-specific loading indicator
+
     const currenciesRef = collection(db, 'currencies');
     const data = [];
 
-    const snapshot = await getDocs(query(currenciesRef, orderBy('country'), orderBy('name'))); // Order by country then name
-    snapshot.forEach(doc => {
-        const currency = doc.data();
-        data.push([
-            doc.id, // Hidden ID for actions
-            currency.country || '',
-            currency.name,
-            currency.symbol
-        ]);
-    });
+    try {
+        const snapshot = await getDocs(query(currenciesRef, orderBy('country'), orderBy('name'))); // Order by country then name
+        snapshot.forEach(doc => {
+            const currency = doc.data();
+            data.push([
+                doc.id, // Hidden ID for actions
+                currency.country || '',
+                currency.name,
+                currency.symbol
+            ]);
+        });
+    } catch (error) {
+        console.error("Error fetching currencies:", error);
+        showMessage('error', 'Currency Load Error', 'Could not load currency data.');
+    } finally {
+        hideTableLoading(currenciesTableLoading); // Hide table-specific loading indicator
+    }
 
     if (currenciesGrid) {
         currenciesGrid.updateConfig({ data: data }).forceRender();
@@ -1381,6 +1518,7 @@ async function renderCurrenciesGrid() {
 async function editCurrency(id) {
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     try {
+        showLoading(); // Show global loading indicator
         const docSnap = await getDoc(doc(db, 'currencies', id));
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -1394,6 +1532,8 @@ async function editCurrency(id) {
     } catch (error) {
         console.error("Error loading currency for edit:", error);
         showMessage('error', 'Error Loading Currency', 'Error loading currency for edit: ' + error.message);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1408,6 +1548,7 @@ async function deleteCurrency(id) {
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this currency? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
+        showLoading(); // Show global loading indicator
         await deleteDoc(doc(db, 'currencies', id));
         showMessage('success', 'Success', 'Currency deleted!');
         renderCurrenciesGrid(); // Refresh grid
@@ -1419,6 +1560,8 @@ async function deleteCurrency(id) {
     } catch (error) {
         console.error("Error deleting currency:", error);
         showMessage('error', 'Error Deleting Currency', 'Error deleting currency: ' + error.message);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1434,6 +1577,7 @@ currencyForm.addEventListener('submit', async (e) => {
     };
 
     try {
+        showLoading(); // Show global loading indicator
         // --- Client-Side Uniqueness Validation for Currency (Country, Name, Symbol) ---
         let q = query(
             collection(db, 'currencies'),
@@ -1483,6 +1627,8 @@ currencyForm.addEventListener('submit', async (e) => {
     } catch (error) {
         console.error("Error saving currency:", error);
         showMessage('error', 'Error Saving Currency', 'Error saving currency: ' + error.message);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 });
 
@@ -1512,6 +1658,7 @@ async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null, 
     priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>'; // Default empty option
 
     try {
+        showLoading(); // Show global loading indicator
         let currenciesRef = collection(db, 'currencies');
         let q;
         if (filterCountry) {
@@ -1534,6 +1681,8 @@ async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null, 
         });
     } catch (error) {
         console.error(`Error fetching currencies for price book dropdown:`, error);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1565,23 +1714,32 @@ async function populatePriceBookCountryDropdown(selectedCountryName = null) {
 async function renderPriceBooksGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return;
 
+    showTableLoading(priceBooksTableLoading); // Show table-specific loading indicator
+
     const priceBooksRef = collection(db, 'priceBooks');
     const data = [];
 
-    const snapshot = await getDocs(query(priceBooksRef, orderBy('name'))); // Order by name
-    snapshot.forEach(doc => {
-        const priceBook = doc.data();
-        data.push([
-            doc.id, // Hidden ID for actions
-            priceBook.name,
-            priceBook.description,
-            priceBook.country || '', // NEW: Display country
-            priceBook.currency || '',
-            priceBook.isActive,
-            priceBook.validFrom,
-            priceBook.validTo
-        ]);
-    });
+    try {
+        const snapshot = await getDocs(query(priceBooksRef, orderBy('name'))); // Order by name
+        snapshot.forEach(doc => {
+            const priceBook = doc.data();
+            data.push([
+                doc.id, // Hidden ID for actions
+                priceBook.name,
+                priceBook.description,
+                priceBook.country || '', // NEW: Display country
+                priceBook.currency || '',
+                priceBook.isActive,
+                priceBook.validFrom,
+                priceBook.validTo
+            ]);
+        });
+    } catch (error) {
+        console.error("Error fetching price books:", error);
+        showMessage('error', 'Price Book Load Error', 'Could not load price book data.');
+    } finally {
+        hideTableLoading(priceBooksTableLoading); // Hide table-specific loading indicator
+    }
 
     if (priceBooksGrid) {
         priceBooksGrid.updateConfig({ data: data }).forceRender();
@@ -1650,6 +1808,7 @@ async function renderPriceBooksGrid() {
 async function editPriceBook(id) {
     if (!currentUser || currentUserRole !== 'Admin') { showMessage('error', 'Access Denied', 'Access Denied'); return; }
     try {
+        showLoading(); // Show global loading indicator
         const docSnap = await getDoc(doc(db, 'priceBooks', id));
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -1670,6 +1829,8 @@ async function editPriceBook(id) {
     } catch (error) {
         console.error("Error loading price book for edit:", error);
         showMessage('error', 'Error Loading Price Book', 'Error loading price book for edit: ' + error.message);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1684,6 +1845,7 @@ async function deletePriceBook(id) {
     showMessage('info', 'Confirm Deletion', 'Are you sure you want to delete this price book? This action cannot be undone. If you are sure, click OK and then click the trash icon again.');
 
     try {
+        showLoading(); // Show global loading indicator
         // First, retrieve the price book data to get name and currency for the index ID
         const priceBookDoc = await getDoc(doc(db, 'priceBooks', id));
         let indexIdToDelete = null;
@@ -1714,6 +1876,8 @@ async function deletePriceBook(id) {
     catch (error) {
         console.error("Error deleting price book:", error);
         showMessage('error', 'Error Deleting Price Book', 'Error deleting price book: ' + error.message);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1753,6 +1917,7 @@ async function populateDefaultCountryDropdown(selectedCountryName = null) {
 async function loadAppSettings() {
     if (!currentUser || currentUserRole !== 'Admin') return;
     try {
+        showLoading(); // Show global loading indicator
         const settingsRef = doc(db, 'settings', 'appSettings'); // Assuming a single document for app settings
         const docSnap = await getDoc(settingsRef);
 
@@ -1771,6 +1936,8 @@ async function loadAppSettings() {
     } catch (error) {
         console.error("Error loading app settings:", error);
         showMessage('error', 'Error Loading Settings', 'Error loading app settings: ' + error.message);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 }
 
@@ -1786,6 +1953,7 @@ appSettingsForm.addEventListener('submit', async (e) => {
     };
 
     try {
+        showLoading(); // Show global loading indicator
         const settingsDocRef = doc(db, 'settings', 'appSettings'); // Reference to the specific settings document
         if (settingsDocIdInput.value) {
             // Update existing settings document
@@ -1801,6 +1969,8 @@ appSettingsForm.addEventListener('submit', async (e) => {
     } catch (error) {
         console.error("Error saving app settings:", error);
         showMessage('error', 'Error Saving Settings', 'Error saving app settings: ' + error.message);
+    } finally {
+        hideLoading(); // Hide global loading indicator
     }
 });
 
@@ -1885,6 +2055,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Generated Index ID (client-side):', newIndexId);
 
             try {
+                showLoading(); // Show global loading indicator
                 // --- Client-Side Uniqueness Validation for Price Book (Name, Currency) ---
                 const existingIndexDoc = await getDoc(doc(db, 'priceBookNameCurrencyIndexes', newIndexId));
 
@@ -1946,6 +2117,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error("Error saving price book:", error);
                 showMessage('error', 'Error Saving Price Book', 'Error saving price book: ' + error.message);
+            } finally {
+                hideLoading(); // Hide global loading indicator
             }
         });
 
