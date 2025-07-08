@@ -257,6 +257,7 @@ messageBoxOkBtn.addEventListener('click', () => {
 // Close message box on outside click
 window.addEventListener('click', (event) => {
     if (event.target === messageBoxModal) {
+        console.log('Message box modal closed by outside click.');
         messageBoxModal.style.display = 'none';
     }
 });
@@ -1133,15 +1134,6 @@ document.querySelectorAll('.admin-form .cancel-edit-btn').forEach(button => {
 
 
 // --- Countries & States Management ---
-
-/**
- * Populates the country country dropdown with data from the 'countries' collection.
- * @param {string|null} selectedCountry - The country name to pre-select (optional).
- */
-async function populateCurrencyCountryDropdown(selectedCountry = null) {
-    if (!currentUser) return;
-    await populateSelect(currencyCountrySelect, 'countries', 'name', 'name', selectedCountry);
-}
 
 /**
  * Renders or updates the Grid.js table for countries and their states.
