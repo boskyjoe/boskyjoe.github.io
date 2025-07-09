@@ -313,13 +313,9 @@ onAuthStateChanged(auth, async (user) => {
             adminNavButton.style.display = 'none';
         }
 
-        // --- IMPORTANT: Removed direct grid rendering and dropdown population calls here ---
-        // These will now be triggered by the navigation logic in DOMContentLoaded
-        // which ensures the HTML elements are fully loaded.
-
-        // Set initial module to dashboard (this will trigger the nav button's click handler)
-        // This MUST be called AFTER the DOMContentLoaded has initialized the nav buttons.
-        // It's already inside DOMContentLoaded, so no need to call it here.
+        // IMPORTANT: Removed all direct grid rendering and dropdown population calls here.
+        // These will now be triggered ONLY by the navigation logic within the navButtons.forEach
+        // listener, which is itself triggered by DOMContentLoaded for the initial load.
 
     } else {
         // User is signed out
@@ -635,6 +631,14 @@ customerForm.addEventListener('submit', async (e) => {
 async function renderCustomersGrid() {
     if (!currentUser) return;
 
+    const containerElement = document.getElementById('customersTable');
+    if (!containerElement) {
+        console.error("[renderCustomersGrid] Container element #customersTable not found.");
+        return; // Exit if container is not found
+    }
+    // Show a loading indicator
+    containerElement.innerHTML = '<div class="loading-indicator">Loading Customers...</div>';
+
     let customersRef = query(collection(db, 'customers'));
     // Filter customers by creatorId if not an Admin
     if (currentUserRole !== 'Admin') {
@@ -642,86 +646,88 @@ async function renderCustomersGrid() {
     }
     const customerData = [];
 
-    const snapshot = await getDocs(query(customersRef, orderBy('name'))); // Order by name for consistent display
-    snapshot.forEach(doc => {
-        const data = doc.data();
-        customerData.push([
-            doc.id, // Hidden ID for actions
-            data.name,
-            data.type,
-            data.email,
-            data.phone,
-            data.address,
-            data.country,
-            data.preferredContactMethod,
-            data.industry,
-            data.source,
-            data.active,
-            data.createdAt // Firestore Timestamp
-        ]);
-    });
+    try {
+        const snapshot = await getDocs(query(customersRef, orderBy('name'))); // Order by name for consistent display
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            customerData.push([
+                doc.id, // Hidden ID for actions
+                data.name,
+                data.type,
+                data.email,
+                data.phone,
+                data.address,
+                data.country,
+                data.preferredContactMethod,
+                data.industry,
+                data.source,
+                data.active,
+                data.createdAt // Firestore Timestamp
+            ]);
+        });
 
-    if (customersGrid) {
-        customersGrid.updateConfig({ data: customerData }).forceRender(); // Update existing grid
-    } else {
-        const containerElement = document.getElementById('customersTable');
-        if (containerElement) {
-            containerElement.innerHTML = '';
-        }
-        customersGrid = new Grid({
-            columns: [
-                { id: 'id', name: 'ID', hidden: true },
-                { id: 'name', name: 'Name', sort: true, filter: true },
-                { id: 'type', name: 'Type', sort: true, filter: true },
-                { id: 'email', name: 'Email', sort: true, filter: true },
-                { id: 'phone', name: 'Phone', sort: true, filter: true },
-                { id: 'address', name: 'Address', sort: true, filter: true },
-                { id: 'country', name: 'Country', sort: true, filter: true },
-                { id: 'preferredContactMethod', name: 'Preferred Contact', sort: true, filter: true },
-                { id: 'industry', name: 'Industry', sort: true, filter: true },
-                { id: 'source', name: 'Source', sort: true, filter: true },
-                { id: 'active', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
-                { id: 'createdAt', name: 'Created At', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
-                {
-                    name: 'Actions',
-                    sort: false,
-                    filter: false,
-                    formatter: (cell, row) => {
-                        const docId = row.cells[0].data; // Get document ID from the first hidden cell
-                        return h('div', { className: 'action-icons' },
-                            h('span', {
-                                className: 'fa-solid fa-edit',
-                                title: 'Edit Customer',
-                                onClick: () => editCustomer(docId)
-                            }),
-                            h('span', {
-                                className: 'fa-solid fa-trash',
-                                title: 'Delete Customer',
-                                onClick: () => deleteCustomer(docId)
-                            })
-                        );
+        if (customersGrid) {
+            customersGrid.updateConfig({ data: customerData }).forceRender(); // Update existing grid
+        } else {
+            customersGrid = new Grid({
+                columns: [
+                    { id: 'id', name: 'ID', hidden: true },
+                    { id: 'name', name: 'Name', sort: true, filter: true },
+                    { id: 'type', name: 'Type', sort: true, filter: true },
+                    { id: 'email', name: 'Email', sort: true, filter: true },
+                    { id: 'phone', name: 'Phone', sort: true, filter: true },
+                    { id: 'address', name: 'Address', sort: true, filter: true },
+                    { id: 'country', name: 'Country', sort: true, filter: true },
+                    { id: 'preferredContactMethod', name: 'Preferred Contact', sort: true, filter: true },
+                    { id: 'industry', name: 'Industry', sort: true, filter: true },
+                    { id: 'source', name: 'Source', sort: true, filter: true },
+                    { id: 'active', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
+                    { id: 'createdAt', name: 'Created At', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
+                    {
+                        name: 'Actions',
+                        sort: false,
+                        filter: false,
+                        formatter: (cell, row) => {
+                            const docId = row.cells[0].data; // Get document ID from the first hidden cell
+                            return h('div', { className: 'action-icons' },
+                                h('span', {
+                                    className: 'fa-solid fa-edit',
+                                    title: 'Edit Customer',
+                                    onClick: () => editCustomer(docId)
+                                }),
+                                h('span', {
+                                    className: 'fa-solid fa-trash',
+                                    title: 'Delete Customer',
+                                    onClick: () => deleteCustomer(docId)
+                                })
+                            );
+                        }
                     }
+                ],
+                data: customerData,
+                search: true, // Global search
+                pagination: { enabled: true, limit: 10, summary: true },
+                sort: true,
+                resizable: true,
+                className: { // Custom CSS classes for Grid.js elements
+                    container: 'gridjs-container', table: 'gridjs-table', thead: 'gridjs-thead', th: 'gridjs-th',
+                    td: 'gridjs-td', tr: 'gridjs-tr', footer: 'gridjs-footer', pagination: 'gridjs-pagination',
+                    'pagination-summary': 'gridjs-pagination-summary', 'pagination-gap': 'gridjs-pagination-gap',
+                    'pagination-nav': 'gridjs-pagination-nav', 'pagination-nav-prev': 'gridjs-pagination-nav-prev',
+                    'pagination-nav-next': 'gridjs-pagination-nav-next', 'pagination-btn': 'gridjs-pagination-btn',
+                    'pagination-btn-current': 'gridjs-currentPage',
+                },
+                language: { // Customizing Grid.js text
+                    'search': { 'placeholder': 'Search customers...' },
+                    'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
+                    'noRecordsFound': 'No Customer Data Available',
                 }
-            ],
-            data: customerData,
-            search: true, // Global search
-            pagination: { enabled: true, limit: 10, summary: true },
-            sort: true,
-            resizable: true,
-            className: { // Custom CSS classes for Grid.js elements
-                container: 'gridjs-container', table: 'gridjs-table', thead: 'gridjs-thead', th: 'gridjs-th',
-                td: 'gridjs-td', tr: 'gridjs-tr', footer: 'gridjs-footer', pagination: 'gridjs-pagination',
-                'pagination-summary': 'gridjs-pagination-summary', 'pagination-gap': 'gridjs-pagination-gap',
-                'pagination-nav': 'gridjs-pagination-nav', 'pagination-nav-prev': 'gridjs-pagination-nav-prev',
-                'pagination-nav-next': 'gridjs-pagination-nav-next', 'pagination-btn': 'gridjs-pagination-btn',
-                'pagination-btn-current': 'gridjs-currentPage',
-            },
-            language: { // Customizing Grid.js text
-                'search': { 'placeholder': 'Search customers...' },
-                'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
-                'noRecordsFound': 'No Customer Data Available',
-            }
-        }).render(containerElement);
+            }).render(containerElement);
+        }
+    } catch (error) {
+        console.error("Error rendering customers grid:", error);
+        showMessage('error', 'Grid Error', 'Could not load customer data: ' + error.message);
+        containerElement.innerHTML = '<div class="error-message">Error loading customer data.</div>'; // Show error in container
     }
 }
 
@@ -930,6 +936,14 @@ opportunityForm.addEventListener('submit', async (e) => {
 async function renderOpportunitiesGrid() {
     if (!currentUser) return;
 
+    const containerElement = document.getElementById('opportunitiesTable');
+    if (!containerElement) {
+        console.error("[renderOpportunitiesGrid] Container element #opportunitiesTable not found.");
+        return; // Exit if container is not found
+    }
+    // Show a loading indicator
+    containerElement.innerHTML = '<div class="loading-indicator">Loading Opportunities...</div>';
+
     let opportunitiesRef = query(collection(db, 'opportunities'));
     // Filter opportunities by creatorId if not an Admin
     if (currentUserRole !== 'Admin') {
@@ -937,89 +951,91 @@ async function renderOpportunitiesGrid() {
     }
     const opportunityData = [];
 
-    const snapshot = await getDocs(query(opportunitiesRef, orderBy('expectedCloseDate'))); // Order by expected close date
-    snapshot.forEach(doc => {
-        const data = doc.data();
-        opportunityData.push([
-            doc.id, // Hidden ID
-            data.name,
-            data.customerName, // Display customer name
-            data.salesStage,
-            data.probability,
-            data.value,
-            data.currency, // Currency symbol
-            data.expectedCloseDate,
-            data.createdAt
-        ]);
-    });
+    try {
+        const snapshot = await getDocs(query(opportunitiesRef, orderBy('expectedCloseDate'))); // Order by expected close date
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            opportunityData.push([
+                doc.id, // Hidden ID
+                data.name,
+                data.customerName, // Display customer name
+                data.salesStage,
+                data.probability,
+                data.value,
+                data.currency, // Currency symbol
+                data.expectedCloseDate,
+                data.createdAt
+            ]);
+        });
 
-    if (opportunitiesGrid) {
-        opportunitiesGrid.updateConfig({ data: data }).forceRender(); // Update existing grid
-    } else {
-        const containerElement = document.getElementById('opportunitiesTable');
-        if (containerElement) {
-            containerElement.innerHTML = '';
-        }
-        opportunitiesGrid = new Grid({
-            columns: [
-                { id: 'id', name: 'ID', hidden: true },
-                { id: 'name', name: 'Opportunity Name', sort: true, filter: true },
-                { id: 'customerName', name: 'Customer', sort: true, filter: true },
-                { id: 'salesStage', name: 'Stage', sort: true, filter: true },
-                { id: 'probability', name: 'Probability (%)', sort: true, filter: true },
-                { 
-                    id: 'value', 
-                    name: 'Value', 
-                    sort: true, 
-                    filter: true, 
-                    formatter: (cell, row) => {
-                        const currencySymbol = row.cells[6].data; // Assuming currency symbol is at index 6
-                        return cell.toLocaleString('en-US', { style: 'currency', currency: currencySymbol || 'USD' });
+        if (opportunitiesGrid) {
+            opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender(); // Update existing grid
+        } else {
+            opportunitiesGrid = new Grid({
+                columns: [
+                    { id: 'id', name: 'ID', hidden: true },
+                    { id: 'name', name: 'Opportunity Name', sort: true, filter: true },
+                    { id: 'customerName', name: 'Customer', sort: true, filter: true },
+                    { id: 'salesStage', name: 'Stage', sort: true, filter: true },
+                    { id: 'probability', name: 'Probability (%)', sort: true, filter: true },
+                    { 
+                        id: 'value', 
+                        name: 'Value', 
+                        sort: true, 
+                        filter: true, 
+                        formatter: (cell, row) => {
+                            const currencySymbol = row.cells[6].data; // Assuming currency symbol is at index 6
+                            return cell.toLocaleString('en-US', { style: 'currency', currency: currencySymbol || 'USD' });
+                        }
+                    },
+                    { id: 'currency', name: 'Currency', sort: true, filter: true },
+                    { id: 'expectedCloseDate', name: 'Close Date', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
+                    { id: 'createdAt', name: 'Created At', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
+                    {
+                        name: 'Actions',
+                        sort: false,
+                        filter: false,
+                        formatter: (cell, row) => {
+                            const docId = row.cells[0].data;
+                            return h('div', { className: 'action-icons' },
+                                h('span', {
+                                    className: 'fa-solid fa-edit',
+                                    title: 'Edit Opportunity',
+                                    onClick: () => editOpportunity(docId)
+                                }),
+                                h('span', {
+                                    className: 'fa-solid fa-trash',
+                                    title: 'Delete Opportunity',
+                                    onClick: () => deleteOpportunity(docId)
+                                })
+                            );
+                        }
                     }
+                ],
+                data: opportunityData,
+                search: true,
+                pagination: { enabled: true, limit: 10, summary: true },
+                sort: true,
+                resizable: true,
+                className: {
+                    container: 'gridjs-container', table: 'gridjs-table', thead: 'gridjs-thead', th: 'gridjs-th',
+                    td: 'gridjs-td', tr: 'gridjs-tr', footer: 'gridjs-footer', pagination: 'gridjs-pagination',
+                    'pagination-summary': 'gridjs-pagination-summary', 'pagination-gap': 'gridjs-pagination-gap',
+                    'pagination-nav': 'gridjs-pagination-nav', 'pagination-nav-prev': 'gridjs-pagination-nav-prev',
+                    'pagination-nav-next': 'gridjs-pagination-nav-next', 'pagination-btn': 'gridjs-pagination-btn',
+                    'pagination-btn-current': 'gridjs-currentPage',
                 },
-                { id: 'currency', name: 'Currency', sort: true, filter: true },
-                { id: 'expectedCloseDate', name: 'Close Date', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
-                { id: 'createdAt', name: 'Created At', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
-                {
-                    name: 'Actions',
-                    sort: false,
-                    filter: false,
-                    formatter: (cell, row) => {
-                        const docId = row.cells[0].data;
-                        return h('div', { className: 'action-icons' },
-                            h('span', {
-                                className: 'fa-solid fa-edit',
-                                title: 'Edit Opportunity',
-                                onClick: () => editOpportunity(docId)
-                            }),
-                            h('span', {
-                                className: 'fa-solid fa-trash',
-                                title: 'Delete Opportunity',
-                                onClick: () => deleteOpportunity(docId)
-                            })
-                        );
-                    }
+                language: {
+                    'search': { 'placeholder': 'Search opportunities...' },
+                    'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
+                    'noRecordsFound': 'No Opportunity Data Available',
                 }
-            ],
-            data: opportunityData,
-            search: true,
-            pagination: { enabled: true, limit: 10, summary: true },
-            sort: true,
-            resizable: true,
-            className: {
-                container: 'gridjs-container', table: 'gridjs-table', thead: 'gridjs-thead', th: 'gridjs-th',
-                td: 'gridjs-td', tr: 'gridjs-tr', footer: 'gridjs-footer', pagination: 'gridjs-pagination',
-                'pagination-summary': 'gridjs-pagination-summary', 'pagination-gap': 'gridjs-pagination-gap',
-                'pagination-nav': 'gridjs-pagination-nav', 'pagination-nav-prev': 'gridjs-pagination-nav-prev',
-                'pagination-nav-next': 'gridjs-pagination-nav-next', 'pagination-btn': 'gridjs-pagination-btn',
-                'pagination-btn-current': 'gridjs-currentPage',
-            },
-            language: {
-                'search': { 'placeholder': 'Search opportunities...' },
-                'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
-                'noRecordsFound': 'No Opportunity Data Available',
-            }
-        }).render(containerElement);
+            }).render(containerElement);
+        }
+    } catch (error) {
+        console.error("Error rendering opportunities grid:", error);
+        showMessage('error', 'Grid Error', 'Could not load opportunity data: ' + error.message);
+        containerElement.innerHTML = '<div class="error-message">Error loading opportunity data.</div>'; // Show error in container
     }
 }
 
@@ -1142,73 +1158,83 @@ document.querySelectorAll('.admin-form .cancel-edit-btn').forEach(button => {
 async function renderCountriesStatesGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return; // Only Admins can view/manage
 
+    const containerElement = document.getElementById('countriesStatesTable');
+    if (!containerElement) {
+        console.error("[renderCountriesStatesGrid] Container element #countriesStatesTable not found.");
+        return; // Exit if container is not found
+    }
+    // Show a loading indicator
+    containerElement.innerHTML = '<div class="loading-indicator">Loading Countries & States...</div>';
+
     const countriesRef = collection(db, 'countries');
     const data = [];
 
-    const snapshot = await getDocs(query(countriesRef, orderBy('name')));
-    snapshot.forEach(doc => {
-        const country = doc.data();
-        data.push([
-            doc.id, // Hidden ID for actions
-            country.name,
-            country.code,
-            country.states ? country.states.join(', ') : ''
-        ]);
-    });
+    try {
+        const snapshot = await getDocs(query(countriesRef, orderBy('name')));
+        snapshot.forEach(doc => {
+            const country = doc.data();
+            data.push([
+                doc.id, // Hidden ID for actions
+                country.name,
+                country.code,
+                country.states ? country.states.join(', ') : ''
+            ]);
+        });
 
-    if (countriesStatesGrid) {
-        countriesStatesGrid.updateConfig({ data: data }).forceRender();
-    } else {
-        const containerElement = document.getElementById('countriesStatesTable');
-        if (containerElement) {
-            containerElement.innerHTML = '';
-        }
-        countriesStatesGrid = new Grid({
-            columns: [
-                { id: 'id', name: 'ID', hidden: true },
-                { id: 'name', name: 'Country Name', sort: true, filter: true },
-                { id: 'code', name: 'Code', sort: true, filter: true },
-                { id: 'states', name: 'States', sort: false, filter: false },
-                {
-                    name: 'Actions',
-                    sort: false,
-                    filter: false,
-                    formatter: (cell, row) => {
-                        const docId = row.cells[0].data;
-                        return h('div', { className: 'action-icons' },
-                            h('span', {
-                                className: 'fa-solid fa-edit',
-                                title: 'Edit Country',
-                                onClick: () => editCountryState(docId)
-                            }),
-                            h('span', {
-                                className: 'fa-solid fa-trash',
-                                title: 'Delete Country',
-                                onClick: () => deleteCountryState(docId)
-                            })
-                        );
+        if (countriesStatesGrid) {
+            countriesStatesGrid.updateConfig({ data: data }).forceRender();
+        } else {
+            countriesStatesGrid = new Grid({
+                columns: [
+                    { id: 'id', name: 'ID', hidden: true },
+                    { id: 'name', name: 'Country Name', sort: true, filter: true },
+                    { id: 'code', name: 'Code', sort: true, filter: true },
+                    { id: 'states', name: 'States', sort: false, filter: false },
+                    {
+                        name: 'Actions',
+                        sort: false,
+                        filter: false,
+                        formatter: (cell, row) => {
+                            const docId = row.cells[0].data;
+                            return h('div', { className: 'action-icons' },
+                                h('span', {
+                                    className: 'fa-solid fa-edit',
+                                    title: 'Edit Country',
+                                    onClick: () => editCountryState(docId)
+                                }),
+                                h('span', {
+                                    className: 'fa-solid fa-trash',
+                                    title: 'Delete Country',
+                                    onClick: () => deleteCountryState(docId)
+                                })
+                            );
+                        }
                     }
+                ],
+                data: data,
+                search: true,
+                pagination: { enabled: true, limit: 5, summary: true },
+                sort: true,
+                resizable: true,
+                className: {
+                    container: 'gridjs-container', table: 'gridjs-table', thead: 'gridjs-thead', th: 'gridjs-th',
+                    td: 'gridjs-td', tr: 'gridjs-tr', footer: 'gridjs-footer', pagination: 'gridjs-pagination',
+                    'pagination-summary': 'gridjs-pagination-summary', 'pagination-gap': 'gridjs-pagination-gap',
+                    'pagination-nav': 'gridjs-pagination-nav', 'pagination-nav-prev': 'gridjs-pagination-nav-prev',
+                    'pagination-nav-next': 'gridjs-pagination-nav-next', 'pagination-btn': 'gridjs-pagination-btn',
+                    'pagination-btn-current': 'gridjs-currentPage',
+                },
+                language: {
+                    'search': { 'placeholder': 'Search countries...' },
+                    'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
+                    'noRecordsFound': 'No Countries & States Data Available',
                 }
-            ],
-            data: data,
-            search: true,
-            pagination: { enabled: true, limit: 5, summary: true },
-            sort: true,
-            resizable: true,
-            className: {
-                container: 'gridjs-container', table: 'gridjs-table', thead: 'gridjs-thead', th: 'gridjs-th',
-                td: 'gridjs-td', tr: 'gridjs-tr', footer: 'gridjs-footer', pagination: 'gridjs-pagination',
-                'pagination-summary': 'gridjs-pagination-summary', 'pagination-gap': 'gridjs-pagination-gap',
-                'pagination-nav': 'gridjs-pagination-nav', 'pagination-nav-prev': 'gridjs-pagination-nav-prev',
-                'pagination-nav-next': 'gridjs-pagination-nav-next', 'pagination-btn': 'gridjs-pagination-btn',
-                'pagination-btn-current': 'gridjs-currentPage',
-            },
-            language: {
-                'search': { 'placeholder': 'Search countries...' },
-                'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
-                'noRecordsFound': 'No Countries & States Data Available',
-            }
-        }).render(containerElement);
+            }).render(containerElement);
+        }
+    } catch (error) {
+        console.error("Error rendering countries states grid:", error);
+        showMessage('error', 'Grid Error', 'Could not load countries & states data: ' + error.message);
+        containerElement.innerHTML = '<div class="error-message">Error loading countries & states data.</div>'; // Show error in container
     }
 }
 
@@ -1319,73 +1345,83 @@ async function populateCurrencyCountryDropdown(selectedCountry = null) {
 async function renderCurrenciesGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return;
 
+    const containerElement = document.getElementById('currenciesTable');
+    if (!containerElement) {
+        console.error("[renderCurrenciesGrid] Container element #currenciesTable not found.");
+        return; // Exit if container is not found
+    }
+    // Show a loading indicator
+    containerElement.innerHTML = '<div class="loading-indicator">Loading Currencies...</div>';
+
     const currenciesRef = collection(db, 'currencies');
     const data = [];
 
-    const snapshot = await getDocs(query(currenciesRef, orderBy('country'), orderBy('name'))); // Order by country then name
-    snapshot.forEach(doc => {
-        const currency = doc.data();
-        data.push([
-            doc.id, // Hidden ID for actions
-            currency.country || '',
-            currency.name,
-            currency.symbol
-        ]);
-    });
+    try {
+        const snapshot = await getDocs(query(currenciesRef, orderBy('country'), orderBy('name'))); // Order by country then name
+        snapshot.forEach(doc => {
+            const currency = doc.data();
+            data.push([
+                doc.id, // Hidden ID for actions
+                currency.country || '',
+                currency.name,
+                currency.symbol
+            ]);
+        });
 
-    if (currenciesGrid) {
-        currenciesGrid.updateConfig({ data: data }).forceRender();
-    } else {
-        const containerElement = document.getElementById('currenciesTable');
-        if (containerElement) {
-            containerElement.innerHTML = '';
-        }
-        currenciesGrid = new Grid({
-            columns: [
-                { id: 'id', name: 'ID', hidden: true },
-                { id: 'country', name: 'Country', sort: true, filter: true },
-                { id: 'name', name: 'Currency Name', sort: true, filter: true },
-                { id: 'symbol', name: 'Symbol', sort: true, filter: true },
-                {
-                    name: 'Actions',
-                    sort: false,
-                    filter: false,
-                    formatter: (cell, row) => {
-                        const docId = row.cells[0].data;
-                        return h('div', { className: 'action-icons' },
-                            h('span', {
-                                className: 'fa-solid fa-edit',
-                                title: 'Edit Currency',
-                                onClick: () => editCurrency(docId)
-                            }),
-                            h('span', {
-                                className: 'fa-solid fa-trash',
-                                title: 'Delete Currency',
-                                onClick: () => deleteCurrency(docId)
-                            })
-                        );
+        if (currenciesGrid) {
+            currenciesGrid.updateConfig({ data: data }).forceRender();
+        } else {
+            currenciesGrid = new Grid({
+                columns: [
+                    { id: 'id', name: 'ID', hidden: true },
+                    { id: 'country', name: 'Country', sort: true, filter: true },
+                    { id: 'name', name: 'Currency Name', sort: true, filter: true },
+                    { id: 'symbol', name: 'Symbol', sort: true, filter: true },
+                    {
+                        name: 'Actions',
+                        sort: false,
+                        filter: false,
+                        formatter: (cell, row) => {
+                            const docId = row.cells[0].data;
+                            return h('div', { className: 'action-icons' },
+                                h('span', {
+                                    className: 'fa-solid fa-edit',
+                                    title: 'Edit Currency',
+                                    onClick: () => editCurrency(docId)
+                                }),
+                                h('span', {
+                                    className: 'fa-solid fa-trash',
+                                    title: 'Delete Currency',
+                                    onClick: () => deleteCurrency(docId)
+                                })
+                            );
+                        }
                     }
+                ],
+                data: data,
+                search: true,
+                pagination: { enabled: true, limit: 5, summary: true },
+                sort: true,
+                resizable: true,
+                className: {
+                    container: 'gridjs-container', table: 'gridjs-table', thead: 'gridjs-thead', th: 'gridjs-th',
+                    td: 'gridjs-td', tr: 'gridjs-tr', footer: 'gridjs-footer', pagination: 'gridjs-pagination',
+                    'pagination-summary': 'gridjs-pagination-summary', 'pagination-gap': 'gridjs-pagination-gap',
+                    'pagination-nav': 'gridjs-pagination-nav', 'pagination-nav-prev': 'gridjs-pagination-nav-prev',
+                    'pagination-nav-next': 'gridjs-pagination-nav-next', 'pagination-btn': 'gridjs-pagination-btn',
+                    'pagination-btn-current': 'gridjs-currentPage',
+                },
+                language: {
+                    'search': { 'placeholder': 'Search currencies...' },
+                    'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
+                    'noRecordsFound': 'No Currencies Data Available',
                 }
-            ],
-            data: data,
-            search: true,
-            pagination: { enabled: true, limit: 5, summary: true },
-            sort: true,
-            resizable: true,
-            className: {
-                container: 'gridjs-container', table: 'gridjs-table', thead: 'gridjs-thead', th: 'gridjs-th',
-                td: 'gridjs-td', tr: 'gridjs-tr', footer: 'gridjs-footer', pagination: 'gridjs-pagination',
-                'pagination-summary': 'gridjs-pagination-summary', 'pagination-gap': 'gridjs-pagination-gap',
-                'pagination-nav': 'gridjs-pagination-nav', 'pagination-nav-prev': 'gridjs-pagination-nav-prev',
-                'pagination-nav-next': 'gridjs-pagination-nav-next', 'pagination-btn': 'gridjs-pagination-btn',
-                'pagination-btn-current': 'gridjs-currentPage',
-            },
-            language: {
-                'search': { 'placeholder': 'Search currencies...' },
-                'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
-                'noRecordsFound': 'No Currencies Data Available',
-            }
-        }).render(containerElement);
+            }).render(containerElement);
+        }
+    } catch (error) {
+        console.error("Error rendering currencies grid:", error);
+        showMessage('error', 'Grid Error', 'Could not load currency data: ' + error.message);
+        containerElement.innerHTML = '<div class="error-message">Error loading currency data.</div>'; // Show error in container
     }
 }
 
@@ -1581,81 +1617,91 @@ async function populatePriceBookCountryDropdown(selectedCountryName = null) {
 async function renderPriceBooksGrid() {
     if (!currentUser || currentUserRole !== 'Admin') return;
 
+    const containerElement = document.getElementById('priceBooksTable');
+    if (!containerElement) {
+        console.error("[renderPriceBooksGrid] Container element #priceBooksTable not found.");
+        return; // Exit if container is not found
+    }
+    // Show a loading indicator
+    containerElement.innerHTML = '<div class="loading-indicator">Loading Price Books...</div>';
+
     const priceBooksRef = collection(db, 'priceBooks');
     const data = [];
 
-    const snapshot = await getDocs(query(priceBooksRef, orderBy('name'))); // Order by name
-    snapshot.forEach(doc => {
-        const priceBook = doc.data();
-        data.push([
-            doc.id, // Hidden ID for actions
-            priceBook.name,
-            priceBook.description,
-            priceBook.country || '', // NEW: Display country
-            priceBook.currency || '',
-            priceBook.isActive,
-            priceBook.validFrom,
-            priceBook.validTo
-        ]);
-    });
+    try {
+        const snapshot = await getDocs(query(priceBooksRef, orderBy('name'))); // Order by name
+        snapshot.forEach(doc => {
+            const priceBook = doc.data();
+            data.push([
+                doc.id, // Hidden ID for actions
+                priceBook.name,
+                priceBook.description,
+                priceBook.country || '', // NEW: Display country
+                priceBook.currency || '',
+                priceBook.isActive,
+                priceBook.validFrom,
+                priceBook.validTo
+            ]);
+        });
 
-    if (priceBooksGrid) {
-        priceBooksGrid.updateConfig({ data: data }).forceRender();
-    } else {
-        const containerElement = document.getElementById('priceBooksTable');
-        if (containerElement) {
-            containerElement.innerHTML = '';
-        }
-        priceBooksGrid = new Grid({
-            columns: [
-                { id: 'id', name: 'ID', hidden: true },
-                { id: 'name', name: 'Price Book Name', sort: true, filter: true },
-                { id: 'description', name: 'Description', sort: true, filter: true },
-                { id: 'country', name: 'Country', sort: true, filter: true }, // NEW: Country column
-                { id: 'currency', name: 'Currency', sort: true, filter: true },
-                { id: 'isActive', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
-                { id: 'validFrom', name: 'Valid From', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
-                { id: 'validTo', name: 'Valid To', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
-                {
-                    name: 'Actions',
-                    sort: false,
-                    filter: false,
-                    formatter: (cell, row) => {
-                        const docId = row.cells[0].data;
-                        return h('div', { className: 'action-icons' },
-                            h('span', {
-                                className: 'fa-solid fa-edit',
-                                title: 'Edit Price Book',
-                                onClick: () => editPriceBook(docId)
-                            }),
-                            h('span', {
-                                className: 'fa-solid fa-trash',
-                                title: 'Delete Price Book',
-                                onClick: () => deletePriceBook(docId)
-                            })
-                        );
+        if (priceBooksGrid) {
+            priceBooksGrid.updateConfig({ data: data }).forceRender();
+        } else {
+            priceBooksGrid = new Grid({
+                columns: [
+                    { id: 'id', name: 'ID', hidden: true },
+                    { id: 'name', name: 'Price Book Name', sort: true, filter: true },
+                    { id: 'description', name: 'Description', sort: true, filter: true },
+                    { id: 'country', name: 'Country', sort: true, filter: true }, // NEW: Country column
+                    { id: 'currency', name: 'Currency', sort: true, filter: true },
+                    { id: 'isActive', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
+                    { id: 'validFrom', name: 'Valid From', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
+                    { id: 'validTo', name: 'Valid To', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
+                    {
+                        name: 'Actions',
+                        sort: false,
+                        filter: false,
+                        formatter: (cell, row) => {
+                            const docId = row.cells[0].data;
+                            return h('div', { className: 'action-icons' },
+                                h('span', {
+                                    className: 'fa-solid fa-edit',
+                                    title: 'Edit Price Book',
+                                    onClick: () => editPriceBook(docId)
+                                }),
+                                h('span', {
+                                    className: 'fa-solid fa-trash',
+                                    title: 'Delete Price Book',
+                                    onClick: () => deletePriceBook(docId)
+                                })
+                            );
+                        }
                     }
+                ],
+                data: data,
+                search: true,
+                pagination: { enabled: true, limit: 5, summary: true },
+                sort: true,
+                resizable: true,
+                className: {
+                    container: 'gridjs-container', table: 'gridjs-table', thead: 'gridjs-thead', th: 'gridjs-th',
+                    td: 'gridjs-td', tr: 'gridjs-tr', footer: 'gridjs-footer', pagination: 'gridjs-pagination',
+                    'pagination-summary': 'gridjs-pagination-summary', 'pagination-gap': 'gridjs-pagination-gap',
+                    'pagination-nav': 'gridjs-pagination-nav', 'pagination-nav-prev': 'gridjs-pagination-nav-prev',
+                    'pagination-nav-next': 'gridjs-pagination-nav-next', 'pagination-btn': 'gridjs-pagination-btn',
+                    'pagination-btn-current': 'gridjs-currentPage',
+                },
+                language: {
+                    'search': { 'placeholder': 'Search price books...' },
+                    'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
+                    'noRecordsFound': 'No Price Books Data Available',
                 }
-            ],
-            data: data,
-            search: true,
-            pagination: { enabled: true, limit: 5, summary: true },
-            sort: true,
-            resizable: true,
-            className: {
-                container: 'gridjs-container', table: 'gridjs-table', thead: 'gridjs-thead', th: 'gridjs-th',
-                td: 'gridjs-td', tr: 'gridjs-tr', footer: 'gridjs-footer', pagination: 'gridjs-pagination',
-                'pagination-summary': 'gridjs-pagination-summary', 'pagination-gap': 'gridjs-pagination-gap',
-                'pagination-nav': 'gridjs-pagination-nav', 'pagination-nav-prev': 'gridjs-pagination-nav-prev',
-                'pagination-nav-next': 'gridjs-pagination-nav-next', 'pagination-btn': 'gridjs-pagination-btn',
-                'pagination-btn-current': 'gridjs-currentPage',
-            },
-            language: {
-                'search': { 'placeholder': 'Search price books...' },
-                'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
-                'noRecordsFound': 'No Price Books Data Available',
-            }
-        }).render(containerElement);
+            }).render(containerElement);
+        }
+    } catch (error) {
+        console.error("Error rendering price books grid:", error);
+        showMessage('error', 'Grid Error', 'Could not load price book data: ' + error.message);
+        containerElement.innerHTML = '<div class="error-message">Error loading price book data.</div>'; // Show error in container
     }
 }
 
@@ -1844,8 +1890,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (messageBoxModal) messageBoxModal.style.display = 'none';
     // Ensure the price book modal is also hidden on load.
     // The priceBookForm's parent element is the modal itself in your HTML structure.
-    if (priceBookForm && priceBookForm.parentElement) {
-        priceBookForm.parentElement.style.display = 'none';
+    // Ensure priceBookForm is initialized before trying to access its parentElement
+    if (document.getElementById('priceBookForm')) { // Check if the form exists in the DOM
+        priceBookForm = document.getElementById('priceBookForm'); // Re-initialize if needed
+        if (priceBookForm.parentElement) {
+            priceBookForm.parentElement.style.display = 'none';
+        }
     }
     // --- END NEW SAFEGUARD ---
 
