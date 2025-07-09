@@ -151,7 +151,7 @@ nav {
     opacity: 0.6; /* Make icons slightly less prominent */
 }
 
-/* Grid.js Specific Overrides */
+/* Grid.js Specific Overrides (replacing Tabulator styles) */
 .gridjs-container {
     box-shadow: var(--shadow-light);
     border-radius: var(--border-radius);
@@ -239,7 +239,7 @@ nav {
 }
 
 /* Add Button Styling (harmonizing with Tailwind) */
-#addCustomerBtn, #addOpportunityBtn, #addPriceBookBtn, #addUserBtn, #addCountryBtn, #addCurrencyBtn {
+#addCustomerBtn, #addOpportunityBtn {
     /* Most styles handled by Tailwind classes in HTML:
        bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md mb-6 shadow-md transition duration-300 */
     display: inline-flex; /* For icon and text alignment */
@@ -264,7 +264,7 @@ nav {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: opacity var(--transition-speed) ease; /* Transition for the overlay */
+    transition: opacity var(--transition-speed) ease;
 }
 
 .modal-content {
@@ -276,12 +276,16 @@ nav {
     border-radius: var(--border-radius);
     box-shadow: 0 5px 20px rgba(0,0,0,0.35); /* Stronger shadow */
     position: relative;
+    animation-name: animatetop; /* Assuming animatetop is defined elsewhere or meant to be fadeIn */
+    animation-duration: 0.4s;
     box-sizing: border-box; /* Ensure padding doesn't overflow */
-    /* Unified transition for scale and opacity for smooth modal appearance/disappearance */
-    transition: transform var(--transition-speed) ease-out, opacity var(--transition-speed) ease-out;
 }
 
-/* No specific keyframe animation needed as JS handles class toggling with transitions */
+/* Re-adding fadeIn for modal content as animatetop was not defined */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
 .close-button {
     color: #999;
@@ -318,7 +322,6 @@ form input[type="email"],
 form input[type="tel"],
 form input[type="number"],
 form input[type="date"],
-form input[type="password"], /* Added password input type */
 form select,
 form textarea {
     /* Tailwind classes handle most of this: mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 */
