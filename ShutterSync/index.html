@@ -448,15 +448,19 @@
                     <input type="hidden" id="currency-id"> <!-- Hidden input for currency ID -->
                     <div>
                         <label for="currency-name" class="block text-sm font-medium text-gray-700">Currency Name:</label>
-                        <input type="text" id="currency-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <input type="text" id="currency-name" placeholder="United States Dollar" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
                         <label for="currency-code" class="block text-sm font-medium text-gray-700">Currency Code (e.g., USD, EUR):</label>
-                        <input type="text" id="currency-code" required maxlength="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <input type="text" id="currency-code" placeholder="USD" maxlength="3" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
                         <label for="currency-symbol" class="block text-sm font-medium text-gray-700">Symbol (e.g., $, €):</label>
-                        <input type="text" id="currency-symbol" required maxlength="5" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <input type="text" id="currency-symbol" placeholder="$" maxlength="5" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="currency-country" class="block text-sm font-medium text-gray-700">Country:</label>
+                        <select id="currency-country" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></select>
                     </div>
                     <div class="md:col-span-2 flex justify-end space-x-3">
                         <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300">Save Currency</button>
@@ -485,7 +489,7 @@
                     <input type="hidden" id="price-book-id"> <!-- Hidden input for price book ID -->
                     <div>
                         <label for="price-book-name" class="block text-sm font-medium text-gray-700">Name:</label>
-                        <input type="text" id="price-book-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <input type="text" id="price-book-name" placeholder="Standard Retail Price" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
                         <label for="price-book-currency" class="block text-sm font-medium text-gray-700">Currency:</label>
