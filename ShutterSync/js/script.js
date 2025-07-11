@@ -605,7 +605,7 @@ async function updateDashboardStats() {
  */
 function resetAndHideForm(formElement, formContainer, idValue, messageElement) {
     formElement.reset();
-    // Dynamically set the ID input value if it exists, otherwise ignore
+    // Dynamically set the ID input value if it.exists, otherwise ignore
     const idInput = formElement.querySelector('[id$="-id"]'); // Finds elements with ID ending in -id
     if (idInput) {
         idInput.value = idValue;
@@ -1785,7 +1785,7 @@ addPriceBookBtn.addEventListener('click', () => {
 // Event listener to save (add or update) a price book
 priceBookForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can save price books.', false); return; }
+    if (!currentUser) { showMessageBox('Authentication required to save price book.', false); return; }
 
     const normalizedName = priceBookNameInput.value.trim().toLowerCase().replace(/\s+/g, '');
     const normalizedCurrency = priceBookCurrencySelect.value.trim().toLowerCase().replace(/\s+/g, '');
@@ -1804,19 +1804,19 @@ priceBookForm.addEventListener('submit', async (e) => {
         validTo: priceBookValidToInput.value ? Timestamp.fromDate(new Date(priceBookValidToInput.value)) : null,
     };
 
-    const newIndexId = getPriceBookIndexId(priceBookData.name, priceBookData.currency);
+    // const newIndexId = getPriceBookIndexId(priceBookData.name, priceBookData.currency); // No longer needed for client-side check
 
     try {
-        // Client-Side Uniqueness Validation for Price Book (Name, Currency)
-        const existingIndexDoc = await getDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId));
+        // // Client-Side Uniqueness Validation for Price Book (Name, Currency) - TEMPORARILY REMOVED FOR DEBUGGING
+        // const existingIndexDoc = await getDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId));
 
-        if (existingIndexDoc.exists()) {
-            if (existingIndexDoc.data().priceBookId !== priceBookId) {
-                priceBookFormMessage.textContent = 'A price book with this Name and Currency already exists. Please choose a unique combination.';
-                priceBookFormMessage.classList.remove('hidden');
-                return;
-            }
-        }
+        // if (existingIndexDoc.exists()) {
+        //     if (existingIndexDoc.data().priceBookId !== priceBookId) {
+        //         priceBookFormMessage.textContent = 'A price book with this Name and Currency already exists. Please choose a unique combination.';
+        //         priceBookFormMessage.classList.remove('hidden');
+        //         return;
+        //     }
+        // }
 
         let docRef;
         if (priceBookId) {
@@ -1824,31 +1824,33 @@ priceBookForm.addEventListener('submit', async (e) => {
             await updateDoc(docRef, priceBookData);
             showMessageBox('Price Book updated successfully!', false);
 
-            const oldPriceBookDoc = await getDoc(doc(db, `priceBooks`, priceBookId));
-            const oldPriceBookData = oldPriceBookDoc.data();
-            const oldIndexId = getPriceBookIndexId(oldPriceBookData.name, oldPriceBookData.currency);
+            // // Remove old index and create new one if name/currency changed - TEMPORARILY REMOVED FOR DEBUGGING
+            // const oldPriceBookDoc = await getDoc(doc(db, `priceBooks`, priceBookId));
+            // const oldPriceBookData = oldPriceBookDoc.data();
+            // const oldIndexId = getPriceBookIndexId(oldPriceBookData.name, oldPriceBookData.currency);
 
-            if (oldIndexId !== newIndexId) {
-                await deleteDoc(doc(db, `priceBookNameCurrencyIndexes`, oldIndexId));
-                await setDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId), {
-                    priceBookId: priceBookId,
-                    priceBookName: priceBookData.normalizedName,
-                    priceBookCurrency: priceBookData.normalizedCurrency
-                });
-            }
+            // if (oldIndexId !== newIndexId) {
+            //     await deleteDoc(doc(db, `priceBookNameCurrencyIndexes`, oldIndexId));
+            //     await setDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId), {
+            //         priceBookId: priceBookId,
+            //         priceBookName: priceBookData.normalizedName,
+            //         priceBookCurrency: priceBookData.normalizedCurrency
+            //     });
+            // }
         } else {
             const newDocRef = await addDoc(collection(db, `priceBooks`), priceBookData);
             docRef = newDocRef;
             showMessageBox('Price Book added successfully!', false);
 
-            await setDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId), {
-                priceBookId: docRef.id,
-                priceBookName: priceBookData.normalizedName,
-                priceBookCurrency: priceBookData.normalizedCurrency
-            });
+            // // Create new index - TEMPORARILY REMOVED FOR DEBUGGING
+            // await setDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId), {
+            //     priceBookId: docRef.id,
+            //     priceBookName: priceBookData.normalizedName,
+            //     priceBookCurrency: priceBookData.normalizedCurrency
+            // });
         }
         resetAndHideForm(priceBookForm, priceBookFormContainer, '', priceBookFormMessage); // Clear and hide form
-        renderPriceBooksGrid(); // This function is called here
+        renderPriceBooksGrid();
         populateOpportunityPriceBookDropdown();
     } catch (error) {
         console.error("Error saving price book:", error);
@@ -1857,6 +1859,70 @@ priceBookForm.addEventListener('submit', async (e) => {
         showMessageBox('Error saving price book: ' + error.message, false);
     }
 });
+
+/**
+ * Populates the price book form with existing data for editing.
+ * @param {string} id - The ID of the price book document to edit.
+ */
+async function editPriceBook(id) {
+    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can edit price books.', false); return; }
+    try {
+        const docSnap = await getDoc(doc(db, `priceBooks`, id));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            document.getElementById('price-book-id').value = docSnap.id;
+
+            priceBookNameInput.value = data.name || '';
+            priceBookDescriptionTextarea.value = data.description || '';
+            await populatePriceBookCountryDropdown(data.country);
+            await populatePriceBookCurrencyDropdown(data.currency);
+            priceBookActiveCheckbox.checked = data.isActive;
+            priceBookValidFromInput.value = formatDateForInput(data.validFrom);
+            priceBookValidToInput.value = formatDateForInput(data.validTo);
+
+            priceBookFormContainer.classList.remove('hidden');
+            priceBookFormMessage.classList.add('hidden');
+        } else {
+            showMessageBox('Price Book not found!', false);
+        }
+    } catch (error) {
+        console.error("Error loading price book for edit:", error);
+        showMessageBox('Error loading price book for edit: ' + error.message, false);
+    }
+}
+
+/**
+ * Deletes a price book document from Firestore.
+ * Requires Admin role.
+ * @param {string} id - The ID of the price book document to delete.
+ */
+async function deletePriceBook(id) {
+    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can delete price books.', false); return; }
+
+    const confirmed = await showMessageBox('Are you sure you want to delete this price book? This action cannot be undone.', true);
+    if (!confirmed) return;
+
+    try {
+        const docSnap = await getDoc(doc(db, `priceBooks`, id));
+        if (!docSnap.exists()) {
+            showMessageBox('Price Book not found!', false);
+            return;
+        }
+        const data = docSnap.data();
+        // const indexId = getPriceBookIndexId(data.name, data.currency); // No longer needed for client-side deletion
+
+        await deleteDoc(doc(db, `priceBooks`, id));
+        // // Also delete the corresponding index document - TEMPORARILY REMOVED FOR DEBUGGING
+        // await deleteDoc(doc(db, `priceBookNameCurrencyIndexes`, indexId));
+
+        showMessageBox('Price Book deleted successfully!', false);
+        renderPriceBooksGrid();
+        populateOpportunityPriceBookDropdown();
+    } catch (error) {
+        console.error("Error deleting price book:", error);
+        showMessageBox('Error deleting price book: ' + error.message, false);
+    }
+}
 
 /**
  * Renders or updates the Grid.js table for price books.
