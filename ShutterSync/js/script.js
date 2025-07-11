@@ -141,6 +141,7 @@ const currencyForm = document.getElementById('currency-form');
 const currencyNameInput = document.getElementById('currency-name');
 const currencyCodeInput = document.getElementById('currency-code');
 const currencySymbolInput = document.getElementById('currency-symbol');
+const currencyCountrySelect = document.getElementById('currency-country'); // NEW: Country select for currencies
 const cancelCurrencyBtn = document.getElementById('cancel-currency-btn');
 const currencyFormMessage = document.getElementById('currency-form-message');
 const currencySearchInput = document.getElementById('currency-search');
@@ -478,6 +479,7 @@ onAuthStateChanged(auth, async (user) => {
         if (opportunityPriceBookSelect) opportunityPriceBookSelect.innerHTML = '<option value="">Select a Price Book</option>';
         if (priceBookCurrencySelect) priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>';
         if (priceBookCountrySelect) priceBookCountrySelect.innerHTML = '<option value="">Select...</option>';
+        if (currencyCountrySelect) currencyCountrySelect.innerHTML = '<option value="">Select...</option>'; // Clear for currencies too
     }
 });
 
@@ -532,6 +534,7 @@ navCurrencies.addEventListener('click', () => {
     if (currentUserRole === 'Admin') {
         showSection(currenciesSection);
         renderCurrenciesGrid();
+        populateCurrencyCountryDropdown(); // Populate country dropdown for currencies
     } else {
         showMessageBox('Access Denied: You must be an Admin to access this feature.', false);
     }
@@ -620,7 +623,10 @@ cancelCountryBtn.addEventListener('click', () => {
     resetAndHideForm(countryForm, countryFormContainer, '', countryFormMessage);
     countryStatesTextarea.value = ''; // Clear states textarea specifically
 });
-cancelCurrencyBtn.addEventListener('click', () => resetAndHideForm(currencyForm, currencyFormContainer, '', currencyFormMessage));
+cancelCurrencyBtn.addEventListener('click', () => {
+    resetAndHideForm(currencyForm, currencyFormContainer, '', currencyFormMessage);
+    currencyCountrySelect.value = ''; // Clear currency country dropdown
+});
 cancelPriceBookBtn.addEventListener('click', () => resetAndHideForm(priceBookForm, priceBookFormContainer, '', priceBookFormMessage));
 
 
@@ -1501,12 +1507,22 @@ async function deleteCountryState(id) {
 
 // --- Currencies Management (Admin Only) ---
 
+/**
+ * Populates the currency country dropdown with data from the 'countries' collection.
+ * @param {string|null} selectedCountry - The country name to pre-select (optional).
+ */
+async function populateCurrencyCountryDropdown(selectedCountry = null) {
+    if (!currentUser || currentUserRole !== 'Admin') return;
+    await populateSelect(currencyCountrySelect, `countries`, 'name', 'name', selectedCountry);
+}
+
 // Event listener to open the Currency Form for adding a new currency
 addCurrencyBtn.addEventListener('click', () => {
     if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can add currencies.', false); return; }
     document.getElementById('currency-id').value = ''; // Clear ID for new currency
     resetAndHideForm(currencyForm, currencyFormContainer, '', currencyFormMessage); // Clear and hide form
     currencyFormContainer.classList.remove('hidden'); // Then show the container
+    populateCurrencyCountryDropdown(); // Populate country dropdown for new currency
 });
 
 // Event listener to save (add or update) a currency
@@ -1519,7 +1535,8 @@ currencyForm.addEventListener('submit', async (e) => {
     const currencyData = {
         name: currencyNameInput.value.trim(),
         code: currencyCodeInput.value.trim().toUpperCase(),
-        symbol: currencySymbolInput.value.trim()
+        symbol: currencySymbolInput.value.trim(),
+        country: currencyCountrySelect.value, // NEW: Include country
     };
 
     try {
@@ -1609,7 +1626,8 @@ async function renderCurrenciesGrid() {
                     doc.id,
                     currency.name,
                     currency.code,
-                    currency.symbol
+                    currency.symbol,
+                    currency.country || '' // NEW: Include country in data for grid
                 ]);
             });
         }
@@ -1623,6 +1641,7 @@ async function renderCurrenciesGrid() {
                     { id: 'name', name: 'Currency Name', sort: true, filter: true },
                     { id: 'code', name: 'Code', sort: true, filter: true },
                     { id: 'symbol', name: 'Symbol', sort: true, filter: true },
+                    { id: 'country', name: 'Country', sort: true, filter: true }, // NEW: Country column
                     {
                         name: 'Actions',
                         sort: false,
@@ -1644,7 +1663,7 @@ async function renderCurrenciesGrid() {
                 data: data,
                 search: {
                     selector: (cell, rowIndex, cellIndex) => {
-                        if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3) {
+                        if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3 || cellIndex === 4) { // Include country in search
                             return cell;
                         }
                         return null;
@@ -1694,6 +1713,7 @@ async function editCurrency(id) {
             currencyNameInput.value = data.name || '';
             currencyCodeInput.value = data.code || '';
             currencySymbolInput.value = data.symbol || '';
+            await populateCurrencyCountryDropdown(data.country); // NEW: Populate country dropdown
             currencyFormContainer.classList.remove('hidden');
             currencyFormMessage.classList.add('hidden');
         } else {
@@ -1835,128 +1855,6 @@ priceBookForm.addEventListener('submit', async (e) => {
         priceBookFormMessage.textContent = 'Error saving price book: ' + error.message;
         priceBookFormMessage.classList.remove('hidden');
         showMessageBox('Error saving price book: ' + error.message, false);
-    }
-});
-
-/**
- * Renders or updates the Grid.js table for price books.
- * Fetches data from the 'priceBooks' collection.
- */
-async function renderPriceBooksGrid() {
-    if (!currentUser || currentUserRole !== 'Admin') {
-        noPriceBooksMessage.classList.remove('hidden');
-        if (priceBooksGrid) {
-            priceBooksGrid.destroy();
-            priceBooksGrid = null;
-        }
-        priceBooksGridContainer.innerHTML = '';
-        return;
-    }
-
-    // Ensure window.gridjs is available before attempting to use it
-    try {
-        await waitForGridJs();
-    } catch (error) {
-        // Error message already shown by waitForGridJs
-        priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading price book data.</p>';
-        return;
-    }
-
-    priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Price Books...</p>';
-    noPriceBooksMessage.classList.add('hidden');
-
-    const priceBooksRef = collection(db, `priceBooks`);
-    const data = [];
-
-    try {
-        const snapshot = await getDocs(query(priceBooksRef, orderBy('name')));
-        priceBooksGridContainer.innerHTML = ''; // Clear loading message
-
-        if (snapshot.empty) {
-            noPriceBooksMessage.classList.remove('hidden');
-        } else {
-            noPriceBooksMessage.classList.add('hidden'); // Ensure it's hidden if data is present
-            snapshot.forEach(doc => {
-                const priceBook = doc.data();
-                data.push([
-                    doc.id,
-                    priceBook.name,
-                    priceBook.description,
-                    priceBook.country || '',
-                    priceBook.currency || '',
-                    priceBook.isActive,
-                    priceBook.validFrom,
-                    priceBook.validTo
-                ]);
-            });
-        }
-
-        if (priceBooksGrid) {
-            priceBooksGrid.updateConfig({ data: data }).forceRender();
-        } else {
-            priceBooksGrid = new window.gridjs.Grid({
-                columns: [
-                    { id: 'id', name: 'ID', hidden: true },
-                    { id: 'name', name: 'Price Book Name', sort: true, filter: true },
-                    { id: 'description', name: 'Description', sort: true, filter: true },
-                    { id: 'country', name: 'Country', sort: true, filter: true },
-                    { id: 'currency', name: 'Currency', sort: true, filter: true },
-                    { id: 'isActive', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
-                    { id: 'validFrom', name: 'Valid From', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
-                    { id: 'validTo', name: 'Valid To', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
-                    {
-                        name: 'Actions',
-                        sort: false,
-                        formatter: (cell, row) => {
-                            const docId = row.cells[0].data;
-                            return window.gridjs.h('div', { className: 'flex space-x-2' },
-                                window.gridjs.h('button', {
-                                    className: 'px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
-                                    onClick: () => editPriceBook(docId)
-                                }, 'Edit'),
-                                window.gridjs.h('button', {
-                                    className: 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm',
-                                    onClick: () => deletePriceBook(docId)
-                                }, 'Delete')
-                            );
-                        }
-                    }
-                ],
-                data: data,
-                search: {
-                    selector: (cell, rowIndex, cellIndex) => {
-                        if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3 || cellIndex === 4) {
-                            return cell;
-                        }
-                        return null;
-                    }
-                },
-                pagination: { enabled: true, limit: 5, summary: true },
-                sort: true,
-                resizable: true,
-                className: {
-                    container: 'gridjs-container', table: 'min-w-full bg-white shadow-md rounded-lg overflow-hidden',
-                    thead: 'bg-gray-200', th: 'py-3 px-4 text-left text-sm font-medium text-gray-700',
-                    td: 'py-3 px-4 text-left text-sm text-gray-800', tr: 'divide-y divide-gray-200',
-                    footer: 'bg-gray-50 p-4 flex justify-between items-center',
-                    pagination: 'flex items-center space-x-2',
-                    'pagination-summary': 'text-sm text-gray-600', 'pagination-gap': 'text-sm text-gray-400',
-                    'pagination-nav': 'flex space-x-1', 'pagination-nav-prev': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-nav-next': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-btn-current': 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
-                },
-                language: {
-                    'search': { 'placeholder': 'Search price books...' },
-                    'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
-                    'noRecordsFound': 'No Price Books Data Available',
-                }
-            }).render(priceBooksGridContainer);
-        }
-    } catch (error) {
-        console.error("Error rendering price book grid:", error);
-        showMessageBox('Could not load price book data: ' + error.message, false);
-        priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading price book data.</p>';
     }
 }
 
