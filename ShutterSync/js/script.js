@@ -4,8 +4,9 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.0.0/firebas
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js';
 import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, serverTimestamp, Timestamp, setDoc } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js';
 
-// Grid.js ES Module Import
-import { Grid, h } from 'https://unpkg.com/gridjs/dist/gridjs.module.min.js';
+// Grid.js is now loaded globally via a <script> tag in index.html.
+// We access it via the global 'gridjs' object.
+// No 'import' statement needed for Grid.js here anymore.
 
 
 // Firebase configuration: Using the exact configuration provided by the user
@@ -719,7 +720,8 @@ async function renderCustomersGrid() {
         if (customersGrid) {
             customersGrid.updateConfig({ data: customerData }).forceRender();
         } else {
-            customersGrid = new Grid({
+            // Access Grid and h from the global 'gridjs' object
+            customersGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
                     { id: 'name', name: 'Name', sort: true, filter: true },
@@ -742,13 +744,13 @@ async function renderCustomersGrid() {
                             const creatorId = row.cells[12].data; // Get creatorId from the row data
                             const canEditDelete = (currentUserRole === 'Admin' || creatorId === currentUser.uid);
 
-                            return h('div', { className: 'flex space-x-2' },
-                                h('button', {
+                            return window.gridjs.h('div', { className: 'flex space-x-2' },
+                                window.gridjs.h('button', {
                                     className: `px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
                                     onClick: () => canEditDelete ? editCustomer(docId) : showMessageBox('You do not have permission to edit this customer.', false),
                                     disabled: !canEditDelete
                                 }, 'Edit'),
-                                h('button', {
+                                window.gridjs.h('button', {
                                     className: `px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
                                     onClick: () => canEditDelete ? deleteCustomer(docId) : showMessageBox('You do not have permission to delete this customer.', false),
                                     disabled: !canEditDelete
@@ -928,10 +930,10 @@ async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null) 
     // Corrected path for public data
     const snapshot = await getDocs(query(collection(db, `priceBooks`), orderBy('name')));
     snapshot.forEach(doc => {
-        const data = doc.data();
+        const data = doc.data(); // Use doc.data() to get the object
         const option = document.createElement('option');
         option.value = doc.id;
-        option.textContent = data.name;
+        option.textContent = data.name; // Access the name property
         if (selectedPriceBookId && doc.id === selectedPriceBookId) {
             option.selected = true;
         }
@@ -1048,7 +1050,8 @@ async function renderOpportunitiesGrid() {
         if (opportunitiesGrid) {
             opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender();
         } else {
-            opportunitiesGrid = new Grid({
+            // Access Grid and h from the global 'gridjs' object
+            opportunitiesGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
                     { id: 'name', name: 'Opportunity Name', sort: true, filter: true },
@@ -1076,13 +1079,13 @@ async function renderOpportunitiesGrid() {
                             const creatorId = row.cells[8].data; // Get creatorId from the row data
                             const canEditDelete = (currentUserRole === 'Admin' || creatorId === currentUser.uid);
 
-                            return h('div', { className: 'flex space-x-2' },
-                                h('button', {
+                            return window.gridjs.h('div', { className: 'flex space-x-2' },
+                                window.gridjs.h('button', {
                                     className: `px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
                                     onClick: () => canEditDelete ? editOpportunity(docId) : showMessageBox('You do not have permission to edit this opportunity.', false),
                                     disabled: !canEditDelete
                                 }, 'Edit'),
-                                h('button', {
+                                window.gridjs.h('button', {
                                     className: `px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
                                     onClick: () => canEditDelete ? deleteOpportunity(docId) : showMessageBox('You do not have permission to delete this opportunity.', false),
                                     disabled: !canEditDelete
@@ -1313,7 +1316,8 @@ async function renderCountriesStatesGrid() {
         if (countriesStatesGrid) {
             countriesStatesGrid.updateConfig({ data: data }).forceRender();
         } else {
-            countriesStatesGrid = new Grid({
+            // Access Grid and h from the global 'gridjs' object
+            countriesStatesGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
                     { id: 'name', name: 'Country Name', sort: true, filter: true },
@@ -1323,12 +1327,12 @@ async function renderCountriesStatesGrid() {
                         sort: false,
                         formatter: (cell, row) => {
                             const docId = row.cells[0].data;
-                            return h('div', { className: 'flex space-x-2' },
-                                h('button', {
+                            return window.gridjs.h('div', { className: 'flex space-x-2' },
+                                window.gridjs.h('button', {
                                     className: 'px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
                                     onClick: () => editCountryState(docId)
                                 }, 'Edit'),
-                                h('button', {
+                                window.gridjs.h('button', {
                                     className: 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm',
                                     onClick: () => deleteCountryState(docId)
                                 }, 'Delete')
@@ -1532,7 +1536,8 @@ async function renderCurrenciesGrid() {
         if (currenciesGrid) {
             currenciesGrid.updateConfig({ data: data }).forceRender();
         } else {
-            currenciesGrid = new Grid({
+            // Access Grid and h from the global 'gridjs' object
+            currenciesGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
                     { id: 'name', name: 'Currency Name', sort: true, filter: true },
@@ -1543,12 +1548,12 @@ async function renderCurrenciesGrid() {
                         sort: false,
                         formatter: (cell, row) => {
                             const docId = row.cells[0].data;
-                            return h('div', { className: 'flex space-x-2' },
-                                h('button', {
+                            return window.gridjs.h('div', { className: 'flex space-x-2' },
+                                window.gridjs.h('button', {
                                     className: 'px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
                                     onClick: () => editCurrency(docId)
                                 }, 'Edit'),
-                                h('button', {
+                                window.gridjs.h('button', {
                                     className: 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm',
                                     onClick: () => deleteCurrency(docId)
                                 }, 'Delete')
@@ -1799,7 +1804,8 @@ async function renderPriceBooksGrid() {
         if (priceBooksGrid) {
             priceBooksGrid.updateConfig({ data: data }).forceRender();
         } else {
-            priceBooksGrid = new Grid({
+            // Access Grid and h from the global 'gridjs' object
+            priceBooksGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
                     { id: 'name', name: 'Price Book Name', sort: true, filter: true },
@@ -1814,12 +1820,12 @@ async function renderPriceBooksGrid() {
                         sort: false,
                         formatter: (cell, row) => {
                             const docId = row.cells[0].data;
-                            return h('div', { className: 'flex space-x-2' },
-                                h('button', {
+                            return window.gridjs.h('div', { className: 'flex space-x-2' },
+                                window.gridjs.h('button', {
                                     className: 'px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
                                     onClick: () => editPriceBook(docId)
                                 }, 'Edit'),
-                                h('button', {
+                                window.gridjs.h('button', {
                                     className: 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm',
                                     onClick: () => deletePriceBook(docId)
                                 }, 'Delete')
