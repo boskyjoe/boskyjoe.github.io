@@ -291,8 +291,9 @@ function getPriceBookIndexId(name, currency) {
  * @param {string} valueField - The field from the document to use as the <option> value.
  * @param {string} textField - The field from the document to use as the <option> text.
  * @param {string|null} selectedValue - The value to pre-select in the dropdown (optional).
+ * @param {string|null} dataAttributeField - An optional field to store as a data attribute (e.g., 'defaultCurrencySymbol').
  */
-async function populateSelect(selectElement, collectionPath, valueField, textField, selectedValue = null) {
+async function populateSelect(selectElement, collectionPath, valueField, textField, selectedValue = null, dataAttributeField = null) {
     if (!selectElement) {
         console.error(`populateSelect: selectElement is null for collection ${collectionPath}`);
         return;
@@ -309,7 +310,10 @@ async function populateSelect(selectElement, collectionPath, valueField, textFie
             if (selectedValue !== null && data[valueField] === selectedValue) {
                 option.selected = true;
             }
-            option.dataset.id = doc.id; // Store Firestore ID for reference if needed
+            // Store additional data as a data attribute if specified
+            if (dataAttributeField && data[dataAttributeField]) {
+                option.dataset[dataAttributeField] = data[dataAttributeField];
+            }
             selectElement.appendChild(option);
         });
     } catch (error) {
@@ -1763,12 +1767,13 @@ async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null) 
 
 /**
  * Populates the price book country dropdown with data from the 'countries' collection.
+ * This function now also fetches and stores the defaultCurrencySymbol in a data attribute.
  * @param {string|null} selectedCountryName - The country name to pre-select (optional).
  */
 async function populatePriceBookCountryDropdown(selectedCountryName = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
-    // Corrected path for public data
-    await populateSelect(priceBookCountrySelect, `countries`, 'name', 'name', selectedCountryName);
+    // Pass 'defaultCurrencySymbol' as the dataAttributeField
+    await populateSelect(priceBookCountrySelect, `countries`, 'name', 'name', selectedCountryName, 'defaultCurrencySymbol');
 }
 
 // Event listener to open the Price Book Form for adding a new price book
@@ -1874,8 +1879,8 @@ async function editPriceBook(id) {
 
             priceBookNameInput.value = data.name || '';
             priceBookDescriptionTextarea.value = data.description || '';
-            await populatePriceBookCountryDropdown(data.country);
-            await populatePriceBookCurrencyDropdown(data.currency);
+            await populatePriceBookCountryDropdown(data.country); // Populate country dropdown
+            await populatePriceBookCurrencyDropdown(data.currency); // Populate currency dropdown
             priceBookActiveCheckbox.checked = data.isActive;
             priceBookValidFromInput.value = formatDateForInput(data.validFrom);
             priceBookValidToInput.value = formatDateForInput(data.validTo);
@@ -2080,12 +2085,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Attach change listener for priceBookCountrySelect
     if (priceBookCountrySelect) {
         priceBookCountrySelect.addEventListener('change', async () => {
-            const selectedCountry = priceBookCountrySelect.value;
-            if (selectedCountry) {
-                // In this version, we're not filtering currencies by country.
-                // The dropdown will always show all available currencies.
-                await populatePriceBookCurrencyDropdown(null);
-            } else {
+            const selectedOption = priceBookCountrySelect.options[priceBookCountrySelect.selectedIndex];
+            const defaultCurrencySymbol = selectedOption ? selectedOption.dataset.defaultCurrencySymbol : '';
+
+            // Set the currency dropdown value
+            priceBookCurrencySelect.value = defaultCurrencySymbol || '';
+
+            // If the currency dropdown is still empty after auto-selection,
+            // or if the selected country has no default currency,
+            // ensure the currency dropdown is populated with all available currencies.
+            // This prevents it from remaining empty if the auto-selected currency isn't found
+            // or if a country without a default is selected.
+            if (!priceBookCurrencySelect.value) {
                 await populatePriceBookCurrencyDropdown();
             }
         });
