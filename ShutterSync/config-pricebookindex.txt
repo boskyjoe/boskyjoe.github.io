@@ -12,6 +12,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Helper function to get the expected index ID for price books
+    function getPriceBookIndexId(normalizedName, normalizedCurrency) {
+      return normalizedName + '_' + normalizedCurrency;
+    }
+
     // Helper function to validate an incoming timestamp-like object or null
     function isValidTimestampOrNull(data) {
       return data == null || (data is map && data.keys().hasAll(['seconds', 'nanoseconds']) && data.seconds is number && data.nanoseconds is number);
@@ -127,11 +132,78 @@ service cloud.firestore {
     // Price Book data (for actual priceBook documents)
     match /priceBooks/{documentId} {
       allow read: if is_authenticated();
-      // Simplified write rules to bypass uniqueness checks for debugging
-      allow create, update, delete: if is_admin();
+
+      // Create: Admin only, with validation and uniqueness check.
+      allow create: if is_admin() &&
+                            request.resource.data.name is string && request.resource.data.name.size() > 0 &&
+                            request.resource.data.normalizedName is string && request.resource.data.normalizedName.size() > 0 &&
+                            request.resource.data.description is string &&
+                            request.resource.data.country is string && request.resource.data.country.size() > 0 &&
+                            request.resource.data.currency is string && request.resource.data.currency.size() > 0 &&
+                            request.resource.data.normalizedCurrency is string && request.resource.data.normalizedCurrency.size() > 0 &&
+                            request.resource.data.isActive is bool &&
+                            isValidTimestampOrNull(request.resource.data.validFrom) &&
+                            isValidTimestampOrNull(request.resource.data.validTo) &&
+                            // Ensure normalizedName and normalizedCurrency are lowercase and contain no whitespace
+                            request.resource.data.normalizedName == request.resource.data.normalizedName.lower() &&
+                            !request.resource.data.normalizedName.matches('.*\\s.*') &&
+                            request.resource.data.normalizedCurrency == request.resource.data.normalizedCurrency.lower() &&
+                            !request.resource.data.normalizedCurrency.matches('.*\\s.*') &&
+                            // Ensure no index with this normalized name_currency combo already exists
+                            !exists(/databases/$(database)/documents/priceBookNameCurrencyIndexes/$(getPriceBookIndexId(request.resource.data.normalizedName, request.resource.data.normalizedCurrency)));
+
+      // Update: Admin only, with validation.
+      allow update: if is_admin() &&
+                            request.resource.data.name is string && request.resource.data.name.size() > 0 &&
+                            request.resource.data.normalizedName is string && request.resource.data.normalizedName.size() > 0 &&
+                            request.resource.data.description is string &&
+                            request.resource.data.country is string && request.resource.data.country.size() > 0 &&
+                            request.resource.data.currency is string && request.resource.data.currency.size() > 0 &&
+                            request.resource.data.normalizedCurrency is string && request.resource.data.normalizedCurrency.size() > 0 &&
+                            request.resource.data.isActive is bool &&
+                            isValidTimestampOrNull(request.resource.data.validFrom) &&
+                            isValidTimestampOrNull(request.resource.data.validTo) &&
+                            // Ensure normalizedName and normalizedCurrency are lowercase and contain no whitespace
+                            request.resource.data.normalizedName == request.resource.data.normalizedName.lower() &&
+                            !request.resource.data.normalizedName.matches('.*\\s.*') &&
+                            request.resource.data.normalizedCurrency == request.resource.data.normalizedCurrency.lower() &&
+                            !request.resource.data.normalizedCurrency.matches('.*\\s.*') &&
+                            // If normalizedName or normalizedCurrency change, the old index must be deleted and a new one created.
+                            // This rule ensures the new combination doesn't conflict with an existing index *not* associated with this document.
+                            (getPriceBookIndexId(request.resource.data.normalizedName, request.resource.data.normalizedCurrency) == getPriceBookIndexId(resource.data.normalizedName, resource.data.normalizedCurrency) ||
+                             !exists(/databases/$(database)/documents/priceBookNameCurrencyIndexes/$(getPriceBookIndexId(request.resource.data.normalizedName, request.resource.data.normalizedCurrency))));
+
+      allow delete: if is_admin();
     }
 
-    // --- Removed priceBookNameCurrencyIndexes collection rules entirely for debugging ---
-    // You will need to re-add these and the client-side logic later if you want to enforce uniqueness.
+    // --- NEW COLLECTION: priceBookNameCurrencyIndexes ---
+    match /priceBookNameCurrencyIndexes/{indexId} {
+      // Only Admins can write to this index collection.
+      allow create: if is_admin() &&
+                            request.resource.id == getPriceBookIndexId(request.resource.data.priceBookName, request.resource.data.priceBookCurrency) &&
+                            request.resource.data.priceBookId is string &&
+                            request.resource.data.priceBookName is string &&
+                            request.resource.data.priceBookCurrency is string &&
+                            request.resource.data.priceBookName == request.resource.data.priceBookName.lower() &&
+                            !request.resource.data.priceBookName.matches('.*\\s.*') &&
+                            request.resource.data.priceBookCurrency == request.resource.data.priceBookCurrency.lower() &&
+                            !request.resource.data.priceBookCurrency.matches('.*\\s.*') &&
+                            !exists(request.resource.__path__); // Ensure this index ID does not exist BEFORE the write.
+
+      allow update: if is_admin() &&
+                            request.resource.id == getPriceBookIndexId(request.resource.data.priceBookName, request.resource.data.priceBookCurrency) &&
+                            request.resource.data.priceBookId is string &&
+                            request.resource.data.priceBookName is string &&
+                            request.resource.data.priceBookCurrency is string &&
+                            request.resource.data.priceBookName == request.resource.data.priceBookName.lower() &&
+                            !request.resource.data.priceBookName.matches('.*\\s.*') &&
+                            request.resource.data.priceBookCurrency == request.resource.data.priceBookCurrency.lower() &&
+                            !request.resource.data.priceBookCurrency.matches('.*\\s.*') &&
+                            // Ensure the priceBookId for this index document doesn't change during an update
+                            resource.data.priceBookId == request.resource.data.priceBookId;
+
+      allow delete: if is_admin();
+      allow read: if false; // No one can read this collection directly (it's purely for indexing)
+    }
   }
 }
