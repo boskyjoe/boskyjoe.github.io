@@ -417,6 +417,10 @@
                         <label for="country-code" class="block text-sm font-medium text-gray-700">Country Code (e.g., US, GB):</label>
                         <input type="text" id="country-code" required maxlength="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                     </div>
+                    <div class="md:col-span-2">
+                        <label for="country-states" class="block text-sm font-medium text-gray-700">States (comma-separated):</label>
+                        <textarea id="country-states" rows="3" placeholder="e.g., California, Texas, Florida" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
                     <div class="md:col-span-2 flex justify-end space-x-3">
                         <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300">Save Country</button>
                         <button type="button" id="cancel-country-btn" class="px-6 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
