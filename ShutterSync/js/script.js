@@ -679,6 +679,14 @@ async function renderCustomersGrid() {
         return;
     }
 
+    // Ensure window.gridjs is available before attempting to use it
+    if (typeof window.gridjs === 'undefined' || !window.gridjs.Grid) {
+        console.error("Grid.js not loaded properly. window.gridjs is undefined.");
+        showMessageBox('Grid.js library failed to load. Please refresh the page or check your internet connection.', false);
+        customersGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error: Grid.js library not loaded.</p>';
+        return;
+    }
+
     // Show a loading indicator
     customersGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Customers...</p>';
     noCustomersMessage.classList.add('hidden');
@@ -720,7 +728,6 @@ async function renderCustomersGrid() {
         if (customersGrid) {
             customersGrid.updateConfig({ data: customerData }).forceRender();
         } else {
-            // Access Grid and h from the global 'gridjs' object
             customersGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
@@ -1013,6 +1020,14 @@ async function renderOpportunitiesGrid() {
         return;
     }
 
+    // Ensure window.gridjs is available before attempting to use it
+    if (typeof window.gridjs === 'undefined' || !window.gridjs.Grid) {
+        console.error("Grid.js not loaded properly. window.gridjs is undefined.");
+        showMessageBox('Grid.js library failed to load. Please refresh the page or check your internet connection.', false);
+        opportunitiesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error: Grid.js library not loaded.</p>';
+        return;
+    }
+
     opportunitiesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Opportunities...</p>';
     noOpportunitiesMessage.classList.add('hidden');
 
@@ -1050,7 +1065,6 @@ async function renderOpportunitiesGrid() {
         if (opportunitiesGrid) {
             opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender();
         } else {
-            // Access Grid and h from the global 'gridjs' object
             opportunitiesGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
@@ -1290,6 +1304,14 @@ async function renderCountriesStatesGrid() {
         return;
     }
 
+    // Ensure window.gridjs is available before attempting to use it
+    if (typeof window.gridjs === 'undefined' || !window.gridjs.Grid) {
+        console.error("Grid.js not loaded properly. window.gridjs is undefined.");
+        showMessageBox('Grid.js library failed to load. Please refresh the page or check your internet connection.', false);
+        countriesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error: Grid.js library not loaded.</p>';
+        return;
+    }
+
     countriesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Countries...</p>';
     noCountriesMessage.classList.add('hidden');
 
@@ -1316,7 +1338,6 @@ async function renderCountriesStatesGrid() {
         if (countriesStatesGrid) {
             countriesStatesGrid.updateConfig({ data: data }).forceRender();
         } else {
-            // Access Grid and h from the global 'gridjs' object
             countriesStatesGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
@@ -1509,6 +1530,14 @@ async function renderCurrenciesGrid() {
         return;
     }
 
+    // Ensure window.gridjs is available before attempting to use it
+    if (typeof window.gridjs === 'undefined' || !window.gridjs.Grid) {
+        console.error("Grid.js not loaded properly. window.gridjs is undefined.");
+        showMessageBox('Grid.js library failed to load. Please refresh the page or check your internet connection.', false);
+        currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error: Grid.js library not loaded.</p>';
+        return;
+    }
+
     currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Currencies...</p>';
     noCurrenciesMessage.classList.add('hidden');
 
@@ -1536,7 +1565,6 @@ async function renderCurrenciesGrid() {
         if (currenciesGrid) {
             currenciesGrid.updateConfig({ data: data }).forceRender();
         } else {
-            // Access Grid and h from the global 'gridjs' object
             currenciesGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
@@ -1773,6 +1801,14 @@ async function renderPriceBooksGrid() {
         return;
     }
 
+    // Ensure window.gridjs is available before attempting to use it
+    if (typeof window.gridjs === 'undefined' || !window.gridjs.Grid) {
+        console.error("Grid.js not loaded properly. window.gridjs is undefined.");
+        showMessageBox('Grid.js library failed to load. Please refresh the page or check your internet connection.', false);
+        priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error: Grid.js library not loaded.</p>';
+        return;
+    }
+
     priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Price Books...</p>';
     noPriceBooksMessage.classList.add('hidden');
 
@@ -1804,7 +1840,6 @@ async function renderPriceBooksGrid() {
         if (priceBooksGrid) {
             priceBooksGrid.updateConfig({ data: data }).forceRender();
         } else {
-            // Access Grid and h from the global 'gridjs' object
             priceBooksGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
