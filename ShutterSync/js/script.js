@@ -126,6 +126,7 @@ const countryFormContainer = document.getElementById('country-form-container');
 const countryForm = document.getElementById('country-form');
 const countryNameInput = document.getElementById('country-name');
 const countryCodeInput = document.getElementById('country-code');
+const countryStatesTextarea = document.getElementById('country-states'); // NEW: States textarea
 const cancelCountryBtn = document.getElementById('cancel-country-btn');
 const countryFormMessage = document.getElementById('country-form-message');
 const countrySearchInput = document.getElementById('country-search');
@@ -474,7 +475,7 @@ onAuthStateChanged(auth, async (user) => {
         if (customerSourceSelect) customerSourceSelect.innerHTML = '<option value="">Select Source</option>';
         if (opportunityCustomerSelect) opportunityCustomerSelect.innerHTML = '<option value="">Select a Customer</option>';
         if (opportunityCurrencySelect) opportunityCurrencySelect.innerHTML = '<option value="">Select...</option>';
-        if (opportunityPriceBookSelect) opportunityPriceBookSelect.innerHTML = '<option value="">Select...</option>';
+        if (opportunityPriceBookSelect) opportunityPriceBookSelect.innerHTML = '<option value="">Select a Price Book</option>';
         if (priceBookCurrencySelect) priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>';
         if (priceBookCountrySelect) priceBookCountrySelect.innerHTML = '<option value="">Select...</option>';
     }
@@ -615,7 +616,10 @@ function resetAndHideForm(formElement, formContainer, idValue, messageElement) {
 // Note: We're passing an empty string for the ID value when resetting, as there's no hidden ID input in the HTML
 cancelCustomerBtn.addEventListener('click', () => resetAndHideForm(customerForm, customerFormContainer, '', customerFormMessage));
 cancelOpportunityBtn.addEventListener('click', () => resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage));
-cancelCountryBtn.addEventListener('click', () => resetAndHideForm(countryForm, countryFormContainer, '', countryFormMessage));
+cancelCountryBtn.addEventListener('click', () => {
+    resetAndHideForm(countryForm, countryFormContainer, '', countryFormMessage);
+    countryStatesTextarea.value = ''; // Clear states textarea specifically
+});
 cancelCurrencyBtn.addEventListener('click', () => resetAndHideForm(currencyForm, currencyFormContainer, '', currencyFormMessage));
 cancelPriceBookBtn.addEventListener('click', () => resetAndHideForm(priceBookForm, priceBookFormContainer, '', priceBookFormMessage));
 
@@ -1263,6 +1267,7 @@ async function deleteOpportunity(opportunityId) {
 addCountryBtn.addEventListener('click', () => {
     if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can add countries.', false); return; }
     document.getElementById('country-id').value = ''; // Clear ID for new country
+    countryStatesTextarea.value = ''; // Clear states textarea for new entry
     resetAndHideForm(countryForm, countryFormContainer, '', countryFormMessage); // Clear and hide form
     countryFormContainer.classList.remove('hidden'); // Then show the container
 });
@@ -1274,9 +1279,13 @@ countryForm.addEventListener('submit', async (e) => {
 
     const countryId = document.getElementById('country-id').value;
 
+    // Parse comma-separated states into an array
+    const statesArray = countryStatesTextarea.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
     const countryData = {
         name: countryNameInput.value.trim(),
         code: countryCodeInput.value.trim().toUpperCase(),
+        states: statesArray, // Store as an array
     };
 
     try {
@@ -1311,6 +1320,7 @@ countryForm.addEventListener('submit', async (e) => {
             showMessageBox('Country added successfully!', false);
         }
         resetAndHideForm(countryForm, countryFormContainer, '', countryFormMessage); // Clear and hide form
+        countryStatesTextarea.value = ''; // Clear states textarea after successful save
         renderCountriesStatesGrid();
         populateCustomerCountryDropdown(); // Refresh customer dropdown
         populatePriceBookCountryDropdown(); // Refresh price book dropdown
@@ -1366,7 +1376,8 @@ async function renderCountriesStatesGrid() {
                 data.push([
                     doc.id,
                     country.name,
-                    country.code
+                    country.code,
+                    country.states ? country.states.join(', ') : '' // Display states as comma-separated string
                 ]);
             });
         }
@@ -1379,6 +1390,7 @@ async function renderCountriesStatesGrid() {
                     { id: 'id', name: 'ID', hidden: true },
                     { id: 'name', name: 'Country Name', sort: true, filter: true },
                     { id: 'code', name: 'Code', sort: true, filter: true },
+                    { id: 'states', name: 'States', sort: true, filter: true }, // New column for states
                     {
                         name: 'Actions',
                         sort: false,
@@ -1400,7 +1412,8 @@ async function renderCountriesStatesGrid() {
                 data: data,
                 search: {
                     selector: (cell, rowIndex, cellIndex) => {
-                        if (cellIndex === 1 || cellIndex === 2) {
+                        // Include states column in search
+                        if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3) {
                             return cell;
                         }
                         return null;
@@ -1449,6 +1462,7 @@ async function editCountryState(id) {
 
             countryNameInput.value = data.name || '';
             countryCodeInput.value = data.code || '';
+            countryStatesTextarea.value = Array.isArray(data.states) ? data.states.join(', ') : ''; // Populate states
             countryFormContainer.classList.remove('hidden');
             countryFormMessage.classList.add('hidden');
         } else {
