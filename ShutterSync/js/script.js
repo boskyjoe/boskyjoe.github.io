@@ -722,7 +722,7 @@ async function renderCustomersGrid() {
 
     // Show a loading indicator *after* clearing, but before data fetch/grid render
     customersGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Customers...</p>';
-    noCustomersMessage.classList.add('hidden');
+    noCustomersMessage.classList.add('hidden'); // Hide "No data" message initially
 
     let customersRef = collection(db, `customers`);
     let q = query(customersRef, orderBy('name'));
@@ -732,9 +732,9 @@ async function renderCustomersGrid() {
         const snapshot = await getDocs(q);
         if (snapshot.empty) {
             noCustomersMessage.classList.remove('hidden');
-            customersGridContainer.innerHTML = ''; // Clear the container if no data
+            customersGridContainer.innerHTML = ''; // Clear loading message if no data
         } else {
-            noCustomersMessage.classList.add('hidden');
+            noCustomersMessage.classList.add('hidden'); // Ensure it's hidden if data is present
             snapshot.forEach(doc => {
                 const data = doc.data();
                 customerData.push([
@@ -1079,9 +1079,9 @@ async function renderOpportunitiesGrid() {
         const snapshot = await getDocs(q);
         if (snapshot.empty) {
             noOpportunitiesMessage.classList.remove('hidden');
-            opportunitiesGridContainer.innerHTML = '';
+            opportunitiesGridContainer.innerHTML = ''; // Clear loading message if no data
         } else {
-            noOpportunitiesMessage.classList.add('hidden');
+            noOpportunitiesMessage.classList.add('hidden'); // Ensure it's hidden if data is present
             snapshot.forEach(doc => {
                 const data = doc.data();
                 opportunityData.push([
@@ -1097,86 +1097,86 @@ async function renderOpportunitiesGrid() {
                     data.creatorId // Added creatorId for rule check
                 ]);
             });
-        }
 
-        if (opportunitiesGrid) {
-            opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender();
-        } else {
-            opportunitiesGridContainer.innerHTML = ''; // Clear loading message
-            opportunitiesGrid = new window.gridjs.Grid({
-                columns: [
-                    { id: 'id', name: 'ID', hidden: true },
-                    { id: 'name', name: 'Opportunity Name', sort: true, filter: true },
-                    { id: 'customerName', name: 'Customer', sort: true, filter: true },
-                    { id: 'salesStage', name: 'Stage', sort: true, filter: true },
-                    { id: 'probability', name: 'Probability (%)', sort: true, filter: true },
-                    {
-                        id: 'value',
-                        name: 'Value',
-                        sort: true,
-                        filter: true,
-                        formatter: (cell, row) => {
-                            const currencySymbol = row.cells[6].data;
-                            return cell.toLocaleString('en-US', { style: 'currency', currency: currencySymbol || 'USD' });
+            if (opportunitiesGrid) {
+                opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender();
+            } else {
+                opportunitiesGridContainer.innerHTML = ''; // Clear loading message
+                opportunitiesGrid = new window.gridjs.Grid({
+                    columns: [
+                        { id: 'id', name: 'ID', hidden: true },
+                        { id: 'name', name: 'Opportunity Name', sort: true, filter: true },
+                        { id: 'customerName', name: 'Customer', sort: true, filter: true },
+                        { id: 'salesStage', name: 'Stage', sort: true, filter: true },
+                        { id: 'probability', name: 'Probability (%)', sort: true, filter: true },
+                        {
+                            id: 'value',
+                            name: 'Value',
+                            sort: true,
+                            filter: true,
+                            formatter: (cell, row) => {
+                                const currencySymbol = row.cells[6].data;
+                                return cell.toLocaleString('en-US', { style: 'currency', currency: currencySymbol || 'USD' });
+                            }
+                        },
+                        { id: 'currency', name: 'Currency', sort: true, filter: true },
+                        { id: 'expectedCloseDate', name: 'Close Date', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
+                        { id: 'creatorId', name: 'Creator ID', hidden: true }, // Keep creatorId hidden but accessible for actions
+                        {
+                            name: 'Actions',
+                            sort: false,
+                            formatter: (cell, row) => {
+                                const docId = row.cells[0].data;
+                                const creatorId = row.cells[8].data; // Get creatorId from the row data
+                                const canEditDelete = (currentUserRole === 'Admin' || creatorId === currentUser.uid);
+
+                                return window.gridjs.h('div', { className: 'flex space-x-2' },
+                                    window.gridjs.h('button', {
+                                        className: `px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
+                                        onClick: () => canEditDelete ? editOpportunity(docId) : showMessageBox('You do not have permission to edit this opportunity.', false),
+                                        disabled: !canEditDelete
+                                    }, 'Edit'),
+                                    window.gridjs.h('button', {
+                                        className: `px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
+                                        onClick: () => canEditDelete ? deleteOpportunity(docId) : showMessageBox('You do not have permission to delete this opportunity.', false),
+                                        disabled: !canEditDelete
+                                    }, 'Delete')
+                                );
+                            }
+                        }
+                    ],
+                    data: opportunityData,
+                    search: {
+                        selector: (cell, rowIndex, cellIndex) => {
+                            // Search across name, customerName, salesStage
+                            if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3) {
+                                return cell;
+                            }
+                            return null;
                         }
                     },
-                    { id: 'currency', name: 'Currency', sort: true, filter: true },
-                    { id: 'expectedCloseDate', name: 'Close Date', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
-                    { id: 'creatorId', name: 'Creator ID', hidden: true }, // Keep creatorId hidden but accessible for actions
-                    {
-                        name: 'Actions',
-                        sort: false,
-                        formatter: (cell, row) => {
-                            const docId = row.cells[0].data;
-                            const creatorId = row.cells[8].data; // Get creatorId from the row data
-                            const canEditDelete = (currentUserRole === 'Admin' || creatorId === currentUser.uid);
-
-                            return window.gridjs.h('div', { className: 'flex space-x-2' },
-                                window.gridjs.h('button', {
-                                    className: `px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
-                                    onClick: () => canEditDelete ? editOpportunity(docId) : showMessageBox('You do not have permission to edit this opportunity.', false),
-                                    disabled: !canEditDelete
-                                }, 'Edit'),
-                                window.gridjs.h('button', {
-                                    className: `px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
-                                    onClick: () => canEditDelete ? deleteOpportunity(docId) : showMessageBox('You do not have permission to delete this opportunity.', false),
-                                    disabled: !canEditDelete
-                                }, 'Delete')
-                            );
-                        }
+                    pagination: { enabled: true, limit: 10, summary: true },
+                    sort: true,
+                    resizable: true,
+                    className: {
+                        container: 'gridjs-container', table: 'min-w-full bg-white shadow-md rounded-lg overflow-hidden',
+                        thead: 'bg-gray-200', th: 'py-3 px-4 text-left text-sm font-medium text-gray-700',
+                        td: 'py-3 px-4 text-left text-sm text-gray-800', tr: 'divide-y divide-gray-200',
+                        footer: 'bg-gray-50 p-4 flex justify-between items-center',
+                        pagination: 'flex items-center space-x-2',
+                        'pagination-summary': 'text-sm text-gray-600', 'pagination-gap': 'text-sm text-gray-400',
+                        'pagination-nav': 'flex space-x-1', 'pagination-nav-prev': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
+                        'pagination-nav-next': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
+                        'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
+                        'pagination-btn-current': 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
+                    },
+                    language: {
+                        'search': { 'placeholder': 'Search opportunities...' },
+                        'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
+                        'noRecordsFound': 'No Opportunity Data Available',
                     }
-                ],
-                data: opportunityData,
-                search: {
-                    selector: (cell, rowIndex, cellIndex) => {
-                        // Search across name, customerName, salesStage
-                        if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3) {
-                            return cell;
-                        }
-                        return null;
-                    }
-                },
-                pagination: { enabled: true, limit: 10, summary: true },
-                sort: true,
-                resizable: true,
-                className: {
-                    container: 'gridjs-container', table: 'min-w-full bg-white shadow-md rounded-lg overflow-hidden',
-                    thead: 'bg-gray-200', th: 'py-3 px-4 text-left text-sm font-medium text-gray-700',
-                    td: 'py-3 px-4 text-left text-sm text-gray-800', tr: 'divide-y divide-gray-200',
-                    footer: 'bg-gray-50 p-4 flex justify-between items-center',
-                    pagination: 'flex items-center space-x-2',
-                    'pagination-summary': 'text-sm text-gray-600', 'pagination-gap': 'text-sm text-gray-400',
-                    'pagination-nav': 'flex space-x-1', 'pagination-nav-prev': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-nav-next': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-btn-current': 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
-                },
-                language: {
-                    'search': { 'placeholder': 'Search opportunities...' },
-                    'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
-                    'noRecordsFound': 'No Opportunity Data Available',
-                }
-            }).render(opportunitiesGridContainer);
+                }).render(opportunitiesGridContainer);
+            }
         }
     } catch (error) {
         console.error("Error rendering opportunities grid:", error);
@@ -1362,9 +1362,9 @@ async function renderCountriesStatesGrid() {
         const snapshot = await getDocs(query(countriesRef, orderBy('name')));
         if (snapshot.empty) {
             noCountriesMessage.classList.remove('hidden');
-            countriesGridContainer.innerHTML = '';
+            countriesGridContainer.innerHTML = ''; // Clear loading message if no data
         } else {
-            noCountriesMessage.classList.add('hidden');
+            noCountriesMessage.classList.add('hidden'); // Ensure it's hidden if data is present
             snapshot.forEach(doc => {
                 const country = doc.data();
                 data.push([
@@ -1591,9 +1591,9 @@ async function renderCurrenciesGrid() {
         const snapshot = await getDocs(query(currenciesRef, orderBy('name')));
         if (snapshot.empty) {
             noCurrenciesMessage.classList.remove('hidden');
-            currenciesGridContainer.innerHTML = '';
+            currenciesGridContainer.innerHTML = ''; // Clear loading message if no data
         } else {
-            noCurrenciesMessage.classList.add('hidden');
+            noCurrenciesMessage.classList.add('hidden'); // Ensure it's hidden if data is present
             snapshot.forEach(doc => {
                 const currency = doc.data();
                 data.push([
@@ -1865,9 +1865,9 @@ async function renderPriceBooksGrid() {
         const snapshot = await getDocs(query(priceBooksRef, orderBy('name')));
         if (snapshot.empty) {
             noPriceBooksMessage.classList.remove('hidden');
-            priceBooksGridContainer.innerHTML = '';
+            priceBooksGridContainer.innerHTML = ''; // Clear loading message if no data
         } else {
-            noPriceBooksMessage.classList.add('hidden');
+            noPriceBooksMessage.classList.add('hidden'); // Ensure it's hidden if data is present
             snapshot.forEach(doc => {
                 const priceBook = doc.data();
                 data.push([
