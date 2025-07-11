@@ -147,7 +147,7 @@ service cloud.firestore {
       allow create, update, delete: if is_admin();
     }
 
-    // Price Book data (for dropdowns) - UPDATED FOR NEW FIELDS AND UNIQUENESS
+    // Price Book data (for dropdowns)
     // Rules for the actual priceBook documents. Uniqueness is enforced via priceBookNameCurrencyIndexes.
     match /priceBooks/{documentId} {
       allow read: if is_authenticated();
@@ -155,39 +155,44 @@ service cloud.firestore {
       // Create: Admin only, with validation and uniqueness check.
       allow create: if is_admin() &&
                         request.resource.data.keys().hasAll([
-                          'name', 'normalizedName', 'description', 'currency', 'normalizedCurrency', 'isActive', 'validFrom'
+                          'name', 'normalizedName', 'description', 'country', 'currency', 'normalizedCurrency', 'isActive', 'validFrom'
+                        ]) &&
+                        request.resource.data.keys().hasOnly([
+                          'name', 'normalizedName', 'description', 'country', 'currency', 'normalizedCurrency', 'isActive', 'validFrom', 'validTo' // Added validTo to hasOnly
                         ]) &&
                         request.resource.data.name is string &&
-                        request.resource.data.normalizedName is string && // New validation for normalizedName
+                        request.resource.data.normalizedName is string &&
                         request.resource.data.description is string &&
+                        request.resource.data.country is string && // NEW: Validate 'country' field
                         request.resource.data.currency is string &&
-                        request.resource.data.normalizedCurrency is string && // New validation for normalizedCurrency
+                        request.resource.data.normalizedCurrency is string &&
                         request.resource.data.isActive is bool &&
                         (isValidTimestampObject(request.resource.data.validFrom) || request.resource.data.validFrom == null) &&
                         (isValidTimestampObject(request.resource.data.validTo) || request.resource.data.validTo == null) &&
                         // Ensure normalizedName and normalizedCurrency are lowercase and contain no whitespace
                         request.resource.data.normalizedName == request.resource.data.normalizedName.lower() &&
-                        !request.resource.data.normalizedName.matches('.*\\s.*') && // Ensure no whitespace
+                        !request.resource.data.normalizedName.matches('.*\\s.*') &&
                         request.resource.data.normalizedCurrency == request.resource.data.normalizedCurrency.lower() &&
-                        !request.resource.data.normalizedCurrency.matches('.*\\s.*') && // Ensure no whitespace
+                        !request.resource.data.normalizedCurrency.matches('.*\\s.*') &&
                         // Ensure no index with this normalized name_currency combo already exists
                         !exists(/databases/$(database)/documents/priceBookNameCurrencyIndexes/$(getPriceBookIndexId(request.resource.data.normalizedName, request.resource.data.normalizedCurrency)));
 
       // Update: Admin only, with validation.
       allow update: if is_admin() &&
                         request.resource.data.name is string &&
-                        request.resource.data.normalizedName is string && // Validate normalizedName on update
+                        request.resource.data.normalizedName is string &&
                         request.resource.data.description is string &&
+                        request.resource.data.country is string && // NEW: Validate 'country' field
                         request.resource.data.currency is string &&
-                        request.resource.data.normalizedCurrency is string && // Validate normalizedCurrency on update
+                        request.resource.data.normalizedCurrency is string &&
                         request.resource.data.isActive is bool &&
                         (isValidTimestampObject(request.resource.data.validFrom) || request.resource.data.validFrom == null) &&
                         (isValidTimestampObject(request.resource.data.validTo) || request.resource.data.validTo == null) &&
                         // Ensure normalizedName and normalizedCurrency are lowercase and contain no whitespace
                         request.resource.data.normalizedName == request.resource.data.normalizedName.lower() &&
-                        !request.resource.data.normalizedName.matches('.*\\s.*') && // Ensure no whitespace
+                        !request.resource.data.normalizedName.matches('.*\\s.*') &&
                         request.resource.data.normalizedCurrency == request.resource.data.normalizedCurrency.lower() &&
-                        !request.resource.data.normalizedCurrency.matches('.*\\s.*'); // Ensure no whitespace
+                        !request.resource.data.normalizedCurrency.matches('.*\\s.*');
       
       allow delete: if is_admin();
     }
