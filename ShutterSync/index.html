@@ -10,9 +10,6 @@
     <!-- Grid.js CSS from CDN -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/theme/mermaid.min.css" rel="stylesheet" />
 
-    <!-- Grid.js JS from CDN (Moved to just before script.js to ensure it loads first) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gridjs.min.js" defer></script>
-
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -531,7 +528,9 @@
         </div>
     </footer>
 
+    <!-- Grid.js JS from CDN (Moved to just before script.js to ensure it loads first) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gridjs.umd.js"></script>
     <!-- Your main script.js (type="module" will ensure it runs after DOMContentLoaded) -->
-    <script type="module" src="js/script.js" defer></script>
+    <script type="module" src="js/script.js"></script>
 </body>
 </html>
