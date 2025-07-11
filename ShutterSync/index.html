@@ -60,6 +60,61 @@
         .dropdown:hover .dropdown-menu {
             display: block;
         }
+
+        /* Grid.js specific styling to integrate with Tailwind */
+        .gridjs-container {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .gridjs-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .gridjs-th, .gridjs-td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .gridjs-th {
+            background-color: #edf2f7;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        .gridjs-tr:last-child .gridjs-td {
+            border-bottom: none;
+        }
+        .gridjs-tr:hover {
+            background-color: #f7fafc;
+        }
+        .gridjs-search, .gridjs-pagination {
+            padding: 1rem;
+            background-color: #fff;
+            border-top: 1px solid #e2e8f0;
+        }
+        .gridjs-search input {
+            border: 1px solid #cbd5e0;
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+            width: 100%;
+            max-width: 300px;
+        }
+        .gridjs-pages button {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            border: 1px solid #cbd5e0;
+            background-color: #fff;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .gridjs-pages button:hover {
+            background-color: #edf2f7;
+        }
+        .gridjs-pages button.gridjs-currentPage {
+            background-color: #4299e1;
+            color: #fff;
+            border-color: #4299e1;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
@@ -110,7 +165,7 @@
             <h2 class="text-2xl font-semibold mb-6">Sign In to ShutterSync CRM</h2>
             <button id="google-signin-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-300 flex items-center justify-center space-x-2">
                 <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12.24 10.27c-.23 0-.44-.02-.66-.06-.18-.03-.36-.07-.54-.12-.18-.05-.35-.1-.52-.16-.17-.06-.33-.12-.48-.19-.15-.07-.29-.15-.43-.23-.14-.08-.27-.16-.39-.25-.12-.09-.23-.18-.33-.28-.1-.1-.19-.2-.28-.3-.09-.1-.17-.2-.24-.3-.07-.1-.13-.2-.18-.3-.05-.1-.09-.2-.12-.3-.03-.1-.05-.2-.06-.3-.01-.1-.01-.2-.01-.3h-1.04c.02.32.07.64.15.96.08.32.19.63.33.94.14.31.3.61.49.9.19.29.4.57.64.84.24.27.5.53.78.78.28.25.58.49.89.71.31.22.64.43.98.62.34.19.69.37 1.06.53.37.16.75.3 1.14.42.39.12.79.22 1.2.3.41.08.83.14 1.26.18.43.04.87.06 1.31.06 1.11 0 2.14-.17 3.09-.52.95-.35 1.76-.87 2.43-1.56.67-.69 1.18-1.51 1.53-2.46.35-.95.52-1.98.52-3.09 0-.45-.04-.89-.12-1.31-.08-.42-.18-.83-.3-1.2-.12-.39-.26-.75-.42-1.14-.16-.37-.37-.72-.62-1.06-.25-.34-.53-.64-.84-.9-.31-.26-.61-.49-.94-.64-.32-.14-.63-.25-.96-.33-.32-.08-.64-.15-.96-.18-.44-.04-.87-.06-1.31-.06-1.11 0-2.14.17-3.09.52-.95.35-1.76.87-2.43 1.56-.67.69-1.18 1.51-1.53 2.46-.35.95-.52 1.98-.52 3.09z" fill="#4285F4"/><path d="M22.56 12.24c0-.45-.04-.89-.12-1.31-.08-.42-.18-.83-.3-1.2-.12-.39-.26-.75-.42-1.14-.16-.37-.37-.72-.62-1.06-.25-.34-.53-.64-.84-.9-.31-.26-.61-.49-.94-.64-.32-.14-.63-.25-.96-.33-.32-.08-.64-.15-.96-.18-.44-.04-.87-.06-1.31-.06-1.11 0-2.14.17-3.09.52-.95.35-1.76.87-2.43 1.56-.67.69-1.18 1.51-1.53 2.46-.35.95-.52 1.98-.52 3.09 0 .45.04.89.12 1.31.08.42.18.83.3 1.2.12.39.26.75.42 1.14.16.37.37.72.62 1.06.25.34.53.64.84.9.31.26.61.49.94.64.32.14.63.25.96.33.32.08.64.15.96.18.44.04.87.06 1.31.06 1.11 0 2.14-.17 3.09-.52.95-.35 1.76-.87 2.43-1.56.67-.69 1.18-1.51 1.53-2.46.35-.95.52-1.98.52-3.09z" fill="#FBBC05"/><path d="M6.02 10.27c-.23 0-.44-.02-.66-.06-.18-.03-.36-.07-.54-.12-.18-.05-.35-.1-.52-.16-.17-.06-.33-.12-.48-.19-.15-.07-.29-.15-.43-.23-.14-.08-.27-.16-.39-.25-.12-.09-.23-.18-.33-.28-.1-.1-.19-.2-.28-.3-.09-.1-.17-.2-.24-.3-.07-.1-.13-.2-.18-.3-.05-.1-.09-.2-.12-.3-.03-.1-.05-.2-.06-.3-.01-.1-.01-.2-.01-.3h-1.04c.02.32.07.64.15.96.08.32.19.63.33.94.14.31.3.61.49.9.19.29.4.57.64.84.24.27.5.53.78.78.28.25.58.49.89.71.31.22.64.43.98.62.34.19.69.37 1.06.53.37.16.75.3 1.14.42.39.12.79.22 1.2.3.41.08.83.14 1.26.18.43.04.87.06 1.31.06 1.11 0 2.14-.17 3.09-.52.95-.35 1.76-.87 2.43-1.56.67-.69 1.18-1.51 1.53-2.46.35-.95.52-1.98.52-3.09z" fill="#EA4335"/><path d="M22.56 12.24c0-.45-.04-.89-.12-1.31-.08-.42-.18-.83-.3-1.2-.12-.39-.26-.75-.42-1.14-.16-.37-.37-.72-.62-1.06-.25-.34-.53-.64-.84-.9-.31-.26-.61-.49-.94-.64-.32-.14-.63-.25-.96-.33-.32-.08-.64-.15-.96-.18-.44-.04-.87-.06-1.31-.06-1.11 0-2.14.17-3.09.52-.95.35-1.76.87-2.43 1.56-.67.69-1.18 1.51-1.53 2.46-.35.95-.52 1.98-.52 3.09z" fill="#34A853"/>
+                    <path d="M12.24 10.27c-.23 0-.44-.02-.66-.06-.18-.03-.36-.07-.54-.12-.18-.05-.35-.1-.48-.19-.15-.07-.29-.15-.43-.23-.14-.08-.27-.16-.39-.25-.12-.09-.23-.18-.33-.28-.1-.1-.19-.2-.28-.3-.09-.1-.17-.2-.24-.3-.07-.1-.13-.2-.18-.3-.05-.1-.09-.2-.12-.3-.03-.1-.05-.2-.06-.3-.01-.1-.01-.2-.01-.3h-1.04c.02.32.07.64.15.96.08.32.19.63.33.94.14.31.3.61.49.9.19.29.4.57.64.84.24.27.5.53.78.78.28.25.58.49.89.71.31.22.64.43.98.62.34.19.69.37 1.06.53.37.16.75.3 1.14.42.39.12.79.22 1.2.3.41.08.83.14 1.26.18.43.04.87.06 1.31.06 1.11 0 2.14-.17 3.09-.52.95-.35 1.76-.87 2.43-1.56.67-.69 1.18-1.51 1.53-2.46.35-.95.52-1.98.52-3.09 0-.45-.04-.89-.12-1.31-.08-.42-.18-.83-.3-1.2-.12-.39-.26-.75-.42-1.14-.16-.37-.37-.72-.62-1.06-.25-.34-.53-.64-.84-.9-.31-.26-.61-.49-.94-.64-.32-.14-.63-.25-.96-.33-.32-.08-.64-.15-.96-.18-.44-.04-.87-.06-1.31-.06-1.11 0-2.14.17-3.09.52-.95.35-1.76.87-2.43 1.56-.67.69-1.18 1.51-1.53 2.46-.35.95-.52 1.98-.52 3.09z" fill="#4285F4"/><path d="M22.56 12.24c0-.45-.04-.89-.12-1.31-.08-.42-.18-.83-.3-1.2-.12-.39-.26-.75-.42-1.14-.16-.37-.37-.72-.62-1.06-.25-.34-.53-.64-.84-.9-.31-.26-.61-.49-.94-.64-.32-.14-.63-.25-.96-.33-.32-.08-.64-.15-.96-.18-.44-.04-.87-.06-1.31-.06-1.11 0-2.14.17-3.09.52-.95.35-1.76.87-2.43 1.56-.67.69-1.18 1.51-1.53 2.46-.35.95-.52 1.98-.52 3.09 0 .45.04.89.12 1.31.08.42.18.83.3 1.2.12.39.26.75.42 1.14.16.37.37.72.62 1.06.25.34.53.64.84.9.31.26.61.49.94.64.32.14.63.25.96.33.32.08.64.15.96.18.44.04.87.06 1.31.06 1.11 0 2.14-.17 3.09-.52.95-.35 1.76-.87 2.43-1.56.67-.69 1.18-1.51 1.53-2.46.35-.95.52 1.98-.52 3.09z" fill="#FBBC05"/><path d="M6.02 10.27c-.23 0-.44-.02-.66-.06-.18-.03-.36-.07-.54-.12-.18-.05-.35-.1-.48-.19-.15-.07-.29-.15-.43-.23-.14-.08-.27-.16-.39-.25-.12-.09-.23-.18-.33-.28-.1-.1-.19-.2-.28-.3-.09-.1-.17-.2-.24-.3-.07-.1-.13-.2-.18-.3-.05-.1-.09-.2-.12-.3-.03-.1-.05-.2-.06-.3-.01-.1-.01-.2-.01-.3h-1.04c.02.32.07.64.15.96.08.32.19.63.33.94.14.31.3.61.49.9.19.29.4.57.64.84.24.27.5.53.78.78.28.25.58.49.89.71.31.22.64.43.98.62.34.19.69.37 1.06.53.37.16.75.3 1.14.42.39.12.79.22 1.2.3.41.08.83.14 1.26.18.43.04.87.06 1.31.06 1.11 0 2.14-.17 3.09-.52.95-.35 1.76-.87 2.43-1.56.67-.69 1.18-1.51 1.53-2.46.35-.95.52 1.98-.52 3.09z" fill="#EA4335"/><path d="M22.56 12.24c0-.45-.04-.89-.12-1.31-.08-.42-.18-.83-.3-1.2-.12-.39-.26-.75-.42-1.14-.16-.37-.37-.72-.62-1.06-.25-.34-.53-.64-.84-.9-.31-.26-.61-.49-.94-.64-.32-.14-.63-.25-.96-.33-.32-.08-.64-.15-.96-.18-.44-.04-.87-.06-1.31-.06-1.11 0-2.14.17-3.09.52-.95.35-1.76.87-2.43 1.56-.67.69-1.18 1.51-1.53 2.46-.35.95-.52 1.98-.52 3.09z" fill="#34A853"/>
                 </svg>
                 <span>Sign in with Google</span>
             </button>
@@ -183,6 +238,7 @@
             <div id="customer-form-container" class="hidden bg-gray-50 p-6 rounded-lg shadow-inner mb-6">
                 <h3 class="text-xl font-semibold mb-4">Add/Edit Customer</h3>
                 <form id="customer-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" id="customer-id"> <!-- Hidden input for customer ID -->
                     <div>
                         <label for="customer-type" class="block text-sm font-medium text-gray-700">Type:</label>
                         <select id="customer-type" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
@@ -260,24 +316,9 @@
                 <p id="customer-form-message" class="text-red-500 text-sm mt-4 hidden"></p>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
-                    <thead class="bg-gray-200">
-                        <tr>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Name</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Email</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Phone</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Country</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Active</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="customers-table-body" class="divide-y divide-gray-200">
-                        <!-- Customer rows will be inserted here by JavaScript -->
-                    </tbody>
-                </table>
-                <p id="no-customers-message" class="text-center text-gray-500 mt-4 hidden">No customers found.</p>
-            </div>
+            <!-- Grid.js will render the customer table here -->
+            <div id="customers-grid-container" class="mt-4"></div>
+            <p id="no-customers-message" class="text-center text-gray-500 mt-4 hidden">No customers found.</p>
         </section>
 
         <!-- Opportunities Section -->
@@ -291,6 +332,7 @@
             <div id="opportunity-form-container" class="hidden bg-gray-50 p-6 rounded-lg shadow-inner mb-6">
                 <h3 class="text-xl font-semibold mb-4">Add/Edit Opportunity</h3>
                 <form id="opportunity-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" id="opportunity-id"> <!-- Hidden input for opportunity ID -->
                     <div>
                         <label for="opportunity-name" class="block text-sm font-medium text-gray-700">Opportunity Name:</label>
                         <input type="text" id="opportunity-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
@@ -347,24 +389,9 @@
                 <p id="opportunity-form-message" class="text-red-500 text-sm mt-4 hidden"></p>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
-                    <thead class="bg-gray-200">
-                        <tr>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Name</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Customer</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Value</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Stage</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Close Date</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="opportunities-table-body" class="divide-y divide-gray-200">
-                        <!-- Opportunity rows will be inserted here by JavaScript -->
-                    </tbody>
-                </table>
-                <p id="no-opportunities-message" class="text-center text-gray-500 mt-4 hidden"></p>
-            </div>
+            <!-- Grid.js will render the opportunity table here -->
+            <div id="opportunities-grid-container" class="mt-4"></div>
+            <p id="no-opportunities-message" class="text-center text-gray-500 mt-4 hidden"></p>
         </section>
 
         <!-- Countries Section (Admin Only) -->
@@ -378,6 +405,7 @@
             <div id="country-form-container" class="hidden bg-gray-50 p-6 rounded-lg shadow-inner mb-6">
                 <h3 class="text-xl font-semibold mb-4">Add/Edit Country</h3>
                 <form id="country-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" id="country-id"> <!-- Hidden input for country ID -->
                     <div>
                         <label for="country-name" class="block text-sm font-medium text-gray-700">Country Name:</label>
                         <input type="text" id="country-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
@@ -394,21 +422,9 @@
                 <p id="country-form-message" class="text-red-500 text-sm mt-4 hidden"></p>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
-                    <thead class="bg-gray-200">
-                        <tr>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Name</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Code</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="countries-table-body" class="divide-y divide-gray-200">
-                        <!-- Country rows will be inserted here by JavaScript -->
-                    </tbody>
-                </table>
-                <p id="no-countries-message" class="text-center text-gray-500 mt-4 hidden">No countries found.</p>
-            </div>
+            <!-- Grid.js will render the countries table here -->
+            <div id="countries-grid-container" class="mt-4"></div>
+            <p id="no-countries-message" class="text-center text-gray-500 mt-4 hidden">No countries found.</p>
         </section>
 
         <!-- Currencies Section (Admin Only) -->
@@ -422,6 +438,7 @@
             <div id="currency-form-container" class="hidden bg-gray-50 p-6 rounded-lg shadow-inner mb-6">
                 <h3 class="text-xl font-semibold mb-4">Add/Edit Currency</h3>
                 <form id="currency-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" id="currency-id"> <!-- Hidden input for currency ID -->
                     <div>
                         <label for="currency-name" class="block text-sm font-medium text-gray-700">Currency Name:</label>
                         <input type="text" id="currency-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
@@ -442,22 +459,9 @@
                 <p id="currency-form-message" class="text-red-500 text-sm mt-4 hidden"></p>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
-                    <thead class="bg-gray-200">
-                        <tr>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Name</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Code</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Symbol</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="currencies-table-body" class="divide-y divide-gray-200">
-                        <!-- Currency rows will be inserted here by JavaScript -->
-                    </tbody>
-                </table>
-                <p id="no-currencies-message" class="text-center text-gray-500 mt-4 hidden">No currencies found.</p>
-            </div>
+            <!-- Grid.js will render the currencies table here -->
+            <div id="currencies-grid-container" class="mt-4"></div>
+            <p id="no-currencies-message" class="text-center text-gray-500 mt-4 hidden">No currencies found.</p>
         </section>
 
         <!-- Price Books Section -->
@@ -471,6 +475,7 @@
             <div id="price-book-form-container" class="hidden bg-gray-50 p-6 rounded-lg shadow-inner mb-6">
                 <h3 class="text-xl font-semibold mb-4">Add/Edit Price Book</h3>
                 <form id="price-book-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" id="price-book-id"> <!-- Hidden input for price book ID -->
                     <div>
                         <label for="price-book-name" class="block text-sm font-medium text-gray-700">Name:</label>
                         <input type="text" id="price-book-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
@@ -507,25 +512,9 @@
                 <p id="price-book-form-message" class="text-red-500 text-sm mt-4 hidden"></p>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
-                    <thead class="bg-gray-200">
-                        <tr>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Name</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Currency</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Country</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Active</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Valid From</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Valid To</th>
-                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="price-books-table-body" class="divide-y divide-gray-200">
-                        <!-- Price Book rows will be inserted here by JavaScript -->
-                    </tbody>
-                </table>
-                <p id="no-price-books-message" class="text-center text-gray-500 mt-4 hidden"></p>
-            </div>
+            <!-- Grid.js will render the price books table here -->
+            <div id="price-books-grid-container" class="mt-4"></div>
+            <p id="no-price-books-message" class="text-center text-gray-500 mt-4 hidden"></p>
         </section>
 
     </main>
