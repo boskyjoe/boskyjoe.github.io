@@ -4,546 +4,544 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShutterSync CRM</title>
-    <!-- Tailwind CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <!-- Font Awesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Grid.js Theme CSS (Mermaid theme for modern look) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/theme/mermaid.min.css">
-    <!-- Custom CSS -->
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+            cursor: pointer;
+        }
+
+        /* Basic dropdown styling for Admin menu */
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            background-color: #3b82f6; /* Tailwind blue-600 */
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 0.375rem; /* rounded-md */
+            overflow: hidden;
+            top: 100%; /* Position below the parent */
+            left: 0;
+            margin-top: 0.5rem; /* Space between parent and dropdown */
+        }
+
+        .dropdown-menu a {
+            color: white;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            text-align: left;
+            transition: background-color 0.3s;
+        }
+
+        .dropdown-menu a:hover {
+            background-color: #2563eb; /* Tailwind blue-700 */
+        }
+
+        .dropdown:hover .dropdown-menu {
+            display: block;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 font-sans">
-    <!-- Global Loading Indicator Overlay -->
-    <div id="loadingOverlay" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-[2000] hidden">
-        <div class="flex flex-col items-center">
-            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
-            <p class="text-white text-lg mt-4">Loading...</p>
-        </div>
-    </div>
+<body class="bg-gray-100 min-h-screen flex flex-col">
 
-    <div class="min-h-screen flex flex-col">
-        <!-- Header -->
-        <header class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center">
-            <h1 class="text-2xl font-bold">ShutterSync CRM</h1>
-            <div id="userInfoDisplay" class="flex items-center space-x-3 hidden">
-                <span id="userName" class="font-medium"></span>
-                <span id="userRole" class="text-blue-200 text-sm px-2 py-1 rounded-full bg-blue-700"></span>
-                <button id="authButton" class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md transition duration-300" aria-label="Sign Out">Sign Out</button>
-            </div>
-            <button id="authButtonAnon" class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md transition duration-300" aria-label="Sign In with Google">Sign In with Google</button>
-        </header>
-
-        <!-- Main Content Area -->
-        <div class="flex flex-1">
-            <!-- Sidebar Navigation -->
-            <nav class="bg-gray-800 text-white w-64 p-4 space-y-2 shadow-lg" role="navigation">
-                <button class="nav-button w-full text-left px-4 py-2 rounded-md hover:bg-gray-700 transition duration-200 flex items-center space-x-2 active" data-module="dashboard" aria-label="Go to Dashboard">
-                    <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
-                </button>
-                <button class="nav-button w-full text-left px-4 py-2 rounded-md hover:bg-gray-700 transition duration-200 flex items-center space-x-2" data-module="customers" aria-label="Manage Customers">
-                    <i class="fas fa-users"></i> <span>Customers</span>
-                </button>
-                <button class="nav-button w-full text-left px-4 py-2 rounded-md hover:bg-gray-700 transition duration-200 flex items-center space-x-2" data-module="opportunities" aria-label="Manage Opportunities">
-                    <i class="fas fa-handshake"></i> <span>Opportunities</span>
-                </button>
-                <button class="nav-button w-full text-left px-4 py-2 rounded-md hover:bg-gray-700 transition duration-200 flex items-center space-x-2 admin-only" data-module="admin" aria-label="Access Admin Panel">
-                    <i class="fas fa-cog"></i> <span>Admin Panel</span>
-                </button>
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-bold">ShutterSync CRM</h1>
+            <nav>
+                <ul class="flex space-x-4">
+                    <li><a href="#" id="nav-dashboard" class="hover:text-blue-200 transition duration-300">Dashboard</a></li>
+                    <li><a href="#" id="nav-customers" class="hover:text-blue-200 transition duration-300">Customers</a></li>
+                    <li><a href="#" id="nav-opportunities" class="hover:text-blue-200 transition duration-300">Opportunities</a></li>
+                    <!-- Admin Dropdown Menu -->
+                    <li id="admin-menu-item" class="relative dropdown hidden">
+                        <a href="#" class="hover:text-blue-200 transition duration-300">Admin &#9662;</a>
+                        <div class="dropdown-menu">
+                            <a href="#" id="nav-countries">Countries</a>
+                            <a href="#" id="nav-currencies">Currencies</a>
+                            <a href="#" id="nav-price-books">Price Books</a>
+                        </div>
+                    </li>
+                    <li><a href="#" id="nav-logout" class="hover:text-blue-200 transition duration-300 hidden">Logout</a></li>
+                </ul>
             </nav>
-
-            <!-- Module Content Area -->
-            <main class="flex-1 p-6 overflow-auto" role="main">
-                <!-- Dashboard Module -->
-                <section id="dashboardModule" class="module active" aria-labelledby="dashboard-heading">
-                    <h2 id="dashboard-heading" class="text-3xl font-semibold text-gray-800 mb-6">Dashboard</h2>
-
-                    <!-- Welcome Message Section -->
-                    <div class="bg-white p-6 rounded-lg shadow-md mb-6" role="region" aria-labelledby="welcome-heading">
-                        <h3 id="welcome-heading" class="text-2xl font-semibold text-gray-800 mb-3">Welcome to ShutterSync CRM!</h3>
-                        <p class="text-gray-700 leading-relaxed">
-                            A Customer Relationship Management (CRM) system helps you manage and analyze customer interactions and data throughout the customer lifecycle. 
-                            Its goal is to improve business relationships with customers, assisting in customer retention and driving sales growth. 
-                            Here, you can track your customers, manage sales opportunities, and configure essential business settings.
-                        </p>
-                    </div>
-                    <!-- End Welcome Message Section -->
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" role="group" aria-label="Dashboard Statistics">
-                        <div class="bg-white p-6 rounded-lg shadow-md flex items-center justify-between">
-                            <div>
-                                <h3 class="text-lg font-semibold text-gray-600">Total Customers</h3>
-                                <p id="totalCustomersCount" class="text-4xl font-bold text-blue-600">0</p>
-                            </div>
-                            <i class="fas fa-users text-5xl text-blue-300" aria-hidden="true"></i>
-                        </div>
-                        <div class="bg-white p-6 rounded-lg shadow-md flex items-center justify-between">
-                            <div>
-                                <h3 class="text-lg font-semibold text-gray-600">Total Opportunities</h3>
-                                <p id="totalOpportunitiesCount" class="text-4xl font-bold text-green-600">0</p>
-                            </div>
-                            <i class="fas fa-handshake text-5xl text-green-300" aria-hidden="true"></i>
-                        </div>
-                        <div class="bg-white p-6 rounded-lg shadow-md flex items-center justify-between">
-                            <div>
-                                <h3 class="text-lg font-semibold text-gray-600">Open Opportunities</h3>
-                                <p id="openOpportunitiesCount" class="text-4xl font-bold text-yellow-600">0</p>
-                            </div>
-                            <i class="fas fa-folder-open text-5xl text-yellow-300" aria-hidden="true"></i>
-                        </div>
-                        <div class="bg-white p-6 rounded-lg shadow-md flex items-center justify-between">
-                            <div>
-                                <h3 class="text-lg font-semibold text-gray-600">Won Opportunities</h3>
-                                <p id="wonOpportunitiesCount" class="text-4xl font-bold text-purple-600">0</p>
-                            </div>
-                            <i class="fas fa-trophy text-5xl text-purple-300" aria-hidden="true"></i>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Customers Module -->
-                <section id="customersModule" class="module hidden" aria-labelledby="customers-heading">
-                    <h2 id="customers-heading" class="text-3xl font-semibold text-gray-800 mb-6">Customer Management</h2>
-
-                    <!-- Customer Management Introduction -->
-                    <div class="bg-white p-6 rounded-lg shadow-md mb-6" role="region" aria-labelledby="customer-intro-heading">
-                        <h3 id="customer-intro-heading" class="text-2xl font-semibold text-gray-800 mb-3">Manage Your Customer Relationships</h3>
-                        <p class="text-gray-700 leading-relaxed">
-                            This section allows you to efficiently manage all your customer records. 
-                            Keep track of their contact information, communication preferences, industry, and lead source. 
-                            Maintaining accurate customer data is key to building strong relationships and providing personalized service.
-                        </p>
-                    </div>
-                    <!-- End Customer Management Introduction -->
-
-                    <button id="addCustomerBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md mb-6 shadow-md transition duration-300" aria-label="Add New Customer">
-                        <i class="fas fa-plus mr-2" aria-hidden="true"></i>Add New Customer
-                    </button>
-                    <!-- Container for Customers Table and its Loading Indicator -->
-                    <div class="bg-white rounded-lg shadow-md p-4" role="table" aria-label="Customers List">
-                        <div id="customersTableLoading" class="loading-indicator text-center py-8 hidden">
-                            <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-                            <p class="text-gray-500 mt-2">Loading customers...</p>
-                        </div>
-                        <div id="customersGridTarget">
-                            <!-- Grid.js table will be rendered here -->
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Opportunities Module -->
-                <section id="opportunitiesModule" class="module hidden" aria-labelledby="opportunities-heading">
-                    <h2 id="opportunities-heading" class="text-3xl font-semibold text-gray-800 mb-6">Opportunity Management</h2>
-
-                    <!-- Opportunity Management Introduction -->
-                    <div class="bg-white p-6 rounded-lg shadow-md mb-6" role="region" aria-labelledby="opportunity-intro-heading">
-                        <h3 id="opportunity-intro-heading" class="2xl font-semibold text-gray-800 mb-3">Track and Close Your Deals</h3>
-                        <p class="text-gray-700 leading-relaxed">
-                            In this section, you can manage your sales pipeline by creating and tracking opportunities. 
-                            Monitor each opportunity's progress through various sales stages, assign values, and set expected close dates. 
-                            Effective opportunity management helps you forecast sales and prioritize your efforts.
-                        </p>
-                    </div>
-                    <!-- End Opportunity Management Introduction -->
-
-                    <button id="addOpportunityBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md mb-6 shadow-md transition duration-300" aria-label="Add New Opportunity">
-                        <i class="fas fa-plus mr-2" aria-hidden="true"></i>Add New Opportunity
-                    </button>
-                    <!-- Container for Opportunities Table and its Loading Indicator -->
-                    <div class="bg-white rounded-lg shadow-md p-4" role="table" aria-label="Opportunities List">
-                        <div id="opportunitiesTableLoading" class="loading-indicator text-center py-8 hidden">
-                            <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500 mx-auto"></div>
-                            <p class="text-gray-500 mt-2">Loading opportunities...</p>
-                        </div>
-                        <div id="opportunitiesGridTarget">
-                            <!-- Grid.js table will be rendered here -->
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Admin Module -->
-                <section id="adminModule" class="module hidden admin-only" aria-labelledby="admin-heading">
-                    <h2 id="admin-heading" class="text-3xl font-semibold text-gray-800 mb-6">Admin Panel</h2>
-                    <div class="flex space-x-4 mb-6 border-b pb-4" role="tablist">
-                        <button class="admin-section-btn px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 transition duration-200 active" data-admin-target="countriesStates" role="tab" aria-controls="countriesStatesSection" aria-selected="true">
-                            <i class="fas fa-globe mr-2" aria-hidden="true"></i>Countries & States
-                        </button>
-                        <button class="admin-section-btn px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 transition duration-200" data-admin-target="currencies" role="tab" aria-controls="currenciesSection" aria-selected="false">
-                            <i class="fas fa-dollar-sign mr-2" aria-hidden="true"></i>Currencies
-                        </button>
-                        <button class="admin-section-btn px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 transition duration-200" data-admin-target="priceBooks" role="tab" aria-controls="priceBooksSection" aria-selected="false">
-                            <i class="fas fa-book mr-2" aria-hidden="true"></i>Price Books
-                        </button>
-                        <button class="admin-section-btn px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 transition duration-200" data-admin-target="settings" role="tab" aria-controls="settingsSection" aria-selected="false">
-                            <i class="fas fa-cogs mr-2" aria-hidden="true"></i>App Settings
-                        </button>
-                    </div>
-
-                    <!-- Admin Subsections -->
-                    <div id="countriesStatesSection" class="admin-subsection active bg-white p-6 rounded-lg shadow-md" role="tabpanel" aria-labelledby="countriesStates-tab">
-                        <h3 class="text-2xl font-semibold text-gray-700 mb-4">Manage Countries & States</h3>
-                        <form id="countryStateForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" aria-label="Country and State Form">
-                            <input type="hidden" id="countryStateId">
-                            <div>
-                                <label for="countryName" class="block text-sm font-medium text-gray-700">Country Name</label>
-                                <input type="text" id="countryName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required aria-required="true">
-                                <span id="countryNameError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                            </div>
-                            <div>
-                                <label for="countryCode" class="block text-sm font-medium text-gray-700">Country Code (e.g., US, CA)</label>
-                                <input type="text" id="countryCode" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" maxlength="2" required aria-required="true">
-                                <span id="countryCodeError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                            </div>
-                            <div class="md:col-span-2">
-                                <label for="countryStates" class="block text-sm font-medium text-gray-700">States/Provinces (comma-separated)</label>
-                                <textarea id="countryStates" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
-                                <span id="countryStatesError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                            </div>
-                            <div class="md:col-span-2 flex justify-end space-x-3">
-                                <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition duration-300" aria-label="Save Country">Save Country</button>
-                                <button type="button" class="cancel-edit-btn bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-md transition duration-300" aria-label="Cancel Edit">Cancel</button>
-                            </div>
-                        </form>
-                        <!-- Container for Countries & States Table and its Loading Indicator -->
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <div id="countriesStatesTableLoading" class="loading-indicator text-center py-8 hidden">
-                                <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-                                <p class="text-gray-500 mt-2">Loading countries and states...</p>
-                            </div>
-                            <div id="countriesStatesGridTarget" role="table" aria-label="Countries and States List">
-                                <!-- Grid.js table will be rendered here -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="currenciesSection" class="admin-subsection hidden bg-white p-6 rounded-lg shadow-md" role="tabpanel" aria-labelledby="currencies-tab">
-                        <h3 class="text-2xl font-semibold text-gray-700 mb-4">Manage Currencies</h3>
-                        <form id="currencyForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" aria-label="Currency Form">
-                            <input type="hidden" id="currencyId">
-                            <div>
-                                <label for="currencyCountry" class="block text-sm font-medium text-gray-700">Country (for this currency)</label>
-                                <select id="currencyCountry" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required aria-required="true">
-                                    <option value="">Select Country</option>
-                                    <!-- Options populated by JavaScript -->
-                                </select>
-                                <span id="currencyCountryError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                            </div>
-                            <div>
-                                <label for="currencyName" class="block text-sm font-medium text-gray-700">Currency Name</label>
-                                <input type="text" id="currencyName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required aria-required="true">
-                                <span id="currencyNameError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                            </div>
-                            <div>
-                                <label for="currencySymbol" class="block text-sm font-medium text-gray-700">Currency Symbol (e.g., $, €, £)</label>
-                                <input type="text" id="currencySymbol" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required aria-required="true">
-                                <span id="currencySymbolError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                            </div>
-                            <div class="md:col-span-2 flex justify-end space-x-3">
-                                <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition duration-300" aria-label="Save Currency">Save Currency</button>
-                                <button type="button" class="cancel-edit-btn bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-md transition duration-300" aria-label="Cancel Edit">Cancel</button>
-                            </div>
-                        </form>
-                        <!-- Container for Currencies Table and its Loading Indicator -->
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <div id="currenciesTableLoading" class="loading-indicator text-center py-8 hidden">
-                                <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-                                <p class="text-gray-500 mt-2">Loading currencies...</p>
-                            </div>
-                            <div id="currenciesGridTarget" role="table" aria-label="Currencies List">
-                                <!-- Grid.js table will be rendered here -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="priceBooksSection" class="admin-subsection hidden bg-white p-6 rounded-lg shadow-md" role="tabpanel" aria-labelledby="priceBooks-tab">
-                        <h3 class="text-2xl font-semibold text-gray-700 mb-4">Manage Price Books</h3>
-                        <form id="priceBookForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" aria-label="Price Book Form">
-                            <input type="hidden" id="priceBookId">
-                            <div>
-                                <label for="priceBookName" class="block text-sm font-medium text-gray-700">Price Book Name</label>
-                                <input type="text" id="priceBookName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required aria-required="true">
-                                <span id="priceBookNameError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                            </div>
-                            
-                            <div>
-                                <label for="priceBookCountry" class="block text-sm font-medium text-gray-700">Select Country</label>
-                                <select id="priceBookCountry" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required aria-required="true">
-                                    <option value="">Select Country</option>
-                                    <!-- Options populated by JavaScript -->
-                                </select>
-                                <span id="priceBookCountryError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                            </div>
-                            
-                            <div>
-                                <label for="priceBookCurrency" class="block text-sm font-medium text-gray-700">Default Currency</label>
-                                <select id="priceBookCurrency" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required aria-required="true">
-                                    <option value="">Select Currency</option>
-                                    <!-- Options populated by JavaScript -->
-                                </select>
-                                <span id="priceBookCurrencyError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                            </div>
-                            <div class="md:col-span-2">
-                                <label for="priceBookDescription" class="block text-sm font-medium text-gray-700">Description</label>
-                                <textarea id="priceBookDescription" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
-                                <span id="priceBookDescriptionError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                            </div>
-                            <!-- NEW FIELDS FOR PRICE BOOK -->
-                            <div>
-                                <label for="priceBookIsActive" class="block text-sm font-medium text-gray-700">Is Active</label>
-                                <select id="priceBookIsActive" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" aria-required="true">
-                                    <option value="Yes">Yes</option>
-                                    <option value="No">No</option>
-                                </select>
-                                <span id="priceBookIsActiveError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                            </div>
-                            <div>
-                                <label for="priceBookValidFrom" class="block text-sm font-medium text-gray-700">Valid From</label>
-                                <input type="date" id="priceBookValidFrom" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                                <span id="priceBookValidFromError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                            </div>
-                            <div>
-                                <label for="priceBookValidTo" class="block text-sm font-medium text-gray-700">Valid To</label>
-                                <input type="date" id="priceBookValidTo" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                                <span id="priceBookValidToError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                            </div>
-                            <!-- END NEW FIELDS -->
-                            <div class="md:col-span-2 flex justify-end space-x-3">
-                                <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition duration-300" aria-label="Save Price Book">Save Price Book</button>
-                                <button type="button" class="cancel-edit-btn bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-md transition duration-300" aria-label="Cancel Edit">Cancel</button>
-                            </div>
-                        </form>
-                        <!-- Container for Price Books Table and its Loading Indicator -->
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <div id="priceBooksTableLoading" class="loading-indicator text-center py-8 hidden">
-                                <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-                                <p class="text-gray-500 mt-2">Loading price books...</p>
-                            </div>
-                            <div id="priceBooksGridTarget" role="table" aria-label="Price Books List">
-                                <!-- Grid.js table will be rendered here -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="settingsSection" class="admin-subsection hidden bg-white p-6 rounded-lg shadow-md" role="tabpanel" aria-labelledby="settings-tab">
-                        <h3 class="text-2xl font-semibold text-gray-700 mb-4">Application Settings</h3>
-                        <form id="appSettingsForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" aria-label="Application Settings Form">
-                            <input type="hidden" id="settingsDocId">
-                            <div>
-                                <label for="defaultCurrency" class="block text-sm font-medium text-gray-700">Default Currency for New Opportunities</label>
-                                <select id="defaultCurrency" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required aria-required="true">
-                                    <option value="">Select Default Currency</option>
-                                    <!-- Options populated by JavaScript -->
-                                </select>
-                                <span id="defaultCurrencyError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                            </div>
-                            <div>
-                                <label for="defaultCountry" class="block text-sm font-medium text-gray-700">Default Country for New Customers</label>
-                                <select id="defaultCountry" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required aria-required="true">
-                                    <option value="">Select Default Country</option>
-                                    <!-- Options populated by JavaScript -->
-                                </select>
-                                <span id="defaultCountryError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                            </div>
-                            <div class="md:col-span-2 flex justify-end space-x-3">
-                                <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition duration-300" aria-label="Save Settings">Save Settings</button>
-                                <button type="button" class="cancel-edit-btn bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-md transition duration-300" aria-label="Cancel Edit">Cancel</button>
-                            </div>
-                        </form>
-                    </div>
-                </section>
-            </main>
-        </div>
-    </div>
-
-    <!-- Message Box Modal (New) -->
-    <div id="messageBoxModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="messageBoxTitle">
-        <div class="modal-content">
-            <span class="close-button" id="messageBoxCloseBtn" aria-label="Close message">&times;</span>
-            <h2 id="messageBoxTitle" class="text-2xl font-bold mb-4"></h2>
-            <p id="messageBoxMessage" class="text-gray-700"></p>
-            <div class="flex justify-end mt-4">
-                <button id="messageBoxOkBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md shadow-md transition duration-300" aria-label="OK">OK</button>
+            <div id="auth-status" class="flex items-center space-x-2">
+                <span id="user-display-name" class="font-medium"></span>
+                <span id="user-id-display" class="text-sm text-blue-200"></span>
             </div>
         </div>
-    </div>
+    </header>
 
-    <!-- Customer Modal -->
-    <div id="customerModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="customerModalTitle">
-        <div class="modal-content">
-            <span class="close-button" aria-label="Close customer form">&times;</span>
-            <h2 id="customerModalTitle" class="text-2xl font-bold mb-4">Add New Customer</h2>
-            <form id="customerForm" class="grid grid-cols-1 md:grid-cols-2 gap-4" aria-label="Customer Form">
-                <input type="hidden" id="customerId">
-                <div>
-                    <label for="customerType" class="block text-sm font-medium text-gray-700">Customer Type</label>
-                    <select id="customerType" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required aria-required="true">
-                        <option value="Individual">Individual</option>
-                        <option value="Business">Business</option>
-                    </select>
-                    <span id="customerTypeError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div>
-                    <label for="customerName" class="block text-sm font-medium text-gray-700">Name</label>
-                    <input type="text" id="customerName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required aria-required="true">
-                    <span id="customerNameError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div>
-                    <label for="customerEmail" class="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" id="customerEmail" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                    <span id="customerEmailError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div>
-                    <label for="customerPhone" class="block text-sm font-medium text-gray-700">Phone</label>
-                    <input type="tel" id="customerPhone" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                    <span id="customerPhoneError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div class="md:col-span-2">
-                    <label for="customerAddress" class="block text-sm font-medium text-gray-700">Address</label>
-                    <textarea id="customerAddress" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
-                    <span id="customerAddressError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div>
-                    <label for="customerCountry" class="block text-sm font-medium text-gray-700">Country</label>
-                    <select id="customerCountry" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                        <option value="">Select Country</option>
-                        <!-- Options populated by JavaScript -->
-                    </select>
-                    <span id="customerCountryError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div>
-                    <label for="customerPreferredContactMethod" class="block text-sm font-medium text-gray-700">Preferred Contact Method</label>
-                    <select id="customerPreferredContactMethod" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" aria-required="true">
-                        <option value="Email">Email</option>
-                        <option value="Phone">Phone</option>
-                        <option value="SMS">SMS</option>
-                    </select>
-                    <span id="customerPreferredContactMethodError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div>
-                    <label for="customerIndustry" class="block text-sm font-medium text-gray-700">Industry</label>
-                    <select id="customerIndustry" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                        <option value="">Select Industry</option>
-                        <option value="Technology">Technology</option>
-                        <option value="Healthcare">Healthcare</option>
-                        <option value="Finance">Finance</option>
-                        <option value="Retail">Retail</option>
-                        <option value="Education">Education</option>
-                        <option value="Other">Other</option>
-                    </select>
-                    <span id="customerIndustryError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div>
-                    <label for="customerSource" class="block text-sm font-medium text-gray-700">Lead Source</label>
-                    <select id="customerSource" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                        <option value="">Select Source</option>
-                        <option value="Website">Website</option>
-                        <option value="Referral">Referral</option>
-                        <option value="Advertisement">Advertisement</option>
-                        <option value="Social Media">Social Media</option>
-                        <option value="Event">Event</option>
-                        <option value="Other">Other</option>
-                    </select>
-                    <span id="customerSourceError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div class="md:col-span-2">
-                    <label for="customerAdditionalDetails" class="block text-sm font-medium text-gray-700">Additional Details</label>
-                    <textarea id="customerAdditionalDetails" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
-                    <span id="customerAdditionalDetailsError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div>
-                    <label for="customerActive" class="block text-sm font-medium text-gray-700">Active Customer</label>
-                    <select id="customerActive" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" aria-required="true">
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                    </select>
-                    <span id="customerActiveError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div class="md:col-span-2 flex justify-end space-x-3 mt-4">
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md shadow-md transition duration-300" aria-label="Save Customer">Save Customer</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <main class="container mx-auto p-6 flex-grow">
 
-    <!-- Opportunity Modal -->
-    <div id="opportunityModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="opportunityModalTitle">
-        <div class="modal-content">
-            <span class="close-button" aria-label="Close opportunity form">&times;</span>
-            <h2 id="opportunityModalTitle" class="text-2xl font-bold mb-4">Add New Opportunity</h2>
-            <form id="opportunityForm" class="grid grid-cols-1 md:grid-cols-2 gap-4" aria-label="Opportunity Form">
-                <input type="hidden" id="opportunityId">
-                <div>
-                    <label for="opportunityName" class="block text-sm font-medium text-gray-700">Opportunity Name</label>
-                    <input type="text" id="opportunityName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required aria-required="true">
-                    <span id="opportunityNameError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
+        <!-- Message Box for alerts/confirmations -->
+        <div id="message-box" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 hidden">
+            <div class="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full text-center">
+                <p id="message-content" class="text-lg font-semibold mb-6"></p>
+                <div class="flex justify-center space-x-4">
+                    <button id="message-confirm-btn" class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 hidden">Confirm</button>
+                    <button id="message-cancel-btn" class="px-6 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">OK</button>
                 </div>
-                <div>
-                    <label for="opportunityCustomer" class="block text-sm font-medium text-gray-700">Customer</label>
-                    <select id="opportunityCustomer" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required aria-required="true">
-                        <option value="">Select a Customer</option>
-                        <!-- Options populated by JavaScript -->
-                    </select>
-                    <span id="opportunityCustomerError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div>
-                    <label for="opportunityCurrency" class="block text-sm font-medium text-gray-700">Currency</label>
-                    <select id="opportunityCurrency" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required aria-required="true">
-                        <option value="">Select Currency</option>
-                        <!-- Options populated by JavaScript -->
-                    </select>
-                    <span id="opportunityCurrencyError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div>
-                    <label for="opportunityPriceBook" class="block text-sm font-medium text-gray-700">Price Book</label>
-                    <select id="opportunityPriceBook" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                        <option value="">Select a Price Book</option>
-                        <!-- Options populated by JavaScript -->
-                    </select>
-                    <span id="opportunityPriceBookError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div>
-                    <label for="opportunityExpectedStartDate" class="block text-sm font-medium text-gray-700">Expected Start Date</label>
-                    <input type="date" id="opportunityExpectedStartDate" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                    <span id="opportunityExpectedStartDateError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div>
-                    <label for="opportunityExpectedCloseDate" class="block text-sm font-medium text-gray-700">Expected Close Date</label>
-                    <input type="date" id="opportunityExpectedCloseDate" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                    <span id="opportunityExpectedCloseDateError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div>
-                    <label for="opportunitySalesStage" class="block text-sm font-medium text-gray-700">Sales Stage</label>
-                    <select id="opportunitySalesStage" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" aria-required="true">
-                        <option value="Prospect">Prospect</option>
-                        <option value="Qualification">Qualification</option>
-                        <option value="Proposal">Proposal</option>
-                        <option value="Negotiation">Negotiation</option>
-                        <option value="Won">Won</option>
-                        <option value="Lost">Lost</option>
-                    </select>
-                    <span id="opportunitySalesStageError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div>
-                    <label for="opportunityProbability" class="block text-sm font-medium text-gray-700">Probability (%)</label>
-                    <input type="number" id="opportunityProbability" min="0" max="100" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                    <span id="opportunityProbabilityError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div>
-                    <label for="opportunityValue" class="block text-sm font-medium text-gray-700">Value</label>
-                    <input type="number" id="opportunityValue" step="0.01" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                    <span id="opportunityValueError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div class="md:col-span-2">
-                    <label for="opportunityNotes" class="block text-sm font-medium text-gray-700">Notes</label>
-                    <textarea id="opportunityNotes" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
-                    <span id="opportunityNotesError" class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                </div>
-                <div class="md:col-span-2 flex justify-end space-x-3 mt-4">
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md shadow-md transition duration-300" aria-label="Save Opportunity">Save Opportunity</button>
-                </div>
-            </form>
+            </div>
         </div>
-    </div>
-    <script type="module" src="js/script.js?v=2025070401" defer></script>
+
+        <!-- Login/Signup Section -->
+        <section id="auth-section" class="hidden bg-white p-8 rounded-lg shadow-md max-w-md mx-auto mt-10">
+            <h2 class="text-2xl font-semibold mb-6 text-center">Login / Sign Up</h2>
+            <form id="auth-form" class="space-y-4">
+                <div>
+                    <label for="auth-email" class="block text-sm font-medium text-gray-700">Email:</label>
+                    <input type="email" id="auth-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="auth-password" class="block text-sm font-medium text-gray-700">Password:</label>
+                    <input type="password" id="auth-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <button type="submit" id="login-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-300">Login</button>
+                <button type="button" id="signup-btn" class="w-full bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 transition duration-300">Sign Up</button>
+            </form>
+            <p id="auth-error-message" class="text-red-500 text-sm mt-4 text-center hidden"></p>
+        </section>
+
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="block bg-white p-8 rounded-lg shadow-md mt-10">
+            <h2 class="text-3xl font-bold mb-6 text-blue-800">Welcome to ShutterSync CRM!</h2>
+            <p class="text-gray-700 mb-8 text-lg leading-relaxed">
+                Your comprehensive solution for managing customer relationships and sales opportunities.
+                Gain insights into your business performance at a glance with the metrics below.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Total Customers Card -->
+                <div class="bg-blue-600 text-white p-6 rounded-lg shadow-md flex items-center space-x-4">
+                    <div class="flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold mb-1">Total Customers</h3>
+                        <p id="dashboard-total-customers" class="text-4xl font-bold">0</p>
+                    </div>
+                </div>
+
+                <!-- Total Opportunities Card -->
+                <div class="bg-purple-600 text-white p-6 rounded-lg shadow-md flex items-center space-x-4">
+                    <div class="flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-briefcase"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold mb-1">Total Opportunities</h3>
+                        <p id="dashboard-total-opportunities" class="text-4xl font-bold">0</p>
+                    </div>
+                </div>
+
+                <!-- Open Opportunities Card -->
+                <div class="bg-orange-600 text-white p-6 rounded-lg shadow-md flex items-center space-x-4">
+                    <div class="flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder-open"><path d="M6 14H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2.5L7 4.5 8.5 3h6L16 4.5 17.5 3H20a2 2 0 0 1 2 2v3"/><path d="M2 12h10l2 5h8"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold mb-1">Open Opportunities</h3>
+                        <p id="dashboard-open-opportunities" class="text-4xl font-bold">0</p>
+                    </div>
+                </div>
+
+                <!-- Won Opportunities Card -->
+                <div class="bg-green-600 text-white p-6 rounded-lg shadow-md flex items-center space-x-4">
+                    <div class="flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold mb-1">Won Opportunities</h3>
+                        <p id="dashboard-won-opportunities" class="text-4xl font-bold">0</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Customers Section -->
+        <section id="customers-section" class="hidden bg-white p-8 rounded-lg shadow-md mt-10">
+            <h2 class="text-2xl font-semibold mb-6">Customers</h2>
+            <div class="flex justify-between items-center mb-4">
+                <button id="add-customer-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Add New Customer</button>
+                <input type="text" id="customer-search" placeholder="Search customers..." class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div id="customer-form-container" class="hidden bg-gray-50 p-6 rounded-lg shadow-inner mb-6">
+                <h3 class="text-xl font-semibold mb-4">Add/Edit Customer</h3>
+                <form id="customer-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="customer-type" class="block text-sm font-medium text-gray-700">Type:</label>
+                        <select id="customer-type" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select Type</option>
+                            <option value="Individual">Individual</option>
+                            <option value="Business">Business</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="customer-name" class="block text-sm font-medium text-gray-700">Name:</label>
+                        <input type="text" id="customer-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="customer-email" class="block text-sm font-medium text-gray-700">Email:</label>
+                        <input type="email" id="customer-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="customer-phone" class="block text-sm font-medium text-gray-700">Phone:</label>
+                        <input type="tel" id="customer-phone" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="customer-address" class="block text-sm font-medium text-gray-700">Address:</label>
+                        <input type="text" id="customer-address" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="customer-country" class="block text-sm font-medium text-gray-700">Country:</label>
+                        <select id="customer-country" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></select>
+                    </div>
+                    <div>
+                        <label for="customer-contact-method" class="block text-sm font-medium text-gray-700">Preferred Contact Method:</label>
+                        <select id="customer-contact-method" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select Method</option>
+                            <option value="Email">Email</option>
+                            <option value="Phone">Phone</option>
+                            <option value="SMS">SMS</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="customer-industry" class="block text-sm font-medium text-gray-700">Industry:</label>
+                        <select id="customer-industry" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select Industry</option>
+                            <option value="Technology">Technology</option>
+                            <option value="Healthcare">Healthcare</option>
+                            <option value="Finance">Finance</option>
+                            <option value="Retail">Retail</option>
+                            <option value="Education">Education</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="customer-source" class="block text-sm font-medium text-gray-700">Source:</label>
+                        <select id="customer-source" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select Source</option>
+                            <option value="Website">Website</option>
+                            <option value="Referral">Referral</option>
+                            <option value="Advertisement">Advertisement</option>
+                            <option value="Social Media">Social Media</option>
+                            <option value="Event">Event</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="customer-details" class="block text-sm font-medium text-gray-700">Additional Details:</label>
+                        <textarea id="customer-details" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="flex items-center md:col-span-2">
+                        <input type="checkbox" id="customer-active" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <label for="customer-active" class="ml-2 block text-sm text-gray-900">Active Customer</label>
+                    </div>
+                    <div class="md:col-span-2 flex justify-end space-x-3">
+                        <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300">Save Customer</button>
+                        <button type="button" id="cancel-customer-btn" class="px-6 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                    </div>
+                </form>
+                <p id="customer-form-message" class="text-red-500 text-sm mt-4 hidden"></p>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
+                    <thead class="bg-gray-200">
+                        <tr>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Name</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Email</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Phone</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Country</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Active</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customers-table-body" class="divide-y divide-gray-200">
+                        <!-- Customer rows will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+                <p id="no-customers-message" class="text-center text-gray-500 mt-4 hidden">No customers found.</p>
+            </div>
+        </section>
+
+        <!-- Opportunities Section -->
+        <section id="opportunities-section" class="hidden bg-white p-8 rounded-lg shadow-md mt-10">
+            <h2 class="text-2xl font-semibold mb-6">Opportunities</h2>
+            <div class="flex justify-between items-center mb-4">
+                <button id="add-opportunity-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Add New Opportunity</button>
+                <input type="text" id="opportunity-search" placeholder="Search opportunities..." class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div id="opportunity-form-container" class="hidden bg-gray-50 p-6 rounded-lg shadow-inner mb-6">
+                <h3 class="text-xl font-semibold mb-4">Add/Edit Opportunity</h3>
+                <form id="opportunity-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="opportunity-name" class="block text-sm font-medium text-gray-700">Opportunity Name:</label>
+                        <input type="text" id="opportunity-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="opportunity-customer" class="block text-sm font-medium text-gray-700">Customer:</label>
+                        <select id="opportunity-customer" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></select>
+                    </div>
+                    <div>
+                        <label for="opportunity-currency" class="block text-sm font-medium text-gray-700">Currency:</label>
+                        <select id="opportunity-currency" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></select>
+                    </div>
+                    <div>
+                        <label for="opportunity-price-book" class="block text-sm font-medium text-gray-700">Price Book:</label>
+                        <select id="opportunity-price-book" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></select>
+                    </div>
+                    <div>
+                        <label for="opportunity-start-date" class="block text-sm font-medium text-gray-700">Expected Start Date:</label>
+                        <input type="date" id="opportunity-start-date" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="opportunity-close-date" class="block text-sm font-medium text-gray-700">Expected Close Date:</label>
+                        <input type="date" id="opportunity-close-date" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="opportunity-sales-stage" class="block text-sm font-medium text-gray-700">Sales Stage:</label>
+                        <select id="opportunity-sales-stage" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select Stage</option>
+                            <option value="Prospect">Prospect</option>
+                            <option value="Qualification">Qualification</option>
+                            <option value="Proposal">Proposal</option>
+                            <option value="Negotiation">Negotiation</option>
+                            <option value="Won">Won</option>
+                            <option value="Lost">Lost</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="opportunity-probability" class="block text-sm font-medium text-gray-700">Probability (%):</label>
+                        <input type="number" id="opportunity-probability" min="0" max="100" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="opportunity-value" class="block text-sm font-medium text-gray-700">Value:</label>
+                        <input type="number" id="opportunity-value" min="0" step="0.01" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="opportunity-notes" class="block text-sm font-medium text-gray-700">Notes:</label>
+                        <textarea id="opportunity-notes" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="md:col-span-2 flex justify-end space-x-3">
+                        <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300">Save Opportunity</button>
+                        <button type="button" id="cancel-opportunity-btn" class="px-6 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                    </div>
+                </form>
+                <p id="opportunity-form-message" class="text-red-500 text-sm mt-4 hidden"></p>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
+                    <thead class="bg-gray-200">
+                        <tr>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Name</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Customer</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Value</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Stage</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Close Date</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="opportunities-table-body" class="divide-y divide-gray-200">
+                        <!-- Opportunity rows will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+                <p id="no-opportunities-message" class="text-center text-gray-500 mt-4 hidden"></p>
+            </div>
+        </section>
+
+        <!-- Countries Section (Admin Only) -->
+        <section id="countries-section" class="hidden bg-white p-8 rounded-lg shadow-md mt-10">
+            <h2 class="text-2xl font-semibold mb-6">Manage Countries</h2>
+            <div class="flex justify-between items-center mb-4">
+                <button id="add-country-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Add New Country</button>
+                <input type="text" id="country-search" placeholder="Search countries..." class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div id="country-form-container" class="hidden bg-gray-50 p-6 rounded-lg shadow-inner mb-6">
+                <h3 class="text-xl font-semibold mb-4">Add/Edit Country</h3>
+                <form id="country-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="country-name" class="block text-sm font-medium text-gray-700">Country Name:</label>
+                        <input type="text" id="country-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="country-code" class="block text-sm font-medium text-gray-700">Country Code (e.g., US, GB):</label>
+                        <input type="text" id="country-code" required maxlength="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="md:col-span-2 flex justify-end space-x-3">
+                        <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300">Save Country</button>
+                        <button type="button" id="cancel-country-btn" class="px-6 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                    </div>
+                </form>
+                <p id="country-form-message" class="text-red-500 text-sm mt-4 hidden"></p>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
+                    <thead class="bg-gray-200">
+                        <tr>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Name</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Code</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="countries-table-body" class="divide-y divide-gray-200">
+                        <!-- Country rows will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+                <p id="no-countries-message" class="text-center text-gray-500 mt-4 hidden">No countries found.</p>
+            </div>
+        </section>
+
+        <!-- Currencies Section (Admin Only) -->
+        <section id="currencies-section" class="hidden bg-white p-8 rounded-lg shadow-md mt-10">
+            <h2 class="text-2xl font-semibold mb-6">Manage Currencies</h2>
+            <div class="flex justify-between items-center mb-4">
+                <button id="add-currency-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Add New Currency</button>
+                <input type="text" id="currency-search" placeholder="Search currencies..." class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div id="currency-form-container" class="hidden bg-gray-50 p-6 rounded-lg shadow-inner mb-6">
+                <h3 class="text-xl font-semibold mb-4">Add/Edit Currency</h3>
+                <form id="currency-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="currency-name" class="block text-sm font-medium text-gray-700">Currency Name:</label>
+                        <input type="text" id="currency-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="currency-code" class="block text-sm font-medium text-gray-700">Currency Code (e.g., USD, EUR):</label>
+                        <input type="text" id="currency-code" required maxlength="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="currency-symbol" class="block text-sm font-medium text-gray-700">Symbol (e.g., $, €):</label>
+                        <input type="text" id="currency-symbol" required maxlength="5" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="md:col-span-2 flex justify-end space-x-3">
+                        <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300">Save Currency</button>
+                        <button type="button" id="cancel-currency-btn" class="px-6 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                    </div>
+                </form>
+                <p id="currency-form-message" class="text-red-500 text-sm mt-4 hidden"></p>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
+                    <thead class="bg-gray-200">
+                        <tr>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Name</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Code</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Symbol</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="currencies-table-body" class="divide-y divide-gray-200">
+                        <!-- Currency rows will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+                <p id="no-currencies-message" class="text-center text-gray-500 mt-4 hidden">No currencies found.</p>
+            </div>
+        </section>
+
+        <!-- Price Books Section -->
+        <section id="price-books-section" class="hidden bg-white p-8 rounded-lg shadow-md mt-10">
+            <h2 class="text-2xl font-semibold mb-6">Price Books</h2>
+            <div class="flex justify-between items-center mb-4">
+                <button id="add-price-book-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Add New Price Book</button>
+                <input type="text" id="price-book-search" placeholder="Search price books..." class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div id="price-book-form-container" class="hidden bg-gray-50 p-6 rounded-lg shadow-inner mb-6">
+                <h3 class="text-xl font-semibold mb-4">Add/Edit Price Book</h3>
+                <form id="price-book-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="price-book-name" class="block text-sm font-medium text-gray-700">Name:</label>
+                        <input type="text" id="price-book-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="price-book-currency" class="block text-sm font-medium text-gray-700">Currency:</label>
+                        <select id="price-book-currency" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></select>
+                    </div>
+                    <div>
+                        <label for="price-book-country" class="block text-sm font-medium text-gray-700">Country:</label>
+                        <select id="price-book-country" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></select>
+                    </div>
+                    <div>
+                        <label for="price-book-valid-from" class="block text-sm font-medium text-gray-700">Valid From:</label>
+                        <input type="date" id="price-book-valid-from" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="price-book-valid-to" class="block text-sm font-medium text-gray-700">Valid To:</label>
+                        <input type="date" id="price-book-valid-to" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="price-book-description" class="block text-sm font-medium text-gray-700">Description:</label>
+                        <textarea id="price-book-description" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="flex items-center md:col-span-2">
+                        <input type="checkbox" id="price-book-active" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <label for="price-book-active" class="ml-2 block text-sm text-gray-900">Is Active</label>
+                    </div>
+                    <div class="md:col-span-2 flex justify-end space-x-3">
+                        <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300">Save Price Book</button>
+                        <button type="button" id="cancel-price-book-btn" class="px-6 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                    </div>
+                </form>
+                <p id="price-book-form-message" class="text-red-500 text-sm mt-4 hidden"></p>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
+                    <thead class="bg-gray-200">
+                        <tr>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Name</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Currency</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Country</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Active</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Valid From</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Valid To</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-700">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="price-books-table-body" class="divide-y divide-gray-200">
+                        <!-- Price Book rows will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+                <p id="no-price-books-message" class="text-center text-gray-500 mt-4 hidden"></p>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-gray-800 text-white p-4 text-center mt-auto">
+        <div class="container mx-auto">
+            <p>&copy; 2025 ShutterSync CRM. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script type="module" src="js/script.js"></script>
 </body>
 </html>
