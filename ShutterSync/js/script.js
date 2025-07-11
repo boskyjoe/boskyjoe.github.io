@@ -359,7 +359,7 @@ onAuthStateChanged(auth, async (user) => {
 
         try {
             // Fetch user's custom claims for role from Firestore
-            // The users_data collection is now a top-level collection as per user's request.
+            // The users_data collection is now a top-level collection as per your request.
             const userDocRef = doc(db, 'users_data', user.uid);
             const userDoc = await getDoc(userDocRef);
 
@@ -521,18 +521,16 @@ async function updateDashboardStats() {
     if (!currentUser) return; // Ensure user is authenticated
 
     try {
-        let customerQueryRef = collection(db, `artifacts/${appId}/users/${userId}/customers`);
+        // For customers, the security rule allows all authenticated users to read all customers.
+        // So, we query all customers regardless of creatorId for dashboard stats.
+        let customerQueryRef = collection(db, `customers`); // Corrected path
         let qCustomers = query(customerQueryRef);
-        // Filter customers by creatorId if not an Admin
-        if (currentUserRole !== 'Admin') {
-            qCustomers = query(customerQueryRef, where('creatorId', '==', currentUser.uid));
-        }
         const customersSnapshot = await getDocs(qCustomers);
         dashboardTotalCustomers.textContent = customersSnapshot.size;
 
-        let opportunityQueryRef = collection(db, `artifacts/${appId}/users/${userId}/opportunities`);
+        let opportunityQueryRef = collection(db, `opportunities`); // Corrected path
         let qOpportunities = query(opportunityQueryRef);
-        // Filter opportunities by creatorId if not an Admin
+        // Filter opportunities by creatorId if not an Admin, as per security rules
         if (currentUserRole !== 'Admin') {
             qOpportunities = query(opportunityQueryRef, where('creatorId', '==', currentUser.uid));
         }
@@ -594,7 +592,8 @@ cancelPriceBookBtn.addEventListener('click', () => resetAndHideForm(priceBookFor
  */
 async function populateCustomerCountryDropdown(selectedCountry = null) {
     if (!currentUser) return;
-    await populateSelect(customerCountrySelect, `artifacts/${appId}/public/data/countries`, 'name', 'name', selectedCountry);
+    // Corrected path for public data
+    await populateSelect(customerCountrySelect, `countries`, 'name', 'name', selectedCountry);
 }
 
 // Event listener to open the Customer Form for adding a new customer
@@ -647,13 +646,13 @@ customerForm.addEventListener('submit', async (e) => {
     try {
         if (customerIdInput.value) {
             // Update existing customer
-            await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/customers`, customerIdInput.value), customerData);
+            await updateDoc(doc(db, `customers`, customerIdInput.value), customerData); // Corrected path
             showMessageBox('Customer updated successfully!', false);
         } else {
             // Add new customer
             customerData.createdAt = serverTimestamp();
             customerData.creatorId = currentUser.uid;
-            await addDoc(collection(db, `artifacts/${appId}/users/${userId}/customers`), customerData);
+            await addDoc(collection(db, `customers`), customerData); // Corrected path
             showMessageBox('Customer added successfully!', false);
         }
         resetAndHideForm(customerForm, customerFormContainer, '', customerFormMessage); // Clear and hide form
@@ -684,11 +683,10 @@ async function renderCustomersGrid() {
     customersTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Loading Customers...</td></tr>';
     noCustomersMessage.classList.add('hidden');
 
-    let customersRef = collection(db, `artifacts/${appId}/users/${userId}/customers`);
+    // FIX: Removed client-side filtering by creatorId for customers as per new Firestore rules.
+    // Now all authenticated users can read all customers.
+    let customersRef = collection(db, `customers`); // Corrected path
     let q = query(customersRef, orderBy('name'));
-    if (currentUserRole !== 'Admin') {
-        q = query(customersRef, where('creatorId', '==', currentUser.uid), orderBy('name'));
-    }
     const customerData = [];
 
     try {
@@ -790,7 +788,7 @@ async function editCustomer(customerId) {
     if (!currentUser) { showMessageBox('Please sign in to edit customers.', false); return; }
 
     try {
-        const docSnap = await getDoc(doc(db, `artifacts/${appId}/users/${userId}/customers`, customerId));
+        const docSnap = await getDoc(doc(db, `customers`, customerId)); // Corrected path
         if (docSnap.exists()) {
             const data = docSnap.data();
             // Check if current user is the creator or an Admin
@@ -844,7 +842,7 @@ async function deleteCustomer(customerId) {
     if (!confirmed) return;
 
     try {
-        const docSnap = await getDoc(doc(db, `artifacts/${appId}/users/${userId}/customers`, customerId));
+        const docSnap = await getDoc(doc(db, `customers`, customerId)); // Corrected path
         if (!docSnap.exists()) {
             showMessageBox('Customer not found!', false);
             return;
@@ -857,13 +855,13 @@ async function deleteCustomer(customerId) {
         }
 
         // Check if there are any opportunities linked to this customer
-        const opportunitiesSnapshot = await getDocs(query(collection(db, `artifacts/${appId}/users/${userId}/opportunities`), where('customerId', '==', customerId)));
+        const opportunitiesSnapshot = await getDocs(query(collection(db, `opportunities`), where('customerId', '==', customerId))); // Corrected path
         if (!opportunitiesSnapshot.empty) {
             showMessageBox('Cannot delete customer: There are existing opportunities linked to this customer. Please delete the opportunities first.', false);
             return;
         }
 
-        await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/customers`, customerId));
+        await deleteDoc(doc(db, `customers`, customerId)); // Corrected path
         showMessageBox('Customer deleted successfully!', false);
         renderCustomersGrid();
         updateDashboardStats();
@@ -884,11 +882,10 @@ async function populateOpportunityCustomerDropdown(selectedCustomerId = null) {
     if (!currentUser) return;
     const selectElement = opportunityCustomerSelect;
     selectElement.innerHTML = '<option value="">Select a Customer</option>';
-    let customerQueryRef = collection(db, `artifacts/${appId}/users/${userId}/customers`);
+    let customerQueryRef = collection(db, `customers`); // Corrected path
+    // The security rule for customers allows all authenticated users to read all customers.
+    // So, we don't need to filter by creatorId here.
     let q = query(customerQueryRef, orderBy('name'));
-    if (currentUserRole !== 'Admin') {
-        q = query(customerQueryRef, where('creatorId', '==', currentUser.uid), orderBy('name'));
-    }
     const snapshot = await getDocs(q);
     snapshot.forEach(doc => {
         const data = doc.data();
@@ -908,7 +905,8 @@ async function populateOpportunityCustomerDropdown(selectedCustomerId = null) {
  */
 async function populateOpportunityCurrencyDropdown(selectedCurrencySymbol = null) {
     if (!currentUser) return;
-    await populateSelect(opportunityCurrencySelect, `artifacts/${appId}/public/data/currencies`, 'symbol', 'name', selectedCurrencySymbol);
+    // Corrected path for public data
+    await populateSelect(opportunityCurrencySelect, `currencies`, 'symbol', 'name', selectedCurrencySymbol);
 }
 
 /**
@@ -919,7 +917,8 @@ async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null) 
     if (!currentUser) return;
     const selectElement = opportunityPriceBookSelect;
     selectElement.innerHTML = '<option value="">Select a Price Book</option>';
-    const snapshot = await getDocs(query(collection(db, `artifacts/${appId}/public/data/priceBooks`), orderBy('name')));
+    // Corrected path for public data
+    const snapshot = await getDocs(query(collection(db, `priceBooks`), orderBy('name')));
     snapshot.forEach(doc => {
         const data = doc.data();
         const option = document.createElement('option');
@@ -976,12 +975,12 @@ opportunityForm.addEventListener('submit', async (e) => {
 
     try {
         if (opportunityIdInput.value) {
-            await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/opportunities`, opportunityIdInput.value), opportunityData);
+            await updateDoc(doc(db, `opportunities`, opportunityIdInput.value), opportunityData); // Corrected path
             showMessageBox('Opportunity updated successfully!', false);
         } else {
             opportunityData.createdAt = serverTimestamp();
             opportunityData.creatorId = currentUser.uid;
-            await addDoc(collection(db, `artifacts/${appId}/users/${userId}/opportunities`), opportunityData);
+            await addDoc(collection(db, `opportunities`), opportunityData); // Corrected path
             showMessageBox('Opportunity added successfully!', false);
         }
         resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage); // Clear and hide form
@@ -1011,7 +1010,7 @@ async function renderOpportunitiesGrid() {
     opportunitiesTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Loading Opportunities...</td></tr>';
     noOpportunitiesMessage.classList.add('hidden');
 
-    let opportunitiesRef = collection(db, `artifacts/${appId}/users/${userId}/opportunities`);
+    let opportunitiesRef = collection(db, `opportunities`); // Corrected path
     let q = query(opportunitiesRef, orderBy('expectedCloseDate'));
     if (currentUserRole !== 'Admin') {
         q = query(opportunitiesRef, where('creatorId', '==', currentUser.uid), orderBy('expectedCloseDate'));
@@ -1128,7 +1127,7 @@ async function editOpportunity(opportunityId) {
     if (!currentUser) { showMessageBox('Please sign in to edit opportunities.', false); return; }
 
     try {
-        const docSnap = await getDoc(doc(db, `artifacts/${appId}/users/${userId}/opportunities`, opportunityId));
+        const docSnap = await getDoc(doc(db, `opportunities`, opportunityId)); // Corrected path
         if (docSnap.exists()) {
             const data = docSnap.data();
             // Check if current user is the creator or an Admin
@@ -1181,7 +1180,7 @@ async function deleteOpportunity(opportunityId) {
     if (!confirmed) return;
 
     try {
-        const docSnap = await getDoc(doc(db, `artifacts/${appId}/users/${userId}/opportunities`, opportunityId));
+        const docSnap = await getDoc(doc(db, `opportunities`, opportunityId)); // Corrected path
         if (!docSnap.exists()) {
             showMessageBox('Opportunity not found!', false);
             return;
@@ -1193,7 +1192,7 @@ async function deleteOpportunity(opportunityId) {
             return;
         }
 
-        await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/opportunities`, opportunityId));
+        await deleteDoc(doc(db, `opportunities`, opportunityId)); // Corrected path
         showMessageBox('Opportunity deleted successfully!', false);
         renderOpportunitiesGrid();
         updateDashboardStats();
@@ -1234,7 +1233,7 @@ countryForm.addEventListener('submit', async (e) => {
 
     try {
         // Client-side validation for unique country code
-        let q = query(collection(db, `artifacts/${appId}/public/data/countries`), where('code', '==', countryData.code));
+        let q = query(collection(db, `countries`), where('code', '==', countryData.code)); // Corrected path
         const existingCountriesSnapshot = await getDocs(q);
 
         let isDuplicate = false;
@@ -1257,10 +1256,10 @@ countryForm.addEventListener('submit', async (e) => {
         }
 
         if (countryIdInput.value) {
-            await updateDoc(doc(db, `artifacts/${appId}/public/data/countries`, countryIdInput.value), countryData);
+            await updateDoc(doc(db, `countries`, countryIdInput.value), countryData); // Corrected path
             showMessageBox('Country updated successfully!', false);
         } else {
-            await addDoc(collection(db, `artifacts/${appId}/public/data/countries`), countryData);
+            await addDoc(collection(db, `countries`), countryData); // Corrected path
             showMessageBox('Country added successfully!', false);
         }
         resetAndHideForm(countryForm, countryFormContainer, '', countryFormMessage); // Clear and hide form
@@ -1292,7 +1291,7 @@ async function renderCountriesStatesGrid() {
     countriesTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4">Loading Countries...</td></tr>';
     noCountriesMessage.classList.add('hidden');
 
-    const countriesRef = collection(db, `artifacts/${appId}/public/data/countries`);
+    const countriesRef = collection(db, `countries`); // Corrected path
     const data = [];
 
     try {
@@ -1383,7 +1382,7 @@ async function renderCountriesStatesGrid() {
 async function editCountryState(id) {
     if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can edit countries.', false); return; }
     try {
-        const docSnap = await getDoc(doc(db, `artifacts/${appId}/public/data/countries`, id));
+        const docSnap = await getDoc(doc(db, `countries`, id)); // Corrected path
         if (docSnap.exists()) {
             const data = docSnap.data();
             // Add hidden input for countryId if it doesn't exist
@@ -1421,7 +1420,7 @@ async function deleteCountryState(id) {
     if (!confirmed) return;
 
     try {
-        await deleteDoc(doc(db, `artifacts/${appId}/public/data/countries`, id));
+        await deleteDoc(doc(db, `countries`, id)); // Corrected path
         showMessageBox('Country deleted successfully!', false);
         renderCountriesStatesGrid();
         populateCustomerCountryDropdown();
@@ -1465,7 +1464,7 @@ currencyForm.addEventListener('submit', async (e) => {
 
     try {
         // Client-Side Uniqueness Validation for Currency (Code)
-        let q = query(collection(db, `artifacts/${appId}/public/data/currencies`), where('code', '==', currencyData.code));
+        let q = query(collection(db, `currencies`), where('code', '==', currencyData.code)); // Corrected path
         const existingCurrenciesSnapshot = await getDocs(q);
 
         let isDuplicate = false;
@@ -1488,10 +1487,10 @@ currencyForm.addEventListener('submit', async (e) => {
         }
 
         if (currencyIdInput.value) {
-            await updateDoc(doc(db, `artifacts/${appId}/public/data/currencies`, currencyIdInput.value), currencyData);
+            await updateDoc(doc(db, `currencies`, currencyIdInput.value), currencyData); // Corrected path
             showMessageBox('Currency updated successfully!', false);
         } else {
-            await addDoc(collection(db, `artifacts/${appId}/public/data/currencies`), currencyData);
+            await addDoc(collection(db, `currencies`), currencyData); // Corrected path
             showMessageBox('Currency added successfully!', false);
         }
         resetAndHideForm(currencyForm, currencyFormContainer, '', currencyFormMessage); // Clear and hide form
@@ -1522,7 +1521,7 @@ async function renderCurrenciesGrid() {
     currenciesTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Loading Currencies...</td></tr>';
     noCurrenciesMessage.classList.add('hidden');
 
-    const currenciesRef = collection(db, `artifacts/${appId}/public/data/currencies`);
+    const currenciesRef = collection(db, `currencies`); // Corrected path
     const data = [];
 
     try {
@@ -1615,7 +1614,7 @@ async function renderCurrenciesGrid() {
 async function editCurrency(id) {
     if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can edit currencies.', false); return; }
     try {
-        const docSnap = await getDoc(doc(db, `artifacts/${appId}/public/data/currencies`, id));
+        const docSnap = await getDoc(doc(db, `currencies`, id)); // Corrected path
         if (docSnap.exists()) {
             const data = docSnap.data();
             // Add hidden input for currencyId if it doesn't exist
@@ -1654,7 +1653,7 @@ async function deleteCurrency(id) {
     if (!confirmed) return;
 
     try {
-        await deleteDoc(doc(db, `artifacts/${appId}/public/data/currencies`, id));
+        await deleteDoc(doc(db, `currencies`, id)); // Corrected path
         showMessageBox('Currency deleted successfully!', false);
         renderCurrenciesGrid();
         populateOpportunityCurrencyDropdown();
@@ -1674,7 +1673,8 @@ async function deleteCurrency(id) {
  */
 async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
-    await populateSelect(priceBookCurrencySelect, `artifacts/${appId}/public/data/currencies`, 'symbol', 'name', selectedCurrencySymbol);
+    // Corrected path for public data
+    await populateSelect(priceBookCurrencySelect, `currencies`, 'symbol', 'name', selectedCurrencySymbol);
 }
 
 /**
@@ -1683,7 +1683,8 @@ async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null) 
  */
 async function populatePriceBookCountryDropdown(selectedCountryName = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
-    await populateSelect(priceBookCountrySelect, `artifacts/${appId}/public/data/countries`, 'name', 'name', selectedCountryName);
+    // Corrected path for public data
+    await populateSelect(priceBookCountrySelect, `countries`, 'name', 'name', selectedCountryName);
 }
 
 // Event listener to open the Price Book Form for adding a new price book
@@ -1730,7 +1731,7 @@ priceBookForm.addEventListener('submit', async (e) => {
 
     try {
         // Client-Side Uniqueness Validation for Price Book (Name, Currency)
-        const existingIndexDoc = await getDoc(doc(db, `artifacts/${appId}/public/data/priceBookNameCurrencyIndexes`, newIndexId));
+        const existingIndexDoc = await getDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId)); // Corrected path
 
         if (existingIndexDoc.exists()) {
             if (existingIndexDoc.data().priceBookId !== currentPriceBookId) {
@@ -1742,28 +1743,28 @@ priceBookForm.addEventListener('submit', async (e) => {
 
         let docRef;
         if (currentPriceBookId) {
-            docRef = doc(db, `artifacts/${appId}/public/data/priceBooks`, currentPriceBookId);
+            docRef = doc(db, `priceBooks`, currentPriceBookId); // Corrected path
             await updateDoc(docRef, priceBookData);
             showMessageBox('Price Book updated successfully!', false);
 
-            const oldPriceBookDoc = await getDoc(doc(db, `artifacts/${appId}/public/data/priceBooks`, currentPriceBookId));
+            const oldPriceBookDoc = await getDoc(doc(db, `priceBooks`, currentPriceBookId)); // Corrected path
             const oldPriceBookData = oldPriceBookDoc.data();
             const oldIndexId = getPriceBookIndexId(oldPriceBookData.name, oldPriceBookData.currency);
 
             if (oldIndexId !== newIndexId) {
-                await deleteDoc(doc(db, `artifacts/${appId}/public/data/priceBookNameCurrencyIndexes`, oldIndexId));
-                await setDoc(doc(db, `artifacts/${appId}/public/data/priceBookNameCurrencyIndexes`, newIndexId), {
+                await deleteDoc(doc(db, `priceBookNameCurrencyIndexes`, oldIndexId)); // Corrected path
+                await setDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId), { // Corrected path
                     priceBookId: currentPriceBookId,
                     priceBookName: priceBookData.normalizedName,
                     priceBookCurrency: priceBookData.normalizedCurrency
                 });
             }
         } else {
-            const newDocRef = await addDoc(collection(db, `artifacts/${appId}/public/data/priceBooks`), priceBookData);
+            const newDocRef = await addDoc(collection(db, `priceBooks`), priceBookData); // Corrected path
             docRef = newDocRef;
             showMessageBox('Price Book added successfully!', false);
 
-            await setDoc(doc(db, `artifacts/${appId}/public/data/priceBookNameCurrencyIndexes`, newIndexId), {
+            await setDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId), { // Corrected path
                 priceBookId: docRef.id,
                 priceBookName: priceBookData.normalizedName,
                 priceBookCurrency: priceBookData.normalizedCurrency
@@ -1796,7 +1797,7 @@ async function renderPriceBooksGrid() {
     priceBooksTableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4">Loading Price Books...</td></tr>';
     noPriceBooksMessage.classList.add('hidden');
 
-    const priceBooksRef = collection(db, `artifacts/${appId}/public/data/priceBooks`);
+    const priceBooksRef = collection(db, `priceBooks`); // Corrected path
     const data = [];
 
     try {
