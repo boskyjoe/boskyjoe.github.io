@@ -717,10 +717,7 @@ async function renderCustomersGrid() {
         return;
     }
 
-    // Always clear the container before attempting to render or re-render
-    customersGridContainer.innerHTML = '';
-
-    // Show a loading indicator *after* clearing, but before data fetch/grid render
+    // Always clear the container and show loading message at the start
     customersGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Customers...</p>';
     noCustomersMessage.classList.add('hidden'); // Hide "No data" message initially
 
@@ -730,9 +727,12 @@ async function renderCustomersGrid() {
 
     try {
         const snapshot = await getDocs(q);
+
+        // Clear the loading message before rendering the actual grid or 'no data' message
+        customersGridContainer.innerHTML = '';
+
         if (snapshot.empty) {
             noCustomersMessage.classList.remove('hidden');
-            customersGridContainer.innerHTML = ''; // Clear loading message if no data
         } else {
             noCustomersMessage.classList.add('hidden'); // Ensure it's hidden if data is present
             snapshot.forEach(doc => {
@@ -759,9 +759,6 @@ async function renderCustomersGrid() {
             if (customersGrid) {
                 customersGrid.updateConfig({ data: customerData }).forceRender();
             } else {
-                // Clear the loading message before rendering the actual grid
-                customersGridContainer.innerHTML = ''; // Clear loading message
-
                 customersGrid = new window.gridjs.Grid({
                     columns: [
                         { id: 'id', name: 'ID', hidden: true },
@@ -1064,7 +1061,6 @@ async function renderOpportunitiesGrid() {
         return;
     }
 
-    opportunitiesGridContainer.innerHTML = ''; // Clear the container before attempting to render or re-render
     opportunitiesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Opportunities...</p>';
     noOpportunitiesMessage.classList.add('hidden');
 
@@ -1077,9 +1073,10 @@ async function renderOpportunitiesGrid() {
 
     try {
         const snapshot = await getDocs(q);
+        opportunitiesGridContainer.innerHTML = ''; // Clear loading message
+
         if (snapshot.empty) {
             noOpportunitiesMessage.classList.remove('hidden');
-            opportunitiesGridContainer.innerHTML = ''; // Clear loading message if no data
         } else {
             noOpportunitiesMessage.classList.add('hidden'); // Ensure it's hidden if data is present
             snapshot.forEach(doc => {
@@ -1101,7 +1098,6 @@ async function renderOpportunitiesGrid() {
             if (opportunitiesGrid) {
                 opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender();
             } else {
-                opportunitiesGridContainer.innerHTML = ''; // Clear loading message
                 opportunitiesGrid = new window.gridjs.Grid({
                     columns: [
                         { id: 'id', name: 'ID', hidden: true },
@@ -1351,7 +1347,6 @@ async function renderCountriesStatesGrid() {
         return;
     }
 
-    countriesGridContainer.innerHTML = ''; // Clear the container before attempting to render or re-render
     countriesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Countries...</p>';
     noCountriesMessage.classList.add('hidden');
 
@@ -1360,9 +1355,10 @@ async function renderCountriesStatesGrid() {
 
     try {
         const snapshot = await getDocs(query(countriesRef, orderBy('name')));
+        countriesGridContainer.innerHTML = ''; // Clear loading message
+
         if (snapshot.empty) {
             noCountriesMessage.classList.remove('hidden');
-            countriesGridContainer.innerHTML = ''; // Clear loading message if no data
         } else {
             noCountriesMessage.classList.add('hidden'); // Ensure it's hidden if data is present
             snapshot.forEach(doc => {
@@ -1378,7 +1374,6 @@ async function renderCountriesStatesGrid() {
         if (countriesStatesGrid) {
             countriesStatesGrid.updateConfig({ data: data }).forceRender();
         } else {
-            countriesGridContainer.innerHTML = ''; // Clear loading message
             countriesStatesGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
@@ -1580,7 +1575,6 @@ async function renderCurrenciesGrid() {
         return;
     }
 
-    currenciesGridContainer.innerHTML = ''; // Clear the container before attempting to render or re-render
     currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Currencies...</p>';
     noCurrenciesMessage.classList.add('hidden');
 
@@ -1589,9 +1583,10 @@ async function renderCurrenciesGrid() {
 
     try {
         const snapshot = await getDocs(query(currenciesRef, orderBy('name')));
+        currenciesGridContainer.innerHTML = ''; // Clear loading message
+
         if (snapshot.empty) {
             noCurrenciesMessage.classList.remove('hidden');
-            currenciesGridContainer.innerHTML = ''; // Clear loading message if no data
         } else {
             noCurrenciesMessage.classList.add('hidden'); // Ensure it's hidden if data is present
             snapshot.forEach(doc => {
@@ -1608,7 +1603,6 @@ async function renderCurrenciesGrid() {
         if (currenciesGrid) {
             currenciesGrid.updateConfig({ data: data }).forceRender();
         } else {
-            currenciesGridContainer.innerHTML = ''; // Clear loading message
             currenciesGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
@@ -1854,7 +1848,6 @@ async function renderPriceBooksGrid() {
         return;
     }
 
-    priceBooksGridContainer.innerHTML = ''; // Clear the container before attempting to render or re-render
     priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Price Books...</p>';
     noPriceBooksMessage.classList.add('hidden');
 
@@ -1863,9 +1856,10 @@ async function renderPriceBooksGrid() {
 
     try {
         const snapshot = await getDocs(query(priceBooksRef, orderBy('name')));
+        priceBooksGridContainer.innerHTML = ''; // Clear loading message
+
         if (snapshot.empty) {
             noPriceBooksMessage.classList.remove('hidden');
-            priceBooksGridContainer.innerHTML = ''; // Clear loading message if no data
         } else {
             noPriceBooksMessage.classList.add('hidden'); // Ensure it's hidden if data is present
             snapshot.forEach(doc => {
@@ -1886,7 +1880,6 @@ async function renderPriceBooksGrid() {
         if (priceBooksGrid) {
             priceBooksGrid.updateConfig({ data: data }).forceRender();
         } else {
-            priceBooksGridContainer.innerHTML = ''; // Clear loading message
             priceBooksGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
