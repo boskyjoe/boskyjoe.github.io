@@ -5,7 +5,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, serverTimestamp, Timestamp, setDoc } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js';
 
 // Grid.js ES Module Import
-import { Grid, h } from 'https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gridjs.module.min.js';
+import { Grid, h } from 'https://unpkg.com/gridjs/dist/gridjs.module.min.js';
 
 
 // Firebase configuration: Using the exact configuration provided by the user
@@ -30,7 +30,8 @@ const db = getFirestore(app); // Get Firestore service
 let currentUser = null;
 let currentUserRole = 'Guest'; // Default role
 let userId = null; // Will store authenticated user's UID or a random ID for unauthenticated
-// Grid.js instances - now directly accessible without window.
+
+// Grid.js instances
 let customersGrid = null;
 let opportunitiesGrid = null;
 let countriesStatesGrid = null;
@@ -47,10 +48,7 @@ const navPriceBooks = document.getElementById('nav-price-books');
 const navLogout = document.getElementById('nav-logout');
 const adminMenuItem = document.getElementById('admin-menu-item'); // The parent li for admin dropdown
 
-// New UI elements for Admin dropdown functionality
-const adminDropdownToggle = document.getElementById('admin-dropdown-toggle');
-const adminSubmenu = document.getElementById('admin-submenu');
-
+// No need for adminDropdownToggle and adminSubmenu variables as the dropdown is now CSS-driven.
 
 const authSection = document.getElementById('auth-section');
 const dashboardSection = document.getElementById('dashboard-section');
@@ -75,8 +73,6 @@ document.getElementById('auth-status').appendChild(userRoleSpan); // Append it t
 const addCustomerBtn = document.getElementById('add-customer-btn');
 const customerFormContainer = document.getElementById('customer-form-container');
 const customerForm = document.getElementById('customer-form');
-// customerIdInput is not present in the HTML, so we will not declare it here to avoid errors.
-// const customerIdInput = document.getElementById('customer-id');
 const customerTypeSelect = document.getElementById('customer-type');
 const customerNameInput = document.getElementById('customer-name');
 const customerEmailInput = document.getElementById('customer-email');
@@ -90,17 +86,16 @@ const customerSourceSelect = document.getElementById('customer-source');
 const customerActiveSelect = document.getElementById('customer-active');
 const cancelCustomerBtn = document.getElementById('cancel-customer-btn');
 const customerFormMessage = document.getElementById('customer-form-message');
-const customersTableBody = document.getElementById('customers-table-body');
 const customerSearchInput = document.getElementById('customer-search');
 const noCustomersMessage = document.getElementById('no-customers-message');
+// NEW: Grid.js container for customers
+const customersGridContainer = document.getElementById('customers-grid-container');
 
 
 // Opportunity Form Elements
 const addOpportunityBtn = document.getElementById('add-opportunity-btn');
 const opportunityFormContainer = document.getElementById('opportunity-form-container');
 const opportunityForm = document.getElementById('opportunity-form');
-// opportunityIdInput is not present in the HTML, so we will not declare it here to avoid errors.
-// const opportunityIdInput = document.getElementById('opportunity-id');
 const opportunityNameInput = document.getElementById('opportunity-name');
 const opportunityCustomerSelect = document.getElementById('opportunity-customer');
 const opportunityCurrencySelect = document.getElementById('opportunity-currency');
@@ -113,9 +108,10 @@ const opportunityValueInput = document.getElementById('opportunity-value');
 const opportunityNotesTextarea = document.getElementById('opportunity-notes');
 const cancelOpportunityBtn = document.getElementById('cancel-opportunity-btn');
 const opportunityFormMessage = document.getElementById('opportunity-form-message');
-const opportunitiesTableBody = document.getElementById('opportunities-table-body');
 const opportunitySearchInput = document.getElementById('opportunity-search');
 const noOpportunitiesMessage = document.getElementById('no-opportunities-message');
+// NEW: Grid.js container for opportunities
+const opportunitiesGridContainer = document.getElementById('opportunities-grid-container');
 
 // Dashboard Elements
 const dashboardTotalCustomers = document.getElementById('dashboard-total-customers');
@@ -123,44 +119,37 @@ const dashboardTotalOpportunities = document.getElementById('dashboard-total-opp
 const dashboardOpenOpportunities = document.getElementById('dashboard-open-opportunities');
 const dashboardWonOpportunities = document.getElementById('dashboard-won-opportunities');
 
-// Admin Panel Elements (Countries, Currencies, Price Books are now direct sections)
-// No need for admin-only class or admin-section-btn as they are directly navigable from admin menu
-
 // Countries Elements
 const addCountryBtn = document.getElementById('add-country-btn');
 const countryFormContainer = document.getElementById('country-form-container');
 const countryForm = document.getElementById('country-form');
-// countryIdInput is not present in the HTML, so we will not declare it here to avoid errors.
-// const countryIdInput = document.getElementById('country-id');
 const countryNameInput = document.getElementById('country-name');
 const countryCodeInput = document.getElementById('country-code');
 const cancelCountryBtn = document.getElementById('cancel-country-btn');
 const countryFormMessage = document.getElementById('country-form-message');
-const countriesTableBody = document.getElementById('countries-table-body');
 const countrySearchInput = document.getElementById('country-search');
 const noCountriesMessage = document.getElementById('no-countries-message');
+// NEW: Grid.js container for countries
+const countriesGridContainer = document.getElementById('countries-grid-container');
 
 // Currencies Elements
 const addCurrencyBtn = document.getElementById('add-currency-btn');
 const currencyFormContainer = document.getElementById('currency-form-container');
 const currencyForm = document.getElementById('currency-form');
-// currencyIdInput is not present in the HTML, so we will not declare it here to avoid errors.
-// const currencyIdInput = document.getElementById('currency-id');
 const currencyNameInput = document.getElementById('currency-name');
 const currencyCodeInput = document.getElementById('currency-code');
 const currencySymbolInput = document.getElementById('currency-symbol');
 const cancelCurrencyBtn = document.getElementById('cancel-currency-btn');
 const currencyFormMessage = document.getElementById('currency-form-message');
-const currenciesTableBody = document.getElementById('currencies-table-body');
 const currencySearchInput = document.getElementById('currency-search');
 const noCurrenciesMessage = document.getElementById('no-currencies-message');
+// NEW: Grid.js container for currencies
+const currenciesGridContainer = document.getElementById('currencies-grid-container');
 
 // Price Books Elements
 const addPriceBookBtn = document.getElementById('add-price-book-btn');
 const priceBookFormContainer = document.getElementById('price-book-form-container');
 const priceBookForm = document.getElementById('price-book-form');
-// priceBookIdInput is not present in the HTML, so we will not declare it here to avoid errors.
-// const priceBookIdInput = document.getElementById('price-book-id');
 const priceBookNameInput = document.getElementById('price-book-name');
 const priceBookDescriptionTextarea = document.getElementById('price-book-description');
 const priceBookCountrySelect = document.getElementById('price-book-country');
@@ -170,9 +159,10 @@ const priceBookValidFromInput = document.getElementById('price-book-valid-from')
 const priceBookValidToInput = document.getElementById('price-book-valid-to');
 const cancelPriceBookBtn = document.getElementById('cancel-price-book-btn');
 const priceBookFormMessage = document.getElementById('price-book-form-message');
-const priceBooksTableBody = document.getElementById('price-books-table-body');
 const priceBookSearchInput = document.getElementById('price-book-search');
 const noPriceBooksMessage = document.getElementById('no-price-books-message');
+// NEW: Grid.js container for price books
+const priceBooksGridContainer = document.getElementById('price-books-grid-container');
 
 // Custom Message Box Elements
 const messageBox = document.getElementById('message-box');
@@ -432,12 +422,20 @@ onAuthStateChanged(auth, async (user) => {
         navCurrencies.classList.add('hidden');
         navPriceBooks.classList.add('hidden');
 
-        // Clear grids
-        if (customersGrid) customersGrid.updateConfig({ data: [] }).forceRender();
-        if (opportunitiesGrid) opportunitiesGrid.updateConfig({ data: [] }).forceRender();
-        if (countriesStatesGrid) countriesStatesGrid.updateConfig({ data: [] }).forceRender();
-        if (currenciesGrid) currenciesGrid.updateConfig({ data: [] }).forceRender();
-        if (priceBooksGrid) priceBooksGrid.updateConfig({ data: [] }).forceRender();
+        // Clear grids if they exist
+        if (customersGrid) { customersGrid.destroy(); customersGrid = null; }
+        if (opportunitiesGrid) { opportunitiesGrid.destroy(); opportunitiesGrid = null; }
+        if (countriesStatesGrid) { countriesStatesGrid.destroy(); countriesStatesGrid = null; }
+        if (currenciesGrid) { currenciesGrid.destroy(); currenciesGrid = null; }
+        if (priceBooksGrid) { priceBooksGrid.destroy(); priceBooksGrid = null; }
+
+        // Clear grid containers
+        if (customersGridContainer) customersGridContainer.innerHTML = '';
+        if (opportunitiesGridContainer) opportunitiesGridContainer.innerHTML = '';
+        if (countriesGridContainer) countriesGridContainer.innerHTML = '';
+        if (currenciesGridContainer) currenciesGridContainer.innerHTML = '';
+        if (priceBooksGridContainer) priceBooksGridContainer.innerHTML = '';
+
 
         // Clear dropdowns (ensure elements exist before trying to access them)
         if (customerCountrySelect) customerCountrySelect.innerHTML = '<option value="">Select...</option>';
@@ -486,20 +484,14 @@ navDashboard.addEventListener('click', () => showSection(dashboardSection));
 navCustomers.addEventListener('click', () => { showSection(customersSection); renderCustomersGrid(); populateCustomerCountryDropdown(); });
 navOpportunities.addEventListener('click', () => { showSection(opportunitiesSection); renderOpportunitiesGrid(); populateOpportunityCustomerDropdown(); populateOpportunityCurrencyDropdown(); populateOpportunityPriceBookDropdown(); });
 
-// Event listener for Admin dropdown toggle
-if (adminDropdownToggle && adminSubmenu) {
-    adminDropdownToggle.addEventListener('click', (e) => {
-        e.preventDefault(); // Prevent default link behavior
-        adminSubmenu.classList.toggle('hidden');
-    });
-}
+// No explicit JavaScript listener for Admin dropdown toggle needed here,
+// as the dropdown is handled by CSS :hover on the parent li.
 
 // Event listeners for Admin sub-menu items
 navCountries.addEventListener('click', () => {
     if (currentUserRole === 'Admin') {
         showSection(countriesSection);
         renderCountriesStatesGrid();
-        adminSubmenu.classList.add('hidden'); // Hide dropdown after selection
     } else {
         showMessageBox('Access Denied: You must be an Admin to access this feature.', false);
     }
@@ -508,8 +500,6 @@ navCurrencies.addEventListener('click', () => {
     if (currentUserRole === 'Admin') {
         showSection(currenciesSection);
         renderCurrenciesGrid();
-        adminSubmenu.classList.add('hidden'); // Hide dropdown after selection
-        // No specific dropdown to populate on currency page itself, but the function is here for consistency
     } else {
         showMessageBox('Access Denied: You must be an Admin to access this feature.', false);
     }
@@ -520,7 +510,6 @@ navPriceBooks.addEventListener('click', () => {
         renderPriceBooksGrid();
         populatePriceBookCountryDropdown(); // Populate dropdown when section is active
         populatePriceBookCurrencyDropdown(); // Populate dropdown when section is active
-        adminSubmenu.classList.add('hidden'); // Hide dropdown after selection
     } else {
         showMessageBox('Access Denied: You must be an Admin to access this feature.', false);
     }
@@ -539,12 +528,12 @@ async function updateDashboardStats() {
     try {
         // For customers, the security rule allows all authenticated users to read all customers.
         // So, we query all customers regardless of creatorId for dashboard stats.
-        let customerQueryRef = collection(db, `customers`); // Corrected path
+        let customerQueryRef = collection(db, `customers`);
         let qCustomers = query(customerQueryRef);
         const customersSnapshot = await getDocs(qCustomers);
         dashboardTotalCustomers.textContent = customersSnapshot.size;
 
-        let opportunityQueryRef = collection(db, `opportunities`); // Corrected path
+        let opportunityQueryRef = collection(db, `opportunities`);
         let qOpportunities = query(opportunityQueryRef);
         // Filter opportunities by creatorId if not an Admin, as per security rules
         if (currentUserRole !== 'Admin') {
@@ -617,6 +606,7 @@ addCustomerBtn.addEventListener('click', () => {
     if (!currentUser) { showMessageBox('Please sign in to add customers.', false); return; }
     customerForm.reset();
     // Assuming no hidden customer-id input for new forms, but setting it for consistency if it were added later
+    document.getElementById('customer-id').value = ''; // Clear ID for new customer
     resetAndHideForm(customerForm, customerFormContainer, '', customerFormMessage); // Reset and hide first
     customerFormContainer.classList.remove('hidden'); // Then show the container
     // Set default values for new entry
@@ -633,16 +623,7 @@ customerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser) { showMessageBox('Authentication required to save customer.', false); return; }
 
-    // Get the current customer ID from a data attribute or similar if editing
-    // Since there's no customerIdInput in HTML, we'll assume it's stored on the form itself or derived.
-    // Let's add a temporary hidden input for customerId for forms to manage edit state.
-    let customerIdInput = document.getElementById('customer-id');
-    if (!customerIdInput) {
-        customerIdInput = document.createElement('input');
-        customerIdInput.type = 'hidden';
-        customerIdInput.id = 'customer-id';
-        customerForm.appendChild(customerIdInput);
-    }
+    const customerId = document.getElementById('customer-id').value;
 
     const customerData = {
         type: customerTypeSelect.value,
@@ -660,15 +641,15 @@ customerForm.addEventListener('submit', async (e) => {
     };
 
     try {
-        if (customerIdInput.value) {
+        if (customerId) {
             // Update existing customer
-            await updateDoc(doc(db, `customers`, customerIdInput.value), customerData); // Corrected path
+            await updateDoc(doc(db, `customers`, customerId), customerData);
             showMessageBox('Customer updated successfully!', false);
         } else {
             // Add new customer
             customerData.createdAt = serverTimestamp();
             customerData.creatorId = currentUser.uid;
-            await addDoc(collection(db, `customers`), customerData); // Corrected path
+            await addDoc(collection(db, `customers`), customerData);
             showMessageBox('Customer added successfully!', false);
         }
         resetAndHideForm(customerForm, customerFormContainer, '', customerFormMessage); // Clear and hide form
@@ -689,19 +670,21 @@ customerForm.addEventListener('submit', async (e) => {
 async function renderCustomersGrid() {
     if (!currentUser) {
         noCustomersMessage.classList.remove('hidden');
-        customersTableBody.innerHTML = '';
-        if (customersGrid) customersGrid.updateConfig({ data: [] }).forceRender();
+        if (customersGrid) {
+            customersGrid.destroy(); // Destroy existing grid if user logs out
+            customersGrid = null;
+        }
+        customersGridContainer.innerHTML = ''; // Clear the container
         return;
     }
 
-    const containerElement = customersTableBody.parentElement; // Get the table container
     // Show a loading indicator
-    customersTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Loading Customers...</td></tr>';
+    customersGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Customers...</p>';
     noCustomersMessage.classList.add('hidden');
 
     // FIX: Removed client-side filtering by creatorId for customers as per new Firestore rules.
     // Now all authenticated users can read all customers.
-    let customersRef = collection(db, `customers`); // Corrected path
+    let customersRef = collection(db, `customers`);
     let q = query(customersRef, orderBy('name'));
     const customerData = [];
 
@@ -709,7 +692,7 @@ async function renderCustomersGrid() {
         const snapshot = await getDocs(q);
         if (snapshot.empty) {
             noCustomersMessage.classList.remove('hidden');
-            customersTableBody.innerHTML = '';
+            customersGridContainer.innerHTML = ''; // Clear the container if no data
         } else {
             noCustomersMessage.classList.add('hidden');
             snapshot.forEach(doc => {
@@ -721,8 +704,13 @@ async function renderCustomersGrid() {
                     data.phone,
                     data.country,
                     data.active,
-                    // Hidden fields for edit/delete logic if needed
-                    data.type, data.preferredContactMethod, data.industry, data.additionalDetails, data.source, data.createdAt
+                    data.type,
+                    data.preferredContactMethod,
+                    data.industry,
+                    data.additionalDetails,
+                    data.source,
+                    data.createdAt,
+                    data.creatorId // Added creatorId for rule check
                 ]);
             });
         }
@@ -739,19 +727,31 @@ async function renderCustomersGrid() {
                     { id: 'phone', name: 'Phone', sort: true, filter: true },
                     { id: 'country', name: 'Country', sort: true, filter: true },
                     { id: 'active', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
+                    { id: 'type', name: 'Type', hidden: true },
+                    { id: 'preferredContactMethod', name: 'Contact Method', hidden: true },
+                    { id: 'industry', name: 'Industry', hidden: true },
+                    { id: 'additionalDetails', name: 'Additional Details', hidden: true },
+                    { id: 'source', name: 'Source', hidden: true },
+                    { id: 'createdAt', name: 'Created At', hidden: true },
+                    { id: 'creatorId', name: 'Creator ID', hidden: true }, // Keep creatorId hidden but accessible for actions
                     {
                         name: 'Actions',
                         sort: false,
                         formatter: (cell, row) => {
                             const docId = row.cells[0].data;
+                            const creatorId = row.cells[12].data; // Get creatorId from the row data
+                            const canEditDelete = (currentUserRole === 'Admin' || creatorId === currentUser.uid);
+
                             return h('div', { className: 'flex space-x-2' },
                                 h('button', {
-                                    className: 'px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
-                                    onClick: () => editCustomer(docId)
+                                    className: `px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
+                                    onClick: () => canEditDelete ? editCustomer(docId) : showMessageBox('You do not have permission to edit this customer.', false),
+                                    disabled: !canEditDelete
                                 }, 'Edit'),
                                 h('button', {
-                                    className: 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm',
-                                    onClick: () => deleteCustomer(docId)
+                                    className: `px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
+                                    onClick: () => canEditDelete ? deleteCustomer(docId) : showMessageBox('You do not have permission to delete this customer.', false),
+                                    disabled: !canEditDelete
                                 }, 'Delete')
                             );
                         }
@@ -787,12 +787,12 @@ async function renderCustomersGrid() {
                     'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
                     'noRecordsFound': 'No Customer Data Available',
                 }
-            }).render(containerElement);
+            }).render(customersGridContainer); // Render into the new container
         }
     } catch (error) {
         console.error("Error rendering customers grid:", error);
         showMessageBox('Could not load customer data: ' + error.message, false);
-        customersTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-red-500">Error loading customer data.</td></tr>';
+        customersGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading customer data.</p>';
     }
 }
 
@@ -804,7 +804,7 @@ async function editCustomer(customerId) {
     if (!currentUser) { showMessageBox('Please sign in to edit customers.', false); return; }
 
     try {
-        const docSnap = await getDoc(doc(db, `customers`, customerId)); // Corrected path
+        const docSnap = await getDoc(doc(db, `customers`, customerId));
         if (docSnap.exists()) {
             const data = docSnap.data();
             // Check if current user is the creator or an Admin
@@ -813,15 +813,7 @@ async function editCustomer(customerId) {
                 return;
             }
 
-            // Set the hidden customer-id input for the form
-            let customerIdInput = document.getElementById('customer-id');
-            if (!customerIdInput) {
-                customerIdInput = document.createElement('input');
-                customerIdInput.type = 'hidden';
-                customerIdInput.id = 'customer-id';
-                customerForm.appendChild(customerIdInput);
-            }
-            customerIdInput.value = docSnap.id;
+            document.getElementById('customer-id').value = docSnap.id;
 
             customerFormContainer.classList.remove('hidden');
             customerFormMessage.classList.add('hidden');
@@ -858,7 +850,7 @@ async function deleteCustomer(customerId) {
     if (!confirmed) return;
 
     try {
-        const docSnap = await getDoc(doc(db, `customers`, customerId)); // Corrected path
+        const docSnap = await getDoc(doc(db, `customers`, customerId));
         if (!docSnap.exists()) {
             showMessageBox('Customer not found!', false);
             return;
@@ -871,13 +863,13 @@ async function deleteCustomer(customerId) {
         }
 
         // Check if there are any opportunities linked to this customer
-        const opportunitiesSnapshot = await getDocs(query(collection(db, `opportunities`), where('customerId', '==', customerId))); // Corrected path
+        const opportunitiesSnapshot = await getDocs(query(collection(db, `opportunities`), where('customerId', '==', customerId)));
         if (!opportunitiesSnapshot.empty) {
             showMessageBox('Cannot delete customer: There are existing opportunities linked to this customer. Please delete the opportunities first.', false);
             return;
         }
 
-        await deleteDoc(doc(db, `customers`, customerId)); // Corrected path
+        await deleteDoc(doc(db, `customers`, customerId));
         showMessageBox('Customer deleted successfully!', false);
         renderCustomersGrid();
         updateDashboardStats();
@@ -898,7 +890,7 @@ async function populateOpportunityCustomerDropdown(selectedCustomerId = null) {
     if (!currentUser) return;
     const selectElement = opportunityCustomerSelect;
     selectElement.innerHTML = '<option value="">Select a Customer</option>';
-    let customerQueryRef = collection(db, `customers`); // Corrected path
+    let customerQueryRef = collection(db, `customers`);
     // The security rule for customers allows all authenticated users to read all customers.
     // So, we don't need to filter by creatorId here.
     let q = query(customerQueryRef, orderBy('name'));
@@ -950,6 +942,7 @@ async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null) 
 // Event listener to open the Opportunity Form for adding a new opportunity
 addOpportunityBtn.addEventListener('click', () => {
     if (!currentUser) { showMessageBox('Please sign in to add opportunities.', false); return; }
+    document.getElementById('opportunity-id').value = ''; // Clear ID for new opportunity
     resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage); // Clear and hide form
     opportunityFormContainer.classList.remove('hidden'); // Then show the container
     populateOpportunityCustomerDropdown();
@@ -962,17 +955,10 @@ opportunityForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser) { showMessageBox('Authentication required to save opportunity.', false); return; }
 
+    const opportunityId = document.getElementById('opportunity-id').value;
+
     const selectedCustomerOption = opportunityCustomerSelect.options[opportunityCustomerSelect.selectedIndex];
     const customerName = selectedCustomerOption ? selectedCustomerOption.textContent : '';
-
-    // Add hidden input for opportunityId if it doesn't exist
-    let opportunityIdInput = document.getElementById('opportunity-id');
-    if (!opportunityIdInput) {
-        opportunityIdInput = document.createElement('input');
-        opportunityIdInput.type = 'hidden';
-        opportunityIdInput.id = 'opportunity-id';
-        opportunityForm.appendChild(opportunityIdInput);
-    }
 
     const opportunityData = {
         name: opportunityNameInput.value.trim(),
@@ -990,13 +976,13 @@ opportunityForm.addEventListener('submit', async (e) => {
     };
 
     try {
-        if (opportunityIdInput.value) {
-            await updateDoc(doc(db, `opportunities`, opportunityIdInput.value), opportunityData); // Corrected path
+        if (opportunityId) {
+            await updateDoc(doc(db, `opportunities`, opportunityId), opportunityData);
             showMessageBox('Opportunity updated successfully!', false);
         } else {
             opportunityData.createdAt = serverTimestamp();
             opportunityData.creatorId = currentUser.uid;
-            await addDoc(collection(db, `opportunities`), opportunityData); // Corrected path
+            await addDoc(collection(db, `opportunities`), opportunityData);
             showMessageBox('Opportunity added successfully!', false);
         }
         resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage); // Clear and hide form
@@ -1017,16 +1003,18 @@ opportunityForm.addEventListener('submit', async (e) => {
 async function renderOpportunitiesGrid() {
     if (!currentUser) {
         noOpportunitiesMessage.classList.remove('hidden');
-        opportunitiesTableBody.innerHTML = '';
-        if (opportunitiesGrid) opportunitiesGrid.updateConfig({ data: [] }).forceRender();
+        if (opportunitiesGrid) {
+            opportunitiesGrid.destroy();
+            opportunitiesGrid = null;
+        }
+        opportunitiesGridContainer.innerHTML = '';
         return;
     }
 
-    const containerElement = opportunitiesTableBody.parentElement;
-    opportunitiesTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Loading Opportunities...</td></tr>';
+    opportunitiesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Opportunities...</p>';
     noOpportunitiesMessage.classList.add('hidden');
 
-    let opportunitiesRef = collection(db, `opportunities`); // Corrected path
+    let opportunitiesRef = collection(db, `opportunities`);
     let q = query(opportunitiesRef, orderBy('expectedCloseDate'));
     if (currentUserRole !== 'Admin') {
         q = query(opportunitiesRef, where('creatorId', '==', currentUser.uid), orderBy('expectedCloseDate'));
@@ -1037,7 +1025,7 @@ async function renderOpportunitiesGrid() {
         const snapshot = await getDocs(q);
         if (snapshot.empty) {
             noOpportunitiesMessage.classList.remove('hidden');
-            opportunitiesTableBody.innerHTML = '';
+            opportunitiesGridContainer.innerHTML = '';
         } else {
             noOpportunitiesMessage.classList.add('hidden');
             snapshot.forEach(doc => {
@@ -1051,7 +1039,8 @@ async function renderOpportunitiesGrid() {
                     data.value,
                     data.currency,
                     data.expectedCloseDate,
-                    data.createdAt
+                    data.createdAt,
+                    data.creatorId // Added creatorId for rule check
                 ]);
             });
         }
@@ -1078,19 +1067,25 @@ async function renderOpportunitiesGrid() {
                     },
                     { id: 'currency', name: 'Currency', sort: true, filter: true },
                     { id: 'expectedCloseDate', name: 'Close Date', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
+                    { id: 'creatorId', name: 'Creator ID', hidden: true }, // Keep creatorId hidden but accessible for actions
                     {
                         name: 'Actions',
                         sort: false,
                         formatter: (cell, row) => {
                             const docId = row.cells[0].data;
+                            const creatorId = row.cells[8].data; // Get creatorId from the row data
+                            const canEditDelete = (currentUserRole === 'Admin' || creatorId === currentUser.uid);
+
                             return h('div', { className: 'flex space-x-2' },
                                 h('button', {
-                                    className: 'px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
-                                    onClick: () => editOpportunity(docId)
+                                    className: `px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
+                                    onClick: () => canEditDelete ? editOpportunity(docId) : showMessageBox('You do not have permission to edit this opportunity.', false),
+                                    disabled: !canEditDelete
                                 }, 'Edit'),
                                 h('button', {
-                                    className: 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm',
-                                    onClick: () => deleteOpportunity(docId)
+                                    className: `px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
+                                    onClick: () => canEditDelete ? deleteOpportunity(docId) : showMessageBox('You do not have permission to delete this opportunity.', false),
+                                    disabled: !canEditDelete
                                 }, 'Delete')
                             );
                         }
@@ -1126,12 +1121,12 @@ async function renderOpportunitiesGrid() {
                     'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
                     'noRecordsFound': 'No Opportunity Data Available',
                 }
-            }).render(containerElement);
+            }).render(opportunitiesGridContainer);
         }
     } catch (error) {
         console.error("Error rendering opportunities grid:", error);
         showMessageBox('Could not load opportunity data: ' + error.message, false);
-        opportunitiesTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-red-500">Error loading opportunity data.</td></tr>';
+        opportunitiesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading opportunity data.</p>';
     }
 }
 
@@ -1143,7 +1138,7 @@ async function editOpportunity(opportunityId) {
     if (!currentUser) { showMessageBox('Please sign in to edit opportunities.', false); return; }
 
     try {
-        const docSnap = await getDoc(doc(db, `opportunities`, opportunityId)); // Corrected path
+        const docSnap = await getDoc(doc(db, `opportunities`, opportunityId));
         if (docSnap.exists()) {
             const data = docSnap.data();
             // Check if current user is the creator or an Admin
@@ -1152,15 +1147,7 @@ async function editOpportunity(opportunityId) {
                 return;
             }
 
-            // Add hidden input for opportunityId if it doesn't exist
-            let opportunityIdInput = document.getElementById('opportunity-id');
-            if (!opportunityIdInput) {
-                opportunityIdInput = document.createElement('input');
-                opportunityIdInput.type = 'hidden';
-                opportunityIdInput.id = 'opportunity-id';
-                opportunityForm.appendChild(opportunityIdInput);
-            }
-            opportunityIdInput.value = docSnap.id;
+            document.getElementById('opportunity-id').value = docSnap.id;
 
             opportunityFormContainer.classList.remove('hidden');
             opportunityFormMessage.classList.add('hidden');
@@ -1196,7 +1183,7 @@ async function deleteOpportunity(opportunityId) {
     if (!confirmed) return;
 
     try {
-        const docSnap = await getDoc(doc(db, `opportunities`, opportunityId)); // Corrected path
+        const docSnap = await getDoc(doc(db, `opportunities`, opportunityId));
         if (!docSnap.exists()) {
             showMessageBox('Opportunity not found!', false);
             return;
@@ -1208,7 +1195,7 @@ async function deleteOpportunity(opportunityId) {
             return;
         }
 
-        await deleteDoc(doc(db, `opportunities`, opportunityId)); // Corrected path
+        await deleteDoc(doc(db, `opportunities`, opportunityId));
         showMessageBox('Opportunity deleted successfully!', false);
         renderOpportunitiesGrid();
         updateDashboardStats();
@@ -1224,6 +1211,7 @@ async function deleteOpportunity(opportunityId) {
 // Event listener to open the Country Form for adding a new country
 addCountryBtn.addEventListener('click', () => {
     if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can add countries.', false); return; }
+    document.getElementById('country-id').value = ''; // Clear ID for new country
     resetAndHideForm(countryForm, countryFormContainer, '', countryFormMessage); // Clear and hide form
     countryFormContainer.classList.remove('hidden'); // Then show the container
 });
@@ -1233,14 +1221,7 @@ countryForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can save countries.', false); return; }
 
-    // Add hidden input for countryId if it doesn't exist
-    let countryIdInput = document.getElementById('country-id');
-    if (!countryIdInput) {
-        countryIdInput = document.createElement('input');
-        countryIdInput.type = 'hidden';
-        countryIdInput.id = 'country-id';
-        countryForm.appendChild(countryIdInput);
-    }
+    const countryId = document.getElementById('country-id').value;
 
     const countryData = {
         name: countryNameInput.value.trim(),
@@ -1249,13 +1230,13 @@ countryForm.addEventListener('submit', async (e) => {
 
     try {
         // Client-side validation for unique country code
-        let q = query(collection(db, `countries`), where('code', '==', countryData.code)); // Corrected path
+        let q = query(collection(db, `countries`), where('code', '==', countryData.code));
         const existingCountriesSnapshot = await getDocs(q);
 
         let isDuplicate = false;
-        if (countryIdInput.value) { // Editing existing
+        if (countryId) { // Editing existing
             existingCountriesSnapshot.forEach(doc => {
-                if (doc.id !== countryIdInput.value) {
+                if (doc.id !== countryId) {
                     isDuplicate = true;
                 }
             });
@@ -1271,11 +1252,11 @@ countryForm.addEventListener('submit', async (e) => {
             return;
         }
 
-        if (countryIdInput.value) {
-            await updateDoc(doc(db, `countries`, countryIdInput.value), countryData); // Corrected path
+        if (countryId) {
+            await updateDoc(doc(db, `countries`, countryId), countryData);
             showMessageBox('Country updated successfully!', false);
         } else {
-            await addDoc(collection(db, `countries`), countryData); // Corrected path
+            await addDoc(collection(db, `countries`), countryData);
             showMessageBox('Country added successfully!', false);
         }
         resetAndHideForm(countryForm, countryFormContainer, '', countryFormMessage); // Clear and hide form
@@ -1298,23 +1279,25 @@ countryForm.addEventListener('submit', async (e) => {
 async function renderCountriesStatesGrid() {
     if (!currentUser || currentUserRole !== 'Admin') {
         noCountriesMessage.classList.remove('hidden');
-        countriesTableBody.innerHTML = '';
-        if (countriesStatesGrid) countriesStatesGrid.updateConfig({ data: [] }).forceRender();
+        if (countriesStatesGrid) {
+            countriesStatesGrid.destroy();
+            countriesStatesGrid = null;
+        }
+        countriesGridContainer.innerHTML = '';
         return;
     }
 
-    const containerElement = countriesTableBody.parentElement;
-    countriesTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4">Loading Countries...</td></tr>';
+    countriesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Countries...</p>';
     noCountriesMessage.classList.add('hidden');
 
-    const countriesRef = collection(db, `countries`); // Corrected path
+    const countriesRef = collection(db, `countries`);
     const data = [];
 
     try {
         const snapshot = await getDocs(query(countriesRef, orderBy('name')));
         if (snapshot.empty) {
             noCountriesMessage.classList.remove('hidden');
-            countriesTableBody.innerHTML = '';
+            countriesGridContainer.innerHTML = '';
         } else {
             noCountriesMessage.classList.add('hidden');
             snapshot.forEach(doc => {
@@ -1382,12 +1365,12 @@ async function renderCountriesStatesGrid() {
                     'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
                     'noRecordsFound': 'No Countries Data Available',
                 }
-            }).render(containerElement);
+            }).render(countriesGridContainer);
         }
     } catch (error) {
         console.error("Error rendering countries grid:", error);
         showMessageBox('Could not load countries data: ' + error.message, false);
-        countriesTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-red-500">Error loading countries data.</td></tr>';
+        countriesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading countries data.</p>';
     }
 }
 
@@ -1398,18 +1381,10 @@ async function renderCountriesStatesGrid() {
 async function editCountryState(id) {
     if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can edit countries.', false); return; }
     try {
-        const docSnap = await getDoc(doc(db, `countries`, id)); // Corrected path
+        const docSnap = await getDoc(doc(db, `countries`, id));
         if (docSnap.exists()) {
             const data = docSnap.data();
-            // Add hidden input for countryId if it doesn't exist
-            let countryIdInput = document.getElementById('country-id');
-            if (!countryIdInput) {
-                countryIdInput = document.createElement('input');
-                countryIdInput.type = 'hidden';
-                countryIdInput.id = 'country-id';
-                countryForm.appendChild(countryIdInput);
-            }
-            countryIdInput.value = docSnap.id;
+            document.getElementById('country-id').value = docSnap.id;
 
             countryNameInput.value = data.name || '';
             countryCodeInput.value = data.code || '';
@@ -1436,7 +1411,7 @@ async function deleteCountryState(id) {
     if (!confirmed) return;
 
     try {
-        await deleteDoc(doc(db, `countries`, id)); // Corrected path
+        await deleteDoc(doc(db, `countries`, id));
         showMessageBox('Country deleted successfully!', false);
         renderCountriesStatesGrid();
         populateCustomerCountryDropdown();
@@ -1454,6 +1429,7 @@ async function deleteCountryState(id) {
 // Event listener to open the Currency Form for adding a new currency
 addCurrencyBtn.addEventListener('click', () => {
     if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can add currencies.', false); return; }
+    document.getElementById('currency-id').value = ''; // Clear ID for new currency
     resetAndHideForm(currencyForm, currencyFormContainer, '', currencyFormMessage); // Clear and hide form
     currencyFormContainer.classList.remove('hidden'); // Then show the container
 });
@@ -1463,14 +1439,7 @@ currencyForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can save currencies.', false); return; }
 
-    // Add hidden input for currencyId if it doesn't exist
-    let currencyIdInput = document.getElementById('currency-id');
-    if (!currencyIdInput) {
-        currencyIdInput = document.createElement('input');
-        currencyIdInput.type = 'hidden';
-        currencyIdInput.id = 'currency-id';
-        currencyForm.appendChild(currencyIdInput);
-    }
+    const currencyId = document.getElementById('currency-id').value;
 
     const currencyData = {
         name: currencyNameInput.value.trim(),
@@ -1480,13 +1449,13 @@ currencyForm.addEventListener('submit', async (e) => {
 
     try {
         // Client-Side Uniqueness Validation for Currency (Code)
-        let q = query(collection(db, `currencies`), where('code', '==', currencyData.code)); // Corrected path
+        let q = query(collection(db, `currencies`), where('code', '==', currencyData.code));
         const existingCurrenciesSnapshot = await getDocs(q);
 
         let isDuplicate = false;
-        if (currencyIdInput.value) { // Editing existing
+        if (currencyId) { // Editing existing
             existingCurrenciesSnapshot.forEach(doc => {
-                if (doc.id !== currencyIdInput.value) {
+                if (doc.id !== currencyId) {
                     isDuplicate = true;
                 }
             });
@@ -1502,11 +1471,11 @@ currencyForm.addEventListener('submit', async (e) => {
             return;
         }
 
-        if (currencyIdInput.value) {
-            await updateDoc(doc(db, `currencies`, currencyIdInput.value), currencyData); // Corrected path
+        if (currencyId) {
+            await updateDoc(doc(db, `currencies`, currencyId), currencyData);
             showMessageBox('Currency updated successfully!', false);
         } else {
-            await addDoc(collection(db, `currencies`), currencyData); // Corrected path
+            await addDoc(collection(db, `currencies`), currencyData);
             showMessageBox('Currency added successfully!', false);
         }
         resetAndHideForm(currencyForm, currencyFormContainer, '', currencyFormMessage); // Clear and hide form
@@ -1528,23 +1497,25 @@ currencyForm.addEventListener('submit', async (e) => {
 async function renderCurrenciesGrid() {
     if (!currentUser || currentUserRole !== 'Admin') {
         noCurrenciesMessage.classList.remove('hidden');
-        currenciesTableBody.innerHTML = '';
-        if (currenciesGrid) currenciesGrid.updateConfig({ data: [] }).forceRender();
+        if (currenciesGrid) {
+            currenciesGrid.destroy();
+            currenciesGrid = null;
+        }
+        currenciesGridContainer.innerHTML = '';
         return;
     }
 
-    const containerElement = currenciesTableBody.parentElement;
-    currenciesTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Loading Currencies...</td></tr>';
+    currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Currencies...</p>';
     noCurrenciesMessage.classList.add('hidden');
 
-    const currenciesRef = collection(db, `currencies`); // Corrected path
+    const currenciesRef = collection(db, `currencies`);
     const data = [];
 
     try {
         const snapshot = await getDocs(query(currenciesRef, orderBy('name')));
         if (snapshot.empty) {
             noCurrenciesMessage.classList.remove('hidden');
-            currenciesTableBody.innerHTML = '';
+            currenciesGridContainer.innerHTML = '';
         } else {
             noCurrenciesMessage.classList.add('hidden');
             snapshot.forEach(doc => {
@@ -1614,12 +1585,12 @@ async function renderCurrenciesGrid() {
                     'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
                     'noRecordsFound': 'No Currencies Data Available',
                 }
-            }).render(containerElement);
+            }).render(currenciesGridContainer);
         }
     } catch (error) {
         console.error("Error rendering currencies grid:", error);
         showMessageBox('Could not load currency data: ' + error.message, false);
-        currenciesTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Error loading currency data.</td></tr>';
+        currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading currency data.</p>';
     }
 }
 
@@ -1630,18 +1601,10 @@ async function renderCurrenciesGrid() {
 async function editCurrency(id) {
     if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can edit currencies.', false); return; }
     try {
-        const docSnap = await getDoc(doc(db, `currencies`, id)); // Corrected path
+        const docSnap = await getDoc(doc(db, `currencies`, id));
         if (docSnap.exists()) {
             const data = docSnap.data();
-            // Add hidden input for currencyId if it doesn't exist
-            let currencyIdInput = document.getElementById('currency-id');
-            if (!currencyIdInput) {
-                currencyIdInput = document.createElement('input');
-                currencyIdInput.type = 'hidden';
-                currencyIdInput.id = 'currency-id';
-                currencyForm.appendChild(currencyIdInput);
-            }
-            currencyIdInput.value = docSnap.id;
+            document.getElementById('currency-id').value = docSnap.id;
 
             currencyNameInput.value = data.name || '';
             currencyCodeInput.value = data.code || '';
@@ -1669,7 +1632,7 @@ async function deleteCurrency(id) {
     if (!confirmed) return;
 
     try {
-        await deleteDoc(doc(db, `currencies`, id)); // Corrected path
+        await deleteDoc(doc(db, `currencies`, id));
         showMessageBox('Currency deleted successfully!', false);
         renderCurrenciesGrid();
         populateOpportunityCurrencyDropdown();
@@ -1706,6 +1669,7 @@ async function populatePriceBookCountryDropdown(selectedCountryName = null) {
 // Event listener to open the Price Book Form for adding a new price book
 addPriceBookBtn.addEventListener('click', () => {
     if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can add price books.', false); return; }
+    document.getElementById('price-book-id').value = ''; // Clear ID for new price book
     resetAndHideForm(priceBookForm, priceBookFormContainer, '', priceBookFormMessage); // Clear and hide form
     priceBookFormContainer.classList.remove('hidden'); // Then show the container
     priceBookActiveCheckbox.checked = true; // Default to active
@@ -1721,14 +1685,7 @@ priceBookForm.addEventListener('submit', async (e) => {
     const normalizedName = priceBookNameInput.value.trim().toLowerCase().replace(/\s+/g, '');
     const normalizedCurrency = priceBookCurrencySelect.value.trim().toLowerCase().replace(/\s+/g, '');
 
-    // Add hidden input for priceBookId if it doesn't exist
-    let priceBookIdInput = document.getElementById('price-book-id');
-    if (!priceBookIdInput) {
-        priceBookIdInput = document.createElement('input');
-        priceBookIdInput.type = 'hidden';
-        priceBookIdInput.id = 'price-book-id';
-        priceBookForm.appendChild(priceBookIdInput);
-    }
+    const priceBookId = document.getElementById('price-book-id').value;
 
     const priceBookData = {
         name: priceBookNameInput.value.trim(),
@@ -1742,15 +1699,14 @@ priceBookForm.addEventListener('submit', async (e) => {
         validTo: priceBookValidToInput.value ? Timestamp.fromDate(new Date(priceBookValidToInput.value)) : null,
     };
 
-    const currentPriceBookId = priceBookIdInput.value;
     const newIndexId = getPriceBookIndexId(priceBookData.name, priceBookData.currency);
 
     try {
         // Client-Side Uniqueness Validation for Price Book (Name, Currency)
-        const existingIndexDoc = await getDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId)); // Corrected path
+        const existingIndexDoc = await getDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId));
 
         if (existingIndexDoc.exists()) {
-            if (existingIndexDoc.data().priceBookId !== currentPriceBookId) {
+            if (existingIndexDoc.data().priceBookId !== priceBookId) {
                 priceBookFormMessage.textContent = 'A price book with this Name and Currency already exists. Please choose a unique combination.';
                 priceBookFormMessage.classList.remove('hidden');
                 return;
@@ -1758,29 +1714,29 @@ priceBookForm.addEventListener('submit', async (e) => {
         }
 
         let docRef;
-        if (currentPriceBookId) {
-            docRef = doc(db, `priceBooks`, currentPriceBookId); // Corrected path
+        if (priceBookId) {
+            docRef = doc(db, `priceBooks`, priceBookId);
             await updateDoc(docRef, priceBookData);
             showMessageBox('Price Book updated successfully!', false);
 
-            const oldPriceBookDoc = await getDoc(doc(db, `priceBooks`, currentPriceBookId)); // Corrected path
+            const oldPriceBookDoc = await getDoc(doc(db, `priceBooks`, priceBookId));
             const oldPriceBookData = oldPriceBookDoc.data();
             const oldIndexId = getPriceBookIndexId(oldPriceBookData.name, oldPriceBookData.currency);
 
             if (oldIndexId !== newIndexId) {
-                await deleteDoc(doc(db, `priceBookNameCurrencyIndexes`, oldIndexId)); // Corrected path
-                await setDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId), { // Corrected path
-                    priceBookId: currentPriceBookId,
+                await deleteDoc(doc(db, `priceBookNameCurrencyIndexes`, oldIndexId));
+                await setDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId), {
+                    priceBookId: priceBookId,
                     priceBookName: priceBookData.normalizedName,
                     priceBookCurrency: priceBookData.normalizedCurrency
                 });
             }
         } else {
-            const newDocRef = await addDoc(collection(db, `priceBooks`), priceBookData); // Corrected path
+            const newDocRef = await addDoc(collection(db, `priceBooks`), priceBookData);
             docRef = newDocRef;
             showMessageBox('Price Book added successfully!', false);
 
-            await setDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId), { // Corrected path
+            await setDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId), {
                 priceBookId: docRef.id,
                 priceBookName: priceBookData.normalizedName,
                 priceBookCurrency: priceBookData.normalizedCurrency
@@ -1804,23 +1760,25 @@ priceBookForm.addEventListener('submit', async (e) => {
 async function renderPriceBooksGrid() {
     if (!currentUser || currentUserRole !== 'Admin') {
         noPriceBooksMessage.classList.remove('hidden');
-        priceBooksTableBody.innerHTML = '';
-        if (priceBooksGrid) priceBooksGrid.updateConfig({ data: [] }).forceRender();
+        if (priceBooksGrid) {
+            priceBooksGrid.destroy();
+            priceBooksGrid = null;
+        }
+        priceBooksGridContainer.innerHTML = '';
         return;
     }
 
-    const containerElement = priceBooksTableBody.parentElement;
-    priceBooksTableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4">Loading Price Books...</td></tr>';
+    priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Price Books...</p>';
     noPriceBooksMessage.classList.add('hidden');
 
-    const priceBooksRef = collection(db, `priceBooks`); // Corrected path
+    const priceBooksRef = collection(db, `priceBooks`);
     const data = [];
 
     try {
         const snapshot = await getDocs(query(priceBooksRef, orderBy('name')));
         if (snapshot.empty) {
             noPriceBooksMessage.classList.remove('hidden');
-            priceBooksTableBody.innerHTML = '';
+            priceBooksGridContainer.innerHTML = '';
         } else {
             noPriceBooksMessage.classList.add('hidden');
             snapshot.forEach(doc => {
@@ -1898,15 +1856,78 @@ async function renderPriceBooksGrid() {
                     'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
                     'noRecordsFound': 'No Price Books Data Available',
                 }
-            }).render(containerElement);
+            }).render(priceBooksGridContainer);
         }
     } catch (error) {
         console.error("Error rendering price book grid:", error);
         showMessageBox('Could not load price book data: ' + error.message, false);
-        priceBooksTableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-red-500">Error loading price book data.</td></tr>';
+        priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading price book data.</p>';
     }
 }
 
+/**
+ * Populates the price book form with existing data for editing.
+ * @param {string} id - The ID of the price book document to edit.
+ */
+async function editPriceBook(id) {
+    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can edit price books.', false); return; }
+    try {
+        const docSnap = await getDoc(doc(db, `priceBooks`, id));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            document.getElementById('price-book-id').value = docSnap.id;
+
+            priceBookNameInput.value = data.name || '';
+            priceBookDescriptionTextarea.value = data.description || '';
+            await populatePriceBookCountryDropdown(data.country);
+            await populatePriceBookCurrencyDropdown(data.currency);
+            priceBookActiveCheckbox.checked = data.isActive;
+            priceBookValidFromInput.value = formatDateForInput(data.validFrom);
+            priceBookValidToInput.value = formatDateForInput(data.validTo);
+
+            priceBookFormContainer.classList.remove('hidden');
+            priceBookFormMessage.classList.add('hidden');
+        } else {
+            showMessageBox('Price Book not found!', false);
+        }
+    } catch (error) {
+        console.error("Error loading price book for edit:", error);
+        showMessageBox('Error loading price book for edit: ' + error.message, false);
+    }
+}
+
+/**
+ * Deletes a price book document from Firestore.
+ * Requires Admin role.
+ * @param {string} id - The ID of the price book document to delete.
+ */
+async function deletePriceBook(id) {
+    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can delete price books.', false); return; }
+
+    const confirmed = await showMessageBox('Are you sure you want to delete this price book? This action cannot be undone.', true);
+    if (!confirmed) return;
+
+    try {
+        const docSnap = await getDoc(doc(db, `priceBooks`, id));
+        if (!docSnap.exists()) {
+            showMessageBox('Price Book not found!', false);
+            return;
+        }
+        const data = docSnap.data();
+        const indexId = getPriceBookIndexId(data.name, data.currency);
+
+        await deleteDoc(doc(db, `priceBooks`, id));
+        // Also delete the corresponding index document
+        await deleteDoc(doc(db, `priceBookNameCurrencyIndexes`, indexId));
+
+        showMessageBox('Price Book deleted successfully!', false);
+        renderPriceBooksGrid();
+        populateOpportunityPriceBookDropdown();
+    } catch (error) {
+        console.error("Error deleting price book:", error);
+        showMessageBox('Error deleting price book: ' + error.message, false);
+    }
+}
 
 // --- Initial Load ---
 document.addEventListener('DOMContentLoaded', async () => {
