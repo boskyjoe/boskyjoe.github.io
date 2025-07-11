@@ -47,6 +47,11 @@ const navPriceBooks = document.getElementById('nav-price-books');
 const navLogout = document.getElementById('nav-logout');
 const adminMenuItem = document.getElementById('admin-menu-item'); // The parent li for admin dropdown
 
+// New UI elements for Admin dropdown functionality
+const adminDropdownToggle = document.getElementById('admin-dropdown-toggle');
+const adminSubmenu = document.getElementById('admin-submenu');
+
+
 const authSection = document.getElementById('auth-section');
 const dashboardSection = document.getElementById('dashboard-section');
 const customersSection = document.getElementById('customers-section');
@@ -481,11 +486,20 @@ navDashboard.addEventListener('click', () => showSection(dashboardSection));
 navCustomers.addEventListener('click', () => { showSection(customersSection); renderCustomersGrid(); populateCustomerCountryDropdown(); });
 navOpportunities.addEventListener('click', () => { showSection(opportunitiesSection); renderOpportunitiesGrid(); populateOpportunityCustomerDropdown(); populateOpportunityCurrencyDropdown(); populateOpportunityPriceBookDropdown(); });
 
+// Event listener for Admin dropdown toggle
+if (adminDropdownToggle && adminSubmenu) {
+    adminDropdownToggle.addEventListener('click', (e) => {
+        e.preventDefault(); // Prevent default link behavior
+        adminSubmenu.classList.toggle('hidden');
+    });
+}
+
 // Event listeners for Admin sub-menu items
 navCountries.addEventListener('click', () => {
     if (currentUserRole === 'Admin') {
         showSection(countriesSection);
         renderCountriesStatesGrid();
+        adminSubmenu.classList.add('hidden'); // Hide dropdown after selection
     } else {
         showMessageBox('Access Denied: You must be an Admin to access this feature.', false);
     }
@@ -494,6 +508,7 @@ navCurrencies.addEventListener('click', () => {
     if (currentUserRole === 'Admin') {
         showSection(currenciesSection);
         renderCurrenciesGrid();
+        adminSubmenu.classList.add('hidden'); // Hide dropdown after selection
         // No specific dropdown to populate on currency page itself, but the function is here for consistency
     } else {
         showMessageBox('Access Denied: You must be an Admin to access this feature.', false);
@@ -505,6 +520,7 @@ navPriceBooks.addEventListener('click', () => {
         renderPriceBooksGrid();
         populatePriceBookCountryDropdown(); // Populate dropdown when section is active
         populatePriceBookCurrencyDropdown(); // Populate dropdown when section is active
+        adminSubmenu.classList.add('hidden'); // Hide dropdown after selection
     } else {
         showMessageBox('Access Denied: You must be an Admin to access this feature.', false);
     }
