@@ -1,0 +1,137 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Function to check if the authenticated user has an 'Admin' role.
+    function is_admin() {
+      return request.auth != null && get(/databases/$(database)/documents/users_data/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // Helper function to check if the request is from an authenticated user.
+    function is_authenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to validate an incoming timestamp-like object or null
+    function isValidTimestampOrNull(data) {
+      return data == null || (data is map && data.keys().hasAll(['seconds', 'nanoseconds']) && data.seconds is number && data.nanoseconds is number);
+    }
+
+    // --- 1. Rules for the 'users_data' collection: ---
+    match /users_data/{userId} {
+      allow read: if is_authenticated() && (request.auth.uid == userId || is_admin());
+      allow create: if is_authenticated() &&
+                            request.auth.uid == userId &&
+                            request.resource.data.email == request.auth.token.email &&
+                            request.resource.data.role == 'Standard' &&
+                            request.resource.data.createdAt is timestamp &&
+                            request.resource.data.lastLogin is timestamp &&
+                            request.resource.data.createdAt <= request.time &&
+                            request.resource.data.displayName is string &&
+                            request.resource.data.keys().hasAll(['displayName', 'email', 'role', 'createdAt', 'lastLogin']) &&
+                            request.resource.data.keys().size() == 5;
+      allow update: if is_authenticated() && (request.auth.uid == userId || is_admin()) &&
+                            request.resource.data.createdAt == resource.data.createdAt &&
+                            request.resource.data.email == resource.data.email &&
+                            request.resource.data.lastLogin is timestamp &&
+                            (is_admin() || (request.resource.data.role == resource.data.role));
+      allow delete: if false;
+    }
+
+    // --- 2. Rules for 'customers' collection: ---
+    match /customers/{customerId} {
+      function is_customer_owner() {
+        return resource.data.creatorId == request.auth.uid;
+      }
+      allow read: if is_authenticated();
+      allow create: if is_authenticated() &&
+                            request.resource.data.creatorId == request.auth.uid &&
+                            request.resource.data.type is string && request.resource.data.type in ['Individual', 'Business'] &&
+                            request.resource.data.name is string && request.resource.data.name.size() > 0 &&
+                            request.resource.data.email is string &&
+                            request.resource.data.phone is string &&
+                            request.resource.data.address is string &&
+                            request.resource.data.country is string &&
+                            request.resource.data.preferredContactMethod is string && request.resource.data.preferredContactMethod in ['Email', 'Phone', 'SMS'] &&
+                            request.resource.data.industry is string && request.resource.data.industry in ['Technology', 'Healthcare', 'Finance', 'Retail', 'Education', 'Other'] &&
+                            request.resource.data.additionalDetails is string &&
+                            request.resource.data.source is string && request.resource.data.source in ['Website', 'Referral', 'Advertisement', 'Social Media', 'Event', 'Other'] &&
+                            request.resource.data.active is bool &&
+                            request.resource.data.createdAt is timestamp &&
+                            request.resource.data.updatedAt is timestamp &&
+                            request.resource.data.createdAt <= request.time &&
+                            request.resource.data.updatedAt <= request.time;
+      allow update: if is_authenticated() && (is_customer_owner() || is_admin()) &&
+                            request.resource.data.creatorId == resource.data.creatorId &&
+                            request.resource.data.updatedAt is timestamp &&
+                            request.resource.data.updatedAt <= request.time;
+      allow delete: if is_authenticated() && (is_customer_owner() || is_admin());
+    }
+
+    // --- 3. Rules for 'opportunities' collection: ---
+    match /opportunities/{opportunityId} {
+      function is_opportunity_owner() {
+        return resource.data.creatorId == request.auth.uid;
+      }
+      allow read: if is_authenticated() && (is_opportunity_owner() || is_admin());
+      allow create: if is_authenticated() &&
+                            request.auth.uid == request.resource.data.creatorId &&
+                            request.resource.data.name is string && request.resource.data.name.size() > 0 &&
+                            request.resource.data.customerId is string && request.resource.data.customerId.size() > 0 &&
+                            request.resource.data.customerName is string && request.resource.data.customerName.size() > 0 &&
+                            request.resource.data.currency is string && request.resource.data.currency.size() > 0 &&
+                            request.resource.data.priceBookId is string &&
+                            isValidTimestampOrNull(request.resource.data.expectedStartDate) &&
+                            isValidTimestampOrNull(request.resource.data.expectedCloseDate) &&
+                            request.resource.data.salesStage is string && request.resource.data.salesStage in ['Prospect', 'Qualification', 'Proposal', 'Negotiation', 'Won', 'Lost'] &&
+                            request.resource.data.probability is int && request.resource.data.probability >= 0 && request.resource.data.probability <= 100 &&
+                            request.resource.data.value is number && request.resource.data.value >= 0 &&
+                            request.resource.data.notes is string &&
+                            request.resource.data.createdAt is timestamp &&
+                            request.resource.data.updatedAt is timestamp &&
+                            request.resource.data.createdAt <= request.time &&
+                            request.resource.data.updatedAt <= request.time;
+      allow update: if is_authenticated() && (is_opportunity_owner() || is_admin()) &&
+                            request.resource.data.creatorId == resource.data.creatorId &&
+                            request.resource.data.updatedAt is timestamp &&
+                            request.resource.data.updatedAt <= request.time;
+      allow delete: if is_authenticated() && (is_opportunity_owner() || is_admin());
+    }
+
+    // --- 4. Rules for sub-collections of 'opportunities' ---
+    match /opportunities/{opportunityId}/{subcollection=**} {
+      allow read, create, update, delete: if is_authenticated() &&
+                                              (get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.creatorId == request.auth.uid || is_admin());
+    }
+
+    // --- 5. Rules for App Metadata Collections (Settings, Countries, Currencies, Price Books): ---
+
+    // Global settings for the app (single document)
+    match /settings/{documentId} {
+      allow read: if is_authenticated();
+      allow write: if is_admin();
+    }
+
+    // Countries data (for dropdowns)
+    match /countries/{documentId} {
+      allow read: if is_authenticated();
+      allow write: if is_admin();
+    }
+
+    // Currency data (for dropdowns)
+    match /currencies/{documentId} {
+      allow read: if is_authenticated();
+      allow create, update, delete: if is_admin();
+    }
+
+    // Price Book data (for actual priceBook documents)
+    match /priceBooks/{documentId} {
+      allow read: if is_authenticated();
+      // Simplified write rules to bypass uniqueness checks for debugging
+      allow create, update, delete: if is_admin();
+    }
+
+    // --- Removed priceBookNameCurrencyIndexes collection rules entirely for debugging ---
+    // You will need to re-add these and the client-side logic later if you want to enforce uniqueness.
+  }
+}
