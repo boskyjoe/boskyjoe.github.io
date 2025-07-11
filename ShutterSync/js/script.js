@@ -338,6 +338,36 @@ function showSection(sectionElement) {
     sectionElement.classList.remove('hidden');
 }
 
+/**
+ * Waits for the Grid.js library to be loaded and available on the window object.
+ * @returns {Promise<void>} A promise that resolves when window.gridjs is defined.
+ */
+async function waitForGridJs() {
+    return new Promise((resolve, reject) => {
+        const checkInterval = 100; // Check every 100ms
+        const maxAttempts = 50; // Max 5 seconds
+        let attempts = 0;
+
+        const checkGridJs = () => {
+            if (typeof window.gridjs !== 'undefined' && typeof window.gridjs.Grid !== 'undefined') {
+                console.log('Grid.js is now available.');
+                resolve();
+            } else if (attempts < maxAttempts) {
+                attempts++;
+                setTimeout(checkGridJs, checkInterval);
+            } else {
+                const errorMessage = 'Grid.js library failed to load after multiple attempts.';
+                console.error(errorMessage);
+                // We show a message box here, but also reject the promise to propagate the error
+                showMessageBox(errorMessage + ' Please refresh the page or check your internet connection.', false);
+                reject(new Error(errorMessage));
+            }
+        };
+
+        checkGridJs();
+    });
+}
+
 
 // --- Authentication ---
 
@@ -680,10 +710,11 @@ async function renderCustomersGrid() {
     }
 
     // Ensure window.gridjs is available before attempting to use it
-    if (typeof window.gridjs === 'undefined' || !window.gridjs.Grid) {
-        console.error("Grid.js not loaded properly. window.gridjs is undefined.");
-        showMessageBox('Grid.js library failed to load. Please refresh the page or check your internet connection.', false);
-        customersGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error: Grid.js library not loaded.</p>';
+    try {
+        await waitForGridJs(); // Wait for Grid.js to be ready
+    } catch (error) {
+        // Error message already shown by waitForGridJs
+        customersGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading customer data.</p>';
         return;
     }
 
@@ -1021,10 +1052,11 @@ async function renderOpportunitiesGrid() {
     }
 
     // Ensure window.gridjs is available before attempting to use it
-    if (typeof window.gridjs === 'undefined' || !window.gridjs.Grid) {
-        console.error("Grid.js not loaded properly. window.gridjs is undefined.");
-        showMessageBox('Grid.js library failed to load. Please refresh the page or check your internet connection.', false);
-        opportunitiesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error: Grid.js library not loaded.</p>';
+    try {
+        await waitForGridJs();
+    } catch (error) {
+        // Error message already shown by waitForGridJs
+        opportunitiesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading opportunity data.</p>';
         return;
     }
 
@@ -1305,10 +1337,11 @@ async function renderCountriesStatesGrid() {
     }
 
     // Ensure window.gridjs is available before attempting to use it
-    if (typeof window.gridjs === 'undefined' || !window.gridjs.Grid) {
-        console.error("Grid.js not loaded properly. window.gridjs is undefined.");
-        showMessageBox('Grid.js library failed to load. Please refresh the page or check your internet connection.', false);
-        countriesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error: Grid.js library not loaded.</p>';
+    try {
+        await waitForGridJs();
+    } catch (error) {
+        // Error message already shown by waitForGridJs
+        countriesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading countries data.</p>';
         return;
     }
 
@@ -1531,10 +1564,11 @@ async function renderCurrenciesGrid() {
     }
 
     // Ensure window.gridjs is available before attempting to use it
-    if (typeof window.gridjs === 'undefined' || !window.gridjs.Grid) {
-        console.error("Grid.js not loaded properly. window.gridjs is undefined.");
-        showMessageBox('Grid.js library failed to load. Please refresh the page or check your internet connection.', false);
-        currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error: Grid.js library not loaded.</p>';
+    try {
+        await waitForGridJs();
+    } catch (error) {
+        // Error message already shown by waitForGridJs
+        currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading currency data.</p>';
         return;
     }
 
@@ -1802,10 +1836,11 @@ async function renderPriceBooksGrid() {
     }
 
     // Ensure window.gridjs is available before attempting to use it
-    if (typeof window.gridjs === 'undefined' || !window.gridjs.Grid) {
-        console.error("Grid.js not loaded properly. window.gridjs is undefined.");
-        showMessageBox('Grid.js library failed to load. Please refresh the page or check your internet connection.', false);
-        priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error: Grid.js library not loaded.</p>';
+    try {
+        await waitForGridJs();
+    } catch (error) {
+        // Error message already shown by waitForGridJs
+        priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading price book data.</p>';
         return;
     }
 
