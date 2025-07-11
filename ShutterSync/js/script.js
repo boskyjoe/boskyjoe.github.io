@@ -1,7 +1,7 @@
 // Firebase SDK Imports (Modular API)
 // Using Firebase SDK version 10.0.0 for compatibility.
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithCustomToken, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js';
 import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, serverTimestamp, Timestamp, setDoc } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js';
 
 // Grid.js ES Module Import
@@ -10,7 +10,7 @@ import { Grid, h } from 'https://cdnjs.cloudflare.com/ajax/libs/gridjs/6.2.0/gri
 
 // Firebase configuration: Using the exact configuration provided by the user
 const firebaseConfig = {
-    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIyGODo", // Corrected typo in API key (was GODo, should be GODo)
+    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
     storageBucket: "shuttersync-96971.firebasestorage.app",
@@ -55,11 +55,8 @@ const countriesSection = document.getElementById('countries-section');
 const currenciesSection = document.getElementById('currencies-section');
 const priceBooksSection = document.getElementById('price-books-section');
 
-const authForm = document.getElementById('auth-form');
-const authEmailInput = document.getElementById('auth-email');
-const authPasswordInput = document.getElementById('auth-password');
-const loginBtn = document.getElementById('login-btn');
-const signupBtn = document.getElementById('signup-btn');
+// Authentication elements (updated for Google Sign-In)
+const googleSignInBtn = document.getElementById('google-signin-btn');
 const authErrorMessage = document.getElementById('auth-error-message');
 
 const userDisplayName = document.getElementById('user-display-name');
@@ -449,47 +446,18 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// Event listener for Login button
-loginBtn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    const email = authEmailInput.value;
-    const password = authPasswordInput.value;
+// Event listener for Google Sign-In button
+googleSignInBtn.addEventListener('click', async () => {
+    const provider = new GoogleAuthProvider();
     try {
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithPopup(auth, provider);
         authErrorMessage.classList.add('hidden');
-        showMessageBox('Logged in successfully!', false);
+        showMessageBox('Logged in successfully with Google!', false);
     } catch (error) {
-        console.error('Login Error:', error);
-        authErrorMessage.textContent = 'Login failed: ' + error.message;
+        console.error('Google Sign-In Error:', error);
+        authErrorMessage.textContent = 'Google Sign-In failed: ' + error.message;
         authErrorMessage.classList.remove('hidden');
-        showMessageBox('Login failed: ' + error.message, false);
-    }
-});
-
-// Event listener for Sign Up button
-signupBtn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    const email = authEmailInput.value;
-    const password = authPasswordInput.value;
-    try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        // User created, now create their user_data document with default 'Standard' role
-        // This document is stored in the private user path
-        const userDocRef = doc(db, `artifacts/${appId}/users/${userCredential.user.uid}/users_data`, userCredential.user.uid);
-        await setDoc(userDocRef, {
-            displayName: userCredential.user.email, // Use email as display name for new users
-            email: userCredential.user.email,
-            role: 'Standard',
-            createdAt: serverTimestamp(),
-            lastLogin: serverTimestamp()
-        });
-        authErrorMessage.classList.add('hidden');
-        showMessageBox('Account created and logged in successfully!', false);
-    } catch (error) {
-        console.error('Sign Up Error:', error);
-        authErrorMessage.textContent = 'Sign up failed: ' + error.message;
-        authErrorMessage.classList.remove('hidden');
-        showMessageBox('Sign up failed: ' + error.message, false);
+        showMessageBox('Google Sign-In failed: ' + error.message, false);
     }
 });
 
@@ -652,7 +620,6 @@ customerForm.addEventListener('submit', async (e) => {
 
     // Get the current customer ID from a data attribute or similar if editing
     // Since there's no customerIdInput in HTML, we'll assume it's stored on the form itself or derived.
-    // For now, let's assume if the form is being submitted after an 'edit' click, a global variable `editingCustomerId` would be set.
     // Let's add a temporary hidden input for customerId for forms to manage edit state.
     let customerIdInput = document.getElementById('customer-id');
     if (!customerIdInput) {
@@ -1920,78 +1887,6 @@ async function renderPriceBooksGrid() {
         console.error("Error rendering price book grid:", error);
         showMessageBox('Could not load price book data: ' + error.message, false);
         priceBooksTableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-red-500">Error loading price book data.</td></tr>';
-    }
-}
-
-/**
- * Populates the price book form with existing data for editing.
- * @param {string} id - The ID of the price book document to edit.
- */
-async function editPriceBook(id) {
-    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can edit price books.', false); return; }
-    try {
-        const docSnap = await getDoc(doc(db, `artifacts/${appId}/public/data/priceBooks`, id));
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            // Add hidden input for priceBookId if it doesn't exist
-            let priceBookIdInput = document.getElementById('price-book-id');
-            if (!priceBookIdInput) {
-                priceBookIdInput = document.createElement('input');
-                priceBookIdInput.type = 'hidden';
-                priceBookIdInput.id = 'price-book-id';
-                priceBookForm.appendChild(priceBookIdInput);
-            }
-            priceBookIdInput.value = docSnap.id;
-
-            priceBookNameInput.value = data.name || '';
-            priceBookDescriptionTextarea.value = data.description || '';
-            await populatePriceBookCountryDropdown(data.country);
-            await populatePriceBookCurrencyDropdown(data.currency);
-            priceBookActiveCheckbox.checked = data.isActive;
-            priceBookValidFromInput.value = formatDateForInput(data.validFrom);
-            priceBookValidToInput.value = formatDateForInput(data.validTo);
-            priceBookFormContainer.classList.remove('hidden');
-            priceBookFormMessage.classList.add('hidden');
-        } else {
-            showMessageBox('Price Book not found!', false);
-        }
-    } catch (error) {
-        console.error("Error loading price book for edit:", error);
-        showMessageBox('Error loading price book for edit: ' + error.message, false);
-    }
-}
-
-/**
- * Deletes a price book document and its corresponding uniqueness index document.
- * Requires Admin role.
- * @param {string} id - The ID of the price book document to delete.
- */
-async function deletePriceBook(id) {
-    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can delete price books.', false); return; }
-
-    const confirmed = await showMessageBox('Are you sure you want to delete this price book? This action cannot be undone.', true);
-    if (!confirmed) return;
-
-    try {
-        const priceBookDoc = await getDoc(doc(db, `artifacts/${appId}/public/data/priceBooks`, id));
-        let indexIdToDelete = null;
-        if (priceBookDoc.exists()) {
-            const data = priceBookDoc.data();
-            indexIdToDelete = getPriceBookIndexId(data.name, data.currency);
-        }
-
-        await deleteDoc(doc(db, `artifacts/${appId}/public/data/priceBooks`, id));
-
-        if (indexIdToDelete) {
-            await deleteDoc(doc(db, `artifacts/${appId}/public/data/priceBookNameCurrencyIndexes`, indexIdToDelete));
-        }
-
-        showMessageBox('Price Book deleted successfully!', false);
-        renderPriceBooksGrid();
-        populateOpportunityPriceBookDropdown();
-    } catch (error) {
-        console.error("Error deleting price book:", error);
-        showMessageBox('Error deleting price book: ' + error.message, false);
     }
 }
 
