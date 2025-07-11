@@ -709,7 +709,6 @@ async function renderCustomersGrid() {
         return;
     }
 
-    // Ensure window.gridjs is available before attempting to use it
     try {
         await waitForGridJs(); // Wait for Grid.js to be ready
     } catch (error) {
@@ -718,12 +717,13 @@ async function renderCustomersGrid() {
         return;
     }
 
-    // Show a loading indicator
+    // Always clear the container before attempting to render or re-render
+    customersGridContainer.innerHTML = '';
+
+    // Show a loading indicator *after* clearing, but before data fetch/grid render
     customersGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Customers...</p>';
     noCustomersMessage.classList.add('hidden');
 
-    // FIX: Removed client-side filtering by creatorId for customers as per new Firestore rules.
-    // Now all authenticated users can read all customers.
     let customersRef = collection(db, `customers`);
     let q = query(customersRef, orderBy('name'));
     const customerData = [];
@@ -753,81 +753,85 @@ async function renderCustomersGrid() {
                     data.creatorId // Added creatorId for rule check
                 ]);
             });
-        }
 
-        // Initialize or update Grid.js
-        if (customersGrid) {
-            customersGrid.updateConfig({ data: customerData }).forceRender();
-        } else {
-            customersGrid = new window.gridjs.Grid({
-                columns: [
-                    { id: 'id', name: 'ID', hidden: true },
-                    { id: 'name', name: 'Name', sort: true, filter: true },
-                    { id: 'email', name: 'Email', sort: true, filter: true },
-                    { id: 'phone', name: 'Phone', sort: true, filter: true },
-                    { id: 'country', name: 'Country', sort: true, filter: true },
-                    { id: 'active', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
-                    { id: 'type', name: 'Type', hidden: true },
-                    { id: 'preferredContactMethod', name: 'Contact Method', hidden: true },
-                    { id: 'industry', name: 'Industry', hidden: true },
-                    { id: 'additionalDetails', name: 'Additional Details', hidden: true },
-                    { id: 'source', name: 'Source', hidden: true },
-                    { id: 'createdAt', name: 'Created At', hidden: true },
-                    { id: 'creatorId', name: 'Creator ID', hidden: true }, // Keep creatorId hidden but accessible for actions
-                    {
-                        name: 'Actions',
-                        sort: false,
-                        formatter: (cell, row) => {
-                            const docId = row.cells[0].data;
-                            const creatorId = row.cells[12].data; // Get creatorId from the row data
-                            const canEditDelete = (currentUserRole === 'Admin' || creatorId === currentUser.uid);
+            // If a grid already exists, update its data.
+            // Otherwise, create a new one.
+            if (customersGrid) {
+                customersGrid.updateConfig({ data: customerData }).forceRender();
+            } else {
+                // Clear the loading message before rendering the actual grid
+                customersGridContainer.innerHTML = ''; // Clear loading message
 
-                            return window.gridjs.h('div', { className: 'flex space-x-2' },
-                                window.gridjs.h('button', {
-                                    className: `px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
-                                    onClick: () => canEditDelete ? editCustomer(docId) : showMessageBox('You do not have permission to edit this customer.', false),
-                                    disabled: !canEditDelete
-                                }, 'Edit'),
-                                window.gridjs.h('button', {
-                                    className: `px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
-                                    onClick: () => canEditDelete ? deleteCustomer(docId) : showMessageBox('You do not have permission to delete this customer.', false),
-                                    disabled: !canEditDelete
-                                }, 'Delete')
-                            );
+                customersGrid = new window.gridjs.Grid({
+                    columns: [
+                        { id: 'id', name: 'ID', hidden: true },
+                        { id: 'name', name: 'Name', sort: true, filter: true },
+                        { id: 'email', name: 'Email', sort: true, filter: true },
+                        { id: 'phone', name: 'Phone', sort: true, filter: true },
+                        { id: 'country', name: 'Country', sort: true, filter: true },
+                        { id: 'active', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
+                        { id: 'type', name: 'Type', hidden: true },
+                        { id: 'preferredContactMethod', name: 'Contact Method', hidden: true },
+                        { id: 'industry', name: 'Industry', hidden: true },
+                        { id: 'additionalDetails', name: 'Additional Details', hidden: true },
+                        { id: 'source', name: 'Source', hidden: true },
+                        { id: 'createdAt', name: 'Created At', hidden: true },
+                        { id: 'creatorId', name: 'Creator ID', hidden: true }, // Keep creatorId hidden but accessible for actions
+                        {
+                            name: 'Actions',
+                            sort: false,
+                            formatter: (cell, row) => {
+                                const docId = row.cells[0].data;
+                                const creatorId = row.cells[12].data; // Get creatorId from the row data
+                                const canEditDelete = (currentUserRole === 'Admin' || creatorId === currentUser.uid);
+
+                                return window.gridjs.h('div', { className: 'flex space-x-2' },
+                                    window.gridjs.h('button', {
+                                        className: `px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
+                                        onClick: () => canEditDelete ? editCustomer(docId) : showMessageBox('You do not have permission to edit this customer.', false),
+                                        disabled: !canEditDelete
+                                    }, 'Edit'),
+                                    window.gridjs.h('button', {
+                                        className: `px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
+                                        onClick: () => canEditDelete ? deleteCustomer(docId) : showMessageBox('You do not have permission to delete this customer.', false),
+                                        disabled: !canEditDelete
+                                    }, 'Delete')
+                                );
+                            }
                         }
-                    }
-                ],
-                data: customerData,
-                search: {
-                    selector: (cell, rowIndex, cellIndex) => {
-                        // Search across name, email, phone, country
-                        if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3 || cellIndex === 4) {
-                            return cell;
+                    ],
+                    data: customerData,
+                    search: {
+                        selector: (cell, rowIndex, cellIndex) => {
+                            // Search across name, email, phone, country
+                            if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3 || cellIndex === 4) {
+                                return cell;
+                            }
+                            return null;
                         }
-                        return null;
+                    },
+                    pagination: { enabled: true, limit: 10, summary: true },
+                    sort: true,
+                    resizable: true,
+                    className: {
+                        container: 'gridjs-container', table: 'min-w-full bg-white shadow-md rounded-lg overflow-hidden',
+                        thead: 'bg-gray-200', th: 'py-3 px-4 text-left text-sm font-medium text-gray-700',
+                        td: 'py-3 px-4 text-left text-sm text-gray-800', tr: 'divide-y divide-gray-200',
+                        footer: 'bg-gray-50 p-4 flex justify-between items-center',
+                        pagination: 'flex items-center space-x-2',
+                        'pagination-summary': 'text-sm text-gray-600', 'pagination-gap': 'text-sm text-gray-400',
+                        'pagination-nav': 'flex space-x-1', 'pagination-nav-prev': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
+                        'pagination-nav-next': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
+                        'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
+                        'pagination-btn-current': 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
+                    },
+                    language: {
+                        'search': { 'placeholder': 'Search customers...' },
+                        'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
+                        'noRecordsFound': 'No Customer Data Available',
                     }
-                },
-                pagination: { enabled: true, limit: 10, summary: true },
-                sort: true,
-                resizable: true,
-                className: {
-                    container: 'gridjs-container', table: 'min-w-full bg-white shadow-md rounded-lg overflow-hidden',
-                    thead: 'bg-gray-200', th: 'py-3 px-4 text-left text-sm font-medium text-gray-700',
-                    td: 'py-3 px-4 text-left text-sm text-gray-800', tr: 'divide-y divide-gray-200',
-                    footer: 'bg-gray-50 p-4 flex justify-between items-center',
-                    pagination: 'flex items-center space-x-2',
-                    'pagination-summary': 'text-sm text-gray-600', 'pagination-gap': 'text-sm text-gray-400',
-                    'pagination-nav': 'flex space-x-1', 'pagination-nav-prev': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-nav-next': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-btn-current': 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
-                },
-                language: {
-                    'search': { 'placeholder': 'Search customers...' },
-                    'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
-                    'noRecordsFound': 'No Customer Data Available',
-                }
-            }).render(customersGridContainer); // Render into the new container
+                }).render(customersGridContainer); // Render into the new container
+            }
         }
     } catch (error) {
         console.error("Error rendering customers grid:", error);
@@ -1060,6 +1064,7 @@ async function renderOpportunitiesGrid() {
         return;
     }
 
+    opportunitiesGridContainer.innerHTML = ''; // Clear the container before attempting to render or re-render
     opportunitiesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Opportunities...</p>';
     noOpportunitiesMessage.classList.add('hidden');
 
@@ -1097,6 +1102,7 @@ async function renderOpportunitiesGrid() {
         if (opportunitiesGrid) {
             opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender();
         } else {
+            opportunitiesGridContainer.innerHTML = ''; // Clear loading message
             opportunitiesGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
@@ -1345,6 +1351,7 @@ async function renderCountriesStatesGrid() {
         return;
     }
 
+    countriesGridContainer.innerHTML = ''; // Clear the container before attempting to render or re-render
     countriesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Countries...</p>';
     noCountriesMessage.classList.add('hidden');
 
@@ -1371,6 +1378,7 @@ async function renderCountriesStatesGrid() {
         if (countriesStatesGrid) {
             countriesStatesGrid.updateConfig({ data: data }).forceRender();
         } else {
+            countriesGridContainer.innerHTML = ''; // Clear loading message
             countriesStatesGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
@@ -1572,6 +1580,7 @@ async function renderCurrenciesGrid() {
         return;
     }
 
+    currenciesGridContainer.innerHTML = ''; // Clear the container before attempting to render or re-render
     currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Currencies...</p>';
     noCurrenciesMessage.classList.add('hidden');
 
@@ -1599,6 +1608,7 @@ async function renderCurrenciesGrid() {
         if (currenciesGrid) {
             currenciesGrid.updateConfig({ data: data }).forceRender();
         } else {
+            currenciesGridContainer.innerHTML = ''; // Clear loading message
             currenciesGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
@@ -1844,6 +1854,7 @@ async function renderPriceBooksGrid() {
         return;
     }
 
+    priceBooksGridContainer.innerHTML = ''; // Clear the container before attempting to render or re-render
     priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Price Books...</p>';
     noPriceBooksMessage.classList.add('hidden');
 
@@ -1875,6 +1886,7 @@ async function renderPriceBooksGrid() {
         if (priceBooksGrid) {
             priceBooksGrid.updateConfig({ data: data }).forceRender();
         } else {
+            priceBooksGridContainer.innerHTML = ''; // Clear loading message
             priceBooksGrid = new window.gridjs.Grid({
                 columns: [
                     { id: 'id', name: 'ID', hidden: true },
