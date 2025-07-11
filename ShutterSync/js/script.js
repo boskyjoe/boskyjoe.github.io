@@ -359,8 +359,8 @@ onAuthStateChanged(auth, async (user) => {
 
         try {
             // Fetch user's custom claims for role from Firestore
-            // The users_data collection should be private to each user
-            const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/users_data`, user.uid);
+            // The users_data collection is now a top-level collection as per user's request.
+            const userDocRef = doc(db, 'users_data', user.uid);
             const userDoc = await getDoc(userDocRef);
 
             if (!userDoc.exists()) {
