@@ -1848,7 +1848,7 @@ priceBookForm.addEventListener('submit', async (e) => {
             });
         }
         resetAndHideForm(priceBookForm, priceBookFormContainer, '', priceBookFormMessage); // Clear and hide form
-        renderPriceBooksGrid();
+        renderPriceBooksGrid(); // This function is called here
         populateOpportunityPriceBookDropdown();
     } catch (error) {
         console.error("Error saving price book:", error);
@@ -1859,66 +1859,124 @@ priceBookForm.addEventListener('submit', async (e) => {
 });
 
 /**
- * Populates the price book form with existing data for editing.
- * @param {string} id - The ID of the price book document to edit.
+ * Renders or updates the Grid.js table for price books.
+ * Fetches data from the 'priceBooks' collection.
  */
-async function editPriceBook(id) {
-    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can edit price books.', false); return; }
-    try {
-        const docSnap = await getDoc(doc(db, `priceBooks`, id));
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            document.getElementById('price-book-id').value = docSnap.id;
-
-            priceBookNameInput.value = data.name || '';
-            priceBookDescriptionTextarea.value = data.description || '';
-            await populatePriceBookCountryDropdown(data.country);
-            await populatePriceBookCurrencyDropdown(data.currency);
-            priceBookActiveCheckbox.checked = data.isActive;
-            priceBookValidFromInput.value = formatDateForInput(data.validFrom);
-            priceBookValidToInput.value = formatDateForInput(data.validTo);
-
-            priceBookFormContainer.classList.remove('hidden');
-            priceBookFormMessage.classList.add('hidden');
-        } else {
-            showMessageBox('Price Book not found!', false);
+async function renderPriceBooksGrid() { // This is the function definition
+    if (!currentUser || currentUserRole !== 'Admin') {
+        noPriceBooksMessage.classList.remove('hidden');
+        if (priceBooksGrid) {
+            priceBooksGrid.destroy();
+            priceBooksGrid = null;
         }
-    } catch (error) {
-        console.error("Error loading price book for edit:", error);
-        showMessageBox('Error loading price book for edit: ' + error.message, false);
+        priceBooksGridContainer.innerHTML = '';
+        return;
     }
-}
 
-/**
- * Deletes a price book document from Firestore.
- * Requires Admin role.
- * @param {string} id - The ID of the price book document to delete.
- */
-async function deletePriceBook(id) {
-    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can delete price books.', false); return; }
+    // Ensure window.gridjs is available before attempting to use it
+    try {
+        await waitForGridJs();
+    } catch (error) {
+        // Error message already shown by waitForGridJs
+        priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading price book data.</p>';
+        return;
+    }
 
-    const confirmed = await showMessageBox('Are you sure you want to delete this price book? This action cannot be undone.', true);
-    if (!confirmed) return;
+    priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Price Books...</p>';
+    noPriceBooksMessage.classList.add('hidden');
+
+    const priceBooksRef = collection(db, `priceBooks`);
+    const data = [];
 
     try {
-        const docSnap = await getDoc(doc(db, `priceBooks`, id));
-        if (!docSnap.exists()) {
-            showMessageBox('Price Book not found!', false);
-            return;
+        const snapshot = await getDocs(query(priceBooksRef, orderBy('name')));
+        priceBooksGridContainer.innerHTML = ''; // Clear loading message
+
+        if (snapshot.empty) {
+            noPriceBooksMessage.classList.remove('hidden');
+        } else {
+            noPriceBooksMessage.classList.add('hidden'); // Ensure it's hidden if data is present
+            snapshot.forEach(doc => {
+                const priceBook = doc.data();
+                data.push([
+                    doc.id,
+                    priceBook.name,
+                    priceBook.description,
+                    priceBook.country || '',
+                    priceBook.currency || '',
+                    priceBook.isActive,
+                    priceBook.validFrom,
+                    priceBook.validTo
+                ]);
+            });
         }
-        const data = docSnap.data();
-        const indexId = getPriceBookIndexId(data.name, data.currency);
 
-        await deleteDoc(doc(db, `priceBooks`, id));
-        // Also delete the corresponding index document
-        await deleteDoc(doc(db, `priceBookNameCurrencyIndexes`, indexId));
-
-        showMessageBox('Price Book deleted successfully!', false);
-        renderPriceBooksGrid();
-        populateOpportunityPriceBookDropdown();
+        if (priceBooksGrid) {
+            priceBooksGrid.updateConfig({ data: data }).forceRender();
+        } else {
+            priceBooksGrid = new window.gridjs.Grid({
+                columns: [
+                    { id: 'id', name: 'ID', hidden: true },
+                    { id: 'name', name: 'Price Book Name', sort: true, filter: true },
+                    { id: 'description', name: 'Description', sort: true, filter: true },
+                    { id: 'country', name: 'Country', sort: true, filter: true },
+                    { id: 'currency', name: 'Currency', sort: true, filter: true },
+                    { id: 'isActive', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
+                    { id: 'validFrom', name: 'Valid From', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
+                    { id: 'validTo', name: 'Valid To', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
+                    {
+                        name: 'Actions',
+                        sort: false,
+                        formatter: (cell, row) => {
+                            const docId = row.cells[0].data;
+                            return window.gridjs.h('div', { className: 'flex space-x-2' },
+                                window.gridjs.h('button', {
+                                    className: 'px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
+                                    onClick: () => editPriceBook(docId)
+                                }, 'Edit'),
+                                window.gridjs.h('button', {
+                                    className: 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm',
+                                    onClick: () => deletePriceBook(docId)
+                                }, 'Delete')
+                            );
+                        }
+                    }
+                ],
+                data: data,
+                search: {
+                    selector: (cell, rowIndex, cellIndex) => {
+                        if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3 || cellIndex === 4) {
+                            return cell;
+                        }
+                        return null;
+                    }
+                },
+                pagination: { enabled: true, limit: 5, summary: true },
+                sort: true,
+                resizable: true,
+                className: {
+                    container: 'gridjs-container', table: 'min-w-full bg-white shadow-md rounded-lg overflow-hidden',
+                    thead: 'bg-gray-200', th: 'py-3 px-4 text-left text-sm font-medium text-gray-700',
+                    td: 'py-3 px-4 text-left text-sm text-gray-800', tr: 'divide-y divide-gray-200',
+                    footer: 'bg-gray-50 p-4 flex justify-between items-center',
+                    pagination: 'flex items-center space-x-2',
+                    'pagination-summary': 'text-sm text-gray-600', 'pagination-gap': 'text-sm text-gray-400',
+                    'pagination-nav': 'flex space-x-1', 'pagination-nav-prev': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
+                    'pagination-nav-next': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
+                    'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
+                    'pagination-btn-current': 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
+                },
+                language: {
+                    'search': { 'placeholder': 'Search price books...' },
+                    'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
+                    'noRecordsFound': 'No Price Books Data Available',
+                }
+            }).render(priceBooksGridContainer);
+        }
     } catch (error) {
-        console.error("Error deleting price book:", error);
-        showMessageBox('Error deleting price book: ' + error.message, false);
+        console.error("Error rendering price book grid:", error);
+        showMessageBox('Could not load price book data: ' + error.message, false);
+        priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading price book data.</p>';
     }
 }
 
