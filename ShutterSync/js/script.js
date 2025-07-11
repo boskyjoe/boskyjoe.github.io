@@ -1856,7 +1856,7 @@ priceBookForm.addEventListener('submit', async (e) => {
         priceBookFormMessage.classList.remove('hidden');
         showMessageBox('Error saving price book: ' + error.message, false);
     }
-}
+});
 
 /**
  * Populates the price book form with existing data for editing.
