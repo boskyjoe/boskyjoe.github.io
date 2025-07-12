@@ -974,35 +974,84 @@ async function populateOpportunityCurrencyDropdown(selectedCurrencySymbol = null
 /**
  * Populates the opportunity price book dropdown with data from the 'priceBooks' collection.
  * @param {string|null} selectedPriceBookId - The price book ID to pre-select (optional).
+ * @param {string|null} currencySymbol - The currency symbol to filter price books by (optional).
  */
-async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null) {
+async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null, currencySymbol = null) {
     if (!currentUser) return;
     const selectElement = opportunityPriceBookSelect;
-    selectElement.innerHTML = '<option value="">Select a Price Book</option>';
-    // Corrected path for public data
-    const snapshot = await getDocs(query(collection(db, `priceBooks`), orderBy('name')));
-    snapshot.forEach(doc => {
-        const data = doc.data(); // Use doc.data() to get the object
-        const option = document.createElement('option');
-        option.value = doc.id;
-        option.textContent = data.name; // Access the name property
-        if (selectedPriceBookId && doc.id === selectedPriceBookId) {
-            option.selected = true;
+    selectElement.innerHTML = '<option value="">Select a Price Book</option>'; // Default empty option
+
+    let priceBookQueryRef = collection(db, `priceBooks`);
+    let q = query(priceBookQueryRef, orderBy('name'));
+
+    if (currencySymbol) {
+        // Filter by currency and ensure it's active
+        q = query(priceBookQueryRef,
+            where('currency', '==', currencySymbol),
+            where('isActive', '==', true),
+            orderBy('name')
+        );
+    } else {
+        // If no currency, still only show active ones
+        q = query(priceBookQueryRef, where('isActive', '==', true), orderBy('name'));
+    }
+
+    try {
+        const snapshot = await getDocs(q);
+        let defaultSelected = false;
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const option = document.createElement('option');
+            option.value = doc.id;
+            option.textContent = data.name;
+
+            // Prioritize explicit selection, then auto-select first active matching currency
+            if (selectedPriceBookId && doc.id === selectedPriceBookId) {
+                option.selected = true;
+                defaultSelected = true;
+            } else if (currencySymbol && !defaultSelected && data.currency === currencySymbol && data.isActive) {
+                // If a currency is specified and no explicit price book is selected,
+                // select the first active price book that matches the currency.
+                option.selected = true;
+                defaultSelected = true;
+            }
+            selectElement.appendChild(option);
+        });
+
+        // If no price book was selected (either explicitly or by currency match),
+        // and there are options, ensure the default "Select a Price Book" is shown.
+        if (!defaultSelected && selectElement.options.length > 1) {
+            selectElement.value = ''; // Ensure "Select a Price Book" is chosen
         }
-        selectElement.appendChild(option);
-    });
+
+    } catch (error) {
+        console.error(`Error fetching price books for dropdown (currency: ${currencySymbol}):`, error);
+        showMessageBox(`Could not load price books for selected currency.`, false);
+    }
 }
 
 // Event listener to open the Opportunity Form for adding a new opportunity
-addOpportunityBtn.addEventListener('click', () => {
+addOpportunityBtn.addEventListener('click', async () => { // Made async to await dropdown populations
     if (!currentUser) { showMessageBox('Please sign in to add opportunities.', false); return; }
     document.getElementById('opportunity-id').value = ''; // Clear ID for new opportunity
     resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage); // Clear and hide form
     opportunityFormContainer.classList.remove('hidden'); // Then show the container
-    populateOpportunityCustomerDropdown();
-    populateOpportunityCurrencyDropdown();
-    populateOpportunityPriceBookDropdown();
+
+    // Populate dropdowns. Order matters: currency first, then price book.
+    await populateOpportunityCustomerDropdown();
+    await populateOpportunityCurrencyDropdown();
+    // Initially populate price book dropdown without a specific currency filter,
+    // or with a default if desired, but the change listener will handle it.
+    await populateOpportunityPriceBookDropdown();
 });
+
+// Event listener for currency selection change to update price book dropdown
+opportunityCurrencySelect.addEventListener('change', () => {
+    const selectedCurrencySymbol = opportunityCurrencySelect.value;
+    populateOpportunityPriceBookDropdown(null, selectedCurrencySymbol); // Pass null for selectedPriceBookId, let it auto-select
+});
+
 
 // Event listener to save (add or update) an opportunity
 opportunityForm.addEventListener('submit', async (e) => {
@@ -1219,7 +1268,7 @@ async function editOpportunity(opportunityId) {
             opportunityNameInput.value = data.name || '';
             await populateOpportunityCustomerDropdown(data.customerId);
             await populateOpportunityCurrencyDropdown(data.currency);
-            await populateOpportunityPriceBookDropdown(data.priceBookId);
+            await populateOpportunityPriceBookDropdown(data.priceBookId, data.currency); // Pass currency for edit
             opportunityExpectedStartDateInput.value = formatDateForInput(data.expectedStartDate);
             opportunityExpectedCloseDateInput.value = formatDateForInput(data.expectedCloseDate);
             opportunitySalesStageSelect.value = data.salesStage || '';
