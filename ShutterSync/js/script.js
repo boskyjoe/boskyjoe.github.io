@@ -158,8 +158,7 @@ const priceBookDescriptionTextarea = document.getElementById('price-book-descrip
 // Removed priceBookCountrySelect
 const priceBookCurrencySelect = document.getElementById('price-book-currency');
 const priceBookActiveCheckbox = document.getElementById('price-book-active'); // Changed to checkbox
-const priceBookValidFromInput = document.getElementById('price-book-valid-from');
-const priceBookValidToInput = document.getElementById('price-book-valid-to');
+// Removed priceBookValidFromInput and priceBookValidToInput
 const cancelPriceBookBtn = document.getElementById('cancel-price-book-btn');
 const priceBookFormMessage = document.getElementById('price-book-form-message');
 const priceBookSearchInput = document.getElementById('price-book-search');
@@ -1772,15 +1771,6 @@ async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null) 
     await populateSelect(priceBookCurrencySelect, `currencies`, 'symbol', 'name', selectedCurrencySymbol);
 }
 
-/**
- * This function is no longer needed as price books are not tied to countries.
- * @deprecated
- */
-// async function populatePriceBookCountryDropdown(selectedCountryName = null) {
-//     if (!currentUser || currentUserRole !== 'Admin') return;
-//     await populateSelect(priceBookCountrySelect, `countries`, 'name', 'name', selectedCountryName, 'defaultCurrencySymbol');
-// }
-
 // Event listener to open the Price Book Form for adding a new price book
 addPriceBookBtn.addEventListener('click', () => {
     if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can add price books.', false); return; }
@@ -1788,7 +1778,6 @@ addPriceBookBtn.addEventListener('click', () => {
     resetAndHideForm(priceBookForm, priceBookFormContainer, '', priceBookFormMessage); // Clear and hide form
     priceBookFormContainer.classList.remove('hidden'); // Then show the container
     priceBookActiveCheckbox.checked = true; // Default to active
-    // Removed populatePriceBookCountryDropdown();
     populatePriceBookCurrencyDropdown();
 });
 
@@ -1806,12 +1795,10 @@ priceBookForm.addEventListener('submit', async (e) => {
         name: priceBookNameInput.value.trim(),
         normalizedName: normalizedName,
         description: priceBookDescriptionTextarea.value.trim(),
-        // Removed country field
         currency: priceBookCurrencySelect.value,
         normalizedCurrency: normalizedCurrency,
         isActive: priceBookActiveCheckbox.checked,
-        validFrom: priceBookValidFromInput.value ? Timestamp.fromDate(new Date(priceBookValidFromInput.value)) : null,
-        validTo: priceBookValidToInput.value ? Timestamp.fromDate(new Date(priceBookValidToInput.value)) : null,
+        // Removed validFrom and validTo fields
     };
 
     // const newIndexId = getPriceBookIndexId(priceBookData.name, priceBookData.currency); // No longer needed for client-side check
@@ -1884,11 +1871,11 @@ async function editPriceBook(id) {
 
             priceBookNameInput.value = data.name || '';
             priceBookDescriptionTextarea.value = data.description || '';
-            // Removed populatePriceBookCountryDropdown(data.country);
             await populatePriceBookCurrencyDropdown(data.currency); // Populate currency dropdown
             priceBookActiveCheckbox.checked = data.isActive;
-            priceBookValidFromInput.value = formatDateForInput(data.validFrom);
-            priceBookValidToInput.value = formatDateForInput(data.validTo);
+            // Removed validFrom and validTo
+            // priceBookValidFromInput.value = formatDateForInput(data.validFrom);
+            // priceBookValidToInput.value = formatDateForInput(data.validTo);
 
             priceBookFormContainer.classList.remove('hidden');
             priceBookFormMessage.classList.add('hidden');
@@ -1978,11 +1965,9 @@ async function renderPriceBooksGrid() { // This is the function definition
                     doc.id,
                     priceBook.name,
                     priceBook.description,
-                    // Removed priceBook.country
                     priceBook.currency || '',
                     priceBook.isActive,
-                    priceBook.validFrom,
-                    priceBook.validTo
+                    // Removed validFrom and validTo
                 ]);
             });
         }
@@ -1995,11 +1980,9 @@ async function renderPriceBooksGrid() { // This is the function definition
                     { id: 'id', name: 'ID', hidden: true },
                     { id: 'name', name: 'Price Book Name', sort: true, filter: true },
                     { id: 'description', name: 'Description', sort: true, filter: true },
-                    // Removed Country column
                     { id: 'currency', name: 'Currency', sort: true, filter: true },
                     { id: 'isActive', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
-                    { id: 'validFrom', name: 'Valid From', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
-                    { id: 'validTo', name: 'Valid To', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
+                    // Removed Valid From and Valid To columns
                     {
                         name: 'Actions',
                         sort: false,
