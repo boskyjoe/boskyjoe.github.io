@@ -130,6 +130,7 @@
                 <ul class="flex space-x-4">
                     <li><a href="#" id="nav-dashboard" class="hover:text-blue-200 transition duration-300">Dashboard</a></li>
                     <li><a href="#" id="nav-customers" class="hover:text-blue-200 transition duration-300">Customers</a></li>
+                    <li><a href="#" id="nav-leads" class="hover:text-blue-200 transition duration-300">Leads</a></li>
                     <li><a href="#" id="nav-opportunities" class="hover:text-blue-200 transition duration-300">Opportunities</a></li>
                     <!-- Admin Dropdown Menu -->
                     <li id="admin-menu-item" class="relative dropdown hidden">
@@ -322,6 +323,78 @@
             <!-- Grid.js will render the customer table here -->
             <div id="customers-grid-container" class="mt-4"></div>
             <p id="no-customers-message" class="text-center text-gray-500 mt-4 hidden">No customers found.</p>
+        </section>
+
+        <!-- Leads Section -->
+        <section id="leads-section" class="hidden bg-white p-8 rounded-lg shadow-md mt-10">
+            <h2 class="text-2xl font-semibold mb-6">Leads</h2>
+            <div class="flex justify-between items-center mb-4">
+                <button id="add-lead-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Add New Lead</button>
+                <input type="text" id="lead-search" placeholder="Search leads..." class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div id="lead-form-container" class="hidden bg-gray-50 p-6 rounded-lg shadow-inner mb-6">
+                <h3 class="text-xl font-semibold mb-4">Add/Edit Lead</h3>
+                <form id="lead-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" id="lead-id"> <!-- Hidden input for lead ID -->
+                    <div>
+                        <label for="lead-contact-name" class="block text-sm font-medium text-gray-700">Contact Name:</label>
+                        <input type="text" id="lead-contact-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="lead-phone" class="block text-sm font-medium text-gray-700">Phone:</label>
+                        <input type="tel" id="lead-phone" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="lead-email" class="block text-sm font-medium text-gray-700">Email:</label>
+                        <input type="email" id="lead-email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="lead-services-interested" class="block text-sm font-medium text-gray-700">Services Interested:</label>
+                        <select id="lead-services-interested" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select Service</option>
+                            <option value="Save the Day">Save the Day</option>
+                            <option value="Pre-Wedding Photo Shoot">Pre-Wedding Photo Shoot</option>
+                            <option value="Wedding">Wedding</option>
+                            <option value="Post-Wedding Photo Shoot">Post-Wedding Photo Shoot</option>
+                            <option value="Baby Shower">Baby Shower</option>
+                            <option value="Corporate Event">Corporate Event</option>
+                            <option value="Product Launch">Product Launch</option>
+                            <option value="Political Meeting">Political Meeting</option>
+                            <option value="Others">Others</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="lead-event-date" class="block text-sm font-medium text-gray-700">Event Date:</label>
+                        <input type="date" id="lead-event-date" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="lead-source" class="block text-sm font-medium text-gray-700">Source:</label>
+                        <select id="lead-source" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select Source</option>
+                            <option value="Website">Website</option>
+                            <option value="Referral">Referral</option>
+                            <option value="Social Media">Social Media</option>
+                            <option value="Advertisement">Advertisement</option>
+                            <option value="Event">Event</option>
+                            <option value="Others">Others</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="lead-additional-details" class="block text-sm font-medium text-gray-700">Additional Details:</label>
+                        <textarea id="lead-additional-details" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="md:col-span-2 flex justify-end space-x-3">
+                        <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300">Save Lead</button>
+                        <button type="button" id="cancel-lead-btn" class="px-6 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                    </div>
+                </form>
+                <p id="lead-form-message" class="text-red-500 text-sm mt-4 hidden"></p>
+            </div>
+
+            <!-- Grid.js will render the leads table here -->
+            <div id="leads-grid-container" class="mt-4"></div>
+            <p id="no-leads-message" class="text-center text-gray-500 mt-4 hidden">No leads found.</p>
         </section>
 
         <!-- Opportunities Section -->
