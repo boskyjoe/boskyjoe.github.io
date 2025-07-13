@@ -38,10 +38,12 @@ let opportunitiesGrid = null;
 let countriesStatesGrid = null;
 let currenciesGrid = null;
 let priceBooksGrid = null;
+let leadsGrid = null; // NEW: Grid.js instance for leads
 
 // UI Elements (declared as const where they are immediately available)
 const navDashboard = document.getElementById('nav-dashboard');
 const navCustomers = document.getElementById('nav-customers');
+const navLeads = document.getElementById('nav-leads'); // NEW: Leads navigation
 const navOpportunities = document.getElementById('nav-opportunities');
 const navCountries = document.getElementById('nav-countries');
 const navCurrencies = document.getElementById('nav-currencies');
@@ -54,6 +56,7 @@ const adminMenuItem = document.getElementById('admin-menu-item'); // The parent 
 const authSection = document.getElementById('auth-section');
 const dashboardSection = document.getElementById('dashboard-section');
 const customersSection = document.getElementById('customers-section');
+const leadsSection = document.getElementById('leads-section'); // NEW: Leads section
 const opportunitiesSection = document.getElementById('opportunities-section');
 const countriesSection = document.getElementById('countries-section');
 const currenciesSection = document.getElementById('currencies-section');
@@ -91,6 +94,23 @@ const customerSearchInput = document.getElementById('customer-search');
 const noCustomersMessage = document.getElementById('no-customers-message');
 // NEW: Grid.js container for customers
 const customersGridContainer = document.getElementById('customers-grid-container');
+
+// NEW: Leads Form Elements
+const addLeadBtn = document.getElementById('add-lead-btn');
+const leadFormContainer = document.getElementById('lead-form-container');
+const leadForm = document.getElementById('lead-form');
+const leadContactNameInput = document.getElementById('lead-contact-name');
+const leadPhoneInput = document.getElementById('lead-phone');
+const leadEmailInput = document.getElementById('lead-email');
+const leadServicesInterestedSelect = document.getElementById('lead-services-interested');
+const leadEventDateInput = document.getElementById('lead-event-date');
+const leadSourceSelect = document.getElementById('lead-source');
+const leadAdditionalDetailsTextarea = document.getElementById('lead-additional-details');
+const cancelLeadBtn = document.getElementById('cancel-lead-btn');
+const leadFormMessage = document.getElementById('lead-form-message');
+const leadSearchInput = document.getElementById('lead-search');
+const noLeadsMessage = document.getElementById('no-leads-message');
+const leadsGridContainer = document.getElementById('leads-grid-container');
 
 
 // Opportunity Form Elements
@@ -291,13 +311,28 @@ function getPriceBookIndexId(name, currency) {
  * @param {string} textField - The field from the document to use as the <option> text.
  * @param {string|null} selectedValue - The value to pre-select in the dropdown (optional).
  * @param {string|null} dataAttributeField - An optional field to store as a data attribute (e.g., 'defaultCurrencySymbol').
+ * @param {Array<Object>|null} staticOptions - Optional: An array of objects {value: '...', text: '...'} for static options.
  */
-async function populateSelect(selectElement, collectionPath, valueField, textField, selectedValue = null, dataAttributeField = null) {
+async function populateSelect(selectElement, collectionPath, valueField, textField, selectedValue = null, dataAttributeField = null, staticOptions = null) {
     if (!selectElement) {
         console.error(`populateSelect: selectElement is null for collection ${collectionPath}`);
         return;
     }
     selectElement.innerHTML = '<option value="">Select...</option>'; // Default empty option
+
+    if (staticOptions) {
+        staticOptions.forEach(optionData => {
+            const option = document.createElement('option');
+            option.value = optionData.value;
+            option.textContent = optionData.text;
+            if (selectedValue !== null && optionData.value === selectedValue) {
+                option.selected = true;
+            }
+            selectElement.appendChild(option);
+        });
+        return; // Exit if static options are provided
+    }
+
     try {
         const collectionRef = collection(db, collectionPath);
         const snapshot = await getDocs(query(collectionRef, orderBy(textField))); // Order by text field for display
@@ -328,6 +363,7 @@ function hideAllSections() {
     authSection.classList.add('hidden');
     dashboardSection.classList.add('hidden');
     customersSection.classList.add('hidden');
+    leadsSection.classList.add('hidden'); // NEW: Hide leads section
     opportunitiesSection.classList.add('hidden');
     countriesSection.classList.add('hidden');
     currenciesSection.classList.add('hidden');
@@ -429,6 +465,7 @@ onAuthStateChanged(auth, async (user) => {
         // Show navigation items
         navDashboard.classList.remove('hidden');
         navCustomers.classList.remove('hidden');
+        navLeads.classList.remove('hidden'); // NEW: Show leads nav
         navOpportunities.classList.remove('hidden');
 
         // Show dashboard as landing page after successful login
@@ -453,6 +490,7 @@ onAuthStateChanged(auth, async (user) => {
         // Hide all navigation items
         navDashboard.classList.add('hidden');
         navCustomers.classList.add('hidden');
+        navLeads.classList.add('hidden'); // NEW: Hide leads nav
         navOpportunities.classList.add('hidden');
         navCountries.classList.add('hidden'); // Hide admin sub-menu items too
         navCurrencies.classList.add('hidden');
@@ -460,6 +498,7 @@ onAuthStateChanged(auth, async (user) => {
 
         // Clear grids if they exist
         if (customersGrid) { customersGrid.destroy(); customersGrid = null; }
+        if (leadsGrid) { leadsGrid.destroy(); leadsGrid = null; } // NEW: Destroy leads grid
         if (opportunitiesGrid) { opportunitiesGrid.destroy(); opportunitiesGrid = null; }
         if (countriesStatesGrid) { countriesStatesGrid.destroy(); countriesStatesGrid = null; }
         if (currenciesGrid) { currenciesGrid.destroy(); currenciesGrid = null; }
@@ -467,6 +506,7 @@ onAuthStateChanged(auth, async (user) => {
 
         // Clear grid containers
         if (customersGridContainer) customersGridContainer.innerHTML = '';
+        if (leadsGridContainer) leadsGridContainer.innerHTML = ''; // NEW: Clear leads grid container
         if (opportunitiesGridContainer) opportunitiesGridContainer.innerHTML = '';
         if (countriesGridContainer) countriesGridContainer.innerHTML = '';
         if (currenciesGridContainer) currenciesGridContainer.innerHTML = '';
@@ -477,6 +517,8 @@ onAuthStateChanged(auth, async (user) => {
         if (customerCountrySelect) customerCountrySelect.innerHTML = '<option value="">Select...</option>';
         if (customerIndustrySelect) customerIndustrySelect.innerHTML = '<option value="">Select Industry</option>';
         if (customerSourceSelect) customerSourceSelect.innerHTML = '<option value="">Select Source</option>';
+        if (leadServicesInterestedSelect) leadServicesInterestedSelect.innerHTML = '<option value="">Select Service</option>'; // NEW: Clear leads dropdowns
+        if (leadSourceSelect) leadSourceSelect.innerHTML = '<option value="">Select Source</option>'; // NEW: Clear leads dropdowns
         if (opportunityCustomerSelect) opportunityCustomerSelect.innerHTML = '<option value="">Select a Customer</option>';
         if (opportunityCurrencySelect) opportunityCurrencySelect.innerHTML = '<option value="">Select...</option>';
         if (opportunityPriceBookSelect) opportunityPriceBookSelect.innerHTML = '<option value="">Select a Price Book</option>';
@@ -519,6 +561,7 @@ navLogout.addEventListener('click', () => {
 // Event listeners for main navigation buttons
 navDashboard.addEventListener('click', () => showSection(dashboardSection));
 navCustomers.addEventListener('click', () => { showSection(customersSection); renderCustomersGrid(); populateCustomerCountryDropdown(); });
+navLeads.addEventListener('click', () => { showSection(leadsSection); renderLeadsGrid(); }); // NEW: Leads navigation handler
 navOpportunities.addEventListener('click', () => { showSection(opportunitiesSection); renderOpportunitiesGrid(); populateOpportunityCustomerDropdown(); populateOpportunityCurrencyDropdown(); populateOpportunityPriceBookDropdown(); });
 
 // No explicit JavaScript listener for Admin dropdown toggle needed here,
@@ -621,6 +664,7 @@ function resetAndHideForm(formElement, formContainer, idValue, messageElement) {
 // Event listeners for cancel buttons on forms
 // Note: We're passing an empty string for the ID value when resetting, as there's no hidden ID input in the HTML
 cancelCustomerBtn.addEventListener('click', () => resetAndHideForm(customerForm, customerFormContainer, '', customerFormMessage));
+cancelLeadBtn.addEventListener('click', () => resetAndHideForm(leadForm, leadFormContainer, '', leadFormMessage)); // NEW: Cancel Lead button
 cancelOpportunityBtn.addEventListener('click', () => resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage));
 cancelCountryBtn.addEventListener('click', () => {
     resetAndHideForm(countryForm, countryFormContainer, '', countryFormMessage);
@@ -933,6 +977,304 @@ async function deleteCustomer(customerId) {
     }
 }
 
+// --- Leads Module (NEW) ---
+
+// Static options for leads dropdowns
+const servicesInterestedOptions = [
+    { value: "Save the Day", text: "Save the Day" },
+    { value: "Pre-Wedding Photo Shoot", text: "Pre-Wedding Photo Shoot" },
+    { value: "Wedding", text: "Wedding" },
+    { value: "Post-Wedding Photo Shoot", text: "Post-Wedding Photo Shoot" },
+    { value: "Baby Shower", text: "Baby Shower" },
+    { value: "Corporate Event", text: "Corporate Event" },
+    { value: "Product Launch", text: "Product Launch" },
+    { value: "Political Meeting", text: "Political Meeting" },
+    { value: "Others", text: "Others" },
+];
+
+const leadSourceOptions = [
+    { value: "Website", text: "Website" },
+    { value: "Referral", text: "Referral" },
+    { value: "Social Media", text: "Social Media" },
+    { value: "Advertisement", text: "Advertisement" },
+    { value: "Event", text: "Event" },
+    { value: "Others", text: "Others" },
+];
+
+/**
+ * Populates the services interested dropdown for leads.
+ * @param {string|null} selectedService - The service to pre-select.
+ */
+async function populateLeadServicesInterestedDropdown(selectedService = null) {
+    await populateSelect(leadServicesInterestedSelect, null, 'value', 'text', selectedService, null, servicesInterestedOptions);
+}
+
+/**
+ * Populates the lead source dropdown.
+ * @param {string|null} selectedSource - The source to pre-select.
+ */
+async function populateLeadSourceDropdown(selectedSource = null) {
+    await populateSelect(leadSourceSelect, null, 'value', 'text', selectedSource, null, leadSourceOptions);
+}
+
+
+// Event listener to open the Lead Form for adding a new lead
+addLeadBtn.addEventListener('click', () => {
+    if (!currentUser) { showMessageBox('Please sign in to add leads.', false); return; }
+    leadForm.reset();
+    document.getElementById('lead-id').value = ''; // Clear ID for new lead
+    resetAndHideForm(leadForm, leadFormContainer, '', leadFormMessage); // Reset and hide first
+    leadFormContainer.classList.remove('hidden'); // Then show the container
+    populateLeadServicesInterestedDropdown();
+    populateLeadSourceDropdown();
+});
+
+// Event listener to save (add or update) a lead
+leadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentUser) { showMessageBox('Authentication required to save lead.', false); return; }
+
+    const leadId = document.getElementById('lead-id').value;
+
+    const leadData = {
+        contactName: leadContactNameInput.value.trim(),
+        phone: leadPhoneInput.value.trim(),
+        email: leadEmailInput.value.trim(),
+        servicesInterested: leadServicesInterestedSelect.value,
+        eventDate: leadEventDateInput.value ? Timestamp.fromDate(new Date(leadEventDateInput.value)) : null,
+        source: leadSourceSelect.value,
+        additionalDetails: leadAdditionalDetailsTextarea.value.trim(),
+        updatedAt: serverTimestamp()
+    };
+
+    try {
+        if (leadId) {
+            // Update existing lead
+            await updateDoc(doc(db, `leads`, leadId), leadData);
+            showMessageBox('Lead updated successfully!', false);
+        } else {
+            // Add new lead
+            leadData.createdAt = serverTimestamp();
+            leadData.creatorId = currentUser.uid;
+            await addDoc(collection(db, `leads`), leadData);
+            showMessageBox('Lead added successfully!', false);
+        }
+        resetAndHideForm(leadForm, leadFormContainer, '', leadFormMessage); // Clear and hide form
+        renderLeadsGrid();
+    } catch (error) {
+        console.error("Error saving lead:", error);
+        leadFormMessage.textContent = 'Error saving lead: ' + error.message;
+        leadFormMessage.classList.remove('hidden');
+        showMessageBox('Error saving lead: ' + error.message, false);
+    }
+});
+
+/**
+ * Renders or updates the Grid.js table for leads.
+ * Fetches lead data from Firestore and displays it.
+ */
+async function renderLeadsGrid() {
+    if (!currentUser) {
+        noLeadsMessage.classList.remove('hidden');
+        if (leadsGrid) {
+            leadsGrid.destroy();
+            leadsGrid = null;
+        }
+        leadsGridContainer.innerHTML = '';
+        return;
+    }
+
+    try {
+        await waitForGridJs();
+    } catch (error) {
+        leadsGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading lead data.</p>';
+        return;
+    }
+
+    leadsGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Leads...</p>';
+    noLeadsMessage.classList.add('hidden');
+
+    let leadsRef = collection(db, `leads`);
+    let q = query(leadsRef, orderBy('contactName'));
+    // Apply creatorId filter for standard users
+    if (currentUserRole !== 'Admin') {
+        q = query(leadsRef, where('creatorId', '==', currentUser.uid), orderBy('contactName'));
+    }
+    const leadData = [];
+
+    try {
+        const snapshot = await getDocs(q);
+        leadsGridContainer.innerHTML = ''; // Clear loading message
+
+        if (snapshot.empty) {
+            noLeadsMessage.classList.remove('hidden');
+        } else {
+            noLeadsMessage.classList.add('hidden');
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                leadData.push([
+                    doc.id,
+                    data.contactName,
+                    data.phone,
+                    data.email,
+                    data.servicesInterested,
+                    data.eventDate,
+                    data.source,
+                    data.additionalDetails,
+                    data.createdAt,
+                    data.creatorId // Include creatorId for permission checks
+                ]);
+            });
+
+            if (leadsGrid) {
+                leadsGrid.updateConfig({ data: leadData }).forceRender();
+            } else {
+                leadsGrid = new window.gridjs.Grid({
+                    columns: [
+                        { id: 'id', name: 'ID', hidden: true },
+                        { id: 'contactName', name: 'Contact Name', sort: true, filter: true },
+                        { id: 'phone', name: 'Phone', sort: true, filter: true },
+                        { id: 'email', name: 'Email', sort: true, filter: true },
+                        { id: 'servicesInterested', name: 'Services Interested', sort: true, filter: true },
+                        { id: 'eventDate', name: 'Event Date', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
+                        { id: 'source', name: 'Source', sort: true, filter: true },
+                        { id: 'additionalDetails', name: 'Additional Details', hidden: true },
+                        { id: 'createdAt', name: 'Created At', hidden: true },
+                        { id: 'creatorId', name: 'Creator ID', hidden: true }, // Keep creatorId hidden but accessible for actions
+                        {
+                            name: 'Actions',
+                            sort: false,
+                            formatter: (cell, row) => {
+                                const docId = row.cells[0].data;
+                                const creatorId = row.cells[9].data; // Get creatorId from the row data
+                                const canEditDelete = (currentUserRole === 'Admin' || creatorId === currentUser.uid);
+
+                                return window.gridjs.h('div', { className: 'flex space-x-2' },
+                                    window.gridjs.h('button', {
+                                        className: `px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
+                                        onClick: () => canEditDelete ? editLead(docId) : showMessageBox('You do not have permission to edit this lead.', false),
+                                        disabled: !canEditDelete
+                                    }, 'Edit'),
+                                    window.gridjs.h('button', {
+                                        className: `px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
+                                        onClick: () => canEditDelete ? deleteLead(docId) : showMessageBox('You do not have permission to delete this lead.', false),
+                                        disabled: !canEditDelete
+                                    }, 'Delete')
+                                );
+                            }
+                        }
+                    ],
+                    data: leadData,
+                    search: {
+                        selector: (cell, rowIndex, cellIndex) => {
+                            // Search across contact name, phone, email, services, source
+                            if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3 || cellIndex === 4 || cellIndex === 6) {
+                                return cell;
+                            }
+                            return null;
+                        }
+                    },
+                    pagination: { enabled: true, limit: 10, summary: true },
+                    sort: true,
+                    resizable: true,
+                    className: {
+                        container: 'gridjs-container', table: 'min-w-full bg-white shadow-md rounded-lg overflow-hidden',
+                        thead: 'bg-gray-200', th: 'py-3 px-4 text-left text-sm font-medium text-gray-700',
+                        td: 'py-3 px-4 text-left text-sm text-gray-800', tr: 'divide-y divide-gray-200',
+                        footer: 'bg-gray-50 p-4 flex justify-between items-center',
+                        pagination: 'flex items-center space-x-2',
+                        'pagination-summary': 'text-sm text-gray-600', 'pagination-gap': 'text-sm text-gray-400',
+                        'pagination-nav': 'flex space-x-1', 'pagination-nav-prev': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
+                        'pagination-nav-next': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
+                        'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
+                        'pagination-btn-current': 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
+                    },
+                    language: {
+                        'search': { 'placeholder': 'Search leads...' },
+                        'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
+                        'noRecordsFound': 'No Lead Data Available',
+                    }
+                }).render(leadsGridContainer);
+            }
+        }
+    } catch (error) {
+        console.error("Error rendering leads grid:", error);
+        showMessageBox('Could not load lead data: ' + error.message, false);
+        leadsGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading lead data.</p>';
+    }
+}
+
+/**
+ * Populates the lead form with existing data for editing.
+ * @param {string} leadId - The ID of the lead document to edit.
+ */
+async function editLead(leadId) {
+    if (!currentUser) { showMessageBox('Please sign in to edit leads.', false); return; }
+
+    try {
+        const docSnap = await getDoc(doc(db, `leads`, leadId));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            // Check if current user is the creator or an Admin
+            if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
+                showMessageBox('You can only edit leads you have created.', false);
+                return;
+            }
+
+            document.getElementById('lead-id').value = docSnap.id;
+
+            leadFormContainer.classList.remove('hidden');
+            leadFormMessage.classList.add('hidden');
+
+            leadContactNameInput.value = data.contactName || '';
+            leadPhoneInput.value = data.phone || '';
+            leadEmailInput.value = data.email || '';
+            await populateLeadServicesInterestedDropdown(data.servicesInterested);
+            leadEventDateInput.value = formatDateForInput(data.eventDate);
+            await populateLeadSourceDropdown(data.source);
+            leadAdditionalDetailsTextarea.value = data.additionalDetails || '';
+        } else {
+            showMessageBox('Lead not found!', false);
+        }
+    } catch (error) {
+        console.error("Error editing lead:", error);
+        showMessageBox('Error loading lead for edit: ' + error.message, false);
+    }
+}
+
+/**
+ * Deletes a lead document from Firestore.
+ * Requires Admin role or creator.
+ * @param {string} leadId - The ID of the lead document to delete.
+ */
+async function deleteLead(leadId) {
+    if (!currentUser) { showMessageBox('Please sign in to delete leads.', false); return; }
+
+    const confirmed = await showMessageBox('Are you sure you want to delete this lead? This action cannot be undone.', true);
+    if (!confirmed) return;
+
+    try {
+        const docSnap = await getDoc(doc(db, `leads`, leadId));
+        if (!docSnap.exists()) {
+            showMessageBox('Lead not found!', false);
+            return;
+        }
+        const data = docSnap.data();
+        // Check if current user is the creator or an Admin
+        if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
+            showMessageBox('You can only delete leads you have created.', false);
+            return;
+        }
+
+        await deleteDoc(doc(db, `leads`, leadId));
+        showMessageBox('Lead deleted successfully!', false);
+        renderLeadsGrid();
+    } catch (error) {
+        console.error("Error deleting lead:", error);
+        showMessageBox('Error deleting lead: ' + error.message, false);
+    }
+}
+
 
 // --- Opportunities Module ---
 
@@ -982,7 +1324,7 @@ async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null, 
     selectElement.innerHTML = '<option value="">Select a Price Book</option>'; // Default empty option
 
     let priceBookQueryRef = collection(db, `priceBooks`);
-    let q = query(priceBookQueryRef, orderBy('name'));
+    let q;
 
     if (currencySymbol) {
         // Filter by currency and ensure it's active
@@ -1305,13 +1647,6 @@ async function deleteOpportunity(opportunityId) {
         // Check if current user is the creator or an Admin
         if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
             showMessageBox('You can only delete opportunities you have created.', false);
-            return;
-        }
-
-        // Check if there are any opportunities linked to this customer
-        const opportunitiesSnapshot = await getDocs(query(collection(db, `opportunities`), where('customerId', '==', customerId)));
-        if (!opportunitiesSnapshot.empty) {
-            showMessageBox('Cannot delete customer: There are existing opportunities linked to this customer. Please delete the opportunities first.', false);
             return;
         }
 
@@ -2116,6 +2451,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Hide all navigation items initially until authenticated
     navDashboard.classList.add('hidden');
     navCustomers.classList.add('hidden');
+    navLeads.classList.add('hidden'); // NEW: Hide leads nav initially
     navOpportunities.classList.add('hidden');
     adminMenuItem.classList.add('hidden'); // Hide admin menu by default
     navLogout.classList.add('hidden');
