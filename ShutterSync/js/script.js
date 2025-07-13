@@ -1056,6 +1056,16 @@ leadForm.addEventListener('submit', async (e) => {
             // Add new lead
             leadData.createdAt = serverTimestamp();
             leadData.creatorId = currentUser.uid;
+
+            // --- DEBUGGING LOGS START ---
+            console.log("--- Debugging Lead Create Attempt ---");
+            console.log("currentUser (from global):", currentUser);
+            console.log("currentUser.uid (from global):", currentUser ? currentUser.uid : "N/A");
+            console.log("leadData (before addDoc):", JSON.stringify(leadData, null, 2)); // Stringify for full object view
+            console.log("Is currentUser.uid === leadData.creatorId?", currentUser && leadData.creatorId && currentUser.uid === leadData.creatorId);
+            console.log("-----------------------------------");
+            // --- DEBUGGING LOGS END ---
+
             await addDoc(collection(db, `leads`), leadData);
             showMessageBox('Lead added successfully!', false);
         }
