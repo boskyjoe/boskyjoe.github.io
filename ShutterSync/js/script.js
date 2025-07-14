@@ -435,18 +435,13 @@ function toggleAccordion(header) {
     if (content.classList.contains('hidden')) {
         content.classList.remove('hidden');
         header.classList.add('expanded');
-        icon.style.transform = 'rotate(180deg)';
+        if (icon) icon.style.transform = 'rotate(180deg)';
     } else {
         content.classList.add('hidden');
         header.classList.remove('expanded');
-        icon.style.transform = 'rotate(0deg)';
+        if (icon) icon.style.transform = 'rotate(0deg)';
     }
 }
-
-// Add event listeners to accordion headers
-document.querySelectorAll('.accordion-header').forEach(header => {
-    header.addEventListener('click', () => toggleAccordion(header));
-});
 
 
 // --- Authentication ---
@@ -2714,7 +2709,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOMContentLoaded fired.');
 
     // Attempt to sign in with custom token if available
-    // This is for Canvas environment auto-login. If it fails, manual login is required.
     const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
     if (initialAuthToken) {
         try {
@@ -2740,4 +2734,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     navOpportunities.classList.add('hidden');
     adminMenuItem.classList.add('hidden'); // Hide admin menu by default
     navLogout.classList.add('hidden');
+
+    // Accordion setup - using a small timeout as a last resort for unusual timing issues
+    setTimeout(() => {
+        console.log('Attempting to set up accordion event listeners after slight delay.');
+        const accordionHeaders = document.querySelectorAll('.accordion-header');
+        console.log('Found accordion headers (after delay):', accordionHeaders);
+
+        accordionHeaders.forEach(header => {
+            if (header) { // This check should prevent the error if 'header' is null
+                header.addEventListener('click', () => toggleAccordion(header));
+            } else {
+                console.error("Skipping null header element detected in accordionHeaders NodeList (after delay).");
+            }
+        });
+    }, 100); // Small delay to ensure DOM is fully stable
 });
