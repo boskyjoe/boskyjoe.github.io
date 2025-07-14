@@ -10,15 +10,14 @@ import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, qu
 
 
 // Firebase configuration: Using the exact configuration provided by the user
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
-  authDomain: "shuttersync-96971.firebaseapp.com",
-  projectId: "shuttersync-96971",
-  storageBucket: "shuttersync-96971.firebasestorage.app",
-  messagingSenderId: "10782416018",
-  appId: "1:10782416018:web:361db5572882a62f291a4b",
-  measurementId: "G-T0W9CES4D3"
+    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
+    authDomain: "shuttersync-96971.firebaseapp.com",
+    projectId: "shuttersync-96971",
+    storageBucket: "shuttersync-96971.firebasestorage.app",
+    messagingSenderId: "10782416018",
+    appId: "1:10782416018:web:361db5572882a62f291a4b",
+    measurementId: "G-T0W9CES4D3"
 };
 // Extract appId directly from the provided firebaseConfig
 const appId = firebaseConfig.appId;
