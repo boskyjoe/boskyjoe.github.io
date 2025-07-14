@@ -11,7 +11,7 @@ import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, qu
 
 // Firebase configuration: Using the exact configuration provided by the user
 const firebaseConfig = {
-    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
+    apiKey: "AIzaSyDePPc0AYN6tT1ygRaOvctR2CjIIjGODo",
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
     storageBucket: "shuttersync-96971.firebasestorage.app",
@@ -31,7 +31,8 @@ const db = getFirestore(app); // Get Firestore service
 let currentUser = null;
 let currentUserRole = 'Guest'; // Default role
 let userId = null; // Will store authenticated user's UID or a random ID for unauthenticated
-let currencySymbolsMap = {}; // NEW: Global map to store currency codes to symbols
+let currencySymbolsMap = {}; // Global map to store currency codes to symbols
+let currentOpportunityId = null; // To keep track of the opportunity being edited for work logs
 
 // Grid.js instances
 let customersGrid = null;
@@ -39,31 +40,29 @@ let opportunitiesGrid = null;
 let countriesStatesGrid = null;
 let currenciesGrid = null;
 let priceBooksGrid = null;
-let leadsGrid = null; // NEW: Grid.js instance for leads
+let leadsGrid = null;
 
 // UI Elements (declared as const where they are immediately available)
 const navDashboard = document.getElementById('nav-dashboard');
 const navCustomers = document.getElementById('nav-customers');
-const navLeads = document.getElementById('nav-leads'); // NEW: Leads navigation
+const navLeads = document.getElementById('nav-leads');
 const navOpportunities = document.getElementById('nav-opportunities');
 const navCountries = document.getElementById('nav-countries');
 const navCurrencies = document.getElementById('nav-currencies');
 const navPriceBooks = document.getElementById('nav-price-books');
 const navLogout = document.getElementById('nav-logout');
-const adminMenuItem = document.getElementById('admin-menu-item'); // The parent li for admin dropdown
-
-// No need for adminDropdownToggle and adminSubmenu variables as the dropdown is now CSS-driven.
+const adminMenuItem = document.getElementById('admin-menu-item');
 
 const authSection = document.getElementById('auth-section');
 const dashboardSection = document.getElementById('dashboard-section');
 const customersSection = document.getElementById('customers-section');
-const leadsSection = document.getElementById('leads-section'); // NEW: Leads section
+const leadsSection = document.getElementById('leads-section');
 const opportunitiesSection = document.getElementById('opportunities-section');
 const countriesSection = document.getElementById('countries-section');
 const currenciesSection = document.getElementById('currencies-section');
 const priceBooksSection = document.getElementById('price-books-section');
 
-// Authentication elements (updated for Google Sign-In)
+// Authentication elements
 const googleSignInBtn = document.getElementById('google-signin-btn');
 const authErrorMessage = document.getElementById('auth-error-message');
 
@@ -93,10 +92,9 @@ const cancelCustomerBtn = document.getElementById('cancel-customer-btn');
 const customerFormMessage = document.getElementById('customer-form-message');
 const customerSearchInput = document.getElementById('customer-search');
 const noCustomersMessage = document.getElementById('no-customers-message');
-// NEW: Grid.js container for customers
 const customersGridContainer = document.getElementById('customers-grid-container');
 
-// NEW: Leads Form Elements
+// Leads Form Elements
 const addLeadBtn = document.getElementById('add-lead-btn');
 const leadFormContainer = document.getElementById('lead-form-container');
 const leadForm = document.getElementById('lead-form');
@@ -132,8 +130,23 @@ const cancelOpportunityBtn = document.getElementById('cancel-opportunity-btn');
 const opportunityFormMessage = document.getElementById('opportunity-form-message');
 const opportunitySearchInput = document.getElementById('opportunity-search');
 const noOpportunitiesMessage = document.getElementById('no-opportunities-message');
-// NEW: Grid.js container for opportunities
 const opportunitiesGridContainer = document.getElementById('opportunities-grid-container');
+
+// NEW: Work Log Elements
+const workLogsListContainer = document.getElementById('work-logs-list-container');
+const noWorkLogsMessage = document.getElementById('no-work-logs-message');
+const workLogsList = document.getElementById('work-logs-list');
+const addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
+const workLogFormContainer = document.getElementById('work-log-form-container');
+const workLogForm = document.getElementById('work-log-form');
+const workLogIdInput = document.getElementById('work-log-id');
+const workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
+const workLogDateInput = document.getElementById('work-log-date');
+const workLogTypeSelect = document.getElementById('work-log-type');
+const workLogDetailsTextarea = document.getElementById('work-log-details');
+const cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
+const workLogFormMessage = document.getElementById('work-log-form-message');
+
 
 // Dashboard Elements
 const dashboardTotalCustomers = document.getElementById('dashboard-total-customers');
@@ -147,12 +160,11 @@ const countryFormContainer = document.getElementById('country-form-container');
 const countryForm = document.getElementById('country-form');
 const countryNameInput = document.getElementById('country-name');
 const countryCodeInput = document.getElementById('country-code');
-const countryStatesTextarea = document.getElementById('country-states'); // NEW: States textarea
+const countryStatesTextarea = document.getElementById('country-states');
 const cancelCountryBtn = document.getElementById('cancel-country-btn');
 const countryFormMessage = document.getElementById('country-form-message');
 const countrySearchInput = document.getElementById('country-search');
 const noCountriesMessage = document.getElementById('no-countries-message');
-// NEW: Grid.js container for countries
 const countriesGridContainer = document.getElementById('countries-grid-container');
 
 // Currencies Elements
@@ -162,12 +174,11 @@ const currencyForm = document.getElementById('currency-form');
 const currencyNameInput = document.getElementById('currency-name');
 const currencyCodeInput = document.getElementById('currency-code');
 const currencySymbolInput = document.getElementById('currency-symbol');
-const currencyCountrySelect = document.getElementById('currency-country'); // NEW: Country select for currencies
+const currencyCountrySelect = document.getElementById('currency-country');
 const cancelCurrencyBtn = document.getElementById('cancel-currency-btn');
 const currencyFormMessage = document.getElementById('currency-form-message');
 const currencySearchInput = document.getElementById('currency-search');
 const noCurrenciesMessage = document.getElementById('no-currencies-message');
-// NEW: Grid.js container for currencies
 const currenciesGridContainer = document.getElementById('currencies-grid-container');
 
 // Price Books Elements
@@ -176,15 +187,12 @@ const priceBookFormContainer = document.getElementById('price-book-form-containe
 const priceBookForm = document.getElementById('price-book-form');
 const priceBookNameInput = document.getElementById('price-book-name');
 const priceBookDescriptionTextarea = document.getElementById('price-book-description');
-// Removed priceBookCountrySelect
 const priceBookCurrencySelect = document.getElementById('price-book-currency');
-const priceBookActiveCheckbox = document.getElementById('price-book-active'); // Changed to checkbox
-// Removed priceBookValidFromInput and priceBookValidToInput
+const priceBookActiveCheckbox = document.getElementById('price-book-active');
 const cancelPriceBookBtn = document.getElementById('cancel-price-book-btn');
 const priceBookFormMessage = document.getElementById('price-book-form-message');
 const priceBookSearchInput = document.getElementById('price-book-search');
 const noPriceBooksMessage = document.getElementById('no-price-books-message');
-// NEW: Grid.js container for price books
 const priceBooksGridContainer = document.getElementById('price-books-grid-container');
 
 // Custom Message Box Elements
@@ -370,7 +378,7 @@ function hideAllSections() {
     authSection.classList.add('hidden');
     dashboardSection.classList.add('hidden');
     customersSection.classList.add('hidden');
-    leadsSection.classList.add('hidden'); // NEW: Hide leads section
+    leadsSection.classList.add('hidden');
     opportunitiesSection.classList.add('hidden');
     countriesSection.classList.add('hidden');
     currenciesSection.classList.add('hidden');
@@ -416,6 +424,30 @@ async function waitForGridJs() {
     });
 }
 
+/**
+ * Toggles the visibility of an accordion content section.
+ * @param {HTMLElement} header - The accordion header element.
+ */
+function toggleAccordion(header) {
+    const content = header.nextElementSibling; // The content div is the next sibling
+    const icon = header.querySelector('.accordion-icon');
+
+    if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        header.classList.add('expanded');
+        icon.style.transform = 'rotate(180deg)';
+    } else {
+        content.classList.add('hidden');
+        header.classList.remove('expanded');
+        icon.style.transform = 'rotate(0deg)';
+    }
+}
+
+// Add event listeners to accordion headers
+document.querySelectorAll('.accordion-header').forEach(header => {
+    header.addEventListener('click', () => toggleAccordion(header));
+});
+
 
 // --- Authentication ---
 
@@ -430,7 +462,6 @@ onAuthStateChanged(auth, async (user) => {
         navLogout.classList.remove('hidden');
         userDisplayName.textContent = user.displayName || user.email;
         userIdDisplay.textContent = ''; // REMOVED: Display full user ID - Now empty string
-        userRoleSpan.textContent = `Role: ${currentUserRole}`; // Display user role
 
         try {
             // Fetch user's custom claims for role from Firestore
@@ -473,7 +504,7 @@ onAuthStateChanged(auth, async (user) => {
         // Show navigation items
         navDashboard.classList.remove('hidden');
         navCustomers.classList.remove('hidden');
-        navLeads.classList.remove('hidden'); // NEW: Show leads nav
+        navLeads.classList.remove('hidden');
         navOpportunities.classList.remove('hidden');
 
         // Show dashboard as landing page after successful login
@@ -498,7 +529,7 @@ onAuthStateChanged(auth, async (user) => {
         // Hide all navigation items
         navDashboard.classList.add('hidden');
         navCustomers.classList.add('hidden');
-        navLeads.classList.add('hidden'); // NEW: Hide leads nav
+        navLeads.classList.add('hidden');
         navOpportunities.classList.add('hidden');
         navCountries.classList.add('hidden'); // Hide admin sub-menu items too
         navCurrencies.classList.add('hidden');
@@ -506,7 +537,7 @@ onAuthStateChanged(auth, async (user) => {
 
         // Clear grids if they exist
         if (customersGrid) { customersGrid.destroy(); customersGrid = null; }
-        if (leadsGrid) { leadsGrid.destroy(); leadsGrid = null; } // NEW: Destroy leads grid
+        if (leadsGrid) { leadsGrid.destroy(); leadsGrid = null; }
         if (opportunitiesGrid) { opportunitiesGrid.destroy(); opportunitiesGrid = null; }
         if (countriesStatesGrid) { countriesStatesGrid.destroy(); countriesStatesGrid = null; }
         if (currenciesGrid) { currenciesGrid.destroy(); currenciesGrid = null; }
@@ -514,7 +545,7 @@ onAuthStateChanged(auth, async (user) => {
 
         // Clear grid containers
         if (customersGridContainer) customersGridContainer.innerHTML = '';
-        if (leadsGridContainer) leadsGridContainer.innerHTML = ''; // NEW: Clear leads grid container
+        if (leadsGridContainer) leadsGridContainer.innerHTML = '';
         if (opportunitiesGridContainer) opportunitiesGridContainer.innerHTML = '';
         if (countriesGridContainer) countriesGridContainer.innerHTML = '';
         if (currenciesGridContainer) currenciesGridContainer.innerHTML = '';
@@ -525,14 +556,13 @@ onAuthStateChanged(auth, async (user) => {
         if (customerCountrySelect) customerCountrySelect.innerHTML = '<option value="">Select...</option>';
         if (customerIndustrySelect) customerIndustrySelect.innerHTML = '<option value="">Select Industry</option>';
         if (customerSourceSelect) customerSourceSelect.innerHTML = '<option value="">Select Source</option>';
-        if (leadServicesInterestedSelect) leadServicesInterestedSelect.innerHTML = '<option value="">Select Service</option>'; // NEW: Clear leads dropdowns
-        if (leadSourceSelect) leadSourceSelect.innerHTML = '<option value="">Select Source</option>'; // NEW: Clear leads dropdowns
+        if (leadServicesInterestedSelect) leadServicesInterestedSelect.innerHTML = '<option value="">Select Service</option>';
+        if (leadSourceSelect) leadSourceSelect.innerHTML = '<option value="">Select Source</option>';
         if (opportunityCustomerSelect) opportunityCustomerSelect.innerHTML = '<option value="">Select a Customer</option>';
         if (opportunityCurrencySelect) opportunityCurrencySelect.innerHTML = '<option value="">Select...</option>';
         if (opportunityPriceBookSelect) opportunityPriceBookSelect.innerHTML = '<option value="">Select a Price Book</option>';
         if (priceBookCurrencySelect) priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>';
-        // Removed priceBookCountrySelect clearing
-        if (currencyCountrySelect) currencyCountrySelect.innerHTML = '<option value="">Select...</option>'; // Clear for currencies too
+        if (currencyCountrySelect) currencyCountrySelect.innerHTML = '<option value="">Select...</option>';
 
         currencySymbolsMap = {}; // Clear the currency symbols map on logout
     }
@@ -571,11 +601,8 @@ navLogout.addEventListener('click', () => {
 // Event listeners for main navigation buttons
 navDashboard.addEventListener('click', () => showSection(dashboardSection));
 navCustomers.addEventListener('click', () => { showSection(customersSection); renderCustomersGrid(); populateCustomerCountryDropdown(); });
-navLeads.addEventListener('click', () => { showSection(leadsSection); renderLeadsGrid(); }); // NEW: Leads navigation handler
+navLeads.addEventListener('click', () => { showSection(leadsSection); renderLeadsGrid(); });
 navOpportunities.addEventListener('click', () => { showSection(opportunitiesSection); renderOpportunitiesGrid(); populateOpportunityCustomerDropdown(); populateOpportunityCurrencyDropdown(); populateOpportunityPriceBookDropdown(); });
-
-// No explicit JavaScript listener for Admin dropdown toggle needed here,
-// as the dropdown is handled by CSS :hover on the parent li.
 
 // Event listeners for Admin sub-menu items
 navCountries.addEventListener('click', () => {
@@ -599,7 +626,6 @@ navPriceBooks.addEventListener('click', () => {
     if (currentUserRole === 'Admin') {
         showSection(priceBooksSection);
         renderPriceBooksGrid();
-        // Removed populatePriceBookCountryDropdown();
         populatePriceBookCurrencyDropdown(); // Populate dropdown when section is active
     } else {
         showMessageBox('Access Denied: You must be an Admin to access this feature.', false);
@@ -672,10 +698,16 @@ function resetAndHideForm(formElement, formContainer, idValue, messageElement) {
 }
 
 // Event listeners for cancel buttons on forms
-// Note: We're passing an empty string for the ID value when resetting, as there's no hidden ID input in the HTML
 cancelCustomerBtn.addEventListener('click', () => resetAndHideForm(customerForm, customerFormContainer, '', customerFormMessage));
-cancelLeadBtn.addEventListener('click', () => resetAndHideForm(leadForm, leadFormContainer, '', leadFormMessage)); // NEW: Cancel Lead button
-cancelOpportunityBtn.addEventListener('click', () => resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage));
+cancelLeadBtn.addEventListener('click', () => resetAndHideForm(leadForm, leadFormContainer, '', leadFormMessage));
+cancelOpportunityBtn.addEventListener('click', () => {
+    resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage);
+    // Also reset and hide the work log form when opportunity form is cancelled
+    resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
+    workLogsList.innerHTML = ''; // Clear work logs list
+    noWorkLogsMessage.classList.remove('hidden'); // Show no work logs message
+    currentOpportunityId = null; // Clear current opportunity ID
+});
 cancelCountryBtn.addEventListener('click', () => {
     resetAndHideForm(countryForm, countryFormContainer, '', countryFormMessage);
     countryStatesTextarea.value = ''; // Clear states textarea specifically
@@ -987,7 +1019,7 @@ async function deleteCustomer(customerId) {
     }
 }
 
-// --- Leads Module (NEW) ---
+// --- Leads Module ---
 
 // Static options for leads dropdowns
 const servicesInterestedOptions = [
@@ -1408,11 +1440,15 @@ addOpportunityBtn.addEventListener('click', async () => { // Made async to await
     resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage); // Clear and hide form
     opportunityFormContainer.classList.remove('hidden'); // Then show the container
 
+    // Reset and hide work log form and list when creating a new opportunity
+    resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
+    workLogsList.innerHTML = '';
+    noWorkLogsMessage.classList.remove('hidden');
+    currentOpportunityId = null; // No opportunity selected yet
+
     // Populate dropdowns. Order matters: currency first, then price book.
     await populateOpportunityCustomerDropdown();
     await populateOpportunityCurrencyDropdown();
-    // Initially populate price book dropdown without a specific currency filter,
-    // or with a default if desired, but the change listener will handle it.
     await populateOpportunityPriceBookDropdown();
 });
 
@@ -1625,6 +1661,7 @@ async function editOpportunity(opportunityId) {
             }
 
             document.getElementById('opportunity-id').value = docSnap.id;
+            currentOpportunityId = docSnap.id; // Set the global currentOpportunityId
 
             opportunityFormContainer.classList.remove('hidden');
             opportunityFormMessage.classList.add('hidden');
@@ -1639,6 +1676,12 @@ async function editOpportunity(opportunityId) {
             opportunityProbabilityInput.value = data.probability || 0;
             opportunityValueInput.value = data.value || 0;
             opportunityNotesTextarea.value = data.notes || '';
+
+            // Load and render work logs for this opportunity
+            await renderWorkLogsList(currentOpportunityId);
+            // Ensure work log form is hidden and reset
+            resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
+
         } else {
             showMessageBox('Opportunity not found!', false);
         }
@@ -1679,6 +1722,237 @@ async function deleteOpportunity(opportunityId) {
     } catch (error) {
         console.error("Error deleting opportunity:", error);
         showMessageBox('Error deleting opportunity: ' + error.message, false);
+    }
+}
+
+// --- Work Logs Module (NEW) ---
+
+// Static options for work log types
+const workLogTypeOptions = [
+    { value: "Call", text: "Call" },
+    { value: "Email", text: "Email" },
+    { value: "Meeting", text: "Meeting" },
+    { value: "Task", text: "Task" },
+    { value: "Note", text: "Note" },
+    { value: "Other", text: "Other" },
+];
+
+/**
+ * Populates the work log type dropdown.
+ * @param {string|null} selectedType - The type to pre-select.
+ */
+async function populateWorkLogTypeDropdown(selectedType = null) {
+    await populateSelect(workLogTypeSelect, null, 'value', 'text', selectedType, null, workLogTypeOptions);
+}
+
+// Event listener to open the Work Log Entry Form
+addWorkLogEntryBtn.addEventListener('click', () => {
+    if (!currentOpportunityId) {
+        showMessageBox('Please select or save an opportunity first to add work logs.', false);
+        return;
+    }
+    workLogForm.reset();
+    workLogIdInput.value = ''; // Clear ID for new entry
+    workLogOpportunityIdInput.value = currentOpportunityId; // Link to current opportunity
+    workLogDateInput.valueAsDate = new Date(); // Default to today's date
+    resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage); // Reset and hide first
+    workLogFormContainer.classList.remove('hidden'); // Then show the container
+    populateWorkLogTypeDropdown();
+});
+
+// Event listener to save (add or update) a work log entry
+workLogForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentUser || !currentOpportunityId) {
+        showMessageBox('Authentication required and an opportunity must be selected to save work logs.', false);
+        return;
+    }
+
+    const workLogId = workLogIdInput.value;
+    const opportunityId = workLogOpportunityIdInput.value; // Get parent opportunity ID
+
+    const workLogData = {
+        date: workLogDateInput.value ? Timestamp.fromDate(new Date(workLogDateInput.value)) : null,
+        type: workLogTypeSelect.value,
+        details: workLogDetailsTextarea.value.trim(),
+        createdAt: serverTimestamp(), // Will only be set on creation
+        updatedAt: serverTimestamp(),
+        creatorId: currentUser.uid
+    };
+
+    try {
+        if (workLogId) {
+            // Update existing work log
+            await updateDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId), {
+                date: workLogData.date,
+                type: workLogData.type,
+                details: workLogData.details,
+                updatedAt: workLogData.updatedAt // Only update these fields
+            });
+            showMessageBox('Work log updated successfully!', false);
+        } else {
+            // Add new work log
+            await addDoc(collection(db, `opportunities/${opportunityId}/workLogs`), workLogData);
+            showMessageBox('Work log added successfully!', false);
+        }
+        resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
+        await renderWorkLogsList(opportunityId); // Re-render the list
+    } catch (error) {
+        console.error("Error saving work log:", error);
+        workLogFormMessage.textContent = 'Error saving work log: ' + error.message;
+        workLogFormMessage.classList.remove('hidden');
+        showMessageBox('Error saving work log: ' + error.message, false);
+    }
+});
+
+// Event listener for cancel work log button
+cancelWorkLogBtn.addEventListener('click', () => {
+    resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
+});
+
+
+/**
+ * Renders the list of work logs for a given opportunity.
+ * @param {string} opportunityId - The ID of the opportunity.
+ */
+async function renderWorkLogsList(opportunityId) {
+    if (!currentUser || !opportunityId) {
+        workLogsList.innerHTML = '';
+        noWorkLogsMessage.classList.remove('hidden');
+        return;
+    }
+
+    workLogsList.innerHTML = '<li class="text-center text-gray-500">Loading work logs...</li>';
+    noWorkLogsMessage.classList.add('hidden');
+
+    try {
+        const workLogsRef = collection(db, `opportunities/${opportunityId}/workLogs`);
+        // Order by date, then by creation time for consistent display
+        const q = query(workLogsRef, orderBy('date', 'desc'), orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(q);
+
+        workLogsList.innerHTML = ''; // Clear loading message
+
+        if (snapshot.empty) {
+            noWorkLogsMessage.classList.remove('hidden');
+        } else {
+            noWorkLogsMessage.classList.add('hidden');
+            snapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                const li = document.createElement('li');
+                li.className = 'bg-gray-100 p-3 rounded-md shadow-sm flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0 sm:space-x-4';
+                li.innerHTML = `
+                    <div class="flex-grow">
+                        <p class="text-sm font-semibold text-gray-700">${formatDateForDisplay(data.date)} - ${data.type}</p>
+                        <p class="text-gray-600 text-sm">${data.details}</p>
+                        <p class="text-xs text-gray-500 mt-1">Logged by ${data.creatorId === currentUser.uid ? 'You' : data.creatorId} on ${formatDateForDisplay(data.createdAt)}</p>
+                    </div>
+                    <div class="flex space-x-2 mt-2 sm:mt-0">
+                        <button type="button" class="px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm edit-work-log-btn"
+                            data-work-log-id="${docSnap.id}" data-opportunity-id="${opportunityId}">Edit</button>
+                        <button type="button" class="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm delete-work-log-btn"
+                            data-work-log-id="${docSnap.id}" data-opportunity-id="${opportunityId}">Delete</button>
+                    </div>
+                `;
+                workLogsList.appendChild(li);
+            });
+
+            // Add event listeners for new buttons
+            workLogsList.querySelectorAll('.edit-work-log-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const workLogId = e.target.dataset.workLogId;
+                    const oppId = e.target.dataset.opportunityId;
+                    editWorkLogEntry(oppId, workLogId);
+                });
+            });
+            workLogsList.querySelectorAll('.delete-work-log-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const workLogId = e.target.dataset.workLogId;
+                    const oppId = e.target.dataset.opportunityId;
+                    deleteWorkLogEntry(oppId, workLogId);
+                });
+            });
+
+        }
+    } catch (error) {
+        console.error("Error rendering work logs:", error);
+        showMessageBox('Could not load work logs: ' + error.message, false);
+        workLogsList.innerHTML = '<li class="text-center text-red-500">Error loading work logs.</li>';
+    }
+}
+
+/**
+ * Populates the work log form with existing data for editing.
+ * @param {string} opportunityId - The ID of the parent opportunity.
+ * @param {string} workLogId - The ID of the work log document to edit.
+ */
+async function editWorkLogEntry(opportunityId, workLogId) {
+    if (!currentUser || !opportunityId || !workLogId) {
+        showMessageBox('Invalid request to edit work log.', false);
+        return;
+    }
+
+    try {
+        const docSnap = await getDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            // Check if current user is the creator or an Admin
+            if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
+                showMessageBox('You can only edit work logs you have created.', false);
+                return;
+            }
+
+            workLogIdInput.value = docSnap.id;
+            workLogOpportunityIdInput.value = opportunityId;
+
+            workLogFormContainer.classList.remove('hidden');
+            workLogFormMessage.classList.add('hidden');
+
+            workLogDateInput.value = formatDateForInput(data.date);
+            await populateWorkLogTypeDropdown(data.type);
+            workLogDetailsTextarea.value = data.details || '';
+        } else {
+            showMessageBox('Work log entry not found!', false);
+        }
+    } catch (error) {
+        console.error("Error editing work log entry:", error);
+        showMessageBox('Error loading work log entry for edit: ' + error.message, false);
+    }
+}
+
+/**
+ * Deletes a work log entry from Firestore.
+ * @param {string} opportunityId - The ID of the parent opportunity.
+ * @param {string} workLogId - The ID of the work log document to delete.
+ */
+async function deleteWorkLogEntry(opportunityId, workLogId) {
+    if (!currentUser || !opportunityId || !workLogId) {
+        showMessageBox('Invalid request to delete work log.', false);
+        return;
+    }
+
+    const confirmed = await showMessageBox('Are you sure you want to delete this work log entry? This action cannot be undone.', true);
+    if (!confirmed) return;
+
+    try {
+        const docSnap = await getDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId));
+        if (!docSnap.exists()) {
+            showMessageBox('Work log entry not found!', false);
+            return;
+        }
+        const data = docSnap.data();
+        // Check if current user is the creator or an Admin
+        if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
+            showMessageBox('You can only delete work logs you have created.', false);
+            return;
+        }
+
+        await deleteDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId));
+        showMessageBox('Work log entry deleted successfully!', false);
+        await renderWorkLogsList(opportunityId); // Re-render the list
+    } catch (error) {
+        console.error("Error deleting work log entry:", error);
+        showMessageBox('Error deleting work log entry: ' + error.message, false);
     }
 }
 
@@ -1745,7 +2019,6 @@ countryForm.addEventListener('submit', async (e) => {
         countryStatesTextarea.value = ''; // Clear states textarea after successful save
         renderCountriesStatesGrid();
         populateCustomerCountryDropdown(); // Refresh customer dropdown
-        // Removed populatePriceBookCountryDropdown();
         populateOpportunityCustomerDropdown(); // Refresh opportunity customer dropdown (if it depends on countries)
     } catch (error) {
         console.error("Error saving country:", error);
@@ -1912,7 +2185,6 @@ async function deleteCountryState(id) {
         showMessageBox('Country deleted successfully!', false);
         renderCountriesStatesGrid();
         populateCustomerCountryDropdown();
-        // Removed populatePriceBookCountryDropdown();
         populateOpportunityCustomerDropdown(); // Refresh opportunity customer dropdown (if it depends on countries)
     } catch (error) {
         console.error("Error deleting country:", error);
@@ -2464,28 +2736,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Hide all navigation items initially until authenticated
     navDashboard.classList.add('hidden');
     navCustomers.classList.add('hidden');
-    navLeads.classList.add('hidden'); // NEW: Hide leads nav initially
+    navLeads.classList.add('hidden');
     navOpportunities.classList.add('hidden');
     adminMenuItem.classList.add('hidden'); // Hide admin menu by default
     navLogout.classList.add('hidden');
-
-    // Removed the priceBookCountrySelect change listener as it's no longer needed.
-    // if (priceBookCountrySelect) {
-    //     priceBookCountrySelect.addEventListener('change', async () => {
-    //         const selectedOption = priceBookCountrySelect.options[priceBookCountrySelect.selectedIndex];
-    //         const defaultCurrencySymbol = selectedOption ? selectedOption.dataset.defaultCurrencySymbol : '';
-
-    //         // Set the currency dropdown value
-    //         priceBookCurrencySelect.value = defaultCurrencySymbol || '';
-
-    //         // If the currency dropdown is still empty after auto-selection,
-    //         // or if the selected country has no default currency,
-    //         // ensure the currency dropdown is populated with all available currencies.
-    //         // This prevents it from remaining empty if the auto-selected currency isn't found
-    //         // or if a country without a default is selected.
-    //         if (!priceBookCurrencySelect.value) {
-    //             await populatePriceBookCurrencyDropdown();
-    //         }
-    //     });
-    // }
 });
