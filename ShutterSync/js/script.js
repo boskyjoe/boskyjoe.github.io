@@ -392,6 +392,11 @@ function hideAllSections() {
 function showSection(sectionElement) {
     hideAllSections();
     sectionElement.classList.remove('hidden');
+
+    // If the opportunities section is shown, set up accordions
+    if (sectionElement === opportunitiesSection) {
+        setupAccordions();
+    }
 }
 
 /**
@@ -441,6 +446,36 @@ function toggleAccordion(header) {
         header.classList.remove('expanded');
         if (icon) icon.style.transform = 'rotate(0deg)';
     }
+}
+
+/**
+ * Sets up event listeners for all accordion headers within the current view.
+ * Ensures initial state (Main Details expanded, others collapsed).
+ */
+function setupAccordions() {
+    const accordionHeaders = document.querySelectorAll('.accordion-header');
+    accordionHeaders.forEach(header => {
+        // Remove existing listener to prevent duplicates if called multiple times
+        header.removeEventListener('click', toggleAccordion);
+        // Add new listener
+        header.addEventListener('click', () => toggleAccordion(header));
+
+        // Set initial state for accordions
+        const content = header.nextElementSibling;
+        const icon = header.querySelector('.accordion-icon');
+
+        if (header.textContent.includes('Main Details')) {
+            // Main Details accordion should be expanded by default
+            content.classList.remove('hidden');
+            header.classList.add('expanded');
+            if (icon) icon.style.transform = 'rotate(180deg)';
+        } else {
+            // Other accordions should be collapsed by default
+            content.classList.add('hidden');
+            header.classList.remove('expanded');
+            if (icon) icon.style.transform = 'rotate(0deg)';
+        }
+    });
 }
 
 
@@ -1432,7 +1467,7 @@ opportunityCurrencySelect.addEventListener('change', () => {
 addOpportunityBtn.addEventListener('click', async () => { // Made async to await dropdown populations
     if (!currentUser) { showMessageBox('Please sign in to add opportunities.', false); return; }
     document.getElementById('opportunity-id').value = ''; // Clear ID for new opportunity
-    resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage); // Clear and hide form
+    resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage); // Reset and hide first
     opportunityFormContainer.classList.remove('hidden'); // Then show the container
 
     // Reset and hide work log form and list when creating a new opportunity
@@ -1445,6 +1480,9 @@ addOpportunityBtn.addEventListener('click', async () => { // Made async to await
     await populateOpportunityCustomerDropdown();
     await populateOpportunityCurrencyDropdown();
     await populateOpportunityPriceBookDropdown();
+
+    // Setup accordions for the new form
+    setupAccordions();
 });
 
 // Event listener to save (add or update) an opportunity
@@ -1676,6 +1714,9 @@ async function editOpportunity(opportunityId) {
             await renderWorkLogsList(currentOpportunityId);
             // Ensure work log form is hidden and reset
             resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
+
+            // Setup accordions for the loaded form
+            setupAccordions();
 
         } else {
             showMessageBox('Opportunity not found!', false);
@@ -2734,19 +2775,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     navOpportunities.classList.add('hidden');
     adminMenuItem.classList.add('hidden'); // Hide admin menu by default
     navLogout.classList.add('hidden');
-
-    // Accordion setup - using a small timeout as a last resort for unusual timing issues
-    setTimeout(() => {
-        console.log('Attempting to set up accordion event listeners after slight delay.');
-        const accordionHeaders = document.querySelectorAll('.accordion-header');
-        console.log('Found accordion headers (after delay):', accordionHeaders);
-
-        accordionHeaders.forEach(header => {
-            if (header) { // This check should prevent the error if 'header' is null
-                header.addEventListener('click', () => toggleAccordion(header));
-            } else {
-                console.error("Skipping null header element detected in accordionHeaders NodeList (after delay).");
-            }
-        });
-    }, 100); // Small delay to ensure DOM is fully stable
 });
