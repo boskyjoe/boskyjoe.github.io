@@ -68,7 +68,7 @@ const googleSignInBtn = document.getElementById('google-signin-btn');
 const authErrorMessage = document.getElementById('auth-error-message');
 
 const userDisplayName = document.getElementById('user-display-name');
-const userIdDisplay = document.getElementById('user-id-display');
+const userIdDisplay = document.getElementById('user-id-display'); // This element will now be cleared
 const userRoleSpan = document.createElement('span'); // Create a span for user role
 userRoleSpan.id = 'user-role';
 userRoleSpan.className = 'text-sm text-blue-200 ml-2';
@@ -429,7 +429,8 @@ onAuthStateChanged(auth, async (user) => {
         userId = user.uid; // Set userId to authenticated UID
         navLogout.classList.remove('hidden');
         userDisplayName.textContent = user.displayName || user.email;
-        userIdDisplay.textContent = `ID: ${userId}`; // Display full user ID
+        userIdDisplay.textContent = ''; // REMOVED: Display full user ID - Now empty string
+        userRoleSpan.textContent = `Role: ${currentUserRole}`; // Display user role
 
         try {
             // Fetch user's custom claims for role from Firestore
@@ -1374,6 +1375,7 @@ async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null, 
             } else if (currencyCode && !defaultSelected && data.currency === currencyCode && data.isActive) {
                 // If a currency is specified and no explicit price book is selected,
                 // select the first active price book that matches the currency.
+                // This logic might need refinement if you have multiple active price books for one currency.
                 option.selected = true;
                 defaultSelected = true;
             }
@@ -1587,7 +1589,7 @@ async function renderOpportunitiesGrid() {
                         'pagination-summary': 'text-sm text-gray-600', 'pagination-gap': 'text-sm text-gray-400',
                         'pagination-nav': 'flex space-x-1', 'pagination-nav-prev': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
                         'pagination-nav-next': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                        'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
+                        'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-300',
                         'pagination-btn-current': 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
                     },
                     language: {
@@ -2306,18 +2308,7 @@ async function deletePriceBook(id) {
     if (!confirmed) return;
 
     try {
-        const docSnap = await getDoc(doc(db, `priceBooks`, id));
-        if (!docSnap.exists()) {
-            showMessageBox('Price Book not found!', false);
-            return;
-        }
-        const data = docSnap.data();
-        // const indexId = getPriceBookIndexId(data.name, data.currency); // No longer needed for client-side deletion
-
         await deleteDoc(doc(db, `priceBooks`, id));
-        // // Also delete the corresponding index document - TEMPORARILY REMOVED FOR DEBUGGING
-        // await deleteDoc(doc(db, `priceBookNameCurrencyIndexes`, indexId));
-
         showMessageBox('Price Book deleted successfully!', false);
         renderPriceBooksGrid();
         populateOpportunityPriceBookDropdown();
