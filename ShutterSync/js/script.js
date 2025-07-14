@@ -187,7 +187,7 @@ const priceBookFormContainer = document.getElementById('price-book-form-containe
 const priceBookForm = document.getElementById('price-book-form');
 const priceBookNameInput = document.getElementById('price-book-name');
 const priceBookDescriptionTextarea = document.getElementById('price-book-description');
-const priceBookCurrencySelect = document.getElementById('price-book-currency');
+const priceBookCurrencySelect = document = document.getElementById('price-book-currency');
 const priceBookActiveCheckbox = document.getElementById('price-book-active');
 const cancelPriceBookBtn = document.getElementById('cancel-price-book-btn');
 const priceBookFormMessage = document.getElementById('price-book-form-message');
@@ -449,31 +449,47 @@ function toggleAccordion(header) {
 }
 
 /**
- * Sets up event listeners for all accordion headers within the current view.
+ * Sets up event listeners for all accordion headers within the opportunity form.
  * Ensures initial state (Main Details expanded, others collapsed).
  */
 function setupAccordions() {
-    const accordionHeaders = document.querySelectorAll('.accordion-header');
+    // Ensure the opportunity form container exists before querying its children
+    const opportunityFormContainer = document.getElementById('opportunity-form-container');
+    if (!opportunityFormContainer) {
+        console.warn("Opportunity form container not found. Cannot set up accordions.");
+        return;
+    }
+
+    // Query for accordion headers specifically within the opportunity form container
+    const accordionHeaders = opportunityFormContainer.querySelectorAll('.accordion-header');
+    console.log(`Found ${accordionHeaders.length} accordion headers within opportunity form container.`);
+
     accordionHeaders.forEach(header => {
-        // Remove existing listener to prevent duplicates if called multiple times
-        header.removeEventListener('click', toggleAccordion);
-        // Add new listener
-        header.addEventListener('click', () => toggleAccordion(header));
+        // Defensive check for 'header' being null, although querySelectorAll should return valid elements
+        if (header) {
+            // Remove existing listener to prevent duplicates if called multiple times
+            // This is crucial if setupAccordions is called repeatedly (e.g., on edit)
+            header.removeEventListener('click', toggleAccordion);
+            // Add new listener
+            header.addEventListener('click', () => toggleAccordion(header));
 
-        // Set initial state for accordions
-        const content = header.nextElementSibling;
-        const icon = header.querySelector('.accordion-icon');
+            // Set initial state for accordions
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.accordion-icon');
 
-        if (header.textContent.includes('Main Details')) {
-            // Main Details accordion should be expanded by default
-            content.classList.remove('hidden');
-            header.classList.add('expanded');
-            if (icon) icon.style.transform = 'rotate(180deg)';
+            if (header.textContent.includes('Main Details')) {
+                // Main Details accordion should be expanded by default
+                content.classList.remove('hidden');
+                header.classList.add('expanded');
+                if (icon) icon.style.transform = 'rotate(180deg)';
+            } else {
+                // Other accordions should be collapsed by default
+                content.classList.add('hidden');
+                header.classList.remove('expanded');
+                if (icon) icon.style.transform = 'rotate(0deg)';
+            }
         } else {
-            // Other accordions should be collapsed by default
-            content.classList.add('hidden');
-            header.classList.remove('expanded');
-            if (icon) icon.style.transform = 'rotate(0deg)';
+            console.error("Null header element encountered during accordion setup within opportunity form container.");
         }
     });
 }
@@ -1467,7 +1483,7 @@ opportunityCurrencySelect.addEventListener('change', () => {
 addOpportunityBtn.addEventListener('click', async () => { // Made async to await dropdown populations
     if (!currentUser) { showMessageBox('Please sign in to add opportunities.', false); return; }
     document.getElementById('opportunity-id').value = ''; // Clear ID for new opportunity
-    resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage); // Reset and hide first
+    resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage); // Clear and hide form
     opportunityFormContainer.classList.remove('hidden'); // Then show the container
 
     // Reset and hide work log form and list when creating a new opportunity
