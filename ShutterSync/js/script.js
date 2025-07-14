@@ -132,20 +132,20 @@ const opportunitySearchInput = document.getElementById('opportunity-search');
 const noOpportunitiesMessage = document.getElementById('no-opportunities-message');
 const opportunitiesGridContainer = document.getElementById('opportunities-grid-container');
 
-// NEW: Work Log Elements
-const workLogsListContainer = document.getElementById('work-logs-list-container');
-const noWorkLogsMessage = document.getElementById('no-work-logs-message');
-const workLogsList = document.getElementById('work-logs-list');
-const addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
-const workLogFormContainer = document.getElementById('work-log-form-container');
-const workLogForm = document.getElementById('work-log-form'); // This is the element that was null
-const workLogIdInput = document.getElementById('work-log-id');
-const workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
-const workLogDateInput = document.getElementById('work-log-date');
-const workLogTypeSelect = document.getElementById('work-log-type');
-const workLogDetailsTextarea = document.getElementById('work-log-details');
-const cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
-const workLogFormMessage = document.getElementById('work-log-form-message');
+// NEW: Work Log Elements - Declared with `let` and initialized to `null`
+let workLogsListContainer = null;
+let noWorkLogsMessage = null;
+let workLogsList = null;
+let addWorkLogEntryBtn = null;
+let workLogFormContainer = null;
+let workLogForm = null; // This will now be assigned when the element is available
+let workLogIdInput = null;
+let workLogOpportunityIdInput = null;
+let workLogDateInput = null;
+let workLogTypeSelect = null;
+let workLogDetailsTextarea = null;
+let cancelWorkLogBtn = null;
+let workLogFormMessage = null;
 
 // Flag to ensure workLogForm listener is added only once
 let workLogFormListenerAdded = false;
@@ -731,41 +731,55 @@ async function updateDashboardStats() {
 
 /**
  * Resets a given form and hides its container.
- * @param {HTMLFormElement} formElement - The form to reset.
- * @param {HTMLElement} formContainer - The container element of the form.
+ * @param {HTMLFormElement|null} formElement - The form to reset. Can be null.
+ * @param {HTMLElement|null} formContainer - The container element of the form. Can be null.
  * @param {string} idValue - The ID value to set for the hidden ID input field.
- * @param {HTMLElement} messageElement - The message display element for the form.
+ * @param {HTMLElement|null} messageElement - The message display element for the form. Can be null.
  */
 function resetAndHideForm(formElement, formContainer, idValue, messageElement) {
-    formElement.reset();
-    // Dynamically set the ID input value if it.exists, otherwise ignore
-    const idInput = formElement.querySelector('[id$="-id"]'); // Finds elements with ID ending in -id
-    if (idInput) {
-        idInput.value = idValue;
+    if (formElement) {
+        formElement.reset();
+        // Dynamically set the ID input value if it.exists, otherwise ignore
+        const idInput = formElement.querySelector('[id$="-id"]'); // Finds elements with ID ending in -id
+        if (idInput) {
+            idInput.value = idValue;
+        }
     }
-    formContainer.classList.add('hidden');
-    messageElement.classList.add('hidden');
-    messageElement.textContent = '';
+    if (formContainer) {
+        formContainer.classList.add('hidden');
+    }
+    if (messageElement) {
+        messageElement.classList.add('hidden');
+        messageElement.textContent = '';
+    }
 }
 
 // Event listeners for cancel buttons on forms
 cancelCustomerBtn.addEventListener('click', () => resetAndHideForm(customerForm, customerFormContainer, '', customerFormMessage));
 cancelLeadBtn.addEventListener('click', () => resetAndHideForm(leadForm, leadFormContainer, '', leadFormMessage));
 cancelOpportunityBtn.addEventListener('click', () => {
+    // Ensure workLogForm and its container/message are retrieved before passing
+    const currentWorkLogForm = document.getElementById('work-log-form');
+    const currentWorkLogFormContainer = document.getElementById('work-log-form-container');
+    const currentWorkLogFormMessage = document.getElementById('work-log-form-message');
+
     resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage);
     // Also reset and hide the work log form when opportunity form is cancelled
-    resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
-    workLogsList.innerHTML = ''; // Clear work logs list
-    noWorkLogsMessage.classList.remove('hidden'); // Show no work logs message
+    resetAndHideForm(currentWorkLogForm, currentWorkLogFormContainer, '', currentWorkLogFormMessage);
+    
+    // Ensure workLogsList and noWorkLogsMessage are not null before accessing
+    if (workLogsList) workLogsList.innerHTML = ''; // Clear work logs list
+    if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden'); // Show no work logs message
+    
     currentOpportunityId = null; // Clear current opportunity ID
 });
 cancelCountryBtn.addEventListener('click', () => {
     resetAndHideForm(countryForm, countryFormContainer, '', countryFormMessage);
-    countryStatesTextarea.value = ''; // Clear states textarea specifically
+    if (countryStatesTextarea) countryStatesTextarea.value = ''; // Clear states textarea specifically
 });
 cancelCurrencyBtn.addEventListener('click', () => {
     resetAndHideForm(currencyForm, currencyFormContainer, '', currencyFormMessage);
-    currencyCountrySelect.value = ''; // Clear currency country dropdown
+    if (currencyCountrySelect) currencyCountrySelect.value = ''; // Clear currency country dropdown
 });
 cancelPriceBookBtn.addEventListener('click', () => resetAndHideForm(priceBookForm, priceBookFormContainer, '', priceBookFormMessage));
 
@@ -1491,10 +1505,25 @@ addOpportunityBtn.addEventListener('click', async () => { // Made async to await
     resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage); // Reset and hide first
     opportunityFormContainer.classList.remove('hidden'); // Then show the container
 
+    // Retrieve work log elements here as the opportunity form container is now visible
+    workLogsListContainer = document.getElementById('work-logs-list-container');
+    noWorkLogsMessage = document.getElementById('no-work-logs-message');
+    workLogsList = document.getElementById('work-logs-list');
+    addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
+    workLogFormContainer = document.getElementById('work-log-form-container');
+    workLogForm = document.getElementById('work-log-form');
+    workLogIdInput = document.getElementById('work-log-id');
+    workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
+    workLogDateInput = document.getElementById('work-log-date');
+    workLogTypeSelect = document.getElementById('work-log-type');
+    workLogDetailsTextarea = document.getElementById('work-log-details');
+    cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
+    workLogFormMessage = document.getElementById('work-log-form-message');
+
     // Reset and hide work log form and list when creating a new opportunity
     resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
-    workLogsList.innerHTML = '';
-    noWorkLogsMessage.classList.remove('hidden');
+    if (workLogsList) workLogsList.innerHTML = '';
+    if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden');
     currentOpportunityId = null; // No opportunity selected yet
 
     // Populate dropdowns. Order matters: currency first, then price book.
@@ -1731,6 +1760,21 @@ async function editOpportunity(opportunityId) {
             opportunityValueInput.value = data.value || 0;
             opportunityNotesTextarea.value = data.notes || '';
 
+            // Retrieve work log elements here as the opportunity form container is now visible
+            workLogsListContainer = document.getElementById('work-logs-list-container');
+            noWorkLogsMessage = document.getElementById('no-work-logs-message');
+            workLogsList = document.getElementById('work-logs-list');
+            addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
+            workLogFormContainer = document.getElementById('work-log-form-container');
+            workLogForm = document.getElementById('work-log-form'); // Assign the element here
+            workLogIdInput = document.getElementById('work-log-id');
+            workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
+            workLogDateInput = document.getElementById('work-log-date');
+            workLogTypeSelect = document.getElementById('work-log-type');
+            workLogDetailsTextarea = document.getElementById('work-log-details');
+            cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
+            workLogFormMessage = document.getElementById('work-log-form-message');
+
             // Load and render work logs for this opportunity
             await renderWorkLogsList(currentOpportunityId);
             // Ensure work log form is hidden and reset
@@ -1799,6 +1843,10 @@ const workLogTypeOptions = [
  * @param {string|null} selectedType - The type to pre-select.
  */
 async function populateWorkLogTypeDropdown(selectedType = null) {
+    // Ensure workLogTypeSelect is available before populating
+    if (!workLogTypeSelect) {
+        workLogTypeSelect = document.getElementById('work-log-type');
+    }
     await populateSelect(workLogTypeSelect, null, 'value', 'text', selectedType, null, workLogTypeOptions);
 }
 
@@ -1808,16 +1856,32 @@ addWorkLogEntryBtn.addEventListener('click', () => {
         showMessageBox('Please select or save an opportunity first to add work logs.', false);
         return;
     }
-    workLogForm.reset();
-    workLogIdInput.value = ''; // Clear ID for new entry
-    workLogOpportunityIdInput.value = currentOpportunityId; // Link to current opportunity
-    workLogDateInput.valueAsDate = new Date(); // Default to today's date
-    resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage); // Reset and hide first
-    workLogFormContainer.classList.remove('hidden'); // Then show the container
+
+    // Ensure all work log elements are retrieved before use
+    workLogsListContainer = document.getElementById('work-logs-list-container');
+    noWorkLogsMessage = document.getElementById('no-work-logs-message');
+    workLogsList = document.getElementById('work-logs-list');
+    addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
+    workLogFormContainer = document.getElementById('work-log-form-container');
+    workLogForm = document.getElementById('work-log-form'); // Assign the element here
+    workLogIdInput = document.getElementById('work-log-id');
+    workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
+    workLogDateInput = document.getElementById('work-log-date');
+    workLogTypeSelect = document.getElementById('work-log-type');
+    workLogDetailsTextarea = document.getElementById('work-log-details');
+    cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
+    workLogFormMessage = document.getElementById('work-log-form-message');
+
+
+    resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
+    if (workLogIdInput) workLogIdInput.value = ''; // Clear ID for new entry
+    if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = currentOpportunityId; // Link to current opportunity
+    if (workLogDateInput) workLogDateInput.valueAsDate = new Date(); // Default to today's date
+    if (workLogFormContainer) workLogFormContainer.classList.remove('hidden'); // Then show the container
     populateWorkLogTypeDropdown();
 
     // Attach workLogForm submit listener only once, now that the form is visible
-    if (!workLogFormListenerAdded) {
+    if (!workLogFormListenerAdded && workLogForm) { // Added check for workLogForm
         workLogForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!currentUser || !currentOpportunityId) {
@@ -1856,8 +1920,10 @@ addWorkLogEntryBtn.addEventListener('click', () => {
                 await renderWorkLogsList(opportunityId); // Re-render the list
             } catch (error) {
                 console.error("Error saving work log:", error);
-                workLogFormMessage.textContent = 'Error saving work log: ' + error.message;
-                workLogFormMessage.classList.remove('hidden');
+                if (workLogFormMessage) { // Defensive check
+                    workLogFormMessage.textContent = 'Error saving work log: ' + error.message;
+                    workLogFormMessage.classList.remove('hidden');
+                }
                 showMessageBox('Error saving work log: ' + error.message, false);
             }
         });
@@ -1867,7 +1933,11 @@ addWorkLogEntryBtn.addEventListener('click', () => {
 
 // Event listener for cancel work log button
 cancelWorkLogBtn.addEventListener('click', () => {
-    resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
+    // Ensure workLogForm and its container/message are retrieved before passing
+    const currentWorkLogForm = document.getElementById('work-log-form');
+    const currentWorkLogFormContainer = document.getElementById('work-log-form-container');
+    const currentWorkLogFormMessage = document.getElementById('work-log-form-message');
+    resetAndHideForm(currentWorkLogForm, currentWorkLogFormContainer, '', currentWorkLogFormMessage);
 });
 
 
@@ -1877,13 +1947,17 @@ cancelWorkLogBtn.addEventListener('click', () => {
  */
 async function renderWorkLogsList(opportunityId) {
     if (!currentUser || !opportunityId) {
-        workLogsList.innerHTML = '';
-        noWorkLogsMessage.classList.remove('hidden');
+        if (workLogsList) workLogsList.innerHTML = '';
+        if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden');
         return;
     }
 
-    workLogsList.innerHTML = '<li class="text-center text-gray-500">Loading work logs...</li>';
-    noWorkLogsMessage.classList.add('hidden');
+    // Ensure elements are retrieved before use
+    if (!workLogsList) workLogsList = document.getElementById('work-logs-list');
+    if (!noWorkLogsMessage) noWorkLogsMessage = document.getElementById('no-work-logs-message');
+
+    if (workLogsList) workLogsList.innerHTML = '<li class="text-center text-gray-500">Loading work logs...</li>';
+    if (noWorkLogsMessage) noWorkLogsMessage.classList.add('hidden');
 
     try {
         const workLogsRef = collection(db, `opportunities/${opportunityId}/workLogs`);
@@ -1891,12 +1965,12 @@ async function renderWorkLogsList(opportunityId) {
         const q = query(workLogsRef, orderBy('date', 'desc'), orderBy('createdAt', 'desc'));
         const snapshot = await getDocs(q);
 
-        workLogsList.innerHTML = ''; // Clear loading message
+        if (workLogsList) workLogsList.innerHTML = ''; // Clear loading message
 
         if (snapshot.empty) {
-            noWorkLogsMessage.classList.remove('hidden');
+            if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden');
         } else {
-            noWorkLogsMessage.classList.add('hidden');
+            if (noWorkLogsMessage) noWorkLogsMessage.classList.add('hidden');
             snapshot.forEach(docSnap => {
                 const data = docSnap.data();
                 const li = document.createElement('li');
@@ -1914,30 +1988,32 @@ async function renderWorkLogsList(opportunityId) {
                             data-work-log-id="${docSnap.id}" data-opportunity-id="${opportunityId}">Delete</button>
                     </div>
                 `;
-                workLogsList.appendChild(li);
+                if (workLogsList) workLogsList.appendChild(li);
             });
 
             // Add event listeners for new buttons
-            workLogsList.querySelectorAll('.edit-work-log-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const workLogId = e.target.dataset.workLogId;
-                    const oppId = e.target.dataset.opportunityId;
-                    editWorkLogEntry(oppId, workLogId);
+            if (workLogsList) {
+                workLogsList.querySelectorAll('.edit-work-log-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const workLogId = e.target.dataset.workLogId;
+                        const oppId = e.target.dataset.opportunityId;
+                        editWorkLogEntry(oppId, workLogId);
+                    });
                 });
-            });
-            workLogsList.querySelectorAll('.delete-work-log-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const workLogId = e.target.dataset.workLogId;
-                    const oppId = e.target.dataset.opportunityId;
-                    deleteWorkLogEntry(oppId, workLogId);
+                workLogsList.querySelectorAll('.delete-work-log-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const workLogId = e.target.dataset.workLogId;
+                        const oppId = e.target.dataset.opportunityId;
+                        deleteWorkLogEntry(oppId, workLogId);
+                    });
                 });
-            });
+            }
 
         }
     } catch (error) {
         console.error("Error rendering work logs:", error);
         showMessageBox('Could not load work logs: ' + error.message, false);
-        workLogsList.innerHTML = '<li class="text-center text-red-500">Error loading work logs.</li>';
+        if (workLogsList) workLogsList.innerHTML = '<li class="text-center text-red-500">Error loading work logs.</li>';
     }
 }
 
@@ -1962,18 +2038,33 @@ async function editWorkLogEntry(opportunityId, workLogId) {
                 return;
             }
 
-            workLogIdInput.value = docSnap.id;
-            workLogOpportunityIdInput.value = opportunityId;
+            // Retrieve work log elements here for edit
+            workLogsListContainer = document.getElementById('work-logs-list-container');
+            noWorkLogsMessage = document.getElementById('no-work-logs-message');
+            workLogsList = document.getElementById('work-logs-list');
+            addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
+            workLogFormContainer = document.getElementById('work-log-form-container');
+            workLogForm = document.getElementById('work-log-form'); // Assign the element here
+            workLogIdInput = document.getElementById('work-log-id');
+            workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
+            workLogDateInput = document.getElementById('work-log-date');
+            workLogTypeSelect = document.getElementById('work-log-type');
+            workLogDetailsTextarea = document.getElementById('work-log-details');
+            cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
+            workLogFormMessage = document.getElementById('work-log-form-message');
 
-            workLogFormContainer.classList.remove('hidden');
-            workLogFormMessage.classList.add('hidden');
+            if (workLogIdInput) workLogIdInput.value = docSnap.id;
+            if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = opportunityId;
 
-            workLogDateInput.value = formatDateForInput(data.date);
+            if (workLogFormContainer) workLogFormContainer.classList.remove('hidden');
+            if (workLogFormMessage) workLogFormMessage.classList.add('hidden');
+
+            if (workLogDateInput) workLogDateInput.value = formatDateForInput(data.date);
             await populateWorkLogTypeDropdown(data.type);
-            workLogDetailsTextarea.value = data.details || '';
+            if (workLogDetailsTextarea) workLogDetailsTextarea.value = data.details || '';
 
             // Attach workLogForm submit listener if not already added (for edit scenario)
-            if (!workLogFormListenerAdded) {
+            if (!workLogFormListenerAdded && workLogForm) { // Added check for workLogForm
                 workLogForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     if (!currentUser || !currentOpportunityId) {
@@ -2012,8 +2103,10 @@ async function editWorkLogEntry(opportunityId, workLogId) {
                         await renderWorkLogsList(opportunityId); // Re-render the list
                     } catch (error) {
                         console.error("Error saving work log:", error);
-                        workLogFormMessage.textContent = 'Error saving work log: ' + error.message;
-                        workLogFormMessage.classList.remove('hidden');
+                        if (workLogFormMessage) {
+                            workLogFormMessage.textContent = 'Error saving work log: ' + error.message;
+                            workLogFormMessage.classList.remove('hidden');
+                        }
                         showMessageBox('Error saving work log: ' + error.message, false);
                     }
                 });
@@ -2072,7 +2165,7 @@ async function deleteWorkLogEntry(opportunityId, workLogId) {
 addCountryBtn.addEventListener('click', () => {
     if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can add countries.', false); return; }
     document.getElementById('country-id').value = ''; // Clear ID for new country
-    countryStatesTextarea.value = ''; // Clear states textarea for new entry
+    if (countryStatesTextarea) countryStatesTextarea.value = ''; // Clear states textarea for new entry
     resetAndHideForm(countryForm, countryFormContainer, '', countryFormMessage); // Clear and hide form
     countryFormContainer.classList.remove('hidden'); // Then show the container
 });
@@ -2125,7 +2218,7 @@ countryForm.addEventListener('submit', async (e) => {
             showMessageBox('Country added successfully!', false);
         }
         resetAndHideForm(countryForm, countryFormContainer, '', countryFormMessage); // Clear and hide form
-        countryStatesTextarea.value = ''; // Clear states textarea after successful save
+        if (countryStatesTextarea) countryStatesTextarea.value = ''; // Clear states textarea after successful save
         renderCountriesStatesGrid();
         populateCustomerCountryDropdown(); // Refresh customer dropdown
         populateOpportunityCustomerDropdown(); // Refresh opportunity customer dropdown (if it depends on countries)
@@ -2143,12 +2236,12 @@ countryForm.addEventListener('submit', async (e) => {
  */
 async function renderCountriesStatesGrid() {
     if (!currentUser || currentUserRole !== 'Admin') {
-        noCountriesMessage.classList.remove('hidden');
+        if (noCountriesMessage) noCountriesMessage.classList.remove('hidden');
         if (countriesStatesGrid) {
             countriesStatesGrid.destroy();
             countriesStatesGrid = null;
         }
-        countriesGridContainer.innerHTML = '';
+        if (countriesGridContainer) countriesGridContainer.innerHTML = '';
         return;
     }
 
@@ -2157,24 +2250,24 @@ async function renderCountriesStatesGrid() {
         await waitForGridJs();
     } catch (error) {
         // Error message already shown by waitForGridJs
-        countriesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading countries data.</p>';
+        if (countriesGridContainer) countriesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading countries data.</p>';
         return;
     }
 
-    countriesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Countries...</p>';
-    noCountriesMessage.classList.add('hidden');
+    if (countriesGridContainer) countriesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Countries...</p>';
+    if (noCountriesMessage) noCountriesMessage.classList.add('hidden');
 
     const countriesRef = collection(db, `countries`);
     const data = [];
 
     try {
         const snapshot = await getDocs(query(countriesRef, orderBy('name')));
-        countriesGridContainer.innerHTML = ''; // Clear loading message
+        if (countriesGridContainer) countriesGridContainer.innerHTML = ''; // Clear loading message
 
         if (snapshot.empty) {
-            noCountriesMessage.classList.remove('hidden');
+            if (noCountriesMessage) noCountriesMessage.classList.remove('hidden');
         } else {
-            noCountriesMessage.classList.add('hidden'); // Ensure it's hidden if data is present
+            if (noCountriesMessage) noCountriesMessage.classList.add('hidden'); // Ensure it's hidden if data is present
             snapshot.forEach(doc => {
                 const country = doc.data();
                 data.push([
@@ -2248,7 +2341,7 @@ async function renderCountriesStatesGrid() {
     } catch (error) {
         console.error("Error rendering countries grid:", error);
         showMessageBox('Could not load countries data: ' + error.message, false);
-        countriesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading countries data.</p>';
+        if (countriesGridContainer) countriesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading countries data.</p>';
     }
 }
 
@@ -2264,11 +2357,11 @@ async function editCountryState(id) {
             const data = docSnap.data();
             document.getElementById('country-id').value = docSnap.id;
 
-            countryNameInput.value = data.name || '';
-            countryCodeInput.value = data.code || '';
-            countryStatesTextarea.value = Array.isArray(data.states) ? data.states.join(', ') : ''; // Populate states
-            countryFormContainer.classList.remove('hidden');
-            countryFormMessage.classList.add('hidden');
+            if (countryNameInput) countryNameInput.value = data.name || '';
+            if (countryCodeInput) countryCodeInput.value = data.code || '';
+            if (countryStatesTextarea) countryStatesTextarea.value = Array.isArray(data.states) ? data.states.join(', ') : ''; // Populate states
+            if (countryFormContainer) countryFormContainer.classList.remove('hidden');
+            if (countryFormMessage) countryFormMessage.classList.add('hidden');
         } else {
             showMessageBox('Country not found!', false);
         }
@@ -2385,12 +2478,12 @@ currencyForm.addEventListener('submit', async (e) => {
  */
 async function renderCurrenciesGrid() {
     if (!currentUser || currentUserRole !== 'Admin') {
-        noCurrenciesMessage.classList.remove('hidden');
+        if (noCurrenciesMessage) noCurrenciesMessage.classList.remove('hidden');
         if (currenciesGrid) {
             currenciesGrid.destroy();
             currenciesGrid = null;
         }
-        currenciesGridContainer.innerHTML = '';
+        if (currenciesGridContainer) currenciesGridContainer.innerHTML = '';
         return;
     }
 
@@ -2399,24 +2492,24 @@ async function renderCurrenciesGrid() {
         await waitForGridJs();
     } catch (error) {
         // Error message already shown by waitForGridJs
-        currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading currency data.</p>';
+        if (currenciesGridContainer) currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading currency data.</p>';
         return;
     }
 
-    currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Currencies...</p>';
-    noCurrenciesMessage.classList.add('hidden');
+    if (currenciesGridContainer) currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Currencies...</p>';
+    if (noCurrenciesMessage) noCurrenciesMessage.classList.add('hidden');
 
     const currenciesRef = collection(db, `currencies`);
     const data = [];
 
     try {
         const snapshot = await getDocs(query(currenciesRef, orderBy('name')));
-        currenciesGridContainer.innerHTML = ''; // Clear loading message
+        if (currenciesGridContainer) currenciesGridContainer.innerHTML = ''; // Clear loading message
 
         if (snapshot.empty) {
-            noCurrenciesMessage.classList.remove('hidden');
+            if (noCurrenciesMessage) noCurrenciesMessage.classList.remove('hidden');
         } else {
-            noCurrenciesMessage.classList.add('hidden'); // Ensure it's hidden if data is present
+            if (noCurrenciesMessage) noCurrenciesMessage.classList.add('hidden'); // Ensure it's hidden if data is present
             snapshot.forEach(doc => {
                 const currency = doc.data();
                 data.push([
@@ -2493,7 +2586,7 @@ async function renderCurrenciesGrid() {
     } catch (error) {
         console.error("Error rendering currencies grid:", error);
         showMessageBox('Could not load currency data: ' + error.message, false);
-        currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading currency data.</p>';
+        if (currenciesGridContainer) currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading currency data.</p>';
     }
 }
 
@@ -2509,12 +2602,12 @@ async function editCurrency(id) {
             const data = docSnap.data();
             document.getElementById('currency-id').value = docSnap.id;
 
-            currencyNameInput.value = data.name || '';
-            currencyCodeInput.value = data.code || '';
-            currencySymbolInput.value = data.symbol || '';
+            if (currencyNameInput) currencyNameInput.value = data.name || '';
+            if (currencyCodeInput) currencyCodeInput.value = data.code || '';
+            if (currencySymbolInput) currencySymbolInput.value = data.symbol || '';
             await populateCurrencyCountryDropdown(data.country); // NEW: Populate country dropdown
-            currencyFormContainer.classList.remove('hidden');
-            currencyFormMessage.classList.add('hidden');
+            if (currencyFormContainer) currencyFormContainer.classList.remove('hidden');
+            if (currencyFormMessage) currencyFormMessage.classList.add('hidden');
         } else {
             showMessageBox('Currency not found!', false);
         }
@@ -2566,7 +2659,7 @@ addPriceBookBtn.addEventListener('click', () => {
     document.getElementById('price-book-id').value = ''; // Clear ID for new price book
     resetAndHideForm(priceBookForm, priceBookFormContainer, '', priceBookFormMessage); // Clear and hide form
     priceBookFormContainer.classList.remove('hidden'); // Then show the container
-    priceBookActiveCheckbox.checked = true; // Default to active
+    if (priceBookActiveCheckbox) priceBookActiveCheckbox.checked = true; // Default to active
     populatePriceBookCurrencyDropdown();
 });
 
@@ -2640,8 +2733,10 @@ priceBookForm.addEventListener('submit', async (e) => {
         populateOpportunityPriceBookDropdown();
     } catch (error) {
         console.error("Error saving price book:", error);
-        priceBookFormMessage.textContent = 'Error saving price book: ' + error.message;
-        priceBookFormMessage.classList.remove('hidden');
+        if (priceBookFormMessage) {
+            priceBookFormMessage.textContent = 'Error saving price book: ' + error.message;
+            priceBookFormMessage.classList.remove('hidden');
+        }
         showMessageBox('Error saving price book: ' + error.message, false);
     }
 });
@@ -2658,16 +2753,16 @@ async function editPriceBook(id) {
             const data = docSnap.data();
             document.getElementById('price-book-id').value = docSnap.id;
 
-            priceBookNameInput.value = data.name || '';
-            priceBookDescriptionTextarea.value = data.description || '';
+            if (priceBookNameInput) priceBookNameInput.value = data.name || '';
+            if (priceBookDescriptionTextarea) priceBookDescriptionTextarea.value = data.description || '';
             await populatePriceBookCurrencyDropdown(data.currency); // Populate currency dropdown with code
-            priceBookActiveCheckbox.checked = data.isActive;
+            if (priceBookActiveCheckbox) priceBookActiveCheckbox.checked = data.isActive;
             // Removed validFrom and validTo
-            // priceBookValidFromInput.value = formatDateForInput(data.validFrom);
-            // priceBookValidToInput.value = formatDateForInput(data.validTo);
+            // if (priceBookValidFromInput) priceBookValidFromInput.value = formatDateForInput(data.validFrom);
+            // if (priceBookValidToInput) priceBookValidToInput.value = formatDateForInput(data.validTo);
 
-            priceBookFormContainer.classList.remove('hidden');
-            priceBookFormMessage.classList.add('hidden');
+            if (priceBookFormContainer) priceBookFormContainer.classList.remove('hidden');
+            if (priceBookFormMessage) priceBookFormMessage.classList.add('hidden');
         } else {
             showMessageBox('Price Book not found!', false);
         }
@@ -2705,12 +2800,12 @@ async function deletePriceBook(id) {
  */
 async function renderPriceBooksGrid() { // This is the function definition
     if (!currentUser || currentUserRole !== 'Admin') {
-        noPriceBooksMessage.classList.remove('hidden');
+        if (noPriceBooksMessage) noPriceBooksMessage.classList.remove('hidden');
         if (priceBooksGrid) {
             priceBooksGrid.destroy();
             priceBooksGrid = null;
         }
-        priceBooksGridContainer.innerHTML = '';
+        if (priceBooksGridContainer) priceBooksGridContainer.innerHTML = '';
         return;
     }
 
@@ -2719,24 +2814,24 @@ async function renderPriceBooksGrid() { // This is the function definition
         await waitForGridJs();
     } catch (error) {
         // Error message already shown by waitForGridJs
-        priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading price book data.</p>';
+        if (priceBooksGridContainer) priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading price book data.</p>';
         return;
     }
 
-    priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Price Books...</p>';
-    noPriceBooksMessage.classList.add('hidden');
+    if (priceBooksGridContainer) priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Price Books...</p>';
+    if (noPriceBooksMessage) noPriceBooksMessage.classList.add('hidden');
 
     const priceBooksRef = collection(db, `priceBooks`);
     const data = [];
 
     try {
         const snapshot = await getDocs(query(priceBooksRef, orderBy('name')));
-        priceBooksGridContainer.innerHTML = ''; // Clear loading message
+        if (priceBooksGridContainer) priceBooksGridContainer.innerHTML = ''; // Clear loading message
 
         if (snapshot.empty) {
-            noPriceBooksMessage.classList.remove('hidden');
+            if (noPriceBooksMessage) noPriceBooksMessage.classList.remove('hidden');
         } else {
-            noPriceBooksMessage.classList.add('hidden'); // Ensure it's hidden if data is present
+            if (noPriceBooksMessage) noPriceBooksMessage.classList.add('hidden'); // Ensure it's hidden if data is present
             snapshot.forEach(doc => {
                 const priceBook = doc.data();
                 data.push([
@@ -2814,7 +2909,7 @@ async function renderPriceBooksGrid() { // This is the function definition
     } catch (error) {
         console.error("Error rendering price book grid:", error);
         showMessageBox('Could not load price book data: ' + error.message, false);
-        priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading price book data.</p>';
+        if (priceBooksGridContainer) priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading price book data.</p>';
     }
 }
 
