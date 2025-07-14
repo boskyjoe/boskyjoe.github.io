@@ -178,7 +178,7 @@ const currencyFormContainer = document.getElementById('currency-form-container')
 const currencyForm = document.getElementById('currency-form');
 const currencyNameInput = document.getElementById('currency-name');
 const currencyCodeInput = document.getElementById('currency-code');
-const currencySymbolInput = document = document.getElementById('currency-symbol');
+const currencySymbolInput = document.getElementById('currency-symbol');
 const currencyCountrySelect = document.getElementById('currency-country');
 const cancelCurrencyBtn = document.getElementById('cancel-currency-btn');
 const currencyFormMessage = document.getElementById('currency-form-message');
