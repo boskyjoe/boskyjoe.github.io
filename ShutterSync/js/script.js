@@ -187,7 +187,7 @@ const priceBookFormContainer = document.getElementById('price-book-form-containe
 const priceBookForm = document.getElementById('price-book-form');
 const priceBookNameInput = document.getElementById('price-book-name');
 const priceBookDescriptionTextarea = document.getElementById('price-book-description');
-const priceBookCurrencySelect = document = document.getElementById('price-book-currency');
+const priceBookCurrencySelect = document.getElementById('price-book-currency');
 const priceBookActiveCheckbox = document.getElementById('price-book-active');
 const cancelPriceBookBtn = document.getElementById('cancel-price-book-btn');
 const priceBookFormMessage = document.getElementById('price-book-form-message');
