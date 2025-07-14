@@ -31,6 +31,7 @@ const db = getFirestore(app); // Get Firestore service
 let currentUser = null;
 let currentUserRole = 'Guest'; // Default role
 let userId = null; // Will store authenticated user's UID or a random ID for unauthenticated
+let currencySymbolsMap = {}; // NEW: Global map to store currency codes to symbols
 
 // Grid.js instances
 let customersGrid = null;
@@ -348,6 +349,12 @@ async function populateSelect(selectElement, collectionPath, valueField, textFie
             if (dataAttributeField && data[dataAttributeField]) {
                 option.dataset[dataAttributeField] = data[dataAttributeField];
             }
+
+            // NEW: If populating currencies, update the global currencySymbolsMap
+            if (collectionPath === 'currencies' && data.code && data.symbol) {
+                currencySymbolsMap[data.code] = data.symbol;
+            }
+
             selectElement.appendChild(option);
         });
     } catch (error) {
@@ -525,6 +532,8 @@ onAuthStateChanged(auth, async (user) => {
         if (priceBookCurrencySelect) priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>';
         // Removed priceBookCountrySelect clearing
         if (currencyCountrySelect) currencyCountrySelect.innerHTML = '<option value="">Select...</option>'; // Clear for currencies too
+
+        currencySymbolsMap = {}; // Clear the currency symbols map on logout
     }
 });
 
@@ -1315,20 +1324,20 @@ async function populateOpportunityCustomerDropdown(selectedCustomerId = null) {
 
 /**
  * Populates the opportunity currency dropdown with data from the 'currencies' collection.
- * @param {string|null} selectedCurrencySymbol - The currency symbol to pre-select (optional).
+ * @param {string|null} selectedCurrencyCode - The currency code to pre-select (optional).
  */
-async function populateOpportunityCurrencyDropdown(selectedCurrencySymbol = null) {
+async function populateOpportunityCurrencyDropdown(selectedCurrencyCode = null) {
     if (!currentUser) return;
-    // Corrected path for public data
-    await populateSelect(opportunityCurrencySelect, `currencies`, 'symbol', 'name', selectedCurrencySymbol);
+    // FIX: Change valueField from 'symbol' to 'code'
+    await populateSelect(opportunityCurrencySelect, `currencies`, 'code', 'name', selectedCurrencyCode);
 }
 
 /**
  * Populates the opportunity price book dropdown with data from the 'priceBooks' collection.
  * @param {string|null} selectedPriceBookId - The price book ID to pre-select (optional).
- * @param {string|null} currencySymbol - The currency symbol to filter price books by (optional).
+ * @param {string|null} currencyCode - The currency code to filter price books by (optional).
  */
-async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null, currencySymbol = null) {
+async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null, currencyCode = null) {
     if (!currentUser) return;
     const selectElement = opportunityPriceBookSelect;
     selectElement.innerHTML = '<option value="">Select a Price Book</option>'; // Default empty option
@@ -1336,10 +1345,10 @@ async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null, 
     let priceBookQueryRef = collection(db, `priceBooks`);
     let q;
 
-    if (currencySymbol) {
-        // Filter by currency and ensure it's active
+    if (currencyCode) {
+        // Filter by currency code (now stored in 'currency' field) and ensure it's active
         q = query(priceBookQueryRef,
-            where('currency', '==', currencySymbol),
+            where('currency', '==', currencyCode), // Filter by code
             where('isActive', '==', true),
             orderBy('name')
         );
@@ -1362,7 +1371,7 @@ async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null, 
             if (selectedPriceBookId && doc.id === selectedPriceBookId) {
                 option.selected = true;
                 defaultSelected = true;
-            } else if (currencySymbol && !defaultSelected && data.currency === currencySymbol && data.isActive) {
+            } else if (currencyCode && !defaultSelected && data.currency === currencyCode && data.isActive) {
                 // If a currency is specified and no explicit price book is selected,
                 // select the first active price book that matches the currency.
                 option.selected = true;
@@ -1378,10 +1387,17 @@ async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null, 
         }
 
     } catch (error) {
-        console.error(`Error fetching price books for dropdown (currency: ${currencySymbol}):`, error);
+        console.error(`Error fetching price books for dropdown (currency: ${currencyCode}):`, error);
         showMessageBox(`Could not load price books for selected currency.`, false);
     }
 }
+
+// Event listener for currency selection change to update price book dropdown
+opportunityCurrencySelect.addEventListener('change', () => {
+    const selectedCurrencyCode = opportunityCurrencySelect.value; // Now gets the code
+    populateOpportunityPriceBookDropdown(null, selectedCurrencyCode); // Pass null for selectedPriceBookId, let it auto-select
+});
+
 
 // Event listener to open the Opportunity Form for adding a new opportunity
 addOpportunityBtn.addEventListener('click', async () => { // Made async to await dropdown populations
@@ -1398,13 +1414,6 @@ addOpportunityBtn.addEventListener('click', async () => { // Made async to await
     await populateOpportunityPriceBookDropdown();
 });
 
-// Event listener for currency selection change to update price book dropdown
-opportunityCurrencySelect.addEventListener('change', () => {
-    const selectedCurrencySymbol = opportunityCurrencySelect.value;
-    populateOpportunityPriceBookDropdown(null, selectedCurrencySymbol); // Pass null for selectedPriceBookId, let it auto-select
-});
-
-
 // Event listener to save (add or update) an opportunity
 opportunityForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1419,7 +1428,7 @@ opportunityForm.addEventListener('submit', async (e) => {
         name: opportunityNameInput.value.trim(),
         customerId: opportunityCustomerSelect.value,
         customerName: customerName,
-        currency: opportunityCurrencySelect.value,
+        currency: opportunityCurrencySelect.value, // Now stores the currency CODE
         priceBookId: opportunityPriceBookSelect.value,
         expectedStartDate: opportunityExpectedStartDateInput.value ? Timestamp.fromDate(new Date(opportunityExpectedStartDateInput.value)) : null,
         expectedCloseDate: opportunityExpectedCloseDateInput.value ? Timestamp.fromDate(new Date(opportunityExpectedCloseDateInput.value)) : null,
@@ -1502,7 +1511,7 @@ async function renderOpportunitiesGrid() {
                     data.salesStage,
                     data.probability,
                     data.value,
-                    data.currency,
+                    data.currency, // This is now the currency CODE
                     data.expectedCloseDate,
                     data.createdAt,
                     data.creatorId // Added creatorId for rule check
@@ -1525,11 +1534,12 @@ async function renderOpportunitiesGrid() {
                             sort: true,
                             filter: true,
                             formatter: (cell, row) => {
-                                const currencySymbol = row.cells[6].data;
-                                return cell.toLocaleString('en-US', { style: 'currency', currency: currencySymbol || 'USD' });
+                                const currencyCode = row.cells[6].data; // Get currency CODE from the row
+                                const currencySymbol = currencySymbolsMap[currencyCode] || currencyCode; // Look up symbol or fallback to code
+                                return cell.toLocaleString('en-US', { style: 'currency', currency: currencyCode || 'USD' });
                             }
                         },
-                        { id: 'currency', name: 'Currency', sort: true, filter: true },
+                        { id: 'currency', name: 'Currency Code', sort: true, filter: true }, // Changed column name
                         { id: 'expectedCloseDate', name: 'Close Date', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
                         { id: 'creatorId', name: 'Creator ID', hidden: true }, // Keep creatorId hidden but accessible for actions
                         {
@@ -1558,8 +1568,8 @@ async function renderOpportunitiesGrid() {
                     data: opportunityData,
                     search: {
                         selector: (cell, rowIndex, cellIndex) => {
-                            // Search across name, customerName, salesStage
-                            if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3) {
+                            // Search across name, customerName, salesStage, currency code
+                            if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3 || cellIndex === 6) {
                                 return cell;
                             }
                             return null;
@@ -1619,8 +1629,8 @@ async function editOpportunity(opportunityId) {
 
             opportunityNameInput.value = data.name || '';
             await populateOpportunityCustomerDropdown(data.customerId);
-            await populateOpportunityCurrencyDropdown(data.currency);
-            await populateOpportunityPriceBookDropdown(data.priceBookId, data.currency); // Pass currency for edit
+            await populateOpportunityCurrencyDropdown(data.currency); // Pass currency CODE for pre-selection
+            await populateOpportunityPriceBookDropdown(data.priceBookId, data.currency); // Pass currency CODE for edit
             opportunityExpectedStartDateInput.value = formatDateForInput(data.expectedStartDate);
             opportunityExpectedCloseDateInput.value = formatDateForInput(data.expectedCloseDate);
             opportunitySalesStageSelect.value = data.salesStage || '';
@@ -2033,6 +2043,8 @@ async function renderCurrenciesGrid() {
                     currency.symbol,
                     currency.country || '' // NEW: Include country in data for grid
                 ]);
+                // NEW: Populate the global currencySymbolsMap
+                currencySymbolsMap[currency.code] = currency.symbol;
             });
         }
 
@@ -2085,7 +2097,7 @@ async function renderCurrenciesGrid() {
                     'pagination-summary': 'text-sm text-gray-600', 'pagination-gap': 'text-sm text-gray-400',
                     'pagination-nav': 'flex space-x-1', 'pagination-nav-prev': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
                     'pagination-nav-next': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
+                    'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-300',
                     'pagination-btn-current': 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
                 },
                 language: {
@@ -2157,12 +2169,12 @@ async function deleteCurrency(id) {
 
 /**
  * Populates the price book currency dropdown with data from the 'currencies' collection.
- * @param {string|null} selectedCurrencySymbol - The currency symbol to pre-select (optional).
+ * @param {string|null} selectedCurrencyCode - The currency code to pre-select (optional).
  */
-async function populatePriceBookCurrencyDropdown(selectedCurrencySymbol = null) {
+async function populatePriceBookCurrencyDropdown(selectedCurrencyCode = null) {
     if (!currentUser || currentUserRole !== 'Admin') return;
-    // Corrected path for public data
-    await populateSelect(priceBookCurrencySelect, `currencies`, 'symbol', 'name', selectedCurrencySymbol);
+    // FIX: Change valueField from 'symbol' to 'code'
+    await populateSelect(priceBookCurrencySelect, `currencies`, 'code', 'name', selectedCurrencyCode);
 }
 
 // Event listener to open the Price Book Form for adding a new price book
@@ -2181,7 +2193,7 @@ priceBookForm.addEventListener('submit', async (e) => {
     if (!currentUser) { showMessageBox('Authentication required to save price book.', false); return; }
 
     const normalizedName = priceBookNameInput.value.trim().toLowerCase().replace(/\s+/g, '');
-    const normalizedCurrency = priceBookCurrencySelect.value.trim().toLowerCase().replace(/\s+/g, '');
+    const normalizedCurrency = priceBookCurrencySelect.value.trim().toLowerCase().replace(/\s+/g, ''); // This will now be the code
 
     const priceBookId = document.getElementById('price-book-id').value;
 
@@ -2189,8 +2201,8 @@ priceBookForm.addEventListener('submit', async (e) => {
         name: priceBookNameInput.value.trim(),
         normalizedName: normalizedName,
         description: priceBookDescriptionTextarea.value.trim(),
-        currency: priceBookCurrencySelect.value,
-        normalizedCurrency: normalizedCurrency,
+        currency: priceBookCurrencySelect.value, // Now stores the currency CODE
+        normalizedCurrency: normalizedCurrency, // Now normalized currency CODE
         isActive: priceBookActiveCheckbox.checked,
         // Removed validFrom and validTo fields
     };
@@ -2265,7 +2277,7 @@ async function editPriceBook(id) {
 
             priceBookNameInput.value = data.name || '';
             priceBookDescriptionTextarea.value = data.description || '';
-            await populatePriceBookCurrencyDropdown(data.currency); // Populate currency dropdown
+            await populatePriceBookCurrencyDropdown(data.currency); // Populate currency dropdown with code
             priceBookActiveCheckbox.checked = data.isActive;
             // Removed validFrom and validTo
             // priceBookValidFromInput.value = formatDateForInput(data.validFrom);
@@ -2359,7 +2371,7 @@ async function renderPriceBooksGrid() { // This is the function definition
                     doc.id,
                     priceBook.name,
                     priceBook.description,
-                    priceBook.currency || '',
+                    priceBook.currency || '', // This is now the currency CODE
                     priceBook.isActive,
                     // Removed validFrom and validTo
                 ]);
@@ -2374,7 +2386,7 @@ async function renderPriceBooksGrid() { // This is the function definition
                     { id: 'id', name: 'ID', hidden: true },
                     { id: 'name', name: 'Price Book Name', sort: true, filter: true },
                     { id: 'description', name: 'Description', sort: true, filter: true },
-                    { id: 'currency', name: 'Currency', sort: true, filter: true },
+                    { id: 'currency', name: 'Currency Code', sort: true, filter: true }, // Changed column name
                     { id: 'isActive', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
                     // Removed Valid From and Valid To columns
                     {
