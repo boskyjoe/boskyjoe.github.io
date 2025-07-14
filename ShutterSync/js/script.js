@@ -136,19 +136,21 @@ const opportunitiesGridContainer = document.getElementById('opportunities-grid-c
 let workLogsListContainer = null;
 let noWorkLogsMessage = null;
 let workLogsList = null;
-let addWorkLogEntryBtn = null;
+let addWorkLogEntryBtn = null; // Will be assigned when available
 let workLogFormContainer = null;
-let workLogForm = null; // This will now be assigned when the element is available
+let workLogForm = null;
 let workLogIdInput = null;
 let workLogOpportunityIdInput = null;
 let workLogDateInput = null;
 let workLogTypeSelect = null;
 let workLogDetailsTextarea = null;
-let cancelWorkLogBtn = null;
+let cancelWorkLogBtn = null; // Will be assigned when available
 let workLogFormMessage = null;
 
-// Flag to ensure workLogForm listener is added only once
+// Flag to ensure workLogForm submit listener is added only once
 let workLogFormListenerAdded = false;
+// Flag to ensure addWorkLogEntryBtn click listener is added only once
+let addWorkLogEntryBtnListenerAdded = false;
 
 
 // Dashboard Elements
@@ -176,7 +178,7 @@ const currencyFormContainer = document.getElementById('currency-form-container')
 const currencyForm = document.getElementById('currency-form');
 const currencyNameInput = document.getElementById('currency-name');
 const currencyCodeInput = document.getElementById('currency-code');
-const currencySymbolInput = document.getElementById('currency-symbol');
+const currencySymbolInput = document = document.getElementById('currency-symbol');
 const currencyCountrySelect = document.getElementById('currency-country');
 const cancelCurrencyBtn = document.getElementById('cancel-currency-btn');
 const currencyFormMessage = document.getElementById('currency-form-message');
@@ -1533,6 +1535,102 @@ addOpportunityBtn.addEventListener('click', async () => { // Made async to await
 
     // Setup accordions for the new form
     setupAccordions();
+
+    // Attach addWorkLogEntryBtn listener here, ensuring the button is available
+    if (addWorkLogEntryBtn && !addWorkLogEntryBtnListenerAdded) {
+        addWorkLogEntryBtn.addEventListener('click', () => {
+            if (!currentOpportunityId) {
+                showMessageBox('Please select or save an opportunity first to add work logs.', false);
+                return;
+            }
+
+            // Ensure all work log elements are retrieved before use
+            workLogsListContainer = document.getElementById('work-logs-list-container');
+            noWorkLogsMessage = document.getElementById('no-work-logs-message');
+            workLogsList = document.getElementById('work-logs-list');
+            addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
+            workLogFormContainer = document.getElementById('work-log-form-container');
+            workLogForm = document.getElementById('work-log-form'); // Assign the element here
+            workLogIdInput = document.getElementById('work-log-id');
+            workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
+            workLogDateInput = document.getElementById('work-log-date');
+            workLogTypeSelect = document.getElementById('work-log-type');
+            workLogDetailsTextarea = document.getElementById('work-log-details');
+            cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
+            workLogFormMessage = document.getElementById('work-log-form-message');
+
+
+            resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
+            if (workLogIdInput) workLogIdInput.value = ''; // Clear ID for new entry
+            if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = currentOpportunityId; // Link to current opportunity
+            if (workLogDateInput) workLogDateInput.valueAsDate = new Date(); // Default to today's date
+            if (workLogFormContainer) workLogFormContainer.classList.remove('hidden'); // Then show the container
+            populateWorkLogTypeDropdown();
+
+            // Attach workLogForm submit listener only once, now that the form is visible
+            if (!workLogFormListenerAdded && workLogForm) { // Added check for workLogForm
+                workLogForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    if (!currentUser || !currentOpportunityId) {
+                        showMessageBox('Authentication required and an opportunity must be selected to save work logs.', false);
+                        return;
+                    }
+
+                    const workLogId = workLogIdInput.value;
+                    const opportunityId = workLogOpportunityIdInput.value; // Get parent opportunity ID
+
+                    const workLogData = {
+                        date: workLogDateInput.value ? Timestamp.fromDate(new Date(workLogDateInput.value)) : null,
+                        type: workLogTypeSelect.value,
+                        details: workLogDetailsTextarea.value.trim(),
+                        createdAt: serverTimestamp(), // Will only be set on creation
+                        updatedAt: serverTimestamp(),
+                        creatorId: currentUser.uid
+                    };
+
+                    try {
+                        if (workLogId) {
+                            // Update existing work log
+                            await updateDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId), {
+                                date: workLogData.date,
+                                type: workLogData.type,
+                                details: workLogData.details,
+                                updatedAt: workLogData.updatedAt // Only update these fields
+                            });
+                            showMessageBox('Work log updated successfully!', false);
+                        } else {
+                            // Add new work log
+                            await addDoc(collection(db, `opportunities/${opportunityId}/workLogs`), workLogData);
+                            showMessageBox('Work log added successfully!', false);
+                        }
+                        resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
+                        await renderWorkLogsList(opportunityId); // Re-render the list
+                    } catch (error) {
+                        console.error("Error saving work log:", error);
+                        if (workLogFormMessage) { // Defensive check
+                            workLogFormMessage.textContent = 'Error saving work log: ' + error.message;
+                            workLogFormMessage.classList.remove('hidden');
+                        }
+                        showMessageBox('Error saving work log: ' + error.message, false);
+                    }
+                });
+                workLogFormListenerAdded = true; // Set flag to true after adding listener
+            }
+        });
+        addWorkLogEntryBtnListenerAdded = true; // Set flag to true after adding listener
+    }
+
+    // Attach cancelWorkLogBtn listener here, ensuring the button is available
+    if (cancelWorkLogBtn && !cancelWorkLogBtnListenerAdded) { // Assuming cancelWorkLogBtnListenerAdded is a new flag
+        cancelWorkLogBtn.addEventListener('click', () => {
+            // Ensure workLogForm and its container/message are retrieved before passing
+            const currentWorkLogForm = document.getElementById('work-log-form');
+            const currentWorkLogFormContainer = document.getElementById('work-log-form-container');
+            const currentWorkLogFormMessage = document.getElementById('work-log-form-message');
+            resetAndHideForm(currentWorkLogForm, currentWorkLogFormContainer, '', currentWorkLogFormMessage);
+        });
+        cancelWorkLogBtnListenerAdded = true; // Set flag to true after adding listener
+    }
 });
 
 // Event listener to save (add or update) an opportunity
@@ -1783,6 +1881,102 @@ async function editOpportunity(opportunityId) {
             // Setup accordions for the loaded form
             setupAccordions();
 
+            // Attach addWorkLogEntryBtn listener here, ensuring the button is available
+            if (addWorkLogEntryBtn && !addWorkLogEntryBtnListenerAdded) {
+                addWorkLogEntryBtn.addEventListener('click', () => {
+                    if (!currentOpportunityId) {
+                        showMessageBox('Please select or save an opportunity first to add work logs.', false);
+                        return;
+                    }
+
+                    // Ensure all work log elements are retrieved before use
+                    workLogsListContainer = document.getElementById('work-logs-list-container');
+                    noWorkLogsMessage = document.getElementById('no-work-logs-message');
+                    workLogsList = document.getElementById('work-logs-list');
+                    addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
+                    workLogFormContainer = document.getElementById('work-log-form-container');
+                    workLogForm = document.getElementById('work-log-form'); // Assign the element here
+                    workLogIdInput = document.getElementById('work-log-id');
+                    workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
+                    workLogDateInput = document.getElementById('work-log-date');
+                    workLogTypeSelect = document.getElementById('work-log-type');
+                    workLogDetailsTextarea = document.getElementById('work-log-details');
+                    cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
+                    workLogFormMessage = document.getElementById('work-log-form-message');
+
+
+                    resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
+                    if (workLogIdInput) workLogIdInput.value = ''; // Clear ID for new entry
+                    if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = currentOpportunityId; // Link to current opportunity
+                    if (workLogDateInput) workLogDateInput.valueAsDate = new Date(); // Default to today's date
+                    if (workLogFormContainer) workLogFormContainer.classList.remove('hidden'); // Then show the container
+                    populateWorkLogTypeDropdown();
+
+                    // Attach workLogForm submit listener only once, now that the form is visible
+                    if (!workLogFormListenerAdded && workLogForm) { // Added check for workLogForm
+                        workLogForm.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+                            if (!currentUser || !currentOpportunityId) {
+                                showMessageBox('Authentication required and an opportunity must be selected to save work logs.', false);
+                                return;
+                            }
+
+                            const workLogId = workLogIdInput.value;
+                            const opportunityId = workLogOpportunityIdInput.value; // Get parent opportunity ID
+
+                            const workLogData = {
+                                date: workLogDateInput.value ? Timestamp.fromDate(new Date(workLogDateInput.value)) : null,
+                                type: workLogTypeSelect.value,
+                                details: workLogDetailsTextarea.value.trim(),
+                                createdAt: serverTimestamp(), // Will only be set on creation
+                                updatedAt: serverTimestamp(),
+                                creatorId: currentUser.uid
+                            };
+
+                            try {
+                                if (workLogId) {
+                                    // Update existing work log
+                                    await updateDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId), {
+                                        date: workLogData.date,
+                                        type: workLogData.type,
+                                        details: workLogData.details,
+                                        updatedAt: workLogData.updatedAt // Only update these fields
+                                    });
+                                    showMessageBox('Work log updated successfully!', false);
+                                } else {
+                                    // Add new work log
+                                    await addDoc(collection(db, `opportunities/${opportunityId}/workLogs`), workLogData);
+                                    showMessageBox('Work log added successfully!', false);
+                                }
+                                resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
+                                await renderWorkLogsList(opportunityId); // Re-render the list
+                            } catch (error) {
+                                console.error("Error saving work log:", error);
+                                if (workLogFormMessage) { // Defensive check
+                                    workLogFormMessage.textContent = 'Error saving work log: ' + error.message;
+                                    workLogFormMessage.classList.remove('hidden');
+                                }
+                                showMessageBox('Error saving work log: ' + error.message, false);
+                            }
+                        });
+                        workLogFormListenerAdded = true; // Set flag to true after adding listener
+                    }
+                });
+                addWorkLogEntryBtnListenerAdded = true; // Set flag to true after adding listener
+            }
+
+            // Attach cancelWorkLogBtn listener here, ensuring the button is available
+            if (cancelWorkLogBtn && !cancelWorkLogBtnListenerAdded) { // Assuming cancelWorkLogBtnListenerAdded is a new flag
+                cancelWorkLogBtn.addEventListener('click', () => {
+                    // Ensure workLogForm and its container/message are retrieved before passing
+                    const currentWorkLogForm = document.getElementById('work-log-form');
+                    const currentWorkLogFormContainer = document.getElementById('work-log-form-container');
+                    const currentWorkLogFormMessage = document.getElementById('work-log-form-message');
+                    resetAndHideForm(currentWorkLogForm, currentWorkLogFormContainer, '', currentWorkLogFormMessage);
+                });
+                cancelWorkLogBtnListenerAdded = true; // Set flag to true after adding listener
+            }
+
         } else {
             showMessageBox('Opportunity not found!', false);
         }
@@ -1850,95 +2044,11 @@ async function populateWorkLogTypeDropdown(selectedType = null) {
     await populateSelect(workLogTypeSelect, null, 'value', 'text', selectedType, null, workLogTypeOptions);
 }
 
-// Event listener to open the Work Log Entry Form
-addWorkLogEntryBtn.addEventListener('click', () => {
-    if (!currentOpportunityId) {
-        showMessageBox('Please select or save an opportunity first to add work logs.', false);
-        return;
-    }
+// Event listener to open the Work Log Entry Form - MOVED TO addOpportunityBtn.addEventListener and editOpportunity
+// addWorkLogEntryBtn.addEventListener('click', () => { ... });
 
-    // Ensure all work log elements are retrieved before use
-    workLogsListContainer = document.getElementById('work-logs-list-container');
-    noWorkLogsMessage = document.getElementById('no-work-logs-message');
-    workLogsList = document.getElementById('work-logs-list');
-    addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
-    workLogFormContainer = document.getElementById('work-log-form-container');
-    workLogForm = document.getElementById('work-log-form'); // Assign the element here
-    workLogIdInput = document.getElementById('work-log-id');
-    workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
-    workLogDateInput = document.getElementById('work-log-date');
-    workLogTypeSelect = document.getElementById('work-log-type');
-    workLogDetailsTextarea = document.getElementById('work-log-details');
-    cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
-    workLogFormMessage = document.getElementById('work-log-form-message');
-
-
-    resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
-    if (workLogIdInput) workLogIdInput.value = ''; // Clear ID for new entry
-    if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = currentOpportunityId; // Link to current opportunity
-    if (workLogDateInput) workLogDateInput.valueAsDate = new Date(); // Default to today's date
-    if (workLogFormContainer) workLogFormContainer.classList.remove('hidden'); // Then show the container
-    populateWorkLogTypeDropdown();
-
-    // Attach workLogForm submit listener only once, now that the form is visible
-    if (!workLogFormListenerAdded && workLogForm) { // Added check for workLogForm
-        workLogForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!currentUser || !currentOpportunityId) {
-                showMessageBox('Authentication required and an opportunity must be selected to save work logs.', false);
-                return;
-            }
-
-            const workLogId = workLogIdInput.value;
-            const opportunityId = workLogOpportunityIdInput.value; // Get parent opportunity ID
-
-            const workLogData = {
-                date: workLogDateInput.value ? Timestamp.fromDate(new Date(workLogDateInput.value)) : null,
-                type: workLogTypeSelect.value,
-                details: workLogDetailsTextarea.value.trim(),
-                createdAt: serverTimestamp(), // Will only be set on creation
-                updatedAt: serverTimestamp(),
-                creatorId: currentUser.uid
-            };
-
-            try {
-                if (workLogId) {
-                    // Update existing work log
-                    await updateDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId), {
-                        date: workLogData.date,
-                        type: workLogData.type,
-                        details: workLogData.details,
-                        updatedAt: workLogData.updatedAt // Only update these fields
-                    });
-                    showMessageBox('Work log updated successfully!', false);
-                } else {
-                    // Add new work log
-                    await addDoc(collection(db, `opportunities/${opportunityId}/workLogs`), workLogData);
-                    showMessageBox('Work log added successfully!', false);
-                }
-                resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
-                await renderWorkLogsList(opportunityId); // Re-render the list
-            } catch (error) {
-                console.error("Error saving work log:", error);
-                if (workLogFormMessage) { // Defensive check
-                    workLogFormMessage.textContent = 'Error saving work log: ' + error.message;
-                    workLogFormMessage.classList.remove('hidden');
-                }
-                showMessageBox('Error saving work log: ' + error.message, false);
-            }
-        });
-        workLogFormListenerAdded = true; // Set flag to true after adding listener
-    }
-});
-
-// Event listener for cancel work log button
-cancelWorkLogBtn.addEventListener('click', () => {
-    // Ensure workLogForm and its container/message are retrieved before passing
-    const currentWorkLogForm = document.getElementById('work-log-form');
-    const currentWorkLogFormContainer = document.getElementById('work-log-form-container');
-    const currentWorkLogFormMessage = document.getElementById('work-log-form-message');
-    resetAndHideForm(currentWorkLogForm, currentWorkLogFormContainer, '', currentWorkLogFormMessage);
-});
+// Event listener for cancel work log button - MOVED TO addOpportunityBtn.addEventListener and editOpportunity
+// cancelWorkLogBtn.addEventListener('click', () => { ... });
 
 
 /**
