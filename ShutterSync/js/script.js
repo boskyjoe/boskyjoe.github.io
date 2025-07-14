@@ -138,7 +138,7 @@ const noWorkLogsMessage = document.getElementById('no-work-logs-message');
 const workLogsList = document.getElementById('work-logs-list');
 const addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
 const workLogFormContainer = document.getElementById('work-log-form-container');
-const workLogForm = document.getElementById('work-log-form');
+const workLogForm = document.getElementById('work-log-form'); // This is the element that was null
 const workLogIdInput = document.getElementById('work-log-id');
 const workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
 const workLogDateInput = document.getElementById('work-log-date');
@@ -146,6 +146,9 @@ const workLogTypeSelect = document.getElementById('work-log-type');
 const workLogDetailsTextarea = document.getElementById('work-log-details');
 const cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
 const workLogFormMessage = document.getElementById('work-log-form-message');
+
+// Flag to ensure workLogForm listener is added only once
+let workLogFormListenerAdded = false;
 
 
 // Dashboard Elements
@@ -456,19 +459,21 @@ function setupAccordions() {
     // Ensure the opportunity form container exists before querying its children
     const opportunityFormContainer = document.getElementById('opportunity-form-container');
     if (!opportunityFormContainer) {
-        console.warn("Opportunity form container not found. Cannot set up accordions.");
+        console.warn("setupAccordions: Opportunity form container not found. Cannot set up accordions.");
         return;
     }
 
     // Query for accordion headers specifically within the opportunity form container
     const accordionHeaders = opportunityFormContainer.querySelectorAll('.accordion-header');
-    console.log(`Found ${accordionHeaders.length} accordion headers within opportunity form container.`);
+    console.log(`setupAccordions: querySelectorAll found ${accordionHeaders.length} accordion headers.`);
+
+    if (accordionHeaders.length === 0) {
+        console.warn("setupAccordions: No accordion headers found. This might be a timing issue.");
+    }
 
     accordionHeaders.forEach(header => {
-        // Defensive check for 'header' being null, although querySelectorAll should return valid elements
         if (header) {
             // Remove existing listener to prevent duplicates if called multiple times
-            // This is crucial if setupAccordions is called repeatedly (e.g., on edit)
             header.removeEventListener('click', toggleAccordion);
             // Add new listener
             header.addEventListener('click', () => toggleAccordion(header));
@@ -1483,7 +1488,7 @@ opportunityCurrencySelect.addEventListener('change', () => {
 addOpportunityBtn.addEventListener('click', async () => { // Made async to await dropdown populations
     if (!currentUser) { showMessageBox('Please sign in to add opportunities.', false); return; }
     document.getElementById('opportunity-id').value = ''; // Clear ID for new opportunity
-    resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage); // Clear and hide form
+    resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage); // Reset and hide first
     opportunityFormContainer.classList.remove('hidden'); // Then show the container
 
     // Reset and hide work log form and list when creating a new opportunity
@@ -1810,50 +1815,53 @@ addWorkLogEntryBtn.addEventListener('click', () => {
     resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage); // Reset and hide first
     workLogFormContainer.classList.remove('hidden'); // Then show the container
     populateWorkLogTypeDropdown();
-});
 
-// Event listener to save (add or update) a work log entry
-workLogForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!currentUser || !currentOpportunityId) {
-        showMessageBox('Authentication required and an opportunity must be selected to save work logs.', false);
-        return;
-    }
+    // Attach workLogForm submit listener only once, now that the form is visible
+    if (!workLogFormListenerAdded) {
+        workLogForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser || !currentOpportunityId) {
+                showMessageBox('Authentication required and an opportunity must be selected to save work logs.', false);
+                return;
+            }
 
-    const workLogId = workLogIdInput.value;
-    const opportunityId = workLogOpportunityIdInput.value; // Get parent opportunity ID
+            const workLogId = workLogIdInput.value;
+            const opportunityId = workLogOpportunityIdInput.value; // Get parent opportunity ID
 
-    const workLogData = {
-        date: workLogDateInput.value ? Timestamp.fromDate(new Date(workLogDateInput.value)) : null,
-        type: workLogTypeSelect.value,
-        details: workLogDetailsTextarea.value.trim(),
-        createdAt: serverTimestamp(), // Will only be set on creation
-        updatedAt: serverTimestamp(),
-        creatorId: currentUser.uid
-    };
+            const workLogData = {
+                date: workLogDateInput.value ? Timestamp.fromDate(new Date(workLogDateInput.value)) : null,
+                type: workLogTypeSelect.value,
+                details: workLogDetailsTextarea.value.trim(),
+                createdAt: serverTimestamp(), // Will only be set on creation
+                updatedAt: serverTimestamp(),
+                creatorId: currentUser.uid
+            };
 
-    try {
-        if (workLogId) {
-            // Update existing work log
-            await updateDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId), {
-                date: workLogData.date,
-                type: workLogData.type,
-                details: workLogData.details,
-                updatedAt: workLogData.updatedAt // Only update these fields
-            });
-            showMessageBox('Work log updated successfully!', false);
-        } else {
-            // Add new work log
-            await addDoc(collection(db, `opportunities/${opportunityId}/workLogs`), workLogData);
-            showMessageBox('Work log added successfully!', false);
-        }
-        resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
-        await renderWorkLogsList(opportunityId); // Re-render the list
-    } catch (error) {
-        console.error("Error saving work log:", error);
-        workLogFormMessage.textContent = 'Error saving work log: ' + error.message;
-        workLogFormMessage.classList.remove('hidden');
-        showMessageBox('Error saving work log: ' + error.message, false);
+            try {
+                if (workLogId) {
+                    // Update existing work log
+                    await updateDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId), {
+                        date: workLogData.date,
+                        type: workLogData.type,
+                        details: workLogData.details,
+                        updatedAt: workLogData.updatedAt // Only update these fields
+                    });
+                    showMessageBox('Work log updated successfully!', false);
+                } else {
+                    // Add new work log
+                    await addDoc(collection(db, `opportunities/${opportunityId}/workLogs`), workLogData);
+                    showMessageBox('Work log added successfully!', false);
+                }
+                resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
+                await renderWorkLogsList(opportunityId); // Re-render the list
+            } catch (error) {
+                console.error("Error saving work log:", error);
+                workLogFormMessage.textContent = 'Error saving work log: ' + error.message;
+                workLogFormMessage.classList.remove('hidden');
+                showMessageBox('Error saving work log: ' + error.message, false);
+            }
+        });
+        workLogFormListenerAdded = true; // Set flag to true after adding listener
     }
 });
 
@@ -1963,6 +1971,55 @@ async function editWorkLogEntry(opportunityId, workLogId) {
             workLogDateInput.value = formatDateForInput(data.date);
             await populateWorkLogTypeDropdown(data.type);
             workLogDetailsTextarea.value = data.details || '';
+
+            // Attach workLogForm submit listener if not already added (for edit scenario)
+            if (!workLogFormListenerAdded) {
+                workLogForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    if (!currentUser || !currentOpportunityId) {
+                        showMessageBox('Authentication required and an opportunity must be selected to save work logs.', false);
+                        return;
+                    }
+
+                    const workLogId = workLogIdInput.value;
+                    const opportunityId = workLogOpportunityIdInput.value; // Get parent opportunity ID
+
+                    const workLogData = {
+                        date: workLogDateInput.value ? Timestamp.fromDate(new Date(workLogDateInput.value)) : null,
+                        type: workLogTypeSelect.value,
+                        details: workLogDetailsTextarea.value.trim(),
+                        createdAt: serverTimestamp(), // Will only be set on creation
+                        updatedAt: serverTimestamp(),
+                        creatorId: currentUser.uid
+                    };
+
+                    try {
+                        if (workLogId) {
+                            // Update existing work log
+                            await updateDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId), {
+                                date: workLogData.date,
+                                type: workLogData.type,
+                                details: workLogData.details,
+                                updatedAt: workLogData.updatedAt // Only update these fields
+                            });
+                            showMessageBox('Work log updated successfully!', false);
+                        } else {
+                            // Add new work log
+                            await addDoc(collection(db, `opportunities/${opportunityId}/workLogs`), workLogData);
+                            showMessageBox('Work log added successfully!', false);
+                        }
+                        resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
+                        await renderWorkLogsList(opportunityId); // Re-render the list
+                    } catch (error) {
+                        console.error("Error saving work log:", error);
+                        workLogFormMessage.textContent = 'Error saving work log: ' + error.message;
+                        workLogFormMessage.classList.remove('hidden');
+                        showMessageBox('Error saving work log: ' + error.message, false);
+                    }
+                });
+                workLogFormListenerAdded = true;
+            }
+
         } else {
             showMessageBox('Work log entry not found!', false);
         }
