@@ -437,7 +437,7 @@ function showOpportunityForm() {
     if (opportunityFormContainer) opportunityFormContainer.classList.remove('hidden');
     console.log('showOpportunityForm: Attempting to set accordion states.');
 
-    // Ensure all accordions are collapsed by default when form opens
+    // Ensure all accordions are collapsed initially
     document.querySelectorAll('#opportunity-form .accordion-content').forEach((content, index) => {
         content.classList.add('hidden');
         const header = content.previousElementSibling;
@@ -449,27 +449,15 @@ function showOpportunityForm() {
         }
     });
 
-    // Explicitly expand the first accordion (Main Details)
-    const mainDetailsAccordionItem = document.querySelector('#opportunity-form .accordion-item:first-child');
-    if (mainDetailsAccordionItem) {
-        const mainDetailsContent = mainDetailsAccordionItem.querySelector('.accordion-content');
-        const mainDetailsHeader = mainDetailsAccordionItem.querySelector('.accordion-header');
-        const mainDetailsIcon = mainDetailsHeader ? mainDetailsHeader.querySelector('.accordion-icon') : null;
-
-        if (mainDetailsContent) {
-            mainDetailsContent.classList.remove('hidden');
-            console.log('  Main Details Content: Removed hidden class.');
-        }
-        if (mainDetailsIcon) {
-            mainDetailsIcon.style.transform = 'rotate(180deg)';
-            console.log('  Main Details Icon: Rotated.');
-        }
-        if (mainDetailsHeader) {
-            mainDetailsHeader.classList.add('expanded');
-            console.log('  Main Details Header: Added expanded class.');
-        }
+    // Find the first accordion header and trigger a click to open it
+    const firstAccordionHeader = document.querySelector('#opportunity-form .accordion-header');
+    if (firstAccordionHeader) {
+        console.log('  Found first accordion header:', firstAccordionHeader.textContent.trim());
+        // Programmatically click the header to trigger the toggleAccordion function
+        firstAccordionHeader.click();
+        console.log('  Clicked first accordion header to open it.');
     } else {
-        console.error('  Could not find the first accordion item for Main Details.');
+        console.error('  Could not find the first accordion header for Main Details. Accordion might not open.');
     }
 }
 
