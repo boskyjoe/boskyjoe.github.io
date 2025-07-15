@@ -14,7 +14,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
-    storageBucket: "shuttersync-96971.firebase-storage.app",
+    storageBucket: "shuttersync-96971.firebasestorage.app",
     messagingSenderId: "10782416018",
     appId: "1:10782416018:web:361db5572882a62f291a4b",
     measurementId: "G-T0W9CES4D3"
@@ -1541,6 +1541,7 @@ addOpportunityBtn.addEventListener('click', async () => { // Made async to await
     // Attach addWorkLogEntryBtn listener here, ensuring the button is available
     if (addWorkLogEntryBtn && !addWorkLogEntryBtnListenerAdded) {
         addWorkLogEntryBtn.addEventListener('click', () => {
+            console.log('Add Work Log Entry button clicked.');
             if (!currentOpportunityId) {
                 showMessageBox('Please select or save an opportunity first to add work logs.', false);
                 return;
@@ -1571,8 +1572,10 @@ addOpportunityBtn.addEventListener('click', async () => { // Made async to await
 
             // Attach workLogForm submit listener only once, now that the form is visible
             if (!workLogFormListenerAdded && workLogForm) { // Added check for workLogForm
+                console.log('Attaching workLogForm submit listener.');
                 workLogForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
+                    console.log('Work Log Form submitted!');
                     if (!currentUser || !currentOpportunityId) {
                         showMessageBox('Authentication required and an opportunity must be selected to save work logs.', false);
                         return;
@@ -1585,14 +1588,25 @@ addOpportunityBtn.addEventListener('click', async () => { // Made async to await
                         date: workLogDateInput.value ? Timestamp.fromDate(new Date(workLogDateInput.value)) : null,
                         type: workLogTypeSelect.value,
                         details: workLogDetailsTextarea.value.trim(),
-                        createdAt: serverTimestamp(), // Will only be set on creation
-                        updatedAt: serverTimestamp(),
-                        creatorId: currentUser.uid
+                        // createdAt and creatorId are only set on initial creation, not on update
+                        // updatedAt is always set
+                        updatedAt: serverTimestamp()
                     };
+
+                    // Add createdAt and creatorId only if it's a new log
+                    if (!workLogId) {
+                        workLogData.createdAt = serverTimestamp();
+                        workLogData.creatorId = currentUser.uid;
+                    }
+
+                    console.log('Work Log Data prepared:', workLogData);
+                    console.log('currentOpportunityId for save:', currentOpportunityId);
+                    console.log('workLogId for save:', workLogId);
+
 
                     try {
                         if (workLogId) {
-                            // Update existing work log
+                            console.log(`Attempting to update work log: opportunities/${opportunityId}/workLogs/${workLogId}`);
                             await updateDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId), {
                                 date: workLogData.date,
                                 type: workLogData.type,
@@ -1601,14 +1615,15 @@ addOpportunityBtn.addEventListener('click', async () => { // Made async to await
                             });
                             showMessageBox('Work log updated successfully!', false);
                         } else {
-                            // Add new work log
+                            console.log(`Attempting to add new work log to: opportunities/${opportunityId}/workLogs`);
                             await addDoc(collection(db, `opportunities/${opportunityId}/workLogs`), workLogData);
                             showMessageBox('Work log added successfully!', false);
                         }
+                        console.log('Work log save operation completed. Resetting form and re-rendering list.');
                         resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
                         await renderWorkLogsList(opportunityId); // Re-render the list
                     } catch (error) {
-                        console.error("Error saving work log:", error);
+                        console.error("Error saving work log in try-catch:", error);
                         if (workLogFormMessage) { // Defensive check
                             workLogFormMessage.textContent = 'Error saving work log: ' + error.message;
                             workLogFormMessage.classList.remove('hidden');
@@ -1624,6 +1639,7 @@ addOpportunityBtn.addEventListener('click', async () => { // Made async to await
 
     // Attach cancelWorkLogBtn listener here, ensuring the button is available
     if (cancelWorkLogBtn && !cancelWorkLogBtnListenerAdded) {
+        console.log('Attaching cancelWorkLogBtn listener.');
         cancelWorkLogBtn.addEventListener('click', () => {
             // Ensure workLogForm and its container/message are retrieved before passing
             const currentWorkLogForm = document.getElementById('work-log-form');
@@ -1845,6 +1861,8 @@ async function editOpportunity(opportunityId) {
 
             document.getElementById('opportunity-id').value = docSnap.id;
             currentOpportunityId = docSnap.id; // Set the global currentOpportunityId
+            console.log('Editing opportunity. currentOpportunityId set to:', currentOpportunityId);
+
 
             opportunityFormContainer.classList.remove('hidden');
             opportunityFormMessage.classList.add('hidden');
@@ -1885,7 +1903,9 @@ async function editOpportunity(opportunityId) {
 
             // Attach addWorkLogEntryBtn listener here, ensuring the button is available
             if (addWorkLogEntryBtn && !addWorkLogEntryBtnListenerAdded) {
+                console.log('Attaching addWorkLogEntryBtn listener during editOpportunity.');
                 addWorkLogEntryBtn.addEventListener('click', () => {
+                    console.log('Add Work Log Entry button clicked (from editOpportunity).');
                     if (!currentOpportunityId) {
                         showMessageBox('Please select or save an opportunity first to add work logs.', false);
                         return;
@@ -1916,8 +1936,10 @@ async function editOpportunity(opportunityId) {
 
                     // Attach workLogForm submit listener only once, now that the form is visible
                     if (!workLogFormListenerAdded && workLogForm) { // Added check for workLogForm
+                        console.log('Attaching workLogForm submit listener (from editOpportunity).');
                         workLogForm.addEventListener('submit', async (e) => {
                             e.preventDefault();
+                            console.log('Work Log Form submitted (from editOpportunity)!');
                             if (!currentUser || !currentOpportunityId) {
                                 showMessageBox('Authentication required and an opportunity must be selected to save work logs.', false);
                                 return;
@@ -1930,14 +1952,25 @@ async function editOpportunity(opportunityId) {
                                 date: workLogDateInput.value ? Timestamp.fromDate(new Date(workLogDateInput.value)) : null,
                                 type: workLogTypeSelect.value,
                                 details: workLogDetailsTextarea.value.trim(),
-                                createdAt: serverTimestamp(), // Will only be set on creation
-                                updatedAt: serverTimestamp(),
-                                creatorId: currentUser.uid
+                                // createdAt and creatorId are only set on initial creation, not on update
+                                // updatedAt is always set
+                                updatedAt: serverTimestamp()
                             };
+
+                            // Add createdAt and creatorId only if it's a new log
+                            if (!workLogId) {
+                                workLogData.createdAt = serverTimestamp();
+                                workLogData.creatorId = currentUser.uid;
+                            }
+
+                            console.log('Work Log Data prepared (from editOpportunity):', workLogData);
+                            console.log('currentOpportunityId for save (from editOpportunity):', currentOpportunityId);
+                            console.log('workLogId for save (from editOpportunity):', workLogId);
+
 
                             try {
                                 if (workLogId) {
-                                    // Update existing work log
+                                    console.log(`Attempting to update work log (from editOpportunity): opportunities/${opportunityId}/workLogs/${workLogId}`);
                                     await updateDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId), {
                                         date: workLogData.date,
                                         type: workLogData.type,
@@ -1946,14 +1979,15 @@ async function editOpportunity(opportunityId) {
                                     });
                                     showMessageBox('Work log updated successfully!', false);
                                 } else {
-                                    // Add new work log
+                                    console.log(`Attempting to add new work log (from editOpportunity) to: opportunities/${opportunityId}/workLogs`);
                                     await addDoc(collection(db, `opportunities/${opportunityId}/workLogs`), workLogData);
                                     showMessageBox('Work log added successfully!', false);
                                 }
+                                console.log('Work log save operation completed (from editOpportunity). Resetting form and re-rendering list.');
                                 resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
                                 await renderWorkLogsList(opportunityId); // Re-render the list
                             } catch (error) {
-                                console.error("Error saving work log:", error);
+                                console.error("Error saving work log in try-catch (from editOpportunity):", error);
                                 if (workLogFormMessage) { // Defensive check
                                     workLogFormMessage.textContent = 'Error saving work log: ' + error.message;
                                     workLogFormMessage.classList.remove('hidden');
@@ -1969,6 +2003,7 @@ async function editOpportunity(opportunityId) {
 
             // Attach cancelWorkLogBtn listener here, ensuring the button is available
             if (cancelWorkLogBtn && !cancelWorkLogBtnListenerAdded) {
+                console.log('Attaching cancelWorkLogBtn listener (from editOpportunity).');
                 cancelWorkLogBtn.addEventListener('click', () => {
                     // Ensure workLogForm and its container/message are retrieved before passing
                     const currentWorkLogForm = document.getElementById('work-log-form');
@@ -2177,8 +2212,10 @@ async function editWorkLogEntry(opportunityId, workLogId) {
 
             // Attach workLogForm submit listener if not already added (for edit scenario)
             if (!workLogFormListenerAdded && workLogForm) { // Added check for workLogForm
+                console.log('Attaching workLogForm submit listener (from editWorkLogEntry).');
                 workLogForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
+                    console.log('Work Log Form submitted (from editWorkLogEntry)!');
                     if (!currentUser || !currentOpportunityId) {
                         showMessageBox('Authentication required and an opportunity must be selected to save work logs.', false);
                         return;
@@ -2191,14 +2228,24 @@ async function editWorkLogEntry(opportunityId, workLogId) {
                         date: workLogDateInput.value ? Timestamp.fromDate(new Date(workLogDateInput.value)) : null,
                         type: workLogTypeSelect.value,
                         details: workLogDetailsTextarea.value.trim(),
-                        createdAt: serverTimestamp(), // Will only be set on creation
-                        updatedAt: serverTimestamp(),
-                        creatorId: currentUser.uid
+                        // createdAt and creatorId are only set on initial creation, not on update
+                        // updatedAt is always set
+                        updatedAt: serverTimestamp()
                     };
+
+                    // Add createdAt and creatorId only if it's a new log
+                    if (!workLogId) {
+                        workLogData.createdAt = serverTimestamp();
+                        workLogData.creatorId = currentUser.uid;
+                    }
+
+                    console.log('Work Log Data prepared (from editWorkLogEntry):', workLogData);
+                    console.log('currentOpportunityId for save (from editWorkLogEntry):', currentOpportunityId);
+                    console.log('workLogId for save (from editWorkLogEntry):', workLogId);
 
                     try {
                         if (workLogId) {
-                            // Update existing work log
+                            console.log(`Attempting to update work log (from editWorkLogEntry): opportunities/${opportunityId}/workLogs/${workLogId}`);
                             await updateDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId), {
                                 date: workLogData.date,
                                 type: workLogData.type,
@@ -2207,14 +2254,15 @@ async function editWorkLogEntry(opportunityId, workLogId) {
                             });
                             showMessageBox('Work log updated successfully!', false);
                         } else {
-                            // Add new work log
+                            console.log(`Attempting to add new work log (from editWorkLogEntry) to: opportunities/${opportunityId}/workLogs`);
                             await addDoc(collection(db, `opportunities/${opportunityId}/workLogs`), workLogData);
                             showMessageBox('Work log added successfully!', false);
                         }
+                        console.log('Work log save operation completed (from editWorkLogEntry). Resetting form and re-rendering list.');
                         resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
                         await renderWorkLogsList(opportunityId); // Re-render the list
                     } catch (error) {
-                        console.error("Error saving work log:", error);
+                        console.error("Error saving work log in try-catch (from editWorkLogEntry):", error);
                         if (workLogFormMessage) {
                             workLogFormMessage.textContent = 'Error saving work log: ' + error.message;
                             workLogFormMessage.classList.remove('hidden');
