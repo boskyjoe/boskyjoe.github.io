@@ -1,13 +1,9 @@
-// Firebase SDK Imports (Modular API)
-// Using Firebase SDK version 10.0.0 for compatibility.
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js';
-import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, serverTimestamp, Timestamp, setDoc } from 'https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js';
+// Part 1: Firebase Imports, Configuration, and Global Variables
 
-// Grid.js is now loaded globally via a <script> tag in index.html.
-// We access it via the global 'gridjs' object.
-// No 'import' statement needed for Grid.js here anymore.
-
+// Firebase imports for ES Modules
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+import { getAuth, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, onSnapshot, FieldValue, writeBatch } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 // Firebase configuration: Using the exact configuration provided by the user
 const firebaseConfig = {
@@ -19,30 +15,32 @@ const firebaseConfig = {
     appId: "1:10782416018:web:361db5572882a62f291a4b",
     measurementId: "G-T0W9CES4D3"
 };
-// Extract appId directly from the provided firebaseConfig
+
+// Use the appId directly from the provided firebaseConfig
 const appId = firebaseConfig.appId;
 
-// Initialize Firebase App
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app); // Get Auth service
-const db = getFirestore(app); // Get Firestore service
+// Environment variable for initial auth token (if available)
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-// Global variables
-let currentUser = null;
-let currentUserRole = 'Guest'; // Default role
-let userId = null; // Will store authenticated user's UID or a random ID for unauthenticated
-let currencySymbolsMap = {}; // Global map to store currency codes to symbols
-let currentOpportunityId = null; // To keep track of the opportunity being edited for work logs
+// Firebase App and Services
+let app;
+let db;
+let auth;
+let userId = null; // Will be set after authentication
+let userRole = 'guest'; // Default role
+let currentOpportunityId = null; // To track the opportunity being edited
 
-// Grid.js instances
-let customersGrid = null;
-let opportunitiesGrid = null;
-let countriesStatesGrid = null;
-let currenciesGrid = null;
-let priceBooksGrid = null;
-let leadsGrid = null;
+// DOM Elements - Main Sections
+const authSection = document.getElementById('auth-section');
+const dashboardSection = document.getElementById('dashboard-section');
+const customersSection = document.getElementById('customers-section');
+const leadsSection = document.getElementById('leads-section');
+const opportunitiesSection = document.getElementById('opportunities-section');
+const countriesSection = document.getElementById('countries-section');
+const currenciesSection = document.getElementById('currencies-section');
+const priceBooksSection = document.getElementById('price-books-section');
 
-// UI Elements (declared as const where they are immediately available)
+// Navigation Buttons
 const navDashboard = document.getElementById('nav-dashboard');
 const navCustomers = document.getElementById('nav-customers');
 const navLeads = document.getElementById('nav-leads');
@@ -53,105 +51,15 @@ const navPriceBooks = document.getElementById('nav-price-books');
 const navLogout = document.getElementById('nav-logout');
 const adminMenuItem = document.getElementById('admin-menu-item');
 
-const authSection = document.getElementById('auth-section');
-const dashboardSection = document.getElementById('dashboard-section');
-const customersSection = document.getElementById('customers-section');
-const leadsSection = document.getElementById('leads-section');
-const opportunitiesSection = document.getElementById('opportunities-section');
-const countriesSection = document.getElementById('countries-section');
-const currenciesSection = document.getElementById('currencies-section');
-const priceBooksSection = document.getElementById('price-books-section');
-
-// Authentication elements
+// Auth Elements
 const googleSignInBtn = document.getElementById('google-signin-btn');
+const authStatus = document.getElementById('auth-status');
+const userDisplayName = document.getElementById('user-display-name');
+const userIdDisplay = document.getElementById('user-id-display');
+const userRoleDisplay = document.getElementById('user-role');
 const authErrorMessage = document.getElementById('auth-error-message');
 
-const userDisplayName = document.getElementById('user-display-name');
-const userIdDisplay = document.getElementById('user-id-display'); // This element will now be cleared
-const userRoleSpan = document.createElement('span'); // Create a span for user role
-userRoleSpan.id = 'user-role';
-userRoleSpan.className = 'text-sm text-blue-200 ml-2';
-document.getElementById('auth-status').appendChild(userRoleSpan); // Append it to auth-status div
-
-// Customer Form Elements
-const addCustomerBtn = document.getElementById('add-customer-btn');
-const customerFormContainer = document.getElementById('customer-form-container');
-const customerForm = document.getElementById('customer-form');
-const customerTypeSelect = document.getElementById('customer-type');
-const customerNameInput = document.getElementById('customer-name');
-const customerEmailInput = document.getElementById('customer-email');
-const customerPhoneInput = document.getElementById('customer-phone');
-const customerAddressTextarea = document.getElementById('customer-address');
-const customerCountrySelect = document.getElementById('customer-country');
-const customerPreferredContactMethodSelect = document.getElementById('customer-contact-method');
-const customerIndustrySelect = document.getElementById('customer-industry');
-const customerAdditionalDetailsTextarea = document.getElementById('customer-details');
-const customerSourceSelect = document.getElementById('customer-source');
-const customerActiveSelect = document.getElementById('customer-active');
-const cancelCustomerBtn = document.getElementById('cancel-customer-btn');
-const customerFormMessage = document.getElementById('customer-form-message');
-const customerSearchInput = document.getElementById('customer-search');
-const noCustomersMessage = document.getElementById('no-customers-message');
-const customersGridContainer = document.getElementById('customers-grid-container');
-
-// Leads Form Elements
-const addLeadBtn = document.getElementById('add-lead-btn');
-const leadFormContainer = document.getElementById('lead-form-container');
-const leadForm = document.getElementById('lead-form');
-const leadContactNameInput = document.getElementById('lead-contact-name');
-const leadPhoneInput = document.getElementById('lead-phone');
-const leadEmailInput = document.getElementById('lead-email');
-const leadServicesInterestedSelect = document.getElementById('lead-services-interested');
-const leadEventDateInput = document.getElementById('lead-event-date');
-const leadSourceSelect = document.getElementById('lead-source');
-const leadAdditionalDetailsTextarea = document.getElementById('lead-additional-details');
-const cancelLeadBtn = document.getElementById('cancel-lead-btn');
-const leadFormMessage = document.getElementById('lead-form-message');
-const leadSearchInput = document.getElementById('lead-search');
-const noLeadsMessage = document.getElementById('no-leads-message');
-const leadsGridContainer = document.getElementById('leads-grid-container');
-
-
-// Opportunity Form Elements
-const addOpportunityBtn = document.getElementById('add-opportunity-btn');
-const opportunityFormContainer = document.getElementById('opportunity-form-container');
-const opportunityForm = document.getElementById('opportunity-form');
-const opportunityNameInput = document.getElementById('opportunity-name');
-const opportunityCustomerSelect = document.getElementById('opportunity-customer');
-const opportunityCurrencySelect = document.getElementById('opportunity-currency');
-const opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
-const opportunityExpectedStartDateInput = document.getElementById('opportunity-start-date');
-const opportunityExpectedCloseDateInput = document.getElementById('opportunity-close-date');
-const opportunitySalesStageSelect = document.getElementById('opportunity-sales-stage');
-const opportunityProbabilityInput = document.getElementById('opportunity-probability');
-const opportunityValueInput = document.getElementById('opportunity-value');
-const opportunityNotesTextarea = document.getElementById('opportunity-notes');
-const cancelOpportunityBtn = document.getElementById('cancel-opportunity-btn');
-const opportunityFormMessage = document.getElementById('opportunity-form-message');
-const opportunitySearchInput = document.getElementById('opportunity-search');
-const noOpportunitiesMessage = document.getElementById('no-opportunities-message');
-const opportunitiesGridContainer = document.getElementById('opportunities-grid-container');
-
-// NEW: Work Log Elements - Declared with `let` and initialized to `null`
-let workLogsListContainer = null;
-let noWorkLogsMessage = null;
-let workLogsList = null;
-let addWorkLogEntryBtn = null; // Will be assigned when available
-let workLogFormContainer = null;
-let workLogForm = null;
-let workLogIdInput = null;
-let workLogOpportunityIdInput = null;
-let workLogDateInput = null;
-let workLogTypeSelect = null;
-let workLogDetailsTextarea = null;
-let cancelWorkLogBtn = null; // Will be assigned when available
-let workLogFormMessage = null;
-
-// Flags for event listeners (ensure these are declared globally at the top)
-let workLogFormListenerAdded = false;
-let addWorkLogEntryBtnListenerAdded = false;
-let cancelWorkLogBtnListenerAdded = false;
-
+// Part 2: Dashboard Elements, Message Box, and Authentication Logic
 
 // Dashboard Elements
 const dashboardTotalCustomers = document.getElementById('dashboard-total-customers');
@@ -159,78 +67,25 @@ const dashboardTotalOpportunities = document.getElementById('dashboard-total-opp
 const dashboardOpenOpportunities = document.getElementById('dashboard-open-opportunities');
 const dashboardWonOpportunities = document.getElementById('dashboard-won-opportunities');
 
-// Countries Elements
-const addCountryBtn = document.getElementById('add-country-btn');
-const countryFormContainer = document.getElementById('country-form-container');
-const countryForm = document.getElementById('country-form');
-const countryNameInput = document.getElementById('country-name');
-const countryCodeInput = document.getElementById('country-code');
-const countryStatesTextarea = document.getElementById('country-states');
-const cancelCountryBtn = document.getElementById('cancel-country-btn');
-const countryFormMessage = document.getElementById('country-form-message');
-const countrySearchInput = document.getElementById('country-search');
-const noCountriesMessage = document.getElementById('no-countries-message');
-const countriesGridContainer = document.getElementById('countries-grid-container');
-
-// Currencies Elements
-const addCurrencyBtn = document.getElementById('add-currency-btn');
-const currencyFormContainer = document.getElementById('currency-form-container');
-const currencyForm = document.getElementById('currency-form');
-const currencyNameInput = document.getElementById('currency-name');
-const currencyCodeInput = document.getElementById('currency-code');
-const currencySymbolInput = document.getElementById('currency-symbol'); // FIXED: Corrected assignment
-const currencyCountrySelect = document.getElementById('currency-country');
-const cancelCurrencyBtn = document.getElementById('cancel-currency-btn');
-const currencyFormMessage = document.getElementById('currency-form-message');
-const currencySearchInput = document.getElementById('currency-search');
-const noCurrenciesMessage = document.getElementById('no-currencies-message');
-const currenciesGridContainer = document.getElementById('currencies-grid-container');
-
-// Price Books Elements
-const addPriceBookBtn = document.getElementById('add-price-book-btn');
-const priceBookFormContainer = document.getElementById('price-book-form-container');
-const priceBookForm = document.getElementById('price-book-form');
-const priceBookNameInput = document.getElementById('price-book-name');
-const priceBookDescriptionTextarea = document.getElementById('price-book-description');
-const priceBookCurrencySelect = document.getElementById('price-book-currency'); // Corrected line
-const priceBookActiveCheckbox = document.getElementById('price-book-active');
-const cancelPriceBookBtn = document.getElementById('cancel-price-book-btn');
-const priceBookFormMessage = document.getElementById('price-book-form-message');
-const priceBookSearchInput = document.getElementById('price-book-search');
-const noPriceBooksMessage = document.getElementById('no-price-books-message');
-const priceBooksGridContainer = document.getElementById('price-books-grid-container');
-
 // Custom Message Box Elements
 const messageBox = document.getElementById('message-box');
 const messageContent = document.getElementById('message-content');
 const messageConfirmBtn = document.getElementById('message-confirm-btn');
 const messageCancelBtn = document.getElementById('message-cancel-btn');
 
-let confirmActionResolve = null; // To hold the resolve function for confirmation
-
-
-// --- Utility Functions ---
-
 /**
- * Displays a custom message box (modal).
- * @param {string} message - The message content.
- * @param {boolean} isConfirm - If true, shows Confirm/Cancel buttons. Otherwise, shows OK.
+ * Shows a custom message box (modal).
+ * @param {string} message - The message to display.
+ * @param {boolean} isConfirm - If true, shows Confirm/Cancel buttons. If false, shows only an OK button.
  * @returns {Promise<boolean>} Resolves true if confirmed, false if cancelled/OK.
  */
 function showMessageBox(message, isConfirm = false) {
-    messageContent.textContent = message;
-    messageBox.classList.remove('hidden');
+    return new Promise((resolve) => {
+        messageContent.textContent = message;
+        messageConfirmBtn.classList.toggle('hidden', !isConfirm);
+        messageCancelBtn.textContent = isConfirm ? 'Cancel' : 'OK';
 
-    messageConfirmBtn.classList.add('hidden');
-    messageCancelBtn.textContent = 'OK'; // Default to OK button
-
-    if (isConfirm) {
-        messageConfirmBtn.classList.remove('hidden');
-        messageCancelBtn.textContent = 'Cancel';
-    }
-
-    return new Promise(resolve => {
-        confirmActionResolve = resolve;
+        messageBox.classList.remove('hidden');
 
         const handleConfirm = () => {
             messageBox.classList.add('hidden');
@@ -248,2716 +103,1339 @@ function showMessageBox(message, isConfirm = false) {
 
         messageConfirmBtn.addEventListener('click', handleConfirm);
         messageCancelBtn.addEventListener('click', handleCancel);
-
-        // Close on outside click for message box
-        const handleOutsideClick = (event) => {
-            if (event.target === messageBox) {
-                messageBox.classList.add('hidden');
-                messageConfirmBtn.removeEventListener('click', handleConfirm);
-                messageCancelBtn.removeEventListener('click', handleCancel);
-                window.removeEventListener('click', handleOutsideClick);
-                resolve(false); // Treat outside click as cancel
-            }
-        };
-        window.addEventListener('click', handleOutsideClick);
     });
 }
 
-
 /**
- * Formats a Firestore Timestamp or Date object for display in a user-friendly format.
- * @param {firebase.firestore.Timestamp|Date|null} timestamp - The timestamp or date to format.
- * @returns {string} The formatted date string, or empty string if null/invalid.
+ * Displays a specific section and hides all others.
+ * @param {HTMLElement} sectionToShow - The section to make visible.
  */
-function formatDateForDisplay(timestamp) {
-    if (!timestamp) return '';
-    let date;
-    if (typeof timestamp.toDate === 'function') { // Check if it's a Firestore Timestamp
-        date = timestamp.toDate();
-    } else if (timestamp instanceof Date) { // Check if it's a native Date object
-        date = timestamp;
-    } else { // Attempt to parse if it's a string or other format
-        date = new Date(timestamp);
+function showSection(sectionToShow) {
+    const sections = [
+        authSection, dashboardSection, customersSection, leadsSection,
+        opportunitiesSection, countriesSection, currenciesSection, priceBooksSection
+    ];
+    sections.forEach(section => {
+        if (section) { // Ensure the section element exists
+            section.classList.add('hidden');
+        }
+    });
+    if (sectionToShow) {
+        sectionToShow.classList.remove('hidden');
     }
-    if (isNaN(date.getTime())) return ''; // Invalid date
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 /**
- * Formats a Firestore Timestamp or Date object for use in an HTML date input (YYYY-MM-DD).
- * @param {firebase.firestore.Timestamp|Date|null} timestamp - The timestamp or date to format.
- * @returns {string} The formatted date string (YYYY-MM-DD), or empty string if null/invalid.
+ * Sets up the authentication state listener and handles UI updates.
  */
-function formatDateForInput(timestamp) {
-    if (!timestamp) return '';
-    let date;
-    if (typeof timestamp.toDate === 'function') { // Check if it's a Firestore Timestamp
-        date = timestamp.toDate();
-    } else if (timestamp instanceof Date) { // Check if it's a native Date object
-        date = timestamp;
-    } else { // Attempt to parse if it's a string or other format
-        date = new Date(timestamp);
+async function setupAuth() {
+    // Initialize Firebase if not already initialized
+    if (!app) {
+        // Use the hardcoded firebaseConfig directly
+        if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.apiKey) {
+            console.error("Firebase config is empty or invalid. Cannot initialize Firebase.");
+            authErrorMessage.textContent = "Firebase is not configured. Please check your firebaseConfig.";
+            authErrorMessage.classList.remove('hidden');
+            return;
+        }
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            console.log("Firebase initialized.");
+        } catch (error) {
+            console.error("Error initializing Firebase:", error);
+            authErrorMessage.textContent = `Error initializing Firebase: ${error.message}`;
+            authErrorMessage.classList.remove('hidden');
+            return;
+        }
     }
-    if (isNaN(date.getTime())) return ''; // Invalid date
-    return date.toISOString().split('T')[0];
-}
 
-/**
- * Generates a consistent unique index ID for price books based on normalized name and currency.
- * This function MUST EXACTLY match the logic in Firestore Security Rules.
- * @param {string} name - The name of the price book.
- * @param {string} currency - The currency symbol of the price book.
- * @returns {string} The normalized unique index ID.
- */
-function getPriceBookIndexId(name, currency) {
-    // Normalize name and currency: convert to lowercase and remove all whitespace characters.
-    // The regex /\s+/g matches one or more whitespace characters (space, tab, newline, etc.) globally.
-    const normalizedName = name.trim().toLowerCase().replace(/\s+/g, '');
-    const normalizedCurrency = currency.trim().toLowerCase().replace(/\s+/g, '');
-    return `${normalizedName}_${normalizedCurrency}`;
-}
-
-/**
- * Populates a <select> dropdown element with data from a Firestore collection.
- * @param {HTMLSelectElement} selectElement - The <select> element to populate.
- * @param {string} collectionPath - The path to the Firestore collection (e.g., 'artifacts/appId/public/data/countries').
- * @param {string} valueField - The field from the document to use as the <option> value.
- * @param {string} textField - The field from the document to use as the <option> text.
- * @param {string|null} selectedValue - The value to pre-select in the dropdown (optional).
- * @param {string|null} dataAttributeField - An optional field to store as a data attribute (e.g., 'defaultCurrencySymbol').
- * @param {Array<Object>|null} staticOptions - Optional: An array of objects {value: '...', text: '...'} for static options.
- */
-async function populateSelect(selectElement, collectionPath, valueField, textField, selectedValue = null, dataAttributeField = null, staticOptions = null) {
-    if (!selectElement) {
-        console.error(`populateSelect: selectElement is null for collection ${collectionPath}`);
-        return;
-    }
-    selectElement.innerHTML = '<option value="">Select...</option>'; // Default empty option
-
-    if (staticOptions) {
-        staticOptions.forEach(optionData => {
-            const option = document.createElement('option');
-            option.value = optionData.value;
-            option.textContent = optionData.text;
-            if (selectedValue !== null && optionData.value === selectedValue) {
-                option.selected = true;
+    // Sign in with custom token if available, otherwise anonymously
+    if (initialAuthToken) {
+        try {
+            await signInWithCustomToken(auth, initialAuthToken);
+            console.log("Signed in with custom token.");
+        } catch (error) {
+            console.error("Error signing in with custom token:", error);
+            // Fallback to anonymous if custom token fails
+            try {
+                await signInAnonymously(auth);
+                console.log("Signed in anonymously after custom token failure.");
+            } catch (anonError) {
+                console.error("Error signing in anonymously:", anonError);
+                authErrorMessage.textContent = `Authentication failed: ${anonError.message}`;
+                authErrorMessage.classList.remove('hidden');
+                showSection(authSection);
+                return;
             }
-            selectElement.appendChild(option);
-        });
-        return; // Exit if static options are provided
+        }
+    } else {
+        try {
+            await signInAnonymously(auth);
+            console.log("Signed in anonymously.");
+        } catch (error) {
+            console.error("Error signing in anonymously:", error);
+            authErrorMessage.textContent = `Authentication failed: ${error.message}`;
+            authErrorMessage.classList.remove('hidden');
+            showSection(authSection);
+            return;
+        }
     }
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            userId = user.uid;
+            userDisplayName.textContent = user.displayName || 'Guest';
+            userIdDisplay.textContent = `(ID: ${userId.substring(0, 8)}...)`; // Display first 8 chars of UID
+            navLogout.classList.remove('hidden');
+            authSection.classList.add('hidden');
+
+            // Determine user role (e.g., based on a 'roles' collection or claims)
+            // For simplicity, let's assume 'admin' if UID matches a predefined admin UID, otherwise 'user'
+            // In a real app, you'd fetch this from Firestore or Firebase Auth custom claims
+            const adminUids = ['YOUR_ADMIN_UID_1', 'YOUR_ADMIN_UID_2']; // Replace with actual admin UIDs
+            userRole = adminUids.includes(userId) ? 'admin' : 'user';
+            userRoleDisplay.textContent = `(${userRole})`;
+
+            if (userRole === 'admin') {
+                adminMenuItem.classList.remove('hidden');
+            } else {
+                adminMenuItem.classList.add('hidden');
+            }
+
+            console.log(`User ${user.uid} (${userRole}) is signed in.`);
+            showSection(dashboardSection); // Show dashboard after successful login
+            await updateDashboard();
+        } else {
+            userId = null;
+            userRole = 'guest';
+            userDisplayName.textContent = '';
+            userIdDisplay.textContent = '';
+            userRoleDisplay.textContent = '';
+            navLogout.classList.add('hidden');
+            adminMenuItem.classList.add('hidden');
+            showSection(authSection);
+            console.log("User is signed out.");
+        }
+    });
+}
+
+/**
+ * Handles Google Sign-In.
+ */
+async function handleGoogleSignIn() {
+    try {
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+    } catch (error) {
+        console.error("Error during Google Sign-In:", error);
+        authErrorMessage.textContent = `Google Sign-In failed: ${error.message}`;
+        authErrorMessage.classList.remove('hidden');
+    }
+}
+
+/**
+ * Handles user logout.
+ */
+async function handleLogout() {
+    try {
+        await signOut(auth);
+        console.log("User signed out successfully.");
+        showMessageBox("You have been signed out.", false);
+    } catch (error) {
+        console.error("Error during logout:", error);
+        showMessageBox(`Error signing out: ${error.message}`, false);
+    }
+}
+
+/**
+ * Updates dashboard statistics.
+ */
+async function updateDashboard() {
+    if (!db || !userId) return;
 
     try {
-        const collectionRef = collection(db, collectionPath);
-        const snapshot = await getDocs(query(collectionRef, orderBy(textField))); // Order by text field for display
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const option = document.createElement('option');
-            option.value = data[valueField];
-            option.textContent = data[textField];
-            if (selectedValue !== null && data[valueField] === selectedValue) {
-                option.selected = true;
-            }
-            // Store additional data as a data attribute if specified
-            if (dataAttributeField && data[dataAttributeField]) {
-                option.dataset[dataAttributeField] = data[dataAttributeField];
-            }
+        const customersRef = collection(db, `artifacts/${appId}/users/${userId}/customers`);
+        const opportunitiesRef = collection(db, `artifacts/${appId}/users/${userId}/opportunities`);
 
-            // NEW: If populating currencies, update the global currencySymbolsMap
-            if (collectionPath === 'currencies' && data.code && data.symbol) {
-                currencySymbolsMap[data.code] = data.symbol;
-            }
+        const totalCustomersSnap = await getDocs(customersRef);
+        if (dashboardTotalCustomers) dashboardTotalCustomers.textContent = totalCustomersSnap.size;
 
-            selectElement.appendChild(option);
-        });
+        const totalOpportunitiesSnap = await getDocs(opportunitiesRef);
+        if (dashboardTotalOpportunities) dashboardTotalOpportunities.textContent = totalOpportunitiesSnap.size;
+
+        const openOpportunitiesQuery = query(opportunitiesRef, where('salesStage', 'in', ['Prospect', 'Qualification', 'Proposal', 'Negotiation']));
+        const openOpportunitiesSnap = await getDocs(openOpportunitiesQuery);
+        if (dashboardOpenOpportunities) dashboardOpenOpportunities.textContent = openOpportunitiesSnap.size;
+
+        const wonOpportunitiesQuery = query(opportunitiesRef, where('salesStage', '==', 'Won'));
+        const wonOpportunitiesSnap = await getDocs(wonOpportunitiesQuery);
+        if (dashboardWonOpportunities) dashboardWonOpportunities.textContent = wonOpportunitiesSnap.size;
+
     } catch (error) {
-        console.error(`Error fetching data for dropdown ${collectionPath}:`, error);
-        showMessageBox(`Could not load data for ${collectionPath}.`, false);
+        console.error("Error updating dashboard:", error);
+        showMessageBox(`Error loading dashboard data: ${error.message}`, false);
     }
 }
 
-/**
- * Hides all main content sections.
- */
-function hideAllSections() {
-    authSection.classList.add('hidden');
-    dashboardSection.classList.add('hidden');
-    customersSection.classList.add('hidden');
-    leadsSection.classList.add('hidden');
-    opportunitiesSection.classList.add('hidden');
-    countriesSection.classList.add('hidden');
-    currenciesSection.classList.add('hidden');
-    priceBooksSection.classList.add('hidden');
-}
+// Part 3: Accordion Logic, Form Visibility Functions, and Data Helpers
 
-/**
- * Shows a specific main content section and hides others.
- * @param {HTMLElement} sectionElement - The section to show.
- */
-function showSection(sectionElement) {
-    hideAllSections();
-    sectionElement.classList.remove('hidden');
-
-    // If the opportunities section is shown, set up accordions
-    if (sectionElement === opportunitiesSection) {
-        setupAccordions();
-    }
-}
-
-/**
- * Waits for the Grid.js library to be loaded and available on the window object.
- * @returns {Promise<void>} A promise that resolves when window.gridjs is defined.
- */
-async function waitForGridJs() {
-    return new Promise((resolve, reject) => {
-        const checkInterval = 100; // Check every 100ms
-        const maxAttempts = 50; // Max 5 seconds
-        let attempts = 0;
-
-        const checkGridJs = () => {
-            if (typeof window.gridjs !== 'undefined' && typeof window.gridjs.Grid !== 'undefined') {
-                console.log('Grid.js is now available.');
-                resolve();
-            } else if (attempts < maxAttempts) {
-                attempts++;
-                setTimeout(checkGridJs, checkInterval);
-            } else {
-                const errorMessage = 'Grid.js library failed to load after multiple attempts.';
-                console.error(errorMessage);
-                // We show a message box here, but also reject the promise to propagate the error
-                showMessageBox(errorMessage + ' Please refresh the page or check your internet connection.', false);
-                reject(new Error(errorMessage));
-            }
-        };
-
-        checkGridJs();
+// --- Accordion Logic ---
+function setupAccordions() {
+    const accordionHeaders = document.querySelectorAll('.accordion-header');
+    console.log('setupAccordions: querySelectorAll found', accordionHeaders.length, 'accordion headers.');
+    accordionHeaders.forEach(header => {
+        // Remove existing listener to prevent duplicates if called multiple times
+        header.removeEventListener('click', toggleAccordion);
+        header.addEventListener('click', toggleAccordion);
     });
 }
 
-/**
- * Toggles the visibility of an accordion content section.
- * @param {HTMLElement} header - The accordion header element.
- */
-function toggleAccordion(header) {
-    const content = header.nextElementSibling; // The content div is the next sibling
+function toggleAccordion(event) {
+    const header = event.currentTarget;
+    const content = header.nextElementSibling;
     const icon = header.querySelector('.accordion-icon');
 
     if (content.classList.contains('hidden')) {
         content.classList.remove('hidden');
+        icon.style.transform = 'rotate(180deg)';
         header.classList.add('expanded');
-        if (icon) icon.style.transform = 'rotate(180deg)';
     } else {
         content.classList.add('hidden');
+        icon.style.transform = 'rotate(0deg)';
         header.classList.remove('expanded');
-        if (icon) icon.style.transform = 'rotate(0deg)';
     }
 }
 
-/**
- * Sets up event listeners for all accordion headers within the opportunity form.
- * Ensures initial state (Main Details expanded, others collapsed).
- */
-function setupAccordions() {
-    // Ensure the opportunity form container exists before querying its children
-    const opportunityFormContainer = document.getElementById('opportunity-form-container');
-    if (!opportunityFormContainer) {
-        console.warn("setupAccordions: Opportunity form container not found. Cannot set up accordions.");
-        return;
-    }
-
-    // Query for accordion headers specifically within the opportunity form container
-    const accordionHeaders = opportunityFormContainer.querySelectorAll('.accordion-header');
-    console.log(`setupAccordions: querySelectorAll found ${accordionHeaders.length} accordion headers.`);
-
-    if (accordionHeaders.length === 0) {
-        console.warn("setupAccordions: No accordion headers found. This might be a timing issue.");
-    }
-
-    accordionHeaders.forEach(header => {
-        if (header) {
-            // Remove existing listener to prevent duplicates if called multiple times
-            header.removeEventListener('click', toggleAccordion);
-            // Add new listener
-            header.addEventListener('click', () => toggleAccordion(header));
-
-            // Set initial state for accordions
-            const content = header.nextElementSibling;
-            const icon = header.querySelector('.accordion-icon');
-
-            if (header.textContent.includes('Main Details')) {
-                // Main Details accordion should be expanded by default
-                content.classList.remove('hidden');
-                header.classList.add('expanded');
-                if (icon) icon.style.transform = 'rotate(180deg)';
-            } else {
-                // Other accordions should be collapsed by default
-                content.classList.add('hidden');
-                header.classList.remove('expanded');
-                if (icon) icon.style.transform = 'rotate(0deg)';
-            }
-        } else {
-            console.error("Null header element encountered during accordion setup within opportunity form container.");
-        }
-    });
+// --- Form Visibility Functions ---
+function showCustomerForm() {
+    customerFormContainer.classList.remove('hidden');
 }
 
-
-// --- Authentication ---
-
-// Listens for Firebase authentication state changes
-onAuthStateChanged(auth, async (user) => {
-    console.log('onAuthStateChanged fired. User:', user ? user.uid : 'null');
-    currentUser = user;
-
-    if (user) {
-        // User is signed in
-        userId = user.uid; // Set userId to authenticated UID
-        navLogout.classList.remove('hidden');
-        userDisplayName.textContent = user.displayName || user.email;
-        userIdDisplay.textContent = ''; // REMOVED: Display full user ID - Now empty string
-
-        try {
-            // Fetch user's custom claims for role from Firestore
-            // The users_data collection is now a top-level collection as per your request.
-            const userDocRef = doc(db, 'users_data', user.uid);
-            const userDoc = await getDoc(userDocRef);
-
-            if (!userDoc.exists()) {
-                // New user, create their profile with 'Standard' role
-                await setDoc(userDocRef, {
-                    displayName: user.displayName || 'New User',
-                    email: user.email,
-                    role: 'Standard', // Default role for new users
-                    createdAt: serverTimestamp(),
-                    lastLogin: serverTimestamp()
-                });
-                currentUserRole = 'Standard';
-            } else {
-                // Existing user, update last login and get role
-                await updateDoc(userDocRef, {
-                    lastLogin: serverTimestamp()
-                });
-                currentUserRole = userDoc.data().role;
-            }
-        } catch (error) {
-            console.error("Error fetching user role or creating user doc:", error);
-            currentUserRole = 'Standard'; // Fallback to standard if error occurs
-            showMessageBox('Could not load user profile. Defaulting to Standard role.', false);
-        }
-
-        userRoleSpan.textContent = `Role: ${currentUserRole}`; // Display user role
-
-        // Show/hide admin navigation button based on role
-        if (currentUserRole === 'Admin') {
-            adminMenuItem.classList.remove('hidden');
-        } else {
-            adminMenuItem.classList.add('hidden');
-        }
-
-        // Show navigation items
-        navDashboard.classList.remove('hidden');
-        navCustomers.classList.remove('hidden');
-        navLeads.classList.remove('hidden');
-        navOpportunities.classList.remove('hidden');
-
-        // Show dashboard as landing page after successful login
-        showSection(dashboardSection);
-        updateDashboardStats();
-
-    } else {
-        // User is signed out or not authenticated
-        // For no anonymous access, we ensure userId is only set if authenticated for data access
-        userId = null; // No authenticated user, so userId is null for data operations
-        navLogout.classList.add('hidden');
-        userDisplayName.textContent = 'Guest';
-        userIdDisplay.textContent = ''; // Clear user ID display
-        userRoleSpan.textContent = ''; // Clear user role display
-        currentUserRole = 'Guest';
-        adminMenuItem.classList.add('hidden'); // Hide admin menu
-
-        // Hide all content sections and show only the authentication section
-        hideAllSections();
-        authSection.classList.remove('hidden');
-
-        // Hide all navigation items
-        navDashboard.classList.add('hidden');
-        navCustomers.classList.add('hidden');
-        navLeads.classList.add('hidden');
-        navOpportunities.classList.add('hidden');
-        navCountries.classList.add('hidden'); // Hide admin sub-menu items too
-        navCurrencies.classList.add('hidden');
-        navPriceBooks.classList.add('hidden');
-
-        // Clear grids if they exist
-        if (customersGrid) { customersGrid.destroy(); customersGrid = null; }
-        if (leadsGrid) { leadsGrid.destroy(); leadsGrid = null; }
-        if (opportunitiesGrid) { opportunitiesGrid.destroy(); opportunitiesGrid = null; }
-        if (countriesStatesGrid) { countriesStatesGrid.destroy(); countriesStatesGrid = null; }
-        if (currenciesGrid) { currenciesGrid.destroy(); currenciesGrid = null; }
-        if (priceBooksGrid) { priceBooksGrid.destroy(); priceBooksGrid = null; }
-
-        // Clear grid containers
-        if (customersGridContainer) customersGridContainer.innerHTML = '';
-        if (leadsGridContainer) leadsGridContainer.innerHTML = '';
-        if (opportunitiesGridContainer) opportunitiesGridContainer.innerHTML = '';
-        if (countriesGridContainer) countriesGridContainer.innerHTML = '';
-        if (currenciesGridContainer) currenciesGridContainer.innerHTML = '';
-        if (priceBooksGridContainer) priceBooksGridContainer.innerHTML = '';
-
-
-        // Clear dropdowns (ensure elements exist before trying to access them)
-        if (customerCountrySelect) customerCountrySelect.innerHTML = '<option value="">Select...</option>';
-        if (customerIndustrySelect) customerIndustrySelect.innerHTML = '<option value="">Select Industry</option>';
-        if (customerSourceSelect) customerSourceSelect.innerHTML = '<option value="">Select Source</option>';
-        if (leadServicesInterestedSelect) leadServicesInterestedSelect.innerHTML = '<option value="">Select Service</option>';
-        if (leadSourceSelect) leadSourceSelect.innerHTML = '<option value="">Select Source</option>';
-        if (opportunityCustomerSelect) opportunityCustomerSelect.innerHTML = '<option value="">Select a Customer</option>';
-        if (opportunityCurrencySelect) opportunityCurrencySelect.innerHTML = '<option value="">Select...</option>';
-        if (opportunityPriceBookSelect) opportunityPriceBookSelect.innerHTML = '<option value="">Select a Price Book</option>';
-        if (priceBookCurrencySelect) priceBookCurrencySelect.innerHTML = '<option value="">Select...</option>';
-        if (currencyCountrySelect) currencyCountrySelect.innerHTML = '<option value="">Selectántica...</option>';
-
-        currencySymbolsMap = {}; // Clear the currency symbols map on logout
-    }
-});
-
-// Event listener for Google Sign-In button
-googleSignInBtn.addEventListener('click', async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-        await signInWithPopup(auth, provider);
-        authErrorMessage.classList.add('hidden');
-        showMessageBox('Logged in successfully with Google!', false);
-    } catch (error) {
-        console.error('Google Sign-In Error:', error);
-        authErrorMessage.textContent = 'Google Sign-In failed: ' + error.message;
-        authErrorMessage.classList.remove('hidden');
-        showMessageBox('Google Sign-In failed: ' + error.message, false);
-    }
-});
-
-// Event listener for Sign Out button
-navLogout.addEventListener('click', () => {
-    if (currentUser) {
-        signOut(auth).then(() => {
-            showMessageBox('Signed out successfully!', false);
-        }).catch((error) => {
-            console.error('Sign Out Error:', error);
-            showMessageBox('Error signing out: ' + error.message, false);
-        });
-    }
-});
-
-
-// --- Navigation ---
-
-// Event listeners for main navigation buttons
-navDashboard.addEventListener('click', () => showSection(dashboardSection));
-navCustomers.addEventListener('click', () => { showSection(customersSection); renderCustomersGrid(); populateCustomerCountryDropdown(); });
-navLeads.addEventListener('click', () => { showSection(leadsSection); renderLeadsGrid(); });
-navOpportunities.addEventListener('click', () => { showSection(opportunitiesSection); renderOpportunitiesGrid(); populateOpportunityCustomerDropdown(); populateOpportunityCurrencyDropdown(); populateOpportunityPriceBookDropdown(); });
-
-// Event listeners for Admin sub-menu items
-navCountries.addEventListener('click', () => {
-    if (currentUserRole === 'Admin') {
-        showSection(countriesSection);
-        renderCountriesStatesGrid();
-    } else {
-        showMessageBox('Access Denied: You must be an Admin to access this feature.', false);
-    }
-});
-navCurrencies.addEventListener('click', () => {
-    if (currentUserRole === 'Admin') {
-        showSection(currenciesSection);
-        renderCurrenciesGrid();
-        populateCurrencyCountryDropdown(); // Populate country dropdown for currencies
-    } else {
-        showMessageBox('Access Denied: You must be an Admin to access this feature.', false);
-    }
-});
-navPriceBooks.addEventListener('click', () => {
-    if (currentUserRole === 'Admin') {
-        showSection(priceBooksSection);
-        renderPriceBooksGrid();
-        populatePriceBookCurrencyDropdown(); // Populate dropdown when section is active
-    } else {
-        showMessageBox('Access Denied: You must be an Admin to access this feature.', false);
-    }
-});
-
-
-// --- Dashboard Module ---
-
-/**
- * Updates the statistics displayed on the dashboard.
- * Fetches counts for total customers, total opportunities, open opportunities, and won opportunities.
- */
-async function updateDashboardStats() {
-    if (!currentUser) return; // Ensure user is authenticated
-
-    try {
-        // For customers, the security rule allows all authenticated users to read all customers.
-        // So, we query all customers regardless of creatorId for dashboard stats.
-        let customerQueryRef = collection(db, `customers`);
-        let qCustomers = query(customerQueryRef);
-        const customersSnapshot = await getDocs(qCustomers);
-        dashboardTotalCustomers.textContent = customersSnapshot.size;
-
-        let opportunityQueryRef = collection(db, `opportunities`);
-        let qOpportunities = query(opportunityQueryRef);
-        // Filter opportunities by creatorId if not an Admin, as per security rules
-        if (currentUserRole !== 'Admin') {
-            qOpportunities = query(opportunityQueryRef, where('creatorId', '==', currentUser.uid));
-        }
-        const opportunitiesSnapshot = await getDocs(qOpportunities);
-        dashboardTotalOpportunities.textContent = opportunitiesSnapshot.size;
-
-        const openOpportunities = opportunitiesSnapshot.docs.filter(doc =>
-            doc.data().salesStage !== 'Won' && doc.data().salesStage !== 'Lost'
-        );
-        dashboardOpenOpportunities.textContent = openOpportunities.length;
-
-        const wonOpportunities = opportunitiesSnapshot.docs.filter(doc =>
-            doc.data().salesStage === 'Won'
-        );
-        dashboardWonOpportunities.textContent = wonOpportunities.length;
-
-    } catch (error) {
-        console.error("Error updating dashboard stats:", error);
-        showMessageBox('Could not load dashboard statistics.', false);
-    }
+function hideCustomerForm() {
+    customerFormContainer.classList.add('hidden');
+    customerForm.reset(); // Clear form fields
+    document.getElementById('customer-id').value = ''; // Clear hidden ID
+    document.getElementById('customer-form-message').classList.add('hidden');
 }
 
-
-// --- Forms General Logic ---
-
-/**
- * Resets a given form and hides its container.
- * @param {HTMLFormElement|null} formElement - The form to reset. Can be null.
- * @param {HTMLElement|null} formContainer - The container element of the form. Can be null.
- * @param {string} idValue - The ID value to set for the hidden ID input field.
- * @param {HTMLElement|null} messageElement - The message display element for the form. Can be null.
- */
-function resetAndHideForm(formElement, formContainer, idValue, messageElement) {
-    if (formElement) {
-        formElement.reset();
-        // Dynamically set the ID input value if it.exists, otherwise ignore
-        const idInput = formElement.querySelector('[id$="-id"]'); // Finds elements with ID ending in -id
-        if (idInput) {
-            idInput.value = idValue;
-        }
-    }
-    if (formContainer) {
-        formContainer.classList.add('hidden');
-    }
-    if (messageElement) {
-        messageElement.classList.add('hidden');
-        messageElement.textContent = '';
-    }
+function showLeadForm() {
+    leadFormContainer.classList.remove('hidden');
 }
 
-// Event listeners for cancel buttons on forms
-cancelCustomerBtn.addEventListener('click', () => resetAndHideForm(customerForm, customerFormContainer, '', customerFormMessage));
-cancelLeadBtn.addEventListener('click', () => resetAndHideForm(leadForm, leadFormContainer, '', leadFormMessage));
-cancelOpportunityBtn.addEventListener('click', () => {
-    // Ensure workLogForm and its container/message are retrieved before passing
-    const currentWorkLogForm = document.getElementById('work-log-form');
-    const currentWorkLogFormContainer = document.getElementById('work-log-form-container');
-    const currentWorkLogFormMessage = document.getElementById('work-log-form-message');
-
-    resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage);
-    // Also reset and hide the work log form when opportunity form is cancelled
-    resetAndHideForm(currentWorkLogForm, currentWorkLogFormContainer, '', currentWorkLogFormMessage);
-    
-    // Ensure workLogsList and noWorkLogsMessage are not null before accessing
-    if (workLogsList) workLogsList.innerHTML = ''; // Clear work logs list
-    if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden'); // Show no work logs message
-    
-    currentOpportunityId = null; // Clear current opportunity ID
-});
-cancelCountryBtn.addEventListener('click', () => {
-    resetAndHideForm(countryForm, countryFormContainer, '', countryFormMessage);
-    if (countryStatesTextarea) countryStatesTextarea.value = ''; // Clear states textarea specifically
-});
-cancelCurrencyBtn.addEventListener('click', () => {
-    resetAndHideForm(currencyForm, currencyFormContainer, '', currencyFormMessage);
-    if (currencyCountrySelect) currencyCountrySelect.value = ''; // Clear currency country dropdown
-});
-cancelPriceBookBtn.addEventListener('click', () => resetAndHideForm(priceBookForm, priceBookFormContainer, '', priceBookFormMessage));
-
-
-// --- Customers Module ---
-
-/**
- * Populates the customer country dropdown with data from the 'countries' collection.
- * @param {string|null} selectedCountry - The country name to pre-select (optional).
- */
-async function populateCustomerCountryDropdown(selectedCountry = null) {
-    if (!currentUser) return;
-    // Corrected path for public data
-    await populateSelect(customerCountrySelect, `countries`, 'name', 'name', selectedCountry);
-}
-
-// Event listener to open the Customer Form for adding a new customer
-addCustomerBtn.addEventListener('click', () => {
-    if (!currentUser) { showMessageBox('Please sign in to add customers.', false); return; }
-    customerForm.reset();
-    // Assuming no hidden customer-id input for new forms, but setting it for consistency if it were added later
-    document.getElementById('customer-id').value = ''; // Clear ID for new customer
-    resetAndHideForm(customerForm, customerFormContainer, '', customerFormMessage); // Reset and hide first
-    customerFormContainer.classList.remove('hidden'); // Then show the container
-    // Set default values for new entry
-    customerTypeSelect.value = 'Individual';
-    customerPreferredContactMethodSelect.value = 'Email';
-    customerActiveSelect.checked = true; // Use checked for checkbox
-    customerIndustrySelect.value = '';
-    customerSourceSelect.value = '';
-    populateCustomerCountryDropdown();
-});
-
-// Event listener to save (add or update) a customer
-customerForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!currentUser) { showMessageBox('Authentication required to save customer.', false); return; }
-
-    const customerId = document.getElementById('customer-id').value;
-
-    const customerData = {
-        type: customerTypeSelect.value,
-        name: customerNameInput.value.trim(),
-        email: customerEmailInput.value.trim(),
-        phone: customerPhoneInput.value.trim(),
-        address: customerAddressTextarea.value.trim(),
-        country: customerCountrySelect.value,
-        preferredContactMethod: customerPreferredContactMethodSelect.value,
-        industry: customerIndustrySelect.value,
-        additionalDetails: customerAdditionalDetailsTextarea.value.trim(),
-        source: customerSourceSelect.value,
-        active: customerActiveSelect.checked, // Use checked for checkbox
-        updatedAt: serverTimestamp()
-    };
-
-    try {
-        if (customerId) {
-            // Update existing customer
-            await updateDoc(doc(db, `customers`, customerId), customerData);
-            showMessageBox('Customer updated successfully!', false);
-        } else {
-            // Add new customer
-            customerData.createdAt = serverTimestamp();
-            customerData.creatorId = currentUser.uid;
-            await addDoc(collection(db, `customers`), customerData);
-            showMessageBox('Customer added successfully!', false);
-        }
-        resetAndHideForm(customerForm, customerFormContainer, '', customerFormMessage); // Clear and hide form
-        renderCustomersGrid();
-        updateDashboardStats();
-    } catch (error) {
-        console.error("Error saving customer:", error);
-        customerFormMessage.textContent = 'Error saving customer: ' + error.message;
-        customerFormMessage.classList.remove('hidden');
-        showMessageBox('Error saving customer: ' + error.message, false);
-    }
-});
-
-/**
- * Renders or updates the Grid.js table for customers.
- * Fetches customer data from Firestore and displays it.
- */
-async function renderCustomersGrid() {
-    if (!currentUser) {
-        noCustomersMessage.classList.remove('hidden');
-        if (customersGrid) {
-            customersGrid.destroy(); // Destroy existing grid if user logs out
-            customersGrid = null;
-        }
-        customersGridContainer.innerHTML = ''; // Clear the container
-        return;
-    }
-
-    try {
-        await waitForGridJs(); // Wait for Grid.js to be ready
-    } catch (error) {
-        // Error message already shown by waitForGridJs
-        customersGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading customer data.</p>';
-        return;
-    }
-
-    // Always clear the container and show loading message at the start
-    customersGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Customers...</p>';
-    noCustomersMessage.classList.add('hidden'); // Hide "No data" message initially
-
-    let customersRef = collection(db, `customers`);
-    let q = query(customersRef, orderBy('name'));
-    const customerData = [];
-
-    try {
-        const snapshot = await getDocs(q);
-
-        // Clear the loading message before rendering the actual grid or 'no data' message
-        customersGridContainer.innerHTML = '';
-
-        if (snapshot.empty) {
-            noCustomersMessage.classList.remove('hidden');
-        } else {
-            noCustomersMessage.classList.add('hidden'); // Ensure it's hidden if data is present
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                customerData.push([
-                    doc.id,
-                    data.name,
-                    data.email,
-                    data.phone,
-                    data.country,
-                    data.active,
-                    data.type,
-                    data.preferredContactMethod,
-                    data.industry,
-                    data.additionalDetails,
-                    data.source,
-                    data.createdAt,
-                    data.creatorId // Added creatorId for rule check
-                ]);
-            });
-
-            // If a grid already exists, update its data.
-            // Otherwise, create a new one.
-            if (customersGrid) {
-                customersGrid.updateConfig({ data: customerData }).forceRender();
-            } else {
-                customersGrid = new window.gridjs.Grid({
-                    columns: [
-                        { id: 'id', name: 'ID', hidden: true },
-                        { id: 'name', name: 'Name', sort: true, filter: true },
-                        { id: 'email', name: 'Email', sort: true, filter: true },
-                        { id: 'phone', name: 'Phone', sort: true, filter: true },
-                        { id: 'country', name: 'Country', sort: true, filter: true },
-                        { id: 'active', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
-                        { id: 'type', name: 'Type', hidden: true },
-                        { id: 'preferredContactMethod', name: 'Contact Method', hidden: true },
-                        { id: 'industry', name: 'Industry', hidden: true },
-                        { id: 'additionalDetails', name: 'Additional Details', hidden: true },
-                        { id: 'source', name: 'Source', hidden: true },
-                        { id: 'createdAt', name: 'Created At', hidden: true },
-                        { id: 'creatorId', name: 'Creator ID', hidden: true }, // Keep creatorId hidden but accessible for actions
-                        {
-                            name: 'Actions',
-                            sort: false,
-                            formatter: (cell, row) => {
-                                const docId = row.cells[0].data;
-                                const creatorId = row.cells[12].data; // Get creatorId from the row data
-                                const canEditDelete = (currentUserRole === 'Admin' || creatorId === currentUser.uid);
-
-                                return window.gridjs.h('div', { className: 'flex space-x-2' },
-                                    window.gridjs.h('button', {
-                                        className: `px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
-                                        onClick: () => canEditDelete ? editCustomer(docId) : showMessageBox('You do not have permission to edit this customer.', false),
-                                        disabled: !canEditDelete
-                                    }, 'Edit'),
-                                    window.gridjs.h('button', {
-                                        className: `px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
-                                        onClick: () => canEditDelete ? deleteCustomer(docId) : showMessageBox('You do not have permission to delete this customer.', false),
-                                        disabled: !canEditDelete
-                                    }, 'Delete')
-                                );
-                            }
-                        }
-                    ],
-                    data: customerData,
-                    search: {
-                        selector: (cell, rowIndex, cellIndex) => {
-                            // Search across name, email, phone, country
-                            if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3 || cellIndex === 4) {
-                                return cell;
-                            }
-                            return null;
-                        }
-                    },
-                    pagination: { enabled: true, limit: 10, summary: true },
-                    sort: true,
-                    resizable: true,
-                    className: {
-                        container: 'gridjs-container', table: 'min-w-full bg-white shadow-md rounded-lg overflow-hidden',
-                        thead: 'bg-gray-200', th: 'py-3 px-4 text-left text-sm font-medium text-gray-700',
-                        td: 'py-3 px-4 text-left text-sm text-gray-800', tr: 'divide-y divide-gray-200',
-                        footer: 'bg-gray-50 p-4 flex justify-between items-center',
-                        pagination: 'flex items-center space-x-2',
-                        'pagination-summary': 'text-sm text-gray-600', 'pagination-gap': 'text-sm text-gray-400',
-                        'pagination-nav': 'flex space-x-1', 'pagination-nav-prev': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                        'pagination-nav-next': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                        'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                        'pagination-btn-current': 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
-                    },
-                    language: {
-                        'search': { 'placeholder': 'Search customers...' },
-                        'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
-                        'noRecordsFound': 'No Customer Data Available',
-                    }
-                }).render(customersGridContainer); // Render into the new container
-            }
-        }
-    } catch (error) {
-        console.error("Error rendering customers grid:", error);
-        showMessageBox('Could not load customer data: ' + error.message, false);
-        customersGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading customer data.</p>';
-    }
-}
-
-/**
- * Populates the customer form with existing data for editing.
- * @param {string} customerId - The ID of the customer document to edit.
- */
-async function editCustomer(customerId) {
-    if (!currentUser) { showMessageBox('Please sign in to edit customers.', false); return; }
-
-    try {
-        const docSnap = await getDoc(doc(db, `customers`, customerId));
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            // Check if current user is the creator or an Admin
-            if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
-                showMessageBox('You can only edit customers you have created.', false);
-                return;
-            }
-
-            document.getElementById('customer-id').value = docSnap.id;
-
-            customerFormContainer.classList.remove('hidden');
-            customerFormMessage.classList.add('hidden');
-
-            customerTypeSelect.value = data.type || '';
-            customerNameInput.value = data.name || '';
-            customerEmailInput.value = data.email || '';
-            customerPhoneInput.value = data.phone || '';
-            customerAddressTextarea.value = data.address || '';
-            await populateCustomerCountryDropdown(data.country);
-            customerPreferredContactMethodSelect.value = data.preferredContactMethod || '';
-            customerIndustrySelect.value = data.industry || '';
-            customerAdditionalDetailsTextarea.value = data.additionalDetails || '';
-            customerSourceSelect.value = data.source || '';
-            customerActiveSelect.checked = data.active; // Set checked for checkbox
-        } else {
-            showMessageBox('Customer not found!', false);
-        }
-    } catch (error) {
-        console.error("Error editing customer:", error);
-        showMessageBox('Error loading customer for edit: ' + error.message, false);
-    }
-}
-
-/**
- * Deletes a customer document from Firestore.
- * Requires Admin role or creator.
- * @param {string} customerId - The ID of the customer document to delete.
- */
-async function deleteCustomer(customerId) {
-    if (!currentUser) { showMessageBox('Please sign in to delete customers.', false); return; }
-
-    const confirmed = await showMessageBox('Are you sure you want to delete this customer? This action cannot be undone.', true);
-    if (!confirmed) return;
-
-    try {
-        const docSnap = await getDoc(doc(db, `customers`, customerId));
-        if (!docSnap.exists()) {
-            showMessageBox('Customer not found!', false);
-            return;
-        }
-        const data = docSnap.data();
-        // Check if current user is the creator or an Admin
-        if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
-            showMessageBox('You can only delete customers you have created.', false);
-            return;
-        }
-
-        // Check if there are any opportunities linked to this customer
-        const opportunitiesSnapshot = await getDocs(query(collection(db, `opportunities`), where('customerId', '==', customerId)));
-        if (!opportunitiesSnapshot.empty) {
-            showMessageBox('Cannot delete customer: There are existing opportunities linked to this customer. Please delete the opportunities first.', false);
-            return;
-        }
-
-        await deleteDoc(doc(db, `customers`, customerId));
-        showMessageBox('Customer deleted successfully!', false);
-        renderCustomersGrid();
-        updateDashboardStats();
-    } catch (error) {
-        console.error("Error deleting customer:", error);
-        showMessageBox('Error deleting customer: ' + error.message, false);
-    }
-}
-
-// --- Leads Module ---
-
-// Static options for leads dropdowns
-const servicesInterestedOptions = [
-    { value: "Save the Day", text: "Save the Day" },
-    { value: "Pre-Wedding Photo Shoot", text: "Pre-Wedding Photo Shoot" },
-    { value: "Wedding", text: "Wedding" },
-    { value: "Post-Wedding Photo Shoot", text: "Post-Wedding Photo Shoot" },
-    { value: "Baby Shower", text: "Baby Shower" },
-    { value: "Corporate Event", text: "Corporate Event" },
-    { value: "Product Launch", text: "Product Launch" },
-    { value: "Political Meeting", text: "Political Meeting" },
-    { value: "Others", text: "Others" },
-];
-
-const leadSourceOptions = [
-    { value: "Website", text: "Website" },
-    { value: "Referral", text: "Referral" },
-    { value: "Social Media", text: "Social Media" },
-    { value: "Advertisement", text: "Advertisement" },
-    { value: "Event", text: "Event" },
-    { value: "Others", text: "Others" },
-];
-
-/**
- * Populates the services interested dropdown for leads.
- * @param {string|null} selectedService - The service to pre-select.
- */
-async function populateLeadServicesInterestedDropdown(selectedService = null) {
-    await populateSelect(leadServicesInterestedSelect, null, 'value', 'text', selectedService, null, servicesInterestedOptions);
-}
-
-/**
- * Populates the lead source dropdown.
- * @param {string|null} selectedSource - The source to pre-select.
- */
-async function populateLeadSourceDropdown(selectedSource = null) {
-    await populateSelect(leadSourceSelect, null, 'value', 'text', selectedSource, null, leadSourceOptions);
-}
-
-
-// Event listener to open the Lead Form for adding a new lead
-addLeadBtn.addEventListener('click', () => {
-    if (!currentUser) { showMessageBox('Please sign in to add leads.', false); return; }
+function hideLeadForm() {
+    leadFormContainer.classList.add('hidden');
     leadForm.reset();
-    document.getElementById('lead-id').value = ''; // Clear ID for new lead
-    resetAndHideForm(leadForm, leadFormContainer, '', leadFormMessage); // Reset and hide first
-    leadFormContainer.classList.remove('hidden'); // Then show the container
-    populateLeadServicesInterestedDropdown();
-    populateLeadSourceDropdown();
-});
+    document.getElementById('lead-id').value = '';
+    document.getElementById('lead-form-message').classList.add('hidden');
+}
 
-// Event listener to save (add or update) a lead
-leadForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!currentUser) { showMessageBox('Authentication required to save lead.', false); return; }
-
-    const leadId = document.getElementById('lead-id').value;
-
-    const leadData = {
-        contactName: leadContactNameInput.value.trim(),
-        phone: leadPhoneInput.value.trim(),
-        email: leadEmailInput.value.trim(),
-        servicesInterested: leadServicesInterestedSelect.value,
-        eventDate: leadEventDateInput.value ? Timestamp.fromDate(new Date(leadEventDateInput.value)) : null,
-        source: leadSourceSelect.value,
-        additionalDetails: leadAdditionalDetailsTextarea.value.trim(),
-        updatedAt: serverTimestamp()
-    };
-
-    try {
-        if (leadId) {
-            // Update existing lead
-            await updateDoc(doc(db, `leads`, leadId), leadData);
-            showMessageBox('Lead updated successfully!', false);
-        } else {
-            // Add new lead
-            leadData.createdAt = serverTimestamp();
-            leadData.creatorId = currentUser.uid;
-
-            // --- DEBUGGING LOGS START ---
-            console.log("--- Debugging Lead Create Attempt ---");
-            console.log("currentUser (from global):", currentUser);
-            console.log("currentUser.uid (from global):", currentUser ? currentUser.uid : "N/A");
-            console.log("leadData (before addDoc):", JSON.stringify(leadData, null, 2)); // Stringify for full object view
-            console.log("Is currentUser.uid === leadData.creatorId?", currentUser && leadData.creatorId && currentUser.uid === leadData.creatorId);
-            console.log("-----------------------------------");
-            // --- DEBUGGING LOGS END ---
-
-            await addDoc(collection(db, `leads`), leadData);
-            showMessageBox('Lead added successfully!', false);
-        }
-        resetAndHideForm(leadForm, leadFormContainer, '', leadFormMessage); // Clear and hide form
-        renderLeadsGrid();
-    } catch (error) {
-        console.error("Error saving lead:", error);
-        leadFormMessage.textContent = 'Error saving lead: ' + error.message;
-        leadFormMessage.classList.remove('hidden');
-        showMessageBox('Error saving lead: ' + error.message, false);
+function showOpportunityForm() {
+    opportunityFormContainer.classList.remove('hidden');
+    // Ensure all accordions are collapsed by default when form opens
+    document.querySelectorAll('#opportunity-form .accordion-content').forEach(content => {
+        content.classList.add('hidden');
+        content.previousElementSibling.querySelector('.accordion-icon').style.transform = 'rotate(0deg)';
+        content.previousElementSibling.classList.remove('expanded');
+    });
+    // Expand the first accordion (Main Details)
+    const mainDetailsHeader = document.querySelector('#opportunity-form .accordion-item:first-child .accordion-header');
+    if (mainDetailsHeader) {
+        mainDetailsHeader.click(); // Simulate a click to expand
     }
-});
+}
+
+function hideOpportunityForm() {
+    opportunityFormContainer.classList.add('hidden');
+    opportunityForm.reset();
+    document.getElementById('opportunity-id').value = '';
+    document.getElementById('opportunity-form-message').classList.add('hidden');
+    currentOpportunityId = null; // Reset current opportunity being edited
+    workLogsList.innerHTML = ''; // Clear work logs
+    noWorkLogsMessage.classList.remove('hidden'); // Show no work logs message
+    hideWorkLogForm(); // Hide work log entry form
+}
+
+function showWorkLogForm() {
+    workLogFormContainer.classList.remove('hidden');
+}
+
+function hideWorkLogForm() {
+    workLogFormContainer.classList.add('hidden');
+    workLogForm.reset();
+    document.getElementById('work-log-id').value = '';
+    document.getElementById('work-log-opportunity-id').value = '';
+    document.getElementById('work-log-form-message').classList.add('hidden');
+}
+
+function showCountryForm() {
+    countryFormContainer.classList.remove('hidden');
+}
+
+function hideCountryForm() {
+    countryFormContainer.classList.add('hidden');
+    countryForm.reset();
+    document.getElementById('country-id').value = '';
+    document.getElementById('country-form-message').classList.add('hidden');
+}
+
+function showCurrencyForm() {
+    currencyFormContainer.classList.remove('hidden');
+}
+
+function hideCurrencyForm() {
+    currencyFormContainer.classList.add('hidden');
+    currencyForm.reset();
+    document.getElementById('currency-id').value = '';
+    document.getElementById('currency-form-message').classList.add('hidden');
+}
+
+function showPriceBookForm() {
+    priceBookFormContainer.classList.remove('hidden');
+}
+
+function hidePriceBookForm() {
+    priceBookFormContainer.classList.add('hidden');
+    priceBookForm.reset();
+    document.getElementById('price-book-id').value = '';
+    document.getElementById('price-book-form-message').classList.add('hidden');
+}
+
+// --- Data Loading Functions ---
 
 /**
- * Renders or updates the Grid.js table for leads.
- * Fetches lead data from Firestore and displays it.
+ * Fetches data from a Firestore collection.
+ * @param {string} collectionPath - The path to the Firestore collection.
+ * @returns {Promise<Array<Object>>} A promise that resolves to an array of documents.
  */
-async function renderLeadsGrid() {
-    if (!currentUser) {
-        noLeadsMessage.classList.remove('hidden');
-        if (leadsGrid) {
-            leadsGrid.destroy();
-            leadsGrid = null;
-        }
-        leadsGridContainer.innerHTML = '';
-        return;
+async function fetchData(collectionPath) {
+    if (!db || !userId) {
+        console.warn("Firestore or userId not available. Cannot fetch data from:", collectionPath);
+        return [];
     }
-
     try {
-        await waitForGridJs();
-    } catch (error) {
-        leadsGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading lead data.</p>';
-        return;
-    }
-
-    leadsGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Leads...</p>';
-    noLeadsMessage.classList.add('hidden');
-
-    let leadsRef = collection(db, `leads`);
-    let q = query(leadsRef, orderBy('contactName'));
-    // Apply creatorId filter for standard users
-    if (currentUserRole !== 'Admin') {
-        q = query(leadsRef, where('creatorId', '==', currentUser.uid), orderBy('contactName'));
-    }
-    const leadData = [];
-
-    try {
+        const q = query(collection(db, collectionPath));
         const snapshot = await getDocs(q);
-        leadsGridContainer.innerHTML = ''; // Clear loading message
-
-        if (snapshot.empty) {
-            noLeadsMessage.classList.remove('hidden');
-        } else {
-            noLeadsMessage.classList.add('hidden');
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                leadData.push([
-                    doc.id,
-                    data.contactName,
-                    data.phone,
-                    data.email,
-                    data.servicesInterested,
-                    data.eventDate,
-                    data.source,
-                    data.additionalDetails,
-                    data.createdAt,
-                    data.creatorId // Include creatorId for permission checks
-                ]);
-            });
-
-            if (leadsGrid) {
-                leadsGrid.updateConfig({ data: leadData }).forceRender();
-            } else {
-                leadsGrid = new window.gridjs.Grid({
-                    columns: [
-                        { id: 'id', name: 'ID', hidden: true },
-                        { id: 'contactName', name: 'Contact Name', sort: true, filter: true },
-                        { id: 'phone', name: 'Phone', sort: true, filter: true },
-                        { id: 'email', name: 'Email', sort: true, filter: true },
-                        { id: 'servicesInterested', name: 'Services Interested', sort: true, filter: true },
-                        { id: 'eventDate', name: 'Event Date', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
-                        { id: 'source', name: 'Source', sort: true, filter: true },
-                        { id: 'additionalDetails', name: 'Additional Details', hidden: true },
-                        { id: 'createdAt', name: 'Created At', hidden: true },
-                        { id: 'creatorId', name: 'Creator ID', hidden: true }, // Keep creatorId hidden but accessible for actions
-                        {
-                            name: 'Actions',
-                            sort: false,
-                            formatter: (cell, row) => {
-                                const docId = row.cells[0].data;
-                                const creatorId = row.cells[9].data; // Get creatorId from the row data
-                                const canEditDelete = (currentUserRole === 'Admin' || creatorId === currentUser.uid);
-
-                                return window.gridjs.h('div', { className: 'flex space-x-2' },
-                                    window.gridjs.h('button', {
-                                        className: `px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
-                                        onClick: () => canEditDelete ? editLead(docId) : showMessageBox('You do not have permission to edit this lead.', false),
-                                        disabled: !canEditDelete
-                                    }, 'Edit'),
-                                    window.gridjs.h('button', {
-                                        className: `px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
-                                        onClick: () => canEditDelete ? deleteLead(docId) : showMessageBox('You do not have permission to delete this lead.', false),
-                                        disabled: !canEditDelete
-                                    }, 'Delete')
-                                );
-                            }
-                        }
-                    ],
-                    data: leadData,
-                    search: {
-                        selector: (cell, rowIndex, cellIndex) => {
-                            // Search across contact name, phone, email, services, source
-                            if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3 || cellIndex === 4 || cellIndex === 6) {
-                                return cell;
-                            }
-                            return null;
-                        }
-                    },
-                    pagination: { enabled: true, limit: 10, summary: true },
-                    sort: true,
-                    resizable: true,
-                    className: {
-                        container: 'gridjs-container', table: 'min-w-full bg-white shadow-md rounded-lg overflow-hidden',
-                        thead: 'bg-gray-200', th: 'py-3 px-4 text-left text-sm font-medium text-gray-700',
-                        td: 'py-3 px-4 text-left text-sm text-gray-800', tr: 'divide-y divide-gray-200',
-                        footer: 'bg-gray-50 p-4 flex justify-between items-center',
-                        pagination: 'flex items-center space-x-2',
-                        'pagination-summary': 'text-sm text-gray-600', 'pagination-gap': 'text-sm text-gray-400',
-                        'pagination-nav': 'flex space-x-1', 'pagination-nav-prev': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                        'pagination-nav-next': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                        'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                        'pagination-btn-current': 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
-                    },
-                    language: {
-                        'search': { 'placeholder': 'Search leads...' },
-                        'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
-                        'noRecordsFound': 'No Lead Data Available',
-                    }
-                }).render(leadsGridContainer);
-            }
-        }
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return data;
     } catch (error) {
-        console.error("Error rendering leads grid:", error);
-        showMessageBox('Could not load lead data: ' + error.message, false);
-        leadsGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading lead data.</p>';
+        console.error("Error fetching data from", collectionPath, ":", error);
+        showMessageBox(`Error loading data from ${collectionPath}: ${error.message}`, false);
+        return [];
     }
 }
 
 /**
- * Populates the lead form with existing data for editing.
- * @param {string} leadId - The ID of the lead document to edit.
+ * Populates a select element with options from Firestore.
+ * @param {HTMLElement} selectElement - The select element to populate.
+ * @param {Array<Object>} data - Array of objects with id and name properties.
+ * @param {string} valueKey - The key to use for the option's value.
+ * @param {string} textKey - The key to use for the option's text.
+ * @param {string} defaultOptionText - Optional text for the default/placeholder option.
  */
-async function editLead(leadId) {
-    if (!currentUser) { showMessageBox('Please sign in to edit leads.', false); return; }
-
-    try {
-        const docSnap = await getDoc(doc(db, `leads`, leadId));
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            // Check if current user is the creator or an Admin
-            if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
-                showMessageBox('You can only edit leads you have created.', false);
-                return;
-            }
-
-            document.getElementById('lead-id').value = docSnap.id;
-
-            leadFormContainer.classList.remove('hidden');
-            leadFormMessage.classList.add('hidden');
-
-            leadContactNameInput.value = data.contactName || '';
-            leadPhoneInput.value = data.phone || '';
-            leadEmailInput.value = data.email || '';
-            await populateLeadServicesInterestedDropdown(data.servicesInterested);
-            leadEventDateInput.value = formatDateForInput(data.eventDate);
-            await populateLeadSourceDropdown(data.source);
-            leadAdditionalDetailsTextarea.value = data.additionalDetails || '';
-        } else {
-            showMessageBox('Lead not found!', false);
-        }
-    } catch (error) {
-        console.error("Error editing lead:", error);
-        showMessageBox('Error loading lead for edit: ' + error.message, false);
-    }
-}
-
-/**
- * Deletes a lead document from Firestore.
- * Requires Admin role or creator.
- * @param {string} leadId - The ID of the lead document to delete.
- */
-async function deleteLead(leadId) {
-    if (!currentUser) { showMessageBox('Please sign in to delete leads.', false); return; }
-
-    const confirmed = await showMessageBox('Are you sure you want to delete this lead? This action cannot be undone.', true);
-    if (!confirmed) return;
-
-    try {
-        const docSnap = await getDoc(doc(db, `leads`, leadId));
-        if (!docSnap.exists()) {
-            showMessageBox('Lead not found!', false);
-            return;
-        }
-        const data = docSnap.data();
-        // Check if current user is the creator or an Admin
-        if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
-            showMessageBox('You can only delete leads you have created.', false);
-            return;
-        }
-
-        await deleteDoc(doc(db, `leads`, leadId));
-        showMessageBox('Lead deleted successfully!', false);
-        renderLeadsGrid();
-    } catch (error) {
-        console.error("Error deleting lead:", error);
-        showMessageBox('Error deleting lead: ' + error.message, false);
-    }
-}
-
-
-// --- Opportunities Module ---
-
-/**
- * Populates the opportunity customer dropdown with data from the 'customers' collection.
- * @param {string|null} selectedCustomerId - The customer ID to pre-select (optional).
- */
-async function populateOpportunityCustomerDropdown(selectedCustomerId = null) {
-    if (!currentUser) return;
-    const selectElement = opportunityCustomerSelect;
-    selectElement.innerHTML = '<option value="">Select a Customer</option>';
-    let customerQueryRef = collection(db, `customers`);
-    // The security rule for customers allows all authenticated users to read all customers.
-    // So, we don't need to filter by creatorId here.
-    let q = query(customerQueryRef, orderBy('name'));
-    const snapshot = await getDocs(q);
-    snapshot.forEach(doc => {
-        const data = doc.data();
+function populateSelect(selectElement, data, valueKey, textKey, defaultOptionText = 'Select...') {
+    selectElement.innerHTML = `<option value="">${defaultOptionText}</option>`;
+    data.forEach(item => {
         const option = document.createElement('option');
-        option.value = doc.id;
-        option.textContent = data.name;
-        if (selectedCustomerId && doc.id === selectedCustomerId) {
-            option.selected = true;
-        }
+        option.value = item[valueKey];
+        option.textContent = item[textKey];
         selectElement.appendChild(option);
     });
 }
 
-/**
- * Populates the opportunity currency dropdown with data from the 'currencies' collection.
- * @param {string|null} selectedCurrencyCode - The currency code to pre-select (optional).
- */
-async function populateOpportunityCurrencyDropdown(selectedCurrencyCode = null) {
-    if (!currentUser) return;
-    // FIX: Change valueField from 'symbol' to 'code'
-    await populateSelect(opportunityCurrencySelect, `currencies`, 'code', 'name', selectedCurrencyCode);
+// Part 4: Customer and Lead DOM Elements
+
+// Customer Elements
+const addCustomerBtn = document.getElementById('add-customer-btn');
+const customerFormContainer = document.getElementById('customer-form-container');
+const customerForm = document.getElementById('customer-form');
+const cancelCustomerBtn = document.getElementById('cancel-customer-btn');
+const customersGridContainer = document.getElementById('customers-grid-container');
+const noCustomersMessage = document.getElementById('no-customers-message');
+const customerSearchInput = document.getElementById('customer-search');
+let customersGrid; // Grid.js instance
+
+// Lead Elements
+const addLeadBtn = document.getElementById('add-lead-btn');
+const leadFormContainer = document.getElementById('lead-form-container');
+const leadForm = document.getElementById('lead-form');
+const cancelLeadBtn = document.getElementById('cancel-lead-btn');
+const leadsGridContainer = document.getElementById('leads-grid-container');
+const noLeadsMessage = document.getElementById('no-leads-message');
+const leadSearchInput = document.getElementById('lead-search');
+let leadsGrid; // Grid.js instance
+
+// Part 5: Customer and Lead Logic
+
+// --- Customer Logic ---
+
+async function setupCustomerForm(customer = null) {
+    const countries = await fetchData(`artifacts/${appId}/public/data/countries`);
+    populateSelect(document.getElementById('customer-country'), countries, 'name', 'name', 'Select Country');
+
+    if (customer) {
+        document.getElementById('customer-id').value = customer.id;
+        document.getElementById('customer-type').value = customer.type || 'Individual';
+        document.getElementById('customer-name').value = customer.name || '';
+        document.getElementById('customer-email').value = customer.email || '';
+        document.getElementById('customer-phone').value = customer.phone || '';
+        document.getElementById('customer-address').value = customer.address || '';
+        document.getElementById('customer-country').value = customer.country || '';
+        document.getElementById('customer-contact-method').value = customer.preferredContactMethod || 'Email';
+        document.getElementById('customer-industry').value = customer.industry || '';
+        document.getElementById('customer-details').value = customer.additionalDetails || '';
+        document.getElementById('customer-source').value = customer.source || '';
+        document.getElementById('customer-active').checked = customer.active !== undefined ? customer.active : true;
+    } else {
+        customerForm.reset();
+        document.getElementById('customer-id').value = '';
+        document.getElementById('customer-active').checked = true; // Default to active for new customers
+    }
+    showCustomerForm();
 }
 
-/**
- * Populates the opportunity price book dropdown with data from the 'priceBooks' collection.
- * @param {string|null} selectedPriceBookId - The price book ID to pre-select (optional).
- * @param {string|null} currencyCode - The currency code to filter price books by (optional).
- */
-async function populateOpportunityPriceBookDropdown(selectedPriceBookId = null, currencyCode = null) {
-    if (!currentUser) return;
-    const selectElement = opportunityPriceBookSelect;
-    selectElement.innerHTML = '<option value="">Select a Price Book</option>'; // Default empty option
-
-    let priceBookQueryRef = collection(db, `priceBooks`);
-    let q;
-
-    if (currencyCode) {
-        // Filter by currency code (now stored in 'currency' field) and ensure it's active
-        q = query(priceBookQueryRef,
-            where('currency', '==', currencyCode), // Filter by code
-            where('isActive', '==', true),
-            orderBy('name')
-        );
-    } else {
-        // If no currency, still only show active ones
-        q = query(priceBookQueryRef, where('isActive', '==', true), orderBy('name'));
+async function handleSaveCustomer(event) {
+    event.preventDefault(); // Prevent default form submission
+    if (!db || !userId) {
+        showMessageBox("Authentication required to save customer.", false);
+        return;
     }
+
+    const customerId = document.getElementById('customer-id').value;
+    const messageElement = document.getElementById('customer-form-message');
+    messageElement.classList.add('hidden');
+
+    const customerData = {
+        type: document.getElementById('customer-type').value,
+        name: document.getElementById('customer-name').value,
+        email: document.getElementById('customer-email').value,
+        phone: document.getElementById('customer-phone').value,
+        address: document.getElementById('customer-address').value,
+        country: document.getElementById('customer-country').value,
+        preferredContactMethod: document.getElementById('customer-contact-method').value,
+        industry: document.getElementById('customer-industry').value,
+        additionalDetails: document.getElementById('customer-details').value,
+        source: document.getElementById('customer-source').value,
+        active: document.getElementById('customer-active').checked,
+        updatedAt: FieldValue.serverTimestamp(),
+        userId: userId // Store the user ID for ownership/security rules
+    };
 
     try {
-        const snapshot = await getDocs(q);
-        let defaultSelected = false;
-
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const option = document.createElement('option');
-            option.value = doc.id;
-            option.textContent = data.name;
-
-            // Prioritize explicit selection, then auto-select first active matching currency
-            if (selectedPriceBookId && doc.id === selectedPriceBookId) {
-                option.selected = true;
-                defaultSelected = true;
-            } else if (currencyCode && !defaultSelected && data.currency === currencyCode && data.isActive) {
-                // If a currency is specified and no explicit price book is selected,
-                // select the first active price book that matches the currency.
-                // This logic might need refinement if you have multiple active price books for one currency.
-                option.selected = true;
-                defaultSelected = true;
-            }
-            selectElement.appendChild(option);
-        });
-
-        // If no price book was selected (either explicitly or by currency match),
-        // and there are options, ensure the default "Select a Price Book" is shown.
-        if (!defaultSelected && selectElement.options.length > 1) {
-            selectElement.value = ''; // Ensure "Select a Price Book" is chosen
+        const collectionRef = collection(db, `artifacts/${appId}/users/${userId}/customers`);
+        if (customerId) {
+            await updateDoc(doc(collectionRef, customerId), customerData);
+            showMessageBox("Customer updated successfully!", false);
+        } else {
+            customerData.createdAt = FieldValue.serverTimestamp();
+            await addDoc(collectionRef, customerData);
+            showMessageBox("Customer added successfully!", false);
         }
-
+        hideCustomerForm();
+        await loadCustomers(); // Reload grid
+        await updateDashboard();
     } catch (error) {
-        console.error(`Error fetching price books for dropdown (currency: ${currencyCode}):`, error);
-        showMessageBox(`Could not load price books for selected currency.`, false);
+        console.error("Error saving customer:", error);
+        messageElement.textContent = `Error saving customer: ${error.message}`;
+        messageElement.classList.remove('hidden');
     }
 }
 
-// Event listener for currency selection change to update price book dropdown
-opportunityCurrencySelect.addEventListener('change', () => {
-    const selectedCurrencyCode = opportunityCurrencySelect.value; // Now gets the code
-    populateOpportunityPriceBookDropdown(null, selectedCurrencyCode); // Pass null for selectedPriceBookId, let it auto-select
-});
+async function loadCustomers() {
+    if (!db || !userId) {
+        noCustomersMessage.classList.remove('hidden');
+        if (customersGrid) customersGrid.updateConfig({ data: [] }).forceRender();
+        return;
+    }
 
+    const customersCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/customers`);
 
-// Event listener to open the Opportunity Form for adding a new opportunity
-addOpportunityBtn.addEventListener('click', async () => { // Made async to await dropdown populations
-    console.log('Add Opportunity button clicked.');
-    if (!currentUser) { showMessageBox('Please sign in to add opportunities.', false); return; }
-    document.getElementById('opportunity-id').value = ''; // Clear ID for new opportunity
-    resetAndHideForm(opportunityForm, opportunityFormContainer, '', opportunityFormMessage); // Reset and hide first
-    opportunityFormContainer.classList.remove('hidden'); // Then show the container
+    // Setup real-time listener
+    onSnapshot(customersCollectionRef, snapshot => {
+        const customers = [];
+        snapshot.forEach(doc => {
+            customers.push({ id: doc.id, ...doc.data() });
+        });
+        renderCustomersGrid(customers);
+    }, error => {
+        console.error("Error loading customers in real-time:", error);
+        showMessageBox(`Error loading customers: ${error.message}`, false);
+        noCustomersMessage.classList.remove('hidden');
+        if (customersGrid) customersGrid.updateConfig({ data: [] }).forceRender();
+    });
+}
 
-    // Retrieve work log elements here as the opportunity form container is now visible
-    workLogsListContainer = document.getElementById('work-logs-list-container');
-    noWorkLogsMessage = document.getElementById('no-work-logs-message');
-    workLogsList = document.getElementById('work-logs-list');
-    addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
-    workLogFormContainer = document.getElementById('work-log-form-container');
-    workLogForm = document.getElementById('work-log-form');
-    workLogIdInput = document.getElementById('work-log-id');
-    workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
-    workLogDateInput = document.getElementById('work-log-date');
-    workLogTypeSelect = document.getElementById('work-log-type');
-    workLogDetailsTextarea = document.getElementById('work-log-details');
-    cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
-    workLogFormMessage = document.getElementById('work-log-form-message');
+function renderCustomersGrid(customers) {
+    const data = customers.map(customer => [
+        customer.name,
+        customer.email,
+        customer.phone,
+        customer.country,
+        customer.active ? 'Yes' : 'No',
+        customer.id
+    ]);
 
-    // Reset and hide work log form and list when creating a new opportunity
-    resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
-    if (workLogsList) workLogsList.innerHTML = '';
-    if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden');
-    currentOpportunityId = null; // No opportunity selected yet
-    console.log('addOpportunityBtn click: currentOpportunityId reset to null.');
+    if (!customersGrid) {
+        customersGrid = new gridjs.Grid({
+            columns: [
+                { name: 'Name', width: '20%' },
+                { name: 'Email', width: '25%' },
+                { name: 'Phone', width: '15%' },
+                { name: 'Country', width: '15%' },
+                { name: 'Active', width: '10%' },
+                {
+                    name: 'Actions',
+                    width: '15%',
+                    formatter: (cell, row) => {
+                        return gridjs.h('div', { className: 'flex space-x-2' },
+                            gridjs.h('button', {
+                                className: 'px-2 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
+                                onclick: () => editCustomer(row.cells[5].data)
+                            }, 'Edit'),
+                            gridjs.h('button', {
+                                className: 'px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-sm',
+                                onclick: () => deleteCustomer(row.cells[5].data)
+                            }, 'Delete')
+                        );
+                    },
+                    sort: false,
+                }
+            ],
+            data: data,
+            search: true,
+            pagination: {
+                enabled: true,
+                limit: 10
+            },
+            sort: true,
+            className: {
+                table: 'min-w-full divide-y divide-gray-200',
+                thead: 'bg-gray-50',
+                th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+                tbody: 'bg-white divide-y divide-gray-200',
+                td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                footer: 'p-4',
+                pagination: 'flex items-center justify-between',
+                container: 'overflow-x-auto'
+            }
+        }).render(customersGridContainer);
+        console.log('Grid.js is now available.'); // Log once when grid is initialized
+    } else {
+        customersGrid.updateConfig({ data: data }).forceRender();
+    }
 
+    if (customers.length === 0) {
+        noCustomersMessage.classList.remove('hidden');
+    } else {
+        noCustomersMessage.classList.add('hidden');
+    }
+}
 
-    // Populate dropdowns. Order matters: currency first, then price book.
-    await populateOpportunityCustomerDropdown();
-    await populateOpportunityCurrencyDropdown();
-    await populateOpportunityPriceBookDropdown();
+async function editCustomer(customerId) {
+    if (!db || !userId) return;
+    try {
+        const docRef = doc(db, `artifacts/${appId}/users/${userId}/customers`, customerId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            await setupCustomerForm(docSnap.data());
+            document.getElementById('customer-id').value = customerId; // Ensure ID is set
+        } else {
+            showMessageBox("Customer not found!", false);
+        }
+    } catch (error) {
+        console.error("Error editing customer:", error);
+        showMessageBox(`Error loading customer for edit: ${error.message}`, false);
+    }
+}
 
-    // Setup accordions for the new form
-    setupAccordions();
+async function deleteCustomer(customerId) {
+    const confirmDelete = await showMessageBox("Are you sure you want to delete this customer?", true);
+    if (!confirmDelete) return;
+
+    if (!db || !userId) return;
+    try {
+        await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/customers`, customerId));
+        showMessageBox("Customer deleted successfully!", false);
+        await loadCustomers(); // Reload grid
+        await updateDashboard();
+    }
+    catch (error) {
+        console.error("Error deleting customer:", error);
+        showMessageBox(`Error deleting customer: ${error.message}`, false);
+    }
+}
+
+// --- Lead Logic ---
+
+async function setupLeadForm(lead = null) {
+    // Populate Services Interested (example data, replace with Firestore if needed)
+    const services = [
+        { id: 'Photography', name: 'Photography' },
+        { id: 'Videography', name: 'Videography' },
+        { id: 'Both', name: 'Both' },
+        { id: 'Other', name: 'Other' }
+    ];
+    populateSelect(document.getElementById('lead-services-interested'), services, 'id', 'name', 'Select Service');
+
+    // Populate Source (example data, replace with Firestore if needed)
+    const sources = [
+        { id: 'Website', name: 'Website' },
+        { id: 'Referral', name: 'Referral' },
+        { id: 'Advertisement', name: 'Advertisement' },
+        { id: 'Social Media', name: 'Social Media' },
+        { id: 'Event', name: 'Event' },
+        { id: 'Other', name: 'Other' }
+    ];
+    populateSelect(document.getElementById('lead-source'), sources, 'id', 'name', 'Select Source');
+
+    if (lead) {
+        document.getElementById('lead-id').value = lead.id;
+        document.getElementById('lead-contact-name').value = lead.contactName || '';
+        document.getElementById('lead-phone').value = lead.phone || '';
+        document.getElementById('lead-email').value = lead.email || '';
+        document.getElementById('lead-services-interested').value = lead.servicesInterested || '';
+        document.getElementById('lead-event-date').value = lead.eventDate || '';
+        document.getElementById('lead-source').value = lead.source || '';
+        document.getElementById('lead-additional-details').value = lead.additionalDetails || '';
+    } else {
+        leadForm.reset();
+        document.getElementById('lead-id').value = '';
+    }
+    showLeadForm();
+}
+
+async function handleSaveLead(event) {
+    event.preventDefault(); // Prevent default form submission
+    if (!db || !userId) {
+        showMessageBox("Authentication required to save lead.", false);
+        return;
+    }
+
+    const leadId = document.getElementById('lead-id').value;
+    const messageElement = document.getElementById('lead-form-message');
+    messageElement.classList.add('hidden');
+
+    const leadData = {
+        contactName: document.getElementById('lead-contact-name').value,
+        phone: document.getElementById('lead-phone').value,
+        email: document.getElementById('lead-email').value,
+        servicesInterested: document.getElementById('lead-services-interested').value,
+        eventDate: document.getElementById('lead-event-date').value,
+        source: document.getElementById('lead-source').value,
+        additionalDetails: document.getElementById('lead-additional-details').value,
+        updatedAt: FieldValue.serverTimestamp(),
+        userId: userId
+    };
+
+    try {
+        const collectionRef = collection(db, `artifacts/${appId}/users/${userId}/leads`);
+        if (leadId) {
+            await updateDoc(doc(collectionRef, leadId), leadData);
+            showMessageBox("Lead updated successfully!", false);
+        } else {
+            leadData.createdAt = FieldValue.serverTimestamp();
+            await addDoc(collectionRef, leadData);
+            showMessageBox("Lead added successfully!", false);
+        }
+        hideLeadForm();
+        await loadLeads(); // Reload grid
+    } catch (error) {
+        console.error("Error saving lead:", error);
+        messageElement.textContent = `Error saving lead: ${error.message}`;
+        messageElement.classList.remove('hidden');
+    }
+}
+
+async function loadLeads() {
+    if (!db || !userId) {
+        noLeadsMessage.classList.remove('hidden');
+        if (leadsGrid) leadsGrid.updateConfig({ data: [] }).forceRender();
+        return;
+    }
+
+    onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/leads`), snapshot => {
+        const leads = [];
+        snapshot.forEach(doc => {
+            leads.push({ id: doc.id, ...doc.data() });
+        });
+        renderLeadsGrid(leads);
+    }, error => {
+        console.error("Error loading leads in real-time:", error);
+        showMessageBox(`Error loading leads: ${error.message}`, false);
+        noLeadsMessage.classList.remove('hidden');
+        if (leadsGrid) leadsGrid.updateConfig({ data: [] }).forceRender();
+    });
+}
+
+function renderLeadsGrid(leads) {
+    const data = leads.map(lead => [
+        lead.contactName,
+        lead.email,
+        lead.phone,
+        lead.servicesInterested,
+        lead.eventDate,
+        lead.source,
+        lead.id
+    ]);
+
+    if (!leadsGrid) {
+        leadsGrid = new gridjs.Grid({
+            columns: [
+                { name: 'Contact Name', width: '20%' },
+                { name: 'Email', width: '20%' },
+                { name: 'Phone', width: '15%' },
+                { name: 'Service', width: '15%' },
+                { name: 'Event Date', width: '10%' },
+                { name: 'Source', width: '10%' },
+                {
+                    name: 'Actions',
+                    width: '10%',
+                    formatter: (cell, row) => {
+                        return gridjs.h('div', { className: 'flex space-x-2' },
+                            gridjs.h('button', {
+                                className: 'px-2 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
+                                onclick: () => editLead(row.cells[6].data)
+                            }, 'Edit'),
+                            gridjs.h('button', {
+                                className: 'px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-sm',
+                                onclick: () => deleteLead(row.cells[6].data)
+                            }, 'Delete')
+                        );
+                    },
+                    sort: false,
+                }
+            ],
+            data: data,
+            search: true,
+            pagination: {
+                enabled: true,
+                limit: 10
+            },
+            sort: true,
+            className: {
+                table: 'min-w-full divide-y divide-gray-200',
+                thead: 'bg-gray-50',
+                th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+                tbody: 'bg-white divide-y divide-gray-200',
+                td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                footer: 'p-4',
+                pagination: 'flex items-center justify-between',
+                container: 'overflow-x-auto'
+            }
+        }).render(leadsGridContainer);
+    } else {
+        leadsGrid.updateConfig({ data: data }).forceRender();
+    }
+
+    if (leads.length === 0) {
+        noLeadsMessage.classList.remove('hidden');
+    } else {
+        noLeadsMessage.classList.add('hidden');
+    }
+}
+
+async function editLead(leadId) {
+    if (!db || !userId) return;
+    try {
+        const docRef = doc(db, `artifacts/${appId}/users/${userId}/leads`, leadId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            await setupLeadForm(docSnap.data());
+            document.getElementById('lead-id').value = leadId; // Ensure ID is set
+        } else {
+            showMessageBox("Lead not found!", false);
+        }
+    } catch (error) {
+        console.error("Error editing lead:", error);
+        showMessageBox(`Error loading lead for edit: ${error.message}`, false);
+    }
+}
+
+async function deleteLead(leadId) {
+    const confirmDelete = await showMessageBox("Are you sure you want to delete this lead?", true);
+    if (!confirmDelete) return;
+
+    if (!db || !userId) return;
+    try {
+        await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/leads`, leadId));
+        showMessageBox("Lead deleted successfully!", false);
+        await loadLeads(); // Reload grid
+    } catch (error) {
+        console.error("Error deleting lead:", error);
+        showMessageBox(`Error deleting lead: ${error.message}`, false);
+    }
+}
+
+// Part 6: Opportunity DOM Elements
+
+// Opportunity Elements
+const addOpportunityBtn = document.getElementById('add-opportunity-btn');
+const opportunityFormContainer = document.getElementById('opportunity-form-container');
+const opportunityForm = document.getElementById('opportunity-form'); // This is the element in question
+const cancelOpportunityBtn = document.getElementById('cancel-opportunity-btn');
+const opportunitiesGridContainer = document.getElementById('opportunities-grid-container');
+const noOpportunitiesMessage = document.getElementById('no-opportunities-message');
+const opportunitySearchInput = document.getElementById('opportunity-search');
+let opportunitiesGrid; // Grid.js instance
+
+// Work Log Elements (within Opportunity Form)
+const addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
+const workLogFormContainer = document.getElementById('work-log-form-container');
+const workLogForm = document.getElementById('work-log-form');
+const cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
+const workLogsList = document.getElementById('work-logs-list');
+const noWorkLogsMessage = document.getElementById('no-work-logs-message');
+
+// Part 7: Opportunity Logic
+
+// --- Opportunity Logic ---
+
+async function setupOpportunityForm(opportunity = null) {
+    const customers = await fetchData(`artifacts/${appId}/users/${userId}/customers`);
+    populateSelect(document.getElementById('opportunity-customer'), customers, 'id', 'name', 'Select a Customer');
+
+    const currencies = await fetchData(`artifacts/${appId}/public/data/currencies`);
+    populateSelect(document.getElementById('opportunity-currency'), currencies, 'code', 'code', 'Select...');
+
+    const priceBooks = await fetchData(`artifacts/${appId}/public/data/priceBooks`);
+    populateSelect(document.getElementById('opportunity-price-book'), priceBooks, 'id', 'name', 'Select a Price Book');
+
+    if (opportunity) {
+        currentOpportunityId = opportunity.id;
+        document.getElementById('opportunity-id').value = opportunity.id;
+        document.getElementById('opportunity-name').value = opportunity.name || '';
+        document.getElementById('opportunity-customer').value = opportunity.customerId || '';
+        document.getElementById('opportunity-currency').value = opportunity.currency || '';
+        document.getElementById('opportunity-price-book').value = opportunity.priceBookId || '';
+        document.getElementById('opportunity-start-date').value = opportunity.expectedStartDate || '';
+        document.getElementById('opportunity-close-date').value = opportunity.expectedCloseDate || '';
+        document.getElementById('opportunity-sales-stage').value = opportunity.salesStage || 'Prospect';
+        document.getElementById('opportunity-probability').value = opportunity.probability !== undefined ? opportunity.probability : '';
+        document.getElementById('opportunity-value').value = opportunity.value !== undefined ? opportunity.value : '';
+        document.getElementById('opportunity-notes').value = opportunity.notes || '';
+
+        await loadWorkLogs(opportunity.id); // Load work logs for this opportunity
+    } else {
+        opportunityForm.reset();
+        document.getElementById('opportunity-id').value = '';
+        currentOpportunityId = null;
+        workLogsList.innerHTML = ''; // Clear work logs for new opportunity
+        noWorkLogsMessage.classList.remove('hidden');
+    }
+    showOpportunityForm();
     console.log('Add Opportunity form setup complete.');
-});
+}
 
-// Event listener to save (add or update) an opportunity
-opportunityForm.addEventListener('submit', async (e) => {
-    console.log('Opportunity form submit event triggered.');
-    e.preventDefault();
-    if (!currentUser) {
-        showMessageBox('Authentication required to save opportunity.', false);
-        console.log('Authentication failed for opportunity save.');
+async function handleSaveOpportunity(event) {
+    event.preventDefault(); // Prevent default form submission
+    console.log('handleSaveOpportunity: Form submit event triggered.'); // Diagnostic log
+
+    if (!db || !userId) {
+        showMessageBox("Authentication required to save opportunity.", false);
         return;
     }
 
     const opportunityId = document.getElementById('opportunity-id').value;
-    console.log('Opportunity ID on submit:', opportunityId);
-
-    const selectedCustomerOption = opportunityCustomerSelect.options[opportunityCustomerSelect.selectedIndex];
-    const customerName = selectedCustomerOption ? selectedCustomerOption.textContent : '';
+    const messageElement = document.getElementById('opportunity-form-message');
+    messageElement.classList.add('hidden');
 
     const opportunityData = {
-        name: opportunityNameInput.value.trim(),
-        customerId: opportunityCustomerSelect.value,
-        customerName: customerName,
-        currency: opportunityCurrencySelect.value, // Now stores the currency CODE
-        priceBookId: opportunityPriceBookSelect.value,
-        expectedStartDate: opportunityExpectedStartDateInput.value ? Timestamp.fromDate(new Date(opportunityExpectedStartDateInput.value)) : null,
-        expectedCloseDate: opportunityExpectedCloseDateInput.value ? Timestamp.fromDate(new Date(opportunityExpectedCloseDateInput.value)) : null,
-        salesStage: opportunitySalesStageSelect.value,
-        probability: parseInt(opportunityProbabilityInput.value, 10),
-        value: parseFloat(opportunityValueInput.value),
-        notes: opportunityNotesTextarea.value.trim(),
-        updatedAt: serverTimestamp()
+        name: document.getElementById('opportunity-name').value,
+        customerId: document.getElementById('opportunity-customer').value,
+        currency: document.getElementById('opportunity-currency').value,
+        priceBookId: document.getElementById('opportunity-price-book').value,
+        expectedStartDate: document.getElementById('opportunity-start-date').value,
+        expectedCloseDate: document.getElementById('opportunity-close-date').value,
+        salesStage: document.getElementById('opportunity-sales-stage').value,
+        probability: parseFloat(document.getElementById('opportunity-probability').value) || 0,
+        value: parseFloat(document.getElementById('opportunity-value').value) || 0,
+        notes: document.getElementById('opportunity-notes').value,
+        updatedAt: FieldValue.serverTimestamp(),
+        userId: userId
     };
-    console.log('Opportunity Data prepared:', opportunityData);
 
     try {
+        const collectionRef = collection(db, `artifacts/${appId}/users/${userId}/opportunities`);
         if (opportunityId) {
-            console.log(`Attempting to update opportunity with ID: ${opportunityId}`);
-            await updateDoc(doc(db, `opportunities`, opportunityId), opportunityData);
-            console.log('Opportunity updated successfully in Firestore.');
-            showMessageBox('Opportunity updated successfully!', false);
-            currentOpportunityId = opportunityId; // Ensure it's set for updates too
-            console.log("Opportunity Updated. currentOpportunityId set to:", currentOpportunityId);
-            await renderWorkLogsList(currentOpportunityId); // Re-render work logs in case of update
+            await updateDoc(doc(collectionRef, opportunityId), opportunityData);
+            showMessageBox("Opportunity updated successfully!", false);
         } else {
-            opportunityData.createdAt = serverTimestamp();
-            opportunityData.creatorId = currentUser.uid;
-            console.log('Attempting to add new opportunity:', opportunityData);
-            const newDocRef = await addDoc(collection(db, `opportunities`), opportunityData);
-            console.log('New opportunity added successfully to Firestore. Doc ID:', newDocRef.id);
-            showMessageBox('Opportunity added successfully!', false);
-            currentOpportunityId = newDocRef.id; // THIS IS THE KEY: Set currentOpportunityId after a new opportunity is created
-            console.log("New Opportunity Created. currentOpportunityId set to:", currentOpportunityId);
-            document.getElementById('opportunity-id').value = newDocRef.id; // Keep the ID in the hidden field for subsequent edits/work logs
-            await renderWorkLogsList(currentOpportunityId); // Render empty work logs list for new opportunity
+            opportunityData.createdAt = FieldValue.serverTimestamp();
+            const docRef = await addDoc(collectionRef, opportunityData);
+            currentOpportunityId = docRef.id; // Set ID for new opportunity
+            showMessageBox("Opportunity added successfully!", false);
         }
-        console.log('Rendering opportunities grid and updating dashboard stats.');
-        renderOpportunitiesGrid();
-        updateDashboardStats();
-
-        // Ensure work log form is hidden and the add work log button is visible.
-        if (workLogFormContainer) workLogFormContainer.classList.add('hidden');
-        if (addWorkLogEntryBtn) addWorkLogEntryBtn.classList.remove('hidden');
-        console.log('Opportunity save process completed.');
-
+        hideOpportunityForm();
+        await loadOpportunities(); // Reload grid
+        await updateDashboard();
     } catch (error) {
-        console.error("Error saving opportunity in try-catch:", error);
-        opportunityFormMessage.textContent = 'Error saving opportunity: ' + error.message;
-        opportunityFormMessage.classList.remove('hidden');
-        showMessageBox('Error saving opportunity: ' + error.message, false);
-    }
-});
-
-/**
- * Renders or updates the Grid.js table for opportunities.
- * Fetches opportunity data from Firestore and displays it.
- */
-async function renderOpportunitiesGrid() {
-    if (!currentUser) {
-        noOpportunitiesMessage.classList.remove('hidden');
-        if (opportunitiesGrid) {
-            opportunitiesGrid.destroy();
-            opportunitiesGrid = null;
-        }
-        opportunitiesGridContainer.innerHTML = '';
-        return;
-    }
-
-    // Ensure window.gridjs is available before attempting to use it
-    try {
-        await waitForGridJs();
-    } catch (error) {
-        // Error message already shown by waitForGridJs
-        opportunitiesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading opportunity data.</p>';
-        return;
-    }
-
-    opportunitiesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Opportunities...</p>';
-    noOpportunitiesMessage.classList.add('hidden');
-
-    let opportunitiesRef = collection(db, `opportunities`);
-    let q = query(opportunitiesRef, orderBy('expectedCloseDate'));
-    if (currentUserRole !== 'Admin') {
-        q = query(opportunitiesRef, where('creatorId', '==', currentUser.uid), orderBy('expectedCloseDate'));
-    }
-    const opportunityData = [];
-
-    try {
-        const snapshot = await getDocs(q);
-        opportunitiesGridContainer.innerHTML = ''; // Clear loading message
-
-        if (snapshot.empty) {
-            noOpportunitiesMessage.classList.remove('hidden');
-        } else {
-            noOpportunitiesMessage.classList.add('hidden'); // Ensure it's hidden if data is present
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                opportunityData.push([
-                    doc.id,
-                    data.name,
-                    data.customerName,
-                    data.salesStage,
-                    data.probability,
-                    data.value,
-                    data.currency, // This is now the currency CODE
-                    data.expectedCloseDate,
-                    data.createdAt,
-                    data.creatorId // Added creatorId for rule check
-                ]);
-            });
-
-            if (opportunitiesGrid) {
-                opportunitiesGrid.updateConfig({ data: opportunityData }).forceRender();
-            } else {
-                opportunitiesGrid = new window.gridjs.Grid({
-                    columns: [
-                        { id: 'id', name: 'ID', hidden: true },
-                        { id: 'name', name: 'Opportunity Name', sort: true, filter: true },
-                        { id: 'customerName', name: 'Customer', sort: true, filter: true },
-                        { id: 'salesStage', name: 'Stage', sort: true, filter: true },
-                        { id: 'probability', name: 'Probability (%)', sort: true, filter: true },
-                        {
-                            id: 'value',
-                            name: 'Value',
-                            sort: true,
-                            filter: true,
-                            formatter: (cell, row) => {
-                                const currencyCode = row.cells[6].data; // Get currency CODE from the row
-                                const currencySymbol = currencySymbolsMap[currencyCode] || currencyCode; // Look up symbol or fallback to code
-                                return cell.toLocaleString('en-US', { style: 'currency', currency: currencyCode || 'USD' });
-                            }
-                        },
-                        { id: 'currency', name: 'Currency Code', sort: true, filter: true }, // Changed column name
-                        { id: 'expectedCloseDate', name: 'Close Date', sort: true, formatter: (cell) => formatDateForDisplay(cell) },
-                        { id: 'creatorId', name: 'Creator ID', hidden: true }, // Keep creatorId hidden but accessible for actions
-                        {
-                            name: 'Actions',
-                            sort: false,
-                            formatter: (cell, row) => {
-                                const docId = row.cells[0].data;
-                                const creatorId = row.cells[8].data; // Get creatorId from the row data
-                                const canEditDelete = (currentUserRole === 'Admin' || creatorId === currentUser.uid);
-
-                                return window.gridjs.h('div', { className: 'flex space-x-2' },
-                                    window.gridjs.h('button', {
-                                        className: `px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
-                                        onClick: () => canEditDelete ? editOpportunity(docId) : showMessageBox('You do not have permission to edit this opportunity.', false),
-                                        disabled: !canEditDelete
-                                    }, 'Edit'),
-                                    window.gridjs.h('button', {
-                                        className: `px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm ${canEditDelete ? '' : 'opacity-50 cursor-not-allowed'}`,
-                                        onClick: () => canEditDelete ? deleteOpportunity(docId) : showMessageBox('You do not have permission to delete this opportunity.', false),
-                                        disabled: !canEditDelete
-                                    }, 'Delete')
-                                );
-                            }
-                        }
-                    ],
-                    data: opportunityData,
-                    search: {
-                        selector: (cell, rowIndex, cellIndex) => {
-                            // Search across name, customerName, salesStage, currency code
-                            if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3 || cellIndex === 6) {
-                                return cell;
-                            }
-                            return null;
-                        }
-                    },
-                    pagination: { enabled: true, limit: 10, summary: true },
-                    sort: true,
-                    resizable: true,
-                    className: {
-                        container: 'gridjs-container', table: 'min-w-full bg-white shadow-md rounded-lg overflow-hidden',
-                        thead: 'bg-gray-200', th: 'py-3 px-4 text-left text-sm font-medium text-gray-700',
-                        td: 'py-3 px-4 text-left text-sm text-gray-800', tr: 'divide-y divide-gray-200',
-                        footer: 'bg-gray-50 p-4 flex justify-between items-center',
-                        pagination: 'flex items-center space-x-2',
-                        'pagination-summary': 'text-sm text-gray-600', 'pagination-gap': 'text-sm text-gray-400',
-                        'pagination-nav': 'flex space-x-1', 'pagination-nav-prev': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                        'pagination-nav-next': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                        'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-300',
-                        'pagination-btn-current': 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
-                    },
-                    language: {
-                        'search': { 'placeholder': 'Search opportunities...' },
-                        'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
-                        'noRecordsFound': 'No Opportunity Data Available',
-                    }
-                }).render(opportunitiesGridContainer);
-            }
-        }
-    } catch (error) {
-        console.error("Error rendering opportunities grid:", error);
-        showMessageBox('Could not load opportunity data: ' + error.message, false);
-        opportunitiesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading opportunity data.</p>';
+        console.error("Error saving opportunity:", error);
+        messageElement.textContent = `Error saving opportunity: ${error.message}`;
+        messageElement.classList.remove('hidden');
     }
 }
 
-/**
- * Populates the opportunity form with existing data for editing.
- * @param {string} opportunityId - The ID of the opportunity document to edit.
- */
-async function editOpportunity(opportunityId) {
-    console.log('editOpportunity called for ID:', opportunityId);
-    if (!currentUser) { showMessageBox('Please sign in to edit opportunities.', false); return; }
+async function loadOpportunities() {
+    if (!db || !userId) {
+        noOpportunitiesMessage.classList.remove('hidden');
+        if (opportunitiesGrid) opportunitiesGrid.updateConfig({ data: [] }).forceRender();
+        return;
+    }
 
-    try {
-        const docSnap = await getDoc(doc(db, `opportunities`, opportunityId));
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            // Check if current user is the creator or an Admin
-            if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
-                showMessageBox('You can only edit opportunities you have created.', false);
-                console.log('Permission denied to edit opportunity:', opportunityId);
-                return;
+    onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/opportunities`), async snapshot => {
+        const opportunities = [];
+        for (const docSnap of snapshot.docs) { // Renamed doc to docSnap to avoid conflict with import
+            const opp = { id: docSnap.id, ...docSnap.data() };
+            // Fetch customer name
+            if (opp.customerId) {
+                try {
+                    const customerSnap = await getDoc(doc(db, `artifacts/${appId}/users/${userId}/customers`, opp.customerId));
+                    opp.customerName = customerSnap.exists() ? customerSnap.data().name : 'Unknown Customer';
+                } catch (error) {
+                    console.warn(`Could not fetch customer ${opp.customerId}:`, error);
+                    opp.customerName = 'Error Loading Customer';
+                }
+            } else {
+                opp.customerName = 'N/A';
             }
+            opportunities.push(opp);
+        }
+        renderOpportunitiesGrid(opportunities);
+    }, error => {
+        console.error("Error loading opportunities in real-time:", error);
+        showMessageBox(`Error loading opportunities: ${error.message}`, false);
+        noOpportunitiesMessage.classList.remove('hidden');
+        if (opportunitiesGrid) opportunitiesGrid.updateConfig({ data: [] }).forceRender();
+    });
+}
 
-            document.getElementById('opportunity-id').value = docSnap.id;
-            currentOpportunityId = docSnap.id; // Set the global currentOpportunityId
-            console.log('Editing opportunity. currentOpportunityId set to:', currentOpportunityId);
+function renderOpportunitiesGrid(opportunities) {
+    const data = opportunities.map(opportunity => [
+        opportunity.name,
+        opportunity.customerName, // Display fetched customer name
+        `${opportunity.currency} ${opportunity.value.toFixed(2)}`,
+        opportunity.salesStage,
+        `${opportunity.probability}%`,
+        opportunity.expectedCloseDate,
+        opportunity.id
+    ]);
 
+    if (!opportunitiesGrid) {
+        opportunitiesGrid = new gridjs.Grid({
+            columns: [
+                { name: 'Opportunity Name', width: '20%' },
+                { name: 'Customer', width: '20%' },
+                { name: 'Value', width: '15%' },
+                { name: 'Stage', width: '15%' },
+                { name: 'Probability', width: '10%' },
+                { name: 'Close Date', width: '10%' },
+                {
+                    name: 'Actions',
+                    width: '10%',
+                    formatter: (cell, row) => {
+                        return gridjs.h('div', { className: 'flex space-x-2' },
+                            gridjs.h('button', {
+                                className: 'px-2 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
+                                onclick: () => editOpportunity(row.cells[6].data)
+                            }, 'Edit'),
+                            gridjs.h('button', {
+                                className: 'px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-sm',
+                                onclick: () => deleteOpportunity(row.cells[6].data)
+                            }, 'Delete')
+                        );
+                    },
+                    sort: false,
+                }
+            ],
+            data: data,
+            search: true,
+            pagination: {
+                enabled: true,
+                limit: 10
+            },
+            sort: true,
+            className: {
+                table: 'min-w-full divide-y divide-gray-200',
+                thead: 'bg-gray-50',
+                th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+                tbody: 'bg-white divide-y divide-gray-200',
+                td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                footer: 'p-4',
+                pagination: 'flex items-center justify-between',
+                container: 'overflow-x-auto'
+            }
+        }).render(opportunitiesGridContainer);
+    } else {
+        opportunitiesGrid.updateConfig({ data: data }).forceRender();
+    }
 
-            opportunityFormContainer.classList.remove('hidden');
-            opportunityFormMessage.classList.add('hidden');
+    if (opportunities.length === 0) {
+        noOpportunitiesMessage.classList.remove('hidden');
+    } else {
+        noOpportunitiesMessage.classList.add('hidden');
+    }
+}
 
-            opportunityNameInput.value = data.name || '';
-            await populateOpportunityCustomerDropdown(data.customerId);
-            await populateOpportunityCurrencyDropdown(data.currency); // Pass currency CODE for pre-selection
-            await populateOpportunityPriceBookDropdown(data.priceBookId, data.currency); // Pass currency CODE for edit
-            opportunityExpectedStartDateInput.value = formatDateForInput(data.expectedStartDate);
-            opportunityExpectedCloseDateInput.value = formatDateForInput(data.expectedCloseDate);
-            opportunitySalesStageSelect.value = data.salesStage || '';
-            opportunityProbabilityInput.value = data.probability || 0;
-            opportunityValueInput.value = data.value || 0;
-            opportunityNotesTextarea.value = data.notes || '';
-
-            // Retrieve work log elements here as the opportunity form container is now visible
-            workLogsListContainer = document.getElementById('work-logs-list-container');
-            noWorkLogsMessage = document.getElementById('no-work-logs-message');
-            workLogsList = document.getElementById('work-logs-list');
-            addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
-            workLogFormContainer = document.getElementById('work-log-form-container');
-            workLogForm = document.getElementById('work-log-form'); // Assign the element here
-            workLogIdInput = document.getElementById('work-log-id');
-            workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
-            workLogDateInput = document.getElementById('work-log-date');
-            workLogTypeSelect = document.getElementById('work-log-type');
-            workLogDetailsTextarea = document.getElementById('work-log-details');
-            cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
-            workLogFormMessage = document.getElementById('work-log-form-message');
-
-            // Load and render work logs for this opportunity
-            await renderWorkLogsList(currentOpportunityId);
-            // Ensure work log form is hidden and reset
-            resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
-
-            // Setup accordions for the loaded form
-            setupAccordions();
-            console.log('Edit Opportunity form setup complete for ID:', opportunityId);
-
+async function editOpportunity(opportunityId) {
+    if (!db || !userId) return;
+    try {
+        const docRef = doc(db, `artifacts/${appId}/users/${userId}/opportunities`, opportunityId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            await setupOpportunityForm(docSnap.data());
+            // currentOpportunityId is already set in setupOpportunityForm
         } else {
-            showMessageBox('Opportunity not found!', false);
-            console.log('Opportunity not found for edit ID:', opportunityId);
+            showMessageBox("Opportunity not found!", false);
         }
     } catch (error) {
         console.error("Error editing opportunity:", error);
-        showMessageBox('Error loading opportunity for edit: ' + error.message, false);
+        showMessageBox(`Error loading opportunity for edit: ${error.message}`, false);
     }
 }
 
-/**
- * Deletes an opportunity document from Firestore.
- * Requires Admin role or creator.
- * @param {string} opportunityId - The ID of the opportunity document to delete.
- */
 async function deleteOpportunity(opportunityId) {
-    if (!currentUser) { showMessageBox('Please sign in to delete opportunities.', false); return; }
+    const confirmDelete = await showMessageBox("Are you sure you want to delete this opportunity and all its work logs?", true);
+    if (!confirmDelete) return;
 
-    const confirmed = await showMessageBox('Are you sure you want to delete this opportunity? This action cannot be undone.', true);
-    if (!confirmed) return;
-
+    if (!db || !userId) return;
     try {
-        const docSnap = await getDoc(doc(db, `opportunities`, opportunityId));
-        if (!docSnap.exists()) {
-            showMessageBox('Opportunity not found!', false);
-            return;
-        }
-        const data = docSnap.data();
-        // Check if current user is the creator or an Admin
-        if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
-            showMessageBox('You can only delete opportunities you have created.', false);
-            return;
-        }
+        // Delete associated work logs first
+        const workLogsRef = collection(db, `artifacts/${appId}/users/${userId}/workLogs`);
+        const workLogsQuery = query(workLogsRef, where('opportunityId', '==', opportunityId));
+        const workLogsSnapshot = await getDocs(workLogsQuery);
+        const batch = writeBatch(db);
+        workLogsSnapshot.forEach(docSnap => { // Renamed doc to docSnap
+            batch.delete(docSnap.ref);
+        });
+        await batch.commit();
 
-        await deleteDoc(doc(db, `opportunities`, opportunityId));
-        showMessageBox('Opportunity deleted successfully!', false);
-        renderOpportunitiesGrid();
-        updateDashboardStats();
+        // Then delete the opportunity
+        await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/opportunities`, opportunityId));
+        showMessageBox("Opportunity and associated work logs deleted successfully!", false);
+        await loadOpportunities(); // Reload grid
+        await updateDashboard();
     } catch (error) {
         console.error("Error deleting opportunity:", error);
-        showMessageBox('Error deleting opportunity: ' + error.message, false);
+        showMessageBox(`Error deleting opportunity: ${error.message}`, false);
     }
 }
 
-// --- Work Logs Module (NEW) ---
+// Part 8: Work Log Logic
 
-// Static options for work log types
-const workLogTypeOptions = [
-    { value: "Call", text: "Call" },
-    { value: "Email", text: "Email" },
-    { value: "Meeting", text: "Meeting" },
-    { value: "Task", text: "Task" },
-    { value: "Note", text: "Note" },
-    { value: "Other", text: "Other" },
-];
+// --- Work Log Logic ---
 
-/**
- * Populates the work log type dropdown.
- * @param {string|null} selectedType - The type to pre-select.
- */
-async function populateWorkLogTypeDropdown(selectedType = null) {
-    // Ensure workLogTypeSelect is available before populating
-    if (!workLogTypeSelect) {
-        workLogTypeSelect = document.getElementById('work-log-type');
-    }
-    await populateSelect(workLogTypeSelect, null, 'value', 'text', selectedType, null, workLogTypeOptions);
-}
-
-
-/**
- * Renders the list of work logs for a given opportunity.
- * @param {string} opportunityId - The ID of the opportunity.
- */
-async function renderWorkLogsList(opportunityId) {
-    console.log('renderWorkLogsList called for opportunityId:', opportunityId);
-    if (!currentUser || !opportunityId) {
-        if (workLogsList) workLogsList.innerHTML = '';
-        if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden');
-        console.log('renderWorkLogsList: currentUser or opportunityId is missing. Clearing list.');
+async function loadWorkLogs(opportunityId) {
+    if (!db || !userId || !opportunityId) {
+        workLogsList.innerHTML = '';
+        noWorkLogsMessage.classList.remove('hidden');
         return;
     }
 
-    // Ensure elements are retrieved before use
-    if (!workLogsList) workLogsList = document.getElementById('work-logs-list');
-    if (!noWorkLogsMessage) noWorkLogsMessage = document.getElementById('no-work-logs-message');
-
-    if (workLogsList) workLogsList.innerHTML = '<li class="text-center text-gray-500">Loading work logs...</li>';
-    if (noWorkLogsMessage) noWorkLogsMessage.classList.add('hidden');
-
-    try {
-        const workLogsRef = collection(db, `opportunities/${opportunityId}/workLogs`);
-        // Order by date, then by creation time for consistent display
-        const q = query(workLogsRef, orderBy('date', 'desc'), orderBy('createdAt', 'desc'));
-        console.log('Querying work logs for path:', `opportunities/${opportunityId}/workLogs`);
-        const snapshot = await getDocs(q);
-        console.log('Work logs snapshot size:', snapshot.size);
-
-        if (workLogsList) workLogsList.innerHTML = ''; // Clear loading message
-
-        if (snapshot.empty) {
-            if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden');
-            console.log('No work logs found for opportunityId:', opportunityId);
-        } else {
-            if (noWorkLogsMessage) noWorkLogsMessage.classList.add('hidden');
-            snapshot.forEach(docSnap => {
-                const data = docSnap.data();
+    onSnapshot(query(collection(db, `artifacts/${appId}/users/${userId}/workLogs`),
+        where('opportunityId', '==', opportunityId),
+        orderBy('date', 'desc')), // Order by date, newest first
+        snapshot => {
+            workLogsList.innerHTML = ''; // Clear existing logs
+            if (snapshot.empty) {
+                noWorkLogsMessage.classList.remove('hidden');
+                return;
+            }
+            noWorkLogsMessage.classList.add('hidden');
+            snapshot.forEach(docSnap => { // Renamed doc to docSnap
+                const log = docSnap.data();
+                const logId = docSnap.id;
                 const li = document.createElement('li');
-                li.className = 'bg-gray-100 p-3 rounded-md shadow-sm flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0 sm:space-x-4';
+                li.className = 'bg-gray-50 p-3 rounded-md shadow-sm border border-gray-200 flex justify-between items-center';
                 li.innerHTML = `
-                    <div class="flex-grow">
-                        <p class="text-sm font-semibold text-gray-700">${formatDateForDisplay(data.date)} - ${data.type}</p>
-                        <p class="text-gray-600 text-sm">${data.details}</p>
-                        <p class="text-xs text-gray-500 mt-1">Logged by ${data.creatorId === currentUser.uid ? 'You' : data.creatorId} on ${formatDateForDisplay(data.createdAt)}</p>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700">${log.date} - ${log.type}</p>
+                        <p class="text-gray-600 text-sm mt-1">${log.details}</p>
                     </div>
-                    <div class="flex space-x-2 mt-2 sm:mt-0">
-                        <button type="button" class="px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm edit-work-log-btn"
-                            data-work-log-id="${docSnap.id}" data-opportunity-id="${opportunityId}">Edit</button>
-                        <button type="button" class="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm delete-work-log-btn"
-                            data-work-log-id="${docSnap.id}" data-opportunity-id="${opportunityId}">Delete</button>
+                    <div class="flex space-x-2">
+                        <button type="button" class="px-2 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-xs"
+                            onclick="editWorkLog('${logId}')">Edit</button>
+                        <button type="button" class="px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-xs"
+                            onclick="deleteWorkLog('${logId}', '${opportunityId}')">Delete</button>
                     </div>
                 `;
-                if (workLogsList) workLogsList.appendChild(li);
+                workLogsList.appendChild(li);
             });
-
-            // Add event listeners for new buttons
-            if (workLogsList) {
-                workLogsList.querySelectorAll('.edit-work-log-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const workLogId = e.target.dataset.workLogId;
-                        const oppId = e.target.dataset.opportunityId;
-                        console.log('Edit work log button clicked. WorkLogId:', workLogId, 'OpportunityId:', oppId);
-                        editWorkLogEntry(oppId, workLogId);
-                    });
-                });
-                workLogsList.querySelectorAll('.delete-work-log-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const workLogId = e.target.dataset.workLogId;
-                        const oppId = e.target.dataset.opportunityId;
-                        console.log('Delete work log button clicked. WorkLogId:', workLogId, 'OpportunityId:', oppId);
-                        deleteWorkLogEntry(oppId, workLogId);
-                    });
-                });
-            }
-
-        }
-    } catch (error) {
-        console.error("Error rendering work logs:", error);
-        showMessageBox('Could not load work logs: ' + error.message, false);
-        if (workLogsList) workLogsList.innerHTML = '<li class="text-center text-red-500">Error loading work logs.</li>';
-    }
+        }, error => {
+            console.error("Error loading work logs in real-time:", error);
+            showMessageBox(`Error loading work logs: ${error.message}`, false);
+            workLogsList.innerHTML = '';
+            noWorkLogsMessage.classList.remove('hidden');
+        });
 }
 
-/**
- * Populates the work log form with existing data for editing.
- * @param {string} opportunityId - The ID of the parent opportunity.
- * @param {string} workLogId - The ID of the work log document to edit.
- */
-async function editWorkLogEntry(opportunityId, workLogId) {
-    console.log('editWorkLogEntry called for OpportunityId:', opportunityId, 'WorkLogId:', workLogId);
-    if (!currentUser || !opportunityId || !workLogId) {
-        showMessageBox('Invalid request to edit work log.', false);
-        console.log('editWorkLogEntry: Missing currentUser, opportunityId, or workLogId.');
+async function handleSaveWorkLog(event) {
+    event.preventDefault();
+    if (!db || !userId || !currentOpportunityId) {
+        showMessageBox("Authentication or selected opportunity required to save work log.", false);
         return;
     }
 
+    const workLogId = document.getElementById('work-log-id').value;
+    const messageElement = document.getElementById('work-log-form-message');
+    messageElement.classList.add('hidden');
+
+    const workLogData = {
+        opportunityId: currentOpportunityId,
+        date: document.getElementById('work-log-date').value,
+        type: document.getElementById('work-log-type').value,
+        details: document.getElementById('work-log-details').value,
+        updatedAt: FieldValue.serverTimestamp(),
+        userId: userId
+    };
+
     try {
-        const docSnap = await getDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId));
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            // Check if current user is the creator or an Admin
-            if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
-                showMessageBox('You can only edit work logs you have created.', false);
-                console.log('editWorkLogEntry: Permission denied. User is not creator or Admin.');
-                return;
-            }
-
-            // Retrieve work log elements here for edit
-            workLogsListContainer = document.getElementById('work-logs-list-container');
-            noWorkLogsMessage = document.getElementById('no-work-logs-message');
-            workLogsList = document.getElementById('work-logs-list');
-            addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
-            workLogFormContainer = document.getElementById('work-log-form-container');
-            workLogForm = document.getElementById('work-log-form'); // Assign the element here
-            workLogIdInput = document.getElementById('work-log-id');
-            workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
-            workLogDateInput = document.getElementById('work-log-date');
-            workLogTypeSelect = document.getElementById('work-log-type');
-            workLogDetailsTextarea = document.getElementById('work-log-details');
-            cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
-            workLogFormMessage = document.getElementById('work-log-form-message');
-
-            if (workLogIdInput) workLogIdInput.value = docSnap.id;
-            if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = opportunityId;
-
-            if (workLogFormContainer) workLogFormContainer.classList.remove('hidden');
-            if (workLogFormMessage) workLogFormMessage.classList.add('hidden');
-
-            if (workLogDateInput) workLogDateInput.value = formatDateForInput(data.date);
-            await populateWorkLogTypeDropdown(data.type);
-            if (workLogDetailsTextarea) workLogDetailsTextarea.value = data.details || '';
-            console.log('Work log form populated for editing WorkLogId:', workLogId);
-
+        const collectionRef = collection(db, `artifacts/${appId}/users/${userId}/workLogs`);
+        if (workLogId) {
+            await updateDoc(doc(collectionRef, workLogId), workLogData);
+            showMessageBox("Work log updated successfully!", false);
         } else {
-            showMessageBox('Work log entry not found!', false);
-            console.log('editWorkLogEntry: Work log not found for ID:', workLogId);
+            workLogData.createdAt = FieldValue.serverTimestamp();
+            await addDoc(collectionRef, workLogData);
+            showMessageBox("Work log added successfully!", false);
         }
+        hideWorkLogForm();
+        // loadWorkLogs is already onSnapshot, so it will update automatically
     } catch (error) {
-        console.error("Error editing work log entry:", error);
-        showMessageBox('Error loading work log entry for edit: ' + error.message, false);
+        console.error("Error saving work log:", error);
+        messageElement.textContent = `Error saving work log: ${error.message}`;
+        messageElement.classList.remove('hidden');
     }
 }
 
-/**
- * Deletes a work log entry from Firestore.
- * @param {string} opportunityId - The ID of the parent opportunity.
- * @param {string} workLogId - The ID of the work log document to delete.
- */
-async function deleteWorkLogEntry(opportunityId, workLogId) {
-    console.log('deleteWorkLogEntry called for OpportunityId:', opportunityId, 'WorkLogId:', workLogId);
-    if (!currentUser || !opportunityId || !workLogId) {
-        showMessageBox('Invalid request to delete work log.', false);
-        console.log('deleteWorkLogEntry: Missing currentUser, opportunityId, or workLogId.');
-        return;
-    }
-
-    const confirmed = await showMessageBox('Are you sure you want to delete this work log entry? This action cannot be undone.', true);
-    if (!confirmed) {
-        console.log('Delete work log cancelled by user.');
-        return;
-    }
-
+async function editWorkLog(workLogId) {
+    if (!db || !userId) return;
     try {
-        const docSnap = await getDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId));
-        if (!docSnap.exists()) {
-            showMessageBox('Work log entry not found!', false);
-            console.log('deleteWorkLogEntry: Work log not found for ID:', workLogId);
-            return;
+        const docRef = doc(db, `artifacts/${appId}/users/${userId}/workLogs`, workLogId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const log = docSnap.data();
+            document.getElementById('work-log-id').value = workLogId;
+            document.getElementById('work-log-opportunity-id').value = log.opportunityId;
+            document.getElementById('work-log-date').value = log.date;
+            document.getElementById('work-log-type').value = log.type;
+            document.getElementById('work-log-details').value = log.details;
+            showWorkLogForm();
+        } else {
+            showMessageBox("Work log not found!", false);
         }
-        const data = docSnap.data();
-        // Check if current user is the creator or an Admin
-        if (currentUserRole !== 'Admin' && data.creatorId !== currentUser.uid) {
-            showMessageBox('You can only delete work logs you have created.', false);
-            console.log('deleteWorkLogEntry: Permission denied. User is not creator or Admin.');
-            return;
-        }
-
-        await deleteDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId));
-        showMessageBox('Work log entry deleted successfully!', false);
-        console.log('Work log entry deleted successfully from Firestore. WorkLogId:', workLogId);
-        await renderWorkLogsList(opportunityId); // Re-render the list
     } catch (error) {
-        console.error("Error deleting work log entry:", error);
-        showMessageBox('Error deleting work log entry: ' + error.message, false);
+        console.error("Error editing work log:", error);
+        showMessageBox(`Error loading work log for edit: ${error.message}`, false);
     }
 }
 
+async function deleteWorkLog(workLogId, opportunityId) {
+    const confirmDelete = await showMessageBox("Are you sure you want to delete this work log entry?", true);
+    if (!confirmDelete) return;
 
-// --- Countries Management (Admin Only) ---
+    if (!db || !userId) return;
+    try {
+        await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/workLogs`, workLogId));
+        showMessageBox("Work log deleted successfully!", false);
+        // loadWorkLogs is already onSnapshot, so it will update automatically
+    } catch (error) {
+        console.error("Error deleting work log:", error);
+        showMessageBox(`Error deleting work log: ${error.message}`, false);
+    }
+}
 
-// Event listener to open the Country Form for adding a new country
-addCountryBtn.addEventListener('click', () => {
-    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can add countries.', false); return; }
-    document.getElementById('country-id').value = ''; // Clear ID for new country
-    if (countryStatesTextarea) countryStatesTextarea.value = ''; // Clear states textarea for new entry
-    resetAndHideForm(countryForm, countryFormContainer, '', countryFormMessage); // Clear and hide form
-    countryFormContainer.classList.remove('hidden'); // Then show the container
-});
+// Part 9: Admin Data (Countries, Currencies, Price Books) DOM Elements
 
-// Event listener to save (add or update) a country
-countryForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can save countries.', false); return; }
+// Admin Elements
+const addCountryBtn = document.getElementById('add-country-btn');
+const countryFormContainer = document.getElementById('country-form-container');
+const countryForm = document.getElementById('country-form');
+const cancelCountryBtn = document.getElementById('cancel-country-btn');
+const countriesGridContainer = document.getElementById('countries-grid-container');
+const noCountriesMessage = document.getElementById('no-countries-message');
+const countrySearchInput = document.getElementById('country-search');
+let countriesGrid;
+
+const addCurrencyBtn = document.getElementById('add-currency-btn');
+const currencyFormContainer = document.getElementById('currency-form-container');
+const currencyForm = document.getElementById('currency-form');
+const cancelCurrencyBtn = document.getElementById('cancel-currency-btn');
+const currenciesGridContainer = document.getElementById('currencies-grid-container');
+const noCurrenciesMessage = document.getElementById('no-currencies-message');
+const currencySearchInput = document.getElementById('currency-search');
+let currenciesGrid;
+
+const addPriceBookBtn = document.getElementById('add-price-book-btn');
+const priceBookFormContainer = document.getElementById('price-book-form-container');
+const priceBookForm = document.getElementById('price-book-form');
+const cancelPriceBookBtn = document.getElementById('cancel-price-book-btn');
+const priceBooksGridContainer = document.getElementById('price-books-grid-container');
+const noPriceBooksMessage = document.getElementById('no-price-books-message');
+const priceBookSearchInput = document.getElementById('price-book-search');
+let priceBooksGrid;
+
+// Part 10: Admin Logic - Countries
+
+async function setupCountryForm(country = null) {
+    if (country) {
+        document.getElementById('country-id').value = country.id;
+        document.getElementById('country-name').value = country.name || '';
+        document.getElementById('country-code').value = country.code || '';
+        document.getElementById('country-states').value = Array.isArray(country.states) ? country.states.join(', ') : '';
+    } else {
+        countryForm.reset();
+        document.getElementById('country-id').value = '';
+    }
+    showCountryForm();
+}
+
+async function handleSaveCountry(event) {
+    event.preventDefault();
+    if (!db || userRole !== 'admin') {
+        showMessageBox("Admin privileges required to save country.", false);
+        return;
+    }
 
     const countryId = document.getElementById('country-id').value;
-
-    // Parse comma-separated states into an array
-    const statesArray = countryStatesTextarea.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    const messageElement = document.getElementById('country-form-message');
+    messageElement.classList.add('hidden');
 
     const countryData = {
-        name: countryNameInput.value.trim(),
-        code: countryCodeInput.value.trim().toUpperCase(),
-        states: statesArray, // Store as an array
+        name: document.getElementById('country-name').value,
+        code: document.getElementById('country-code').value.toUpperCase(),
+        states: document.getElementById('country-states').value.split(',').map(s => s.trim()).filter(s => s !== ''),
+        updatedAt: FieldValue.serverTimestamp()
     };
 
     try {
-        // Client-side validation for unique country code
-        let q = query(collection(db, `countries`), where('code', '==', countryData.code));
-        const existingCountriesSnapshot = await getDocs(q);
-
-        let isDuplicate = false;
-        if (countryId) { // Editing existing
-            existingCountriesSnapshot.forEach(doc => {
-                if (doc.id !== countryId) {
-                    isDuplicate = true;
-                }
-            });
-        } else { // Adding new
-            if (!existingCountriesSnapshot.empty) {
-                isDuplicate = true;
-            }
-        }
-
-        if (isDuplicate) {
-            countryFormMessage.textContent = 'A country with this code already exists. Please use a unique code.';
-            countryFormMessage.classList.remove('hidden');
-            return;
-        }
-
+        const collectionRef = collection(db, `artifacts/${appId}/public/data/countries`);
         if (countryId) {
-            await updateDoc(doc(db, `countries`, countryId), countryData);
-            showMessageBox('Country updated successfully!', false);
+            await updateDoc(doc(collectionRef, countryId), countryData);
+            showMessageBox("Country updated successfully!", false);
         } else {
-            await addDoc(collection(db, `countries`), countryData);
-            showMessageBox('Country added successfully!', false);
+            countryData.createdAt = FieldValue.serverTimestamp();
+            await addDoc(collectionRef, countryData);
+            showMessageBox("Country added successfully!", false);
         }
-        resetAndHideForm(countryForm, countryFormContainer, '', countryFormMessage); // Clear and hide form
-        if (countryStatesTextarea) countryStatesTextarea.value = ''; // Clear states textarea after successful save
-        renderCountriesStatesGrid();
-        populateCustomerCountryDropdown(); // Refresh customer dropdown
-        populateOpportunityCustomerDropdown(); // Refresh opportunity customer dropdown (if it depends on countries)
+        hideCountryForm();
+        await loadCountries();
     } catch (error) {
         console.error("Error saving country:", error);
-        countryFormMessage.textContent = 'Error saving country: ' + error.message;
-        countryFormMessage.classList.remove('hidden');
-        showMessageBox('Error saving country: ' + error.message, false);
+        messageElement.textContent = `Error saving country: ${error.message}`;
+        messageElement.classList.remove('hidden');
     }
-});
+}
 
-/**
- * Renders or updates the Grid.js table for countries.
- * Fetches data from the 'countries' collection.
- */
-async function renderCountriesStatesGrid() {
-    if (!currentUser || currentUserRole !== 'Admin') {
-        if (noCountriesMessage) noCountriesMessage.classList.remove('hidden');
-        if (countriesStatesGrid) {
-            countriesStatesGrid.destroy();
-            countriesStatesGrid = null;
-        }
-        if (countriesGridContainer) countriesGridContainer.innerHTML = '';
+async function loadCountries() {
+    if (!db || userRole !== 'admin') {
+        noCountriesMessage.classList.remove('hidden');
+        if (countriesGrid) countriesGrid.updateConfig({ data: [] }).forceRender();
         return;
     }
 
-    // Ensure window.gridjs is available before attempting to use it
-    try {
-        await waitForGridJs();
-    } catch (error) {
-        // Error message already shown by waitForGridJs
-        if (countriesGridContainer) countriesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading countries data.</p>';
-        return;
-    }
+    onSnapshot(collection(db, `artifacts/${appId}/public/data/countries`), snapshot => {
+        const countries = [];
+        snapshot.forEach(doc => {
+            countries.push({ id: doc.id, ...doc.data() });
+        });
+        renderCountriesGrid(countries);
+    }, error => {
+        console.error("Error loading countries in real-time:", error);
+        showMessageBox(`Error loading countries: ${error.message}`, false);
+        noCountriesMessage.classList.remove('hidden');
+        if (countriesGrid) countriesGrid.updateConfig({ data: [] }).forceRender();
+    });
+}
 
-    if (countriesGridContainer) countriesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Countries...</p>';
-    if (noCountriesMessage) noCountriesMessage.classList.add('hidden');
+function renderCountriesGrid(countries) {
+    const data = countries.map(country => [
+        country.name,
+        country.code,
+        country.states ? country.states.join(', ') : '',
+        country.id
+    ]);
 
-    const countriesRef = collection(db, `countries`);
-    const data = [];
-
-    try {
-        const snapshot = await getDocs(query(countriesRef, orderBy('name')));
-        if (countriesGridContainer) countriesGridContainer.innerHTML = ''; // Clear loading message
-
-        if (snapshot.empty) {
-            if (noCountriesMessage) noCountriesMessage.classList.remove('hidden');
-        } else {
-            if (noCountriesMessage) noCountriesMessage.classList.add('hidden'); // Ensure it's hidden if data is present
-            snapshot.forEach(doc => {
-                const country = doc.data();
-                data.push([
-                    doc.id,
-                    country.name,
-                    country.code,
-                    country.states ? country.states.join(', ') : '' // Display states as comma-separated string
-                ]);
-            });
-        }
-
-        if (countriesStatesGrid) {
-            countriesStatesGrid.updateConfig({ data: data }).forceRender();
-        } else {
-            countriesStatesGrid = new window.gridjs.Grid({
-                columns: [
-                    { id: 'id', name: 'ID', hidden: true },
-                    { id: 'name', name: 'Country Name', sort: true, filter: true },
-                    { id: 'code', name: 'Code', sort: true, filter: true },
-                    { id: 'states', name: 'States', sort: true, filter: true }, // New column for states
-                    {
-                        name: 'Actions',
-                        sort: false,
-                        formatter: (cell, row) => {
-                            const docId = row.cells[0].data;
-                            return window.gridjs.h('div', { className: 'flex space-x-2' },
-                                window.gridjs.h('button', {
-                                    className: 'px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
-                                    onClick: () => editCountryState(docId)
-                                }, 'Edit'),
-                                window.gridjs.h('button', {
-                                    className: 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm',
-                                    onClick: () => deleteCountryState(docId)
-                                }, 'Delete')
-                            );
-                        }
-                    }
-                ],
-                data: data,
-                search: {
-                    selector: (cell, rowIndex, cellIndex) => {
-                        // Include states column in search
-                        if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3) {
-                            return cell;
-                        }
-                        return null;
-                    }
-                },
-                pagination: { enabled: true, limit: 5, summary: true },
-                sort: true,
-                resizable: true,
-                className: {
-                    container: 'gridjs-container', table: 'min-w-full bg-white shadow-md rounded-lg overflow-hidden',
-                    thead: 'bg-gray-200', th: 'py-3 px-4 text-left text-sm font-medium text-gray-700',
-                    td: 'py-3 px-4 text-left text-sm text-gray-800', tr: 'divide-y divide-gray-200',
-                    footer: 'bg-gray-50 p-4 flex justify-between items-center',
-                    pagination: 'flex items-center space-x-2',
-                    'pagination-summary': 'text-sm text-gray-600', 'pagination-gap': 'text-sm text-gray-400',
-                    'pagination-nav': 'flex space-x-1', 'pagination-nav-prev': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-nav-next': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-btn-current': 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
-                },
-                language: {
-                    'search': { 'placeholder': 'Search countries...' },
-                    'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
-                    'noRecordsFound': 'No Countries Data Available',
+    if (!countriesGrid) {
+        countriesGrid = new gridjs.Grid({
+            columns: [
+                { name: 'Country Name', width: '30%' },
+                { name: 'Code', width: '15%' },
+                { name: 'States/Provinces', width: '40%' },
+                {
+                    name: 'Actions',
+                    width: '15%',
+                    formatter: (cell, row) => {
+                        return gridjs.h('div', { className: 'flex space-x-2' },
+                            gridjs.h('button', {
+                                className: 'px-2 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
+                                onclick: () => editCountry(row.cells[3].data)
+                            }, 'Edit'),
+                            gridjs.h('button', {
+                                className: 'px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-sm',
+                                onclick: () => deleteCountry(row.cells[3].data)
+                            }, 'Delete')
+                        );
+                    },
+                    sort: false,
                 }
-            }).render(countriesGridContainer);
-        }
-    } catch (error) {
-        console.error("Error rendering countries grid:", error);
-        showMessageBox('Could not load countries data: ' + error.message, false);
-        if (countriesGridContainer) countriesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading countries data.</p>';
+            ],
+            data: data,
+            search: true,
+            pagination: {
+                enabled: true,
+                limit: 10
+            },
+            sort: true,
+            className: {
+                table: 'min-w-full divide-y divide-gray-200',
+                thead: 'bg-gray-50',
+                th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+                tbody: 'bg-white divide-y divide-gray-200',
+                td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                footer: 'p-4',
+                pagination: 'flex items-center justify-between',
+                container: 'overflow-x-auto'
+            }
+        }).render(countriesGridContainer);
+    } else {
+        countriesGrid.updateConfig({ data: data }).forceRender();
+    }
+
+    if (countries.length === 0) {
+        noCountriesMessage.classList.remove('hidden');
+    } else {
+        noCountriesMessage.classList.add('hidden');
     }
 }
 
-/**
- * Populates the country form with existing data for editing.
- * @param {string} id - The ID of the country document to edit.
- */
-async function editCountryState(id) {
-    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can edit countries.', false); return; }
+async function editCountry(countryId) {
+    if (!db || userRole !== 'admin') return;
     try {
-        const docSnap = await getDoc(doc(db, `countries`, id));
+        const docRef = doc(db, `artifacts/${appId}/public/data/countries`, countryId);
+        const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-            const data = docSnap.data();
-            document.getElementById('country-id').value = docSnap.id;
-
-            if (countryNameInput) countryNameInput.value = data.name || '';
-            if (countryCodeInput) countryCodeInput.value = data.code || '';
-            if (countryStatesTextarea) countryStatesTextarea.value = Array.isArray(data.states) ? data.states.join(', ') : ''; // Populate states
-            if (countryFormContainer) countryFormContainer.classList.remove('hidden');
-            if (countryFormMessage) countryFormMessage.classList.add('hidden');
+            await setupCountryForm(docSnap.data());
         } else {
-            showMessageBox('Country not found!', false);
+            showMessageBox("Country not found!", false);
         }
     } catch (error) {
-        console.error("Error loading country for edit:", error);
-        showMessageBox('Error loading country for edit: ' + error.message, false);
+        console.error("Error editing country:", error);
+        showMessageBox(`Error loading country for edit: ${error.message}`, false);
     }
 }
 
-/**
- * Deletes a country document from Firestore.
- * Requires Admin role.
- * @param {string} id - The ID of the country document to delete.
- */
-async function deleteCountryState(id) {
-    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can delete countries.', false); return; }
+async function deleteCountry(countryId) {
+    const confirmDelete = await showMessageBox("Are you sure you want to delete this country?", true);
+    if (!confirmDelete) return;
 
-    const confirmed = await showMessageBox('Are you sure you want to delete this country? This action cannot be undone.', true);
-    if (!confirmed) return;
-
+    if (!db || userRole !== 'admin') return;
     try {
-        await deleteDoc(doc(db, `countries`, id));
-        showMessageBox('Country deleted successfully!', false);
-        renderCountriesStatesGrid();
-        populateCustomerCountryDropdown();
-        populateOpportunityCustomerDropdown(); // Refresh opportunity customer dropdown (if it depends on countries)
+        await deleteDoc(doc(db, `artifacts/${appId}/public/data/countries`, countryId));
+        showMessageBox("Country deleted successfully!", false);
+        await loadCountries();
     } catch (error) {
         console.error("Error deleting country:", error);
-        showMessageBox('Error deleting country: ' + error.message, false);
+        showMessageBox(`Error deleting country: ${error.message}`, false);
     }
 }
-
-
-// --- Currencies Management (Admin Only) ---
-
-/**
- * Populates the currency country dropdown with data from the 'countries' collection.
- * @param {string|null} selectedCountry - The country name to pre-select (optional).
- */
-async function populateCurrencyCountryDropdown(selectedCountry = null) {
-    if (!currentUser || currentUserRole !== 'Admin') return;
-    await populateSelect(currencyCountrySelect, `countries`, 'name', 'name', selectedCountry);
-}
-
-// Event listener to open the Currency Form for adding a new currency
-addCurrencyBtn.addEventListener('click', () => {
-    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can add currencies.', false); return; }
-    document.getElementById('currency-id').value = ''; // Clear ID for new currency
-    resetAndHideForm(currencyForm, currencyFormContainer, '', currencyFormMessage); // Clear and hide form
-    currencyFormContainer.classList.remove('hidden'); // Then show the container
-    populateCurrencyCountryDropdown(); // Populate country dropdown for new currency
-});
-
-// Event listener to save (add or update) a currency
-currencyForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can save currencies.', false); return; }
-
-    const currencyId = document.getElementById('currency-id').value;
-
-    const currencyData = {
-        name: currencyNameInput.value.trim(),
-        code: currencyCodeInput.value.trim().toUpperCase(),
-        symbol: currencySymbolInput.value.trim(),
-        country: currencyCountrySelect.value, // NEW: Include country
-    };
-
-    try {
-        // Client-Side Uniqueness Validation for Currency (Code)
-        let q = query(collection(db, `currencies`), where('code', '==', currencyData.code));
-        const existingCurrenciesSnapshot = await getDocs(q);
-
-        let isDuplicate = false;
-        if (currencyId) { // Editing existing
-            existingCurrenciesSnapshot.forEach(doc => {
-                if (doc.id !== currencyId) {
-                    isDuplicate = true;
-                }
-            });
-        } else { // Adding new
-            if (!existingCurrenciesSnapshot.empty) {
-                isDuplicate = true;
-            }
-        }
-
-        if (isDuplicate) {
-            currencyFormMessage.textContent = 'A currency with this code already exists. Please use a unique code.';
-            currencyFormMessage.classList.remove('hidden');
-            return;
-        }
-
-        if (currencyId) {
-            await updateDoc(doc(db, `currencies`, currencyId), currencyData);
-            showMessageBox('Currency updated successfully!', false);
-        } else {
-            await addDoc(collection(db, `currencies`), currencyData);
-            showMessageBox('Currency added successfully!', false);
-        }
-        resetAndHideForm(currencyForm, currencyFormContainer, '', currencyFormMessage); // Clear and hide form
-        renderCurrenciesGrid();
-        populateOpportunityCurrencyDropdown(); // Refresh opportunity dropdown
-        populatePriceBookCurrencyDropdown(); // Refresh price book dropdown
-    } catch (error) {
-        console.error("Error saving currency:", error);
-        currencyFormMessage.textContent = 'Error saving currency: ' + error.message;
-        currencyFormMessage.classList.remove('hidden');
-        showMessageBox('Error saving currency: ' + error.message, false);
-    }
-});
-
-/**
- * Renders or updates the Grid.js table for currencies.
- * Fetches data from the 'currencies' collection.
- */
-async function renderCurrenciesGrid() {
-    if (!currentUser || currentUserRole !== 'Admin') {
-        if (noCurrenciesMessage) noCurrenciesMessage.classList.remove('hidden');
-        if (currenciesGrid) {
-            currenciesGrid.destroy();
-            currenciesGrid = null;
-        }
-        if (currenciesGridContainer) currenciesGridContainer.innerHTML = '';
-        return;
-    }
-
-    // Ensure window.gridjs is available before attempting to use it
-    try {
-        await waitForGridJs();
-    } catch (error) {
-        // Error message already shown by waitForGridJs
-        if (currenciesGridContainer) currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading currency data.</p>';
-        return;
-    }
-
-    if (currenciesGridContainer) currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Currencies...</p>';
-    if (noCurrenciesMessage) noCurrenciesMessage.classList.add('hidden');
-
-    const currenciesRef = collection(db, `currencies`);
-    const data = [];
-
-    try {
-        const snapshot = await getDocs(query(currenciesRef, orderBy('name')));
-        if (currenciesGridContainer) currenciesGridContainer.innerHTML = ''; // Clear loading message
-
-        if (snapshot.empty) {
-            if (noCurrenciesMessage) noCurrenciesMessage.classList.remove('hidden');
-        } else {
-            if (noCurrenciesMessage) noCurrenciesMessage.classList.add('hidden'); // Ensure it's hidden if data is present
-            snapshot.forEach(doc => {
-                const currency = doc.data();
-                data.push([
-                    doc.id,
-                    currency.name,
-                    currency.code,
-                    currency.symbol,
-                    currency.country || '' // NEW: Include country in data for grid
-                ]);
-                // NEW: Populate the global currencySymbolsMap
-                currencySymbolsMap[currency.code] = currency.symbol;
-            });
-        }
-
-        if (currenciesGrid) {
-            currenciesGrid.updateConfig({ data: data }).forceRender();
-        } else {
-            currenciesGrid = new window.gridjs.Grid({
-                columns: [
-                    { id: 'id', name: 'ID', hidden: true },
-                    { id: 'name', name: 'Currency Name', sort: true, filter: true },
-                    { id: 'code', name: 'Code', sort: true, filter: true },
-                    { id: 'symbol', name: 'Symbol', sort: true, filter: true },
-                    { id: 'country', name: 'Country', sort: true, filter: true }, // NEW: Country column
-                    {
-                        name: 'Actions',
-                        sort: false,
-                        formatter: (cell, row) => {
-                            const docId = row.cells[0].data;
-                            return window.gridjs.h('div', { className: 'flex space-x-2' },
-                                window.gridjs.h('button', {
-                                    className: 'px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
-                                    onClick: () => editCurrency(docId)
-                                }, 'Edit'),
-                                window.gridjs.h('button', {
-                                    className: 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm',
-                                    onClick: () => deleteCurrency(docId)
-                                }, 'Delete')
-                            );
-                        }
-                    }
-                ],
-                data: data,
-                search: {
-                    selector: (cell, rowIndex, cellIndex) => {
-                        if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3 || cellIndex === 4) { // Include country in search
-                            return cell;
-                        }
-                        return null;
-                    }
-                },
-                pagination: { enabled: true, limit: 5, summary: true },
-                sort: true,
-                resizable: true,
-                className: {
-                    container: 'gridjs-container', table: 'min-w-full bg-white shadow-md rounded-lg overflow-hidden',
-                    thead: 'bg-gray-200', th: 'py-3 px-4 text-left text-sm font-medium text-gray-700',
-                    td: 'py-3 px-4 text-left text-sm text-gray-800', tr: 'divide-y divide-gray-200',
-                    footer: 'bg-gray-50 p-4 flex justify-between items-center',
-                    pagination: 'flex items-center space-x-2',
-                    'pagination-summary': 'text-sm text-gray-600', 'pagination-gap': 'text-sm text-gray-400',
-                    'pagination-nav': 'flex space-x-1', 'pagination-nav-prev': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-nav-next': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-300',
-                    'pagination-btn-current': 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
-                },
-                language: {
-                    'search': { 'placeholder': 'Search currencies...' },
-                    'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
-                    'noRecordsFound': 'No Currencies Data Available',
-                }
-            }).render(currenciesGridContainer);
-        }
-    } catch (error) {
-        console.error("Error rendering currencies grid:", error);
-        showMessageBox('Could not load currency data: ' + error.message, false);
-        if (currenciesGridContainer) currenciesGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading currency data.</p>';
-    }
-}
-
-/**
- * Populates the currency form with existing data for editing.
- * @param {string} id - The ID of the currency document to edit.
- */
-async function editCurrency(id) {
-    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can edit currencies.', false); return; }
-    try {
-        const docSnap = await getDoc(doc(db, `currencies`, id));
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            document.getElementById('currency-id').value = docSnap.id;
-
-            if (currencyNameInput) currencyNameInput.value = data.name || '';
-            if (currencyCodeInput) currencyCodeInput.value = data.code || '';
-            if (currencySymbolInput) currencySymbolInput.value = data.symbol || '';
-            await populateCurrencyCountryDropdown(data.country); // NEW: Populate country dropdown
-            if (currencyFormContainer) currencyFormContainer.classList.remove('hidden');
-            if (currencyFormMessage) currencyFormMessage.classList.add('hidden');
-        } else {
-            showMessageBox('Currency not found!', false);
-        }
-    } catch (error) {
-        console.error("Error loading currency for edit:", error);
-        showMessageBox('Error loading currency for edit: ' + error.message, false);
-    }
-}
-
-/**
- * Deletes a currency document from Firestore.
- * Requires Admin role.
- * @param {string} id - The ID of the currency document to delete.
- */
-async function deleteCurrency(id) {
-    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can delete currencies.', false); return; }
-
-    const confirmed = await showMessageBox('Are you sure you want to delete this currency? This action cannot be undone.', true);
-    if (!confirmed) return;
-
-    try {
-        await deleteDoc(doc(db, `currencies`, id));
-        showMessageBox('Currency deleted successfully!', false);
-        renderCurrenciesGrid();
-        populateOpportunityCurrencyDropdown();
-        populatePriceBookCurrencyDropdown();
-    } catch (error) {
-        console.error("Error deleting currency:", error);
-        showMessageBox('Error deleting currency: ' + error.message, false);
-    }
-}
-
-
-// --- Price Books Management (Admin Only) ---
-
-/**
- * Populates the price book currency dropdown with data from the 'currencies' collection.
- * @param {string|null} selectedCurrencyCode - The currency code to pre-select (optional).
- */
-async function populatePriceBookCurrencyDropdown(selectedCurrencyCode = null) {
-    if (!currentUser || currentUserRole !== 'Admin') return;
-    // FIX: Change valueField from 'symbol' to 'code'
-    await populateSelect(priceBookCurrencySelect, `currencies`, 'code', 'name', selectedCurrencyCode);
-}
-
-// Event listener to open the Price Book Form for adding a new price book
-addPriceBookBtn.addEventListener('click', () => {
-    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can add price books.', false); return; }
-    document.getElementById('price-book-id').value = ''; // Clear ID for new price book
-    resetAndHideForm(priceBookForm, priceBookFormContainer, '', priceBookFormMessage); // Clear and hide form
-    priceBookFormContainer.classList.remove('hidden'); // Then show the container
-    if (priceBookActiveCheckbox) priceBookActiveCheckbox.checked = true; // Default to active
-    populatePriceBookCurrencyDropdown();
-});
-
-// Event listener to save (add or update) a price book
-priceBookForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!currentUser) { showMessageBox('Authentication required to save price book.', false); return; }
-
-    const normalizedName = priceBookNameInput.value.trim().toLowerCase().replace(/\s+/g, '');
-    const normalizedCurrency = priceBookCurrencySelect.value.trim().toLowerCase().replace(/\s+/g, ''); // This will now be the code
-
-    const priceBookId = document.getElementById('price-book-id').value;
-
-    const priceBookData = {
-        name: priceBookNameInput.value.trim(),
-        normalizedName: normalizedName,
-        description: priceBookDescriptionTextarea.value.trim(),
-        currency: priceBookCurrencySelect.value, // Now stores the currency CODE
-        normalizedCurrency: normalizedCurrency, // Now normalized currency CODE
-        isActive: priceBookActiveCheckbox.checked,
-        // Removed validFrom and validTo fields
-    };
-
-    // const newIndexId = getPriceBookIndexId(priceBookData.name, priceBookData.currency); // No longer needed for client-side check
-
-    try {
-        // // Client-Side Uniqueness Validation for Price Book (Name, Currency) - TEMPORARILY REMOVED FOR DEBUGGING
-        // const existingIndexDoc = await getDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId));
-
-        // if (existingIndexDoc.exists()) {
-        //     if (existingIndexDoc.data().priceBookId !== priceBookId) {
-        //         priceBookFormMessage.textContent = 'A price book with this Name and Currency already exists. Please choose a unique combination.';
-        //         priceBookFormMessage.classList.remove('hidden');
-        //         return;
-        //     }
-        // }
-
-        let docRef;
-        if (priceBookId) {
-            docRef = doc(db, `priceBooks`, priceBookId);
-            await updateDoc(docRef, priceBookData);
-            showMessageBox('Price Book updated successfully!', false);
-
-            // // Remove old index and create new one if name/currency changed - TEMPORARILY REMOVED FOR DEBUGGING
-            // const oldPriceBookDoc = await getDoc(doc(db, `priceBooks`, priceBookId));
-            // const oldPriceBookData = oldPriceBookDoc.data();
-            // const oldIndexId = getPriceBookIndexId(oldPriceBookData.name, oldPriceBookData.currency);
-
-            // if (oldIndexId !== newIndexId) {
-            //     await deleteDoc(doc(db, `priceBookNameCurrencyIndexes`, oldIndexId));
-            //     await setDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId), {
-            //         priceBookId: priceBookId,
-            //         priceBookName: priceBookData.normalizedName,
-            //         priceBookCurrency: priceBookData.normalizedCurrency
-            //     });
-            // }
-        } else {
-            const newDocRef = await addDoc(collection(db, `priceBooks`), priceBookData);
-            docRef = newDocRef;
-            showMessageBox('Price Book added successfully!', false);
-
-            // // Create new index - TEMPORARILY REMOVED FOR DEBUGGING
-            // await setDoc(doc(db, `priceBookNameCurrencyIndexes`, newIndexId), {
-            //     priceBookId: docRef.id,
-            //     priceBookName: priceBookData.normalizedName,
-            //     priceBookCurrency: priceBookData.normalizedCurrency
-            // });
-        }
-        resetAndHideForm(priceBookForm, priceBookFormContainer, '', priceBookFormMessage); // Clear and hide form
-        renderPriceBooksGrid();
-        populateOpportunityPriceBookDropdown();
-    } catch (error) {
-        console.error("Error saving price book:", error);
-        if (priceBookFormMessage) {
-            priceBookFormMessage.textContent = 'Error saving price book: ' + error.message;
-            priceBookFormMessage.classList.remove('hidden');
-        }
-        showMessageBox('Error saving price book: ' + error.message, false);
-    }
-});
-
-/**
- * Populates the price book form with existing data for editing.
- * @param {string} id - The ID of the price book document to edit.
- */
-async function editPriceBook(id) {
-    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can edit price books.', false); return; }
-    try {
-        const docSnap = await getDoc(doc(db, `priceBooks`, id));
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            document.getElementById('price-book-id').value = docSnap.id;
-
-            if (priceBookNameInput) priceBookNameInput.value = data.name || '';
-            if (priceBookDescriptionTextarea) priceBookDescriptionTextarea.value = data.description || '';
-            await populatePriceBookCurrencyDropdown(data.currency); // Populate currency dropdown with code
-            if (priceBookActiveCheckbox) priceBookActiveCheckbox.checked = data.isActive;
-            // Removed validFrom and validTo
-            // if (priceBookValidFromInput) priceBookValidFromInput.value = formatDateForInput(data.validFrom);
-            // if (priceBookValidToInput) priceBookValidToInput.value = formatDateForInput(data.validTo);
-
-            if (priceBookFormContainer) priceBookFormContainer.classList.remove('hidden');
-            if (priceBookFormMessage) priceBookFormMessage.classList.add('hidden');
-        } else {
-            showMessageBox('Price Book not found!', false);
-        }
-    } catch (error) {
-        console.error("Error loading price book for edit:", error);
-        showMessageBox('Error loading price book for edit: ' + error.message, false);
-    }
-}
-
-/**
- * Deletes a price book document from Firestore.
- * Requires Admin role.
- * @param {string} id - The ID of the price book document to delete.
- */
-async function deletePriceBook(id) {
-    if (currentUserRole !== 'Admin') { showMessageBox('Access Denied: Only Admins can delete price books.', false); return; }
-
-    const confirmed = await showMessageBox('Are you sure you want to delete this price book? This action cannot be undone.', true);
-    if (!confirmed) return;
-
-    try {
-        await deleteDoc(doc(db, `priceBooks`, id));
-        showMessageBox('Price Book deleted successfully!', false);
-        renderPriceBooksGrid();
-        populateOpportunityPriceBookDropdown();
-    } catch (error) {
-        console.error("Error deleting price book:", error);
-        showMessageBox('Error deleting price book: ' + error.message, false);
-    }
-}
-
-/**
- * Renders or updates the Grid.js table for price books.
- * Fetches data from the 'priceBooks' collection.
- */
-async function renderPriceBooksGrid() { // This is the function definition
-    if (!currentUser || currentUserRole !== 'Admin') {
-        if (noPriceBooksMessage) noPriceBooksMessage.classList.remove('hidden');
-        if (priceBooksGrid) {
-            priceBooksGrid.destroy();
-            priceBooksGrid = null;
-        }
-        if (priceBooksGridContainer) priceBooksGridContainer.innerHTML = '';
-        return;
-    }
-
-    // Ensure window.gridjs is available before attempting to use it
-    try {
-        await waitForGridJs();
-    } catch (error) {
-        // Error message already shown by waitForGridJs
-        if (priceBooksGridContainer) priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading price book data.</p>';
-        return;
-    }
-
-    if (priceBooksGridContainer) priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Loading Price Books...</p>';
-    if (noPriceBooksMessage) noPriceBooksMessage.classList.add('hidden');
-
-    const priceBooksRef = collection(db, `priceBooks`);
-    const data = [];
-
-    try {
-        const snapshot = await getDocs(query(priceBooksRef, orderBy('name')));
-        if (priceBooksGridContainer) priceBooksGridContainer.innerHTML = ''; // Clear loading message
-
-        if (snapshot.empty) {
-            if (noPriceBooksMessage) noPriceBooksMessage.classList.remove('hidden');
-        } else {
-            if (noPriceBooksMessage) noPriceBooksMessage.classList.add('hidden'); // Ensure it's hidden if data is present
-            snapshot.forEach(doc => {
-                const priceBook = doc.data();
-                data.push([
-                    doc.id,
-                    priceBook.name,
-                    priceBook.description,
-                    priceBook.currency || '', // This is now the currency CODE
-                    priceBook.isActive,
-                    // Removed validFrom and validTo
-                ]);
-            });
-        }
-
-        if (priceBooksGrid) {
-            priceBooksGrid.updateConfig({ data: data }).forceRender();
-        } else {
-            priceBooksGrid = new window.gridjs.Grid({
-                columns: [
-                    { id: 'id', name: 'ID', hidden: true },
-                    { id: 'name', name: 'Price Book Name', sort: true, filter: true },
-                    { id: 'description', name: 'Description', sort: true, filter: true },
-                    { id: 'currency', name: 'Currency Code', sort: true, filter: true }, // Changed column name
-                    { id: 'isActive', name: 'Active', sort: true, filter: true, formatter: (cell) => cell ? 'Yes' : 'No' },
-                    // Removed Valid From and Valid To columns
-                    {
-                        name: 'Actions',
-                        sort: false,
-                        formatter: (cell, row) => {
-                            const docId = row.cells[0].data;
-                            return window.gridjs.h('div', { className: 'flex space-x-2' },
-                                window.gridjs.h('button', {
-                                    className: 'px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
-                                    onClick: () => editPriceBook(docId)
-                                }, 'Edit'),
-                                window.gridjs.h('button', {
-                                    className: 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-300 text-sm',
-                                    onClick: () => deletePriceBook(docId)
-                                }, 'Delete')
-                            );
-                        }
-                    }
-                ],
-                data: data,
-                search: {
-                    selector: (cell, rowIndex, cellIndex) => {
-                        // Updated search index for currency (was 4, now 3)
-                        if (cellIndex === 1 || cellIndex === 2 || cellIndex === 3) {
-                            return cell;
-                        }
-                        return null;
-                    }
-                },
-                pagination: { enabled: true, limit: 5, summary: true },
-                sort: true,
-                resizable: true,
-                className: {
-                    container: 'gridjs-container', table: 'min-w-full bg-white shadow-md rounded-lg overflow-hidden',
-                    thead: 'bg-gray-200', th: 'py-3 px-4 text-left text-sm font-medium text-gray-700',
-                    td: 'py-3 px-4 text-left text-sm text-gray-800', tr: 'divide-y divide-gray-200',
-                    footer: 'bg-gray-50 p-4 flex justify-between items-center',
-                    pagination: 'flex items-center space-x-2',
-                    'pagination-summary': 'text-sm text-gray-600', 'pagination-gap': 'text-sm text-gray-400',
-                    'pagination-nav': 'flex space-x-1', 'pagination-nav-prev': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-nav-next': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-200',
-                    'pagination-btn': 'px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-300',
-                    'pagination-btn-current': 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
-                },
-                language: {
-                    'search': { 'placeholder': 'Search price books...' },
-                    'pagination': { 'previous': 'Prev', 'next': 'Next', 'showing': 'Showing', 'of': 'of', 'results': 'results', 'to': 'to' },
-                    'noRecordsFound': 'No Price Books Data Available',
-                }
-            }).render(priceBooksGridContainer);
-        }
-    } catch (error) {
-        console.error("Error rendering price book grid:", error);
-        showMessageBox('Could not load price book data: ' + error.message, false);
-        if (priceBooksGridContainer) priceBooksGridContainer.innerHTML = '<p class="text-center py-4 text-red-500">Error loading price book data.</p>';
-    }
-}
-
-// --- Initial Load ---
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('DOMContentLoaded fired.');
-
-    // Attempt to sign in with custom token if available
-    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-    if (initialAuthToken) {
-        try {
-            await signInWithCustomToken(auth, initialAuthToken);
-            console.log('Signed in with custom token.');
-        } catch (error) {
-            console.error('Error signing in with custom token:', error);
-            showMessageBox('Failed to auto-login. Please sign in manually.', false);
-            // Fall through to show auth section if custom token fails
-        }
-    } else {
-        console.log('No initial auth token found. User must sign in.');
-    }
-
-    // Initial state: Hide all content sections and show auth section
-    hideAllSections();
-    authSection.classList.remove('hidden'); // Ensure auth section is visible initially
-
-    // Hide all navigation items initially until authenticated
-    navDashboard.classList.add('hidden');
-    navCustomers.classList.add('hidden');
-    navLeads.classList.add('hidden');
-    navOpportunities.classList.add('hidden');
-    adminMenuItem.classList.add('hidden'); // Hide admin menu by default
-    navLogout.classList.add('hidden');
-
-    // --- Attach Work Log Event Listeners ONCE during DOMContentLoaded ---
-    // Retrieve work log elements (they should exist in the HTML)
-    workLogsListContainer = document.getElementById('work-logs-list-container');
-    noWorkLogsMessage = document.getElementById('no-work-logs-message');
-    workLogsList = document.getElementById('work-logs-list');
-    addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
-    workLogFormContainer = document.getElementById('work-log-form-container');
-    workLogForm = document.getElementById('work-log-form');
-    workLogIdInput = document.getElementById('work-log-id');
-    workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
-    workLogDateInput = document.getElementById('work-log-date');
-    workLogTypeSelect = document.getElementById('work-log-type');
-    workLogDetailsTextarea = document.getElementById('work-log-details');
-    cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
-    workLogFormMessage = document.getElementById('work-log-form-message');
-
-    if (addWorkLogEntryBtn && !addWorkLogEntryBtnListenerAdded) {
-        console.log('Attaching addWorkLogEntryBtn listener.');
-        addWorkLogEntryBtn.addEventListener('click', () => {
-            console.log('Add Work Log Entry button clicked.');
-            if (!currentOpportunityId) {
-                showMessageBox('Please select or save an opportunity first to add work logs.', false);
-                return;
-            }
-            resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
-            if (workLogIdInput) workLogIdInput.value = ''; // Clear ID for new entry
-            if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = currentOpportunityId; // Link to current opportunity
-            if (workLogDateInput) workLogDateInput.valueAsDate = new Date(); // Default to today's date
-            if (workLogFormContainer) workLogFormContainer.classList.remove('hidden'); // Then show the container
-            populateWorkLogTypeDropdown();
-        });
-        addWorkLogEntryBtnListenerAdded = true;
-    }
-
-    if (cancelWorkLogBtn && !cancelWorkLogBtnListenerAdded) {
-        console.log('Attaching cancelWorkLogBtn listener.');
-        cancelWorkLogBtn.addEventListener('click', () => {
-            resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
-        });
-        cancelWorkLogBtnListenerAdded = true;
-    }
-
-    if (workLogForm && !workLogFormListenerAdded) {
-        console.log('Attaching workLogForm submit listener.');
-        workLogForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            console.log('Work Log Form submitted!');
-            if (!currentUser || !currentOpportunityId) {
-                showMessageBox('Authentication required and an opportunity must be selected to save work logs.', false);
-                return;
-            }
-
-            const workLogId = workLogIdInput.value;
-            const opportunityId = workLogOpportunityIdInput.value;
-
-            const workLogData = {
-                date: workLogDateInput.value ? Timestamp.fromDate(new Date(workLogDateInput.value)) : null,
-                type: workLogTypeSelect.value,
-                details: workLogDetailsTextarea.value.trim(),
-                updatedAt: serverTimestamp()
-            };
-
-            if (!workLogId) {
-                workLogData.createdAt = serverTimestamp();
-                workLogData.creatorId = currentUser.uid;
-            }
-
-            console.log('Work Log Data prepared:', workLogData);
-            console.log('currentOpportunityId for save:', currentOpportunityId);
-            console.log('workLogId for save:', workLogId);
-
-            try {
-                if (workLogId) {
-                    console.log(`Attempting to update work log: opportunities/${opportunityId}/workLogs/${workLogId}`);
-                    await updateDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId), {
-                        date: workLogData.date,
-                        type: workLogData.type,
-                        details: workLogData.details,
-                        updatedAt: workLogData.updatedAt
-                    });
-                    showMessageBox('Work log updated successfully!', false);
-                } else {
-                    console.log(`Attempting to add new work log to: opportunities/${opportunityId}/workLogs`);
-                    await addDoc(collection(db, `opportunities/${opportunityId}/workLogs`), workLogData);
-                    showMessageBox('Work log added successfully!', false);
-                }
-                console.log('Work log save operation completed. Resetting form and re-rendering list.');
-                resetAndHideForm(workLogForm, workLogFormContainer, '', workLogFormMessage);
-                await renderWorkLogsList(opportunityId);
-            } catch (error) {
-                console.error("Error saving work log in try-catch:", error);
-                if (workLogFormMessage) {
-                    workLogFormMessage.textContent = 'Error saving work log: ' + error.message;
-                    workLogFormMessage.classList.remove('hidden');
-                }
-                showMessageBox('Error saving work log: ' + error.message, false);
-            }
-        });
-        workLogFormListenerAdded = true;
-    }
-});
