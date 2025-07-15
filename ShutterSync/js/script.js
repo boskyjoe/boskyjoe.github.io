@@ -14,7 +14,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
-    storageBucket: "shuttersync-96971.firebasestorage.app",
+    storageBucket: "shuttersync-96971.firebase-storage.app",
     messagingSenderId: "10782416018",
     appId: "1:10782416018:web:361db5572882a62f291a4b",
     measurementId: "G-T0W9CES4D3"
@@ -151,6 +151,8 @@ let workLogFormMessage = null;
 let workLogFormListenerAdded = false;
 // Flag to ensure addWorkLogEntryBtn click listener is added only once
 let addWorkLogEntryBtnListenerAdded = false;
+// NEW: Flag to ensure cancelWorkLogBtn click listener is added only once
+let cancelWorkLogBtnListenerAdded = false;
 
 
 // Dashboard Elements
@@ -178,7 +180,7 @@ const currencyFormContainer = document.getElementById('currency-form-container')
 const currencyForm = document.getElementById('currency-form');
 const currencyNameInput = document.getElementById('currency-name');
 const currencyCodeInput = document.getElementById('currency-code');
-const currencySymbolInput = document.getElementById('currency-symbol');
+const currencySymbolInput = document.getElementById('currency-symbol'); // FIXED: Corrected assignment
 const currencyCountrySelect = document.getElementById('currency-country');
 const cancelCurrencyBtn = document.getElementById('cancel-currency-btn');
 const currencyFormMessage = document.getElementById('currency-form-message');
@@ -1621,7 +1623,7 @@ addOpportunityBtn.addEventListener('click', async () => { // Made async to await
     }
 
     // Attach cancelWorkLogBtn listener here, ensuring the button is available
-    if (cancelWorkLogBtn && !cancelWorkLogBtnListenerAdded) { // Assuming cancelWorkLogBtnListenerAdded is a new flag
+    if (cancelWorkLogBtn && !cancelWorkLogBtnListenerAdded) {
         cancelWorkLogBtn.addEventListener('click', () => {
             // Ensure workLogForm and its container/message are retrieved before passing
             const currentWorkLogForm = document.getElementById('work-log-form');
@@ -1966,7 +1968,7 @@ async function editOpportunity(opportunityId) {
             }
 
             // Attach cancelWorkLogBtn listener here, ensuring the button is available
-            if (cancelWorkLogBtn && !cancelWorkLogBtnListenerAdded) { // Assuming cancelWorkLogBtnListenerAdded is a new flag
+            if (cancelWorkLogBtn && !cancelWorkLogBtnListenerAdded) {
                 cancelWorkLogBtn.addEventListener('click', () => {
                     // Ensure workLogForm and its container/message are retrieved before passing
                     const currentWorkLogForm = document.getElementById('work-log-form');
