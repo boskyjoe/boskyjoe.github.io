@@ -135,6 +135,7 @@ let messageCancelBtn;
 
 let opportunityCurrencySelect; // Added for easy access
 let opportunityPriceBookSelect; // Added for easy access
+
 // Part 2: Message Box, Authentication, and Dashboard Logic
 
 /**
