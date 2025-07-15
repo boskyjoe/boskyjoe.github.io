@@ -135,7 +135,6 @@ let messageCancelBtn;
 
 let opportunityCurrencySelect; // Added for easy access
 let opportunityPriceBookSelect; // Added for easy access
-
 // Part 2: Message Box, Authentication, and Dashboard Logic
 
 /**
@@ -430,34 +429,46 @@ function hideLeadForm() {
     const leadIdInput = document.getElementById('lead-id');
     if (leadIdInput) leadIdInput.value = '';
     const leadFormMessage = document.getElementById('lead-form-message');
-    if (leadFormMessage) leadFormFormMessage.classList.add('hidden');
+    if (leadFormMessage) leadFormMessage.classList.add('hidden');
 }
 
 function showOpportunityForm() {
     if (opportunityFormContainer) opportunityFormContainer.classList.remove('hidden');
+    console.log('showOpportunityForm: Attempting to set accordion states.');
+
     // Ensure all accordions are collapsed by default when form opens
-    document.querySelectorAll('#opportunity-form .accordion-content').forEach(content => {
+    document.querySelectorAll('#opportunity-form .accordion-content').forEach((content, index) => {
         content.classList.add('hidden');
         const header = content.previousElementSibling;
         if (header) {
             const icon = header.querySelector('.accordion-icon');
             if (icon) icon.style.transform = 'rotate(0deg)';
             header.classList.remove('expanded');
+            console.log(`  Accordion ${index + 1} (${header.textContent.trim()}): Collapsed.`);
         }
     });
-    // Explicitly expand the first accordion (Main Details)
-    const mainDetailsContent = document.querySelector('#opportunity-form .accordion-item:first-child .accordion-content');
-    const mainDetailsHeader = document.querySelector('#opportunity-form .accordion-item:first-child .accordion-header');
-    const mainDetailsIcon = mainDetailsHeader ? mainDetailsHeader.querySelector('.accordion-icon') : null;
 
-    if (mainDetailsContent) {
-        mainDetailsContent.classList.remove('hidden');
-    }
-    if (mainDetailsIcon) {
-        mainDetailsIcon.style.transform = 'rotate(180deg)';
-    }
-    if (mainDetailsHeader) {
-        mainDetailsHeader.classList.add('expanded');
+    // Explicitly expand the first accordion (Main Details)
+    const mainDetailsAccordionItem = document.querySelector('#opportunity-form .accordion-item:first-child');
+    if (mainDetailsAccordionItem) {
+        const mainDetailsContent = mainDetailsAccordionItem.querySelector('.accordion-content');
+        const mainDetailsHeader = mainDetailsAccordionItem.querySelector('.accordion-header');
+        const mainDetailsIcon = mainDetailsHeader ? mainDetailsHeader.querySelector('.accordion-icon') : null;
+
+        if (mainDetailsContent) {
+            mainDetailsContent.classList.remove('hidden');
+            console.log('  Main Details Content: Removed hidden class.');
+        }
+        if (mainDetailsIcon) {
+            mainDetailsIcon.style.transform = 'rotate(180deg)';
+            console.log('  Main Details Icon: Rotated.');
+        }
+        if (mainDetailsHeader) {
+            mainDetailsHeader.classList.add('expanded');
+            console.log('  Main Details Header: Added expanded class.');
+        }
+    } else {
+        console.error('  Could not find the first accordion item for Main Details.');
     }
 }
 
@@ -1028,17 +1039,22 @@ function filterAndPopulatePriceBooks(selectedCurrencyCode, currentPriceBookId = 
         ? allPriceBooks.filter(pb => pb.currency === selectedCurrencyCode && pb.isActive)
         : allPriceBooks.filter(pb => pb.isActive); // Show all active if no currency selected
 
+    console.log(`  Filtering price books for currency: ${selectedCurrencyCode}. Found ${filteredPriceBooks.length} active price books.`);
+
     populateSelect(opportunityPriceBookSelect, filteredPriceBooks, 'id', 'name', 'Select a Price Book');
 
     // Auto-select if only one option is available
     if (filteredPriceBooks.length === 1) {
         opportunityPriceBookSelect.value = filteredPriceBooks[0].id;
+        console.log(`  Auto-selected single price book: ${filteredPriceBooks[0].name} (ID: ${filteredPriceBooks[0].id})`);
     } else if (currentPriceBookId && filteredPriceBooks.some(pb => pb.id === currentPriceBookId)) {
         // Attempt to re-select the current price book if it's still in the filtered list
         opportunityPriceBookSelect.value = currentPriceBookId;
+        console.log(`  Re-selected existing price book with ID: ${currentPriceBookId}`);
     } else {
         // If no auto-selection, or current price book is no longer valid, reset selection
         opportunityPriceBookSelect.value = "";
+        console.log('  No auto-selection for price book, resetting dropdown.');
     }
 }
 
