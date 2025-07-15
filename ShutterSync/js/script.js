@@ -31,6 +31,9 @@ let userId = null; // Will be set after authentication
 let userRole = 'guest'; // Default role
 let currentOpportunityId = null; // To track the opportunity being edited
 
+// Global cache for price books to enable filtering without re-fetching
+let allPriceBooks = [];
+
 // Declare DOM elements globally, but assign them inside initializePage
 // This ensures they are found after the DOM is fully loaded.
 let authSection;
@@ -129,6 +132,9 @@ let messageBox;
 let messageContent;
 let messageConfirmBtn;
 let messageCancelBtn;
+
+let opportunityCurrencySelect; // Added for easy access
+let opportunityPriceBookSelect; // Added for easy access
 
 // Part 2: Message Box, Authentication, and Dashboard Logic
 
@@ -424,7 +430,7 @@ function hideLeadForm() {
     const leadIdInput = document.getElementById('lead-id');
     if (leadIdInput) leadIdInput.value = '';
     const leadFormMessage = document.getElementById('lead-form-message');
-    if (leadFormMessage) leadFormMessage.classList.add('hidden');
+    if (leadFormMessage) leadFormFormMessage.classList.add('hidden');
 }
 
 function showOpportunityForm() {
@@ -1003,23 +1009,49 @@ async function deleteLead(leadId) {
 
 // --- Opportunity Logic ---
 
+/**
+ * Filters price books based on the selected currency and populates the dropdown.
+ * @param {string} selectedCurrencyCode - The currency code to filter by.
+ * @param {string|null} currentPriceBookId - The ID of the price book to select after filtering, if any.
+ */
+function filterAndPopulatePriceBooks(selectedCurrencyCode, currentPriceBookId = null) {
+    const filteredPriceBooks = selectedCurrencyCode
+        ? allPriceBooks.filter(pb => pb.currency === selectedCurrencyCode && pb.isActive)
+        : allPriceBooks.filter(pb => pb.isActive); // Show all active if no currency selected
+
+    populateSelect(opportunityPriceBookSelect, filteredPriceBooks, 'id', 'name', 'Select a Price Book');
+
+    // Attempt to re-select the current price book if it's still in the filtered list
+    if (currentPriceBookId && filteredPriceBooks.some(pb => pb.id === currentPriceBookId)) {
+        opportunityPriceBookSelect.value = currentPriceBookId;
+    } else {
+        // If the current price book is no longer valid, or no current price book, reset selection
+        opportunityPriceBookSelect.value = "";
+    }
+}
+
+
 async function setupOpportunityForm(opportunity = null) {
     const customers = await fetchData('customers'); // Corrected path
     populateSelect(document.getElementById('opportunity-customer'), customers, 'id', 'name', 'Select a Customer');
 
     const currencies = await fetchData('currencies'); // Corrected path
-    populateSelect(document.getElementById('opportunity-currency'), currencies, 'code', 'code', 'Select...');
+    // Populate currency dropdown with name, but value remains code
+    populateSelect(opportunityCurrencySelect, currencies, 'code', 'name', 'Select...');
 
-    const priceBooks = await fetchData('priceBooks'); // Corrected path
-    populateSelect(document.getElementById('opportunity-price-book'), priceBooks, 'id', 'name', 'Select a Price Book');
+    // Fetch all price books once and store them
+    allPriceBooks = await fetchData('priceBooks'); // Corrected path
 
     if (opportunity) {
         currentOpportunityId = opportunity.id;
         document.getElementById('opportunity-id').value = opportunity.id;
         document.getElementById('opportunity-name').value = opportunity.name || '';
         document.getElementById('opportunity-customer').value = opportunity.customerId || '';
-        document.getElementById('opportunity-currency').value = opportunity.currency || '';
-        document.getElementById('opportunity-price-book').value = opportunity.priceBookId || '';
+        opportunityCurrencySelect.value = opportunity.currency || ''; // Set selected currency
+
+        // Now filter and populate price books based on the opportunity's currency
+        filterAndPopulatePriceBooks(opportunity.currency, opportunity.priceBookId);
+
         // Convert Firestore Timestamp to YYYY-MM-DD string for input type="date"
         const startDate = opportunity.expectedStartDate ? new Date(opportunity.expectedStartDate.seconds * 1000).toISOString().split('T')[0] : '';
         const closeDate = opportunity.expectedCloseDate ? new Date(opportunity.expectedCloseDate.seconds * 1000).toISOString().split('T')[0] : '';
@@ -1039,6 +1071,9 @@ async function setupOpportunityForm(opportunity = null) {
         currentOpportunityId = null;
         if (workLogsList) workLogsList.innerHTML = ''; // Clear work logs for new opportunity
         if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden');
+
+        // For new opportunities, populate price books with all active ones initially
+        filterAndPopulatePriceBooks(''); // Pass empty string to show all active price books
     }
     showOpportunityForm();
     console.log('Add Opportunity form setup complete.');
@@ -1081,8 +1116,8 @@ async function handleSaveOpportunity(event) {
         name: document.getElementById('opportunity-name').value,
         customerId: customerId,
         customerName: customerName, // Added customerName as per rules
-        currency: document.getElementById('opportunity-currency').value,
-        priceBookId: document.getElementById('opportunity-price-book').value,
+        currency: opportunityCurrencySelect.value, // Get value from the select
+        priceBookId: opportunityPriceBookSelect.value, // Get value from the select
         expectedStartDate: expectedStartDateTimestamp, // Save as Date object (Firestore converts to Timestamp)
         expectedCloseDate: expectedCloseDateTimestamp, // Save as Date object (Firestore converts to Timestamp)
         salesStage: document.getElementById('opportunity-sales-stage').value,
@@ -2051,6 +2086,10 @@ function initializePage() {
     messageConfirmBtn = document.getElementById('message-confirm-btn');
     messageCancelBtn = document.getElementById('message-cancel-btn');
 
+    // Assign opportunity specific dropdowns
+    opportunityCurrencySelect = document.getElementById('opportunity-currency');
+    opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
+
 
     // --- NEW DIAGNOSTIC LOG ---
     console.log('initializePage: opportunityForm element at start (after assignment):', opportunityForm);
@@ -2135,6 +2174,14 @@ function initializePage() {
         console.error('ERROR: opportunityForm element not found during initialization, cannot attach submit listener!');
     }
     // --- END DIAGNOSTIC LOGS ---
+
+    // New: Add listener for currency change to filter price books
+    if (opportunityCurrencySelect) {
+        opportunityCurrencySelect.addEventListener('change', (event) => {
+            filterAndPopulatePriceBooks(event.target.value);
+        });
+    }
+
 
     if (opportunitySearchInput) opportunitySearchInput.addEventListener('input', (event) => { if (opportunitiesGrid) opportunitiesGrid.search(event.target.value); });
 
