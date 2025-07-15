@@ -445,10 +445,19 @@ function showOpportunityForm() {
             header.classList.remove('expanded');
         }
     });
-    // Expand the first accordion (Main Details)
+    // Explicitly expand the first accordion (Main Details)
+    const mainDetailsContent = document.querySelector('#opportunity-form .accordion-item:first-child .accordion-content');
     const mainDetailsHeader = document.querySelector('#opportunity-form .accordion-item:first-child .accordion-header');
+    const mainDetailsIcon = mainDetailsHeader ? mainDetailsHeader.querySelector('.accordion-icon') : null;
+
+    if (mainDetailsContent) {
+        mainDetailsContent.classList.remove('hidden');
+    }
+    if (mainDetailsIcon) {
+        mainDetailsIcon.style.transform = 'rotate(180deg)';
+    }
     if (mainDetailsHeader) {
-        mainDetailsHeader.click(); // Simulate a click to expand
+        mainDetailsHeader.classList.add('expanded');
     }
 }
 
@@ -1021,11 +1030,14 @@ function filterAndPopulatePriceBooks(selectedCurrencyCode, currentPriceBookId = 
 
     populateSelect(opportunityPriceBookSelect, filteredPriceBooks, 'id', 'name', 'Select a Price Book');
 
-    // Attempt to re-select the current price book if it's still in the filtered list
-    if (currentPriceBookId && filteredPriceBooks.some(pb => pb.id === currentPriceBookId)) {
+    // Auto-select if only one option is available
+    if (filteredPriceBooks.length === 1) {
+        opportunityPriceBookSelect.value = filteredPriceBooks[0].id;
+    } else if (currentPriceBookId && filteredPriceBooks.some(pb => pb.id === currentPriceBookId)) {
+        // Attempt to re-select the current price book if it's still in the filtered list
         opportunityPriceBookSelect.value = currentPriceBookId;
     } else {
-        // If the current price book is no longer valid, or no current price book, reset selection
+        // If no auto-selection, or current price book is no longer valid, reset selection
         opportunityPriceBookSelect.value = "";
     }
 }
