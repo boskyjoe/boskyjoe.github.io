@@ -2,7 +2,7 @@
 
 // Firebase imports for ES Modules
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-import { getAuth, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+import { getAuth, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, onSnapshot, FieldValue, writeBatch } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 // Firebase configuration: Using the exact configuration provided by the user
@@ -222,42 +222,7 @@ async function setupAuth() {
         }
     }
 
-    // Sign in with custom token if available, otherwise anonymously
-    if (initialAuthToken) {
-        try {
-            await signInWithCustomToken(auth, initialAuthToken);
-            console.log("Signed in with custom token.");
-        } catch (error) {
-            console.error("Error signing in with custom token:", error);
-            // Fallback to anonymous if custom token fails
-            try {
-                await signInAnonymously(auth);
-                console.log("Signed in anonymously after custom token failure.");
-            } catch (anonError) {
-                console.error("Error signing in anonymously:", anonError);
-                if (authErrorMessage) {
-                    authErrorMessage.textContent = `Authentication failed: ${anonError.message}`;
-                    authErrorMessage.classList.remove('hidden');
-                }
-                showSection(authSection);
-                return;
-            }
-        }
-    } else {
-        try {
-            await signInAnonymously(auth);
-            console.log("Signed in anonymously.");
-        } catch (error) {
-            console.error("Error signing in anonymously:", error);
-            if (authErrorMessage) {
-                authErrorMessage.textContent = `Authentication failed: ${error.message}`;
-                authErrorMessage.classList.remove('hidden');
-            }
-            showSection(authSection);
-            return;
-        }
-    }
-
+    // Check for existing auth state first
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             userId = user.uid;
@@ -285,6 +250,7 @@ async function setupAuth() {
             showSection(dashboardSection); // Show dashboard after successful login
             await updateDashboard();
         } else {
+            // No user is signed in. Attempt custom token login (for Canvas) or show Google Sign-In.
             userId = null;
             userRole = 'guest';
             if (userDisplayName) userDisplayName.textContent = 'Guest';
@@ -292,8 +258,25 @@ async function setupAuth() {
             if (userRoleDisplay) userRoleDisplay.textContent = '';
             if (navLogout) navLogout.classList.add('hidden');
             if (adminMenuItem) adminMenuItem.classList.add('hidden');
-            showSection(authSection);
-            console.log("User is signed out.");
+
+            if (initialAuthToken) {
+                try {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                    console.log("Attempted sign-in with custom token.");
+                    // onAuthStateChanged will be triggered again if successful
+                } catch (error) {
+                    console.error("Error signing in with custom token:", error);
+                    if (authErrorMessage) {
+                        authErrorMessage.textContent = `Authentication failed: ${error.message}. Please sign in with Google.`;
+                        authErrorMessage.classList.remove('hidden');
+                    }
+                    showSection(authSection); // Show auth section if custom token fails
+                }
+            } else {
+                // No custom token, show Google Sign-In
+                console.log("No custom token, prompting Google Sign-In.");
+                showSection(authSection);
+            }
         }
     });
 }
@@ -1211,131 +1194,247 @@ async function deleteOpportunity(opportunityId) {
     }
 }
 
-// Part 6: Work Log Logic
+// Part 5: Opportunity Logic
 
-// --- Work Log Logic ---
+// --- Opportunity Logic ---
 
-async function loadWorkLogs(opportunityId) {
-    if (!db || !userId || !opportunityId) {
-        if (workLogsList) workLogsList.innerHTML = '';
+async function setupOpportunityForm(opportunity = null) {
+    const customers = await fetchData(`artifacts/${appId}/users/${userId}/customers`);
+    populateSelect(document.getElementById('opportunity-customer'), customers, 'id', 'name', 'Select a Customer');
+
+    const currencies = await fetchData(`artifacts/${appId}/public/data/currencies`);
+    populateSelect(document.getElementById('opportunity-currency'), currencies, 'code', 'code', 'Select...');
+
+    const priceBooks = await fetchData(`artifacts/${appId}/public/data/priceBooks`);
+    populateSelect(document.getElementById('opportunity-price-book'), priceBooks, 'id', 'name', 'Select a Price Book');
+
+    if (opportunity) {
+        currentOpportunityId = opportunity.id;
+        document.getElementById('opportunity-id').value = opportunity.id;
+        document.getElementById('opportunity-name').value = opportunity.name || '';
+        document.getElementById('opportunity-customer').value = opportunity.customerId || '';
+        document.getElementById('opportunity-currency').value = opportunity.currency || '';
+        document.getElementById('opportunity-price-book').value = opportunity.priceBookId || '';
+        document.getElementById('opportunity-start-date').value = opportunity.expectedStartDate || '';
+        document.getElementById('opportunity-close-date').value = opportunity.expectedCloseDate || '';
+        document.getElementById('opportunity-sales-stage').value = opportunity.salesStage || 'Prospect';
+        document.getElementById('opportunity-probability').value = opportunity.probability !== undefined ? opportunity.probability : '';
+        document.getElementById('opportunity-value').value = opportunity.value !== undefined ? opportunity.value : '';
+        document.getElementById('opportunity-notes').value = opportunity.notes || '';
+
+        await loadWorkLogs(opportunity.id); // Load work logs for this opportunity
+    } else {
+        if (opportunityForm) opportunityForm.reset();
+        const opportunityIdInput = document.getElementById('opportunity-id');
+        if (opportunityIdInput) opportunityIdInput.value = '';
+        currentOpportunityId = null;
+        if (workLogsList) workLogsList.innerHTML = ''; // Clear work logs for new opportunity
         if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden');
-        return;
     }
-
-    onSnapshot(query(collection(db, `artifacts/${appId}/users/${userId}/workLogs`),
-        where('opportunityId', '==', opportunityId),
-        orderBy('date', 'desc')), // Order by date, newest first
-        snapshot => {
-            if (workLogsList) workLogsList.innerHTML = ''; // Clear existing logs
-            if (noWorkLogsMessage) {
-                if (snapshot.empty) {
-                    noWorkLogsMessage.classList.remove('hidden');
-                    return;
-                }
-                noWorkLogsMessage.classList.add('hidden');
-            }
-            snapshot.forEach(docSnap => { // Renamed doc to docSnap
-                const log = docSnap.data();
-                const logId = docSnap.id;
-                const li = document.createElement('li');
-                li.className = 'bg-gray-50 p-3 rounded-md shadow-sm border border-gray-200 flex justify-between items-center';
-                li.innerHTML = `
-                    <div>
-                        <p class="text-sm font-semibold text-gray-700">${log.date} - ${log.type}</p>
-                        <p class="text-gray-600 text-sm mt-1">${log.details}</p>
-                    </div>
-                    <div class="flex space-x-2">
-                        <button type="button" class="px-2 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-xs"
-                            onclick="editWorkLog('${logId}')">Edit</button>
-                        <button type="button" class="px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-xs"
-                            onclick="deleteWorkLog('${logId}', '${opportunityId}')">Delete</button>
-                    </div>
-                `;
-                if (workLogsList) workLogsList.appendChild(li);
-            });
-        }, error => {
-            console.error("Error loading work logs in real-time:", error);
-            showMessageBox(`Error loading work logs: ${error.message}`, false);
-            if (workLogsList) workLogsList.innerHTML = '';
-            if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden');
-        });
+    showOpportunityForm();
+    console.log('Add Opportunity form setup complete.');
 }
 
-async function handleSaveWorkLog(event) {
-    event.preventDefault();
-    if (!db || !userId || !currentOpportunityId) {
-        showMessageBox("Authentication or selected opportunity required to save work log.", false);
+async function handleSaveOpportunity(event) {
+    event.preventDefault(); // Prevent default form submission
+    console.log('handleSaveOpportunity: Form submit event triggered.'); // Diagnostic log
+
+    if (!db || !userId) {
+        showMessageBox("Authentication required to save opportunity.", false);
         return;
     }
 
-    const workLogId = document.getElementById('work-log-id').value;
-    const messageElement = document.getElementById('work-log-form-message');
+    const opportunityId = document.getElementById('opportunity-id').value;
+    const messageElement = document.getElementById('opportunity-form-message');
     if (messageElement) messageElement.classList.add('hidden');
 
-    const workLogData = {
-        opportunityId: currentOpportunityId,
-        date: document.getElementById('work-log-date').value,
-        type: document.getElementById('work-log-type').value,
-        details: document.getElementById('work-log-details').value,
+    const opportunityData = {
+        name: document.getElementById('opportunity-name').value,
+        customerId: document.getElementById('opportunity-customer').value,
+        currency: document.getElementById('opportunity-currency').value,
+        priceBookId: document.getElementById('opportunity-price-book').value,
+        expectedStartDate: document.getElementById('opportunity-start-date').value,
+        expectedCloseDate: document.getElementById('opportunity-close-date').value,
+        salesStage: document.getElementById('opportunity-sales-stage').value,
+        probability: parseFloat(document.getElementById('opportunity-probability').value) || 0,
+        value: parseFloat(document.getElementById('opportunity-value').value) || 0,
+        notes: document.getElementById('opportunity-notes').value,
         updatedAt: FieldValue.serverTimestamp(),
         userId: userId
     };
 
     try {
-        const collectionRef = collection(db, `artifacts/${appId}/users/${userId}/workLogs`);
-        if (workLogId) {
-            await updateDoc(doc(collectionRef, workLogId), workLogData);
-            showMessageBox("Work log updated successfully!", false);
+        const collectionRef = collection(db, `artifacts/${appId}/users/${userId}/opportunities`);
+        if (opportunityId) {
+            await updateDoc(doc(collectionRef, opportunityId), opportunityData);
+            showMessageBox("Opportunity updated successfully!", false);
         } else {
-            workLogData.createdAt = FieldValue.serverTimestamp();
-            await addDoc(collectionRef, workLogData);
-            showMessageBox("Work log added successfully!", false);
+            opportunityData.createdAt = FieldValue.serverTimestamp();
+            const docRef = await addDoc(collectionRef, opportunityData);
+            currentOpportunityId = docRef.id; // Set ID for new opportunity
+            showMessageBox("Opportunity added successfully!", false);
         }
-        hideWorkLogForm();
-        // loadWorkLogs is already onSnapshot, so it will update automatically
+        hideOpportunityForm();
+        await loadOpportunities(); // Reload grid
+        await updateDashboard();
     } catch (error) {
-        console.error("Error saving work log:", error);
+        console.error("Error saving opportunity:", error);
         if (messageElement) {
-            messageElement.textContent = `Error saving work log: ${error.message}`;
+            messageElement.textContent = `Error saving opportunity: ${error.message}`;
             messageElement.classList.remove('hidden');
         }
     }
 }
 
-async function editWorkLog(workLogId) {
-    if (!db || !userId) return;
-    try {
-        const docRef = doc(db, `artifacts/${appId}/users/${userId}/workLogs`, workLogId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            const log = docSnap.data();
-            document.getElementById('work-log-id').value = workLogId;
-            document.getElementById('work-log-opportunity-id').value = log.opportunityId;
-            document.getElementById('work-log-date').value = log.date;
-            document.getElementById('work-log-type').value = log.type;
-            document.getElementById('work-log-details').value = log.details;
-            showWorkLogForm();
-        } else {
-            showMessageBox("Work log not found!", false);
+async function loadOpportunities() {
+    if (!db || !userId) {
+        if (noOpportunitiesMessage) noOpportunitiesMessage.classList.remove('hidden');
+        if (opportunitiesGrid) opportunitiesGrid.updateConfig({ data: [] }).forceRender();
+        return;
+    }
+
+    onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/opportunities`), async snapshot => {
+        const opportunities = [];
+        for (const docSnap of snapshot.docs) { // Renamed doc to docSnap to avoid conflict with import
+            const opp = { id: docSnap.id, ...docSnap.data() };
+            // Fetch customer name
+            if (opp.customerId) {
+                try {
+                    const customerSnap = await getDoc(doc(db, `artifacts/${appId}/users/${userId}/customers`, opp.customerId));
+                    opp.customerName = customerSnap.exists() ? customerSnap.data().name : 'Unknown Customer';
+                } catch (error) {
+                    console.warn(`Could not fetch customer ${opp.customerId}:`, error);
+                    opp.customerName = 'Error Loading Customer';
+                }
+            } else {
+                opp.customerName = 'N/A';
+            }
+            opportunities.push(opp);
         }
-    } catch (error) {
-        console.error("Error editing work log:", error);
-        showMessageBox(`Error loading work log for edit: ${error.message}`, false);
+        renderOpportunitiesGrid(opportunities);
+    }, error => {
+        console.error("Error loading opportunities in real-time:", error);
+        showMessageBox(`Error loading opportunities: ${error.message}`, false);
+        if (noOpportunitiesMessage) noOpportunitiesMessage.classList.remove('hidden');
+        if (opportunitiesGrid) opportunitiesGrid.updateConfig({ data: [] }).forceRender();
+    });
+}
+
+function renderOpportunitiesGrid(opportunities) {
+    const data = opportunities.map(opportunity => [
+        opportunity.name,
+        opportunity.customerName, // Display fetched customer name
+        `${opportunity.currency} ${opportunity.value !== undefined ? opportunity.value.toFixed(2) : 'N/A'}`, // Handle undefined value
+        opportunity.salesStage,
+        `${opportunity.probability !== undefined ? opportunity.probability : 'N/A'}%`, // Handle undefined probability
+        opportunity.expectedCloseDate,
+        opportunity.id
+    ]);
+
+    if (!opportunitiesGrid) {
+        if (opportunitiesGridContainer) {
+            opportunitiesGrid = new gridjs.Grid({
+                columns: [
+                    { name: 'Opportunity Name', width: '20%' },
+                    { name: 'Customer', width: '20%' },
+                    { name: 'Value', width: '15%' },
+                    { name: 'Stage', width: '15%' },
+                    { name: 'Probability', width: '10%' },
+                    { name: 'Close Date', width: '10%' },
+                    {
+                        name: 'Actions',
+                        width: '10%',
+                        formatter: (cell, row) => {
+                            return gridjs.h('div', { className: 'flex space-x-2' },
+                                gridjs.h('button', {
+                                    className: 'px-2 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
+                                    onclick: () => editOpportunity(row.cells[6].data)
+                                }, 'Edit'),
+                                gridjs.h('button', {
+                                    className: 'px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-sm',
+                                    onclick: () => deleteOpportunity(row.cells[6].data)
+                                }, 'Delete')
+                            );
+                        },
+                        sort: false,
+                    }
+                ],
+                data: data,
+                search: true,
+                pagination: {
+                    enabled: true,
+                    limit: 10
+                },
+                sort: true,
+                className: {
+                    table: 'min-w-full divide-y divide-gray-200',
+                    thead: 'bg-gray-50',
+                    th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+                    tbody: 'bg-white divide-y divide-gray-200',
+                    td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                    footer: 'p-4',
+                    pagination: 'flex items-center justify-between',
+                    container: 'overflow-x-auto'
+                }
+            }).render(opportunitiesGridContainer);
+            console.log('Grid.js is now available for opportunities.');
+        } else {
+            console.error("opportunitiesGridContainer not found, cannot render opportunities grid.");
+        }
+    } else {
+        opportunitiesGrid.updateConfig({ data: data }).forceRender();
+    }
+
+    if (noOpportunitiesMessage) {
+        if (opportunities.length === 0) {
+            noOpportunitiesMessage.classList.remove('hidden');
+        } else {
+            noOpportunitiesMessage.classList.add('hidden');
+        }
     }
 }
 
-async function deleteWorkLog(workLogId, opportunityId) {
-    const confirmDelete = await showMessageBox("Are you sure you want to delete this work log entry?", true);
+async function editOpportunity(opportunityId) {
+    if (!db || !userId) return;
+    try {
+        const docRef = doc(db, `artifacts/${appId}/users/${userId}/opportunities`, opportunityId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            await setupOpportunityForm(docSnap.data());
+            // currentOpportunityId is already set in setupOpportunityForm
+        } else {
+            showMessageBox("Opportunity not found!", false);
+        }
+    } catch (error) {
+        console.error("Error editing opportunity:", error);
+        showMessageBox(`Error loading opportunity for edit: ${error.message}`, false);
+    }
+}
+
+async function deleteOpportunity(opportunityId) {
+    const confirmDelete = await showMessageBox("Are you sure you want to delete this opportunity and all its work logs?", true);
     if (!confirmDelete) return;
 
     if (!db || !userId) return;
     try {
-        await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/workLogs`, workLogId));
-        showMessageBox("Work log deleted successfully!", false);
-        // loadWorkLogs is already onSnapshot, so it will update automatically
+        // Delete associated work logs first
+        const workLogsRef = collection(db, `artifacts/${appId}/users/${userId}/workLogs`);
+        const workLogsQuery = query(workLogsRef, where('opportunityId', '==', opportunityId));
+        const workLogsSnapshot = await getDocs(workLogsQuery);
+        const batch = writeBatch(db);
+        workLogsSnapshot.forEach(docSnap => { // Renamed doc to docSnap
+            batch.delete(docSnap.ref);
+        });
+        await batch.commit();
+
+        // Then delete the opportunity
+        await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/opportunities`, opportunityId));
+        showMessageBox("Opportunity and associated work logs deleted successfully!", false);
+        await loadOpportunities(); // Reload grid
+        await updateDashboard();
     } catch (error) {
-        console.error("Error deleting work log:", error);
-        showMessageBox(`Error deleting work log: ${error.message}`, false);
+        console.error("Error deleting opportunity:", error);
+        showMessageBox(`Error deleting opportunity: ${error.message}`, false);
     }
 }
 
@@ -1983,7 +2082,7 @@ function initializePage() {
     // --- END NEW DIAGNOSTIC LOG ---
 
     // Setup Auth
-    setupAuth();
+    setupAuth(); // This will now handle the correct login flow
 
     // Navigation Event Listeners (ensure elements exist before adding listeners)
     if (navDashboard) navDashboard.addEventListener('click', () => {
