@@ -17,6 +17,7 @@ const firebaseConfig = {
 };
 
 // Use the appId directly from the provided firebaseConfig
+// Note: appId is not used in collection paths as per provided Firestore Rules.
 const appId = firebaseConfig.appId;
 
 // Environment variable for initial auth token (if available)
@@ -231,15 +232,35 @@ async function setupAuth() {
             if (navLogout) navLogout.classList.remove('hidden');
             if (authSection) authSection.classList.add('hidden');
 
-            // Determine user role (e.g., based on a 'roles' collection or claims)
-            // For simplicity, let's assume 'admin' if UID matches a predefined admin UID, otherwise 'user'
-            // In a real app, you'd fetch this from Firestore or Firebase Auth custom claims
-            const adminUids = ['YOUR_ADMIN_UID_1', 'YOUR_ADMIN_UID_2']; // Replace with actual admin UIDs
-            userRole = adminUids.includes(userId) ? 'admin' : 'user';
+            // Determine user role (e.g., based on a 'users_data' collection or claims)
+            // Fetch user role from 'users_data' collection
+            try {
+                const userDocRef = doc(db, 'users_data', userId);
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists()) {
+                    userRole = userDocSnap.data().role || 'Standard';
+                } else {
+                    // If user data doesn't exist, create it (for new Google sign-ins)
+                    // Default to 'Standard' role for new users
+                    userRole = 'Standard';
+                    await setDoc(userDocRef, {
+                        displayName: user.displayName || 'New User',
+                        email: user.email || '',
+                        role: userRole,
+                        createdAt: FieldValue.serverTimestamp(),
+                        lastLogin: FieldValue.serverTimestamp()
+                    }, { merge: true }); // Use merge to avoid overwriting existing fields if any
+                    console.log(`New user data created for ${user.email} with role ${userRole}`);
+                }
+            } catch (error) {
+                console.error("Error fetching/setting user role:", error);
+                userRole = 'guest'; // Fallback to guest if there's an error
+            }
+
             if (userRoleDisplay) userRoleDisplay.textContent = `(${userRole})`;
 
             if (adminMenuItem) {
-                if (userRole === 'admin') {
+                if (userRole === 'Admin') { // Check for 'Admin' role as per rules
                     adminMenuItem.classList.remove('hidden');
                 } else {
                     adminMenuItem.classList.add('hidden');
@@ -318,20 +339,29 @@ async function updateDashboard() {
     if (!db || !userId) return;
 
     try {
-        const customersRef = collection(db, `artifacts/${appId}/users/${userId}/customers`);
-        const opportunitiesRef = collection(db, `artifacts/${appId}/users/${userId}/opportunities`);
+        // Query customers and opportunities owned by the current user
+        const customersRef = collection(db, 'customers');
+        const opportunitiesRef = collection(db, 'opportunities');
 
-        const totalCustomersSnap = await getDocs(customersRef);
+        const totalCustomersQuery = query(customersRef, where('creatorId', '==', userId));
+        const totalCustomersSnap = await getDocs(totalCustomersQuery);
         if (dashboardTotalCustomers) dashboardTotalCustomers.textContent = totalCustomersSnap.size;
 
-        const totalOpportunitiesSnap = await getDocs(opportunitiesRef);
+        const totalOpportunitiesQuery = query(opportunitiesRef, where('creatorId', '==', userId));
+        const totalOpportunitiesSnap = await getDocs(totalOpportunitiesQuery);
         if (dashboardTotalOpportunities) dashboardTotalOpportunities.textContent = totalOpportunitiesSnap.size;
 
-        const openOpportunitiesQuery = query(opportunitiesRef, where('salesStage', 'in', ['Prospect', 'Qualification', 'Proposal', 'Negotiation']));
+        const openOpportunitiesQuery = query(opportunitiesRef,
+            where('creatorId', '==', userId),
+            where('salesStage', 'in', ['Prospect', 'Qualification', 'Proposal', 'Negotiation'])
+        );
         const openOpportunitiesSnap = await getDocs(openOpportunitiesQuery);
         if (dashboardOpenOpportunities) dashboardOpenOpportunities.textContent = openOpportunitiesSnap.size;
 
-        const wonOpportunitiesQuery = query(opportunitiesRef, where('salesStage', '==', 'Won'));
+        const wonOpportunitiesQuery = query(opportunitiesRef,
+            where('creatorId', '==', userId),
+            where('salesStage', '==', 'Won')
+        );
         const wonOpportunitiesSnap = await getDocs(wonOpportunitiesQuery);
         if (dashboardWonOpportunities) dashboardWonOpportunities.textContent = wonOpportunitiesSnap.size;
 
@@ -534,7 +564,7 @@ function populateSelect(selectElement, data, valueKey, textKey, defaultOptionTex
 // --- Customer Logic ---
 
 async function setupCustomerForm(customer = null) {
-    const countries = await fetchData(`artifacts/${appId}/public/data/countries`);
+    const countries = await fetchData('countries'); // Corrected path
     populateSelect(document.getElementById('customer-country'), countries, 'name', 'name', 'Select Country');
 
     if (customer) {
@@ -583,17 +613,19 @@ async function handleSaveCustomer(event) {
         additionalDetails: document.getElementById('customer-details').value,
         source: document.getElementById('customer-source').value,
         active: document.getElementById('customer-active').checked,
+        creatorId: userId, // Added creatorId as per rules
         updatedAt: FieldValue.serverTimestamp(),
-        userId: userId // Store the user ID for ownership/security rules
+        createdAt: FieldValue.serverTimestamp() // Will be overwritten by update if customerId exists
     };
 
     try {
-        const collectionRef = collection(db, `artifacts/${appId}/users/${userId}/customers`);
+        const collectionRef = collection(db, 'customers'); // Corrected path
         if (customerId) {
+            // For update, only update updatedAt, not createdAt
+            delete customerData.createdAt;
             await updateDoc(doc(collectionRef, customerId), customerData);
             showMessageBox("Customer updated successfully!", false);
         } else {
-            customerData.createdAt = FieldValue.serverTimestamp();
             await addDoc(collectionRef, customerData);
             showMessageBox("Customer added successfully!", false);
         }
@@ -616,10 +648,10 @@ async function loadCustomers() {
         return;
     }
 
-    const customersCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/customers`);
+    const customersCollectionRef = collection(db, 'customers'); // Corrected path
 
-    // Setup real-time listener
-    onSnapshot(customersCollectionRef, snapshot => {
+    // Setup real-time listener, query only for current user's customers
+    onSnapshot(query(customersCollectionRef, where('creatorId', '==', userId)), snapshot => {
         const customers = [];
         snapshot.forEach(doc => {
             customers.push({ id: doc.id, ...doc.data() });
@@ -708,7 +740,7 @@ function renderCustomersGrid(customers) {
 async function editCustomer(customerId) {
     if (!db || !userId) return;
     try {
-        const docRef = doc(db, `artifacts/${appId}/users/${userId}/customers`, customerId);
+        const docRef = doc(db, 'customers', customerId); // Corrected path
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             await setupCustomerForm(docSnap.data());
@@ -729,11 +761,12 @@ async function deleteCustomer(customerId) {
 
     if (!db || !userId) return;
     try {
-        await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/customers`, customerId));
+        await deleteDoc(doc(db, 'customers', customerId)); // Corrected path
         showMessageBox("Customer deleted successfully!", false);
         await loadCustomers(); // Reload grid
         await updateDashboard();
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error deleting customer:", error);
         showMessageBox(`Error deleting customer: ${error.message}`, false);
     }
@@ -744,10 +777,15 @@ async function deleteCustomer(customerId) {
 async function setupLeadForm(lead = null) {
     // Populate Services Interested (example data, replace with Firestore if needed)
     const services = [
-        { id: 'Photography', name: 'Photography' },
-        { id: 'Videography', name: 'Videography' },
-        { id: 'Both', name: 'Both' },
-        { id: 'Other', name: 'Other' }
+        { id: 'Save the Day', name: 'Save the Day' },
+        { id: 'Pre-Wedding Photo Shoot', name: 'Pre-Wedding Photo Shoot' },
+        { id: 'Wedding', name: 'Wedding' },
+        { id: 'Post-Wedding Photo Shoot', name: 'Post-Wedding Photo Shoot' },
+        { id: 'Baby Shower', name: 'Baby Shower' },
+        { id: 'Corporate Event', name: 'Corporate Event' },
+        { id: 'Product Launch', name: 'Product Launch' },
+        { id: 'Political Meeting', name: 'Political Meeting' },
+        { id: 'Others', name: 'Others' }
     ];
     populateSelect(document.getElementById('lead-services-interested'), services, 'id', 'name', 'Select Service');
 
@@ -758,7 +796,7 @@ async function setupLeadForm(lead = null) {
         { id: 'Advertisement', name: 'Advertisement' },
         { id: 'Social Media', name: 'Social Media' },
         { id: 'Event', name: 'Event' },
-        { id: 'Other', name: 'Other' }
+        { id: 'Others', name: 'Others' }
     ];
     populateSelect(document.getElementById('lead-source'), sources, 'id', 'name', 'Select Source');
 
@@ -768,7 +806,9 @@ async function setupLeadForm(lead = null) {
         document.getElementById('lead-phone').value = lead.phone || '';
         document.getElementById('lead-email').value = lead.email || '';
         document.getElementById('lead-services-interested').value = lead.servicesInterested || '';
-        document.getElementById('lead-event-date').value = lead.eventDate || '';
+        // Convert Firestore Timestamp to YYYY-MM-DD string for input type="date"
+        const eventDate = lead.eventDate ? new Date(lead.eventDate.seconds * 1000).toISOString().split('T')[0] : '';
+        document.getElementById('lead-event-date').value = eventDate;
         document.getElementById('lead-source').value = lead.source || '';
         document.getElementById('lead-additional-details').value = lead.additionalDetails || '';
     } else {
@@ -790,25 +830,30 @@ async function handleSaveLead(event) {
     const messageElement = document.getElementById('lead-form-message');
     if (messageElement) messageElement.classList.add('hidden');
 
+    const eventDateValue = document.getElementById('lead-event-date').value;
+    const eventDateTimestamp = eventDateValue ? new Date(eventDateValue) : null;
+
     const leadData = {
         contactName: document.getElementById('lead-contact-name').value,
         phone: document.getElementById('lead-phone').value,
         email: document.getElementById('lead-email').value,
         servicesInterested: document.getElementById('lead-services-interested').value,
-        eventDate: document.getElementById('lead-event-date').value,
+        eventDate: eventDateTimestamp, // Save as Date object (Firestore converts to Timestamp)
         source: document.getElementById('lead-source').value,
         additionalDetails: document.getElementById('lead-additional-details').value,
+        creatorId: userId, // Added creatorId as per rules
         updatedAt: FieldValue.serverTimestamp(),
-        userId: userId
+        createdAt: FieldValue.serverTimestamp() // Will be overwritten by update if leadId exists
     };
 
     try {
-        const collectionRef = collection(db, `artifacts/${appId}/users/${userId}/leads`);
+        const collectionRef = collection(db, 'leads'); // Corrected path
         if (leadId) {
+            // For update, only update updatedAt, not createdAt
+            delete leadData.createdAt;
             await updateDoc(doc(collectionRef, leadId), leadData);
             showMessageBox("Lead updated successfully!", false);
         } else {
-            leadData.createdAt = FieldValue.serverTimestamp();
             await addDoc(collectionRef, leadData);
             showMessageBox("Lead added successfully!", false);
         }
@@ -830,10 +875,14 @@ async function loadLeads() {
         return;
     }
 
-    onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/leads`), snapshot => {
+    // Query only for current user's leads
+    onSnapshot(query(collection(db, 'leads'), where('creatorId', '==', userId)), snapshot => { // Corrected path
         const leads = [];
         snapshot.forEach(doc => {
-            leads.push({ id: doc.id, ...doc.data() });
+            const leadData = doc.data();
+            // Convert Firestore Timestamp to YYYY-MM-DD string for display
+            const eventDateDisplay = leadData.eventDate && leadData.eventDate.toDate ? leadData.eventDate.toDate().toISOString().split('T')[0] : 'N/A';
+            leads.push({ id: doc.id, ...leadData, eventDate: eventDateDisplay });
         });
         renderLeadsGrid(leads);
     }, error => {
@@ -850,7 +899,7 @@ function renderLeadsGrid(leads) {
         lead.email,
         lead.phone,
         lead.servicesInterested,
-        lead.eventDate,
+        lead.eventDate, // Already formatted in loadLeads
         lead.source,
         lead.id
     ]);
@@ -920,7 +969,7 @@ function renderLeadsGrid(leads) {
 async function editLead(leadId) {
     if (!db || !userId) return;
     try {
-        const docRef = doc(db, `artifacts/${appId}/users/${userId}/leads`, leadId);
+        const docRef = doc(db, 'leads', leadId); // Corrected path
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             await setupLeadForm(docSnap.data());
@@ -941,7 +990,7 @@ async function deleteLead(leadId) {
 
     if (!db || !userId) return;
     try {
-        await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/leads`, leadId));
+        await deleteDoc(doc(db, 'leads', leadId)); // Corrected path
         showMessageBox("Lead deleted successfully!", false);
         await loadLeads(); // Reload grid
     } catch (error) {
@@ -955,13 +1004,13 @@ async function deleteLead(leadId) {
 // --- Opportunity Logic ---
 
 async function setupOpportunityForm(opportunity = null) {
-    const customers = await fetchData(`artifacts/${appId}/users/${userId}/customers`);
+    const customers = await fetchData('customers'); // Corrected path
     populateSelect(document.getElementById('opportunity-customer'), customers, 'id', 'name', 'Select a Customer');
 
-    const currencies = await fetchData(`artifacts/${appId}/public/data/currencies`);
+    const currencies = await fetchData('currencies'); // Corrected path
     populateSelect(document.getElementById('opportunity-currency'), currencies, 'code', 'code', 'Select...');
 
-    const priceBooks = await fetchData(`artifacts/${appId}/public/data/priceBooks`);
+    const priceBooks = await fetchData('priceBooks'); // Corrected path
     populateSelect(document.getElementById('opportunity-price-book'), priceBooks, 'id', 'name', 'Select a Price Book');
 
     if (opportunity) {
@@ -971,8 +1020,12 @@ async function setupOpportunityForm(opportunity = null) {
         document.getElementById('opportunity-customer').value = opportunity.customerId || '';
         document.getElementById('opportunity-currency').value = opportunity.currency || '';
         document.getElementById('opportunity-price-book').value = opportunity.priceBookId || '';
-        document.getElementById('opportunity-start-date').value = opportunity.expectedStartDate || '';
-        document.getElementById('opportunity-close-date').value = opportunity.expectedCloseDate || '';
+        // Convert Firestore Timestamp to YYYY-MM-DD string for input type="date"
+        const startDate = opportunity.expectedStartDate ? new Date(opportunity.expectedStartDate.seconds * 1000).toISOString().split('T')[0] : '';
+        const closeDate = opportunity.expectedCloseDate ? new Date(opportunity.expectedCloseDate.seconds * 1000).toISOString().split('T')[0] : '';
+
+        document.getElementById('opportunity-start-date').value = startDate;
+        document.getElementById('opportunity-close-date').value = closeDate;
         document.getElementById('opportunity-sales-stage').value = opportunity.salesStage || 'Prospect';
         document.getElementById('opportunity-probability').value = opportunity.probability !== undefined ? opportunity.probability : '';
         document.getElementById('opportunity-value').value = opportunity.value !== undefined ? opportunity.value : '';
@@ -1004,28 +1057,51 @@ async function handleSaveOpportunity(event) {
     const messageElement = document.getElementById('opportunity-form-message');
     if (messageElement) messageElement.classList.add('hidden');
 
+    const customerId = document.getElementById('opportunity-customer').value;
+    let customerName = '';
+    if (customerId) {
+        try {
+            const customerSnap = await getDoc(doc(db, 'customers', customerId)); // Corrected path
+            if (customerSnap.exists()) {
+                customerName = customerSnap.data().name;
+            }
+        } catch (error) {
+            console.error("Error fetching customer name for opportunity:", error);
+            customerName = 'Unknown Customer'; // Fallback
+        }
+    }
+
+    const expectedStartDateValue = document.getElementById('opportunity-start-date').value;
+    const expectedStartDateTimestamp = expectedStartDateValue ? new Date(expectedStartDateValue) : null;
+
+    const expectedCloseDateValue = document.getElementById('opportunity-close-date').value;
+    const expectedCloseDateTimestamp = expectedCloseDateValue ? new Date(expectedCloseDateValue) : null;
+
     const opportunityData = {
         name: document.getElementById('opportunity-name').value,
-        customerId: document.getElementById('opportunity-customer').value,
+        customerId: customerId,
+        customerName: customerName, // Added customerName as per rules
         currency: document.getElementById('opportunity-currency').value,
         priceBookId: document.getElementById('opportunity-price-book').value,
-        expectedStartDate: document.getElementById('opportunity-start-date').value,
-        expectedCloseDate: document.getElementById('opportunity-close-date').value,
+        expectedStartDate: expectedStartDateTimestamp, // Save as Date object (Firestore converts to Timestamp)
+        expectedCloseDate: expectedCloseDateTimestamp, // Save as Date object (Firestore converts to Timestamp)
         salesStage: document.getElementById('opportunity-sales-stage').value,
         probability: parseFloat(document.getElementById('opportunity-probability').value) || 0,
         value: parseFloat(document.getElementById('opportunity-value').value) || 0,
         notes: document.getElementById('opportunity-notes').value,
+        creatorId: userId, // Added creatorId as per rules
         updatedAt: FieldValue.serverTimestamp(),
-        userId: userId
+        createdAt: FieldValue.serverTimestamp() // Will be overwritten by update if opportunityId exists
     };
 
     try {
-        const collectionRef = collection(db, `artifacts/${appId}/users/${userId}/opportunities`);
+        const collectionRef = collection(db, 'opportunities'); // Corrected path
         if (opportunityId) {
+            // For update, only update updatedAt, not createdAt
+            delete opportunityData.createdAt;
             await updateDoc(doc(collectionRef, opportunityId), opportunityData);
             showMessageBox("Opportunity updated successfully!", false);
         } else {
-            opportunityData.createdAt = FieldValue.serverTimestamp();
             const docRef = await addDoc(collectionRef, opportunityData);
             currentOpportunityId = docRef.id; // Set ID for new opportunity
             showMessageBox("Opportunity added successfully!", false);
@@ -1049,22 +1125,15 @@ async function loadOpportunities() {
         return;
     }
 
-    onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/opportunities`), async snapshot => {
+    // Query only for current user's opportunities
+    onSnapshot(query(collection(db, 'opportunities'), where('creatorId', '==', userId)), async snapshot => { // Corrected path
         const opportunities = [];
         for (const docSnap of snapshot.docs) { // Renamed doc to docSnap to avoid conflict with import
             const opp = { id: docSnap.id, ...docSnap.data() };
-            // Fetch customer name
-            if (opp.customerId) {
-                try {
-                    const customerSnap = await getDoc(doc(db, `artifacts/${appId}/users/${userId}/customers`, opp.customerId));
-                    opp.customerName = customerSnap.exists() ? customerSnap.data().name : 'Unknown Customer';
-                } catch (error) {
-                    console.warn(`Could not fetch customer ${opp.customerId}:`, error);
-                    opp.customerName = 'Error Loading Customer';
-                }
-            } else {
-                opp.customerName = 'N/A';
-            }
+            // customerName is now stored directly in the opportunity document, no need to fetch
+            // Convert Firestore Timestamps to YYYY-MM-DD string for display
+            opp.expectedStartDate = opp.expectedStartDate && opp.expectedStartDate.toDate ? opp.expectedStartDate.toDate().toISOString().split('T')[0] : 'N/A';
+            opp.expectedCloseDate = opp.expectedCloseDate && opp.expectedCloseDate.toDate ? opp.expectedCloseDate.toDate().toISOString().split('T')[0] : 'N/A';
             opportunities.push(opp);
         }
         renderOpportunitiesGrid(opportunities);
@@ -1153,7 +1222,7 @@ function renderOpportunitiesGrid(opportunities) {
 async function editOpportunity(opportunityId) {
     if (!db || !userId) return;
     try {
-        const docRef = doc(db, `artifacts/${appId}/users/${userId}/opportunities`, opportunityId);
+        const docRef = doc(db, 'opportunities', opportunityId); // Corrected path
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             await setupOpportunityForm(docSnap.data());
@@ -1173,9 +1242,9 @@ async function deleteOpportunity(opportunityId) {
 
     if (!db || !userId) return;
     try {
-        // Delete associated work logs first
-        const workLogsRef = collection(db, `artifacts/${appId}/users/${userId}/workLogs`);
-        const workLogsQuery = query(workLogsRef, where('opportunityId', '==', opportunityId));
+        // Delete associated work logs first (subcollection)
+        const workLogsRef = collection(db, `opportunities/${opportunityId}/workLogs`); // Corrected path for subcollection
+        const workLogsQuery = query(workLogsRef); // No need for where('opportunityId') as it's a subcollection
         const workLogsSnapshot = await getDocs(workLogsQuery);
         const batch = writeBatch(db);
         workLogsSnapshot.forEach(docSnap => { // Renamed doc to docSnap
@@ -1184,7 +1253,7 @@ async function deleteOpportunity(opportunityId) {
         await batch.commit();
 
         // Then delete the opportunity
-        await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/opportunities`, opportunityId));
+        await deleteDoc(doc(db, 'opportunities', opportunityId)); // Corrected path
         showMessageBox("Opportunity and associated work logs deleted successfully!", false);
         await loadOpportunities(); // Reload grid
         await updateDashboard();
@@ -1205,8 +1274,9 @@ async function loadWorkLogs(opportunityId) {
         return;
     }
 
-    onSnapshot(query(collection(db, `artifacts/${appId}/users/${userId}/workLogs`),
-        where('opportunityId', '==', opportunityId),
+    // Query work logs as a subcollection of the specific opportunity
+    onSnapshot(query(collection(db, `opportunities/${opportunityId}/workLogs`), // Corrected path
+        where('creatorId', '==', userId), // Work logs are also user-specific
         orderBy('date', 'desc')), // Order by date, newest first
         snapshot => {
             if (workLogsList) workLogsList.innerHTML = ''; // Clear existing logs
@@ -1220,16 +1290,19 @@ async function loadWorkLogs(opportunityId) {
             snapshot.forEach(docSnap => { // Renamed doc to docSnap
                 const log = docSnap.data();
                 const logId = docSnap.id;
+                // Convert Firestore Timestamp to YYYY-MM-DD string for display
+                const logDateDisplay = log.date && log.date.toDate ? log.date.toDate().toISOString().split('T')[0] : 'N/A';
+
                 const li = document.createElement('li');
                 li.className = 'bg-gray-50 p-3 rounded-md shadow-sm border border-gray-200 flex justify-between items-center';
                 li.innerHTML = `
                     <div>
-                        <p class="text-sm font-semibold text-gray-700">${log.date} - ${log.type}</p>
+                        <p class="text-sm font-semibold text-gray-700">${logDateDisplay} - ${log.type}</p>
                         <p class="text-gray-600 text-sm mt-1">${log.details}</p>
                     </div>
                     <div class="flex space-x-2">
                         <button type="button" class="px-2 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-xs"
-                            onclick="editWorkLog('${logId}')">Edit</button>
+                            onclick="editWorkLog('${logId}', '${opportunityId}')">Edit</button>
                         <button type="button" class="px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-xs"
                             onclick="deleteWorkLog('${logId}', '${opportunityId}')">Delete</button>
                     </div>
@@ -1255,22 +1328,27 @@ async function handleSaveWorkLog(event) {
     const messageElement = document.getElementById('work-log-form-message');
     if (messageElement) messageElement.classList.add('hidden');
 
+    const workLogDateValue = document.getElementById('work-log-date').value;
+    const workLogDateTimestamp = workLogDateValue ? new Date(workLogDateValue) : null;
+
     const workLogData = {
-        opportunityId: currentOpportunityId,
-        date: document.getElementById('work-log-date').value,
+        opportunityId: currentOpportunityId, // Stored for reference, but path is now subcollection
+        date: workLogDateTimestamp, // Save as Date object (Firestore converts to Timestamp)
         type: document.getElementById('work-log-type').value,
         details: document.getElementById('work-log-details').value,
+        creatorId: userId, // Added creatorId as per rules
         updatedAt: FieldValue.serverTimestamp(),
-        userId: userId
+        createdAt: FieldValue.serverTimestamp() // Will be overwritten by update if workLogId exists
     };
 
     try {
-        const collectionRef = collection(db, `artifacts/${appId}/users/${userId}/workLogs`);
+        const collectionRef = collection(db, `opportunities/${currentOpportunityId}/workLogs`); // Corrected path
         if (workLogId) {
+            // For update, only update updatedAt, not createdAt
+            delete workLogData.createdAt;
             await updateDoc(doc(collectionRef, workLogId), workLogData);
             showMessageBox("Work log updated successfully!", false);
         } else {
-            workLogData.createdAt = FieldValue.serverTimestamp();
             await addDoc(collectionRef, workLogData);
             showMessageBox("Work log added successfully!", false);
         }
@@ -1285,16 +1363,18 @@ async function handleSaveWorkLog(event) {
     }
 }
 
-async function editWorkLog(workLogId) {
-    if (!db || !userId) return;
+async function editWorkLog(workLogId, opportunityId) { // Pass opportunityId to correctly build docRef
+    if (!db || !userId || !opportunityId) return;
     try {
-        const docRef = doc(db, `artifacts/${appId}/users/${userId}/workLogs`, workLogId);
+        const docRef = doc(db, `opportunities/${opportunityId}/workLogs`, workLogId); // Corrected path
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             const log = docSnap.data();
             document.getElementById('work-log-id').value = workLogId;
-            document.getElementById('work-log-opportunity-id').value = log.opportunityId;
-            document.getElementById('work-log-date').value = log.date;
+            document.getElementById('work-log-opportunity-id').value = log.opportunityId; // Keep for form logic
+            // Convert Firestore Timestamp to YYYY-MM-DD string for input type="date"
+            const logDate = log.date ? new Date(log.date.seconds * 1000).toISOString().split('T')[0] : '';
+            document.getElementById('work-log-date').value = logDate;
             document.getElementById('work-log-type').value = log.type;
             document.getElementById('work-log-details').value = log.details;
             showWorkLogForm();
@@ -1307,13 +1387,13 @@ async function editWorkLog(workLogId) {
     }
 }
 
-async function deleteWorkLog(workLogId, opportunityId) {
+async function deleteWorkLog(workLogId, opportunityId) { // Pass opportunityId to correctly build docRef
     const confirmDelete = await showMessageBox("Are you sure you want to delete this work log entry?", true);
     if (!confirmDelete) return;
 
-    if (!db || !userId) return;
+    if (!db || !userId || !opportunityId) return;
     try {
-        await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/workLogs`, workLogId));
+        await deleteDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId)); // Corrected path
         showMessageBox("Work log deleted successfully!", false);
         // loadWorkLogs is already onSnapshot, so it will update automatically
     } catch (error) {
@@ -1340,7 +1420,7 @@ async function setupCountryForm(country = null) {
 
 async function handleSaveCountry(event) {
     event.preventDefault();
-    if (!db || userRole !== 'admin') {
+    if (!db || userRole !== 'Admin') { // Check for 'Admin' role
         showMessageBox("Admin privileges required to save country.", false);
         return;
     }
@@ -1353,16 +1433,18 @@ async function handleSaveCountry(event) {
         name: document.getElementById('country-name').value,
         code: document.getElementById('country-code').value.toUpperCase(),
         states: document.getElementById('country-states').value.split(',').map(s => s.trim()).filter(s => s !== ''),
-        updatedAt: FieldValue.serverTimestamp()
+        updatedAt: FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp() // Will be overwritten by update if countryId exists
     };
 
     try {
-        const collectionRef = collection(db, `artifacts/${appId}/public/data/countries`);
+        const collectionRef = collection(db, 'countries'); // Corrected path
         if (countryId) {
+            // For update, only update updatedAt, not createdAt
+            delete countryData.createdAt;
             await updateDoc(doc(collectionRef, countryId), countryData);
             showMessageBox("Country updated successfully!", false);
         } else {
-            countryData.createdAt = FieldValue.serverTimestamp();
             await addDoc(collectionRef, countryData);
             showMessageBox("Country added successfully!", false);
         }
@@ -1378,13 +1460,13 @@ async function handleSaveCountry(event) {
 }
 
 async function loadCountries() {
-    if (!db || userRole !== 'admin') {
+    if (!db || userRole !== 'Admin') { // Check for 'Admin' role
         if (noCountriesMessage) noCountriesMessage.classList.remove('hidden');
         if (countriesGrid) countriesGrid.updateConfig({ data: [] }).forceRender();
         return;
     }
 
-    onSnapshot(collection(db, `artifacts/${appId}/public/data/countries`), snapshot => {
+    onSnapshot(collection(db, 'countries'), snapshot => { // Corrected path
         const countries = [];
         snapshot.forEach(doc => {
             countries.push({ id: doc.id, ...doc.data() });
@@ -1466,9 +1548,9 @@ function renderCountriesGrid(countries) {
 }
 
 async function editCountry(countryId) {
-    if (!db || userRole !== 'admin') return;
+    if (!db || userRole !== 'Admin') return; // Check for 'Admin' role
     try {
-        const docRef = doc(db, `artifacts/${appId}/public/data/countries`, countryId);
+        const docRef = doc(db, 'countries', countryId); // Corrected path
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             await setupCountryForm(docSnap.data());
@@ -1485,9 +1567,9 @@ async function deleteCountry(countryId) {
     const confirmDelete = await showMessageBox("Are you sure you want to delete this country?", true);
     if (!confirmDelete) return;
 
-    if (!db || userRole !== 'admin') return;
+    if (!db || userRole !== 'Admin') return; // Check for 'Admin' role
     try {
-        await deleteDoc(doc(db, `artifacts/${appId}/public/data/countries`, countryId));
+        await deleteDoc(doc(db, 'countries', countryId)); // Corrected path
         showMessageBox("Country deleted successfully!", false);
         await loadCountries();
     } catch (error) {
@@ -1499,7 +1581,7 @@ async function deleteCountry(countryId) {
 // Part 8: Admin Logic - Currencies
 
 async function setupCurrencyForm(currency = null) {
-    const countries = await fetchData(`artifacts/${appId}/public/data/countries`);
+    const countries = await fetchData('countries'); // Corrected path
     populateSelect(document.getElementById('currency-country'), countries, 'code', 'name', 'Select Country (Optional)');
 
     if (currency) {
@@ -1518,7 +1600,7 @@ async function setupCurrencyForm(currency = null) {
 
 async function handleSaveCurrency(event) {
     event.preventDefault();
-    if (!db || userRole !== 'admin') {
+    if (!db || userRole !== 'Admin') { // Check for 'Admin' role
         showMessageBox("Admin privileges required to save currency.", false);
         return;
     }
@@ -1532,16 +1614,18 @@ async function handleSaveCurrency(event) {
         code: document.getElementById('currency-code').value.toUpperCase(),
         symbol: document.getElementById('currency-symbol').value,
         countryCode: document.getElementById('currency-country').value || null, // Save country code
-        updatedAt: FieldValue.serverTimestamp()
+        updatedAt: FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp() // Will be overwritten by update if currencyId exists
     };
 
     try {
-        const collectionRef = collection(db, `artifacts/${appId}/public/data/currencies`);
+        const collectionRef = collection(db, 'currencies'); // Corrected path
         if (currencyId) {
+            // For update, only update updatedAt, not createdAt
+            delete currencyData.createdAt;
             await updateDoc(doc(collectionRef, currencyId), currencyData);
             showMessageBox("Currency updated successfully!", false);
         } else {
-            currencyData.createdAt = FieldValue.serverTimestamp();
             await addDoc(collectionRef, currencyData);
             showMessageBox("Currency added successfully!", false);
         }
@@ -1557,13 +1641,13 @@ async function handleSaveCurrency(event) {
 }
 
 async function loadCurrencies() {
-    if (!db || userRole !== 'admin') {
+    if (!db || userRole !== 'Admin') { // Check for 'Admin' role
         if (noCurrenciesMessage) noCurrenciesMessage.classList.remove('hidden');
         if (currenciesGrid) currenciesGrid.updateConfig({ data: [] }).forceRender();
         return;
     }
 
-    onSnapshot(collection(db, `artifacts/${appId}/public/data/currencies`), snapshot => {
+    onSnapshot(collection(db, 'currencies'), snapshot => { // Corrected path
         const currencies = [];
         snapshot.forEach(doc => {
             currencies.push({ id: doc.id, ...doc.data() });
@@ -1647,9 +1731,9 @@ function renderCurrenciesGrid(currencies) {
 }
 
 async function editCurrency(currencyId) {
-    if (!db || userRole !== 'admin') return;
+    if (!db || userRole !== 'Admin') return; // Check for 'Admin' role
     try {
-        const docRef = doc(db, `artifacts/${appId}/public/data/currencies`, currencyId);
+        const docRef = doc(db, 'currencies', currencyId); // Corrected path
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             await setupCurrencyForm(docSnap.data());
@@ -1666,9 +1750,9 @@ async function deleteCurrency(currencyId) {
     const confirmDelete = await showMessageBox("Are you sure you want to delete this currency?", true);
     if (!confirmDelete) return;
 
-    if (!db || userRole !== 'admin') return;
+    if (!db || userRole !== 'Admin') return; // Check for 'Admin' role
     try {
-        await deleteDoc(doc(db, `artifacts/${appId}/public/data/currencies`, currencyId));
+        await deleteDoc(doc(db, 'currencies', currencyId)); // Corrected path
         showMessageBox("Currency deleted successfully!", false);
         await loadCurrencies();
     } catch (error) {
@@ -1680,7 +1764,7 @@ async function deleteCurrency(currencyId) {
 // Part 9: Admin Logic - Price Books
 
 async function setupPriceBookForm(priceBook = null) {
-    const currencies = await fetchData(`artifacts/${appId}/public/data/currencies`);
+    const currencies = await fetchData('currencies'); // Corrected path
     populateSelect(document.getElementById('price-book-currency'), currencies, 'code', 'code', 'Select Currency');
 
     if (priceBook) {
@@ -1688,7 +1772,7 @@ async function setupPriceBookForm(priceBook = null) {
         document.getElementById('price-book-name').value = priceBook.name || '';
         document.getElementById('price-book-description').value = priceBook.description || '';
         document.getElementById('price-book-currency').value = priceBook.currency || '';
-        document.getElementById('price-book-active').checked = priceBook.active !== undefined ? priceBook.active : true;
+        document.getElementById('price-book-active').checked = priceBook.isActive !== undefined ? priceBook.isActive : true; // Use isActive
     } else {
         if (priceBookForm) priceBookForm.reset();
         const priceBookIdInput = document.getElementById('price-book-id');
@@ -1701,7 +1785,7 @@ async function setupPriceBookForm(priceBook = null) {
 
 async function handleSavePriceBook(event) {
     event.preventDefault();
-    if (!db || userRole !== 'admin') {
+    if (!db || userRole !== 'Admin') { // Check for 'Admin' role
         showMessageBox("Admin privileges required to save price book.", false);
         return;
     }
@@ -1710,21 +1794,28 @@ async function handleSavePriceBook(event) {
     const messageElement = document.getElementById('price-book-form-message');
     if (messageElement) messageElement.classList.add('hidden');
 
+    const name = document.getElementById('price-book-name').value;
+    const currency = document.getElementById('price-book-currency').value;
+
     const priceBookData = {
-        name: document.getElementById('price-book-name').value,
+        name: name,
+        normalizedName: name.toLowerCase().replace(/\s/g, ''), // Add normalizedName
         description: document.getElementById('price-book-description').value,
-        currency: document.getElementById('price-book-currency').value,
-        active: document.getElementById('price-book-active').checked,
-        updatedAt: FieldValue.serverTimestamp()
+        currency: currency,
+        normalizedCurrency: currency.toLowerCase().replace(/\s/g, ''), // Add normalizedCurrency
+        isActive: document.getElementById('price-book-active').checked, // Use isActive
+        updatedAt: FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp() // Will be overwritten by update if priceBookId exists
     };
 
     try {
-        const collectionRef = collection(db, `artifacts/${appId}/public/data/priceBooks`);
+        const collectionRef = collection(db, 'priceBooks'); // Corrected path
         if (priceBookId) {
+            // For update, only update updatedAt, not createdAt
+            delete priceBookData.createdAt;
             await updateDoc(doc(collectionRef, priceBookId), priceBookData);
             showMessageBox("Price Book updated successfully!", false);
         } else {
-            priceBookData.createdAt = FieldValue.serverTimestamp();
             await addDoc(collectionRef, priceBookData);
             showMessageBox("Price Book added successfully!", false);
         }
@@ -1740,13 +1831,13 @@ async function handleSavePriceBook(event) {
 }
 
 async function loadPriceBooks() {
-    if (!db || userRole !== 'admin') {
+    if (!db || userRole !== 'Admin') { // Check for 'Admin' role
         if (noPriceBooksMessage) noPriceBooksMessage.classList.remove('hidden');
         if (priceBooksGrid) priceBooksGrid.updateConfig({ data: [] }).forceRender();
         return;
     }
 
-    onSnapshot(collection(db, `artifacts/${appId}/public/data/priceBooks`), snapshot => {
+    onSnapshot(collection(db, 'priceBooks'), snapshot => { // Corrected path
         const priceBooks = [];
         snapshot.forEach(doc => {
             priceBooks.push({ id: doc.id, ...doc.data() });
@@ -1765,7 +1856,7 @@ function renderPriceBooksGrid(priceBooks) {
         priceBook.name,
         priceBook.description,
         priceBook.currency,
-        priceBook.active ? 'Yes' : 'No',
+        priceBook.isActive ? 'Yes' : 'No', // Use isActive
         priceBook.id
     ]);
 
@@ -1830,9 +1921,9 @@ function renderPriceBooksGrid(priceBooks) {
 }
 
 async function editPriceBook(priceBookId) {
-    if (!db || userRole !== 'admin') return;
+    if (!db || userRole !== 'Admin') return; // Check for 'Admin' role
     try {
-        const docRef = doc(db, `artifacts/${appId}/public/data/priceBooks`, priceBookId);
+        const docRef = doc(db, 'priceBooks', priceBookId); // Corrected path
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             await setupPriceBookForm(docSnap.data());
@@ -1849,9 +1940,9 @@ async function deletePriceBook(priceBookId) {
     const confirmDelete = await showMessageBox("Are you sure you want to delete this price book?", true);
     if (!confirmDelete) return;
 
-    if (!db || userRole !== 'admin') return;
+    if (!db || userRole !== 'Admin') return; // Check for 'Admin' role
     try {
-        await deleteDoc(doc(db, `artifacts/${appId}/public/data/priceBooks`, priceBookId));
+        await deleteDoc(doc(db, 'priceBooks', priceBookId)); // Corrected path
         showMessageBox("Price Book deleted successfully!", false);
         await loadPriceBooks();
     } catch (error) {
@@ -1986,7 +2077,7 @@ function initializePage() {
         loadOpportunities();
     });
     if (navCountries) navCountries.addEventListener('click', () => {
-        if (userRole === 'admin') {
+        if (userRole === 'Admin') { // Check for 'Admin' role
             showSection(countriesSection);
             loadCountries();
         } else {
@@ -1994,7 +2085,7 @@ function initializePage() {
         }
     });
     if (navCurrencies) navCurrencies.addEventListener('click', () => {
-        if (userRole === 'admin') {
+        if (userRole === 'Admin') { // Check for 'Admin' role
             showSection(currenciesSection);
             loadCurrencies();
         } else {
@@ -2002,7 +2093,7 @@ function initializePage() {
         }
     });
     if (navPriceBooks) navPriceBooks.addEventListener('click', () => {
-        if (userRole === 'admin') {
+        if (userRole === 'Admin') { // Check for 'Admin' role
             showSection(priceBooksSection);
             loadPriceBooks();
         } else {
