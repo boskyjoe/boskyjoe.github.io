@@ -12,14 +12,13 @@ const firebaseConfig = {
     authDomain: "shuttersync-96971.firebaseapp.com",
     projectId: "shuttersync-96971",
     storageBucket: "shuttersync-96971.firebasestorage.app",
-    messagingSenderId: "10782416018",
     appId: "1:10782416018:web:361db5572882a62f291a4b",
     measurementId: "G-T0W9CES4D3"
 };
 
-// Use the appId directly from the provided firebaseConfig
-// Note: appId is not used in collection paths as per provided Firestore Rules.
+// The appId from firebaseConfig is sufficient as collections are top-level, not nested under artifacts/appId/
 const appId = firebaseConfig.appId;
+
 
 // Environment variable for initial auth token (if available)
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
@@ -243,6 +242,7 @@ async function setupAuth() {
             // Determine user role (e.g., based on a 'users_data' collection or claims)
             // Fetch user role from 'users_data' collection
             try {
+                // User data is stored in a top-level collection, as per rules
                 const userDocRef = doc(db, 'users_data', userId);
                 const userDocSnap = await getDoc(userDocRef);
                 if (userDocSnap.exists()) {
@@ -255,8 +255,8 @@ async function setupAuth() {
                         displayName: user.displayName || 'New User',
                         email: user.email || '',
                         role: userRole,
-                        createdAt: serverTimestamp(), // Corrected usage
-                        lastLogin: serverTimestamp() // Corrected usage
+                        createdAt: serverTimestamp(),
+                        lastLogin: serverTimestamp()
                     }, { merge: true }); // Use merge to avoid overwriting existing fields if any
                     console.log(`New user data created for ${user.email} with role ${userRole}`);
                 }
@@ -347,8 +347,9 @@ async function updateDashboard() {
     if (!db || !userId) return;
 
     try {
-        // Query customers and opportunities owned by the current user
+        // Customers are top-level, filtered by creatorId
         const customersRef = collection(db, 'customers');
+        // Opportunities are top-level, filtered by creatorId
         const opportunitiesRef = collection(db, 'opportunities');
 
         const totalCustomersQuery = query(customersRef, where('creatorId', '==', userId));
@@ -568,22 +569,31 @@ function hidePriceBookForm() {
 
 /**
  * Fetches data from a Firestore collection.
- * @param {string} collectionPath - The path to the Firestore collection.
+ * @param {string} collectionName - The name of the Firestore collection (e.g., 'customers').
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of documents.
  */
-async function fetchData(collectionPath) {
+async function fetchData(collectionName) {
     if (!db || !userId) {
-        console.warn("Firestore or userId not available. Cannot fetch data from:", collectionPath);
+        console.warn("Firestore or userId not available. Cannot fetch data from:", collectionName);
         return [];
     }
+    let collectionRef = collection(db, collectionName);
+
     try {
-        const q = query(collection(db, collectionPath));
+        let q;
+        // Apply creatorId filter only for user-specific collections as per rules
+        if (['customers', 'leads', 'opportunities', 'workLogs'].includes(collectionName)) {
+            q = query(collectionRef, where('creatorId', '==', userId));
+        } else {
+            // For public collections (countries, currencies, priceBooks), no creatorId filter
+            q = query(collectionRef);
+        }
         const snapshot = await getDocs(q);
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return data;
     } catch (error) {
-        console.error("Error fetching data from", collectionPath, ":", error);
-        showMessageBox(`Error loading data from ${collectionPath}: ${error.message}`, false);
+        console.error(`Error fetching data from ${collectionName}:`, error);
+        showMessageBox(`Error loading data from ${collectionName}: ${error.message}`, false);
         return [];
     }
 }
@@ -615,7 +625,7 @@ function populateSelect(selectElement, data, valueKey, textKey, defaultOptionTex
 // --- Customer Logic ---
 
 async function setupCustomerForm(customer = null) {
-    const countries = await fetchData('countries'); // Corrected path
+    const countries = await fetchData('countries'); // Countries are top-level
     populateSelect(document.getElementById('customer-country'), countries, 'name', 'name', 'Select Country');
 
     if (customer) {
@@ -665,12 +675,12 @@ async function handleSaveCustomer(event) {
         source: document.getElementById('customer-source').value,
         active: document.getElementById('customer-active').checked,
         creatorId: userId, // Added creatorId as per rules
-        updatedAt: serverTimestamp(), // Corrected usage
-        createdAt: serverTimestamp() // Corrected usage
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp()
     };
 
     try {
-        const collectionRef = collection(db, 'customers'); // Corrected path
+        const collectionRef = collection(db, 'customers'); // Top-level collection
         if (customerId) {
             // For update, only update updatedAt, not createdAt
             delete customerData.createdAt;
@@ -699,7 +709,7 @@ async function loadCustomers() {
         return;
     }
 
-    const customersCollectionRef = collection(db, 'customers'); // Corrected path
+    const customersCollectionRef = collection(db, 'customers'); // Top-level collection
 
     // Setup real-time listener, query only for current user's customers
     onSnapshot(query(customersCollectionRef, where('creatorId', '==', userId)), snapshot => {
@@ -791,7 +801,7 @@ function renderCustomersGrid(customers) {
 async function editCustomer(customerId) {
     if (!db || !userId) return;
     try {
-        const docRef = doc(db, 'customers', customerId); // Corrected path
+        const docRef = doc(db, 'customers', customerId); // Top-level collection
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             await setupCustomerForm(docSnap.data());
@@ -812,7 +822,7 @@ async function deleteCustomer(customerId) {
 
     if (!db || !userId) return;
     try {
-        await deleteDoc(doc(db, 'customers', customerId)); // Corrected path
+        await deleteDoc(doc(db, 'customers', customerId)); // Top-level collection
         showMessageBox("Customer deleted successfully!", false);
         await loadCustomers(); // Reload grid
         await updateDashboard();
@@ -893,12 +903,12 @@ async function handleSaveLead(event) {
         source: document.getElementById('lead-source').value,
         additionalDetails: document.getElementById('lead-additional-details').value,
         creatorId: userId, // Added creatorId as per rules
-        updatedAt: serverTimestamp(), // Corrected usage
-        createdAt: serverTimestamp() // Corrected usage
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp()
     };
 
     try {
-        const collectionRef = collection(db, 'leads'); // Corrected path
+        const collectionRef = collection(db, 'leads'); // Top-level collection
         if (leadId) {
             // For update, only update updatedAt, not createdAt
             delete leadData.createdAt;
@@ -926,8 +936,8 @@ async function loadLeads() {
         return;
     }
 
-    // Query only for current user's leads
-    onSnapshot(query(collection(db, 'leads'), where('creatorId', '==', userId)), snapshot => { // Corrected path
+    // Query only for current user's leads (top-level collection)
+    onSnapshot(query(collection(db, 'leads'), where('creatorId', '==', userId)), snapshot => {
         const leads = [];
         snapshot.forEach(doc => {
             const leadData = doc.data();
@@ -1020,7 +1030,7 @@ function renderLeadsGrid(leads) {
 async function editLead(leadId) {
     if (!db || !userId) return;
     try {
-        const docRef = doc(db, 'leads', leadId); // Corrected path
+        const docRef = doc(db, 'leads', leadId); // Top-level collection
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             await setupLeadForm(docSnap.data());
@@ -1041,7 +1051,7 @@ async function deleteLead(leadId) {
 
     if (!db || !userId) return;
     try {
-        await deleteDoc(doc(db, 'leads', leadId)); // Corrected path
+        await deleteDoc(doc(db, 'leads', leadId)); // Top-level collection
         showMessageBox("Lead deleted successfully!", false);
         await loadLeads(); // Reload grid
     } catch (error) {
@@ -1085,15 +1095,15 @@ function filterAndPopulatePriceBooks(selectedCurrencyCode, currentPriceBookId = 
 
 
 async function setupOpportunityForm(opportunity = null) {
-    const customers = await fetchData('customers'); // Corrected path
+    const customers = await fetchData('customers'); // Customers are top-level
     populateSelect(document.getElementById('opportunity-customer'), customers, 'id', 'name', 'Select a Customer');
 
-    const currencies = await fetchData('currencies'); // Corrected path
+    const currencies = await fetchData('currencies'); // Currencies are top-level
     // Populate currency dropdown with name, but value remains code
     populateSelect(opportunityCurrencySelect, currencies, 'code', 'name', 'Select...');
 
     // Fetch all price books once and store them
-    allPriceBooks = await fetchData('priceBooks'); // Corrected path
+    allPriceBooks = await fetchData('priceBooks'); // Price books are top-level
 
     if (opportunity) {
         currentOpportunityId = opportunity.id;
@@ -1179,7 +1189,8 @@ async function handleSaveOpportunity(event) {
     let customerName = '';
     if (customerId) {
         try {
-            const customerSnap = await getDoc(doc(db, 'customers', customerId)); // Corrected path
+            // Fetch customer name from the top-level customer collection
+            const customerSnap = await getDoc(doc(db, 'customers', customerId));
             if (customerSnap.exists()) {
                 customerName = customerSnap.data().name;
             }
@@ -1208,12 +1219,13 @@ async function handleSaveOpportunity(event) {
         value: parseFloat(document.getElementById('opportunity-value').value) || 0,
         notes: document.getElementById('opportunity-notes').value,
         creatorId: userId, // Added creatorId as per rules
-        updatedAt: serverTimestamp(), // Corrected usage
-        createdAt: serverTimestamp() // Corrected usage
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp()
     };
 
     try {
-        const collectionRef = collection(db, 'opportunities'); // Corrected path
+        // Opportunities are top-level as per provided rules
+        const collectionRef = collection(db, 'opportunities');
         if (opportunityId) {
             // For update, only update updatedAt, not createdAt
             delete opportunityData.createdAt;
@@ -1243,8 +1255,8 @@ async function loadOpportunities() {
         return;
     }
 
-    // Query only for current user's opportunities
-    onSnapshot(query(collection(db, 'opportunities'), where('creatorId', '==', userId)), async snapshot => { // Corrected path
+    // Query only for current user's opportunities (top-level collection)
+    onSnapshot(query(collection(db, 'opportunities'), where('creatorId', '==', userId)), async snapshot => {
         const opportunities = [];
         for (const docSnap of snapshot.docs) { // Renamed doc to docSnap to avoid conflict with import
             const opp = { id: docSnap.id, ...docSnap.data() };
@@ -1340,7 +1352,8 @@ function renderOpportunitiesGrid(opportunities) {
 async function editOpportunity(opportunityId) {
     if (!db || !userId) return;
     try {
-        const docRef = doc(db, 'opportunities', opportunityId); // Corrected path
+        // Opportunities are top-level as per provided rules
+        const docRef = doc(db, 'opportunities', opportunityId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             await setupOpportunityForm(docSnap.data());
@@ -1360,8 +1373,8 @@ async function deleteOpportunity(opportunityId) {
 
     if (!db || !userId) return;
     try {
-        // Delete associated work logs first (subcollection)
-        const workLogsRef = collection(db, `opportunities/${opportunityId}/workLogs`); // Corrected path for subcollection
+        // Delete associated work logs first (subcollection of top-level opportunity)
+        const workLogsRef = collection(db, `opportunities/${opportunityId}/workLogs`);
         const workLogsQuery = query(workLogsRef); // No need for where('opportunityId') as it's a subcollection
         const workLogsSnapshot = await getDocs(workLogsQuery);
         const batch = writeBatch(db);
@@ -1370,8 +1383,8 @@ async function deleteOpportunity(opportunityId) {
         });
         await batch.commit();
 
-        // Then delete the opportunity
-        await deleteDoc(doc(db, 'opportunities', opportunityId)); // Corrected path
+        // Then delete the opportunity (top-level)
+        await deleteDoc(doc(db, 'opportunities', opportunityId));
         showMessageBox("Opportunity and associated work logs deleted successfully!", false);
         await loadOpportunities(); // Reload grid
         await updateDashboard();
@@ -1392,8 +1405,8 @@ async function loadWorkLogs(opportunityId) {
         return;
     }
 
-    // Query work logs as a subcollection of the specific opportunity
-    onSnapshot(query(collection(db, `opportunities/${opportunityId}/workLogs`), // Corrected path
+    // Query work logs as a subcollection of the specific opportunity (top-level opportunity)
+    onSnapshot(query(collection(db, `opportunities/${opportunityId}/workLogs`),
         where('creatorId', '==', userId), // Work logs are also user-specific
         orderBy('date', 'desc')), // Order by date, newest first
         snapshot => {
@@ -1475,12 +1488,13 @@ async function handleSaveWorkLog(event) {
         type: workLogTypeSelect.value, // Get value from the select
         details: document.getElementById('work-log-details').value,
         creatorId: userId, // Added creatorId as per rules
-        updatedAt: serverTimestamp(), // Corrected usage
-        createdAt: serverTimestamp() // Corrected usage
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp()
     };
 
     try {
-        const collectionRef = collection(db, `opportunities/${currentOpportunityId}/workLogs`); // Corrected path
+        // Work logs are a subcollection of top-level opportunities
+        const collectionRef = collection(db, `opportunities/${currentOpportunityId}/workLogs`);
         if (workLogId) {
             // For update, only update updatedAt, not createdAt
             delete workLogData.createdAt;
@@ -1504,7 +1518,8 @@ async function handleSaveWorkLog(event) {
 async function editWorkLog(workLogId, opportunityId) { // Pass opportunityId to correctly build docRef
     if (!db || !userId || !opportunityId) return;
     try {
-        const docRef = doc(db, `opportunities/${opportunityId}/workLogs`, workLogId); // Corrected path
+        // Work logs are a subcollection of top-level opportunities
+        const docRef = doc(db, `opportunities/${opportunityId}/workLogs`, workLogId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             const log = docSnap.data();
@@ -1527,7 +1542,8 @@ async function deleteWorkLog(workLogId, opportunityId) { // Pass opportunityId t
 
     if (!db || !userId || !opportunityId) return;
     try {
-        await deleteDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId)); // Corrected path
+        // Work logs are a subcollection of top-level opportunities
+        await deleteDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId));
         showMessageBox("Work log deleted successfully!", false);
         // loadWorkLogs is already onSnapshot, so it will update automatically
     } catch (error) {
@@ -1567,12 +1583,12 @@ async function handleSaveCountry(event) {
         name: document.getElementById('country-name').value,
         code: document.getElementById('country-code').value.toUpperCase(),
         states: document.getElementById('country-states').value.split(',').map(s => s.trim()).filter(s => s !== ''),
-        updatedAt: serverTimestamp(), // Corrected usage
-        createdAt: serverTimestamp() // Corrected usage
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp()
     };
 
     try {
-        const collectionRef = collection(db, 'countries'); // Corrected path
+        const collectionRef = collection(db, 'countries'); // Top-level collection
         if (countryId) {
             // For update, only update updatedAt, not createdAt
             delete countryData.createdAt;
@@ -1600,7 +1616,8 @@ async function loadCountries() {
         return;
     }
 
-    onSnapshot(collection(db, 'countries'), snapshot => { // Corrected path
+    // Countries are top-level public data, no creatorId filter needed
+    onSnapshot(collection(db, 'countries'), snapshot => {
         const countries = [];
         snapshot.forEach(doc => {
             countries.push({ id: doc.id, ...doc.data() });
@@ -1684,7 +1701,7 @@ function renderCountriesGrid(countries) {
 async function editCountry(countryId) {
     if (!db || userRole !== 'Admin') return; // Check for 'Admin' role
     try {
-        const docRef = doc(db, 'countries', countryId); // Corrected path
+        const docRef = doc(db, 'countries', countryId); // Top-level collection
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             await setupCountryForm(docSnap.data());
@@ -1703,7 +1720,7 @@ async function deleteCountry(countryId) {
 
     if (!db || userRole !== 'Admin') return; // Check for 'Admin' role
     try {
-        await deleteDoc(doc(db, 'countries', countryId)); // Corrected path
+        await deleteDoc(doc(db, 'countries', countryId)); // Top-level collection
         showMessageBox("Country deleted successfully!", false);
         await loadCountries();
     } catch (error) {
@@ -1715,7 +1732,7 @@ async function deleteCountry(countryId) {
 // Part 8: Admin Logic - Currencies
 
 async function setupCurrencyForm(currency = null) {
-    const countries = await fetchData('countries'); // Corrected path
+    const countries = await fetchData('countries'); // Countries are top-level
     populateSelect(document.getElementById('currency-country'), countries, 'code', 'name', 'Select Country (Optional)');
 
     if (currency) {
@@ -1748,12 +1765,12 @@ async function handleSaveCurrency(event) {
         code: document.getElementById('currency-code').value.toUpperCase(),
         symbol: document.getElementById('currency-symbol').value,
         countryCode: document.getElementById('currency-country').value || null, // Save country code
-        updatedAt: serverTimestamp(), // Corrected usage
-        createdAt: serverTimestamp() // Corrected usage
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp()
     };
 
     try {
-        const collectionRef = collection(db, 'currencies'); // Corrected path
+        const collectionRef = collection(db, 'currencies'); // Top-level collection
         if (currencyId) {
             // For update, only update updatedAt, not createdAt
             delete currencyData.createdAt;
@@ -1781,7 +1798,8 @@ async function loadCurrencies() {
         return;
     }
 
-    onSnapshot(collection(db, 'currencies'), snapshot => { // Corrected path
+    // Currencies are top-level public data, no creatorId filter needed
+    onSnapshot(collection(db, 'currencies'), snapshot => {
         const currencies = [];
         snapshot.forEach(doc => {
             currencies.push({ id: doc.id, ...doc.data() });
@@ -1867,7 +1885,7 @@ function renderCurrenciesGrid(currencies) {
 async function editCurrency(currencyId) {
     if (!db || userRole !== 'Admin') return; // Check for 'Admin' role
     try {
-        const docRef = doc(db, 'currencies', currencyId); // Corrected path
+        const docRef = doc(db, 'currencies', currencyId); // Top-level collection
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             await setupCurrencyForm(docSnap.data());
@@ -1886,7 +1904,7 @@ async function deleteCurrency(currencyId) {
 
     if (!db || userRole !== 'Admin') return; // Check for 'Admin' role
     try {
-        await deleteDoc(doc(db, 'currencies', currencyId)); // Corrected path
+        await deleteDoc(doc(db, 'currencies', currencyId)); // Top-level collection
         showMessageBox("Currency deleted successfully!", false);
         await loadCurrencies();
     } catch (error) {
@@ -1898,7 +1916,7 @@ async function deleteCurrency(currencyId) {
 // Part 9: Admin Logic - Price Books
 
 async function setupPriceBookForm(priceBook = null) {
-    const currencies = await fetchData('currencies'); // Corrected path
+    const currencies = await fetchData('currencies'); // Currencies are top-level
     populateSelect(document.getElementById('price-book-currency'), currencies, 'code', 'code', 'Select Currency');
 
     if (priceBook) {
@@ -1938,12 +1956,12 @@ async function handleSavePriceBook(event) {
         currency: currency,
         normalizedCurrency: currency.toLowerCase().replace(/\s/g, ''), // Add normalizedCurrency
         isActive: document.getElementById('price-book-active').checked, // Use isActive
-        updatedAt: serverTimestamp(), // Corrected usage
-        createdAt: serverTimestamp() // Corrected usage
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp()
     };
 
     try {
-        const collectionRef = collection(db, 'priceBooks'); // Corrected path
+        const collectionRef = collection(db, 'priceBooks'); // Top-level collection
         if (priceBookId) {
             // For update, only update updatedAt, not createdAt
             delete priceBookData.createdAt;
@@ -1971,7 +1989,8 @@ async function loadPriceBooks() {
         return;
     }
 
-    onSnapshot(collection(db, 'priceBooks'), snapshot => { // Corrected path
+    // Price books are top-level public data, no creatorId filter needed
+    onSnapshot(collection(db, 'priceBooks'), snapshot => {
         const priceBooks = [];
         snapshot.forEach(doc => {
             priceBooks.push({ id: doc.id, ...doc.data() });
@@ -2057,7 +2076,7 @@ function renderPriceBooksGrid(priceBooks) {
 async function editPriceBook(priceBookId) {
     if (!db || userRole !== 'Admin') return; // Check for 'Admin' role
     try {
-        const docRef = doc(db, 'priceBooks', priceBookId); // Corrected path
+        const docRef = doc(db, 'priceBooks', priceBookId); // Top-level collection
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             await setupPriceBookForm(docSnap.data());
@@ -2076,7 +2095,7 @@ async function deletePriceBook(priceBookId) {
 
     if (!db || userRole !== 'Admin') return; // Check for 'Admin' role
     try {
-        await deleteDoc(doc(db, 'priceBooks', priceBookId)); // Corrected path
+        await deleteDoc(doc(db, 'priceBooks', priceBookId)); // Top-level collection
         showMessageBox("Price Book deleted successfully!", false);
         await loadPriceBooks();
     } catch (error) {
