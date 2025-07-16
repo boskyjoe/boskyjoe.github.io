@@ -509,6 +509,10 @@ async function setupWorkLogForm(workLog = null) {
     showWorkLogForm();
 }
 
+function showWorkLogForm() { // Made this function explicitly separate for clarity and global access
+    if (workLogFormContainer) workLogFormContainer.classList.remove('hidden');
+}
+
 function hideWorkLogForm() {
     if (workLogFormContainer) workLogFormContainer.classList.add('hidden');
     if (workLogForm) workLogForm.reset();
@@ -2299,7 +2303,7 @@ function initializePage() {
     if (addPriceBookBtn) addPriceBookBtn.addEventListener('click', () => setupPriceBookForm());
     if (cancelPriceBookBtn) cancelPriceBookBtn.addEventListener('click', hidePriceBookForm);
     if (priceBookForm) priceBookForm.addEventListener('submit', handleSavePriceBook);
-    if (priceBookSearchInput) priceBookBookSearchInput.addEventListener('input', (event) => { if (priceBooksGrid) priceBooksGrid.search(event.target.value); });
+    if (priceBookSearchInput) priceBookSearchInput.addEventListener('input', (event) => { if (priceBooksGrid) priceBooksGrid.search(event.target.value); });
 
     // Initial accordion setup
     setupAccordions();
@@ -2323,3 +2327,4 @@ window.editPriceBook = editPriceBook;
 window.deletePriceBook = deletePriceBook;
 window.showMessageBox = showMessageBox; // Make showMessageBox globally available
 window.setupWorkLogForm = setupWorkLogForm; // Make setupWorkLogForm globally available
+window.showWorkLogForm = showWorkLogForm; // Make showWorkLogForm globally available
