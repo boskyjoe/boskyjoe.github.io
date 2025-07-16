@@ -100,6 +100,7 @@ let workLogForm;
 let cancelWorkLogBtn;
 let workLogsList;
 let noWorkLogsMessage;
+let workLogTypeSelect; // Added for easy access
 
 let addCountryBtn;
 let countryFormContainer;
@@ -474,8 +475,38 @@ function hideOpportunityForm() {
     hideWorkLogForm(); // Hide work log entry form
 }
 
-function showWorkLogForm() {
-    if (workLogFormContainer) workLogFormContainer.classList.remove('hidden');
+/**
+ * Sets up the Work Log form, populating the Type dropdown.
+ * @param {Object|null} workLog - The work log data to pre-fill the form, or null for a new entry.
+ */
+async function setupWorkLogForm(workLog = null) {
+    // Populate Work Log Type (hardcoded options for now)
+    const workLogTypes = [
+        { id: 'Call', name: 'Call' },
+        { id: 'Email', name: 'Email' },
+        { id: 'Meeting', name: 'Meeting' },
+        { id: 'Site Visit', name: 'Site Visit' },
+        { id: 'Proposal Sent', name: 'Proposal Sent' },
+        { id: 'Follow-up', name: 'Follow-up' },
+        { id: 'Other', name: 'Other' }
+    ];
+    populateSelect(workLogTypeSelect, workLogTypes, 'id', 'name', 'Select Type');
+
+    if (workLog) {
+        document.getElementById('work-log-id').value = workLog.id;
+        document.getElementById('work-log-opportunity-id').value = workLog.opportunityId;
+        const logDate = workLog.date ? new Date(workLog.date.seconds * 1000).toISOString().split('T')[0] : '';
+        document.getElementById('work-log-date').value = logDate;
+        workLogTypeSelect.value = workLog.type || '';
+        document.getElementById('work-log-details').value = workLog.details || '';
+    } else {
+        if (workLogForm) workLogForm.reset();
+        const workLogIdInput = document.getElementById('work-log-id');
+        if (workLogIdInput) workLogIdInput.value = '';
+        const workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
+        if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = currentOpportunityId || ''; // Ensure opportunity ID is set for new logs
+    }
+    showWorkLogForm();
 }
 
 function hideWorkLogForm() {
@@ -1436,7 +1467,7 @@ async function handleSaveWorkLog(event) {
     const workLogData = {
         opportunityId: currentOpportunityId, // Stored for reference, but path is now subcollection
         date: workLogDateTimestamp, // Save as Date object (Firestore converts to Timestamp)
-        type: document.getElementById('work-log-type').value,
+        type: workLogTypeSelect.value, // Get value from the select
         details: document.getElementById('work-log-details').value,
         creatorId: userId, // Added creatorId as per rules
         updatedAt: FieldValue.serverTimestamp(),
@@ -1472,14 +1503,10 @@ async function editWorkLog(workLogId, opportunityId) { // Pass opportunityId to 
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             const log = docSnap.data();
+            await setupWorkLogForm(log); // Call setupWorkLogForm to pre-fill
+            // Ensure the hidden ID and opportunity ID are correctly set after setupWorkLogForm
             document.getElementById('work-log-id').value = workLogId;
-            document.getElementById('work-log-opportunity-id').value = log.opportunityId; // Keep for form logic
-            // Convert Firestore Timestamp to YYYY-MM-DD string for input type="date"
-            const logDate = log.date ? new Date(log.date.seconds * 1000).toISOString().split('T')[0] : '';
-            document.getElementById('work-log-date').value = logDate;
-            document.getElementById('work-log-type').value = log.type;
-            document.getElementById('work-log-details').value = log.details;
-            showWorkLogForm();
+            document.getElementById('work-log-opportunity-id').value = opportunityId;
         } else {
             showMessageBox("Work log not found!", false);
         }
@@ -2123,6 +2150,7 @@ function initializePage() {
     cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
     workLogsList = document.getElementById('work-logs-list');
     noWorkLogsMessage = document.getElementById('no-work-logs-message');
+    workLogTypeSelect = document.getElementById('work-log-type'); // Assigned here
 
     addCountryBtn = document.getElementById('add-country-btn');
     countryFormContainer = document.getElementById('country-form-container');
@@ -2253,7 +2281,7 @@ function initializePage() {
     if (opportunitySearchInput) opportunitySearchInput.addEventListener('input', (event) => { if (opportunitiesGrid) opportunitiesGrid.search(event.target.value); });
 
     // Work Log Event Listeners
-    if (addWorkLogEntryBtn) addWorkLogEntryBtn.addEventListener('click', () => showWorkLogForm());
+    if (addWorkLogEntryBtn) addWorkLogEntryBtn.addEventListener('click', () => setupWorkLogForm()); // Call setupWorkLogForm
     if (cancelWorkLogBtn) cancelWorkLogBtn.addEventListener('click', hideWorkLogForm);
     if (workLogForm) workLogForm.addEventListener('submit', handleSaveWorkLog);
 
@@ -2271,7 +2299,7 @@ function initializePage() {
     if (addPriceBookBtn) addPriceBookBtn.addEventListener('click', () => setupPriceBookForm());
     if (cancelPriceBookBtn) cancelPriceBookBtn.addEventListener('click', hidePriceBookForm);
     if (priceBookForm) priceBookForm.addEventListener('submit', handleSavePriceBook);
-    if (priceBookSearchInput) priceBookSearchInput.addEventListener('input', (event) => { if (priceBooksGrid) priceBooksGrid.search(event.target.value); });
+    if (priceBookSearchInput) priceBookBookSearchInput.addEventListener('input', (event) => { if (priceBooksGrid) priceBooksGrid.search(event.target.value); });
 
     // Initial accordion setup
     setupAccordions();
@@ -2294,3 +2322,4 @@ window.deleteCurrency = deleteCurrency;
 window.editPriceBook = editPriceBook;
 window.deletePriceBook = deletePriceBook;
 window.showMessageBox = showMessageBox; // Make showMessageBox globally available
+window.setupWorkLogForm = setupWorkLogForm; // Make setupWorkLogForm globally available
