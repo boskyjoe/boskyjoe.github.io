@@ -3,7 +3,8 @@
 // Firebase imports for ES Modules
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { getAuth, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, onSnapshot, FieldValue, writeBatch } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+// Corrected import: serverTimestamp is now imported directly
+import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, onSnapshot, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 // Firebase configuration: Using the exact configuration provided by the user
 const firebaseConfig = {
@@ -254,8 +255,8 @@ async function setupAuth() {
                         displayName: user.displayName || 'New User',
                         email: user.email || '',
                         role: userRole,
-                        createdAt: FieldValue.serverTimestamp(),
-                        lastLogin: FieldValue.serverTimestamp()
+                        createdAt: serverTimestamp(), // Corrected usage
+                        lastLogin: serverTimestamp() // Corrected usage
                     }, { merge: true }); // Use merge to avoid overwriting existing fields if any
                     console.log(`New user data created for ${user.email} with role ${userRole}`);
                 }
@@ -664,8 +665,8 @@ async function handleSaveCustomer(event) {
         source: document.getElementById('customer-source').value,
         active: document.getElementById('customer-active').checked,
         creatorId: userId, // Added creatorId as per rules
-        updatedAt: FieldValue.serverTimestamp(),
-        createdAt: FieldValue.serverTimestamp() // Will be overwritten by update if customerId exists
+        updatedAt: serverTimestamp(), // Corrected usage
+        createdAt: serverTimestamp() // Corrected usage
     };
 
     try {
@@ -892,8 +893,8 @@ async function handleSaveLead(event) {
         source: document.getElementById('lead-source').value,
         additionalDetails: document.getElementById('lead-additional-details').value,
         creatorId: userId, // Added creatorId as per rules
-        updatedAt: FieldValue.serverTimestamp(),
-        createdAt: FieldValue.serverTimestamp() // Will be overwritten by update if leadId exists
+        updatedAt: serverTimestamp(), // Corrected usage
+        createdAt: serverTimestamp() // Corrected usage
     };
 
     try {
@@ -1207,8 +1208,8 @@ async function handleSaveOpportunity(event) {
         value: parseFloat(document.getElementById('opportunity-value').value) || 0,
         notes: document.getElementById('opportunity-notes').value,
         creatorId: userId, // Added creatorId as per rules
-        updatedAt: FieldValue.serverTimestamp(),
-        createdAt: FieldValue.serverTimestamp() // Will be overwritten by update if opportunityId exists
+        updatedAt: serverTimestamp(), // Corrected usage
+        createdAt: serverTimestamp() // Corrected usage
     };
 
     try {
@@ -1474,8 +1475,8 @@ async function handleSaveWorkLog(event) {
         type: workLogTypeSelect.value, // Get value from the select
         details: document.getElementById('work-log-details').value,
         creatorId: userId, // Added creatorId as per rules
-        updatedAt: FieldValue.serverTimestamp(),
-        createdAt: FieldValue.serverTimestamp() // Will be overwritten by update if workLogId exists
+        updatedAt: serverTimestamp(), // Corrected usage
+        createdAt: serverTimestamp() // Corrected usage
     };
 
     try {
@@ -1566,8 +1567,8 @@ async function handleSaveCountry(event) {
         name: document.getElementById('country-name').value,
         code: document.getElementById('country-code').value.toUpperCase(),
         states: document.getElementById('country-states').value.split(',').map(s => s.trim()).filter(s => s !== ''),
-        updatedAt: FieldValue.serverTimestamp(),
-        createdAt: FieldValue.serverTimestamp() // Will be overwritten by update if countryId exists
+        updatedAt: serverTimestamp(), // Corrected usage
+        createdAt: serverTimestamp() // Corrected usage
     };
 
     try {
@@ -1747,8 +1748,8 @@ async function handleSaveCurrency(event) {
         code: document.getElementById('currency-code').value.toUpperCase(),
         symbol: document.getElementById('currency-symbol').value,
         countryCode: document.getElementById('currency-country').value || null, // Save country code
-        updatedAt: FieldValue.serverTimestamp(),
-        createdAt: FieldValue.serverTimestamp() // Will be overwritten by update if currencyId exists
+        updatedAt: serverTimestamp(), // Corrected usage
+        createdAt: serverTimestamp() // Corrected usage
     };
 
     try {
@@ -1937,8 +1938,8 @@ async function handleSavePriceBook(event) {
         currency: currency,
         normalizedCurrency: currency.toLowerCase().replace(/\s/g, ''), // Add normalizedCurrency
         isActive: document.getElementById('price-book-active').checked, // Use isActive
-        updatedAt: FieldValue.serverTimestamp(),
-        createdAt: FieldValue.serverTimestamp() // Will be overwritten by update if priceBookId exists
+        updatedAt: serverTimestamp(), // Corrected usage
+        createdAt: serverTimestamp() // Corrected usage
     };
 
     try {
