@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,20 +17,24 @@
             background-color: #f4f7f6;
             color: #333;
         }
+
         .container {
             max-width: 1200px;
         }
+
         /* Custom styles for dropdown menu */
         .dropdown-menu {
             display: none;
             position: absolute;
             background-color: #fff;
             min-width: 160px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
             z-index: 10;
             border-radius: 0.5rem;
-            overflow: hidden; /* Ensures rounded corners apply to children */
+            overflow: hidden;
+            /* Ensures rounded corners apply to children */
         }
+
         .dropdown-menu a {
             color: black;
             padding: 12px 16px;
@@ -37,55 +42,74 @@
             display: block;
             text-align: left;
         }
+
         .dropdown-menu a:hover {
             background-color: #f1f1f1;
         }
+
         .dropdown:hover .dropdown-menu {
             display: block;
         }
+
         /* Accordion styles */
         .accordion-item {
-            border: 1px solid #e5e7eb; /* Light border for separation */
+            border: 1px solid #e5e7eb;
+            /* Light border for separation */
             border-radius: 0.5rem;
-            overflow: hidden; /* Ensures content respects border-radius */
+            overflow: hidden;
+            /* Ensures content respects border-radius */
         }
+
         .accordion-header {
             cursor: pointer;
             padding: 1rem;
-            background-color: #f3f4f6; /* Light gray */
+            background-color: #f3f4f6;
+            /* Light gray */
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-weight: 600;
-            color: #374151; /* Darker gray text */
+            color: #374151;
+            /* Darker gray text */
             transition: background-color 0.2s ease-in-out;
         }
+
         .accordion-header:hover {
-            background-color: #e5e7eb; /* Slightly darker on hover */
+            background-color: #e5e7eb;
+            /* Slightly darker on hover */
         }
+
         .accordion-icon {
             transition: transform 0.2s ease-in-out;
         }
+
         .accordion-header.expanded .accordion-icon {
             transform: rotate(180deg);
         }
+
         .accordion-content {
-            padding: 0 1rem; /* Adjust padding for content */
+            padding: 0 1rem;
+            /* Adjust padding for content */
             overflow: hidden;
-            transition: max-height 0.3s ease-out, padding 0.3s ease-out; /* For smooth collapse/expand */
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+            /* For smooth collapse/expand */
         }
+
         .accordion-content.hidden {
             max-height: 0;
             padding-top: 0;
             padding-bottom: 0;
         }
+
         .accordion-content:not(.hidden) {
-            max-height: 1000px; /* Arbitrarily large value for expansion */
+            max-height: 1000px;
+            /* Arbitrarily large value for expansion */
             padding-top: 1rem;
             padding-bottom: 1rem;
         }
     </style>
 </head>
+
 <body class="bg-gray-100 min-h-screen flex flex-col">
     <!-- Header -->
     <header class="bg-blue-600 text-white p-4 shadow-md">
@@ -93,19 +117,27 @@
             <h1 class="text-2xl font-bold">ShutterSync CRM</h1>
             <nav>
                 <ul class="flex space-x-4 items-center">
-                    <li><a href="#" id="nav-dashboard" class="hover:text-blue-200 transition duration-300 px-3 py-2 rounded-md">Dashboard</a></li>
-                    <li><a href="#" id="nav-customers" class="hover:text-blue-200 transition duration-300 px-3 py-2 rounded-md">Customers</a></li>
-                    <li><a href="#" id="nav-leads" class="hover:text-blue-200 transition duration-300 px-3 py-2 rounded-md">Leads</a></li>
-                    <li><a href="#" id="nav-opportunities" class="hover:text-blue-200 transition duration-300 px-3 py-2 rounded-md">Opportunities</a></li>
+                    <li><a href="#" id="nav-dashboard"
+                            class="hover:text-blue-200 transition duration-300 px-3 py-2 rounded-md">Dashboard</a></li>
+                    <li><a href="#" id="nav-customers"
+                            class="hover:text-blue-200 transition duration-300 px-3 py-2 rounded-md">Customers</a></li>
+                    <li><a href="#" id="nav-leads"
+                            class="hover:text-blue-200 transition duration-300 px-3 py-2 rounded-md">Leads</a></li>
+                    <li><a href="#" id="nav-opportunities"
+                            class="hover:text-blue-200 transition duration-300 px-3 py-2 rounded-md">Opportunities</a>
+                    </li>
                     <li id="admin-menu-item" class="relative dropdown hidden">
-                        <a href="#" class="hover:text-blue-200 transition duration-300 px-3 py-2 rounded-md">Admin &#9660;</a>
+                        <a href="#" class="hover:text-blue-200 transition duration-300 px-3 py-2 rounded-md">Admin
+                            &#9660;</a>
                         <div class="dropdown-menu">
                             <a href="#" id="nav-countries">Countries</a>
                             <a href="#" id="nav-currencies">Currencies</a>
                             <a href="#" id="nav-price-books">Price Books</a>
                         </div>
                     </li>
-                    <li><a href="#" id="nav-logout" class="hover:text-blue-200 transition duration-300 px-3 py-2 rounded-md hidden">Logout</a></li>
+                    <li><a href="#" id="nav-logout"
+                            class="hover:text-blue-200 transition duration-300 px-3 py-2 rounded-md hidden">Logout</a>
+                    </li>
                     <li id="auth-status" class="text-blue-200 text-sm flex items-center ml-4">
                         <span id="user-display-name">Guest</span>
                         <span id="user-id-display" class="hidden"></span> <!-- Hidden now -->
@@ -121,7 +153,8 @@
         <section id="auth-section" class="hidden bg-white p-8 rounded-lg shadow-md text-center">
             <h2 class="text-3xl font-bold text-gray-800 mb-6">Welcome to ShutterSync CRM</h2>
             <p class="text-gray-600 mb-8">Please sign in to access your dashboard and manage your sales data.</p>
-            <button id="google-signin-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+            <button id="google-signin-btn"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
                 Sign in with Google
             </button>
             <p id="auth-error-message" class="text-red-500 mt-4 hidden"></p>
@@ -157,7 +190,9 @@
         <!-- Customers Section -->
         <section id="customers-section" class="hidden">
             <h2 class="text-3xl font-bold text-gray-800 mb-6">Customers</h2>
-            <button id="add-customer-btn" class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 mb-4">Add New Customer</button>
+            <button id="add-customer-btn"
+                class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 mb-4">Add
+                New Customer</button>
 
             <!-- Customer Form -->
             <div id="customer-form-container" class="hidden bg-white p-6 rounded-lg shadow-md mb-6">
@@ -166,36 +201,44 @@
                     <input type="hidden" id="customer-id">
                     <div>
                         <label for="customer-type" class="block text-sm font-medium text-gray-700">Type</label>
-                        <select id="customer-type" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <select id="customer-type" required
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <option value="Individual">Individual</option>
                             <option value="Business">Business</option>
                         </select>
                     </div>
                     <div>
                         <label for="customer-name" class="block text-sm font-medium text-gray-700">Name</label>
-                        <input type="text" id="customer-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <input type="text" id="customer-name" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
                         <label for="customer-email" class="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" id="customer-email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <input type="email" id="customer-email"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
                         <label for="customer-phone" class="block text-sm font-medium text-gray-700">Phone</label>
-                        <input type="tel" id="customer-phone" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <input type="tel" id="customer-phone"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
                         <label for="customer-address" class="block text-sm font-medium text-gray-700">Address</label>
-                        <textarea id="customer-address" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                        <textarea id="customer-address" rows="3"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                     </div>
                     <div>
                         <label for="customer-country" class="block text-sm font-medium text-gray-700">Country</label>
-                        <select id="customer-country" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <select id="customer-country"
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <!-- Options populated by JS -->
                         </select>
                     </div>
                     <div>
-                        <label for="customer-contact-method" class="block text-sm font-medium text-gray-700">Preferred Contact Method</label>
-                        <select id="customer-contact-method" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <label for="customer-contact-method" class="block text-sm font-medium text-gray-700">Preferred
+                            Contact Method</label>
+                        <select id="customer-contact-method" required
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <option value="Email">Email</option>
                             <option value="Phone">Phone</option>
                             <option value="SMS">SMS</option>
@@ -203,7 +246,8 @@
                     </div>
                     <div>
                         <label for="customer-industry" class="block text-sm font-medium text-gray-700">Industry</label>
-                        <select id="customer-industry" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <select id="customer-industry" required
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <option value="">Select Industry</option>
                             <option value="Technology">Technology</option>
                             <option value="Healthcare">Healthcare</option>
@@ -214,12 +258,15 @@
                         </select>
                     </div>
                     <div>
-                        <label for="customer-details" class="block text-sm font-medium text-gray-700">Additional Details</label>
-                        <textarea id="customer-details" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                        <label for="customer-details" class="block text-sm font-medium text-gray-700">Additional
+                            Details</label>
+                        <textarea id="customer-details" rows="3"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                     </div>
                     <div>
                         <label for="customer-source" class="block text-sm font-medium text-gray-700">Source</label>
-                        <select id="customer-source" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <select id="customer-source" required
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <option value="">Select Source</option>
                             <option value="Website">Website</option>
                             <option value="Referral">Referral</option>
@@ -230,12 +277,16 @@
                         </select>
                     </div>
                     <div class="flex items-center">
-                        <input type="checkbox" id="customer-active" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <input type="checkbox" id="customer-active"
+                            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                         <label for="customer-active" class="ml-2 block text-sm text-gray-900">Active Customer</label>
                     </div>
                     <div class="flex justify-end space-x-3">
-                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save Customer</button>
-                        <button type="button" id="cancel-customer-btn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                        <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
+                            Customer</button>
+                        <button type="button" id="cancel-customer-btn"
+                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
                     </div>
                     <p id="customer-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
                 </form>
@@ -249,7 +300,9 @@
         <!-- Leads Section -->
         <section id="leads-section" class="hidden">
             <h2 class="text-3xl font-bold text-gray-800 mb-6">Leads</h2>
-            <button id="add-lead-btn" class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 mb-4">Add New Lead</button>
+            <button id="add-lead-btn"
+                class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 mb-4">Add
+                New Lead</button>
 
             <!-- Lead Form -->
             <div id="lead-form-container" class="hidden bg-white p-6 rounded-lg shadow-md mb-6">
@@ -257,40 +310,53 @@
                 <form id="lead-form" class="space-y-4">
                     <input type="hidden" id="lead-id">
                     <div>
-                        <label for="lead-contact-name" class="block text-sm font-medium text-gray-700">Contact Name</label>
-                        <input type="text" id="lead-contact-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <label for="lead-contact-name" class="block text-sm font-medium text-gray-700">Contact
+                            Name</label>
+                        <input type="text" id="lead-contact-name" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
                         <label for="lead-phone" class="block text-sm font-medium text-gray-700">Phone</label>
-                        <input type="tel" id="lead-phone" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <input type="tel" id="lead-phone"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
                         <label for="lead-email" class="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" id="lead-email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <input type="email" id="lead-email"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
-                        <label for="lead-services-interested" class="block text-sm font-medium text-gray-700">Services Interested</label>
-                        <select id="lead-services-interested" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <label for="lead-services-interested" class="block text-sm font-medium text-gray-700">Services
+                            Interested</label>
+                        <select id="lead-services-interested" required
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <!-- Options populated by JS -->
                         </select>
                     </div>
                     <div>
                         <label for="lead-event-date" class="block text-sm font-medium text-gray-700">Event Date</label>
-                        <input type="date" id="lead-event-date" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <input type="date" id="lead-event-date"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
                         <label for="lead-source" class="block text-sm font-medium text-gray-700">Source</label>
-                        <select id="lead-source" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <select id="lead-source" required
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <!-- Options populated by JS -->
                         </select>
                     </div>
                     <div>
-                        <label for="lead-additional-details" class="block text-sm font-medium text-gray-700">Additional Details</label>
-                        <textarea id="lead-additional-details" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                        <label for="lead-additional-details" class="block text-sm font-medium text-gray-700">Additional
+                            Details</label>
+                        <textarea id="lead-additional-details" rows="3"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                     </div>
                     <div class="flex justify-end space-x-3">
-                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save Lead</button>
-                        <button type="button" id="cancel-lead-btn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                        <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
+                            Lead</button>
+                        <button type="button" id="cancel-lead-btn"
+                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
                     </div>
                     <p id="lead-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
                 </form>
@@ -303,149 +369,166 @@
 
         <!-- Opportunities Section -->
         <section id="opportunities-section" class="hidden">
-            <h2 class="text-3xl font-bold text-gray-800 mb-6">Opportunities</h2>
-            <button id="add-opportunity-btn" class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 mb-4">Add New Opportunity</button>
+            <h2 class="text-2xl font-semibold text-gray-800 mb-6">Opportunities</h2>
+            <div class="flex justify-between items-center mb-4">
+                <input type="text" id="opportunity-search" placeholder="Search opportunities..."
+                    class="form-input w-1/3">
+                <button id="add-opportunity-btn" class="btn-primary">Add Opportunity</button>
+            </div>
 
-            <!-- Opportunity Form -->
+            <!-- Opportunity Form Container -->
             <div id="opportunity-form-container" class="hidden bg-white p-6 rounded-lg shadow-md mb-6">
-                <h3 class="text-2xl font-bold text-gray-800 mb-4">Opportunity Details</h3>
-                <form id="opportunity-form" class="space-y-4">
+                <h3 class="text-xl font-semibold text-gray-700 mb-4">Add/Edit Opportunity</h3>
+                <form id="opportunity-form">
                     <input type="hidden" id="opportunity-id">
+                    <p id="opportunity-form-message" class="text-red-500 text-sm mb-4 hidden"></p>
 
-                    <!-- Main Opportunity Details Accordion -->
-                    <div class="accordion-item bg-white rounded-lg shadow-md mb-4">
-                        <div class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200 expanded">
-                            <h3 class="text-lg font-semibold text-gray-800">Main Details</h3>
-                            <span class="accordion-icon transform transition-transform duration-200">&#9660;</span>
+                    <!-- Main Details Accordion -->
+                    <div class="accordion-item">
+                        <div class="accordion-header">
+                            <span>Main Details</span>
+                            <svg class="accordion-icon w-5 h-5 text-gray-600" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7"></path>
+                            </svg>
                         </div>
-                        <div class="accordion-content pt-4">
-                            <div>
-                                <label for="opportunity-name" class="block text-sm font-medium text-gray-700">Opportunity Name</label>
-                                <input type="text" id="opportunity-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <div class="accordion-content hidden">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="opportunity-name"
+                                        class="block text-sm font-medium text-gray-700">Opportunity Name</label>
+                                    <input type="text" id="opportunity-name" name="opportunityName" required
+                                        class="form-input mt-1">
+                                </div>
+                                <div>
+                                    <label for="opportunity-customer"
+                                        class="block text-sm font-medium text-gray-700">Customer</label>
+                                    <select id="opportunity-customer" name="customerId" required
+                                        class="form-select mt-1"></select>
+                                </div>
+                                <div>
+                                    <label for="opportunity-currency"
+                                        class="block text-sm font-medium text-gray-700">Currency</label>
+                                    <select id="opportunity-currency" name="currency" required
+                                        class="form-select mt-1"></select>
+                                </div>
+                                <div>
+                                    <label for="opportunity-price-book"
+                                        class="block text-sm font-medium text-gray-700">Price Book</label>
+                                    <select id="opportunity-price-book" name="priceBookId"
+                                        class="form-select mt-1"></select>
+                                </div>
+                                <div>
+                                    <label for="opportunity-start-date"
+                                        class="block text-sm font-medium text-gray-700">Expected Start Date</label>
+                                    <input type="date" id="opportunity-start-date" name="expectedStartDate"
+                                        class="form-input mt-1">
+                                </div>
+                                <div>
+                                    <label for="opportunity-close-date"
+                                        class="block text-sm font-medium text-gray-700">Expected Close Date</label>
+                                    <input type="date" id="opportunity-close-date" name="expectedCloseDate"
+                                        class="form-input mt-1">
+                                </div>
+                                <div>
+                                    <label for="opportunity-sales-stage"
+                                        class="block text-sm font-medium text-gray-700">Sales Stage</label>
+                                    <select id="opportunity-sales-stage" name="salesStage" required
+                                        class="form-select mt-1">
+                                        <option value="Prospect">Prospect</option>
+                                        <option value="Qualification">Qualification</option>
+                                        <option value="Proposal">Proposal</option>
+                                        <option value="Negotiation">Negotiation</option>
+                                        <option value="Won">Won</option>
+                                        <option value="Lost">Lost</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="opportunity-probability"
+                                        class="block text-sm font-medium text-gray-700">Probability (%)</label>
+                                    <input type="number" id="opportunity-probability" name="probability" min="0"
+                                        max="100" class="form-input mt-1">
+                                </div>
+                                <div>
+                                    <label for="opportunity-value"
+                                        class="block text-sm font-medium text-gray-700">Value</label>
+                                    <input type="number" id="opportunity-value" name="value" min="0" step="0.01"
+                                        class="form-input mt-1">
+                                </div>
                             </div>
-                            <div>
-                                <label for="opportunity-customer" class="block text-sm font-medium text-gray-700">Customer</label>
-                                <select id="opportunity-customer" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                    <!-- Options populated by JS -->
-                                </select>
-                            </div>
-                            <div>
-                                <label for="opportunity-currency" class="block text-sm font-medium text-gray-700">Currency</label>
-                                <select id="opportunity-currency" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                    <!-- Options populated by JS -->
-                                </select>
-                            </div>
-                            <div>
-                                <label for="opportunity-price-book" class="block text-sm font-medium text-gray-700">Price Book</label>
-                                <select id="opportunity-price-book" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                    <!-- Options populated by JS -->
-                                </select>
-                            </div>
-                            <div>
-                                <label for="opportunity-start-date" class="block text-sm font-medium text-gray-700">Expected Start Date</label>
-                                <input type="date" id="opportunity-start-date" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            </div>
-                            <div>
-                                <label for="opportunity-close-date" class="block text-sm font-medium text-gray-700">Expected Close Date</label>
-                                <input type="date" id="opportunity-close-date" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            </div>
-                            <div>
-                                <label for="opportunity-sales-stage" class="block text-sm font-medium text-gray-700">Sales Stage</label>
-                                <select id="opportunity-sales-stage" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                    <option value="Prospect">Prospect</option>
-                                    <option value="Qualification">Qualification</option>
-                                    <option value="Proposal">Proposal</option>
-                                    <option value="Negotiation">Negotiation</option>
-                                    <option value="Won">Won</option>
-                                    <option value="Lost">Lost</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="opportunity-probability" class="block text-sm font-medium text-gray-700">Probability (%)</label>
-                                <input type="number" id="opportunity-probability" min="0" max="100" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            </div>
-                            <div>
-                                <label for="opportunity-value" class="block text-sm font-medium text-gray-700">Value</label>
-                                <input type="number" id="opportunity-value" step="0.01" min="0" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            </div>
-                            <div>
-                                <label for="opportunity-notes" class="block text-sm font-medium text-gray-700">Notes</label>
-                                <textarea id="opportunity-notes" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
-                            </div>
-                        </div>
-                        
-                        <div class="flex justify-end space-x-3">
-                            <!--<div class="flex justify-end space-x-3 mt-6">-->
-                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save Opportunity</button>
-                            <button type="button" id="cancel-opportunity-btn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
-                        </div>
-
-                        <p id="opportunity-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
-                    </div>
-
-                    <!-- Work Logs Accordion -->
-                    <div class="accordion-item bg-white rounded-lg shadow-md mb-4">
-                        <div class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200">
-                            <h3 class="text-lg font-semibold text-gray-800">Work Logs</h3>
-                            <span class="accordion-icon transform transition-transform duration-200">&#9660;</span> <!-- Down arrow -->
-                        </div>
-                        <div class="accordion-content hidden pt-4">
-                            <div id="work-logs-list-container" class="mb-4">
-                                <!-- Work logs will be rendered here -->
-                                <p id="no-work-logs-message" class="text-center text-gray-500 hidden">No work logs found for this opportunity.</p>
-                                <ul id="work-logs-list" class="space-y-2"></ul>
-                            </div>
-
-                            <button id="add-work-log-entry-btn" type="button" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300 mb-4">Add New Work Log Entry</button>
-
-                            <!-- Work Log Entry Form -->
-                            <div id="work-log-form-container" class="hidden bg-gray-50 p-4 rounded-lg shadow-inner">
-                                <h4 class="text-md font-semibold text-gray-700 mb-3">Add/Edit Work Log Entry</h4>
-                                <form id="work-log-form" class="space-y-4">
-                                    <input type="hidden" id="work-log-id">
-                                    <input type="hidden" id="work-log-opportunity-id"> <!-- To link to parent opportunity -->
-
-                                    <div>
-                                        <label for="work-log-date" class="block text-sm font-medium text-gray-700">Date</label>
-                                        <input type="date" id="work-log-date" name="workLogDate" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                    </div>
-
-                                    <div>
-                                        <label for="work-log-type" class="block text-sm font-medium text-gray-700">Type</label>
-                                        <select id="work-log-type" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                            <!-- Options will be populated by JS -->
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label for="work-log-details" class="block text-sm font-medium text-gray-700">Details</label>
-                                        <textarea id="work-log-details" rows="3" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
-                                    </div>
-
-                                    <div class="flex justify-end space-x-3">
-                                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save Work Log</button>
-                                        <button type="button" id="cancel-work-log-btn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
-                                    </div>
-                                    <p id="work-log-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
-                                </form>
+                            <div class="mt-4">
+                                <label for="opportunity-notes"
+                                    class="block text-sm font-medium text-gray-700">Notes</label>
+                                <textarea id="opportunity-notes" name="notes" rows="3"
+                                    class="form-textarea mt-1"></textarea>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Other Accordions (Line Items, Quotes) would go here in the future -->
-                    
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
+                            Opportunity</button>
+                        <button type="button" id="cancel-opportunity-btn"
+                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                    </div>
                 </form>
             </div>
 
-            <!-- Opportunity Grid -->
-            <p id="no-opportunities-message" class="text-center text-gray-500 mt-8 hidden">No opportunities found.</p>
+            <!-- Work Log Form Container (Moved OUTSIDE opportunity-form) -->
+            <div id="work-log-form-container" class="hidden bg-white p-6 rounded-lg shadow-md mt-6">
+                <h3 class="text-xl font-semibold text-gray-700 mb-4">Add/Edit Work Log Entry</h3>
+                <form id="work-log-form">
+                    <input type="hidden" id="work-log-id">
+                    <input type="hidden" id="work-log-opportunity-id">
+                    <p id="work-log-form-message" class="text-red-500 text-sm mb-4 hidden"></p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="work-log-date" class="block text-sm font-medium text-gray-700">Date</label>
+                            <input type="date" id="work-log-date" name="workLogDate" required class="form-input mt-1">
+                        </div>
+                        <div>
+                            <label for="work-log-type" class="block text-sm font-medium text-gray-700">Type</label>
+                            <select id="work-log-type" name="workLogType" required class="form-select mt-1"></select>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label for="work-log-details" class="block text-sm font-medium text-gray-700">Details</label>
+                        <textarea id="work-log-details" name="workLogDetails" rows="3"
+                            class="form-textarea mt-1"></textarea>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="submit"
+                            class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300">Save
+                            Work Log</button>
+                        <button type="button" id="cancel-work-log-btn"
+                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Work Logs List Container -->
+            <div id="work-logs-list-container" class="bg-white p-6 rounded-lg shadow-md mt-6">
+                <h3 class="text-xl font-semibold text-gray-700 mb-4">Work Logs</h3>
+                <button id="add-work-log-entry-btn" class="btn-primary mb-4">Add Work Log Entry</button>
+                <ul id="work-logs-list" class="space-y-3">
+                    <!-- Work log entries will be rendered here by JS -->
+                </ul>
+                <p id="no-work-logs-message" class="text-gray-500 text-center mt-4 hidden">No work logs found for this
+                    opportunity.</p>
+            </div>
+
             <div id="opportunities-grid-container" class="mt-6"></div>
+            <p id="no-opportunities-message" class="text-gray-500 text-center mt-4 hidden">No opportunities found.</p>
         </section>
 
         <!-- Countries Section -->
         <section id="countries-section" class="hidden">
             <h2 class="text-3xl font-bold text-gray-800 mb-6">Countries</h2>
-            <button id="add-country-btn" class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 mb-4">Add New Country</button>
+            <button id="add-country-btn"
+                class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 mb-4">Add
+                New Country</button>
 
             <!-- Country Form -->
             <div id="country-form-container" class="hidden bg-white p-6 rounded-lg shadow-md mb-6">
@@ -454,19 +537,27 @@
                     <input type="hidden" id="country-id">
                     <div>
                         <label for="country-name" class="block text-sm font-medium text-gray-700">Country Name</label>
-                        <input type="text" id="country-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <input type="text" id="country-name" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
-                        <label for="country-code" class="block text-sm font-medium text-gray-700">Country Code (e.g., US, CA)</label>
-                        <input type="text" id="country-code" required maxlength="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm uppercase">
+                        <label for="country-code" class="block text-sm font-medium text-gray-700">Country Code (e.g.,
+                            US, CA)</label>
+                        <input type="text" id="country-code" required maxlength="2"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm uppercase">
                     </div>
                     <div>
-                        <label for="country-states" class="block text-sm font-medium text-gray-700">States/Provinces (comma-separated)</label>
-                        <textarea id="country-states" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                        <label for="country-states" class="block text-sm font-medium text-gray-700">States/Provinces
+                            (comma-separated)</label>
+                        <textarea id="country-states" rows="3"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                     </div>
                     <div class="flex justify-end space-x-3">
-                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save Country</button>
-                        <button type="button" id="cancel-country-btn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                        <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
+                            Country</button>
+                        <button type="button" id="cancel-country-btn"
+                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
                     </div>
                     <p id="country-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
                 </form>
@@ -480,7 +571,9 @@
         <!-- Currencies Section -->
         <section id="currencies-section" class="hidden">
             <h2 class="text-3xl font-bold text-gray-800 mb-6">Currencies</h2>
-            <button id="add-currency-btn" class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 mb-4">Add New Currency</button>
+            <button id="add-currency-btn"
+                class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 mb-4">Add
+                New Currency</button>
 
             <!-- Currency Form -->
             <div id="currency-form-container" class="hidden bg-white p-6 rounded-lg shadow-md mb-6">
@@ -488,26 +581,37 @@
                 <form id="currency-form" class="space-y-4">
                     <input type="hidden" id="currency-id">
                     <div>
-                        <label for="currency-name" class="block text-sm font-medium text-gray-700">Currency Name (e.g., US Dollar)</label>
-                        <input type="text" id="currency-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <label for="currency-name" class="block text-sm font-medium text-gray-700">Currency Name (e.g.,
+                            US Dollar)</label>
+                        <input type="text" id="currency-name" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
-                        <label for="currency-code" class="block text-sm font-medium text-gray-700">Currency Code (e.g., USD)</label>
-                        <input type="text" id="currency-code" required maxlength="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm uppercase">
+                        <label for="currency-code" class="block text-sm font-medium text-gray-700">Currency Code (e.g.,
+                            USD)</label>
+                        <input type="text" id="currency-code" required maxlength="3"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm uppercase">
                     </div>
                     <div>
-                        <label for="currency-symbol" class="block text-sm font-medium text-gray-700">Symbol (e.g., $)</label>
-                        <input type="text" id="currency-symbol" required maxlength="5" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <label for="currency-symbol" class="block text-sm font-medium text-gray-700">Symbol (e.g.,
+                            $)</label>
+                        <input type="text" id="currency-symbol" required maxlength="5"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
-                        <label for="currency-country" class="block text-sm font-medium text-gray-700">Associated Country (Optional)</label>
-                        <select id="currency-country" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <label for="currency-country" class="block text-sm font-medium text-gray-700">Associated Country
+                            (Optional)</label>
+                        <select id="currency-country"
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <!-- Options populated by JS -->
                         </select>
                     </div>
                     <div class="flex justify-end space-x-3">
-                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save Currency</button>
-                        <button type="button" id="cancel-currency-btn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                        <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
+                            Currency</button>
+                        <button type="button" id="cancel-currency-btn"
+                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
                     </div>
                     <p id="currency-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
                 </form>
@@ -521,7 +625,9 @@
         <!-- Price Books Section -->
         <section id="price-books-section" class="hidden">
             <h2 class="text-3xl font-bold text-gray-800 mb-6">Price Books</h2>
-            <button id="add-price-book-btn" class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 mb-4">Add New Price Book</button>
+            <button id="add-price-book-btn"
+                class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 mb-4">Add
+                New Price Book</button>
 
             <!-- Price Book Form -->
             <div id="price-book-form-container" class="hidden bg-white p-6 rounded-lg shadow-md mb-6">
@@ -529,26 +635,37 @@
                 <form id="price-book-form" class="space-y-4">
                     <input type="hidden" id="price-book-id">
                     <div>
-                        <label for="price-book-name" class="block text-sm font-medium text-gray-700">Price Book Name</label>
-                        <input type="text" id="price-book-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <label for="price-book-name" class="block text-sm font-medium text-gray-700">Price Book
+                            Name</label>
+                        <input type="text" id="price-book-name" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
-                        <label for="price-book-description" class="block text-sm font-medium text-gray-700">Description</label>
-                        <textarea id="price-book-description" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                        <label for="price-book-description"
+                            class="block text-sm font-medium text-gray-700">Description</label>
+                        <textarea id="price-book-description" rows="3"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                     </div>
                     <div>
-                        <label for="price-book-currency" class="block text-sm font-medium text-gray-700">Currency</label>
-                        <select id="price-book-currency" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <label for="price-book-currency"
+                            class="block text-sm font-medium text-gray-700">Currency</label>
+                        <select id="price-book-currency" required
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <!-- Options populated by JS -->
                         </select>
                     </div>
                     <div class="flex items-center">
-                        <input type="checkbox" id="price-book-active" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                        <label for="price-book-active" class="ml-2 block text-sm text-gray-900">Active Price Book</label>
+                        <input type="checkbox" id="price-book-active"
+                            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="price-book-active" class="ml-2 block text-sm text-gray-900">Active Price
+                            Book</label>
                     </div>
                     <div class="flex justify-end space-x-3">
-                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save Price Book</button>
-                        <button type="button" id="cancel-price-book-btn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                        <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
+                            Price Book</button>
+                        <button type="button" id="cancel-price-book-btn"
+                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
                     </div>
                     <p id="price-book-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
                 </form>
@@ -566,8 +683,10 @@
         <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
             <p id="message-content" class="text-lg font-semibold text-gray-800 mb-4"></p>
             <div class="flex justify-center space-x-4">
-                <button id="message-confirm-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 hidden">Confirm</button>
-                <button id="message-cancel-btn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">OK</button>
+                <button id="message-confirm-btn"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 hidden">Confirm</button>
+                <button id="message-cancel-btn"
+                    class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">OK</button>
             </div>
         </div>
     </div>
@@ -577,4 +696,5 @@
     <!-- Your main application JavaScript -->
     <script type="module" src="js/script.js" defer></script>
 </body>
+
 </html>
