@@ -473,75 +473,74 @@
                         </div>
 
                         <p id="opportunity-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
-                    </div>
-
-                    <!-- Work Logs Accordion -->
-                    <div class="accordion-item bg-white rounded-lg shadow-md mb-4">
-                        <div
-                            class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200">
-                            <h3 class="text-lg font-semibold text-gray-800">Work Logs</h3>
-                            <span class="accordion-icon transform transition-transform duration-200">&#9660;</span>
-                            <!-- Down arrow -->
-                        </div>
-                        <div class="accordion-content hidden pt-4">
-                            <div id="work-logs-list-container" class="mb-4">
-                                <!-- Work logs will be rendered here -->
-                                <p id="no-work-logs-message" class="text-center text-gray-500 hidden">No work logs found
-                                    for this opportunity.</p>
-                                <ul id="work-logs-list" class="space-y-2"></ul>
-                            </div>
-
-                            <button id="add-work-log-entry-btn" type="button"
-                                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300 mb-4">Add
-                                New Work Log Entry</button>
-
-                            <!-- Work Log Entry Form -->
-                            <div id="work-log-form-container" class="hidden bg-gray-50 p-4 rounded-lg shadow-inner">
-                                <h4 class="text-md font-semibold text-gray-700 mb-3">Add/Edit Work Log Entry</h4>
-                                <form id="work-log-form" class="space-y-4">
-                                    <input type="hidden" id="work-log-id">
-                                    <input type="hidden" id="work-log-opportunity-id">
-                                    <!-- To link to parent opportunity -->
-
-                                    <div>
-                                        <label for="work-log-date"
-                                            class="block text-sm font-medium text-gray-700">Date</label>
-                                        <input type="date" id="work-log-date" name="workLogDate" required
-                                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                    </div>
-
-                                    <div>
-                                        <label for="work-log-type"
-                                            class="block text-sm font-medium text-gray-700">Type</label>
-                                        <select id="work-log-type" required
-                                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                            <!-- Options will be populated by JS -->
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label for="work-log-details"
-                                            class="block text-sm font-medium text-gray-700">Details</label>
-                                        <textarea id="work-log-details" rows="3" required
-                                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
-                                    </div>
-
-                                    <div class="flex justify-end space-x-3">
-                                        <button type="submit"
-                                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
-                                            Work Log</button>
-                                        <button type="button" id="cancel-work-log-btn"
-                                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
-                                    </div>
-                                    <p id="work-log-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Other Accordions (Line Items, Quotes) would go here in the future -->
-
                 </form>
+            </div>
+
+            <!-- Work Logs Accordion -->
+            <div class="accordion-item bg-white rounded-lg shadow-md mb-4">
+                <div
+                    class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200">
+                    <h3 class="text-lg font-semibold text-gray-800">Work Logs</h3>
+                    <span class="accordion-icon transform transition-transform duration-200">&#9660;</span>
+                    <!-- Down arrow -->
+                </div>
+                <div class="accordion-content hidden pt-4">
+                    <div id="work-logs-list-container" class="mb-4">
+                        <!-- Work logs will be rendered here -->
+                        <p id="no-work-logs-message" class="text-center text-gray-500 hidden">No work logs found
+                            for this opportunity.</p>
+                        <ul id="work-logs-list" class="space-y-2"></ul>
+                    </div>
+
+                    <button id="add-work-log-entry-btn" type="button"
+                        class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300 mb-4">Add
+                        New Work Log Entry</button>
+
+                    <!-- Work Log Entry Form -->
+                    <div id="work-log-form-container" class="hidden bg-gray-50 p-4 rounded-lg shadow-inner">
+                        <h4 class="text-md font-semibold text-gray-700 mb-3">Add/Edit Work Log Entry</h4>
+                        <form id="work-log-form" class="space-y-4">
+                            <input type="hidden" id="work-log-id">
+                            <input type="hidden" id="work-log-opportunity-id">
+                            <!-- To link to parent opportunity -->
+
+                            <div>
+                                <label for="work-log-date" class="block text-sm font-medium text-gray-700">Date</label>
+                                <input type="date" id="work-log-date" name="workLogDate" required
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            </div>
+
+                            <div>
+                                <label for="work-log-type" class="block text-sm font-medium text-gray-700">Type</label>
+                                <select id="work-log-type" required
+                                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                    <!-- Options will be populated by JS -->
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="work-log-details"
+                                    class="block text-sm font-medium text-gray-700">Details</label>
+                                <textarea id="work-log-details" rows="3" required
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                            </div>
+
+                            <div class="flex justify-end space-x-3">
+                                <button type="submit"
+                                    class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
+                                    Work Log</button>
+                                <button type="button" id="cancel-work-log-btn"
+                                    class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                            </div>
+                            <p id="work-log-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other Accordions (Line Items, Quotes) would go here in the future -->
+
+            </form>
             </div>
 
             <!-- Opportunity Grid -->
