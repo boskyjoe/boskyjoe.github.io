@@ -149,7 +149,7 @@ function showMessageBox(message, isConfirm = false) {
         // Ensure messageBox and its children are available
         if (!messageBox || !messageContent || !messageConfirmBtn || !messageCancelBtn) {
             console.error("Message box elements not found. Cannot display message.");
-            // Fallback to console log if elements are missing
+            // Fallback to console log if elements is missing
             console.log(`Message: ${message} (isConfirm: ${isConfirm})`);
             resolve(false); // Assume cancellation if message box can't be shown
             return;
@@ -450,7 +450,7 @@ function showOpportunityForm() {
     });
 
     // Find the first accordion header and trigger a click to open it
-    const firstAccordionHeader = document.querySelector('#opportunity-form .accordion-header');
+    const firstAccordionHeader = document.querySelector('#opportunity-form .accordion-item .accordion-header');
     if (firstAccordionHeader) {
         console.log('  Found first accordion header:', firstAccordionHeader.textContent.trim());
         // Programmatically click the header to trigger the toggleAccordion function
@@ -1109,6 +1109,36 @@ async function handleSaveOpportunity(event) {
     const messageElement = document.getElementById('opportunity-form-message');
     if (messageElement) messageElement.classList.add('hidden');
 
+    // --- Start Client-Side Validation ---
+    const requiredFields = opportunityForm.querySelectorAll('[required]');
+    let firstInvalidField = null;
+
+    for (const field of requiredFields) {
+        if (!field.value) {
+            firstInvalidField = field;
+            break;
+        }
+    }
+
+    if (firstInvalidField) {
+        console.warn('Validation failed: Required field is empty.', firstInvalidField);
+        // Find the parent accordion of the invalid field
+        let parentAccordionContent = firstInvalidField.closest('.accordion-content');
+        if (parentAccordionContent && parentAccordionContent.classList.contains('hidden')) {
+            const parentAccordionHeader = parentAccordionContent.previousElementSibling;
+            if (parentAccordionHeader) {
+                console.log('Opening parent accordion:', parentAccordionHeader.textContent.trim());
+                parentAccordionHeader.click(); // Programmatically click to open
+            }
+        }
+        firstInvalidField.focus(); // Focus on the invalid field
+        messageElement.textContent = `Please fill in the required field: ${firstInvalidField.labels ? firstInvalidField.labels[0].textContent : firstInvalidField.id.replace(/-/g, ' ')}.`;
+        messageElement.classList.remove('hidden');
+        return; // Stop form submission
+    }
+    // --- End Client-Side Validation ---
+
+
     const customerId = document.getElementById('opportunity-customer').value;
     let customerName = '';
     if (customerId) {
@@ -1379,6 +1409,26 @@ async function handleSaveWorkLog(event) {
     const workLogId = document.getElementById('work-log-id').value;
     const messageElement = document.getElementById('work-log-form-message');
     if (messageElement) messageElement.classList.add('hidden');
+
+    // --- Start Client-Side Validation for Work Log ---
+    const requiredFields = workLogForm.querySelectorAll('[required]');
+    let firstInvalidField = null;
+
+    for (const field of requiredFields) {
+        if (!field.value) {
+            firstInvalidField = field;
+            break;
+        }
+    }
+
+    if (firstInvalidField) {
+        console.warn('Work Log Validation failed: Required field is empty.', firstInvalidField);
+        firstInvalidField.focus(); // Focus on the invalid field
+        messageElement.textContent = `Please fill in the required field: ${firstInvalidField.labels ? firstInvalidField.labels[0].textContent : firstInvalidField.id.replace(/-/g, ' ')}.`;
+        messageElement.classList.remove('hidden');
+        return; // Stop form submission
+    }
+    // --- End Client-Side Validation for Work Log ---
 
     const workLogDateValue = document.getElementById('work-log-date').value;
     const workLogDateTimestamp = workLogDateValue ? new Date(workLogDateValue) : null;
