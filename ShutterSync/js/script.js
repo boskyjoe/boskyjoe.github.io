@@ -582,7 +582,8 @@ async function fetchData(collectionName) {
     try {
         let q;
         // Apply creatorId filter only for user-specific collections as per rules
-        if (['customers', 'leads', 'opportunities', 'workLogs'].includes(collectionName)) {
+        // Note: 'users_data' is also top-level but not filtered by creatorId in client-side fetches
+        if (['customers', 'leads', 'opportunities'].includes(collectionName)) {
             q = query(collectionRef, where('creatorId', '==', userId));
         } else {
             // For public collections (countries, currencies, priceBooks), no creatorId filter
@@ -1450,6 +1451,7 @@ async function loadWorkLogs(opportunityId) {
 
 async function handleSaveWorkLog(event) {
     event.preventDefault();
+    console.log('handleSaveWorkLog: Form submit event triggered.'); // Diagnostic log
     if (!db || !userId || !currentOpportunityId) {
         showMessageBox("Authentication or selected opportunity required to save work log.", false);
         return;
