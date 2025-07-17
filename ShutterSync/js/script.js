@@ -818,7 +818,7 @@ function renderCustomersGrid(customers) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
-                    td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                    td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
                     container: 'overflow-x-auto'
@@ -1090,7 +1090,7 @@ function renderLeadsGrid(leads) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
-                    td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                    td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
                     container: 'overflow-x-auto'
@@ -1495,7 +1495,7 @@ function renderOpportunitiesGrid(opportunities) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
-                    td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                    td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
                     container: 'overflow-x-auto'
@@ -1840,7 +1840,7 @@ function renderCountriesGrid(countries) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
-                    td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                    td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
                     container: 'overflow-x-auto'
@@ -2024,7 +2024,7 @@ function renderCurrenciesGrid(currencies) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
-                    td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                    td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
                     container: 'overflow-x-auto'
@@ -2216,7 +2216,7 @@ function renderPriceBooksGrid(priceBooks) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
-                    td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                    td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
                     container: 'overflow-x-auto'
