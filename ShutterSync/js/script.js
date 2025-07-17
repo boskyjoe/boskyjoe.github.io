@@ -64,80 +64,6 @@ let authErrorMessage;
 let dashboardTotalCustomers;
 let dashboardTotalOpportunities;
 let dashboardOpenOpportunities;
-I'm sorry, I seem to have made a mistake and did not include the full `script.js` file in my previous response. My apologies for that.
-
-I will now provide the complete `js/script.js` file, split into 10 logical immersive blocks as requested. This version will include all the changes for the `servicesInterested` field and ensure the accordion logic is correct for your single-column layout.
-
-Please replace your entire `js/script.js` file with the content from the immersive blocks below.
-
-
-```javascript
-// Part 1: Firebase Imports, Configuration, and Global Variable Declarations
-
-// Firebase imports for ES Modules
-import { initializeApp } from '[https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js)';
-import { getAuth, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from '[https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js)';
-import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, onSnapshot, serverTimestamp, writeBatch } from '[https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js)';
-
-// Firebase configuration: Using the exact configuration provided by the user
-const firebaseConfig = {
-    apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
-    authDomain: "shuttersync-96971.firebaseapp.com",
-    projectId: "shuttersync-96971",
-    storageBucket: "shuttersync-96971.firebasestorage.app",
-    appId: "1:10782416018:web:361db5572882a62f291a4b",
-    measurementId: "G-T0W9CES4D3"
-};
-
-// The appId from firebaseConfig is sufficient as collections are top-level, not nested under artifacts/appId/
-const appId = firebaseConfig.appId;
-
-
-// Environment variable for initial auth token (if available)
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-// Firebase App and Services (initialized in setupAuth)
-let app;
-let db;
-let auth;
-let userId = null; // Will be set after authentication
-let userRole = 'guest'; // Default role
-let currentOpportunityId = null; // To track the opportunity being edited
-
-// Global cache for price books to enable filtering without re-fetching
-let allPriceBooks = [];
-
-// Declare DOM elements globally, but assign them inside initializePage
-// This ensures they are found after the DOM is fully loaded.
-let authSection;
-let dashboardSection;
-let customersSection;
-let leadsSection;
-let opportunitiesSection;
-let countriesSection;
-let currenciesSection;
-let priceBooksSection;
-
-let navDashboard;
-let navCustomers;
-let navLeads;
-let navOpportunities;
-let navCountries;
-let navCurrencies;
-let navPriceBooks;
-let navLogout;
-let adminMenuItem;
-
-let googleSignInBtn;
-let authStatus;
-let userDisplayName;
-let userIdDisplay;
-let userRoleDisplay;
-let authErrorMessage;
-
-let dashboardTotalCustomers;
-let dashboardTotalOpportunities;
-let dashboardOpenOpportunities;
 let dashboardWonOpportunities;
 
 let addCustomerBtn;
@@ -211,6 +137,7 @@ let messageCancelBtn;
 let opportunityCurrencySelect; // Added for easy access
 let opportunityPriceBookSelect; // Added for easy access
 let opportunityServicesInterestedSelect; // NEW: Added for services interested multi-select
+
 
 // Part 2: Message Box, Authentication, and Dashboard Logic
 
