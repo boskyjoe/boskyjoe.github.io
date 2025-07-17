@@ -138,7 +138,6 @@ let opportunityCurrencySelect; // Added for easy access
 let opportunityPriceBookSelect; // Added for easy access
 let opportunityServicesInterestedSelect; // NEW: Added for services interested multi-select
 
-
 // Part 2: Message Box, Authentication, and Dashboard Logic
 
 /**
@@ -1477,7 +1476,8 @@ async function editOpportunity(opportunityId) {
     try {
         // setupOpportunityForm will now fetch the data if only an ID is passed
         await setupOpportunityForm(opportunityId);
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error editing opportunity:", error);
         showMessageBox(`Error loading opportunity for edit: ${error.message}`, false);
     }
