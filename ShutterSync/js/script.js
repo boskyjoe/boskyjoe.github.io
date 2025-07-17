@@ -2314,7 +2314,7 @@ function initializePage() {
     addPriceBookBtn = document.getElementById('add-price-book-btn');
     priceBookFormContainer = document.getElementById('price-book-form-container');
     priceBookForm = document.getElementById('price-book-form');
-    cancelPriceBookBtn = document = document.getElementById('cancel-price-book-btn');
+    cancelPriceBookBtn = document.getElementById('cancel-price-book-btn');
     priceBooksGridContainer = document.getElementById('price-books-grid-container');
     noPriceBooksMessage = document.getElementById('no-price-books-message');
     priceBookSearchInput = document.getElementById('price-book-search');
