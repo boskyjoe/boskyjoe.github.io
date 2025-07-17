@@ -3,7 +3,6 @@
 // Firebase imports for ES Modules
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { getAuth, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-// Corrected import: serverTimestamp is now imported directly
 import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, onSnapshot, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 // Firebase configuration: Using the exact configuration provided by the user
@@ -137,6 +136,7 @@ let messageCancelBtn;
 
 let opportunityCurrencySelect; // Added for easy access
 let opportunityPriceBookSelect; // Added for easy access
+let opportunityServicesInterestedSelect; // NEW: Added for services interested multi-select
 
 // Part 2: Message Box, Authentication, and Dashboard Logic
 
@@ -404,8 +404,6 @@ function toggleAccordion(event) {
         // Only apply transform for SVG icons, as per HTML structure
         if (icon && icon.tagName === 'SVG') {
             icon.style.transform = 'rotate(180deg)';
-        } else if (icon && icon.tagName === 'SPAN') { // Fallback for span if any exist
-            icon.innerHTML = '&#9650;'; // Use innerHTML for HTML entities
         }
         header.classList.add('expanded');
     } else {
@@ -413,8 +411,6 @@ function toggleAccordion(event) {
         // Only apply transform for SVG icons, as per HTML structure
         if (icon && icon.tagName === 'SVG') {
             icon.style.transform = 'rotate(0deg)';
-        } else if (icon && icon.tagName === 'SPAN') { // Fallback for span if any exist
-            icon.innerHTML = '&#9660;'; // Use innerHTML for HTML entities
         }
         header.classList.remove('expanded');
     }
@@ -449,33 +445,47 @@ function hideLeadForm() {
 
 function showOpportunityForm() {
     if (opportunityFormContainer) opportunityFormContainer.classList.remove('hidden');
+    // Ensure the work logs section container is also shown when the opportunity form is displayed
+    if (workLogsSectionContainer) workLogsSectionContainer.classList.remove('hidden');
+
     console.log('showOpportunityForm: Attempting to set accordion states.');
 
-    // Ensure all accordions are collapsed initially
-    document.querySelectorAll('#opportunity-form .accordion-content').forEach((content, index) => {
-        content.classList.add('hidden');
-        const header = content.previousElementSibling;
-        if (header) {
-            const icon = header.querySelector('.accordion-icon');
-            if (icon && icon.tagName === 'SVG') {
-                icon.style.transform = 'rotate(0deg)';
-            } else if (icon && icon.tagName === 'SPAN') {
-                icon.innerHTML = '&#9660;'; // Down arrow
-            }
-            header.classList.remove('expanded');
-            console.log(`  Accordion ${index + 1} (${header.textContent.trim()}): Collapsed.`);
-        }
-    });
+    // Find the Main Details accordion header and content within the opportunity-form-container
+    const mainDetailsAccordionHeader = opportunityFormContainer.querySelector('.accordion-item:first-child .accordion-header');
+    const mainDetailsAccordionContent = mainDetailsAccordionHeader ? mainDetailsAccordionHeader.nextElementSibling : null;
+    const mainDetailsIcon = mainDetailsAccordionHeader ? mainDetailsAccordionHeader.querySelector('.accordion-icon') : null;
 
-    // Find the first accordion header and trigger a click to open it
-    const firstAccordionHeader = document.querySelector('#opportunity-form .accordion-item .accordion-header');
-    if (firstAccordionHeader) {
-        console.log('  Found first accordion header:', firstAccordionHeader.textContent.trim());
-        // Programmatically click the header to trigger the toggleAccordion function
-        firstAccordionHeader.click();
-        console.log('  Clicked first accordion header to open it.');
+    // Ensure Main Details accordion is open
+    if (mainDetailsAccordionContent) {
+        mainDetailsAccordionContent.classList.remove('hidden');
+        if (mainDetailsIcon) {
+            mainDetailsIcon.style.transform = 'rotate(180deg)'; // Up arrow
+        }
+        if (mainDetailsAccordionHeader) {
+            mainDetailsAccordionHeader.classList.add('expanded');
+        }
+        console.log('  Main Details Accordion: Opened.');
     } else {
-        console.error('  Could not find the first accordion header for Main Details. Accordion might not open.');
+        console.error('  Could not find Main Details accordion elements.');
+    }
+
+    // Find the Work Logs accordion header and content within the work-logs-section-container
+    const workLogsAccordionHeader = workLogsSectionContainer.querySelector('.accordion-item:first-child .accordion-header');
+    const workLogsAccordionContent = workLogsAccordionHeader ? workLogsAccordionHeader.nextElementSibling : null;
+    const workLogsIcon = workLogsAccordionHeader ? workLogsAccordionHeader.querySelector('.accordion-icon') : null;
+
+    // Ensure Work Logs accordion is closed
+    if (workLogsAccordionContent) {
+        workLogsAccordionContent.classList.add('hidden');
+        if (workLogsIcon) {
+            workLogsIcon.style.transform = 'rotate(0deg)'; // Down arrow
+        }
+        if (workLogsAccordionHeader) {
+            workLogsAccordionHeader.classList.remove('expanded');
+        }
+        console.log('  Work Logs Accordion: Minimized.');
+    } else {
+        console.error('  Could not find Work Logs accordion elements.');
     }
 }
 
@@ -634,6 +644,31 @@ function populateSelect(selectElement, data, valueKey, textKey, defaultOptionTex
         const option = document.createElement('option');
         option.value = item[valueKey];
         option.textContent = item[textKey];
+        selectElement.appendChild(option);
+    });
+}
+
+/**
+ * Populates a multi-select element with options.
+ * @param {HTMLElement} selectElement - The multi-select element to populate.
+ * @param {Array<Object>} data - Array of objects with id and name properties.
+ * @param {string} valueKey - The key to use for the option's value.
+ * @param {string} textKey - The key to use for the option's text.
+ * @param {Array<string>} selectedValues - An array of values to pre-select.
+ */
+function populateMultiSelect(selectElement, data, valueKey, textKey, selectedValues = []) {
+    if (!selectElement) {
+        console.warn("populateMultiSelect: selectElement is null.");
+        return;
+    }
+    selectElement.innerHTML = ''; // Clear existing options
+    data.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item[valueKey];
+        option.textContent = item[textKey];
+        if (selectedValues.includes(item[valueKey])) {
+            option.selected = true;
+        }
         selectElement.appendChild(option);
     });
 }
@@ -1111,6 +1146,18 @@ function filterAndPopulatePriceBooks(selectedCurrencyCode, currentPriceBookId = 
     }
 }
 
+// Hardcoded services options for the multi-select dropdown
+const opportunityServicesOptions = [
+    { id: 'Save the Day', name: 'Save the Day' },
+    { id: 'Pre-Wedding Photo Shoot', name: 'Pre-Wedding Photo Shoot' },
+    { id: 'Wedding', name: 'Wedding' },
+    { id: 'Post-Wedding Photo Shoot', name: 'Post-Wedding Photo Shoot' },
+    { id: 'Baby Shower', name: 'Baby Shower' },
+    { id: 'Corporate Event', name: 'Corporate Event' },
+    { id: 'Product Launch', name: 'Product Launch' },
+    { id: 'Political Meeting', name: 'Political Meeting' },
+    { id: 'Others', name: 'Others' }
+];
 
 async function setupOpportunityForm(opportunity = null) {
     let opportunityData = opportunity;
@@ -1136,6 +1183,10 @@ async function setupOpportunityForm(opportunity = null) {
 
     // Fetch all price books once and store them
     allPriceBooks = await fetchData('priceBooks'); // Price books are top-level
+
+    // Populate Services Interested multi-select
+    populateMultiSelect(opportunityServicesInterestedSelect, opportunityServicesOptions, 'id', 'name', opportunityData ? opportunityData.servicesInterested : []);
+
 
     if (opportunityData) { // Use opportunityData consistently
         currentOpportunityId = opportunityData.id;
@@ -1220,6 +1271,10 @@ async function handleSaveOpportunity(event) {
     }
     // --- End Client-Side Validation ---
 
+    // Get selected services from multi-select
+    const selectedServices = Array.from(opportunityServicesInterestedSelect.options)
+                                .filter(option => option.selected)
+                                .map(option => option.value);
 
     const customerId = document.getElementById('opportunity-customer').value;
     let customerName = '';
@@ -1254,6 +1309,7 @@ async function handleSaveOpportunity(event) {
         probability: parseFloat(document.getElementById('opportunity-probability').value) || 0,
         value: parseFloat(document.getElementById('opportunity-value').value) || 0,
         notes: document.getElementById('opportunity-notes').value,
+        servicesInterested: selectedServices, // NEW: Add selected services
         creatorId: userId, // Added creatorId as per rules
         updatedAt: serverTimestamp(),
         createdAt: serverTimestamp()
@@ -1319,6 +1375,8 @@ async function loadOpportunities() {
             // Convert Firestore Timestamps to YYYY-MM-DD string for display
             opp.expectedStartDate = opp.expectedStartDate && opp.expectedStartDate.toDate ? opp.expectedStartDate.toDate().toISOString().split('T')[0] : 'N/A';
             opp.expectedCloseDate = opp.expectedCloseDate && opp.expectedCloseDate.toDate ? opp.expectedCloseDate.toDate().toISOString().split('T')[0] : 'N/A';
+            // Display services as a comma-separated string
+            opp.servicesInterestedDisplay = Array.isArray(opp.servicesInterested) ? opp.servicesInterested.join(', ') : 'N/A';
             opportunities.push(opp);
         }
         renderOpportunitiesGrid(opportunities);
@@ -1334,6 +1392,7 @@ function renderOpportunitiesGrid(opportunities) {
     const data = opportunities.map(opportunity => [
         opportunity.name,
         opportunity.customerName, // Display fetched customer name
+        opportunity.servicesInterestedDisplay, // NEW: Display services interested
         `${opportunity.currency} ${opportunity.value !== undefined ? opportunity.value.toFixed(2) : 'N/A'}`, // Handle undefined value
         opportunity.salesStage,
         `${opportunity.probability !== undefined ? opportunity.probability : 'N/A'}%`, // Handle undefined probability
@@ -1345,24 +1404,25 @@ function renderOpportunitiesGrid(opportunities) {
         if (opportunitiesGridContainer) {
             opportunitiesGrid = new gridjs.Grid({
                 columns: [
-                    { name: 'Opportunity Name', width: '20%' },
-                    { name: 'Customer', width: '20%' },
-                    { name: 'Value', width: '15%' },
-                    { name: 'Stage', width: '15%' },
-                    { name: 'Probability', width: '10%' },
+                    { name: 'Opportunity Name', width: '15%' },
+                    { name: 'Customer', width: '15%' },
+                    { name: 'Services', width: '20%' }, // NEW: Column for services
+                    { name: 'Value', width: '10%' },
+                    { name: 'Stage', width: '10%' },
+                    { name: 'Probability', width: '5%' },
                     { name: 'Close Date', width: '10%' },
                     {
                         name: 'Actions',
-                        width: '10%',
+                        width: '15%',
                         formatter: (cell, row) => {
                             return gridjs.h('div', { className: 'flex space-x-2' },
                                 gridjs.h('button', {
                                     className: 'px-2 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
-                                    onclick: () => editOpportunity(row.cells[6].data)
+                                    onclick: () => editOpportunity(row.cells[7].data) // Adjusted index for ID
                                 }, 'Edit'),
                                 gridjs.h('button', {
                                     className: 'px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-sm',
-                                    onclick: () => deleteOpportunity(row.cells[6].data)
+                                    onclick: () => deleteOpportunity(row.cells[7].data) // Adjusted index for ID
                                 }, 'Delete')
                             );
                         },
@@ -1956,7 +2016,8 @@ async function deleteCurrency(currencyId) {
         await deleteDoc(doc(db, 'currencies', currencyId)); // Top-level collection
         showMessageBox("Currency deleted successfully!", false);
         await loadCurrencies();
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error deleting currency:", error);
         showMessageBox(`Error deleting currency: ${error.message}`, false);
     }
@@ -2258,6 +2319,7 @@ function initializePage() {
     // Assign opportunity specific dropdowns
     opportunityCurrencySelect = document.getElementById('opportunity-currency');
     opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
+    opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested'); // NEW: Assign multi-select
 
 
     // --- NEW DIAGNOSTIC LOG ---
