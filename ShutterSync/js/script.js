@@ -401,19 +401,20 @@ function toggleAccordion(event) {
 
     if (content.classList.contains('hidden')) {
         content.classList.remove('hidden');
-        // Check if the icon is a text node (like '&#9660;') or an SVG
-        if (icon && icon.tagName === 'SPAN') { // Assuming span for text-based arrow
-            icon.textContent = '&#9650;'; // Up arrow
-        } else if (icon && icon.tagName === 'SVG') { // Assuming SVG for path-based arrow
+        // Only apply transform for SVG icons, as per HTML structure
+        if (icon && icon.tagName === 'SVG') {
             icon.style.transform = 'rotate(180deg)';
+        } else if (icon && icon.tagName === 'SPAN') { // Fallback for span if any exist
+            icon.innerHTML = '&#9650;'; // Use innerHTML for HTML entities
         }
         header.classList.add('expanded');
     } else {
         content.classList.add('hidden');
-        if (icon && icon.tagName === 'SPAN') {
-            icon.textContent = '&#9660;'; // Down arrow
-        } else if (icon && icon.tagName === 'SVG') {
+        // Only apply transform for SVG icons, as per HTML structure
+        if (icon && icon.tagName === 'SVG') {
             icon.style.transform = 'rotate(0deg)';
+        } else if (icon && icon.tagName === 'SPAN') { // Fallback for span if any exist
+            icon.innerHTML = '&#9660;'; // Use innerHTML for HTML entities
         }
         header.classList.remove('expanded');
     }
@@ -456,10 +457,10 @@ function showOpportunityForm() {
         const header = content.previousElementSibling;
         if (header) {
             const icon = header.querySelector('.accordion-icon');
-            if (icon && icon.tagName === 'SPAN') {
-                icon.textContent = '&#9660;'; // Down arrow
-            } else if (icon && icon.tagName === 'SVG') {
+            if (icon && icon.tagName === 'SVG') {
                 icon.style.transform = 'rotate(0deg)';
+            } else if (icon && icon.tagName === 'SPAN') {
+                icon.innerHTML = '&#9660;'; // Down arrow
             }
             header.classList.remove('expanded');
             console.log(`  Accordion ${index + 1} (${header.textContent.trim()}): Collapsed.`);
