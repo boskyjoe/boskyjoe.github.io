@@ -94,6 +94,7 @@ let noOpportunitiesMessage;
 let opportunitySearchInput;
 let opportunitiesGrid; // Grid.js instance
 
+let workLogsSectionContainer; // New: Container for work logs list and add button
 let addWorkLogEntryBtn;
 let workLogFormContainer;
 let workLogForm;
@@ -400,11 +401,20 @@ function toggleAccordion(event) {
 
     if (content.classList.contains('hidden')) {
         content.classList.remove('hidden');
-        icon.style.transform = 'rotate(180deg)';
+        // Check if the icon is a text node (like '&#9660;') or an SVG
+        if (icon && icon.tagName === 'SPAN') { // Assuming span for text-based arrow
+            icon.textContent = '&#9650;'; // Up arrow
+        } else if (icon && icon.tagName === 'SVG') { // Assuming SVG for path-based arrow
+            icon.style.transform = 'rotate(180deg)';
+        }
         header.classList.add('expanded');
     } else {
         content.classList.add('hidden');
-        icon.style.transform = 'rotate(0deg)';
+        if (icon && icon.tagName === 'SPAN') {
+            icon.textContent = '&#9660;'; // Down arrow
+        } else if (icon && icon.tagName === 'SVG') {
+            icon.style.transform = 'rotate(0deg)';
+        }
         header.classList.remove('expanded');
     }
 }
@@ -446,7 +456,11 @@ function showOpportunityForm() {
         const header = content.previousElementSibling;
         if (header) {
             const icon = header.querySelector('.accordion-icon');
-            if (icon) icon.style.transform = 'rotate(0deg)';
+            if (icon && icon.tagName === 'SPAN') {
+                icon.textContent = '&#9660;'; // Down arrow
+            } else if (icon && icon.tagName === 'SVG') {
+                icon.style.transform = 'rotate(0deg)';
+            }
             header.classList.remove('expanded');
             console.log(`  Accordion ${index + 1} (${header.textContent.trim()}): Collapsed.`);
         }
@@ -475,6 +489,8 @@ function hideOpportunityForm() {
     if (workLogsList) workLogsList.innerHTML = ''; // Clear work logs
     if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden'); // Show no work logs message
     hideWorkLogForm(); // Hide work log entry form
+    // Also hide the work logs section container when opportunity form is hidden
+    if (workLogsSectionContainer) workLogsSectionContainer.classList.add('hidden');
 }
 
 /**
@@ -1096,38 +1112,54 @@ function filterAndPopulatePriceBooks(selectedCurrencyCode, currentPriceBookId = 
 
 
 async function setupOpportunityForm(opportunity = null) {
+    let opportunityData = opportunity;
+    if (typeof opportunity === 'string') { // If only an ID is passed
+        console.log("setupOpportunityForm: Fetching opportunity data for ID:", opportunity);
+        const docRef = doc(db, 'opportunities', opportunity);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            opportunityData = { id: docSnap.id, ...docSnap.data() };
+        } else {
+            console.error("setupOpportunityForm: Opportunity not found for ID:", opportunity);
+            showMessageBox("Opportunity not found!", false);
+            return;
+        }
+    }
+
     const customers = await fetchData('customers'); // Customers are top-level
     populateSelect(document.getElementById('opportunity-customer'), customers, 'id', 'name', 'Select a Customer');
 
     const currencies = await fetchData('currencies'); // Currencies are top-level
     // Populate currency dropdown with name, but value remains code
-    populateSelect(opportunityCurrencySelect, currencies, 'code', 'name', 'Select...');
+    populateSelect(opportunityCurrencySelect, currencies, 'code', 'code', 'Select...'); // Changed to 'code' for display as well
 
     // Fetch all price books once and store them
     allPriceBooks = await fetchData('priceBooks'); // Price books are top-level
 
-    if (opportunity) {
-        currentOpportunityId = opportunity.id;
-        document.getElementById('opportunity-id').value = opportunity.id;
-        document.getElementById('opportunity-name').value = opportunity.name || '';
-        document.getElementById('opportunity-customer').value = opportunity.customerId || '';
-        opportunityCurrencySelect.value = opportunity.currency || ''; // Set selected currency
+    if (opportunityData) { // Use opportunityData consistently
+        currentOpportunityId = opportunityData.id;
+        document.getElementById('opportunity-id').value = opportunityData.id;
+        document.getElementById('opportunity-name').value = opportunityData.name || '';
+        document.getElementById('opportunity-customer').value = opportunityData.customerId || '';
+        opportunityCurrencySelect.value = opportunityData.currency || ''; // Set selected currency
 
         // Now filter and populate price books based on the opportunity's currency
-        filterAndPopulatePriceBooks(opportunity.currency, opportunity.priceBookId);
+        filterAndPopulatePriceBooks(opportunityData.currency, opportunityData.priceBookId);
 
         // Convert Firestore Timestamp to YYYY-MM-DD string for input type="date"
-        const startDate = opportunity.expectedStartDate ? new Date(opportunity.expectedStartDate.seconds * 1000).toISOString().split('T')[0] : '';
-        const closeDate = opportunity.expectedCloseDate ? new Date(opportunity.expectedCloseDate.seconds * 1000).toISOString().split('T')[0] : '';
+        const startDate = opportunityData.expectedStartDate ? new Date(opportunityData.expectedStartDate.seconds * 1000).toISOString().split('T')[0] : '';
+        const closeDate = opportunityData.expectedCloseDate ? new Date(opportunityData.expectedCloseDate.seconds * 1000).toISOString().split('T')[0] : '';
 
         document.getElementById('opportunity-start-date').value = startDate;
         document.getElementById('opportunity-close-date').value = closeDate;
-        document.getElementById('opportunity-sales-stage').value = opportunity.salesStage || 'Prospect';
-        document.getElementById('opportunity-probability').value = opportunity.probability !== undefined ? opportunity.probability : '';
-        document.getElementById('opportunity-value').value = opportunity.value !== undefined ? opportunity.value : '';
-        document.getElementById('opportunity-notes').value = opportunity.notes || '';
+        document.getElementById('opportunity-sales-stage').value = opportunityData.salesStage || 'Prospect';
+        document.getElementById('opportunity-probability').value = opportunityData.probability !== undefined ? opportunityData.probability : '';
+        document.getElementById('opportunity-value').value = opportunityData.value !== undefined ? opportunityData.value : '';
+        document.getElementById('opportunity-notes').value = opportunityData.notes || '';
 
-        await loadWorkLogs(opportunity.id); // Load work logs for this opportunity
+        await loadWorkLogs(opportunityData.id); // Load work logs for this opportunity
+        // Show work logs section when editing/viewing an opportunity
+        if (workLogsSectionContainer) workLogsSectionContainer.classList.remove('hidden');
     } else {
         if (opportunityForm) opportunityForm.reset();
         const opportunityIdInput = document.getElementById('opportunity-id');
@@ -1135,12 +1167,14 @@ async function setupOpportunityForm(opportunity = null) {
         currentOpportunityId = null;
         if (workLogsList) workLogsList.innerHTML = ''; // Clear work logs for new opportunity
         if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden');
-
+        hideWorkLogForm(); // Hide work log entry form
         // For new opportunities, populate price books with all active ones initially
         filterAndPopulatePriceBooks(''); // Pass empty string to show all active price books
+        // Hide work logs section when creating a brand new opportunity
+        if (workLogsSectionContainer) workLogsSectionContainer.classList.add('hidden');
     }
     showOpportunityForm();
-    console.log('Add Opportunity form setup complete.');
+    console.log('Add/Edit Opportunity form setup complete. currentOpportunityId:', currentOpportunityId);
 }
 
 async function handleSaveOpportunity(event) {
@@ -1227,19 +1261,38 @@ async function handleSaveOpportunity(event) {
     try {
         // Opportunities are top-level as per provided rules
         const collectionRef = collection(db, 'opportunities');
+        let savedOpportunityId; // Variable to hold the ID of the saved/created opportunity
+
         if (opportunityId) {
-            // For update, only update updatedAt, not createdAt
+            // Update existing opportunity
             delete opportunityData.createdAt;
             await updateDoc(doc(collectionRef, opportunityId), opportunityData);
+            savedOpportunityId = opportunityId;
             showMessageBox("Opportunity updated successfully!", false);
+            hideOpportunityForm(); // Hide form after update
         } else {
+            // Create new opportunity
             const docRef = await addDoc(collectionRef, opportunityData);
-            currentOpportunityId = docRef.id; // Set ID for new opportunity
-            showMessageBox("Opportunity added successfully!", false);
+            savedOpportunityId = docRef.id;
+            showMessageBox("Opportunity added successfully! You can now add work logs.", false);
+
+            // Instead of hiding, re-setup the form with the new ID to allow adding work logs
+            // This will keep the form open and load work logs for the newly created opportunity
+            // Fetch the full data of the newly created opportunity to pass to setupOpportunityForm
+            const newOpportunitySnap = await getDoc(doc(collectionRef, savedOpportunityId));
+            if (newOpportunitySnap.exists()) {
+                await setupOpportunityForm({ id: newOpportunitySnap.id, ...newOpportunitySnap.data() });
+            } else {
+                console.error("Could not retrieve newly created opportunity data.");
+                // Fallback: just set currentOpportunityId and hope for the best, or show error
+                currentOpportunityId = savedOpportunityId;
+                if (workLogsSectionContainer) workLogsSectionContainer.classList.remove('hidden');
+            }
         }
-        hideOpportunityForm();
+
         await loadOpportunities(); // Reload grid
         await updateDashboard();
+
     } catch (error) {
         console.error("Error saving opportunity:", error);
         if (messageElement) {
@@ -1353,15 +1406,8 @@ function renderOpportunitiesGrid(opportunities) {
 async function editOpportunity(opportunityId) {
     if (!db || !userId) return;
     try {
-        // Opportunities are top-level as per provided rules
-        const docRef = doc(db, 'opportunities', opportunityId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            await setupOpportunityForm(docSnap.data());
-            // currentOpportunityId is already set in setupOpportunityForm
-        } else {
-            showMessageBox("Opportunity not found!", false);
-        }
+        // setupOpportunityForm will now fetch the data if only an ID is passed
+        await setupOpportunityForm(opportunityId);
     } catch (error) {
         console.error("Error editing opportunity:", error);
         showMessageBox(`Error loading opportunity for edit: ${error.message}`, false);
@@ -1919,7 +1965,7 @@ async function deleteCurrency(currencyId) {
 
 async function setupPriceBookForm(priceBook = null) {
     const currencies = await fetchData('currencies'); // Currencies are top-level
-    populateSelect(document.getElementById('price-book-currency'), currencies, 'code', 'code', 'Select Currency');
+    populateSelect(document.getElementById('price-book-currency'), currencies, 'code', 'code', 'Select Currency'); // Changed to 'code' for display as well
 
     if (priceBook) {
         document.getElementById('price-book-id').value = priceBook.id;
@@ -2170,6 +2216,7 @@ function initializePage() {
     noOpportunitiesMessage = document.getElementById('no-opportunities-message');
     opportunitySearchInput = document.getElementById('opportunity-search');
 
+    workLogsSectionContainer = document.getElementById('work-logs-section-container'); // Assigned here
     addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
     workLogFormContainer = document.getElementById('work-log-form-container');
     workLogForm = document.getElementById('work-log-form');
