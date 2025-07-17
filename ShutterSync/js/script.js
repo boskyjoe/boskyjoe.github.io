@@ -818,6 +818,7 @@ function renderCustomersGrid(customers) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
+                    // MODIFIED: Removed whitespace-nowrap for text wrapping
                     td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
@@ -1090,6 +1091,7 @@ function renderLeadsGrid(leads) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
+                    // MODIFIED: Removed whitespace-nowrap for text wrapping
                     td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
@@ -1495,6 +1497,7 @@ function renderOpportunitiesGrid(opportunities) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
+                    // MODIFIED: Removed whitespace-nowrap for text wrapping
                     td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
@@ -1840,6 +1843,7 @@ function renderCountriesGrid(countries) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
+                    // MODIFIED: Removed whitespace-nowrap for text wrapping
                     td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
@@ -2024,6 +2028,7 @@ function renderCurrenciesGrid(currencies) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
+                    // MODIFIED: Removed whitespace-nowrap for text wrapping
                     td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
@@ -2216,6 +2221,7 @@ function renderPriceBooksGrid(priceBooks) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
+                    // MODIFIED: Removed whitespace-nowrap for text wrapping
                     td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
@@ -2263,7 +2269,8 @@ async function deletePriceBook(priceBookId) {
         await deleteDoc(doc(db, 'priceBooks', priceBookId)); // Top-level collection
         showMessageBox("Price Book deleted successfully!", false);
         await loadPriceBooks();
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error deleting price book:", error);
         showMessageBox(`Error deleting price book: ${error.message}`, false);
     }
