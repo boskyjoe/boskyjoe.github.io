@@ -443,16 +443,18 @@ function hideLeadForm() {
     if (leadFormMessage) leadFormMessage.classList.add('hidden');
 }
 
+/**
+ * Shows the Opportunity form and sets the initial state of its accordions.
+ * This function should NOT manipulate the work logs section visibility directly.
+ * That is handled by setupOpportunityForm based on whether it's a new or existing opportunity.
+ */
 function showOpportunityForm() {
     // Show the main opportunity form container
     if (opportunityFormContainer) opportunityFormContainer.classList.remove('hidden');
-    // Show the work logs section container
-    if (workLogsSectionContainer) workLogsSectionContainer.classList.remove('hidden');
 
-    console.log('showOpportunityForm: Setting initial accordion states.');
+    console.log('showOpportunityForm: Setting initial accordion states for opportunity form.');
 
-    // Get the Main Details accordion elements
-    // Select directly by ID to avoid issues with multiple accordion items in the DOM
+    // Get the Main Details accordion elements within the opportunity form
     const mainDetailsAccordionHeader = document.querySelector('#opportunity-form-container .accordion-item .accordion-header');
     const mainDetailsAccordionContent = mainDetailsAccordionHeader ? mainDetailsAccordionHeader.nextElementSibling : null;
     const mainDetailsIcon = mainDetailsAccordionHeader ? mainDetailsAccordionHeader.querySelector('.accordion-icon') : null;
@@ -468,28 +470,12 @@ function showOpportunityForm() {
         }
         console.log('  Main Details Accordion: Opened.');
     } else {
-        console.error('  Could not find Main Details accordion elements.');
+        console.error('  Could not find Main Details accordion elements within opportunity form.');
     }
 
-    // Get the Work Logs accordion elements
-    // Select directly by ID to avoid issues with multiple accordion items in the DOM
-    const workLogsAccordionHeader = document.querySelector('#work-logs-section-container .accordion-item .accordion-header');
-    const workLogsAccordionContent = workLogsAccordionHeader ? workLogsAccordionHeader.nextElementSibling : null;
-    const workLogsIcon = workLogsAccordionHeader ? workLogsAccordionHeader.querySelector('.accordion-icon') : null;
-
-    // Ensure Work Logs accordion is MINIMIZED
-    if (workLogsAccordionContent) {
-        workLogsAccordionContent.classList.add('hidden');
-        if (workLogsIcon) {
-            workLogsIcon.style.transform = 'rotate(0deg)'; // Down arrow
-        }
-        if (workLogsAccordionHeader) {
-            workLogsAccordionHeader.classList.remove('expanded');
-        }
-        console.log('  Work Logs Accordion: Minimized.');
-    } else {
-        console.error('  Could not find Work Logs accordion elements.');
-    }
+    // Note: This function no longer attempts to manipulate the work logs accordion.
+    // The visibility and state of the work logs section are managed by setupOpportunityForm
+    // and handleSaveOpportunity based on whether an opportunity is new or existing.
 }
 
 function hideOpportunityForm() {
@@ -1218,8 +1204,26 @@ async function setupOpportunityForm(opportunity = null) {
 
         await loadWorkLogs(opportunityData.id); // Load work logs for this opportunity
         // Show work logs section when editing/viewing an opportunity
-        if (workLogsSectionContainer) workLogsSectionContainer.classList.remove('hidden');
+        if (workLogsSectionContainer) {
+            workLogsSectionContainer.classList.remove('hidden');
+            // Ensure Work Logs accordion is minimized when loading an existing opportunity
+            const workLogsAccordionHeader = document.querySelector('#work-logs-section-container .accordion-item .accordion-header');
+            const workLogsAccordionContent = workLogsAccordionHeader ? workLogsAccordionHeader.nextElementSibling : null;
+            const workLogsIcon = workLogsAccordionHeader ? workLogsAccordionHeader.querySelector('.accordion-icon') : null;
+
+            if (workLogsAccordionContent) {
+                workLogsAccordionContent.classList.add('hidden');
+                if (workLogsIcon) {
+                    workLogsIcon.style.transform = 'rotate(0deg)'; // Down arrow
+                }
+                if (workLogsAccordionHeader) {
+                    workLogsAccordionHeader.classList.remove('expanded');
+                }
+                console.log('  Work Logs Accordion: Minimized on existing opportunity load.');
+            }
+        }
     } else {
+        // For a new opportunity
         if (opportunityForm) opportunityForm.reset();
         const opportunityIdInput = document.getElementById('opportunity-id');
         if (opportunityIdInput) opportunityIdInput.value = '';
@@ -1227,12 +1231,12 @@ async function setupOpportunityForm(opportunity = null) {
         if (workLogsList) workLogsList.innerHTML = ''; // Clear work logs for new opportunity
         if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden');
         hideWorkLogForm(); // Hide work log entry form
-        // For new opportunities, populate price books with all active ones initially
-        filterAndPopulatePriceBooks(''); // Pass empty string to show all active price books
         // Hide work logs section when creating a brand new opportunity
         if (workLogsSectionContainer) workLogsSectionContainer.classList.add('hidden');
+        // For new opportunities, populate price books with all active ones initially
+        filterAndPopulatePriceBooks(''); // Pass empty string to show all active price books
     }
-    showOpportunityForm(); // This function now correctly sets the accordion states
+    showOpportunityForm(); // Call showOpportunityForm to handle main form visibility and its accordion
     console.log('Add/Edit Opportunity form setup complete. currentOpportunityId:', currentOpportunityId);
 }
 
@@ -2397,7 +2401,7 @@ function initializePage() {
     if (addOpportunityBtn) addOpportunityBtn.addEventListener('click', () => {
         console.log('Add Opportunity button clicked.');
         currentOpportunityId = null; // Reset current opportunity being edited
-        setupOpportunityForm();
+        setupOpportunityForm(); // This will now correctly handle visibility and initial accordion state
         console.log('addOpportunityBtn click: currentOpportunityId reset to null.');
     });
     if (cancelOpportunityBtn) cancelOpportunityBtn.addEventListener('click', hideOpportunityForm);
