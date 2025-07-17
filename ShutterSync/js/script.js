@@ -136,7 +136,8 @@ let messageCancelBtn;
 
 let opportunityCurrencySelect; // Added for easy access
 let opportunityPriceBookSelect; // Added for easy access
-let opportunityServicesInterestedSelect; // NEW: Added for services interested multi-select
+let opportunityServicesInterestedSelect; // For Opportunities: multi-select
+let leadServicesInterestedSelect; // NEW: For Leads: multi-select
 
 // Part 2: Message Box, Authentication, and Dashboard Logic
 
@@ -284,7 +285,7 @@ async function setupAuth() {
             userId = null;
             userRole = 'guest';
             if (userDisplayName) userDisplayName.textContent = 'Guest';
-            if (userIdDisplay) userIdDisplay.textContent = '';
+            if (userIdDisplay) userId.textContent = '';
             if (userRoleDisplay) userRoleDisplay.textContent = '';
             if (navLogout) navLogout.classList.add('hidden');
             if (adminMenuItem) adminMenuItem.classList.add('hidden');
@@ -890,7 +891,6 @@ async function setupLeadForm(lead = null) {
         { id: 'Political Meeting', name: 'Political Meeting' },
         { id: 'Others', name: 'Others' }
     ];
-    populateSelect(document.getElementById('lead-services-interested'), services, 'id', 'name', 'Select Service');
 
     // Populate Source (example data, replace with Firestore if needed)
     const sources = [
@@ -908,7 +908,10 @@ async function setupLeadForm(lead = null) {
         document.getElementById('lead-contact-name').value = lead.contactName || '';
         document.getElementById('lead-phone').value = lead.phone || '';
         document.getElementById('lead-email').value = lead.email || '';
-        document.getElementById('lead-services-interested').value = lead.servicesInterested || '';
+        // NEW: Populate multi-select for servicesInterested
+        const currentServices = Array.isArray(lead.servicesInterested) ? lead.servicesInterested : [];
+        populateMultiSelect(leadServicesInterestedSelect, services, 'id', 'name', currentServices);
+
         // Convert Firestore Timestamp to YYYY-MM-DD string for input type="date"
         const eventDate = lead.eventDate ? new Date(lead.eventDate.seconds * 1000).toISOString().split('T')[0] : '';
         document.getElementById('lead-event-date').value = eventDate;
@@ -918,6 +921,8 @@ async function setupLeadForm(lead = null) {
         if (leadForm) leadForm.reset();
         const leadIdInput = document.getElementById('lead-id');
         if (leadIdInput) leadIdInput.value = '';
+        // NEW: For new leads, ensure multi-select is reset
+        populateMultiSelect(leadServicesInterestedSelect, services, 'id', 'name', []);
     }
     showLeadForm();
 }
@@ -933,14 +938,46 @@ async function handleSaveLead(event) {
     const messageElement = document.getElementById('lead-form-message');
     if (messageElement) messageElement.classList.add('hidden');
 
+    // --- Start Client-Side Validation ---
+    const requiredFields = leadForm.querySelectorAll('[required]');
+    let firstInvalidField = null;
+
+    for (const field of requiredFields) {
+        // Special handling for multi-select: check if at least one option is selected
+        if (field.tagName === 'SELECT' && field.multiple) {
+            const selectedOptions = Array.from(field.options).filter(option => option.selected);
+            if (selectedOptions.length === 0) {
+                firstInvalidField = field;
+                break;
+            }
+        } else if (!field.value) {
+            firstInvalidField = field;
+            break;
+        }
+    }
+
+    if (firstInvalidField) {
+        console.warn('Validation failed: Required field is empty.', firstInvalidField);
+        firstInvalidField.focus(); // Focus on the invalid field
+        messageElement.textContent = `Please fill in the required field: ${firstInvalidField.labels ? firstInvalidField.labels[0].textContent : firstInvalidField.id.replace(/-/g, ' ')}.`;
+        messageElement.classList.remove('hidden');
+        return; // Stop form submission
+    }
+    // --- End Client-Side Validation ---
+
     const eventDateValue = document.getElementById('lead-event-date').value;
     const eventDateTimestamp = eventDateValue ? new Date(eventDateValue) : null;
+
+    // NEW: Capture selected services from multi-select as an array
+    const selectedServices = Array.from(leadServicesInterestedSelect.options)
+                                .filter(option => option.selected)
+                                .map(option => option.value);
 
     const leadData = {
         contactName: document.getElementById('lead-contact-name').value,
         phone: document.getElementById('lead-phone').value,
         email: document.getElementById('lead-email').value,
-        servicesInterested: document.getElementById('lead-services-interested').value,
+        servicesInterested: selectedServices, // NEW: Save as array
         eventDate: eventDateTimestamp, // Save as Date object (Firestore converts to Timestamp)
         source: document.getElementById('lead-source').value,
         additionalDetails: document.getElementById('lead-additional-details').value,
@@ -985,7 +1022,9 @@ async function loadLeads() {
             const leadData = doc.data();
             // Convert Firestore Timestamp to YYYY-MM-DD string for display
             const eventDateDisplay = leadData.eventDate && leadData.eventDate.toDate ? leadData.eventDate.toDate().toISOString().split('T')[0] : 'N/A';
-            leads.push({ id: doc.id, ...leadData, eventDate: eventDateDisplay });
+            // Display services as a comma-separated string
+            const servicesInterestedDisplay = Array.isArray(leadData.servicesInterested) ? leadData.servicesInterested.join(', ') : 'N/A';
+            leads.push({ id: doc.id, ...leadData, eventDate: eventDateDisplay, servicesInterestedDisplay: servicesInterestedDisplay });
         });
         renderLeadsGrid(leads);
     }, error => {
@@ -1001,7 +1040,7 @@ function renderLeadsGrid(leads) {
         lead.contactName,
         lead.email,
         lead.phone,
-        lead.servicesInterested,
+        lead.servicesInterestedDisplay, // NEW: Display formatted services
         lead.eventDate, // Already formatted in loadLeads
         lead.source,
         lead.id
@@ -1403,7 +1442,7 @@ function renderOpportunitiesGrid(opportunities) {
     const data = opportunities.map(opportunity => [
         opportunity.name,
         opportunity.customerName, // Display fetched customer name
-        opportunity.servicesInterestedDisplay, // NEW: Display services interested
+        opportunity.servicesInterestedDisplay, // NEW: Column for services
         `${opportunity.currency} ${opportunity.value !== undefined ? opportunity.value.toFixed(2) : 'N/A'}`, // Handle undefined value
         opportunity.salesStage,
         `${opportunity.probability !== undefined ? opportunity.probability : 'N/A'}%`, // Handle undefined probability
@@ -2281,6 +2320,7 @@ function initializePage() {
     leadsGridContainer = document.getElementById('leads-grid-container');
     noLeadsMessage = document.getElementById('no-leads-message');
     leadSearchInput = document.getElementById('lead-search');
+    leadServicesInterestedSelect = document.getElementById('lead-services-interested'); // NEW: Assign multi-select for Leads
 
     addOpportunityBtn = document.getElementById('add-opportunity-btn');
     opportunityFormContainer = document.getElementById('opportunity-form-container');
@@ -2331,7 +2371,7 @@ function initializePage() {
     // Assign opportunity specific dropdowns
     opportunityCurrencySelect = document.getElementById('opportunity-currency');
     opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
-    opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested'); // NEW: Assign multi-select
+    opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested'); // For Opportunities: multi-select
 
 
     // --- NEW DIAGNOSTIC LOG ---
@@ -2447,7 +2487,7 @@ function initializePage() {
     if (addPriceBookBtn) addPriceBookBtn.addEventListener('click', () => setupPriceBookForm());
     if (cancelPriceBookBtn) cancelPriceBookBtn.addEventListener('click', hidePriceBookForm);
     if (priceBookForm) priceBookForm.addEventListener('submit', handleSavePriceBook);
-    if (priceBookSearchInput) priceBookSearchInput.addEventListener('input', (event) => { if (priceBooksGrid) priceBooksGrid.search(event.target.value); });
+    if (priceBookSearchInput) priceBookBookSearchInput.addEventListener('input', (event) => { if (priceBooksGrid) priceBooksGrid.search(event.target.value); });
 
     // Initial accordion setup
     setupAccordions();
