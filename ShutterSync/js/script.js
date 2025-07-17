@@ -986,11 +986,15 @@ async function handleSaveLead(event) {
         createdAt: serverTimestamp()
     };
 
+    // --- START DEBUG LOGGING ---
+    console.log("Attempting to save lead with data:", JSON.stringify(leadData, null, 2));
+    // --- END DEBUG LOGGING ---
+
     try {
         const collectionRef = collection(db, 'leads'); // Top-level collection
         if (leadId) {
             // For update, only update updatedAt, not createdAt
-            delete leadData.createdAt;
+            delete leadData.createdAt; // Ensure createdAt is not sent on update
             await updateDoc(doc(collectionRef, leadId), leadData);
             showMessageBox("Lead updated successfully!", false);
         } else {
