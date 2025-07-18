@@ -1,8 +1,7 @@
-// Firebase imports (keep these, even if not fully used in this debug version)
+// Firebase imports for ES Modules
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { getAuth, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, onSnapshot, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
-
 
 // Firebase configuration: Using the exact configuration provided by the user
 const firebaseConfig = {
@@ -111,10 +110,14 @@ let noQuotesMessage;
 let quoteSearchInput;
 let quotesGrid; // Grid.js instance
 let quoteOpportunitySelect; // Opportunity dropdown for quotes
+
+// --- CRITICAL: Ensure these are declared correctly ---
 let customerContactNameInput; // Auto-filled
 let customerPhoneInput; // Auto-filled
 let customerEmailInput; // Auto-filled
 let customerAddressInput; // Auto-filled
+// --- END CRITICAL ---
+
 let quoteStatusSelect; // Status dropdown for quotes
 
 
@@ -2418,13 +2421,8 @@ async function handleOpportunityChangeForQuote() {
                     customerEmailInput.value = customerData.email || '';
                     customerAddressInput.value = customerData.address || '';
 
-                    console.log('handleOpportunityChangeForQuote: Populated fields:');
-                    console.log('  Name:', customerContactNameInput.value);
-                    console.log('  Phone:', customerPhoneInput.value);
-                    console.log('  Email:', customerEmailInput.value);
-                    console.log('  Address:', customerAddressInput.value);
-
                     // --- TEMPORARY VISUAL TEST ---
+                    // Keeping these for your observation, they should now work
                     customerContactNameInput.style.backgroundColor = 'red';
                     customerPhoneInput.style.backgroundColor = 'lime';
                     customerEmailInput.style.backgroundColor = 'purple';
@@ -2436,7 +2434,6 @@ async function handleOpportunityChangeForQuote() {
                     console.log('  Phone:', customerPhoneInput.value);
                     console.log('  Email:', customerEmailInput.value);
                     console.log('  Address:', customerAddressInput.value);
-
 
                 } else {
                     console.warn("handleOpportunityChangeForQuote: Customer not found for selected opportunity:", customerId);
@@ -2758,12 +2755,23 @@ function initializePage() {
     quoteSearchInput = document.getElementById('quote-search');
     quoteOpportunitySelect = document.getElementById('quote-opportunity');
     
-    // --- CRITICAL: Re-verify these assignments ---
+    // --- CRITICAL DEBUGGING: Assign and immediately check these elements ---
     customerContactNameInput = document.getElementById('customer-contact-name');
+    console.log('initializePage: customerContactNameInput (after assignment):', customerContactNameInput);
+    console.assert(customerContactNameInput !== null, 'customerContactNameInput is NULL!');
+
     customerPhoneInput = document.getElementById('customer-phone');
+    console.log('initializePage: customerPhoneInput (after assignment):', customerPhoneInput);
+    console.assert(customerPhoneInput !== null, 'customerPhoneInput is NULL!');
+
     customerEmailInput = document.getElementById('customer-email');
+    console.log('initializePage: customerEmailInput (after assignment):', customerEmailInput);
+    console.assert(customerEmailInput !== null, 'customerEmailInput is NULL!');
+
     customerAddressInput = document.getElementById('customer-address');
-    // --- END CRITICAL SECTION ---
+    console.log('initializePage: customerAddressInput (after assignment):', customerAddressInput);
+    console.assert(customerAddressInput !== null, 'customerAddressInput is NULL!');
+    // --- END CRITICAL DEBUGGING ---
 
     quoteStatusSelect = document.getElementById('quote-status');
 
@@ -2801,14 +2809,6 @@ function initializePage() {
     opportunityCurrencySelect = document.getElementById('opportunity-currency');
     opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
     opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested');
-
-
-    // --- DEBUGGING: Log the assigned elements for quotes ---
-    console.log('initializePage: customerContactNameInput:', customerContactNameInput);
-    console.log('initializePage: customerPhoneInput:', customerPhoneInput);
-    console.log('initializePage: customerEmailInput:', customerEmailInput);
-    console.log('initializePage: customerAddressInput:', customerAddressInput);
-    // --- END DEBUGGING ---
 
 
     // Setup Auth
