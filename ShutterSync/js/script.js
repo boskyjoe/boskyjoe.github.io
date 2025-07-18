@@ -111,12 +111,13 @@ let quoteSearchInput;
 let quotesGrid; // Grid.js instance
 let quoteOpportunitySelect; // Opportunity dropdown for quotes
 
-// --- CRITICAL: Ensure these are declared correctly ---
-let customerContactNameInput; // Auto-filled
-let customerPhoneInput; // Auto-filled
-let customerEmailInput; // Auto-filled
-let customerAddressInput; // Auto-filled
-// --- END CRITICAL ---
+// --- Quote Customer Contact Fields ---
+// These variables MUST be correctly assigned in initializePage
+let customerContactNameInput;
+let customerPhoneInput;
+let customerEmailInput;
+let customerAddressInput;
+// --- End Quote Customer Contact Fields ---
 
 let quoteStatusSelect; // Status dropdown for quotes
 
@@ -2421,13 +2422,12 @@ async function handleOpportunityChangeForQuote() {
                     customerEmailInput.value = customerData.email || '';
                     customerAddressInput.value = customerData.address || '';
 
-                    // --- TEMPORARY VISUAL TEST ---
-                    // Keeping these for your observation, they should now work
-                    customerContactNameInput.style.backgroundColor = 'red';
-                    customerPhoneInput.style.backgroundColor = 'lime';
-                    customerEmailInput.style.backgroundColor = 'purple';
-                    customerAddressInput.style.backgroundColor = 'orange';
-                    // --- END TEMPORARY VISUAL TEST ---
+                    // --- REMOVED TEMPORARY VISUAL TEST ---
+                    // customerContactNameInput.style.backgroundColor = 'red';
+                    // customerPhoneInput.style.backgroundColor = 'lime';
+                    // customerEmailInput.style.backgroundColor = 'purple';
+                    // customerAddressInput.style.backgroundColor = 'orange';
+                    // --- END REMOVED TEMPORARY VISUAL TEST ---
 
                     console.log('handleOpportunityChangeForQuote: Populated fields:');
                     console.log('  Name:', customerContactNameInput.value);
@@ -2755,23 +2755,12 @@ function initializePage() {
     quoteSearchInput = document.getElementById('quote-search');
     quoteOpportunitySelect = document.getElementById('quote-opportunity');
     
-    // --- CRITICAL DEBUGGING: Assign and immediately check these elements ---
+    // --- CRITICAL: Assign all quote-related input elements here ---
     customerContactNameInput = document.getElementById('customer-contact-name');
-    console.log('initializePage: customerContactNameInput (after assignment):', customerContactNameInput);
-    console.assert(customerContactNameInput !== null, 'customerContactNameInput is NULL!');
-
     customerPhoneInput = document.getElementById('customer-phone');
-    console.log('initializePage: customerPhoneInput (after assignment):', customerPhoneInput);
-    console.assert(customerPhoneInput !== null, 'customerPhoneInput is NULL!');
-
     customerEmailInput = document.getElementById('customer-email');
-    console.log('initializePage: customerEmailInput (after assignment):', customerEmailInput);
-    console.assert(customerEmailInput !== null, 'customerEmailInput is NULL!');
-
     customerAddressInput = document.getElementById('customer-address');
-    console.log('initializePage: customerAddressInput (after assignment):', customerAddressInput);
-    console.assert(customerAddressInput !== null, 'customerAddressInput is NULL!');
-    // --- END CRITICAL DEBUGGING ---
+    // --- END CRITICAL ASSIGNMENT ---
 
     quoteStatusSelect = document.getElementById('quote-status');
 
@@ -2809,6 +2798,21 @@ function initializePage() {
     opportunityCurrencySelect = document.getElementById('opportunity-currency');
     opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
     opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested');
+
+
+    // --- DEBUGGING: Log the assigned elements for quotes after assignment ---
+    console.log('initializePage: customerContactNameInput (after assignment):', customerContactNameInput);
+    console.assert(customerContactNameInput !== null, 'customerContactNameInput is NULL!');
+
+    console.log('initializePage: customerPhoneInput (after assignment):', customerPhoneInput);
+    console.assert(customerPhoneInput !== null, 'customerPhoneInput is NULL!');
+
+    console.log('initializePage: customerEmailInput (after assignment):', customerEmailInput);
+    console.assert(customerEmailInput !== null, 'customerEmailInput is NULL!');
+
+    console.log('initializePage: customerAddressInput (after assignment):', customerAddressInput);
+    console.assert(customerAddressInput !== null, 'customerAddressInput is NULL!');
+    // --- END DEBUGGING ---
 
 
     // Setup Auth
