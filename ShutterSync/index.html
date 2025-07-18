@@ -564,6 +564,103 @@
             <div id="opportunities-grid-container" class="mt-6"></div>
         </section>
 
+        <!-- Quotes Section -->
+        <section id="quotes-section" class="hidden">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">Quotes</h2>
+            <button id="add-quote-btn"
+                class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 mb-4">Add
+                New Quote</button>
+
+            <!-- Quote Form -->
+            <div id="quote-form-container" class="hidden bg-white p-6 rounded-lg shadow-md mb-6">
+                <h3 class="text-2xl font-bold text-gray-800 mb-4">Quote Details</h3>
+                <form id="quote-form" class="space-y-4">
+                    <input type="hidden" id="quote-id">
+                    <div>
+                        <label for="quote-name" class="block text-sm font-medium text-gray-700">Quote Name</label>
+                        <input type="text" id="quote-name" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="quote-opportunity"
+                            class="block text-sm font-medium text-gray-700">Opportunity</label>
+                        <select id="quote-opportunity" required
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                            <!-- Options populated by JS (Won opportunities only) -->
+                        </select>
+                    </div>
+                    <div>
+                        <label for="event-name" class="block text-sm font-medium text-gray-700">Event Name</label>
+                        <input type="text" id="event-name" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="customer-contact-name" class="block text-sm font-medium text-gray-700">Customer
+                            Contact Name</label>
+                        <input type="text" id="customer-contact-name" readonly disabled
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="customer-phone" class="block text-sm font-medium text-gray-700">Phone</label>
+                        <input type="tel" id="customer-phone" readonly disabled
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="customer-email" class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" id="customer-email" readonly disabled
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="customer-address" class="block text-sm font-medium text-gray-700">Customer
+                            Address</label>
+                        <textarea id="customer-address" rows="3" readonly disabled
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed sm:text-sm"></textarea>
+                    </div>
+                    <div>
+                        <label for="quote-event-date" class="block text-sm font-medium text-gray-700">Event Date</label>
+                        <input type="date" id="quote-event-date"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="quote-additional-details" class="block text-sm font-medium text-gray-700">Additional
+                            Details</label>
+                        <textarea id="quote-additional-details" rows="3"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                    </div>
+                    <div>
+                        <label for="quote-amount" class="block text-sm font-medium text-gray-700">Quote Amount</label>
+                        <input type="number" id="quote-amount" step="0.01" min="0" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="quote-status" class="block text-sm font-medium text-gray-700">Status</label>
+                        <select id="quote-status" required
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                            <option value="Draft">Draft</option>
+                            <option value="Review">Review</option>
+                            <option value="Finalized">Finalized</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
+                            Quote</button>
+                        <button type="button" id="cancel-quote-btn"
+                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                    </div>
+                    <p id="quote-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
+                </form>
+            </div>
+
+            <!-- Quote Grid -->
+            <p id="no-quotes-message" class="text-center text-gray-500 mt-8 hidden">No quotes found.</p>
+            <div id="quotes-grid-container" class="mt-6"></div>
+        </section>
+
+
+
+
+
         <!-- Countries Section -->
         <section id="countries-section" class="hidden">
             <h2 class="text-3xl font-bold text-gray-800 mb-6">Countries</h2>
