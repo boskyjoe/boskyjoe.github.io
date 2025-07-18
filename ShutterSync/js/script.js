@@ -2424,6 +2424,20 @@ async function handleOpportunityChangeForQuote() {
                     console.log('  Email:', customerEmailInput.value);
                     console.log('  Address:', customerAddressInput.value);
 
+                    // --- TEMPORARY VISUAL TEST ---
+                    customerContactNameInput.style.backgroundColor = 'red';
+                    customerPhoneInput.style.backgroundColor = 'lime';
+                    customerEmailInput.style.backgroundColor = 'purple';
+                    customerAddressInput.style.backgroundColor = 'orange';
+                    // --- END TEMPORARY VISUAL TEST ---
+
+                    console.log('handleOpportunityChangeForQuote: Populated fields:');
+                    console.log('  Name:', customerContactNameInput.value);
+                    console.log('  Phone:', customerPhoneInput.value);
+                    console.log('  Email:', customerEmailInput.value);
+                    console.log('  Address:', customerAddressInput.value);
+
+
                 } else {
                     console.warn("handleOpportunityChangeForQuote: Customer not found for selected opportunity:", customerId);
                     showMessageBox("Customer details not found for the selected opportunity. Please ensure the customer exists.", false);
