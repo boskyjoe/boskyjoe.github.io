@@ -30,6 +30,13 @@ let currentOpportunityId = null; // To track the opportunity being edited
 // Global cache for price books to enable filtering without re-fetching
 let allPriceBooks = [];
 
+// Global state for opportunity quote counts
+let opportunityQuoteCounts = new Map(); // Map<opportunityId, count>
+
+// Global state for quotes filter
+let currentQuotesFilterOpportunityId = null;
+let currentQuotesFilterOpportunityName = '';
+
 // Declare DOM elements globally, but assign them inside initializePage
 // This ensures they are found after the DOM is fully loaded.
 let authSection;
@@ -112,7 +119,6 @@ let quotesGrid; // Grid.js instance
 let quoteOpportunitySelect; // Opportunity dropdown for quotes
 
 // --- Quote Customer Contact Fields ---
-// These variables MUST be correctly assigned in initializePage
 let customerContactNameInput;
 let customerPhoneInput;
 let customerEmailInput;
@@ -120,6 +126,11 @@ let customerAddressInput;
 // --- End Quote Customer Contact Fields ---
 
 let quoteStatusSelect; // Status dropdown for quotes
+
+// NEW: Quote filter display elements
+let quotesFilterDisplay;
+let quotesFilterOpportunityName;
+let clearQuotesFilterBtn;
 
 
 let addCountryBtn;
@@ -249,6 +260,27 @@ async function setupAuth() {
             return;
         }
     }
+
+    // Start listening for quote counts immediately after Firebase is initialized
+    // This will populate opportunityQuoteCounts in real-time
+    onSnapshot(collection(db, 'quotes'), snapshot => {
+        const counts = new Map();
+        snapshot.forEach(doc => {
+            const opportunityId = doc.data().opportunityId;
+            if (opportunityId) {
+                counts.set(opportunityId, (counts.get(opportunityId) || 0) + 1);
+            }
+        });
+        opportunityQuoteCounts = counts;
+        console.log("Updated opportunityQuoteCounts:", opportunityQuoteCounts);
+        // If opportunities grid is visible, force a re-render to update quote counts
+        if (opportunitiesGrid) {
+            loadOpportunities(); // Reload opportunities to update quote counts in grid
+        }
+    }, error => {
+        console.error("Error listening to quotes for counts:", error);
+    });
+
 
     // Check for existing auth state first
     onAuthStateChanged(auth, async (user) => {
@@ -1464,6 +1496,10 @@ async function loadOpportunities() {
             opp.expectedCloseDate = opp.expectedCloseDate && opp.expectedCloseDate.toDate ? opp.expectedCloseDate.toDate().toISOString().split('T')[0] : 'N/A';
             // Display services as a comma-separated string
             opp.servicesInterestedDisplay = Array.isArray(opp.servicesInterested) ? opp.servicesInterested.join(', ') : 'N/A';
+
+            // Add quote count to the opportunity data
+            opp.quoteCount = opportunityQuoteCounts.get(opp.id) || 0;
+
             opportunities.push(opp);
         }
         renderOpportunitiesGrid(opportunities);
@@ -1484,7 +1520,8 @@ function renderOpportunitiesGrid(opportunities) {
         opportunity.salesStage,
         `${opportunity.probability !== undefined ? opportunity.probability : 'N/A'}%`, // Handle undefined probability
         opportunity.expectedCloseDate,
-        opportunity.id
+        opportunity.quoteCount, // Pass quote count to formatter
+        opportunity.id // Pass ID as last for actions
     ]);
 
     if (!opportunitiesGrid) {
@@ -1499,17 +1536,51 @@ function renderOpportunitiesGrid(opportunities) {
                     { name: 'Probability', width: '5%' },
                     { name: 'Close Date', width: '10%' },
                     {
+                        name: 'Quotes', // New column for quote count
+                        width: '5%',
+                        formatter: (quoteCount, row) => {
+                            const opportunityId = row.cells[8].data; // ID is the last cell
+                            const opportunityName = row.cells[0].data; // Name is the first cell
+                            if (quoteCount > 0) {
+                                return gridjs.h('button', {
+                                    className: 'px-2 py-1 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition duration-300 text-xs font-bold',
+                                    onclick: () => showQuotesForOpportunity(opportunityId, opportunityName),
+                                    title: `View ${quoteCount} quote(s) for this opportunity`
+                                }, quoteCount);
+                            }
+                            return ''; // No icon if no quotes
+                        },
+                        sort: false,
+                    },
+                    {
                         name: 'Actions',
-                        width: '15%',
+                        width: '10%',
                         formatter: (cell, row) => {
+                            const opportunityId = row.cells[8].data; // ID is the last cell
+                            const salesStage = row.cells[4].data; // Sales Stage is the 5th cell (index 4)
+                            const quoteCount = row.cells[7].data; // Quote Count is the 8th cell (index 7)
+
+                            const isWon = salesStage === 'Won';
+                            const hasQuotes = quoteCount >= 1;
+                            const canEdit = !(isWon && hasQuotes); // Opportunity cannot be edited if Won AND has 1+ quotes
+
+                            const editButtonClass = canEdit
+                                ? 'px-2 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm'
+                                : 'px-2 py-1 bg-gray-400 text-gray-700 rounded-md cursor-not-allowed text-sm';
+                            const editButtonTitle = canEdit
+                                ? 'Edit Opportunity'
+                                : 'Cannot edit: Won opportunity with associated quotes.';
+
                             return gridjs.h('div', { className: 'flex space-x-2' },
                                 gridjs.h('button', {
-                                    className: 'px-2 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
-                                    onclick: () => editOpportunity(row.cells[7].data) // Adjusted index for ID
+                                    className: editButtonClass,
+                                    onclick: canEdit ? () => editOpportunity(opportunityId) : null,
+                                    disabled: !canEdit,
+                                    title: editButtonTitle
                                 }, 'Edit'),
                                 gridjs.h('button', {
                                     className: 'px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-sm',
-                                    onclick: () => deleteOpportunity(row.cells[7].data) // Adjusted index for ID
+                                    onclick: () => deleteOpportunity(opportunityId)
                                 }, 'Delete')
                             );
                         },
@@ -1554,8 +1625,22 @@ function renderOpportunitiesGrid(opportunities) {
 async function editOpportunity(opportunityId) {
     if (!db || !userId) return;
     try {
-        // setupOpportunityForm will now fetch the data if only an ID is passed
-        await setupOpportunityForm(opportunityId);
+        const docRef = doc(db, 'opportunities', opportunityId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const opportunityData = docSnap.data();
+            const salesStage = opportunityData.salesStage;
+            const quoteCount = opportunityQuoteCounts.get(opportunityId) || 0;
+
+            // Prevent editing if Won and has 1 or more quotes
+            if (salesStage === 'Won' && quoteCount >= 1) {
+                showMessageBox("This opportunity cannot be edited because it is 'Won' and has associated quotes.", false);
+                return; // Stop function execution
+            }
+            await setupOpportunityForm({ id: docSnap.id, ...opportunityData });
+        } else {
+            showMessageBox("Opportunity not found!", false);
+        }
     }
     catch (error) {
         console.error("Error editing opportunity:", error);
@@ -2307,6 +2392,27 @@ async function deletePriceBook(priceBookId) {
 
 // --- Quote Logic ---
 
+/**
+ * Navigates to the Quotes section and filters the grid for a specific opportunity.
+ * @param {string} opportunityId - The ID of the opportunity to filter by.
+ * @param {string} opportunityName - The name of the opportunity to display in the filter message.
+ */
+function showQuotesForOpportunity(opportunityId, opportunityName) {
+    currentQuotesFilterOpportunityId = opportunityId;
+    currentQuotesFilterOpportunityName = opportunityName;
+    showSection(quotesSection);
+    loadQuotes(); // This will now load filtered quotes
+}
+
+/**
+ * Clears the quote filter and reloads all quotes.
+ */
+function clearQuotesFilter() {
+    currentQuotesFilterOpportunityId = null;
+    currentQuotesFilterOpportunityName = '';
+    loadQuotes(); // This will now load all quotes
+}
+
 async function setupQuoteForm(quote = null) {
     if (!db || !userId) {
         showMessageBox("Authentication required to setup quote form.", false);
@@ -2532,15 +2638,24 @@ async function loadQuotes() {
         return;
     }
 
+    let quotesCollectionRef = collection(db, 'quotes');
     let quotesQuery;
-    if (userRole === 'Admin') {
-        // Admin can see all quotes
-        quotesQuery = collection(db, 'quotes');
+
+    // Apply filter if an opportunity ID is set
+    if (currentQuotesFilterOpportunityId) {
+        quotesQuery = query(quotesCollectionRef, where('opportunityId', '==', currentQuotesFilterOpportunityId));
+        // Show filter message
+        if (quotesFilterDisplay && quotesFilterOpportunityName) {
+            quotesFilterOpportunityName.textContent = currentQuotesFilterOpportunityName;
+            quotesFilterDisplay.classList.remove('hidden');
+        }
     } else {
-        // Standard users can only see quotes tied to opportunities they created
-        // The security rules will handle filtering what the client is *allowed* to see based on opportunity.creatorId
-        // So we query the main 'quotes' collection, and Firestore rules will implicitly filter.
-        quotesQuery = collection(db, 'quotes');
+        // No filter, load all quotes (subject to security rules)
+        quotesQuery = quotesCollectionRef;
+        // Hide filter message
+        if (quotesFilterDisplay) {
+            quotesFilterDisplay.classList.add('hidden');
+        }
     }
 
     onSnapshot(quotesQuery, async snapshot => {
@@ -2754,7 +2869,6 @@ function initializePage() {
     quoteOpportunitySelect = document.getElementById('quote-opportunity');
     
     // --- CRITICAL: Assign all quote-related input elements using their NEW, UNIQUE IDs ---
-    // Log each assignment to verify what document.getElementById returns
     customerContactNameInput = document.getElementById('quote-customer-contact-name');
     console.log('initializePage: Assigned customerContactNameInput:', customerContactNameInput);
     console.assert(customerContactNameInput !== null, 'ERROR: quote-customer-contact-name element not found! Check HTML ID.');
@@ -2774,6 +2888,10 @@ function initializePage() {
 
     quoteStatusSelect = document.getElementById('quote-status');
 
+    // NEW: Assign quote filter display elements
+    quotesFilterDisplay = document.getElementById('quotes-filter-display');
+    quotesFilterOpportunityName = document.getElementById('quotes-filter-opportunity-name');
+    clearQuotesFilterBtn = document.getElementById('clear-quotes-filter-btn');
 
     addCountryBtn = document.getElementById('add-country-btn');
     countryFormContainer = document.getElementById('country-form-container');
@@ -2834,8 +2952,9 @@ function initializePage() {
     if (navQuotes) {
         navQuotes.addEventListener('click', () => {
             console.log('Navigating to Quotes section...');
+            // When navigating to quotes, clear any existing filter by default
+            clearQuotesFilter(); // This will call loadQuotes()
             showSection(quotesSection);
-            loadQuotes();
         });
         console.log('navQuotes listener attached successfully.');
     } else {
@@ -2916,6 +3035,7 @@ function initializePage() {
     if (quoteForm) quoteForm.addEventListener('submit', handleSaveQuote);
     if (quoteOpportunitySelect) quoteOpportunitySelect.addEventListener('change', handleOpportunityChangeForQuote); // Auto-fill customer details
     if (quoteSearchInput) quoteSearchInput.addEventListener('input', (event) => { if (quotesGrid) quotesGrid.search(event.target.value); });
+    if (clearQuotesFilterBtn) clearQuotesFilterBtn.addEventListener('click', clearQuotesFilter);
 
 
     // Admin Event Listeners
@@ -2958,3 +3078,5 @@ window.deleteQuote = deleteQuote;
 window.showMessageBox = showMessageBox;
 window.setupWorkLogForm = setupWorkLogForm;
 window.showWorkLogForm = showWorkLogForm;
+window.showQuotesForOpportunity = showQuotesForOpportunity; // Make global for Grid.js formatter
+window.clearQuotesFilter = clearQuotesFilter; // Make global for button
