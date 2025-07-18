@@ -2299,7 +2299,7 @@ async function deletePriceBook(priceBookId) {
     }
 }
 
-// --- Quote Logic ---
+/// --- Quote Logic ---
 
 async function setupQuoteForm(quote = null) {
     if (!db || !userId) {
@@ -2322,32 +2322,11 @@ async function setupQuoteForm(quote = null) {
             id: doc.id,
             name: doc.data().name,
             customerId: doc.data().customerId,
-            // These fields will be fetched from the actual customer document
-            customerContactName: '',
-            customerPhone: '',
-            customerEmail: '',
-            customerAddress: ''
+            // We don't pre-fetch full customer details here for dropdown options,
+            // as handleOpportunityChangeForQuote will do that on selection.
         }));
 
-        // For each won opportunity, fetch its associated customer to get full contact details
-        const opportunitiesWithCustomerDetails = await Promise.all(wonOpportunities.map(async (opp) => {
-            if (opp.customerId) {
-                const customerDoc = await getDoc(doc(db, 'customers', opp.customerId));
-                if (customerDoc.exists()) {
-                    const customerData = customerDoc.data();
-                    return {
-                        ...opp,
-                        customerContactName: customerData.name || '', // Use customer's name
-                        customerPhone: customerData.phone || '',
-                        customerEmail: customerData.email || '',
-                        customerAddress: customerData.address || ''
-                    };
-                }
-            }
-            return opp; // Return opportunity as is if customer not found or no customerId
-        }));
-
-        populateSelect(quoteOpportunitySelect, opportunitiesWithCustomerDetails, 'id', 'name', 'Select Opportunity (Won)');
+        populateSelect(quoteOpportunitySelect, wonOpportunities, 'id', 'name', 'Select Opportunity (Won)');
 
     } catch (error) {
         console.error("Error fetching 'Won' opportunities:", error);
@@ -2371,7 +2350,7 @@ async function setupQuoteForm(quote = null) {
         quoteOpportunitySelect.value = quote.opportunityId || '';
         document.getElementById('event-name').value = quote.eventName || '';
 
-        // Auto-fill customer details from quote data (these are read-only)
+        // Populate customer details from the existing quote data
         customerContactNameInput.value = quote.customerContactName || '';
         customerPhoneInput.value = quote.phone || '';
         customerEmailInput.value = quote.email || '';
@@ -2502,10 +2481,10 @@ async function handleSaveQuote(event) {
         quoteName: document.getElementById('quote-name').value,
         opportunityId: quoteOpportunitySelect.value,
         eventName: document.getElementById('event-name').value,
-        customerContactName: customerContactNameInput.value, // Read-only, auto-filled
-        phone: customerPhoneInput.value, // Read-only, auto-filled
-        email: customerEmailInput.value, // Read-only, auto-filled
-        customerAddress: customerAddressInput.value, // Read-only, auto-filled
+        customerContactName: customerContactNameInput.value, // Now reads from the editable field
+        phone: customerPhoneInput.value, // Now reads from the editable field
+        email: customerEmailInput.value, // Now reads from the editable field
+        customerAddress: customerAddressInput.value, // Now reads from the editable field
         eventDate: eventDateTimestamp,
         additionalDetails: document.getElementById('quote-additional-details').value,
         quoteAmount: parseFloat(document.getElementById('quote-amount').value) || 0,
