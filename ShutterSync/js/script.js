@@ -40,6 +40,7 @@ let dashboardSection;
 let customersSection;
 let leadsSection;
 let opportunitiesSection;
+let quotesSection; // NEW: Quotes Section
 let countriesSection;
 let currenciesSection;
 let priceBooksSection;
@@ -48,6 +49,7 @@ let navDashboard;
 let navCustomers;
 let navLeads;
 let navOpportunities;
+let navQuotes; // NEW: Quotes Navigation
 let navCountries;
 let navCurrencies;
 let navPriceBooks;
@@ -101,6 +103,22 @@ let cancelWorkLogBtn;
 let workLogsList;
 let noWorkLogsMessage;
 let workLogTypeSelect; // Added for easy access
+
+let addQuoteBtn; // NEW: Quotes
+let quoteFormContainer; // NEW: Quotes
+let quoteForm; // NEW: Quotes
+let cancelQuoteBtn; // NEW: Quotes
+let quotesGridContainer; // NEW: Quotes
+let noQuotesMessage; // NEW: Quotes
+let quoteSearchInput; // NEW: Quotes
+let quotesGrid; // NEW: Quotes.js instance
+let quoteOpportunitySelect; // NEW: Quotes - Opportunity dropdown
+let customerContactNameInput; // NEW: Quotes - Auto-filled
+let customerPhoneInput; // NEW: Quotes - Auto-filled
+let customerEmailInput; // NEW: Quotes - Auto-filled
+let customerAddressInput; // NEW: Quotes - Auto-filled
+let quoteStatusSelect; // NEW: Quotes - Status dropdown
+
 
 let addCountryBtn;
 let countryFormContainer;
@@ -190,7 +208,7 @@ function showMessageBox(message, isConfirm = false) {
 function showSection(sectionToShow) {
     const sections = [
         authSection, dashboardSection, customersSection, leadsSection,
-        opportunitiesSection, countriesSection, currenciesSection, priceBooksSection
+        opportunitiesSection, quotesSection, countriesSection, currenciesSection, priceBooksSection // NEW: quotesSection
     ];
     sections.forEach(section => {
         if (section) { // Ensure the section element exists
@@ -353,6 +371,9 @@ async function updateDashboard() {
         const customersRef = collection(db, 'customers');
         // Opportunities are top-level, filtered by creatorId
         const opportunitiesRef = collection(db, 'opportunities');
+        // Quotes are top-level, filtered by creatorId for standard users, all for admin (handled by rules)
+        const quotesRef = collection(db, 'quotes');
+
 
         const totalCustomersQuery = query(customersRef, where('creatorId', '==', userId));
         const totalCustomersSnap = await getDocs(totalCustomersQuery);
@@ -542,6 +563,26 @@ function hideWorkLogForm() {
     const workLogFormMessage = document.getElementById('work-log-form-message');
     if (workLogFormMessage) workLogFormMessage.classList.add('hidden');
 }
+
+// NEW: Quote Form Visibility Functions
+function showQuoteForm() {
+    if (quoteFormContainer) quoteFormContainer.classList.remove('hidden');
+}
+
+function hideQuoteForm() {
+    if (quoteFormContainer) quoteFormContainer.classList.add('hidden');
+    if (quoteForm) quoteForm.reset();
+    const quoteIdInput = document.getElementById('quote-id');
+    if (quoteIdInput) quoteIdInput.value = '';
+    const quoteFormMessage = document.getElementById('quote-form-message');
+    if (quoteFormMessage) quoteFormMessage.classList.add('hidden');
+    // Clear auto-filled fields
+    if (customerContactNameInput) customerContactNameInput.value = '';
+    if (customerPhoneInput) customerPhoneInput.value = '';
+    if (customerEmailInput) customerEmailInput.value = '';
+    if (customerAddressInput) customerAddressInput.value = '';
+}
+
 
 function showCountryForm() {
     if (countryFormContainer) countryFormContainer.classList.remove('hidden');
@@ -1722,6 +1763,9 @@ async function deleteWorkLog(workLogId, opportunityId) { // Pass opportunityId t
 // Part 7: Admin Logic - Countries
 
 async function setupCountryForm(country = null) {
+    const countries = await fetchData('countries'); // Countries are top-level
+    populateSelect(document.getElementById('country-country'), countries, 'name', 'name', 'Select Country');
+
     if (country) {
         document.getElementById('country-id').value = country.id;
         document.getElementById('country-name').value = country.name || '';
@@ -2276,250 +2320,388 @@ async function deletePriceBook(priceBookId) {
     }
 }
 
-// Part 10: Event Listeners and Global Window Assignments
+// Part 11: New Quote Logic
 
-// --- Event Listeners ---
-document.addEventListener('DOMContentLoaded', initializePage);
+// --- Quote Logic ---
 
-function initializePage() {
-    console.log('DOMContentLoaded: Initializing page.');
+async function setupQuoteForm(quote = null) {
+    if (!db || !userId) {
+        showMessageBox("Authentication required to setup quote form.", false);
+        return;
+    }
 
-    // Assign DOM elements here to ensure they are available
-    authSection = document.getElementById('auth-section');
-    dashboardSection = document.getElementById('dashboard-section');
-    customersSection = document.getElementById('customers-section');
-    leadsSection = document.getElementById('leads-section');
-    opportunitiesSection = document.getElementById('opportunities-section');
-    countriesSection = document.getElementById('countries-section');
-    currenciesSection = document.getElementById('currencies-section');
-    priceBooksSection = document.getElementById('price-books-section');
-
-    navDashboard = document.getElementById('nav-dashboard');
-    navCustomers = document.getElementById('nav-customers');
-    navLeads = document.getElementById('nav-leads');
-    navOpportunities = document.getElementById('nav-opportunities');
-    navCountries = document.getElementById('nav-countries');
-    navCurrencies = document.getElementById('nav-currencies');
-    navPriceBooks = document.getElementById('nav-price-books');
-    navLogout = document.getElementById('nav-logout');
-    adminMenuItem = document.getElementById('admin-menu-item');
-
-    googleSignInBtn = document.getElementById('google-signin-btn');
-    authStatus = document.getElementById('auth-status');
-    userDisplayName = document.getElementById('user-display-name');
-    userIdDisplay = document.getElementById('user-id-display');
-    userRoleDisplay = document.getElementById('user-role');
-    authErrorMessage = document.getElementById('auth-error-message');
-
-    dashboardTotalCustomers = document.getElementById('dashboard-total-customers');
-    dashboardTotalOpportunities = document.getElementById('dashboard-total-opportunities');
-    dashboardOpenOpportunities = document.getElementById('dashboard-open-opportunities');
-    dashboardWonOpportunities = document.getElementById('dashboard-won-opportunities');
-
-    addCustomerBtn = document.getElementById('add-customer-btn');
-    customerFormContainer = document.getElementById('customer-form-container');
-    customerForm = document.getElementById('customer-form');
-    cancelCustomerBtn = document.getElementById('cancel-customer-btn');
-    customersGridContainer = document.getElementById('customers-grid-container');
-    noCustomersMessage = document.getElementById('no-customers-message');
-    customerSearchInput = document.getElementById('customer-search');
-
-    addLeadBtn = document.getElementById('add-lead-btn');
-    leadFormContainer = document.getElementById('lead-form-container');
-    leadForm = document.getElementById('lead-form');
-    cancelLeadBtn = document.getElementById('cancel-lead-btn');
-    leadsGridContainer = document.getElementById('leads-grid-container');
-    noLeadsMessage = document.getElementById('no-leads-message');
-    leadSearchInput = document.getElementById('lead-search');
-    leadServicesInterestedSelect = document.getElementById('lead-services-interested'); // NEW: Assign multi-select for Leads
-
-    addOpportunityBtn = document.getElementById('add-opportunity-btn');
-    opportunityFormContainer = document.getElementById('opportunity-form-container');
-    opportunityForm = document.getElementById('opportunity-form');
-    cancelOpportunityBtn = document.getElementById('cancel-opportunity-btn');
-    opportunitiesGridContainer = document.getElementById('opportunities-grid-container');
-    noOpportunitiesMessage = document.getElementById('no-opportunities-message');
-    opportunitySearchInput = document.getElementById('opportunity-search');
-
-    workLogsSectionContainer = document.getElementById('work-logs-section-container'); // Assigned here
-    addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
-    workLogFormContainer = document.getElementById('work-log-form-container');
-    workLogForm = document.getElementById('work-log-form');
-    cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
-    workLogsList = document.getElementById('work-logs-list');
-    noWorkLogsMessage = document.getElementById('no-work-logs-message');
-    workLogTypeSelect = document.getElementById('work-log-type'); // Assigned here
-
-    addCountryBtn = document.getElementById('add-country-btn');
-    countryFormContainer = document.getElementById('country-form-container');
-    countryForm = document.getElementById('country-form');
-    cancelCountryBtn = document.getElementById('cancel-country-btn');
-    countriesGridContainer = document.getElementById('countries-grid-container');
-    noCountriesMessage = document.getElementById('no-countries-message');
-    countrySearchInput = document.getElementById('country-search');
-
-    addCurrencyBtn = document.getElementById('add-currency-btn');
-    currencyFormContainer = document.getElementById('currency-form-container');
-    currencyForm = document.getElementById('currency-form');
-    cancelCurrencyBtn = document.getElementById('cancel-currency-btn');
-    currenciesGridContainer = document.getElementById('currencies-grid-container');
-    noCurrenciesMessage = document.getElementById('no-currencies-message');
-    currencySearchInput = document.getElementById('currency-search');
-
-    addPriceBookBtn = document.getElementById('add-price-book-btn');
-    priceBookFormContainer = document.getElementById('price-book-form-container');
-    priceBookForm = document.getElementById('price-book-form');
-    cancelPriceBookBtn = document.getElementById('cancel-price-book-btn');
-    priceBooksGridContainer = document.getElementById('price-books-grid-container');
-    noPriceBooksMessage = document.getElementById('no-price-books-message');
-    priceBookSearchInput = document.getElementById('price-book-search');
-
-    messageBox = document.getElementById('message-box');
-    messageContent = document.getElementById('message-content');
-    messageConfirmBtn = document.getElementById('message-confirm-btn');
-    messageCancelBtn = document.getElementById('message-cancel-btn');
-
-    // Assign opportunity specific dropdowns
-    opportunityCurrencySelect = document.getElementById('opportunity-currency');
-    opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
-    opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested'); // For Opportunities: multi-select
-
-
-    // --- NEW DIAGNOSTIC LOG ---
-    console.log('initializePage: opportunityForm element at start (after assignment):', opportunityForm);
-    // --- END NEW DIAGNOSTIC LOG ---
-
-    // Setup Auth
-    setupAuth(); // This will now handle the correct login flow
-
-    // Navigation Event Listeners (ensure elements exist before adding listeners)
-    if (navDashboard) navDashboard.addEventListener('click', () => {
-        showSection(dashboardSection);
-        updateDashboard();
-    });
-    if (navCustomers) navCustomers.addEventListener('click', () => {
-        showSection(customersSection);
-        loadCustomers();
-    });
-    if (navLeads) navLeads.addEventListener('click', () => {
-        showSection(leadsSection);
-        loadLeads();
-    });
-    if (navOpportunities) navOpportunities.addEventListener('click', () => {
-        showSection(opportunitiesSection);
-        loadOpportunities();
-    });
-    if (navCountries) navCountries.addEventListener('click', () => {
-        if (userRole === 'Admin') { // Check for 'Admin' role
-            showSection(countriesSection);
-            loadCountries();
-        } else {
-            showMessageBox("You do not have permission to access this section.", false);
-        }
-    });
-    if (navCurrencies) navCurrencies.addEventListener('click', () => {
-        if (userRole === 'Admin') { // Check for 'Admin' role
-            showSection(currenciesSection);
-            loadCurrencies();
-        } else {
-            showMessageBox("You do not have permission to access this section.", false);
-        }
-    });
-    if (navPriceBooks) navPriceBooks.addEventListener('click', () => {
-        if (userRole === 'Admin') { // Check for 'Admin' role
-            showSection(priceBooksSection);
-            loadPriceBooks();
-        } else {
-            showMessageBox("You do not have permission to access this section.", false);
-        }
-    });
-    if (googleSignInBtn) googleSignInBtn.addEventListener('click', handleGoogleSignIn);
-    if (navLogout) navLogout.addEventListener('click', handleLogout);
-
-    // Customer Event Listeners
-    if (addCustomerBtn) addCustomerBtn.addEventListener('click', () => setupCustomerForm());
-    if (cancelCustomerBtn) cancelCustomerBtn.addEventListener('click', hideCustomerForm);
-    if (customerForm) customerForm.addEventListener('submit', handleSaveCustomer);
-    if (customerSearchInput) customerSearchInput.addEventListener('input', (event) => { if (customersGrid) customersGrid.search(event.target.value); });
-
-    // Lead Event Listeners
-    if (addLeadBtn) addLeadBtn.addEventListener('click', () => setupLeadForm());
-    if (cancelLeadBtn) cancelLeadBtn.addEventListener('click', hideLeadForm);
-    if (leadForm) leadForm.addEventListener('submit', handleSaveLead);
-    if (leadSearchInput) leadSearchInput.addEventListener('input', (event) => { if (leadsGrid) leadsGrid.search(event.target.value); });
-
-    // Opportunity Event Listeners
-    if (addOpportunityBtn) addOpportunityBtn.addEventListener('click', () => {
-        console.log('Add Opportunity button clicked.');
-        currentOpportunityId = null; // Reset current opportunity being edited
-        setupOpportunityForm(); // This will now correctly handle visibility and initial accordion state
-        console.log('addOpportunityBtn click: currentOpportunityId reset to null.');
-    });
-    if (cancelOpportunityBtn) cancelOpportunityBtn.addEventListener('click', hideOpportunityForm);
-
-    // --- DIAGNOSTIC LOGS FOR OPPORTUNITY FORM SUBMISSION ---
-    console.log('Attempting to attach submit listener to opportunityForm...');
-    console.log('opportunityForm element (before listener attachment):', opportunityForm); // Check if element is found
-
-    if (opportunityForm) {
-        opportunityForm.addEventListener('submit', handleSaveOpportunity);
-        console.log('Successfully attached submit listener to opportunityForm.');
+    // Fetch only 'Won' opportunities created by the current user (if Standard) or all 'Won' (if Admin)
+    let opportunitiesQuery;
+    if (userRole === 'Admin') {
+        opportunitiesQuery = query(collection(db, 'opportunities'), where('salesStage', '==', 'Won'));
     } else {
-        console.error('ERROR: opportunityForm element not found during initialization, cannot attach submit listener!');
-    }
-    // --- END DIAGNOSTIC LOGS ---
-
-    // New: Add listener for currency change to filter price books
-    if (opportunityCurrencySelect) {
-        opportunityCurrencySelect.addEventListener('change', (event) => {
-            filterAndPopulatePriceBooks(event.target.value);
-        });
+        // Standard users can only see their own 'Won' opportunities
+        opportunitiesQuery = query(collection(db, 'opportunities'), where('creatorId', '==', userId), where('salesStage', '==', 'Won'));
     }
 
+    try {
+        const opportunitiesSnapshot = await getDocs(opportunitiesQuery);
+        const wonOpportunities = opportunitiesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            name: doc.data().name,
+            customerId: doc.data().customerId,
+            customerName: doc.data().customerName,
+            customerPhone: doc.data().phone, // Assuming phone is stored on opportunity or customer
+            customerEmail: doc.data().email, // Assuming email is stored on opportunity or customer
+            customerAddress: doc.data().address // Assuming address is stored on opportunity or customer
+        }));
 
-    if (opportunitySearchInput) opportunitySearchInput.addEventListener('input', (event) => { if (opportunitiesGrid) opportunitiesGrid.search(event.target.value); });
+        // For each won opportunity, fetch its associated customer to get full contact details
+        // This is necessary because opportunity might only store customerId, not all details
+        const opportunitiesWithCustomerDetails = await Promise.all(wonOpportunities.map(async (opp) => {
+            if (opp.customerId) {
+                const customerDoc = await getDoc(doc(db, 'customers', opp.customerId));
+                if (customerDoc.exists()) {
+                    const customerData = customerDoc.data();
+                    return {
+                        ...opp,
+                        customerContactName: customerData.name || '', // Use customer's name
+                        customerPhone: customerData.phone || '',
+                        customerEmail: customerData.email || '',
+                        customerAddress: customerData.address || ''
+                    };
+                }
+            }
+            return opp; // Return opportunity as is if customer not found or no customerId
+        }));
 
-    // Work Log Event Listeners
-    if (addWorkLogEntryBtn) addWorkLogEntryBtn.addEventListener('click', () => setupWorkLogForm()); // Call setupWorkLogForm
-    if (cancelWorkLogBtn) cancelWorkLogBtn.addEventListener('click', hideWorkLogForm);
-    if (workLogForm) workLogForm.addEventListener('submit', handleSaveWorkLog);
+        populateSelect(quoteOpportunitySelect, opportunitiesWithCustomerDetails, 'id', 'name', 'Select Opportunity (Won)');
 
-    // Admin Event Listeners
-    if (addCountryBtn) addCountryBtn.addEventListener('click', () => setupCountryForm());
-    if (cancelCountryBtn) cancelCountryBtn.addEventListener('click', hideCountryForm);
-    if (countryForm) countryForm.addEventListener('submit', handleSaveCountry);
-    if (countrySearchInput) countrySearchInput.addEventListener('input', (event) => { if (countriesGrid) countriesGrid.search(event.target.value); });
+    } catch (error) {
+        console.error("Error fetching 'Won' opportunities:", error);
+        showMessageBox(`Error loading opportunities for quotes: ${error.message}`, false);
+        // Ensure dropdown is empty on error
+        populateSelect(quoteOpportunitySelect, [], 'id', 'name', 'Error loading opportunities');
+    }
 
-    if (addCurrencyBtn) addCurrencyBtn.addEventListener('click', () => setupCurrencyForm());
-    if (cancelCurrencyBtn) cancelCurrencyBtn.addEventListener('click', hideCurrencyForm);
-    if (currencyForm) currencyForm.addEventListener('submit', handleSaveCurrency);
-    if (currencySearchInput) currencySearchInput.addEventListener('input', (event) => { if (currenciesGrid) currenciesGrid.search(event.target.value); });
+    // Populate Status dropdown
+    const quoteStatuses = [
+        { id: 'Draft', name: 'Draft' },
+        { id: 'Review', name: 'Review' },
+        { id: 'Finalized', name: 'Finalized' }
+    ];
+    populateSelect(quoteStatusSelect, quoteStatuses, 'id', 'name', 'Select Status');
 
-    if (addPriceBookBtn) addPriceBookBtn.addEventListener('click', () => setupPriceBookForm());
-    if (cancelPriceBookBtn) cancelPriceBookBtn.addEventListener('click', hidePriceBookForm);
-    if (priceBookForm) priceBookForm.addEventListener('submit', handleSavePriceBook);
-    if (priceBookSearchInput) priceBookBookSearchInput.addEventListener('input', (event) => { if (priceBooksGrid) priceBooksGrid.search(event.target.value); });
 
-    // Initial accordion setup
-    setupAccordions();
+    if (quote) {
+        document.getElementById('quote-id').value = quote.id;
+        document.getElementById('quote-name').value = quote.quoteName || '';
+        quoteOpportunitySelect.value = quote.opportunityId || '';
+        document.getElementById('event-name').value = quote.eventName || '';
+
+        // Auto-fill customer details from quote data (these are read-only)
+        customerContactNameInput.value = quote.customerContactName || '';
+        customerPhoneInput.value = quote.phone || '';
+        customerEmailInput.value = quote.email || '';
+        customerAddressInput.value = quote.customerAddress || '';
+
+        const eventDate = quote.eventDate ? new Date(quote.eventDate.seconds * 1000).toISOString().split('T')[0] : '';
+        document.getElementById('quote-event-date').value = eventDate;
+        document.getElementById('quote-additional-details').value = quote.additionalDetails || '';
+        document.getElementById('quote-amount').value = quote.quoteAmount !== undefined ? quote.quoteAmount : '';
+        quoteStatusSelect.value = quote.status || 'Draft';
+
+    } else {
+        // Reset form for new quote
+        if (quoteForm) quoteForm.reset();
+        document.getElementById('quote-id').value = '';
+        // Clear auto-filled fields for new quote
+        customerContactNameInput.value = '';
+        customerPhoneInput.value = '';
+        customerEmailInput.value = '';
+        customerAddressInput.value = '';
+        quoteStatusSelect.value = 'Draft'; // Default status for new quotes
+    }
+    showQuoteForm();
 }
 
-// Make functions globally accessible for inline onclick attributes (e.g., in Grid.js formatters)
-// These functions are called from HTML generated by Grid.js, so they need to be on the window object.
-window.editCustomer = editCustomer;
-window.deleteCustomer = deleteCustomer;
-window.editLead = editLead;
-window.deleteLead = deleteLead;
-window.editOpportunity = editOpportunity;
-window.deleteOpportunity = deleteOpportunity;
-window.editWorkLog = editWorkLog;
-window.deleteWorkLog = deleteWorkLog;
-window.editCountry = editCountry;
-window.deleteCountry = deleteCountry;
-window.editCurrency = editCurrency;
-window.deleteCurrency = deleteCurrency;
-window.editPriceBook = editPriceBook;
-window.deletePriceBook = deletePriceBook;
-window.showMessageBox = showMessageBox; // Make showMessageBox globally available
-window.setupWorkLogForm = setupWorkLogForm; // Make setupWorkLogForm globally available
-window.showWorkLogForm = showWorkLogForm; // Make showWorkLogForm globally available
+/**
+ * Handles the change event on the Opportunity dropdown in the Quote form.
+ * Auto-fills customer contact details based on the selected opportunity's customer.
+ */
+async function handleOpportunityChangeForQuote() {
+    const selectedOpportunityId = quoteOpportunitySelect.value;
+    if (!selectedOpportunityId) {
+        // Clear fields if no opportunity is selected
+        customerContactNameInput.value = '';
+        customerPhoneInput.value = '';
+        customerEmailInput.value = '';
+        customerAddressInput.value = '';
+        return;
+    }
+
+    try {
+        const opportunityDoc = await getDoc(doc(db, 'opportunities', selectedOpportunityId));
+        if (opportunityDoc.exists()) {
+            const opportunityData = opportunityDoc.data();
+            const customerId = opportunityData.customerId;
+
+            if (customerId) {
+                const customerDoc = await getDoc(doc(db, 'customers', customerId));
+                if (customerDoc.exists()) {
+                    const customerData = customerDoc.data();
+                    customerContactNameInput.value = customerData.name || '';
+                    customerPhoneInput.value = customerData.phone || '';
+                    customerEmailInput.value = customerData.email || '';
+                    customerAddressInput.value = customerData.address || '';
+                } else {
+                    console.warn("Customer not found for selected opportunity:", customerId);
+                    showMessageBox("Customer details not found for the selected opportunity.", false);
+                    // Clear fields if customer not found
+                    customerContactNameInput.value = '';
+                    customerPhoneInput.value = '';
+                    customerEmailInput.value = '';
+                    customerAddressInput.value = '';
+                }
+            } else {
+                console.warn("Selected opportunity has no customerId.");
+                // Clear fields if no customerId on opportunity
+                customerContactNameInput.value = '';
+                customerPhoneInput.value = '';
+                customerEmailInput.value = '';
+                customerAddressInput.value = '';
+            }
+        } else {
+            console.warn("Selected opportunity does not exist:", selectedOpportunityId);
+            showMessageBox("Selected opportunity does not exist.", false);
+            // Clear fields if opportunity not found
+            customerContactNameInput.value = '';
+            customerPhoneInput.value = '';
+            customerEmailInput.value = '';
+            customerAddressInput.value = '';
+        }
+    } catch (error) {
+        console.error("Error fetching customer details for opportunity:", error);
+        showMessageBox(`Error fetching customer details: ${error.message}`, false);
+        // Clear fields on error
+        customerContactNameInput.value = '';
+        customerPhoneInput.value = '';
+        customerEmailInput.value = '';
+        customerAddressInput.value = '';
+    }
+}
+
+
+async function handleSaveQuote(event) {
+    event.preventDefault();
+    if (!db || userRole !== 'Admin') { // Only Admin can create/update quotes
+        showMessageBox("Admin privileges required to save quote.", false);
+        return;
+    }
+
+    const quoteId = document.getElementById('quote-id').value;
+    const messageElement = document.getElementById('quote-form-message');
+    if (messageElement) messageElement.classList.add('hidden');
+
+    // --- Client-Side Validation ---
+    const requiredFields = quoteForm.querySelectorAll('[required]');
+    let firstInvalidField = null;
+
+    for (const field of requiredFields) {
+        if (!field.value) {
+            firstInvalidField = field;
+            break;
+        }
+    }
+
+    if (firstInvalidField) {
+        console.warn('Validation failed: Required field is empty.', firstInvalidField);
+        firstInvalidField.focus();
+        messageElement.textContent = `Please fill in the required field: ${firstInvalidField.labels ? firstInvalidField.labels[0].textContent : firstInvalidField.id.replace(/-/g, ' ')}.`;
+        messageElement.classList.remove('hidden');
+        return;
+    }
+    // --- End Client-Side Validation ---
+
+    const eventDateValue = document.getElementById('quote-event-date').value;
+    const eventDateTimestamp = eventDateValue ? new Date(eventDateValue) : null;
+
+    const quoteData = {
+        quoteName: document.getElementById('quote-name').value,
+        opportunityId: quoteOpportunitySelect.value,
+        eventName: document.getElementById('event-name').value,
+        customerContactName: customerContactNameInput.value, // Read-only, auto-filled
+        phone: customerPhoneInput.value, // Read-only, auto-filled
+        email: customerEmailInput.value, // Read-only, auto-filled
+        customerAddress: customerAddressInput.value, // Read-only, auto-filled
+        eventDate: eventDateTimestamp,
+        additionalDetails: document.getElementById('quote-additional-details').value,
+        quoteAmount: parseFloat(document.getElementById('quote-amount').value) || 0,
+        status: quoteStatusSelect.value,
+        creatorId: userId, // Set creatorId
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp()
+    };
+
+    try {
+        const collectionRef = collection(db, 'quotes');
+        if (quoteId) {
+            // For update, only update updatedAt, not createdAt
+            delete quoteData.createdAt;
+            await updateDoc(doc(collectionRef, quoteId), quoteData);
+            showMessageBox("Quote updated successfully!", false);
+        } else {
+            await addDoc(collectionRef, quoteData);
+            showMessageBox("Quote added successfully!", false);
+        }
+        hideQuoteForm();
+        await loadQuotes(); // Reload grid
+    } catch (error) {
+        console.error("Error saving quote:", error);
+        if (messageElement) {
+            messageElement.textContent = `Error saving quote: ${error.message}`;
+            messageElement.classList.remove('hidden');
+        }
+    }
+}
+
+async function loadQuotes() {
+    if (!db || !userId) {
+        if (noQuotesMessage) noQuotesMessage.classList.remove('hidden');
+        if (quotesGrid) quotesGrid.updateConfig({ data: [] }).forceRender();
+        return;
+    }
+
+    let quotesQuery;
+    if (userRole === 'Admin') {
+        // Admin can see all quotes
+        quotesQuery = collection(db, 'quotes');
+    } else {
+        // Standard users can only see quotes tied to opportunities they created
+        // This requires a more complex query or client-side filtering after fetching
+        // For simplicity and to leverage security rules, we'll fetch all quotes
+        // and let the security rules filter what the client is *allowed* to see.
+        // The onSnapshot will only return documents that pass the read rule.
+        quotesQuery = collection(db, 'quotes');
+    }
+
+    onSnapshot(quotesQuery, async snapshot => {
+        const quotes = [];
+        for (const docSnap of snapshot.docs) {
+            const quoteData = docSnap.data();
+            // Convert Firestore Timestamp to YYYY-MM-DD string for display
+            const eventDateDisplay = quoteData.eventDate && quoteData.eventDate.toDate ? quoteData.eventDate.toDate().toISOString().split('T')[0] : 'N/A';
+            quotes.push({ id: docSnap.id, ...quoteData, eventDate: eventDateDisplay });
+        }
+        renderQuotesGrid(quotes);
+    }, error => {
+        console.error("Error loading quotes in real-time:", error);
+        showMessageBox(`Error loading quotes: ${error.message}`, false);
+        if (noQuotesMessage) noQuotesMessage.classList.remove('hidden');
+        if (quotesGrid) quotesGrid.updateConfig({ data: [] }).forceRender();
+    });
+}
+
+function renderQuotesGrid(quotes) {
+    const data = quotes.map(quote => [
+        quote.quoteName,
+        quote.eventName,
+        quote.customerContactName,
+        quote.phone,
+        quote.email,
+        `${quote.quoteAmount !== undefined ? quote.quoteAmount.toFixed(2) : 'N/A'}`,
+        quote.status,
+        quote.eventDate,
+        quote.id
+    ]);
+
+    if (!quotesGrid) {
+        if (quotesGridContainer) {
+            quotesGrid = new gridjs.Grid({
+                columns: [
+                    { name: 'Quote Name', width: '15%' },
+                    { name: 'Event Name', width: '15%' },
+                    { name: 'Customer', width: '15%' },
+                    { name: 'Phone', width: '10%' },
+                    { name: 'Email', width: '15%' },
+                    { name: 'Amount', width: '10%' },
+                    { name: 'Status', width: '10%' },
+                    { name: 'Event Date', width: '10%' },
+                    {
+                        name: 'Actions',
+                        width: '10%',
+                        formatter: (cell, row) => {
+                            return gridjs.h('div', { className: 'flex space-x-2' },
+                                gridjs.h('button', {
+                                    className: 'px-2 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
+                                    onclick: () => editQuote(row.cells[8].data)
+                                }, 'Edit'),
+                                gridjs.h('button', {
+                                    className: 'px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-sm',
+                                    onclick: () => deleteQuote(row.cells[8].data)
+                                }, 'Delete')
+                            );
+                        },
+                        sort: false,
+                    }
+                ],
+                data: data,
+                search: true,
+                pagination: {
+                    enabled: true,
+                    limit: 10
+                },
+                sort: true,
+                className: {
+                    table: 'min-w-full divide-y divide-gray-200',
+                    thead: 'bg-gray-50',
+                    th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+                    tbody: 'bg-white divide-y divide-gray-200',
+                    td: 'px-6 py-4 whitespace-normal text-sm text-gray-900', // Ensure text wrapping
+                    footer: 'p-4',
+                    pagination: 'flex items-center justify-between',
+                    container: 'overflow-x-auto'
+                }
+            }).render(quotesGridContainer);
+        } else {
+            console.error("quotesGridContainer not found, cannot render quotes grid.");
+        }
+    } else {
+        quotesGrid.updateConfig({ data: data }).forceRender();
+    }
+
+    if (noQuotesMessage) {
+        if (quotes.length === 0) {
+            noQuotesMessage.classList.remove('hidden');
+        } else {
+            noQuotesMessage.classList.add('hidden');
+        }
+    }
+}
+
+async function editQuote(quoteId) {
+    if (!db || !userId) return;
+    try {
+        const docRef = doc(db, 'quotes', quoteId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            await setupQuoteForm(docSnap.data());
+            document.getElementById('quote-id').value = quoteId;
+        } else {
+            showMessageBox("Quote not found!", false);
+        }
+    } catch (error) {
+        console.error("Error editing quote:", error);
+        showMessageBox(`Error loading quote for edit: ${error.message}`, false);
+    }
+}
+
+async function deleteQuote(quoteId) {
+    const confirmDelete = await showMessageBox("Are you sure you want to delete this quote?", true);
+    if (!confirmDelete) return;
+
+    if (!db || !userId) return;
+    try {
+        await deleteDoc(doc(db, 'quotes', quoteId));
+        showMessageBox("Quote deleted successfully!", false);
+        await loadQuotes();
+    } catch (error) {
+        console.error("Error deleting quote:", error);
+        showMessageBox(`Error deleting quote: ${error.message}`, false);
+    }
+}
