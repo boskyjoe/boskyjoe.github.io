@@ -1,5 +1,3 @@
-// Part 1: Firebase Imports, Configuration, and Global Variable Declarations
-
 // Firebase imports for ES Modules
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { getAuth, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
@@ -17,7 +15,6 @@ const firebaseConfig = {
 
 // The appId from firebaseConfig is sufficient as collections are top-level, not nested under artifacts/appId/
 const appId = firebaseConfig.appId;
-
 
 // Environment variable for initial auth token (if available)
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
@@ -40,7 +37,7 @@ let dashboardSection;
 let customersSection;
 let leadsSection;
 let opportunitiesSection;
-let quotesSection; // NEW: Quotes Section
+let quotesSection;
 let countriesSection;
 let currenciesSection;
 let priceBooksSection;
@@ -49,7 +46,7 @@ let navDashboard;
 let navCustomers;
 let navLeads;
 let navOpportunities;
-let navQuotes; // NEW: Quotes Navigation
+let navQuotes;
 let navCountries;
 let navCurrencies;
 let navPriceBooks;
@@ -104,20 +101,20 @@ let workLogsList;
 let noWorkLogsMessage;
 let workLogTypeSelect; // Added for easy access
 
-let addQuoteBtn; // NEW: Quotes
-let quoteFormContainer; // NEW: Quotes
-let quoteForm; // NEW: Quotes
-let cancelQuoteBtn; // NEW: Quotes
-let quotesGridContainer; // NEW: Quotes
-let noQuotesMessage; // NEW: Quotes
-let quoteSearchInput; // NEW: Quotes
-let quotesGrid; // NEW: Quotes.js instance
-let quoteOpportunitySelect; // NEW: Quotes - Opportunity dropdown
-let customerContactNameInput; // NEW: Quotes - Auto-filled
-let customerPhoneInput; // NEW: Quotes - Auto-filled
-let customerEmailInput; // NEW: Quotes - Auto-filled
-let customerAddressInput; // NEW: Quotes - Auto-filled
-let quoteStatusSelect; // NEW: Quotes - Status dropdown
+let addQuoteBtn;
+let quoteFormContainer;
+let quoteForm;
+let cancelQuoteBtn;
+let quotesGridContainer;
+let noQuotesMessage;
+let quoteSearchInput;
+let quotesGrid; // Grid.js instance
+let quoteOpportunitySelect; // Opportunity dropdown for quotes
+let customerContactNameInput; // Auto-filled
+let customerPhoneInput; // Auto-filled
+let customerEmailInput; // Auto-filled
+let customerAddressInput; // Auto-filled
+let quoteStatusSelect; // Status dropdown for quotes
 
 
 let addCountryBtn;
@@ -155,9 +152,8 @@ let messageCancelBtn;
 let opportunityCurrencySelect; // Added for easy access
 let opportunityPriceBookSelect; // Added for easy access
 let opportunityServicesInterestedSelect; // For Opportunities: multi-select
-let leadServicesInterestedSelect; // NEW: For Leads: multi-select
+let leadServicesInterestedSelect; // For Leads: multi-select
 
-// Part 2: Message Box, Authentication, and Dashboard Logic
 
 /**
  * Shows a custom message box (modal).
@@ -208,7 +204,7 @@ function showMessageBox(message, isConfirm = false) {
 function showSection(sectionToShow) {
     const sections = [
         authSection, dashboardSection, customersSection, leadsSection,
-        opportunitiesSection, quotesSection, countriesSection, currenciesSection, priceBooksSection // NEW: quotesSection
+        opportunitiesSection, quotesSection, countriesSection, currenciesSection, priceBooksSection
     ];
     sections.forEach(section => {
         if (section) { // Ensure the section element exists
@@ -226,7 +222,6 @@ function showSection(sectionToShow) {
 async function setupAuth() {
     // Initialize Firebase if not already initialized
     if (!app) {
-        // Use the hardcoded firebaseConfig directly
         if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.apiKey) {
             console.error("Firebase config is empty or invalid. Cannot initialize Firebase.");
             if (authErrorMessage) {
@@ -371,9 +366,6 @@ async function updateDashboard() {
         const customersRef = collection(db, 'customers');
         // Opportunities are top-level, filtered by creatorId
         const opportunitiesRef = collection(db, 'opportunities');
-        // Quotes are top-level, filtered by creatorId for standard users, all for admin (handled by rules)
-        const quotesRef = collection(db, 'quotes');
-
 
         const totalCustomersQuery = query(customersRef, where('creatorId', '==', userId));
         const totalCustomersSnap = await getDocs(totalCustomersQuery);
@@ -403,8 +395,6 @@ async function updateDashboard() {
     }
 }
 
-// Part 3: Accordion Logic, Form Visibility Functions, and Data Helpers
-
 // --- Accordion Logic ---
 function setupAccordions() {
     const accordionHeaders = document.querySelectorAll('.accordion-header');
@@ -430,7 +420,6 @@ function toggleAccordion(event) {
         header.classList.add('expanded');
     } else {
         content.classList.add('hidden');
-        // Only apply transform for SVG icons, as per HTML structure
         if (icon && icon.tagName === 'SVG') {
             icon.style.transform = 'rotate(0deg)';
         }
@@ -641,10 +630,12 @@ async function fetchData(collectionName) {
         let q;
         // Apply creatorId filter only for user-specific collections as per rules
         // Note: 'users_data' is also top-level but not filtered by creatorId in client-side fetches
+        // 'quotes' read rule depends on opportunity creator, so it's not simply creatorId == userId here
         if (['customers', 'leads', 'opportunities'].includes(collectionName)) {
             q = query(collectionRef, where('creatorId', '==', userId));
         } else {
-            // For public collections (countries, currencies, priceBooks), no creatorId filter
+            // For public collections (countries, currencies, priceBooks, quotes), no client-side creatorId filter
+            // Security rules will handle read permissions for 'quotes'
             q = query(collectionRef);
         }
         const snapshot = await getDocs(q);
@@ -703,8 +694,6 @@ function populateMultiSelect(selectElement, data, valueKey, textKey, selectedVal
         selectElement.appendChild(option);
     });
 }
-
-// Part 4: Customer and Lead Logic
 
 // --- Customer Logic ---
 
@@ -859,7 +848,6 @@ function renderCustomersGrid(customers) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
-                    // MODIFIED: Removed whitespace-nowrap for text wrapping
                     td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
@@ -883,15 +871,15 @@ function renderCustomersGrid(customers) {
     }
 }
 
-async function editCustomer(customerId) {
+async function editCustomer(customerDataId) {
     if (!db || !userId) return;
     try {
-        const docRef = doc(db, 'customers', customerId); // Top-level collection
+        const docRef = doc(db, 'customers', customerDataId); // Top-level collection
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             await setupCustomerForm(docSnap.data());
             const customerIdInput = document.getElementById('customer-id');
-            if (customerIdInput) customerIdInput.value = customerId; // Ensure ID is set
+            if (customerIdInput) customerIdInput.value = customerDataId; // Ensure ID is set
         } else {
             showMessageBox("Customer not found!", false);
         }
@@ -901,13 +889,13 @@ async function editCustomer(customerId) {
     }
 }
 
-async function deleteCustomer(customerId) {
+async function deleteCustomer(customerDataId) {
     const confirmDelete = await showMessageBox("Are you sure you want to delete this customer?", true);
     if (!confirmDelete) return;
 
     if (!db || !userId) return;
     try {
-        await deleteDoc(doc(db, 'customers', customerId)); // Top-level collection
+        await deleteDoc(doc(db, 'customers', customerDataId)); // Top-level collection
         showMessageBox("Customer deleted successfully!", false);
         await loadCustomers(); // Reload grid
         await updateDashboard();
@@ -1132,7 +1120,6 @@ function renderLeadsGrid(leads) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
-                    // MODIFIED: Removed whitespace-nowrap for text wrapping
                     td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
@@ -1187,8 +1174,6 @@ async function deleteLead(leadId) {
         showMessageBox(`Error deleting lead: ${error.message}`, false);
     }
 }
-
-// Part 5: Opportunity Logic
 
 // --- Opportunity Logic ---
 
@@ -1538,7 +1523,6 @@ function renderOpportunitiesGrid(opportunities) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
-                    // MODIFIED: Removed whitespace-nowrap for text wrapping
                     td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
@@ -1585,7 +1569,7 @@ async function deleteOpportunity(opportunityId) {
         const workLogsQuery = query(workLogsRef); // No need for where('opportunityId') as it's a subcollection
         const workLogsSnapshot = await getDocs(workLogsQuery);
         const batch = writeBatch(db);
-        workLogsSnapshot.forEach(docSnap => { // Renamed doc to docSnap
+        workLogsSnapshot.forEach(docSnap => {
             batch.delete(docSnap.ref);
         });
         await batch.commit();
@@ -1600,8 +1584,6 @@ async function deleteOpportunity(opportunityId) {
         showMessageBox(`Error deleting opportunity: ${error.message}`, false);
     }
 }
-
-// Part 6: Work Log Logic
 
 // --- Work Log Logic ---
 
@@ -1625,7 +1607,7 @@ async function loadWorkLogs(opportunityId) {
                 }
                 noWorkLogsMessage.classList.add('hidden');
             }
-            snapshot.forEach(docSnap => { // Renamed doc to docSnap
+            snapshot.forEach(docSnap => {
                 const log = docSnap.data();
                 const logId = docSnap.id;
                 // Convert Firestore Timestamp to YYYY-MM-DD string for display
@@ -1760,7 +1742,7 @@ async function deleteWorkLog(workLogId, opportunityId) { // Pass opportunityId t
     }
 }
 
-// Part 7: Admin Logic - Countries
+// --- Admin Logic - Countries ---
 
 async function setupCountryForm(country = null) {
     const countries = await fetchData('countries'); // Countries are top-level
@@ -1887,7 +1869,6 @@ function renderCountriesGrid(countries) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
-                    // MODIFIED: Removed whitespace-nowrap for text wrapping
                     td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
@@ -1941,7 +1922,7 @@ async function deleteCountry(countryId) {
     }
 }
 
-// Part 8: Admin Logic - Currencies
+// --- Admin Logic - Currencies ---
 
 async function setupCurrencyForm(currency = null) {
     const countries = await fetchData('countries'); // Countries are top-level
@@ -2072,7 +2053,6 @@ function renderCurrenciesGrid(currencies) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
-                    // MODIFIED: Removed whitespace-nowrap for text wrapping
                     td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
@@ -2127,7 +2107,7 @@ async function deleteCurrency(currencyId) {
     }
 }
 
-// Part 9: Admin Logic - Price Books
+// --- Admin Logic - Price Books ---
 
 async function setupPriceBookForm(priceBook = null) {
     const currencies = await fetchData('currencies'); // Currencies are top-level
@@ -2265,7 +2245,6 @@ function renderPriceBooksGrid(priceBooks) {
                     thead: 'bg-gray-50',
                     th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
                     tbody: 'bg-white divide-y divide-gray-200',
-                    // MODIFIED: Removed whitespace-nowrap for text wrapping
                     td: 'px-6 py-4 whitespace-normal text-sm text-gray-900',
                     footer: 'p-4',
                     pagination: 'flex items-center justify-between',
@@ -2320,257 +2299,6 @@ async function deletePriceBook(priceBookId) {
     }
 }
 
-// Part 10: Event Listeners and Global Window Assignments
-
-// --- Event Listeners ---
-document.addEventListener('DOMContentLoaded', initializePage);
-
-function initializePage() {
-    console.log('DOMContentLoaded: Initializing page.');
-
-    // Assign DOM elements here to ensure they are available
-    authSection = document.getElementById('auth-section');
-    dashboardSection = document.getElementById('dashboard-section');
-    customersSection = document.getElementById('customers-section');
-    leadsSection = document.getElementById('leads-section');
-    opportunitiesSection = document.getElementById('opportunities-section');
-    countriesSection = document.getElementById('countries-section');
-    currenciesSection = document.getElementById('currencies-section');
-    priceBooksSection = document.getElementById('price-books-section');
-
-    navDashboard = document.getElementById('nav-dashboard');
-    navCustomers = document.getElementById('nav-customers');
-    navLeads = document.getElementById('nav-leads');
-    navOpportunities = document.getElementById('nav-opportunities');
-    navCountries = document.getElementById('nav-countries');
-    navCurrencies = document.getElementById('nav-currencies');
-    navPriceBooks = document.getElementById('nav-price-books');
-    navLogout = document.getElementById('nav-logout');
-    adminMenuItem = document.getElementById('admin-menu-item');
-
-    googleSignInBtn = document.getElementById('google-signin-btn');
-    authStatus = document.getElementById('auth-status');
-    userDisplayName = document.getElementById('user-display-name');
-    userIdDisplay = document.getElementById('user-id-display');
-    userRoleDisplay = document.getElementById('user-role');
-    authErrorMessage = document.getElementById('auth-error-message');
-
-    dashboardTotalCustomers = document.getElementById('dashboard-total-customers');
-    dashboardTotalOpportunities = document.getElementById('dashboard-total-opportunities');
-    dashboardOpenOpportunities = document.getElementById('dashboard-open-opportunities');
-    dashboardWonOpportunities = document.getElementById('dashboard-won-opportunities');
-
-    addCustomerBtn = document.getElementById('add-customer-btn');
-    customerFormContainer = document.getElementById('customer-form-container');
-    customerForm = document.getElementById('customer-form');
-    cancelCustomerBtn = document.getElementById('cancel-customer-btn');
-    customersGridContainer = document.getElementById('customers-grid-container');
-    noCustomersMessage = document.getElementById('no-customers-message');
-    customerSearchInput = document.getElementById('customer-search');
-
-    addLeadBtn = document.getElementById('add-lead-btn');
-    leadFormContainer = document.getElementById('lead-form-container');
-    leadForm = document.getElementById('lead-form');
-    cancelLeadBtn = document.getElementById('cancel-lead-btn');
-    leadsGridContainer = document.getElementById('leads-grid-container');
-    noLeadsMessage = document.getElementById('no-leads-message');
-    leadSearchInput = document.getElementById('lead-search');
-    leadServicesInterestedSelect = document.getElementById('lead-services-interested'); // NEW: Assign multi-select for Leads
-
-    addOpportunityBtn = document.getElementById('add-opportunity-btn');
-    opportunityFormContainer = document.getElementById('opportunity-form-container');
-    opportunityForm = document.getElementById('opportunity-form');
-    cancelOpportunityBtn = document.getElementById('cancel-opportunity-btn');
-    opportunitiesGridContainer = document.getElementById('opportunities-grid-container');
-    noOpportunitiesMessage = document.getElementById('no-opportunities-message');
-    opportunitySearchInput = document.getElementById('opportunity-search');
-
-    workLogsSectionContainer = document.getElementById('work-logs-section-container'); // Assigned here
-    addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
-    workLogFormContainer = document.getElementById('work-log-form-container');
-    workLogForm = document.getElementById('work-log-form');
-    cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
-    workLogsList = document.getElementById('work-logs-list');
-    noWorkLogsMessage = document.getElementById('no-work-logs-message');
-    workLogTypeSelect = document.getElementById('work-log-type'); // Assigned here
-
-    addCountryBtn = document.getElementById('add-country-btn');
-    countryFormContainer = document.getElementById('country-form-container');
-    countryForm = document.getElementById('country-form');
-    cancelCountryBtn = document.getElementById('cancel-country-btn');
-    countriesGridContainer = document.getElementById('countries-grid-container');
-    noCountriesMessage = document.getElementById('no-countries-message');
-    countrySearchInput = document.getElementById('country-search');
-
-    addCurrencyBtn = document.getElementById('add-currency-btn');
-    currencyFormContainer = document.getElementById('currency-form-container');
-    currencyForm = document.getElementById('currency-form');
-    cancelCurrencyBtn = document.getElementById('cancel-currency-btn');
-    currenciesGridContainer = document.getElementById('currencies-grid-container');
-    noCurrenciesMessage = document.getElementById('no-currencies-message');
-    currencySearchInput = document.getElementById('currency-search');
-
-    addPriceBookBtn = document.getElementById('add-price-book-btn');
-    priceBookFormContainer = document.getElementById('price-book-form-container');
-    priceBookForm = document.getElementById('price-book-form');
-    cancelPriceBookBtn = document.getElementById('cancel-price-book-btn');
-    priceBooksGridContainer = document.getElementById('price-books-grid-container');
-    noPriceBooksMessage = document.getElementById('no-price-books-message');
-    priceBookSearchInput = document.getElementById('price-book-search');
-
-    messageBox = document.getElementById('message-box');
-    messageContent = document.getElementById('message-content');
-    messageConfirmBtn = document.getElementById('message-confirm-btn');
-    messageCancelBtn = document.getElementById('message-cancel-btn');
-
-    // Assign opportunity specific dropdowns
-    opportunityCurrencySelect = document.getElementById('opportunity-currency');
-    opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
-    opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested'); // For Opportunities: multi-select
-
-
-    // --- NEW DIAGNOSTIC LOG ---
-    console.log('initializePage: opportunityForm element at start (after assignment):', opportunityForm);
-    // --- END NEW DIAGNOSTIC LOG ---
-
-    // Setup Auth
-    setupAuth(); // This will now handle the correct login flow
-
-    // Navigation Event Listeners (ensure elements exist before adding listeners)
-    if (navDashboard) navDashboard.addEventListener('click', () => {
-        showSection(dashboardSection);
-        updateDashboard();
-    });
-    if (navCustomers) navCustomers.addEventListener('click', () => {
-        showSection(customersSection);
-        loadCustomers();
-    });
-    if (navLeads) navLeads.addEventListener('click', () => {
-        showSection(leadsSection);
-        loadLeads();
-    });
-    if (navOpportunities) navOpportunities.addEventListener('click', () => {
-        showSection(opportunitiesSection);
-        loadOpportunities();
-    });
-    if (navCountries) navCountries.addEventListener('click', () => {
-        if (userRole === 'Admin') { // Check for 'Admin' role
-            showSection(countriesSection);
-            loadCountries();
-        } else {
-            showMessageBox("You do not have permission to access this section.", false);
-        }
-    });
-    if (navCurrencies) navCurrencies.addEventListener('click', () => {
-        if (userRole === 'Admin') { // Check for 'Admin' role
-            showSection(currenciesSection);
-            loadCurrencies();
-        } else {
-            showMessageBox("You do not have permission to access this section.", false);
-        }
-    });
-    if (navPriceBooks) navPriceBooks.addEventListener('click', () => {
-        if (userRole === 'Admin') { // Check for 'Admin' role
-            showSection(priceBooksSection);
-            loadPriceBooks();
-        } else {
-            showMessageBox("You do not have permission to access this section.", false);
-        }
-    });
-    if (googleSignInBtn) googleSignInBtn.addEventListener('click', handleGoogleSignIn);
-    if (navLogout) navLogout.addEventListener('click', handleLogout);
-
-    // Customer Event Listeners
-    if (addCustomerBtn) addCustomerBtn.addEventListener('click', () => setupCustomerForm());
-    if (cancelCustomerBtn) cancelCustomerBtn.addEventListener('click', hideCustomerForm);
-    if (customerForm) customerForm.addEventListener('submit', handleSaveCustomer);
-    if (customerSearchInput) customerSearchInput.addEventListener('input', (event) => { if (customersGrid) customersGrid.search(event.target.value); });
-
-    // Lead Event Listeners
-    if (addLeadBtn) addLeadBtn.addEventListener('click', () => setupLeadForm());
-    if (cancelLeadBtn) cancelLeadBtn.addEventListener('click', hideLeadForm);
-    if (leadForm) leadForm.addEventListener('submit', handleSaveLead);
-    if (leadSearchInput) leadSearchInput.addEventListener('input', (event) => { if (leadsGrid) leadsGrid.search(event.target.value); });
-
-    // Opportunity Event Listeners
-    if (addOpportunityBtn) addOpportunityBtn.addEventListener('click', () => {
-        console.log('Add Opportunity button clicked.');
-        currentOpportunityId = null; // Reset current opportunity being edited
-        setupOpportunityForm(); // This will now correctly handle visibility and initial accordion state
-        console.log('addOpportunityBtn click: currentOpportunityId reset to null.');
-    });
-    if (cancelOpportunityBtn) cancelOpportunityBtn.addEventListener('click', hideOpportunityForm);
-
-    // --- DIAGNOSTIC LOGS FOR OPPORTUNITY FORM SUBMISSION ---
-    console.log('Attempting to attach submit listener to opportunityForm...');
-    console.log('opportunityForm element (before listener attachment):', opportunityForm); // Check if element is found
-
-    if (opportunityForm) {
-        opportunityForm.addEventListener('submit', handleSaveOpportunity);
-        console.log('Successfully attached submit listener to opportunityForm.');
-    } else {
-        console.error('ERROR: opportunityForm element not found during initialization, cannot attach submit listener!');
-    }
-    // --- END DIAGNOSTIC LOGS ---
-
-    // New: Add listener for currency change to filter price books
-    if (opportunityCurrencySelect) {
-        opportunityCurrencySelect.addEventListener('change', (event) => {
-            filterAndPopulatePriceBooks(event.target.value);
-        });
-    }
-
-
-    if (opportunitySearchInput) opportunitySearchInput.addEventListener('input', (event) => { if (opportunitiesGrid) opportunitiesGrid.search(event.target.value); });
-
-    // Work Log Event Listeners
-    if (addWorkLogEntryBtn) addWorkLogEntryBtn.addEventListener('click', () => setupWorkLogForm()); // Call setupWorkLogForm
-    if (cancelWorkLogBtn) cancelWorkLogBtn.addEventListener('click', hideWorkLogForm);
-    if (workLogForm) workLogForm.addEventListener('submit', handleSaveWorkLog);
-
-    // Admin Event Listeners
-    if (addCountryBtn) addCountryBtn.addEventListener('click', () => setupCountryForm());
-    if (cancelCountryBtn) cancelCountryBtn.addEventListener('click', hideCountryForm);
-    if (countryForm) countryForm.addEventListener('submit', handleSaveCountry);
-    if (countrySearchInput) countrySearchInput.addEventListener('input', (event) => { if (countriesGrid) countriesGrid.search(event.target.value); });
-
-    if (addCurrencyBtn) addCurrencyBtn.addEventListener('click', () => setupCurrencyForm());
-    if (cancelCurrencyBtn) cancelCurrencyBtn.addEventListener('click', hideCurrencyForm);
-    if (currencyForm) currencyForm.addEventListener('submit', handleSaveCurrency);
-    if (currencySearchInput) currencySearchInput.addEventListener('input', (event) => { if (currenciesGrid) currenciesGrid.search(event.target.value); });
-
-    if (addPriceBookBtn) addPriceBookBtn.addEventListener('click', () => setupPriceBookForm());
-    if (cancelPriceBookBtn) cancelPriceBookBtn.addEventListener('click', hidePriceBookForm);
-    if (priceBookForm) priceBookForm.addEventListener('submit', handleSavePriceBook);
-    if (priceBookSearchInput) priceBookBookSearchInput.addEventListener('input', (event) => { if (priceBooksGrid) priceBooksGrid.search(event.target.value); });
-
-    // Initial accordion setup
-    setupAccordions();
-}
-
-// Make functions globally accessible for inline onclick attributes (e.g., in Grid.js formatters)
-// These functions are called from HTML generated by Grid.js, so they need to be on the window object.
-window.editCustomer = editCustomer;
-window.deleteCustomer = deleteCustomer;
-window.editLead = editLead;
-window.deleteLead = deleteLead;
-window.editOpportunity = editOpportunity;
-window.deleteOpportunity = deleteOpportunity;
-window.editWorkLog = editWorkLog;
-window.deleteWorkLog = deleteWorkLog;
-window.editCountry = editCountry;
-window.deleteCountry = deleteCountry;
-window.editCurrency = editCurrency;
-window.deleteCurrency = deleteCurrency;
-window.editPriceBook = editPriceBook;
-window.deletePriceBook = deletePriceBook;
-window.showMessageBox = showMessageBox; // Make showMessageBox globally available
-window.setupWorkLogForm = setupWorkLogForm; // Make setupWorkLogForm globally available
-window.showWorkLogForm = showWorkLogForm; // Make showWorkLogForm globally available
-
-
-// Part 11: New Quote Logic
-
 // --- Quote Logic ---
 
 async function setupQuoteForm(quote = null) {
@@ -2594,14 +2322,14 @@ async function setupQuoteForm(quote = null) {
             id: doc.id,
             name: doc.data().name,
             customerId: doc.data().customerId,
-            customerName: doc.data().customerName,
-            customerPhone: doc.data().phone, // Assuming phone is stored on opportunity or customer
-            customerEmail: doc.data().email, // Assuming email is stored on opportunity or customer
-            customerAddress: doc.data().address // Assuming address is stored on opportunity or customer
+            // These fields will be fetched from the actual customer document
+            customerContactName: '',
+            customerPhone: '',
+            customerEmail: '',
+            customerAddress: ''
         }));
 
         // For each won opportunity, fetch its associated customer to get full contact details
-        // This is necessary because opportunity might only store customerId, not all details
         const opportunitiesWithCustomerDetails = await Promise.all(wonOpportunities.map(async (opp) => {
             if (opp.customerId) {
                 const customerDoc = await getDoc(doc(db, 'customers', opp.customerId));
@@ -2822,10 +2550,8 @@ async function loadQuotes() {
         quotesQuery = collection(db, 'quotes');
     } else {
         // Standard users can only see quotes tied to opportunities they created
-        // This requires a more complex query or client-side filtering after fetching
-        // For simplicity and to leverage security rules, we'll fetch all quotes
-        // and let the security rules filter what the client is *allowed* to see.
-        // The onSnapshot will only return documents that pass the read rule.
+        // The security rules will handle filtering what the client is *allowed* to see based on opportunity.creatorId
+        // So we query the main 'quotes' collection, and Firestore rules will implicitly filter.
         quotesQuery = collection(db, 'quotes');
     }
 
@@ -2954,3 +2680,280 @@ async function deleteQuote(quoteId) {
         showMessageBox(`Error deleting quote: ${error.message}`, false);
     }
 }
+
+
+// --- Event Listeners ---
+document.addEventListener('DOMContentLoaded', initializePage);
+
+function initializePage() {
+    console.log('DOMContentLoaded: Initializing page.');
+
+    // Assign DOM elements here to ensure they are available
+    authSection = document.getElementById('auth-section');
+    dashboardSection = document.getElementById('dashboard-section');
+    customersSection = document.getElementById('customers-section');
+    leadsSection = document.getElementById('leads-section');
+    opportunitiesSection = document.getElementById('opportunities-section');
+    quotesSection = document.getElementById('quotes-section');
+    countriesSection = document.getElementById('countries-section');
+    currenciesSection = document.getElementById('currencies-section');
+    priceBooksSection = document.getElementById('price-books-section');
+
+    navDashboard = document.getElementById('nav-dashboard');
+    navCustomers = document.getElementById('nav-customers');
+    navLeads = document.getElementById('nav-leads');
+    navOpportunities = document.getElementById('nav-opportunities');
+    navQuotes = document.getElementById('nav-quotes');
+    navCountries = document.getElementById('nav-countries');
+    navCurrencies = document.getElementById('nav-currencies');
+    navPriceBooks = document.getElementById('nav-price-books');
+    navLogout = document.getElementById('nav-logout');
+    adminMenuItem = document.getElementById('admin-menu-item');
+
+    googleSignInBtn = document.getElementById('google-signin-btn');
+    authStatus = document.getElementById('auth-status');
+    userDisplayName = document.getElementById('user-display-name');
+    userIdDisplay = document.getElementById('user-id-display');
+    userRoleDisplay = document.getElementById('user-role'); // Ensure this element exists in HTML if you want to display role
+    authErrorMessage = document.getElementById('auth-error-message');
+
+    dashboardTotalCustomers = document.getElementById('dashboard-total-customers');
+    dashboardTotalOpportunities = document.getElementById('dashboard-total-opportunities');
+    dashboardOpenOpportunities = document.getElementById('dashboard-open-opportunities');
+    dashboardWonOpportunities = document.getElementById('dashboard-won-opportunities');
+
+    addCustomerBtn = document.getElementById('add-customer-btn');
+    customerFormContainer = document.getElementById('customer-form-container');
+    customerForm = document.getElementById('customer-form');
+    cancelCustomerBtn = document.getElementById('cancel-customer-btn');
+    customersGridContainer = document.getElementById('customers-grid-container');
+    noCustomersMessage = document.getElementById('no-customers-message');
+    customerSearchInput = document.getElementById('customer-search');
+
+    addLeadBtn = document.getElementById('add-lead-btn');
+    leadFormContainer = document.getElementById('lead-form-container');
+    leadForm = document.getElementById('lead-form');
+    cancelLeadBtn = document.getElementById('cancel-lead-btn');
+    leadsGridContainer = document.getElementById('leads-grid-container');
+    noLeadsMessage = document.getElementById('no-leads-message');
+    leadSearchInput = document.getElementById('lead-search');
+    leadServicesInterestedSelect = document.getElementById('lead-services-interested');
+
+    addOpportunityBtn = document.getElementById('add-opportunity-btn');
+    opportunityFormContainer = document.getElementById('opportunity-form-container');
+    opportunityForm = document.getElementById('opportunity-form');
+    cancelOpportunityBtn = document.getElementById('cancel-opportunity-btn');
+    opportunitiesGridContainer = document.getElementById('opportunities-grid-container');
+    noOpportunitiesMessage = document.getElementById('no-opportunities-message');
+    opportunitySearchInput = document.getElementById('opportunity-search');
+
+    workLogsSectionContainer = document.getElementById('work-logs-section-container');
+    addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
+    workLogFormContainer = document.getElementById('work-log-form-container');
+    workLogForm = document.getElementById('work-log-form');
+    cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
+    workLogsList = document.getElementById('work-logs-list');
+    noWorkLogsMessage = document.getElementById('no-work-logs-message');
+    workLogTypeSelect = document.getElementById('work-log-type');
+
+    addQuoteBtn = document.getElementById('add-quote-btn');
+    quoteFormContainer = document.getElementById('quote-form-container');
+    quoteForm = document.getElementById('quote-form');
+    cancelQuoteBtn = document.getElementById('cancel-quote-btn');
+    quotesGridContainer = document.getElementById('quotes-grid-container');
+    noQuotesMessage = document.getElementById('no-quotes-message');
+    quoteSearchInput = document.getElementById('quote-search');
+    quoteOpportunitySelect = document.getElementById('quote-opportunity');
+    customerContactNameInput = document.getElementById('customer-contact-name');
+    customerPhoneInput = document.getElementById('customer-phone');
+    customerEmailInput = document.getElementById('customer-email');
+    customerAddressInput = document.getElementById('customer-address');
+    quoteStatusSelect = document.getElementById('quote-status');
+
+
+    addCountryBtn = document.getElementById('add-country-btn');
+    countryFormContainer = document.getElementById('country-form-container');
+    countryForm = document.getElementById('country-form');
+    cancelCountryBtn = document.getElementById('cancel-country-btn');
+    countriesGridContainer = document.getElementById('countries-grid-container');
+    noCountriesMessage = document.getElementById('no-countries-message');
+    countrySearchInput = document.getElementById('country-search');
+
+    addCurrencyBtn = document.getElementById('add-currency-btn');
+    currencyFormContainer = document.getElementById('currency-form-container');
+    currencyForm = document.getElementById('currency-form');
+    cancelCurrencyBtn = document.getElementById('cancel-currency-btn');
+    currenciesGridContainer = document.getElementById('currencies-grid-container');
+    noCurrenciesMessage = document.getElementById('no-currencies-message');
+    currencySearchInput = document.getElementById('currency-search');
+
+    addPriceBookBtn = document.getElementById('add-price-book-btn');
+    priceBookFormContainer = document.getElementById('price-book-form-container');
+    priceBookForm = document.getElementById('price-book-form');
+    cancelPriceBookBtn = document.getElementById('cancel-price-book-btn');
+    priceBooksGridContainer = document.getElementById('price-books-grid-container');
+    noPriceBooksMessage = document.getElementById('no-price-books-message');
+    priceBookSearchInput = document.getElementById('price-book-search');
+
+    messageBox = document.getElementById('message-box');
+    messageContent = document.getElementById('message-content');
+    messageConfirmBtn = document.getElementById('message-confirm-btn');
+    messageCancelBtn = document.getElementById('message-cancel-btn');
+
+    // Assign opportunity specific dropdowns
+    opportunityCurrencySelect = document.getElementById('opportunity-currency');
+    opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
+    opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested');
+
+
+    // Setup Auth
+    setupAuth();
+
+    // Navigation Event Listeners (ensure elements exist before adding listeners)
+    if (navDashboard) navDashboard.addEventListener('click', () => {
+        showSection(dashboardSection);
+        updateDashboard();
+    });
+    if (navCustomers) navCustomers.addEventListener('click', () => {
+        showSection(customersSection);
+        loadCustomers();
+    });
+    if (navLeads) navLeads.addEventListener('click', () => {
+        showSection(leadsSection);
+        loadLeads();
+    });
+    if (navOpportunities) navOpportunities.addEventListener('click', () => {
+        showSection(opportunitiesSection);
+        loadOpportunities();
+    });
+
+    // --- CRITICAL: Ensure navQuotes is correctly found and listener attached ---
+    if (navQuotes) {
+        navQuotes.addEventListener('click', () => {
+            console.log('Navigating to Quotes section...');
+            showSection(quotesSection);
+            loadQuotes();
+        });
+        console.log('navQuotes listener attached successfully.');
+    } else {
+        console.error('ERROR: navQuotes element not found! Quotes navigation will not work.');
+    }
+    // --- END CRITICAL SECTION ---
+
+    if (navCountries) navCountries.addEventListener('click', () => {
+        if (userRole === 'Admin') {
+            showSection(countriesSection);
+            loadCountries();
+        } else {
+            showMessageBox("You do not have permission to access this section.", false);
+        }
+    });
+    if (navCurrencies) navCurrencies.addEventListener('click', () => {
+        if (userRole === 'Admin') {
+            showSection(currenciesSection);
+            loadCurrencies();
+        } else {
+            showMessageBox("You do not have permission to access this section.", false);
+        }
+    });
+    if (navPriceBooks) navPriceBooks.addEventListener('click', () => {
+        if (userRole === 'Admin') {
+            showSection(priceBooksSection);
+            loadPriceBooks();
+        } else {
+            showMessageBox("You do not have permission to access this section.", false);
+        }
+    });
+    if (googleSignInBtn) googleSignInBtn.addEventListener('click', handleGoogleSignIn);
+    if (navLogout) navLogout.addEventListener('click', handleLogout);
+
+    // Customer Event Listeners
+    if (addCustomerBtn) addCustomerBtn.addEventListener('click', () => setupCustomerForm());
+    if (cancelCustomerBtn) cancelCustomerBtn.addEventListener('click', hideCustomerForm);
+    if (customerForm) customerForm.addEventListener('submit', handleSaveCustomer);
+    if (customerSearchInput) customerSearchInput.addEventListener('input', (event) => { if (customersGrid) customersGrid.search(event.target.value); });
+
+    // Lead Event Listeners
+    if (addLeadBtn) addLeadBtn.addEventListener('click', () => setupLeadForm());
+    if (cancelLeadBtn) cancelLeadBtn.addEventListener('click', hideLeadForm);
+    if (leadForm) leadForm.addEventListener('submit', handleSaveLead);
+    if (leadSearchInput) leadSearchInput.addEventListener('input', (event) => { if (leadsGrid) leadsGrid.search(event.target.value); });
+
+    // Opportunity Event Listeners
+    if (addOpportunityBtn) addOpportunityBtn.addEventListener('click', () => {
+        console.log('Add Opportunity button clicked.');
+        currentOpportunityId = null; // Reset current opportunity being edited
+        setupOpportunityForm(); // This will now correctly handle visibility and initial accordion state
+        console.log('addOpportunityBtn click: currentOpportunityId reset to null.');
+    });
+    if (cancelOpportunityBtn) cancelOpportunityBtn.addEventListener('click', hideOpportunityForm);
+
+    if (opportunityForm) {
+        opportunityForm.addEventListener('submit', handleSaveOpportunity);
+    } else {
+        console.error('ERROR: opportunityForm element not found during initialization, cannot attach submit listener!');
+    }
+
+    // Add listener for currency change to filter price books
+    if (opportunityCurrencySelect) {
+        opportunityCurrencySelect.addEventListener('change', (event) => {
+            filterAndPopulatePriceBooks(event.target.value);
+        });
+    }
+
+    if (opportunitySearchInput) opportunitySearchInput.addEventListener('input', (event) => { if (opportunitiesGrid) opportunitiesGrid.search(event.target.value); });
+
+    // Work Log Event Listeners
+    if (addWorkLogEntryBtn) addWorkLogEntryBtn.addEventListener('click', () => setupWorkLogForm());
+    if (cancelWorkLogBtn) cancelWorkLogBtn.addEventListener('click', hideWorkLogForm);
+    if (workLogForm) workLogForm.addEventListener('submit', handleSaveWorkLog);
+
+    // NEW: Quote Event Listeners
+    if (addQuoteBtn) addQuoteBtn.addEventListener('click', () => setupQuoteForm());
+    if (cancelQuoteBtn) cancelQuoteBtn.addEventListener('click', hideQuoteForm);
+    if (quoteForm) quoteForm.addEventListener('submit', handleSaveQuote);
+    if (quoteOpportunitySelect) quoteOpportunitySelect.addEventListener('change', handleOpportunityChangeForQuote); // Auto-fill customer details
+    if (quoteSearchInput) quoteSearchInput.addEventListener('input', (event) => { if (quotesGrid) quotesGrid.search(event.target.value); });
+
+
+    // Admin Event Listeners
+    if (addCountryBtn) addCountryBtn.addEventListener('click', () => setupCountryForm());
+    if (cancelCountryBtn) cancelCountryBtn.addEventListener('click', hideCountryForm);
+    if (countryForm) countryForm.addEventListener('submit', handleSaveCountry);
+    if (countrySearchInput) countrySearchInput.addEventListener('input', (event) => { if (countriesGrid) countriesGrid.search(event.target.value); });
+
+    if (addCurrencyBtn) addCurrencyBtn.addEventListener('click', () => setupCurrencyForm());
+    if (cancelCurrencyBtn) cancelCurrencyBtn.addEventListener('click', hideCurrencyForm);
+    if (currencyForm) currencyForm.addEventListener('submit', handleSaveCurrency);
+    if (currencySearchInput) currencySearchInput.addEventListener('input', (event) => { if (currenciesGrid) currenciesGrid.search(event.target.value); });
+
+    if (addPriceBookBtn) addPriceBookBtn.addEventListener('click', () => setupPriceBookForm());
+    if (cancelPriceBookBtn) cancelPriceBookBtn.addEventListener('click', hidePriceBookForm);
+    if (priceBookForm) priceBookForm.addEventListener('submit', handleSavePriceBook);
+    if (priceBookSearchInput) priceBookSearchInput.addEventListener('input', (event) => { if (priceBooksGrid) priceBooksGrid.search(event.target.value); });
+
+    // Initial accordion setup
+    setupAccordions();
+}
+
+// Make functions globally accessible for inline onclick attributes (e.g., in Grid.js formatters)
+// These functions are called from HTML generated by Grid.js, so they need to be on the window object.
+window.editCustomer = editCustomer;
+window.deleteCustomer = deleteCustomer;
+window.editLead = editLead;
+window.deleteLead = deleteLead;
+window.editOpportunity = editOpportunity;
+window.deleteOpportunity = deleteOpportunity;
+window.editWorkLog = editWorkLog;
+window.deleteWorkLog = deleteWorkLog;
+window.editCountry = editCountry;
+window.deleteCountry = deleteCountry;
+window.editCurrency = editCurrency;
+window.deleteCurrency = deleteCurrency;
+window.editPriceBook = editPriceBook;
+window.deletePriceBook = deletePriceBook;
+window.editQuote = editQuote;
+window.deleteQuote = deleteQuote;
+window.showMessageBox = showMessageBox;
+window.setupWorkLogForm = setupWorkLogForm;
+window.showWorkLogForm = showWorkLogForm;
