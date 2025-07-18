@@ -531,8 +531,8 @@ async function setupWorkLogForm(workLog = null) {
         document.getElementById('work-log-opportunity-id').value = workLog.opportunityId;
         const logDate = workLog.date ? new Date(workLog.date.seconds * 1000).toISOString().split('T')[0] : '';
         document.getElementById('work-log-date').value = logDate;
-        workLogTypeSelect.value = workLog.type || '';
-        document.getElementById('work-log-details').value = workLog.details || '';
+        workLogTypeSelect.value = log.type || '';
+        document.getElementById('work-log-details').value = log.details || '';
     } else {
         if (workLogForm) workLogForm.reset();
         const workLogIdInput = document.getElementById('work-log-id');
@@ -2757,19 +2757,19 @@ function initializePage() {
     // Log each assignment to verify what document.getElementById returns
     customerContactNameInput = document.getElementById('quote-customer-contact-name');
     console.log('initializePage: Assigned customerContactNameInput:', customerContactNameInput);
-    console.assert(customerContactNameInput !== null, 'ERROR: quote-customer-contact-name element not found!');
+    console.assert(customerContactNameInput !== null, 'ERROR: quote-customer-contact-name element not found! Check HTML ID.');
 
     customerPhoneInput = document.getElementById('quote-customer-phone');
     console.log('initializePage: Assigned customerPhoneInput:', customerPhoneInput);
-    console.assert(customerPhoneInput !== null, 'ERROR: quote-customer-phone element not found!');
+    console.assert(customerPhoneInput !== null, 'ERROR: quote-customer-phone element not found! Check HTML ID.');
 
     customerEmailInput = document.getElementById('quote-customer-email');
     console.log('initializePage: Assigned customerEmailInput:', customerEmailInput);
-    console.assert(customerEmailInput !== null, 'ERROR: quote-customer-email element not found!');
+    console.assert(customerEmailInput !== null, 'ERROR: quote-customer-email element not found! Check HTML ID.');
 
     customerAddressInput = document.getElementById('quote-customer-address');
     console.log('initializePage: Assigned customerAddressInput:', customerAddressInput);
-    console.assert(customerAddressInput !== null, 'ERROR: quote-customer-address element not found!');
+    console.assert(customerAddressInput !== null, 'ERROR: quote-customer-address element not found! Check HTML ID.');
     // --- END CRITICAL ASSIGNMENT ---
 
     quoteStatusSelect = document.getElementById('quote-status');
