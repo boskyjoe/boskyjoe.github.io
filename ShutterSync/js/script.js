@@ -2761,6 +2761,9 @@ function initializePage() {
     quoteForm = document.getElementById('quote-form');
     cancelQuoteBtn = document.getElementById('cancel-quote-btn');
     quotesGridContainer = document.getElementById('quotes-grid-container');
+    
+    console.log('quotesGridContainer assigned:', quotesGridContainer); // <--- ADD THIS LINE
+
     noQuotesMessage = document.getElementById('no-quotes-message');
     quoteSearchInput = document.getElementById('quote-search');
     quoteOpportunitySelect = document.getElementById('quote-opportunity');
