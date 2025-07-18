@@ -1,7 +1,8 @@
-// Firebase imports for ES Modules
+// Firebase imports (keep these, even if not fully used in this debug version)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { getAuth, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, onSnapshot, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
 
 // Firebase configuration: Using the exact configuration provided by the user
 const firebaseConfig = {
@@ -1916,7 +1917,8 @@ async function deleteCountry(countryId) {
         await deleteDoc(doc(db, 'countries', countryId)); // Top-level collection
         showMessageBox("Country deleted successfully!", false);
         await loadCountries();
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error deleting country:", error);
         showMessageBox(`Error deleting country: ${error.message}`, false);
     }
@@ -2299,7 +2301,7 @@ async function deletePriceBook(priceBookId) {
     }
 }
 
-/// --- Quote Logic ---
+// --- Quote Logic ---
 
 async function setupQuoteForm(quote = null) {
     if (!db || !userId) {
@@ -2384,12 +2386,13 @@ async function handleOpportunityChangeForQuote() {
     const selectedOpportunityId = quoteOpportunitySelect.value;
     console.log('handleOpportunityChangeForQuote: Selected Opportunity ID:', selectedOpportunityId);
 
+    // Clear fields immediately when selection changes or is empty
+    customerContactNameInput.value = '';
+    customerPhoneInput.value = '';
+    customerEmailInput.value = '';
+    customerAddressInput.value = '';
+
     if (!selectedOpportunityId) {
-        // Clear fields if no opportunity is selected
-        customerContactNameInput.value = '';
-        customerPhoneInput.value = '';
-        customerEmailInput.value = '';
-        customerAddressInput.value = '';
         console.log('handleOpportunityChangeForQuote: No opportunity selected, clearing customer fields.');
         return;
     }
@@ -2409,6 +2412,7 @@ async function handleOpportunityChangeForQuote() {
                     const customerData = customerDoc.data();
                     console.log('handleOpportunityChangeForQuote: Found Customer Data:', customerData);
 
+                    // Assign values to the input fields
                     customerContactNameInput.value = customerData.name || '';
                     customerPhoneInput.value = customerData.phone || '';
                     customerEmailInput.value = customerData.email || '';
@@ -2423,38 +2427,18 @@ async function handleOpportunityChangeForQuote() {
                 } else {
                     console.warn("handleOpportunityChangeForQuote: Customer not found for selected opportunity:", customerId);
                     showMessageBox("Customer details not found for the selected opportunity. Please ensure the customer exists.", false);
-                    // Clear fields if customer not found
-                    customerContactNameInput.value = '';
-                    customerPhoneInput.value = '';
-                    customerEmailInput.value = '';
-                    customerAddressInput.value = '';
                 }
             } else {
                 console.warn("handleOpportunityChangeForQuote: Selected opportunity has no customerId.");
                 showMessageBox("The selected opportunity is not linked to a customer.", false);
-                // Clear fields if no customerId on opportunity
-                customerContactNameInput.value = '';
-                customerPhoneInput.value = '';
-                customerEmailInput.value = '';
-                customerAddressInput.value = '';
             }
         } else {
             console.warn("handleOpportunityChangeForQuote: Selected opportunity does not exist:", selectedOpportunityId);
             showMessageBox("Selected opportunity does not exist.", false);
-            // Clear fields if opportunity not found
-            customerContactNameInput.value = '';
-            customerPhoneInput.value = '';
-            customerEmailInput.value = '';
-            customerAddressInput.value = '';
         }
     } catch (error) {
         console.error("handleOpportunityChangeForQuote: Error fetching customer details for opportunity:", error);
         showMessageBox(`Error fetching customer details: ${error.message}`, false);
-        // Clear fields on error
-        customerContactNameInput.value = '';
-        customerPhoneInput.value = '';
-        customerEmailInput.value = '';
-        customerAddressInput.value = '';
     }
 }
 
@@ -2756,16 +2740,17 @@ function initializePage() {
     quoteForm = document.getElementById('quote-form');
     cancelQuoteBtn = document.getElementById('cancel-quote-btn');
     quotesGridContainer = document.getElementById('quotes-grid-container');
-    
-    console.log('quotesGridContainer assigned:', quotesGridContainer); // <--- ADD THIS LINE
-
     noQuotesMessage = document.getElementById('no-quotes-message');
     quoteSearchInput = document.getElementById('quote-search');
     quoteOpportunitySelect = document.getElementById('quote-opportunity');
+    
+    // --- CRITICAL: Re-verify these assignments ---
     customerContactNameInput = document.getElementById('customer-contact-name');
     customerPhoneInput = document.getElementById('customer-phone');
     customerEmailInput = document.getElementById('customer-email');
     customerAddressInput = document.getElementById('customer-address');
+    // --- END CRITICAL SECTION ---
+
     quoteStatusSelect = document.getElementById('quote-status');
 
 
@@ -2804,6 +2789,14 @@ function initializePage() {
     opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested');
 
 
+    // --- DEBUGGING: Log the assigned elements for quotes ---
+    console.log('initializePage: customerContactNameInput:', customerContactNameInput);
+    console.log('initializePage: customerPhoneInput:', customerPhoneInput);
+    console.log('initializePage: customerEmailInput:', customerEmailInput);
+    console.log('initializePage: customerAddressInput:', customerAddressInput);
+    // --- END DEBUGGING ---
+
+
     // Setup Auth
     setupAuth();
 
@@ -2825,7 +2818,6 @@ function initializePage() {
         loadOpportunities();
     });
 
-    // --- CRITICAL: Ensure navQuotes is correctly found and listener attached ---
     if (navQuotes) {
         navQuotes.addEventListener('click', () => {
             console.log('Navigating to Quotes section...');
@@ -2834,9 +2826,8 @@ function initializePage() {
         });
         console.log('navQuotes listener attached successfully.');
     } else {
-        console.error('ERROR: navQuotes element not found! Quotes navigation will not work.');
+        console.error('ERROR: navQuotes element not found during initializePage! Quotes navigation will not work.');
     }
-    // --- END CRITICAL SECTION ---
 
     if (navCountries) navCountries.addEventListener('click', () => {
         if (userRole === 'Admin') {
@@ -2935,7 +2926,6 @@ function initializePage() {
 }
 
 // Make functions globally accessible for inline onclick attributes (e.g., in Grid.js formatters)
-// These functions are called from HTML generated by Grid.js, so they need to be on the window object.
 window.editCustomer = editCustomer;
 window.deleteCustomer = deleteCustomer;
 window.editLead = editLead;
