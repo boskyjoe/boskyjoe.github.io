@@ -569,7 +569,7 @@ function hideQuoteForm() {
     const quoteIdInput = document.getElementById('quote-id');
     if (quoteIdInput) quoteIdInput.value = '';
     const quoteFormMessage = document.getElementById('quote-form-message');
-    if (quoteFormMessage) quoteFormFormMessage.classList.add('hidden');
+    if (quoteFormMessage) quoteFormMessage.classList.add('hidden');
     // Clear auto-filled fields
     if (customerContactNameInput) customerContactNameInput.value = '';
     if (customerPhoneInput) customerPhoneInput.value = '';
@@ -2357,10 +2357,11 @@ async function setupQuoteForm(quote = null) {
         document.getElementById('event-name').value = quote.eventName || '';
 
         // Populate customer details from the existing quote data
-        customerContactNameInput.value = quote.customerContactName || '';
-        customerPhoneInput.value = quote.phone || '';
-        customerEmailInput.value = quote.email || '';
-        customerAddressInput.value = quote.customerAddress || '';
+        // Add null checks before setting values
+        if (customerContactNameInput) customerContactNameInput.value = quote.customerContactName || '';
+        if (customerPhoneInput) customerPhoneInput.value = quote.phone || '';
+        if (customerEmailInput) customerEmailInput.value = quote.email || '';
+        if (customerAddressInput) customerAddressInput.value = quote.customerAddress || '';
 
         const eventDate = quote.eventDate ? new Date(quote.eventDate.seconds * 1000).toISOString().split('T')[0] : '';
         document.getElementById('quote-event-date').value = eventDate;
@@ -2373,10 +2374,11 @@ async function setupQuoteForm(quote = null) {
         if (quoteForm) quoteForm.reset();
         document.getElementById('quote-id').value = '';
         // Clear auto-filled fields for new quote
-        customerContactNameInput.value = '';
-        customerPhoneInput.value = '';
-        customerEmailInput.value = '';
-        customerAddressInput.value = '';
+        // Add null checks before setting values
+        if (customerContactNameInput) customerContactNameInput.value = '';
+        if (customerPhoneInput) customerPhoneInput.value = '';
+        if (customerEmailInput) customerEmailInput.value = '';
+        if (customerAddressInput) customerAddressInput.value = '';
         quoteStatusSelect.value = 'Draft'; // Default status for new quotes
     }
     showQuoteForm();
@@ -2391,10 +2393,11 @@ async function handleOpportunityChangeForQuote() {
     console.log('handleOpportunityChangeForQuote: Selected Opportunity ID:', selectedOpportunityId);
 
     // Clear fields immediately when selection changes or is empty
-    customerContactNameInput.value = '';
-    customerPhoneInput.value = '';
-    customerEmailInput.value = '';
-    customerAddressInput.value = '';
+    // Add null checks before attempting to set values
+    if (customerContactNameInput) customerContactNameInput.value = '';
+    if (customerPhoneInput) customerPhoneInput.value = '';
+    if (customerEmailInput) customerEmailInput.value = '';
+    if (customerAddressInput) customerAddressInput.value = '';
 
     if (!selectedOpportunityId) {
         console.log('handleOpportunityChangeForQuote: No opportunity selected, clearing customer fields.');
@@ -2417,16 +2420,17 @@ async function handleOpportunityChangeForQuote() {
                     console.log('handleOpportunityChangeForQuote: Found Customer Data:', customerData);
 
                     // Assign values to the input fields
-                    customerContactNameInput.value = customerData.name || '';
-                    customerPhoneInput.value = customerData.phone || '';
-                    customerEmailInput.value = customerData.email || '';
-                    customerAddressInput.value = customerData.address || '';
+                    // Add null checks before attempting to set values
+                    if (customerContactNameInput) customerContactNameInput.value = customerData.name || '';
+                    if (customerPhoneInput) customerPhoneInput.value = customerData.phone || '';
+                    if (customerEmailInput) customerEmailInput.value = customerData.email || '';
+                    if (customerAddressInput) customerAddressInput.value = customerData.address || '';
 
                     console.log('handleOpportunityChangeForQuote: Populated fields:');
-                    console.log('  Name:', customerContactNameInput.value);
-                    console.log('  Phone:', customerPhoneInput.value);
-                    console.log('  Email:', customerEmailInput.value);
-                    console.log('  Address:', customerAddressInput.value);
+                    console.log('  Name:', customerContactNameInput ? customerContactNameInput.value : 'N/A (null element)');
+                    console.log('  Phone:', customerPhoneInput ? customerPhoneInput.value : 'N/A (null element)');
+                    console.log('  Email:', customerEmailInput ? customerEmailInput.value : 'N/A (null element)');
+                    console.log('  Address:', customerAddressInput ? customerAddressInput.value : 'N/A (null element)');
 
                 } else {
                     console.warn("handleOpportunityChangeForQuote: Customer not found for selected opportunity:", customerId);
@@ -2485,10 +2489,11 @@ async function handleSaveQuote(event) {
         quoteName: document.getElementById('quote-name').value,
         opportunityId: quoteOpportunitySelect.value,
         eventName: document.getElementById('event-name').value,
-        customerContactName: customerContactNameInput.value, // Now reads from the editable field
-        phone: customerPhoneInput.value, // Now reads from the editable field
-        email: customerEmailInput.value, // Now reads from the editable field
-        customerAddress: customerAddressInput.value, // Now reads from the editable field
+        // Add null checks before reading values
+        customerContactName: customerContactNameInput ? customerContactNameInput.value : '',
+        phone: customerPhoneInput ? customerPhoneInput.value : '',
+        email: customerEmailInput ? customerEmailInput.value : '',
+        customerAddress: customerAddressInput ? customerAddressInput.value : '',
         eventDate: eventDateTimestamp,
         additionalDetails: document.getElementById('quote-additional-details').value,
         quoteAmount: parseFloat(document.getElementById('quote-amount').value) || 0,
@@ -2749,10 +2754,22 @@ function initializePage() {
     quoteOpportunitySelect = document.getElementById('quote-opportunity');
     
     // --- CRITICAL: Assign all quote-related input elements using their NEW, UNIQUE IDs ---
+    // Log each assignment to verify what document.getElementById returns
     customerContactNameInput = document.getElementById('quote-customer-contact-name');
+    console.log('initializePage: Assigned customerContactNameInput:', customerContactNameInput);
+    console.assert(customerContactNameInput !== null, 'ERROR: quote-customer-contact-name element not found!');
+
     customerPhoneInput = document.getElementById('quote-customer-phone');
+    console.log('initializePage: Assigned customerPhoneInput:', customerPhoneInput);
+    console.assert(customerPhoneInput !== null, 'ERROR: quote-customer-phone element not found!');
+
     customerEmailInput = document.getElementById('quote-customer-email');
+    console.log('initializePage: Assigned customerEmailInput:', customerEmailInput);
+    console.assert(customerEmailInput !== null, 'ERROR: quote-customer-email element not found!');
+
     customerAddressInput = document.getElementById('quote-customer-address');
+    console.log('initializePage: Assigned customerAddressInput:', customerAddressInput);
+    console.assert(customerAddressInput !== null, 'ERROR: quote-customer-address element not found!');
     // --- END CRITICAL ASSIGNMENT ---
 
     quoteStatusSelect = document.getElementById('quote-status');
@@ -2791,21 +2808,6 @@ function initializePage() {
     opportunityCurrencySelect = document.getElementById('opportunity-currency');
     opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
     opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested');
-
-
-    // --- DEBUGGING: Log the assigned elements for quotes after assignment ---
-    console.log('initializePage: customerContactNameInput (after assignment):', customerContactNameInput);
-    console.assert(customerContactNameInput !== null, 'customerContactNameInput is NULL!');
-
-    console.log('initializePage: customerPhoneInput (after assignment):', customerPhoneInput);
-    console.assert(customerPhoneInput !== null, 'customerPhoneInput is NULL!');
-
-    console.log('initializePage: customerEmailInput (after assignment):', customerEmailInput);
-    console.assert(customerEmailInput !== null, 'customerEmailInput is NULL!');
-
-    console.log('initializePage: customerAddressInput (after assignment):', customerAddressInput);
-    console.assert(customerAddressInput !== null, 'customerAddressInput is NULL!');
-    // --- END DEBUGGING ---
 
 
     // Setup Auth
