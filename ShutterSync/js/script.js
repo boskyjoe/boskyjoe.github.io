@@ -569,7 +569,7 @@ function hideQuoteForm() {
     const quoteIdInput = document.getElementById('quote-id');
     if (quoteIdInput) quoteIdInput.value = '';
     const quoteFormMessage = document.getElementById('quote-form-message');
-    if (quoteFormMessage) quoteFormMessage.classList.add('hidden');
+    if (quoteFormMessage) quoteFormFormMessage.classList.add('hidden');
     // Clear auto-filled fields
     if (customerContactNameInput) customerContactNameInput.value = '';
     if (customerPhoneInput) customerPhoneInput.value = '';
@@ -2396,12 +2396,6 @@ async function handleOpportunityChangeForQuote() {
     customerEmailInput.value = '';
     customerAddressInput.value = '';
 
-    // Remove temporary background colors
-    customerContactNameInput.style.backgroundColor = '';
-    customerPhoneInput.style.backgroundColor = '';
-    customerEmailInput.style.backgroundColor = '';
-    customerAddressInput.style.backgroundColor = '';
-
     if (!selectedOpportunityId) {
         console.log('handleOpportunityChangeForQuote: No opportunity selected, clearing customer fields.');
         return;
@@ -2422,39 +2416,17 @@ async function handleOpportunityChangeForQuote() {
                     const customerData = customerDoc.data();
                     console.log('handleOpportunityChangeForQuote: Found Customer Data:', customerData);
 
-                    // Assign values to the input fields using both .value and setAttribute for inputs
-                    // For textarea, use .value and .textContent
+                    // Assign values to the input fields
                     customerContactNameInput.value = customerData.name || '';
-                    customerContactNameInput.setAttribute('value', customerData.name || '');
-
                     customerPhoneInput.value = customerData.phone || '';
-                    customerPhoneInput.setAttribute('value', customerData.phone || '');
-
                     customerEmailInput.value = customerData.email || '';
-                    customerEmailInput.setAttribute('value', customerData.email || '');
-
                     customerAddressInput.value = customerData.address || '';
-                    customerAddressInput.textContent = customerData.address || ''; // For textarea, textContent also applies
 
-
-                    // --- TEMPORARY VISUAL TEST (re-added) ---
-                    customerContactNameInput.style.backgroundColor = 'red';
-                    customerPhoneInput.style.backgroundColor = 'lime';
-                    customerEmailInput.style.backgroundColor = 'purple';
-                    customerAddressInput.style.backgroundColor = 'orange';
-                    // --- END TEMPORARY VISUAL TEST ---
-
-
-                    console.log('handleOpportunityChangeForQuote: Populated fields (from .value property):');
+                    console.log('handleOpportunityChangeForQuote: Populated fields:');
                     console.log('  Name:', customerContactNameInput.value);
                     console.log('  Phone:', customerPhoneInput.value);
                     console.log('  Email:', customerEmailInput.value);
-                    console.log('  Address:', customerAddressInput.value); // For textarea, .value is preferred
-
-                    // Additional check: Inspect innerHTML of parent div for textarea
-                    if (customerAddressInput.parentElement) {
-                        console.log('handleOpportunityChangeForQuote: Parent of Address Input innerHTML:', customerAddressInput.parentElement.innerHTML);
-                    }
+                    console.log('  Address:', customerAddressInput.value);
 
                 } else {
                     console.warn("handleOpportunityChangeForQuote: Customer not found for selected opportunity:", customerId);
@@ -2473,7 +2445,6 @@ async function handleOpportunityChangeForQuote() {
         showMessageBox(`Error fetching customer details: ${error.message}`, false);
     }
 }
-
 
 
 async function handleSaveQuote(event) {
@@ -2777,11 +2748,11 @@ function initializePage() {
     quoteSearchInput = document.getElementById('quote-search');
     quoteOpportunitySelect = document.getElementById('quote-opportunity');
     
-    // --- CRITICAL: Assign all quote-related input elements here ---
-    customerContactNameInput = document.getElementById('customer-contact-name');
-    customerPhoneInput = document.getElementById('customer-phone');
-    customerEmailInput = document.getElementById('customer-email');
-    customerAddressInput = document.getElementById('customer-address');
+    // --- CRITICAL: Assign all quote-related input elements using their NEW, UNIQUE IDs ---
+    customerContactNameInput = document.getElementById('quote-customer-contact-name');
+    customerPhoneInput = document.getElementById('quote-customer-phone');
+    customerEmailInput = document.getElementById('quote-customer-email');
+    customerAddressInput = document.getElementById('quote-customer-address');
     // --- END CRITICAL ASSIGNMENT ---
 
     quoteStatusSelect = document.getElementById('quote-status');
