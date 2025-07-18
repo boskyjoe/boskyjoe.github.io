@@ -2382,12 +2382,15 @@ async function setupQuoteForm(quote = null) {
  */
 async function handleOpportunityChangeForQuote() {
     const selectedOpportunityId = quoteOpportunitySelect.value;
+    console.log('handleOpportunityChangeForQuote: Selected Opportunity ID:', selectedOpportunityId);
+
     if (!selectedOpportunityId) {
         // Clear fields if no opportunity is selected
         customerContactNameInput.value = '';
         customerPhoneInput.value = '';
         customerEmailInput.value = '';
         customerAddressInput.value = '';
+        console.log('handleOpportunityChangeForQuote: No opportunity selected, clearing customer fields.');
         return;
     }
 
@@ -2396,18 +2399,30 @@ async function handleOpportunityChangeForQuote() {
         if (opportunityDoc.exists()) {
             const opportunityData = opportunityDoc.data();
             const customerId = opportunityData.customerId;
+            console.log('handleOpportunityChangeForQuote: Found Opportunity Data:', opportunityData);
+            console.log('handleOpportunityChangeForQuote: Customer ID from Opportunity:', customerId);
+
 
             if (customerId) {
                 const customerDoc = await getDoc(doc(db, 'customers', customerId));
                 if (customerDoc.exists()) {
                     const customerData = customerDoc.data();
+                    console.log('handleOpportunityChangeForQuote: Found Customer Data:', customerData);
+
                     customerContactNameInput.value = customerData.name || '';
                     customerPhoneInput.value = customerData.phone || '';
                     customerEmailInput.value = customerData.email || '';
                     customerAddressInput.value = customerData.address || '';
+
+                    console.log('handleOpportunityChangeForQuote: Populated fields:');
+                    console.log('  Name:', customerContactNameInput.value);
+                    console.log('  Phone:', customerPhoneInput.value);
+                    console.log('  Email:', customerEmailInput.value);
+                    console.log('  Address:', customerAddressInput.value);
+
                 } else {
-                    console.warn("Customer not found for selected opportunity:", customerId);
-                    showMessageBox("Customer details not found for the selected opportunity.", false);
+                    console.warn("handleOpportunityChangeForQuote: Customer not found for selected opportunity:", customerId);
+                    showMessageBox("Customer details not found for the selected opportunity. Please ensure the customer exists.", false);
                     // Clear fields if customer not found
                     customerContactNameInput.value = '';
                     customerPhoneInput.value = '';
@@ -2415,7 +2430,8 @@ async function handleOpportunityChangeForQuote() {
                     customerAddressInput.value = '';
                 }
             } else {
-                console.warn("Selected opportunity has no customerId.");
+                console.warn("handleOpportunityChangeForQuote: Selected opportunity has no customerId.");
+                showMessageBox("The selected opportunity is not linked to a customer.", false);
                 // Clear fields if no customerId on opportunity
                 customerContactNameInput.value = '';
                 customerPhoneInput.value = '';
@@ -2423,7 +2439,7 @@ async function handleOpportunityChangeForQuote() {
                 customerAddressInput.value = '';
             }
         } else {
-            console.warn("Selected opportunity does not exist:", selectedOpportunityId);
+            console.warn("handleOpportunityChangeForQuote: Selected opportunity does not exist:", selectedOpportunityId);
             showMessageBox("Selected opportunity does not exist.", false);
             // Clear fields if opportunity not found
             customerContactNameInput.value = '';
@@ -2432,7 +2448,7 @@ async function handleOpportunityChangeForQuote() {
             customerAddressInput.value = '';
         }
     } catch (error) {
-        console.error("Error fetching customer details for opportunity:", error);
+        console.error("handleOpportunityChangeForQuote: Error fetching customer details for opportunity:", error);
         showMessageBox(`Error fetching customer details: ${error.message}`, false);
         // Clear fields on error
         customerContactNameInput.value = '';
