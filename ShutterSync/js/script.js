@@ -2320,6 +2320,255 @@ async function deletePriceBook(priceBookId) {
     }
 }
 
+// Part 10: Event Listeners and Global Window Assignments
+
+// --- Event Listeners ---
+document.addEventListener('DOMContentLoaded', initializePage);
+
+function initializePage() {
+    console.log('DOMContentLoaded: Initializing page.');
+
+    // Assign DOM elements here to ensure they are available
+    authSection = document.getElementById('auth-section');
+    dashboardSection = document.getElementById('dashboard-section');
+    customersSection = document.getElementById('customers-section');
+    leadsSection = document.getElementById('leads-section');
+    opportunitiesSection = document.getElementById('opportunities-section');
+    countriesSection = document.getElementById('countries-section');
+    currenciesSection = document.getElementById('currencies-section');
+    priceBooksSection = document.getElementById('price-books-section');
+
+    navDashboard = document.getElementById('nav-dashboard');
+    navCustomers = document.getElementById('nav-customers');
+    navLeads = document.getElementById('nav-leads');
+    navOpportunities = document.getElementById('nav-opportunities');
+    navCountries = document.getElementById('nav-countries');
+    navCurrencies = document.getElementById('nav-currencies');
+    navPriceBooks = document.getElementById('nav-price-books');
+    navLogout = document.getElementById('nav-logout');
+    adminMenuItem = document.getElementById('admin-menu-item');
+
+    googleSignInBtn = document.getElementById('google-signin-btn');
+    authStatus = document.getElementById('auth-status');
+    userDisplayName = document.getElementById('user-display-name');
+    userIdDisplay = document.getElementById('user-id-display');
+    userRoleDisplay = document.getElementById('user-role');
+    authErrorMessage = document.getElementById('auth-error-message');
+
+    dashboardTotalCustomers = document.getElementById('dashboard-total-customers');
+    dashboardTotalOpportunities = document.getElementById('dashboard-total-opportunities');
+    dashboardOpenOpportunities = document.getElementById('dashboard-open-opportunities');
+    dashboardWonOpportunities = document.getElementById('dashboard-won-opportunities');
+
+    addCustomerBtn = document.getElementById('add-customer-btn');
+    customerFormContainer = document.getElementById('customer-form-container');
+    customerForm = document.getElementById('customer-form');
+    cancelCustomerBtn = document.getElementById('cancel-customer-btn');
+    customersGridContainer = document.getElementById('customers-grid-container');
+    noCustomersMessage = document.getElementById('no-customers-message');
+    customerSearchInput = document.getElementById('customer-search');
+
+    addLeadBtn = document.getElementById('add-lead-btn');
+    leadFormContainer = document.getElementById('lead-form-container');
+    leadForm = document.getElementById('lead-form');
+    cancelLeadBtn = document.getElementById('cancel-lead-btn');
+    leadsGridContainer = document.getElementById('leads-grid-container');
+    noLeadsMessage = document.getElementById('no-leads-message');
+    leadSearchInput = document.getElementById('lead-search');
+    leadServicesInterestedSelect = document.getElementById('lead-services-interested'); // NEW: Assign multi-select for Leads
+
+    addOpportunityBtn = document.getElementById('add-opportunity-btn');
+    opportunityFormContainer = document.getElementById('opportunity-form-container');
+    opportunityForm = document.getElementById('opportunity-form');
+    cancelOpportunityBtn = document.getElementById('cancel-opportunity-btn');
+    opportunitiesGridContainer = document.getElementById('opportunities-grid-container');
+    noOpportunitiesMessage = document.getElementById('no-opportunities-message');
+    opportunitySearchInput = document.getElementById('opportunity-search');
+
+    workLogsSectionContainer = document.getElementById('work-logs-section-container'); // Assigned here
+    addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
+    workLogFormContainer = document.getElementById('work-log-form-container');
+    workLogForm = document.getElementById('work-log-form');
+    cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
+    workLogsList = document.getElementById('work-logs-list');
+    noWorkLogsMessage = document.getElementById('no-work-logs-message');
+    workLogTypeSelect = document.getElementById('work-log-type'); // Assigned here
+
+    addCountryBtn = document.getElementById('add-country-btn');
+    countryFormContainer = document.getElementById('country-form-container');
+    countryForm = document.getElementById('country-form');
+    cancelCountryBtn = document.getElementById('cancel-country-btn');
+    countriesGridContainer = document.getElementById('countries-grid-container');
+    noCountriesMessage = document.getElementById('no-countries-message');
+    countrySearchInput = document.getElementById('country-search');
+
+    addCurrencyBtn = document.getElementById('add-currency-btn');
+    currencyFormContainer = document.getElementById('currency-form-container');
+    currencyForm = document.getElementById('currency-form');
+    cancelCurrencyBtn = document.getElementById('cancel-currency-btn');
+    currenciesGridContainer = document.getElementById('currencies-grid-container');
+    noCurrenciesMessage = document.getElementById('no-currencies-message');
+    currencySearchInput = document.getElementById('currency-search');
+
+    addPriceBookBtn = document.getElementById('add-price-book-btn');
+    priceBookFormContainer = document.getElementById('price-book-form-container');
+    priceBookForm = document.getElementById('price-book-form');
+    cancelPriceBookBtn = document.getElementById('cancel-price-book-btn');
+    priceBooksGridContainer = document.getElementById('price-books-grid-container');
+    noPriceBooksMessage = document.getElementById('no-price-books-message');
+    priceBookSearchInput = document.getElementById('price-book-search');
+
+    messageBox = document.getElementById('message-box');
+    messageContent = document.getElementById('message-content');
+    messageConfirmBtn = document.getElementById('message-confirm-btn');
+    messageCancelBtn = document.getElementById('message-cancel-btn');
+
+    // Assign opportunity specific dropdowns
+    opportunityCurrencySelect = document.getElementById('opportunity-currency');
+    opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
+    opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested'); // For Opportunities: multi-select
+
+
+    // --- NEW DIAGNOSTIC LOG ---
+    console.log('initializePage: opportunityForm element at start (after assignment):', opportunityForm);
+    // --- END NEW DIAGNOSTIC LOG ---
+
+    // Setup Auth
+    setupAuth(); // This will now handle the correct login flow
+
+    // Navigation Event Listeners (ensure elements exist before adding listeners)
+    if (navDashboard) navDashboard.addEventListener('click', () => {
+        showSection(dashboardSection);
+        updateDashboard();
+    });
+    if (navCustomers) navCustomers.addEventListener('click', () => {
+        showSection(customersSection);
+        loadCustomers();
+    });
+    if (navLeads) navLeads.addEventListener('click', () => {
+        showSection(leadsSection);
+        loadLeads();
+    });
+    if (navOpportunities) navOpportunities.addEventListener('click', () => {
+        showSection(opportunitiesSection);
+        loadOpportunities();
+    });
+    if (navCountries) navCountries.addEventListener('click', () => {
+        if (userRole === 'Admin') { // Check for 'Admin' role
+            showSection(countriesSection);
+            loadCountries();
+        } else {
+            showMessageBox("You do not have permission to access this section.", false);
+        }
+    });
+    if (navCurrencies) navCurrencies.addEventListener('click', () => {
+        if (userRole === 'Admin') { // Check for 'Admin' role
+            showSection(currenciesSection);
+            loadCurrencies();
+        } else {
+            showMessageBox("You do not have permission to access this section.", false);
+        }
+    });
+    if (navPriceBooks) navPriceBooks.addEventListener('click', () => {
+        if (userRole === 'Admin') { // Check for 'Admin' role
+            showSection(priceBooksSection);
+            loadPriceBooks();
+        } else {
+            showMessageBox("You do not have permission to access this section.", false);
+        }
+    });
+    if (googleSignInBtn) googleSignInBtn.addEventListener('click', handleGoogleSignIn);
+    if (navLogout) navLogout.addEventListener('click', handleLogout);
+
+    // Customer Event Listeners
+    if (addCustomerBtn) addCustomerBtn.addEventListener('click', () => setupCustomerForm());
+    if (cancelCustomerBtn) cancelCustomerBtn.addEventListener('click', hideCustomerForm);
+    if (customerForm) customerForm.addEventListener('submit', handleSaveCustomer);
+    if (customerSearchInput) customerSearchInput.addEventListener('input', (event) => { if (customersGrid) customersGrid.search(event.target.value); });
+
+    // Lead Event Listeners
+    if (addLeadBtn) addLeadBtn.addEventListener('click', () => setupLeadForm());
+    if (cancelLeadBtn) cancelLeadBtn.addEventListener('click', hideLeadForm);
+    if (leadForm) leadForm.addEventListener('submit', handleSaveLead);
+    if (leadSearchInput) leadSearchInput.addEventListener('input', (event) => { if (leadsGrid) leadsGrid.search(event.target.value); });
+
+    // Opportunity Event Listeners
+    if (addOpportunityBtn) addOpportunityBtn.addEventListener('click', () => {
+        console.log('Add Opportunity button clicked.');
+        currentOpportunityId = null; // Reset current opportunity being edited
+        setupOpportunityForm(); // This will now correctly handle visibility and initial accordion state
+        console.log('addOpportunityBtn click: currentOpportunityId reset to null.');
+    });
+    if (cancelOpportunityBtn) cancelOpportunityBtn.addEventListener('click', hideOpportunityForm);
+
+    // --- DIAGNOSTIC LOGS FOR OPPORTUNITY FORM SUBMISSION ---
+    console.log('Attempting to attach submit listener to opportunityForm...');
+    console.log('opportunityForm element (before listener attachment):', opportunityForm); // Check if element is found
+
+    if (opportunityForm) {
+        opportunityForm.addEventListener('submit', handleSaveOpportunity);
+        console.log('Successfully attached submit listener to opportunityForm.');
+    } else {
+        console.error('ERROR: opportunityForm element not found during initialization, cannot attach submit listener!');
+    }
+    // --- END DIAGNOSTIC LOGS ---
+
+    // New: Add listener for currency change to filter price books
+    if (opportunityCurrencySelect) {
+        opportunityCurrencySelect.addEventListener('change', (event) => {
+            filterAndPopulatePriceBooks(event.target.value);
+        });
+    }
+
+
+    if (opportunitySearchInput) opportunitySearchInput.addEventListener('input', (event) => { if (opportunitiesGrid) opportunitiesGrid.search(event.target.value); });
+
+    // Work Log Event Listeners
+    if (addWorkLogEntryBtn) addWorkLogEntryBtn.addEventListener('click', () => setupWorkLogForm()); // Call setupWorkLogForm
+    if (cancelWorkLogBtn) cancelWorkLogBtn.addEventListener('click', hideWorkLogForm);
+    if (workLogForm) workLogForm.addEventListener('submit', handleSaveWorkLog);
+
+    // Admin Event Listeners
+    if (addCountryBtn) addCountryBtn.addEventListener('click', () => setupCountryForm());
+    if (cancelCountryBtn) cancelCountryBtn.addEventListener('click', hideCountryForm);
+    if (countryForm) countryForm.addEventListener('submit', handleSaveCountry);
+    if (countrySearchInput) countrySearchInput.addEventListener('input', (event) => { if (countriesGrid) countriesGrid.search(event.target.value); });
+
+    if (addCurrencyBtn) addCurrencyBtn.addEventListener('click', () => setupCurrencyForm());
+    if (cancelCurrencyBtn) cancelCurrencyBtn.addEventListener('click', hideCurrencyForm);
+    if (currencyForm) currencyForm.addEventListener('submit', handleSaveCurrency);
+    if (currencySearchInput) currencySearchInput.addEventListener('input', (event) => { if (currenciesGrid) currenciesGrid.search(event.target.value); });
+
+    if (addPriceBookBtn) addPriceBookBtn.addEventListener('click', () => setupPriceBookForm());
+    if (cancelPriceBookBtn) cancelPriceBookBtn.addEventListener('click', hidePriceBookForm);
+    if (priceBookForm) priceBookForm.addEventListener('submit', handleSavePriceBook);
+    if (priceBookSearchInput) priceBookBookSearchInput.addEventListener('input', (event) => { if (priceBooksGrid) priceBooksGrid.search(event.target.value); });
+
+    // Initial accordion setup
+    setupAccordions();
+}
+
+// Make functions globally accessible for inline onclick attributes (e.g., in Grid.js formatters)
+// These functions are called from HTML generated by Grid.js, so they need to be on the window object.
+window.editCustomer = editCustomer;
+window.deleteCustomer = deleteCustomer;
+window.editLead = editLead;
+window.deleteLead = deleteLead;
+window.editOpportunity = editOpportunity;
+window.deleteOpportunity = deleteOpportunity;
+window.editWorkLog = editWorkLog;
+window.deleteWorkLog = deleteWorkLog;
+window.editCountry = editCountry;
+window.deleteCountry = deleteCountry;
+window.editCurrency = editCurrency;
+window.deleteCurrency = deleteCurrency;
+window.editPriceBook = editPriceBook;
+window.deletePriceBook = deletePriceBook;
+window.showMessageBox = showMessageBox; // Make showMessageBox globally available
+window.setupWorkLogForm = setupWorkLogForm; // Make setupWorkLogForm globally available
+window.showWorkLogForm = showWorkLogForm; // Make showWorkLogForm globally available
+
+
 // Part 11: New Quote Logic
 
 // --- Quote Logic ---
