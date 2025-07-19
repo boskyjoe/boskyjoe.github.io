@@ -471,6 +471,27 @@
                                 <input type="number" id="opportunity-value" step="0.01" min="0" required
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             </div>
+                            
+                            <!-- New Fields for Opportunity Discount, Adjustment Amt, and Net -->
+                            <div class="mb-4">
+                                <label for="opportunity-discount" class="block text-sm font-medium text-gray-700">Opportunity Discount%</label>
+                                <input type="number" step="0.01" id="opportunity-discount" name="discount" value="0" min="0" max="100"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            </div>
+                            <div class="mb-4">
+                                <label for="adjustment-amt" class="block text-sm font-medium text-gray-700">Adjustment Amt</label>
+                                <input type="number" step="0.01" id="adjustment-amt" name="adjustmentAmt" value="0"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            </div>
+                            <div class="mb-4">
+                                <label for="opportunity-net" class="block text-sm font-medium text-gray-700">Opportunity Net</label>
+                                <span id="opportunity-net"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-md shadow-sm sm:text-sm">0.00</span>
+                            </div>
+                            <!-- End New Fields -->
+
+
+                            
                             <div>
                                 <label for="opportunity-notes"
                                     class="block text-sm font-medium text-gray-700">Notes</label>
