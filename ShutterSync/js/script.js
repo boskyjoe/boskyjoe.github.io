@@ -1608,9 +1608,19 @@ function renderOpportunitiesGrid(opportunities) {
         if (opportunitiesGridContainer) {
             opportunitiesGrid = new gridjs.Grid({
                 columns: [
+                    { name: 'Opportunity Name', width: '12%' },
+                    { name: 'Customer', width: '12%' },
+                    { name: 'Services', width: '15%' },
+                    { name: 'Value', width: '8%' },
+                    { name: 'Discount', width: '7%' }, // NEW
+                    { name: 'Adjustment', width: '8%' }, // NEW
+                    { name: 'Net', width: '8%' }, // NEW
+                    { name: 'Stage', width: '8%' },
+                    { name: 'Probability', width: '5%' },
+                    { name: 'Close Date', width: '8%' },
                     {
                         name: 'Quotes', // New column for quote count
-                        width: 'auto',
+                        width: '5%',
                         formatter: (quoteCount, row) => {
                             const opportunityId = row.cells[11].data; // ID is the last cell
                             const opportunityName = row.cells[0].data; // Name is the first cell
@@ -1625,16 +1635,6 @@ function renderOpportunitiesGrid(opportunities) {
                         },
                         sort: false,
                     },
-                    { name: 'Opportunity Name', width: 'auto' },
-                    { name: 'Customer', width: 'auto' },
-                    { name: 'Services', width: '15%' },
-                    { name: 'Value', width: 'auto' },
-                    { name: 'Discount', width: 'auto' }, // NEW
-                    { name: 'Adjustment', width: 'auto' }, // NEW
-                    { name: 'Net', width: 'auto' }, // NEW
-                    { name: 'Stage', width: '8%' },
-                    { name: 'Probability', width: '5%' },
-                    { name: 'Close Date', width: '8%' },
                     {
                         name: 'Actions',
                         width: '10%',
