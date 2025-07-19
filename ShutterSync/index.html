@@ -374,6 +374,7 @@
             <div id="leads-grid-container" class="mt-6"></div>
         </section>
 
+
         <!-- Opportunities Section -->
         <section id="opportunities-section" class="hidden">
             <h2 class="text-3xl font-bold text-gray-800 mb-6">Opportunities</h2>
@@ -455,6 +456,17 @@
                                     <option value="Lost">Lost</option>
                                 </select>
                             </div>
+                            <!-- NEW FIELD: Services Interested Multi-select -->
+                            <div class="mt-4">
+                                <label for="opportunity-services-interested"
+                                    class="block text-sm font-medium text-gray-700">Services Interested <span
+                                        class="text-red-500">*</span></label>
+                                <select id="opportunity-services-interested" name="servicesInterested" multiple required
+                                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md h-32">
+                                    <!-- Options will be populated by JS -->
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
+                            </div>
                             <div>
                                 <label for="opportunity-probability"
                                     class="block text-sm font-medium text-gray-700">Probability (%)</label>
@@ -491,16 +503,7 @@
                             </div>
                             <!-- End New Fields -->
 
-                            <div class="col-span-full"> <!-- Make this span full width in grid -->
-                                <label for="opportunity-services-interested"
-                                    class="block text-sm font-medium text-gray-700">Services Interested <span
-                                        class="text-red-500">*</span></label>
-                                <select id="opportunity-services-interested" name="servicesInterested" multiple required
-                                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md h-32">
-                                    <!-- Options will be populated by JS -->
-                                </select>
-                                <p class="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
-                            </div>
+
                             <div class="col-span-full"> <!-- Make this span full width in grid -->
                                 <label for="opportunity-notes"
                                     class="block text-sm font-medium text-gray-700">Notes</label>
@@ -521,8 +524,8 @@
                 </form>
             </div>
 
-            <!-- Work Logs Accordion - Added mt-6 for gap -->
-            <div id="work-logs-section-container" class="accordion-item bg-white rounded-lg shadow-md mt-6">
+            <!-- Work Logs Accordion - Added mt-6 for gap and 'hidden' class for default state -->
+            <div id="work-logs-section-container" class="accordion-item bg-white rounded-lg shadow-md mt-6 hidden">
                 <div
                     class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200">
                     <h3 class="text-lg font-semibold text-gray-800">Work Logs</h3>
