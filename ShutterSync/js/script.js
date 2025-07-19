@@ -453,6 +453,36 @@ function setupAccordions() {
     });
 }
 
+/**
+ * Sets the visual state of an accordion (content visibility and icon rotation).
+ * @param {HTMLElement} accordionHeader - The header element of the accordion.
+ * @param {boolean} isOpen - True to open (show content, arrow down), false to close (hide content, arrow up).
+ */
+function setAccordionVisualState(accordionHeader, isOpen) {
+    if (!accordionHeader) {
+        console.warn("setAccordionVisualState: accordionHeader is null.");
+        return;
+    }
+    const content = accordionHeader.nextElementSibling;
+    const icon = accordionHeader.querySelector('.accordion-icon');
+
+    if (!content || !icon) {
+        console.warn("setAccordionVisualState: Could not find content or icon for header.", accordionHeader);
+        return;
+    }
+
+    if (isOpen) {
+        content.classList.remove('hidden');
+        icon.style.transform = 'rotate(0deg)'; // Down arrow for open state
+        accordionHeader.classList.add('expanded');
+    } else {
+        content.classList.add('hidden');
+        icon.style.transform = 'rotate(180deg)'; // Up arrow for closed state
+        accordionHeader.classList.remove('expanded');
+    }
+    console.log(`Accordion state set for ${accordionHeader.textContent.trim()}: ${isOpen ? 'OPEN' : 'CLOSED'}`);
+}
+
 function toggleAccordion(event) {
     const header = event.currentTarget;
     const content = header.nextElementSibling;
@@ -1349,38 +1379,16 @@ async function setupOpportunityForm(opportunity = null) {
             mainOpportunityDetailsAccordion.classList.remove('md:col-span-full'); // Main details takes half width
             // Ensure Main Details accordion is OPEN (right arrow rotated down)
             const mainDetailsHeader = mainOpportunityDetailsAccordion.querySelector('.accordion-header');
-            const mainDetailsContent = mainDetailsHeader ? mainDetailsHeader.nextElementSibling : null;
-            const mainDetailsIcon = mainDetailsHeader ? mainDetailsHeader.querySelector('.accordion-icon') : null;
-
-            if (mainDetailsContent) {
-                mainDetailsContent.classList.remove('hidden');
-                if (mainDetailsIcon) {
-                    mainDetailsIcon.style.transform = 'rotate(0deg)'; // Down arrow for open
-                }
-                if (mainDetailsHeader) {
-                    mainDetailsHeader.classList.add('expanded');
-                }
-            }
+            setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
         }
 
         // Show work logs section when editing/viewing an opportunity
         if (workLogsSectionContainer) {
             workLogsSectionContainer.classList.remove('hidden');// Show work logs
             // Ensure Work Logs accordion is minimized when loading an existing opportunity
-            const workLogsAccordionHeader = document.querySelector('#work-logs-section-container .accordion-item .accordion-header');
-            const workLogsAccordionContent = workLogsAccordionHeader ? workLogsAccordionHeader.nextElementSibling : null;
-            const workLogsIcon = workLogsAccordionHeader ? workLogsAccordionHeader.querySelector('.accordion-icon') : null;
-
-            if (workLogsAccordionContent) {
-                workLogsAccordionContent.classList.add('hidden');
-                if (workLogsIcon) {
-                    workLogsIcon.style.transform = 'rotate(180deg)'; // Up arrow for closed
-                }
-                if (workLogsAccordionHeader) {
-                    workLogsAccordionHeader.classList.remove('expanded');
-                }
-                console.log('  Work Logs Accordion: Minimized on existing opportunity load.');
-            }
+            // Explicitly set Work Logs accordion to CLOSED
+            const workLogsAccordionHeader = workLogsSectionContainer.querySelector('.accordion-header');
+            setAccordionVisualState(workLogsAccordionHeader, false); // False for CLOSED
         }
         await loadWorkLogs(opportunityData.id); // Load work logs for this opportunity
         // --- End Layout Adjustment for EDIT mode ---
@@ -1402,22 +1410,9 @@ async function setupOpportunityForm(opportunity = null) {
         if (mainOpportunityDetailsAccordion) {
             mainOpportunityDetailsAccordion.classList.add('md:col-span-full'); // Main details spans full width
 
-            // Ensure Main Details accordion is OPEN (arrow pointing DOWN)
+            // Explicitly set Main Details accordion to OPEN
             const mainDetailsHeader = mainOpportunityDetailsAccordion.querySelector('.accordion-header');
-            const mainDetailsContent = mainDetailsHeader ? mainDetailsHeader.nextElementSibling : null;
-            const mainDetailsIcon = mainDetailsHeader ? mainDetailsHeader.querySelector('.accordion-icon') : null;
-
-            if (mainDetailsContent) {
-                mainDetailsContent.classList.remove('hidden');
-                if (mainDetailsIcon) {
-                    mainDetailsIcon.style.transform = 'rotate(0deg)'; // Down arrow for open
-                }
-                if (mainDetailsHeader) {
-                    mainDetailsHeader.classList.add('expanded');
-                }
-            }
-
-
+            setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
         }
         // --- End Layout Adjustment for ADD mode ---
 
