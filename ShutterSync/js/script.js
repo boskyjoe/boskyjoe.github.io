@@ -170,6 +170,12 @@ let opportunityPriceBookSelect; // Added for easy access
 let opportunityServicesInterestedSelect; // For Opportunities: multi-select
 let leadServicesInterestedSelect; // For Leads: multi-select
 
+// NEW: Opportunity form calculation fields
+let opportunityValueInput;
+let opportunityDiscountInput;
+let adjustmentAmtInput;
+let opportunityNetDisplay;
+
 
 /**
  * Shows a custom message box (modal).
@@ -1216,6 +1222,22 @@ async function deleteLead(leadId) {
 // --- Opportunity Logic ---
 
 /**
+ * Calculates the Opportunity Net based on Value, Discount, and Adjustment.
+ * Formula: Opportunity Net = (Value - (Value * (Opportunity Discount / 100))) - Adjustment Amt
+ */
+function calculateOpportunityNet() {
+    const value = parseFloat(opportunityValueInput.value) || 0;
+    const discount = parseFloat(opportunityDiscountInput.value) || 0;
+    const adjustment = parseFloat(adjustmentAmtInput.value) || 0;
+
+    let net = value - (value * (discount / 100));
+    net = net - adjustment;
+
+    // Ensure net is not negative and format to 2 decimal places
+    opportunityNetDisplay.textContent = Math.max(0, net).toFixed(2);
+}
+
+/**
  * Filters price books based on the selected currency and populates the dropdown.
  * @param {string} selectedCurrencyCode - The currency code to filter by.
  * @param {string|null} currentPriceBookId - The ID of the price book to select after filtering, if any.
@@ -1311,6 +1333,14 @@ async function setupOpportunityForm(opportunity = null) {
         document.getElementById('opportunity-value').value = opportunityData.value !== undefined ? opportunityData.value : '';
         document.getElementById('opportunity-notes').value = opportunityData.notes || '';
 
+        // NEW: Populate new opportunity fields
+        opportunityDiscountInput.value = opportunityData.opportunityDiscount !== undefined ? opportunityData.opportunityDiscount : 0;
+        adjustmentAmtInput.value = opportunityData.adjustmentAmt !== undefined ? opportunityData.adjustmentAmt : 0;
+        // opportunityNetDisplay will be calculated by calculateOpportunityNet()
+
+        // Call calculateOpportunityNet after all relevant fields are populated
+        calculateOpportunityNet();
+
         await loadWorkLogs(opportunityData.id); // Load work logs for this opportunity
         // Show work logs section when editing/viewing an opportunity
         if (workLogsSectionContainer) {
@@ -1344,6 +1374,11 @@ async function setupOpportunityForm(opportunity = null) {
         if (workLogsSectionContainer) workLogsSectionContainer.classList.add('hidden');
         // For new opportunities, populate price books with all active ones initially
         filterAndPopulatePriceBooks(''); // Pass empty string to show all active price books
+
+        // NEW: Reset new opportunity fields to default for new record
+        opportunityDiscountInput.value = 0;
+        adjustmentAmtInput.value = 0;
+        calculateOpportunityNet(); // Calculate initial net
     }
     showOpportunityForm(); // Call showOpportunityForm to handle main form visibility and its accordion
     console.log('Add/Edit Opportunity form setup complete. currentOpportunityId:', currentOpportunityId);
@@ -1417,6 +1452,16 @@ async function handleSaveOpportunity(event) {
     const expectedCloseDateValue = document.getElementById('opportunity-close-date').value;
     const expectedCloseDateTimestamp = expectedCloseDateValue ? new Date(expectedCloseDateValue) : null;
 
+    // NEW: Get values for discount and adjustment
+    const opportunityValue = parseFloat(opportunityValueInput.value) || 0;
+    const opportunityDiscount = parseFloat(opportunityDiscountInput.value) || 0;
+    const adjustmentAmt = parseFloat(adjustmentAmtInput.value) || 0;
+
+    // NEW: Calculate Opportunity Net based on the formula
+    let opportunityNet = opportunityValue - (opportunityValue * (opportunityDiscount / 100));
+    opportunityNet = opportunityNet - adjustmentAmt;
+    opportunityNet = Math.max(0, opportunityNet); // Ensure it's not negative
+
     const opportunityData = {
         name: document.getElementById('opportunity-name').value,
         customerId: customerId,
@@ -1427,7 +1472,10 @@ async function handleSaveOpportunity(event) {
         expectedCloseDate: expectedCloseDateTimestamp, // Save as Date object (Firestore converts to Timestamp)
         salesStage: document.getElementById('opportunity-sales-stage').value,
         probability: parseFloat(document.getElementById('opportunity-probability').value) || 0,
-        value: parseFloat(document.getElementById('opportunity-value').value) || 0,
+        value: opportunityValue, // Use parsed value
+        opportunityDiscount: opportunityDiscount, // NEW
+        adjustmentAmt: adjustmentAmt, // NEW
+        opportunityNet: opportunityNet, // NEW (calculated)
         notes: document.getElementById('opportunity-notes').value,
         servicesInterested: selectedServices, // NEW: Add selected services
         creatorId: userId, // Added creatorId as per rules
@@ -1518,6 +1566,9 @@ function renderOpportunitiesGrid(opportunities) {
         opportunity.customerName, // Display fetched customer name
         opportunity.servicesInterestedDisplay, // NEW: Column for services
         `${opportunity.currency} ${opportunity.value !== undefined ? opportunity.value.toFixed(2) : 'N/A'}`, // Handle undefined value
+        `${opportunity.opportunityDiscount !== undefined ? opportunity.opportunityDiscount.toFixed(2) : 'N/A'}%`, // NEW: Discount
+        `${opportunity.adjustmentAmt !== undefined ? opportunity.adjustmentAmt.toFixed(2) : 'N/A'}`, // NEW: Adjustment Amt
+        `${opportunity.opportunityNet !== undefined ? opportunity.opportunityNet.toFixed(2) : 'N/A'}`, // NEW: Opportunity Net
         opportunity.salesStage,
         `${opportunity.probability !== undefined ? opportunity.probability : 'N/A'}%`, // Handle undefined probability
         opportunity.expectedCloseDate,
@@ -1529,18 +1580,21 @@ function renderOpportunitiesGrid(opportunities) {
         if (opportunitiesGridContainer) {
             opportunitiesGrid = new gridjs.Grid({
                 columns: [
-                    { name: 'Opportunity Name', width: '15%' },
-                    { name: 'Customer', width: '15%' },
-                    { name: 'Services', width: '20%' }, // NEW: Column for services
-                    { name: 'Value', width: '10%' },
-                    { name: 'Stage', width: '10%' },
+                    { name: 'Opportunity Name', width: '12%' },
+                    { name: 'Customer', width: '12%' },
+                    { name: 'Services', width: '15%' },
+                    { name: 'Value', width: '8%' },
+                    { name: 'Discount', width: '7%' }, // NEW
+                    { name: 'Adjustment', width: '8%' }, // NEW
+                    { name: 'Net', width: '8%' }, // NEW
+                    { name: 'Stage', width: '8%' },
                     { name: 'Probability', width: '5%' },
-                    { name: 'Close Date', width: '10%' },
+                    { name: 'Close Date', width: '8%' },
                     {
                         name: 'Quotes', // New column for quote count
                         width: '5%',
                         formatter: (quoteCount, row) => {
-                            const opportunityId = row.cells[8].data; // ID is the last cell
+                            const opportunityId = row.cells[11].data; // ID is the last cell
                             const opportunityName = row.cells[0].data; // Name is the first cell
                             if (quoteCount > 0) {
                                 return gridjs.h('button', {
@@ -1557,9 +1611,9 @@ function renderOpportunitiesGrid(opportunities) {
                         name: 'Actions',
                         width: '10%',
                         formatter: (cell, row) => {
-                            const opportunityId = row.cells[8].data; // ID is the last cell
-                            const salesStage = row.cells[4].data; // Sales Stage is the 5th cell (index 4)
-                            const quoteCount = row.cells[7].data; // Quote Count is the 8th cell (index 7)
+                            const opportunityId = row.cells[11].data; // ID is the last cell
+                            const salesStage = row.cells[7].data; // Sales Stage is the 8th cell (index 7)
+                            const quoteCount = row.cells[10].data; // Quote Count is the 11th cell (index 10)
 
                             const isWon = salesStage === 'Won';
                             const hasQuotes = quoteCount >= 1;
@@ -2780,7 +2834,8 @@ async function deleteQuote(quoteId) {
         await deleteDoc(doc(db, 'quotes', quoteId));
         showMessageBox("Quote deleted successfully!", false);
         await loadQuotes();
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error deleting quote:", error);
         showMessageBox(`Error deleting quote: ${error.message}`, false);
     }
@@ -2851,6 +2906,13 @@ function initializePage() {
     opportunitiesGridContainer = document.getElementById('opportunities-grid-container');
     noOpportunitiesMessage = document.getElementById('no-opportunities-message');
     opportunitySearchInput = document.getElementById('opportunity-search');
+
+    // NEW: Assign opportunity calculation fields
+    opportunityValueInput = document.getElementById('opportunity-value');
+    opportunityDiscountInput = document.getElementById('opportunity-discount');
+    adjustmentAmtInput = document.getElementById('adjustment-amt');
+    opportunityNetDisplay = document.getElementById('opportunity-net');
+
 
     workLogsSectionContainer = document.getElementById('work-logs-section-container');
     addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
@@ -3023,6 +3085,12 @@ function initializePage() {
             filterAndPopulatePriceBooks(event.target.value);
         });
     }
+
+    // NEW: Add event listeners for opportunity net calculation
+    if (opportunityValueInput) opportunityValueInput.addEventListener('input', calculateOpportunityNet);
+    if (opportunityDiscountInput) opportunityDiscountInput.addEventListener('input', calculateOpportunityNet);
+    if (adjustmentAmtInput) adjustmentAmtInput.addEventListener('input', calculateOpportunityNet);
+
 
     if (opportunitySearchInput) opportunitySearchInput.addEventListener('input', (event) => { if (opportunitiesGrid) opportunitiesGrid.search(event.target.value); });
 
