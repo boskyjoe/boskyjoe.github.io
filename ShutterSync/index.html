@@ -397,10 +397,10 @@
                             <div
                                 class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200">
                                 <h3 class="text-lg font-semibold text-gray-800">Main Details</h3>
-                                <!-- Default icon is DOWN, but initially rotated UP (180deg) for closed state -->
-                                <span class="accordion-icon transform transition-transform duration-200"
-                                    style="transform: rotate(180deg);">&#9660;</span>
+                                <!-- Default icon is DOWN (&#9660;), JS will rotate to UP when closed -->
+                                <span class="accordion-icon transform transition-transform duration-200">&#9660;</span>
                             </div>
+                            <!-- Content starts hidden, JS will open it and set icon -->
                             <div class="accordion-content hidden pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label for="opportunity-name"
@@ -523,9 +523,8 @@
                             <div
                                 class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200">
                                 <h3 class="text-lg font-semibold text-gray-800">Work Logs</h3>
-                                <!-- Default icon is DOWN, but initially rotated UP (180deg) for closed state -->
-                                <span class="accordion-icon transform transition-transform duration-200"
-                                    style="transform: rotate(180deg);">&#9660;</span>
+                                <!-- Default icon is DOWN (&#9660;), JS will rotate to UP when closed -->
+                                <span class="accordion-icon transform transition-transform duration-200">&#9660;</span>
                             </div>
                             <div class="accordion-content hidden pt-4">
                                 <div id="work-logs-list-container" class="mb-4">
