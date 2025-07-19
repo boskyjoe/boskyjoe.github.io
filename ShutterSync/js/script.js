@@ -1609,6 +1609,33 @@ function renderOpportunitiesGrid(opportunities) {
             opportunitiesGrid = new gridjs.Grid({
                 columns: [
                     {
+                        name: 'Quotes', // New column for quote count
+                        width: 'auto',
+                        formatter: (quoteCount, row) => {
+                            const opportunityId = row.cells[11].data; // ID is the last cell
+                            const opportunityName = row.cells[0].data; // Name is the first cell
+                            if (quoteCount > 0) {
+                                return gridjs.h('button', {
+                                    className: 'px-2 py-1 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition duration-300 text-xs font-bold',
+                                    onclick: () => showQuotesForOpportunity(opportunityId, opportunityName),
+                                    title: `View ${quoteCount} quote(s) for this opportunity`
+                                }, quoteCount);
+                            }
+                            return ''; // No icon if no quotes
+                        },
+                        sort: false,
+                    },
+                    { name: 'Opportunity Name', width: 'auto' },
+                    { name: 'Customer', width: 'auto' },
+                    { name: 'Services', width: '15%' },
+                    { name: 'Value', width: 'auto' },
+                    { name: 'Discount', width: 'auto' }, // NEW
+                    { name: 'Adjustment', width: 'auto' }, // NEW
+                    { name: 'Net', width: 'auto' }, // NEW
+                    { name: 'Stage', width: '8%' },
+                    { name: 'Probability', width: '5%' },
+                    { name: 'Close Date', width: '8%' },
+                    {
                         name: 'Actions',
                         width: '10%',
                         formatter: (cell, row) => {
@@ -1641,34 +1668,7 @@ function renderOpportunitiesGrid(opportunities) {
                             );
                         },
                         sort: false,
-                    },
-                    {
-                        name: 'Quotes', // New column for quote count
-                        width: 'auto',
-                        formatter: (quoteCount, row) => {
-                            const opportunityId = row.cells[11].data; // ID is the last cell
-                            const opportunityName = row.cells[0].data; // Name is the first cell
-                            if (quoteCount > 0) {
-                                return gridjs.h('button', {
-                                    className: 'px-2 py-1 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition duration-300 text-xs font-bold',
-                                    onclick: () => showQuotesForOpportunity(opportunityId, opportunityName),
-                                    title: `View ${quoteCount} quote(s) for this opportunity`
-                                }, quoteCount);
-                            }
-                            return ''; // No icon if no quotes
-                        },
-                        sort: false,
-                    },
-                    { name: 'Opportunity Name', width: '12%' },
-                    { name: 'Customer', width: '12%' },
-                    { name: 'Services', width: '15%' },
-                    { name: 'Value', width: 'auto' },
-                    { name: 'Discount', width: 'auto' }, // NEW
-                    { name: 'Adjustment', width: 'auto' }, // NEW
-                    { name: 'Net', width: 'auto' }, // NEW
-                    { name: 'Stage', width: '8%' },
-                    { name: 'Probability', width: '5%' },
-                    { name: 'Close Date', width: '8%' }
+                    }
                 ],
                 data: data,
                 search: true,
