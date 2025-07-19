@@ -107,6 +107,23 @@
             padding-top: 1rem;
             padding-bottom: 1rem;
         }
+
+        /* Ensure grid headers can wrap text and allow horizontal scrolling */
+        .gridjs-container {
+            overflow-x: auto;
+            /* Allows horizontal scrolling if content overflows */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            /* Ensures rounded corners apply to the grid */
+        }
+
+        .gridjs-th .gridjs-th-content {
+            white-space: normal;
+            /* Allows text to wrap */
+            word-break: break-word;
+            /* Breaks long words if necessary */
+        }
     </style>
 </head>
 
