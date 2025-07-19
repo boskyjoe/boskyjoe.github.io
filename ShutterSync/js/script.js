@@ -462,13 +462,13 @@ function toggleAccordion(event) {
         content.classList.remove('hidden');
         // Only apply transform for SVG icons, as per HTML structure
         if (icon && icon.tagName === 'SVG') {
-            icon.style.transform = 'rotate(180deg)';
+            icon.style.transform = 'rotate(0deg)';// Down arrow for open state
         }
         header.classList.add('expanded');
     } else {
         content.classList.add('hidden');
         if (icon && icon.tagName === 'SVG') {
-            icon.style.transform = 'rotate(0deg)';
+            icon.style.transform = 'rotate(180deg)'; // Up arrow for closed state
         }
         header.classList.remove('expanded');
     }
@@ -1347,6 +1347,20 @@ async function setupOpportunityForm(opportunity = null) {
         // --- Layout Adjustment for EDIT mode ---
         if (mainOpportunityDetailsAccordion) {
             mainOpportunityDetailsAccordion.classList.remove('md:col-span-full'); // Main details takes half width
+            // Ensure Main Details accordion is OPEN (right arrow rotated down)
+            const mainDetailsHeader = mainOpportunityDetailsAccordion.querySelector('.accordion-header');
+            const mainDetailsContent = mainDetailsHeader ? mainDetailsHeader.nextElementSibling : null;
+            const mainDetailsIcon = mainDetailsHeader ? mainDetailsHeader.querySelector('.accordion-icon') : null;
+
+            if (mainDetailsContent) {
+                mainDetailsContent.classList.remove('hidden');
+                if (mainDetailsIcon) {
+                    mainDetailsIcon.style.transform = 'rotate(90deg)'; // Right arrow rotates down for open
+                }
+                if (mainDetailsHeader) {
+                    mainDetailsHeader.classList.add('expanded');
+                }
+            }
         }
 
         // Show work logs section when editing/viewing an opportunity
@@ -1360,7 +1374,7 @@ async function setupOpportunityForm(opportunity = null) {
             if (workLogsAccordionContent) {
                 workLogsAccordionContent.classList.add('hidden');
                 if (workLogsIcon) {
-                    workLogsIcon.style.transform = 'rotate(0deg)'; // Down arrow
+                    workLogsIcon.style.transform = 'rotate(180deg)'; // Down arrow
                 }
                 if (workLogsAccordionHeader) {
                     workLogsAccordionHeader.classList.remove('expanded');
@@ -1387,6 +1401,23 @@ async function setupOpportunityForm(opportunity = null) {
         }
         if (mainOpportunityDetailsAccordion) {
             mainOpportunityDetailsAccordion.classList.add('md:col-span-full'); // Main details spans full width
+
+            // Ensure Main Details accordion is OPEN (arrow pointing DOWN)
+            const mainDetailsHeader = mainOpportunityDetailsAccordion.querySelector('.accordion-header');
+            const mainDetailsContent = mainDetailsHeader ? mainDetailsHeader.nextElementSibling : null;
+            const mainDetailsIcon = mainDetailsHeader ? mainDetailsHeader.querySelector('.accordion-icon') : null;
+
+            if (mainDetailsContent) {
+                mainDetailsContent.classList.remove('hidden');
+                if (mainDetailsIcon) {
+                    mainDetailsIcon.style.transform = 'rotate(0deg)'; // Down arrow for open
+                }
+                if (mainDetailsHeader) {
+                    mainDetailsHeader.classList.add('expanded');
+                }
+            }
+
+
         }
         // --- End Layout Adjustment for ADD mode ---
 
