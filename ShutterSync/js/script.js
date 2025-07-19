@@ -462,13 +462,13 @@ function toggleAccordion(event) {
         content.classList.remove('hidden');
         // Only apply transform for SVG icons, as per HTML structure
         if (icon && icon.tagName === 'SVG') {
-            icon.style.transform = 'rotate(180deg)';// Down arrow for open state
+            icon.style.transform = 'rotate(0deg)';// Down arrow for open state
         }
         header.classList.add('expanded');
     } else {
         content.classList.add('hidden');
         if (icon && icon.tagName === 'SVG') {
-            icon.style.transform = 'rotate(0deg)'; // Up arrow for closed state
+            icon.style.transform = 'rotate(180deg)'; // Up arrow for closed state
         }
         header.classList.remove('expanded');
     }
