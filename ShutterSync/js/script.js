@@ -541,26 +541,6 @@ function showOpportunityForm() {
     if (opportunityFormContainer) opportunityFormContainer.classList.remove('hidden');
 
     console.log('showOpportunityForm: Setting initial accordion states for opportunity form.');
-
-    // Get the Main Details accordion elements within the opportunity form
-    const mainDetailsAccordionHeader = document.querySelector('#opportunity-form-container .accordion-item .accordion-header');
-    const mainDetailsAccordionContent = mainDetailsAccordionHeader ? mainDetailsAccordionHeader.nextElementSibling : null;
-    const mainDetailsIcon = mainDetailsAccordionHeader ? mainDetailsAccordionHeader.querySelector('.accordion-icon') : null;
-
-    // Ensure Main Details accordion is OPEN
-    if (mainDetailsAccordionContent) {
-        mainDetailsAccordionContent.classList.remove('hidden');
-        if (mainDetailsIcon) {
-            mainDetailsIcon.style.transform = 'rotate(180deg)'; // Up arrow
-        }
-        if (mainDetailsAccordionHeader) {
-            mainDetailsAccordionHeader.classList.add('expanded');
-        }
-        console.log('  Main Details Accordion: Opened.');
-    } else {
-        console.error('  Could not find Main Details accordion elements within opportunity form.');
-    }
-
     // Note: This function no longer attempts to manipulate the work logs accordion.
     // The visibility and state of the work logs section are managed by setupOpportunityForm
     // and handleSaveOpportunity based on whether an opportunity is new or existing.
