@@ -388,22 +388,25 @@
                     <input type="hidden" id="opportunity-id">
 
                     <!-- Main Opportunity Details Accordion -->
-                    <div class="accordion-item bg-white rounded-lg shadow-md mb-4">
+                    <div class="accordion-item bg-white rounded-lg shadow-md">
                         <div
                             class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200 expanded">
                             <h3 class="text-lg font-semibold text-gray-800">Main Details</h3>
                             <span class="accordion-icon transform transition-transform duration-200">&#9660;</span>
                         </div>
-                        <div class="accordion-content pt-4">
+                        <!-- Added grid layout to accordion-content for better field visibility -->
+                        <div class="accordion-content pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label for="opportunity-name"
-                                    class="block text-sm font-medium text-gray-700">Opportunity Name</label>
+                                    class="block text-sm font-medium text-gray-700">Opportunity Name <span
+                                        class="text-red-500">*</span></label>
                                 <input type="text" id="opportunity-name" required
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             </div>
                             <div>
                                 <label for="opportunity-customer"
-                                    class="block text-sm font-medium text-gray-700">Customer</label>
+                                    class="block text-sm font-medium text-gray-700">Customer <span
+                                        class="text-red-500">*</span></label>
                                 <select id="opportunity-customer" required
                                     class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                                     <!-- Options populated by JS -->
@@ -411,7 +414,8 @@
                             </div>
                             <div>
                                 <label for="opportunity-currency"
-                                    class="block text-sm font-medium text-gray-700">Currency</label>
+                                    class="block text-sm font-medium text-gray-700">Currency <span
+                                        class="text-red-500">*</span></label>
                                 <select id="opportunity-currency" required
                                     class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                                     <!-- Options populated by JS -->
@@ -439,7 +443,8 @@
                             </div>
                             <div>
                                 <label for="opportunity-sales-stage"
-                                    class="block text-sm font-medium text-gray-700">Sales Stage</label>
+                                    class="block text-sm font-medium text-gray-700">Sales Stage <span
+                                        class="text-red-500">*</span></label>
                                 <select id="opportunity-sales-stage" required
                                     class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                                     <option value="Prospect">Prospect</option>
@@ -450,15 +455,6 @@
                                     <option value="Lost">Lost</option>
                                 </select>
                             </div>
-                            <!-- NEW FIELD: Services Interested Multi-select -->
-                            <div class="mt-4">
-                                <label for="opportunity-services-interested"
-                                    class="block text-sm font-medium text-gray-700">Services Interested</label>
-                                <select id="opportunity-services-interested" name="servicesInterested" multiple required
-                                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md h-32">
-                                    <!-- Options will be populated by JS -->
-                                </select>
-                            </div>
                             <div>
                                 <label for="opportunity-probability"
                                     class="block text-sm font-medium text-gray-700">Probability (%)</label>
@@ -467,54 +463,66 @@
                             </div>
                             <div>
                                 <label for="opportunity-value"
-                                    class="block text-sm font-medium text-gray-700">Value</label>
+                                    class="block text-sm font-medium text-gray-700">Opportunity Value <span
+                                        class="text-red-500">*</span></label>
                                 <input type="number" id="opportunity-value" step="0.01" min="0" required
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             </div>
-                            
+
                             <!-- New Fields for Opportunity Discount, Adjustment Amt, and Net -->
-                            <div class="mb-4">
-                                <label for="opportunity-discount" class="block text-sm font-medium text-gray-700">Opportunity Discount%</label>
-                                <input type="number" step="0.01" id="opportunity-discount" name="discount" value="0" min="0" max="100"
+                            <div>
+                                <label for="opportunity-discount"
+                                    class="block text-sm font-medium text-gray-700">Opportunity Discount%</label>
+                                <input type="number" step="0.01" id="opportunity-discount" name="discount" value="0"
+                                    min="0" max="100"
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             </div>
-                            <div class="mb-4">
-                                <label for="adjustment-amt" class="block text-sm font-medium text-gray-700">Adjustment Amt</label>
+                            <div>
+                                <label for="adjustment-amt" class="block text-sm font-medium text-gray-700">Adjustment
+                                    Amt</label>
                                 <input type="number" step="0.01" id="adjustment-amt" name="adjustmentAmt" value="0"
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             </div>
-                            <div class="mb-4">
-                                <label for="opportunity-net" class="block text-sm font-medium text-gray-700">Opportunity Net</label>
+                            <div>
+                                <label for="opportunity-net" class="block text-sm font-medium text-gray-700">Opportunity
+                                    Net</label>
                                 <span id="opportunity-net"
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-md shadow-sm sm:text-sm">0.00</span>
                             </div>
                             <!-- End New Fields -->
 
-
-                            
-                            <div>
+                            <div class="col-span-full"> <!-- Make this span full width in grid -->
+                                <label for="opportunity-services-interested"
+                                    class="block text-sm font-medium text-gray-700">Services Interested <span
+                                        class="text-red-500">*</span></label>
+                                <select id="opportunity-services-interested" name="servicesInterested" multiple required
+                                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md h-32">
+                                    <!-- Options will be populated by JS -->
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
+                            </div>
+                            <div class="col-span-full"> <!-- Make this span full width in grid -->
                                 <label for="opportunity-notes"
                                     class="block text-sm font-medium text-gray-700">Notes</label>
                                 <textarea id="opportunity-notes" rows="3"
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="flex justify-end space-x-3">
-                            <!--<div class="flex justify-end space-x-3 mt-6">-->
-                            <button type="submit"
-                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
-                                Opportunity</button>
-                            <button type="button" id="cancel-opportunity-btn"
-                                class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
-                        </div>
-
-                        <p id="opportunity-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
+                    <p id="opportunity-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
+                    <div class="flex justify-end space-x-3 mt-6"> <!-- Moved buttons here, added mt-6 for spacing -->
+                        <button type="button" id="cancel-opportunity-btn"
+                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                        <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
+                            Opportunity</button>
+                    </div>
                 </form>
             </div>
 
-            <!-- Work Logs Accordion -->
-            <div class="accordion-item bg-white rounded-lg shadow-md mb-4">
+            <!-- Work Logs Accordion - Added mt-6 for gap -->
+            <div id="work-logs-section-container" class="accordion-item bg-white rounded-lg shadow-md mt-6">
                 <div
                     class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200">
                     <h3 class="text-lg font-semibold text-gray-800">Work Logs</h3>
@@ -542,13 +550,15 @@
                             <!-- To link to parent opportunity -->
 
                             <div>
-                                <label for="work-log-date" class="block text-sm font-medium text-gray-700">Date</label>
+                                <label for="work-log-date" class="block text-sm font-medium text-gray-700">Date <span
+                                        class="text-red-500">*</span></label>
                                 <input type="date" id="work-log-date" name="workLogDate" required
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             </div>
 
                             <div>
-                                <label for="work-log-type" class="block text-sm font-medium text-gray-700">Type</label>
+                                <label for="work-log-type" class="block text-sm font-medium text-gray-700">Type <span
+                                        class="text-red-500">*</span></label>
                                 <select id="work-log-type" required
                                     class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                                     <!-- Options will be populated by JS -->
@@ -556,8 +566,8 @@
                             </div>
 
                             <div>
-                                <label for="work-log-details"
-                                    class="block text-sm font-medium text-gray-700">Details</label>
+                                <label for="work-log-details" class="block text-sm font-medium text-gray-700">Details
+                                    <span class="text-red-500">*</span></label>
                                 <textarea id="work-log-details" rows="3" required
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                             </div>
@@ -575,18 +585,14 @@
                 </div>
             </div>
 
-            <!-- Other Accordions (Line Items, Quotes) would go here in the future -->
-
-            </form>
-            </div>
-
             <!-- Opportunity Grid -->
             <p id="no-opportunities-message" class="text-center text-gray-500 mt-8 hidden">No opportunities found.</p>
             <div id="opportunities-grid-container" class="mt-6"></div>
         </section>
 
-       
-               <!-- Quotes Section -->
+
+
+        <!-- Quotes Section -->
         <section id="quotes-section" class="hidden">
             <h2 class="text-3xl font-bold text-gray-800 mb-6">Quotes</h2>
             <button id="add-quote-btn"
@@ -594,9 +600,13 @@
                 New Quote</button>
 
             <!-- Quotes Filter Display (NEW) -->
-            <div id="quotes-filter-display" class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4 hidden" role="alert">
-                <p class="font-bold inline-block mr-2">Showing quotes for Opportunity: <span id="quotes-filter-opportunity-name" class="font-normal"></span></p>
-                <button id="clear-quotes-filter-btn" class="ml-4 px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 text-sm">Clear Filter</button>
+            <div id="quotes-filter-display" class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4 hidden"
+                role="alert">
+                <p class="font-bold inline-block mr-2">Showing quotes for Opportunity: <span
+                        id="quotes-filter-opportunity-name" class="font-normal"></span></p>
+                <button id="clear-quotes-filter-btn"
+                    class="ml-4 px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 text-sm">Clear
+                    Filter</button>
             </div>
             <!-- End Quotes Filter Display -->
 
@@ -624,25 +634,26 @@
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
-                        <label for="quote-customer-contact-name" class="block text-sm font-medium text-gray-700">Customer
+                        <label for="quote-customer-contact-name"
+                            class="block text-sm font-medium text-gray-700">Customer
                             Contact Name</label>
-                        <input type="text" id="quote-customer-contact-name" 
+                        <input type="text" id="quote-customer-contact-name"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
                         <label for="quote-customer-phone" class="block text-sm font-medium text-gray-700">Phone</label>
-                        <input type="tel" id="quote-customer-phone" 
+                        <input type="tel" id="quote-customer-phone"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
                         <label for="quote-customer-email" class="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" id="quote-customer-email" 
+                        <input type="email" id="quote-customer-email"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
                         <label for="quote-customer-address" class="block text-sm font-medium text-gray-700">Customer
                             Address</label>
-                        <textarea id="quote-customer-address" rows="3" 
+                        <textarea id="quote-customer-address" rows="3"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                     </div>
                     <div>
