@@ -374,7 +374,6 @@
             <div id="leads-grid-container" class="mt-6"></div>
         </section>
 
-
         <!-- Opportunities Section -->
         <section id="opportunities-section" class="hidden">
             <h2 class="text-3xl font-bold text-gray-800 mb-6">Opportunities</h2>
@@ -514,6 +513,17 @@
                                     <textarea id="opportunity-notes" rows="3"
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                                 </div>
+
+                                <!-- MOVED: Save and Cancel buttons, and form message, inside this accordion's content -->
+                                <p id="opportunity-form-message" class="text-red-500 text-sm mt-2 hidden col-span-full">
+                                </p>
+                                <div class="flex justify-end space-x-3 mt-6 col-span-full">
+                                    <button type="button" id="cancel-opportunity-btn"
+                                        class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                                    <button type="submit"
+                                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
+                                        Opportunity</button>
+                                </div>
                             </div>
                         </div>
 
@@ -586,14 +596,7 @@
 
                     </div> <!-- END #opportunity-accordions-grid -->
 
-                    <p id="opportunity-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
-                    <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" id="cancel-opportunity-btn"
-                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
-                        <button type="submit"
-                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
-                            Opportunity</button>
-                    </div>
+                    <!-- Removed Save/Cancel buttons and form message from here -->
                 </form>
             </div>
 
