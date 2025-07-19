@@ -461,13 +461,13 @@ function toggleAccordion(event) {
     if (content.classList.contains('hidden')) {
         content.classList.remove('hidden');
         // Only apply transform for SVG icons, as per HTML structure
-        if (icon && icon.tagName === 'SVG') {
+        if (icon) {
             icon.style.transform = 'rotate(0deg)';// Down arrow for open state
         }
         header.classList.add('expanded');
     } else {
         content.classList.add('hidden');
-        if (icon && icon.tagName === 'SVG') {
+        if (icon) {
             icon.style.transform = 'rotate(180deg)'; // Up arrow for closed state
         }
         header.classList.remove('expanded');
@@ -1355,7 +1355,7 @@ async function setupOpportunityForm(opportunity = null) {
             if (mainDetailsContent) {
                 mainDetailsContent.classList.remove('hidden');
                 if (mainDetailsIcon) {
-                    mainDetailsIcon.style.transform = 'rotate(90deg)'; // Right arrow rotates down for open
+                    mainDetailsIcon.style.transform = 'rotate(0deg)'; // Down arrow for open
                 }
                 if (mainDetailsHeader) {
                     mainDetailsHeader.classList.add('expanded');
@@ -1374,7 +1374,7 @@ async function setupOpportunityForm(opportunity = null) {
             if (workLogsAccordionContent) {
                 workLogsAccordionContent.classList.add('hidden');
                 if (workLogsIcon) {
-                    workLogsIcon.style.transform = 'rotate(180deg)'; // Down arrow
+                    workLogsIcon.style.transform = 'rotate(180deg)'; // Up arrow for closed
                 }
                 if (workLogsAccordionHeader) {
                     workLogsAccordionHeader.classList.remove('expanded');
