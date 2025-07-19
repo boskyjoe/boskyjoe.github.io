@@ -388,11 +388,13 @@
                 <form id="opportunity-form" class="space-y-4">
                     <input type="hidden" id="opportunity-id">
 
-                    <!-- NEW: Grid container for side-by-side accordions -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- NEW: Grid container for dynamic side-by-side or full-width accordions -->
+                    <div id="opportunity-accordions-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                        <!-- Main Opportunity Details Accordion (Left Column) -->
-                        <div class="accordion-item bg-white rounded-lg shadow-md">
+                        <!-- Main Opportunity Details Accordion (Left Column / Full Span dynamically) -->
+                        <!-- Initially set to span full width on medium screens and up -->
+                        <div id="main-opportunity-details-accordion"
+                            class="accordion-item bg-white rounded-lg shadow-md md:col-span-full">
                             <div
                                 class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200 expanded">
                                 <h3 class="text-lg font-semibold text-gray-800">Main Details</h3>
@@ -514,7 +516,7 @@
                             </div>
                         </div>
 
-                        <!-- Work Logs Accordion (Right Column) -->
+                        <!-- Work Logs Accordion (Right Column, hidden by default) -->
                         <div id="work-logs-section-container"
                             class="accordion-item bg-white rounded-lg shadow-md hidden">
                             <div
@@ -580,7 +582,7 @@
                             </div>
                         </div>
 
-                    </div> <!-- END NEW: Grid container -->
+                    </div> <!-- END #opportunity-accordions-grid -->
 
                     <p id="opportunity-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
                     <div class="flex justify-end space-x-3 mt-6">
