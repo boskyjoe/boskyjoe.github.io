@@ -274,8 +274,9 @@ async function setupAuth() {
         opportunityQuoteCounts = counts;
         console.log("Updated opportunityQuoteCounts:", opportunityQuoteCounts);
         // If opportunities grid is visible, force a re-render to update quote counts
-        if (opportunitiesGrid) {
-            loadOpportunities(); // Reload opportunities to update quote counts in grid
+        // This will trigger loadOpportunities which will then use the updated counts
+        if (opportunitiesGrid && opportunitiesSection && !opportunitiesSection.classList.contains('hidden')) {
+            loadOpportunities();
         }
     }, error => {
         console.error("Error listening to quotes for counts:", error);
@@ -2685,7 +2686,7 @@ function renderQuotesGrid(quotes) {
         `${quote.quoteAmount !== undefined ? quote.quoteAmount.toFixed(2) : 'N/A'}`,
         quote.status,
         quote.eventDate,
-        quote.id
+        quote.id // Keep ID as the last element for actions formatter
     ]);
 
     if (!quotesGrid) {
@@ -2704,14 +2705,15 @@ function renderQuotesGrid(quotes) {
                         name: 'Actions',
                         width: '10%',
                         formatter: (cell, row) => {
+                            const quoteId = row.cells[8].data; // Get the ID from the last cell
                             return gridjs.h('div', { className: 'flex space-x-2' },
                                 gridjs.h('button', {
                                     className: 'px-2 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300 text-sm',
-                                    onclick: () => editQuote(row.cells[8].data)
+                                    onclick: () => editQuote(quoteId)
                                 }, 'Edit'),
                                 gridjs.h('button', {
                                     className: 'px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-sm',
-                                    onclick: () => deleteQuote(row.cells[8].data)
+                                    onclick: () => deleteQuote(quoteId)
                                 }, 'Delete')
                             );
                         },
