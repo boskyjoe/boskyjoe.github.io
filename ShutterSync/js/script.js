@@ -176,6 +176,9 @@ let opportunityDiscountInput;
 let adjustmentAmtInput;
 let opportunityNetDisplay;
 
+let opportunityAccordionsGrid; // New: Reference to the grid container
+let mainOpportunityDetailsAccordion; // New: Reference to the main details accordion
+
 
 /**
  * Shows a custom message box (modal).
@@ -1044,8 +1047,8 @@ async function handleSaveLead(event) {
 
     // NEW: Capture selected services from multi-select as an array
     const selectedServices = Array.from(leadServicesInterestedSelect.options)
-                                .filter(option => option.selected)
-                                .map(option => option.value);
+        .filter(option => option.selected)
+        .map(option => option.value);
 
     const leadData = {
         contactName: document.getElementById('lead-contact-name').value,
@@ -1341,10 +1344,14 @@ async function setupOpportunityForm(opportunity = null) {
         // Call calculateOpportunityNet after all relevant fields are populated
         calculateOpportunityNet();
 
-        await loadWorkLogs(opportunityData.id); // Load work logs for this opportunity
+        // --- Layout Adjustment for EDIT mode ---
+        if (mainOpportunityDetailsAccordion) {
+            mainOpportunityDetailsAccordion.classList.remove('md:col-span-full'); // Main details takes half width
+        }
+
         // Show work logs section when editing/viewing an opportunity
         if (workLogsSectionContainer) {
-            workLogsSectionContainer.classList.remove('hidden');
+            workLogsSectionContainer.classList.remove('hidden');// Show work logs
             // Ensure Work Logs accordion is minimized when loading an existing opportunity
             const workLogsAccordionHeader = document.querySelector('#work-logs-section-container .accordion-item .accordion-header');
             const workLogsAccordionContent = workLogsAccordionHeader ? workLogsAccordionHeader.nextElementSibling : null;
@@ -1361,6 +1368,9 @@ async function setupOpportunityForm(opportunity = null) {
                 console.log('  Work Logs Accordion: Minimized on existing opportunity load.');
             }
         }
+        await loadWorkLogs(opportunityData.id); // Load work logs for this opportunity
+        // --- End Layout Adjustment for EDIT mode ---
+
     } else {
         // For a new opportunity
         if (opportunityForm) opportunityForm.reset();
@@ -1370,8 +1380,20 @@ async function setupOpportunityForm(opportunity = null) {
         if (workLogsList) workLogsList.innerHTML = ''; // Clear work logs for new opportunity
         if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden');
         hideWorkLogForm(); // Hide work log entry form
+
+        // --- Layout Adjustment for ADD mode ---
+        if (workLogsSectionContainer) {
+            workLogsSectionContainer.classList.add('hidden'); // Hide work logs
+        }
+        if (mainOpportunityDetailsAccordion) {
+            mainOpportunityDetailsAccordion.classList.add('md:col-span-full'); // Main details spans full width
+        }
+        // --- End Layout Adjustment for ADD mode ---
+
+
+
         // Hide work logs section when creating a brand new opportunity
-        if (workLogsSectionContainer) workLogsSectionContainer.classList.add('hidden');
+        //if (workLogsSectionContainer) workLogsSectionContainer.classList.add('hidden');
         // For new opportunities, populate price books with all active ones initially
         filterAndPopulatePriceBooks(''); // Pass empty string to show all active price books
 
@@ -1428,8 +1450,8 @@ async function handleSaveOpportunity(event) {
 
     // Get selected services from multi-select
     const selectedServices = Array.from(opportunityServicesInterestedSelect.options)
-                                .filter(option => option.selected)
-                                .map(option => option.value);
+        .filter(option => option.selected)
+        .map(option => option.value);
 
     const customerId = document.getElementById('opportunity-customer').value;
     let customerName = '';
@@ -2907,6 +2929,10 @@ function initializePage() {
     noOpportunitiesMessage = document.getElementById('no-opportunities-message');
     opportunitySearchInput = document.getElementById('opportunity-search');
 
+    // NEW: Two colum layout of opportunity
+    opportunityAccordionsGrid = document.getElementById('opportunity-accordions-grid');
+    mainOpportunityDetailsAccordion = document.getElementById('main-opportunity-details-accordion');
+
     // NEW: Assign opportunity calculation fields
     opportunityValueInput = document.getElementById('opportunity-value');
     opportunityDiscountInput = document.getElementById('opportunity-discount');
@@ -2931,7 +2957,7 @@ function initializePage() {
     noQuotesMessage = document.getElementById('no-quotes-message');
     quoteSearchInput = document.getElementById('quote-search');
     quoteOpportunitySelect = document.getElementById('quote-opportunity');
-    
+
     // --- CRITICAL: Assign all quote-related input elements using their NEW, UNIQUE IDs ---
     customerContactNameInput = document.getElementById('quote-customer-contact-name');
     console.log('initializePage: Assigned customerContactNameInput:', customerContactNameInput);
