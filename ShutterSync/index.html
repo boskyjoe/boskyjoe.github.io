@@ -47,9 +47,16 @@
             background-color: #f1f1f1;
         }
 
-        .dropdown:hover .dropdown-menu {
+        /*.dropdown:hover .dropdown-menu {
             display: block;
-        }
+        }*/
+
+        .dropdown-menu a:hover {
+    background-color: #f1f1f1;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
 
         /* Accordion styles */
         .accordion-item {
@@ -91,7 +98,10 @@
             padding: 0 1rem;
             /* Adjust padding for content */
             overflow: hidden;
-            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+            opacity: 0; /* new added */
+            /* transition: max-height 0.3s ease-out, padding 0.3s ease-out; */
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out, opacity 0.3s ease-out; /* new added*/
+
             /* For smooth collapse/expand */
         }
 
@@ -102,10 +112,11 @@
         }
 
         .accordion-content:not(.hidden) {
-            max-height: 1000px;
+            /*max-height: 1000px;
             /* Arbitrarily large value for expansion */
-            padding-top: 1rem;
-            padding-bottom: 1rem;
+            /*padding-top: 1rem;
+            padding-bottom: 1rem;*/
+            opacity: 1;
         }
 
         /* Ensure grid headers can wrap text and allow horizontal scrolling */
