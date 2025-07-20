@@ -6,13 +6,7 @@
 /* Ensure body uses Inter font */
 body {
     font-family: 'Inter', sans-serif;
-    font-size: 16px;
-    letter-spacing: 0.01em;
-    line-height: 1.6;
-    background-color: #f4f7f6;
-    color: #333;
 }
-
 
 /* Base styles for tables for better readability on smaller screens if overflow-x-auto is not enough */
 table {
@@ -32,18 +26,8 @@ th {
     font-weight: 600;
 }
 
-th {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-}
-
 tbody tr:hover {
     background-color: #f7fafc; /* Tailwind gray-50 */
-}
-
-tbody tr:nth-child(even) {
-    background-color: #f1f5f9; /* Tailwind gray-100 */
 }
 
 /* Adjustments for smaller screens, if needed, though Tailwind handles most responsiveness */
@@ -52,12 +36,4 @@ tbody tr:nth-child(even) {
     .md\:grid-cols-2 {
         grid-template-columns: 1fr;
     }
-}
-
-input, select, textarea {
-    border: 1px solid #e2e8f0;
-    border-radius: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
