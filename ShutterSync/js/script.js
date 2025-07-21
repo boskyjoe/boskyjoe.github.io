@@ -600,19 +600,24 @@ function showWorkLogForm() { // Made this function explicitly separate for clari
 }
 
 function hideWorkLogForm() {
-    // Add null checks for robustness
     if (workLogFormContainer) {
         workLogFormContainer.classList.add('hidden');
     }
-    if (workLogForm) { // Only proceed if workLogForm is not null
+    if (workLogForm) {
         workLogForm.reset();
-        workLogForm.setAttribute('novalidate', 'novalidate'); // Apply novalidate when hidden
+        workLogForm.setAttribute('novalidate', 'novalidate');
     }
-    // These might also be null, but setting value to '' on null is a no-op, so less critical for TypeError
     document.getElementById('work-log-id').value = '';
     document.getElementById('work-log-opportunity-id').value = '';
-    showMessageBox(workLogFormMessage, '', false);
+    
+    // ADDED NULL CHECK HERE:
+    if (workLogFormMessage) {
+        showMessageBox(workLogFormMessage, '', false);
+    } else {
+        console.warn("workLogFormMessage element not found or not yet initialized.");
+    }
 }
+
 
 
 // NEW: Quote Form Visibility Functions
