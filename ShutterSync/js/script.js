@@ -603,21 +603,26 @@ function showWorkLogForm() { // Made this function explicitly separate for clari
 }
 
 function hideWorkLogForm() {
-    if (workLogFormContainer) {
+    if (workLogFormContainer) { // Check if container exists
         workLogFormContainer.classList.add('hidden');
     }
-    if (workLogForm) {
+    if (workLogForm) { // Check if form element exists
         workLogForm.reset();
-        workLogForm.setAttribute('novalidate', 'novalidate');
+        workLogForm.setAttribute('novalidate', 'novalidate'); // This line was causing the error
     }
-    document.getElementById('work-log-id').value = '';
-    document.getElementById('work-log-opportunity-id').value = '';
     
-    // ADDED NULL CHECK HERE:
+    // Ensure these elements exist before trying to set their value
+    const workLogIdInput = document.getElementById('work-log-id');
+    const workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
+
+    if (workLogIdInput) workLogIdInput.value = '';
+    if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = '';
+    
+    // Check if message element exists before using it
     if (workLogFormMessage) {
         showMessageBox(workLogFormMessage, '', false);
     } else {
-        console.warn("workLogFormMessage element not found or not yet initialized.");
+        console.warn("workLogFormMessage element not found or not yet initialized in hideWorkLogForm.");
     }
 }
 
@@ -1381,7 +1386,9 @@ async function setupOpportunityForm(opportunity = null) {
             // Ensure Work Logs accordion is minimized when loading an existing opportunity
             // Explicitly set Work Logs accordion to CLOSED
             const workLogsAccordionHeader = workLogsSectionContainer.querySelector('.accordion-header');
-            setAccordionVisualState(workLogsAccordionHeader, false); // False for CLOSED
+            if (workLogsAccordionHeader) { // Check if header exists
+                setAccordionVisualState(workLogsAccordionHeader, false); // False for CLOSED
+            }
             // IMPORTANT: Remove novalidate when work logs section is visible (in edit mode)
             if (workLogForm) { // Add null check here
                 workLogForm.removeAttribute('novalidate');
@@ -1404,14 +1411,20 @@ async function setupOpportunityForm(opportunity = null) {
         if (workLogsSectionContainer) {
             workLogsSectionContainer.classList.add('hidden'); // Hide work logs
             // IMPORTANT: Add novalidate when work logs section is hidden (in add mode)
-            workLogForm.setAttribute('novalidate', 'novalidate');
+            // IMPORTANT: Add novalidate when work logs section is hidden (in add mode)
+            if (workLogForm) { // Check if form exists before acting on it
+                workLogForm.setAttribute('novalidate', 'novalidate');
+            }
         }
+
         if (mainOpportunityDetailsAccordion) {
             mainOpportunityDetailsAccordion.classList.add('md:col-span-full'); // Main details spans full width
 
             // Explicitly set Main Details accordion to OPEN
             const mainDetailsHeader = mainOpportunityDetailsAccordion.querySelector('.accordion-header');
-            setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
+            if (mainDetailsHeader) { // Check if header exists
+                setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
+            }
         }
         // --- End Layout Adjustment for ADD mode ---
 
