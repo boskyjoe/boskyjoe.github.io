@@ -611,7 +611,7 @@ function hideWorkLogForm() {
     // These might also be null, but setting value to '' on null is a no-op, so less critical for TypeError
     document.getElementById('work-log-id').value = '';
     document.getElementById('work-log-opportunity-id').value = '';
-    showMessage(workLogFormMessage, '', false);
+    showMessageBox(workLogFormMessage, '', false);
 }
 
 
