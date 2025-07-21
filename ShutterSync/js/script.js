@@ -600,17 +600,20 @@ function showWorkLogForm() { // Made this function explicitly separate for clari
 }
 
 function hideWorkLogForm() {
-    if (workLogFormContainer) workLogFormContainer.classList.add('hidden');
-    if (workLogForm) workLogForm.reset();
-    const workLogIdInput = document.getElementById('work-log-id');
-    if (workLogIdInput) workLogIdInput.value = '';
-    const workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
-    if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = '';
-    const workLogFormMessage = document.getElementById('work-log-form-message');
-    if (workLogFormMessage) workLogFormMessage.classList.add('hidden');
-    // IMPORTANT: Add novalidate when the form is hidden
-    workLogForm.setAttribute('novalidate', 'novalidate');
+    // Add null checks for robustness
+    if (workLogFormContainer) {
+        workLogFormContainer.classList.add('hidden');
+    }
+    if (workLogForm) { // Only proceed if workLogForm is not null
+        workLogForm.reset();
+        workLogForm.setAttribute('novalidate', 'novalidate'); // Apply novalidate when hidden
+    }
+    // These might also be null, but setting value to '' on null is a no-op, so less critical for TypeError
+    document.getElementById('work-log-id').value = '';
+    document.getElementById('work-log-opportunity-id').value = '';
+    showMessage(workLogFormMessage, '', false);
 }
+
 
 // NEW: Quote Form Visibility Functions
 function showQuoteForm() {
@@ -1372,7 +1375,9 @@ async function setupOpportunityForm(opportunity = null) {
             const workLogsAccordionHeader = workLogsSectionContainer.querySelector('.accordion-header');
             setAccordionVisualState(workLogsAccordionHeader, false); // False for CLOSED
             // IMPORTANT: Remove novalidate when work logs section is visible (in edit mode)
-            workLogForm.removeAttribute('novalidate');
+            if (workLogForm) { // Add null check here
+                workLogForm.removeAttribute('novalidate');
+            }
         }
         await loadWorkLogs(opportunityData.id); // Load work logs for this opportunity
         // --- End Layout Adjustment for EDIT mode ---
