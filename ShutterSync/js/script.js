@@ -608,6 +608,8 @@ function hideWorkLogForm() {
     if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = '';
     const workLogFormMessage = document.getElementById('work-log-form-message');
     if (workLogFormMessage) workLogFormMessage.classList.add('hidden');
+    // IMPORTANT: Add novalidate when the form is hidden
+    workLogForm.setAttribute('novalidate', 'novalidate');
 }
 
 // NEW: Quote Form Visibility Functions
@@ -1369,6 +1371,8 @@ async function setupOpportunityForm(opportunity = null) {
             // Explicitly set Work Logs accordion to CLOSED
             const workLogsAccordionHeader = workLogsSectionContainer.querySelector('.accordion-header');
             setAccordionVisualState(workLogsAccordionHeader, false); // False for CLOSED
+            // IMPORTANT: Remove novalidate when work logs section is visible (in edit mode)
+            workLogForm.removeAttribute('novalidate');
         }
         await loadWorkLogs(opportunityData.id); // Load work logs for this opportunity
         // --- End Layout Adjustment for EDIT mode ---
@@ -1386,6 +1390,8 @@ async function setupOpportunityForm(opportunity = null) {
         // --- Layout Adjustment for ADD mode ---
         if (workLogsSectionContainer) {
             workLogsSectionContainer.classList.add('hidden'); // Hide work logs
+            // IMPORTANT: Add novalidate when work logs section is hidden (in add mode)
+            workLogForm.setAttribute('novalidate', 'novalidate');
         }
         if (mainOpportunityDetailsAccordion) {
             mainOpportunityDetailsAccordion.classList.add('md:col-span-full'); // Main details spans full width
