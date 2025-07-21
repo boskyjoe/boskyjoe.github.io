@@ -176,6 +176,9 @@ let opportunityDiscountInput;
 let adjustmentAmtInput;
 let opportunityNetDisplay;
 
+let opportunityFormMessage;
+let workLogFormMessage;
+
 let opportunityAccordionsGrid; // New: Reference to the grid container
 let mainOpportunityDetailsAccordion; // New: Reference to the main details accordion
 
