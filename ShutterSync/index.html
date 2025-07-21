@@ -398,26 +398,28 @@
                 class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 mb-4">Add
                 New Opportunity</button>
 
-            <!-- Opportunity Form -->
+            <!-- Opportunity Form Container -->
             <div id="opportunity-form-container" class="hidden bg-white p-6 rounded-lg shadow-md mb-6">
                 <h3 class="text-2xl font-bold text-gray-800 mb-4">Opportunity Details</h3>
-                <form id="opportunity-form" class="space-y-4">
-                    <input type="hidden" id="opportunity-id">
 
-                    <!-- Grid container for dynamic side-by-side or full-width accordions -->
-                    <div id="opportunity-accordions-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Grid container for dynamic side-by-side or full-width accordions -->
+                <!-- This wraps both the main opportunity details accordion AND the work logs accordion -->
+                <div id="opportunity-accordions-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                        <!-- Main Opportunity Details Accordion (Left Column / Full Span dynamically) -->
-                        <div id="main-opportunity-details-accordion"
-                            class="accordion-item bg-white rounded-lg shadow-md md:col-span-full">
-                            <div
-                                class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200">
-                                <h3 class="text-lg font-semibold text-gray-800">Main Details</h3>
-                                <!-- Default icon is DOWN (&#9660;), JS will rotate to UP when closed -->
-                                <span class="accordion-icon transform transition-transform duration-200">&#9660;</span>
-                            </div>
-                            <!-- Content starts hidden, JS will open it and set icon -->
-                            <div class="accordion-content hidden pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Main Opportunity Details Accordion (Left Column / Full Span dynamically) -->
+                    <div id="main-opportunity-details-accordion"
+                        class="accordion-item bg-white rounded-lg shadow-md md:col-span-full">
+                        <div
+                            class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200">
+                            <h3 class="text-lg font-semibold text-gray-800">Main Details</h3>
+                            <span class="accordion-icon transform transition-transform duration-200">&#9660;</span>
+                        </div>
+                        <!-- Content starts hidden, JS will open it and set icon -->
+                        <div class="accordion-content hidden pt-4">
+                            <!-- THE OPPORTUNITY FORM IS NOW INSIDE THIS ACCORDION CONTENT -->
+                            <form id="opportunity-form" class="space-y-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <input type="hidden" id="opportunity-id">
+
                                 <div>
                                     <label for="opportunity-name"
                                         class="block text-sm font-medium text-gray-700">Opportunity Name <span
@@ -531,7 +533,7 @@
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                                 </div>
 
-                                <!-- MOVED: Save and Cancel buttons, and form message, inside this accordion's content -->
+                                <!-- Save and Cancel buttons, and form message, inside this form -->
                                 <p id="opportunity-form-message" class="text-red-500 text-sm mt-2 hidden col-span-full">
                                 </p>
                                 <div class="flex justify-end space-x-3 mt-6 col-span-full">
@@ -541,87 +543,80 @@
                                         class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
                                         Opportunity</button>
                                 </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Work Logs Accordion (Right Column, hidden by default) -->
+                    <div id="work-logs-section-container" class="accordion-item bg-white rounded-lg shadow-md hidden">
+                        <div
+                            class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200">
+                            <h3 class="text-lg font-semibold text-gray-800">Work Logs</h3>
+                            <span class="accordion-icon transform transition-transform duration-200">&#9660;</span>
+                        </div>
+                        <div class="accordion-content hidden pt-4">
+                            <div id="work-logs-list-container" class="mb-4">
+                                <p id="no-work-logs-message" class="text-center text-gray-500 hidden">No work logs found
+                                    for this opportunity.</p>
+                                <ul id="work-logs-list" class="space-y-2"></ul>
+                            </div>
+
+                            <button id="add-work-log-entry-btn" type="button"
+                                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300 mb-4">Add
+                                New Work Log Entry</button>
+
+                            <!-- Work Log Entry Form (NOW A SEPARATE FORM, NOT NESTED) -->
+                            <div id="work-log-form-container" class="hidden bg-gray-50 p-4 rounded-lg shadow-inner">
+                                <h4 class="text-md font-semibold text-gray-700 mb-3">Add/Edit Work Log Entry</h4>
+                                <form id="work-log-form" class="space-y-4">
+                                    <input type="hidden" id="work-log-id">
+                                    <input type="hidden" id="work-log-opportunity-id">
+
+                                    <div>
+                                        <label for="work-log-date" class="block text-sm font-medium text-gray-700">Date
+                                            <span class="text-red-500">*</span></label>
+                                        <input type="date" id="work-log-date" name="workLogDate" required
+                                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    </div>
+
+                                    <div>
+                                        <label for="work-log-type" class="block text-sm font-medium text-gray-700">Type
+                                            <span class="text-red-500">*</span></label>
+                                        <select id="work-log-type" required
+                                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                            <!-- Options will be populated by JS -->
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label for="work-log-details"
+                                            class="block text-sm font-medium text-gray-700">Details <span
+                                                class="text-red-500">*</span></label>
+                                        <textarea id="work-log-details" rows="3" required
+                                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                                    </div>
+
+                                    <div class="flex justify-end space-x-3">
+                                        <button type="submit"
+                                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
+                                            Work Log</button>
+                                        <button type="button" id="cancel-work-log-btn"
+                                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
+                                    </div>
+                                    <p id="work-log-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
+                                </form>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Work Logs Accordion (Right Column, hidden by default) -->
-                        <div id="work-logs-section-container"
-                            class="accordion-item bg-white rounded-lg shadow-md hidden">
-                            <div
-                                class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200">
-                                <h3 class="text-lg font-semibold text-gray-800">Work Logs</h3>
-                                <!-- Default icon is DOWN (&#9660;), JS will rotate to UP when closed -->
-                                <span class="accordion-icon transform transition-transform duration-200">&#9660;</span>
-                            </div>
-                            <!-- Content starts hidden, JS will open it and set icon -->
-                            <div class="accordion-content hidden pt-4">
-                                <div id="work-logs-list-container" class="mb-4">
-                                    <p id="no-work-logs-message" class="text-center text-gray-500 hidden">No work logs
-                                        found
-                                        for this opportunity.</p>
-                                    <ul id="work-logs-list" class="space-y-2"></ul>
-                                </div>
-
-                                <button id="add-work-log-entry-btn" type="button"
-                                    class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300 mb-4">Add
-                                    New Work Log Entry</button>
-
-                                <!-- Work Log Entry Form -->
-                                <div id="work-log-form-container" class="hidden bg-gray-50 p-4 rounded-lg shadow-inner">
-                                    <h4 class="text-md font-semibold text-gray-700 mb-3">Add/Edit Work Log Entry</h4>
-                                    <form id="work-log-form" class="space-y-4">
-                                        <input type="hidden" id="work-log-id">
-                                        <input type="hidden" id="work-log-opportunity-id">
-
-                                        <div>
-                                            <label for="work-log-date"
-                                                class="block text-sm font-medium text-gray-700">Date <span
-                                                    class="text-red-500">*</span></label>
-                                            <input type="date" id="work-log-date" name="workLogDate" required
-                                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                        </div>
-
-                                        <div>
-                                            <label for="work-log-type"
-                                                class="block text-sm font-medium text-gray-700">Type <span
-                                                    class="text-red-500">*</span></label>
-                                            <select id="work-log-type" required
-                                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                                <!-- Options will be populated by JS -->
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label for="work-log-details"
-                                                class="block text-sm font-medium text-gray-700">Details <span
-                                                    class="text-red-500">*</span></label>
-                                            <textarea id="work-log-details" rows="3" required
-                                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
-                                        </div>
-
-                                        <div class="flex justify-end space-x-3">
-                                            <button type="submit"
-                                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
-                                                Work Log</button>
-                                            <button type="button" id="cancel-work-log-btn"
-                                                class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
-                                        </div>
-                                        <p id="work-log-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div> <!-- END #opportunity-accordions-grid -->
-
-                    <!-- Removed Save/Cancel buttons and form message from here -->
-                </form>
+                </div> <!-- END #opportunity-accordions-grid -->
             </div>
 
             <!-- Opportunity Grid -->
             <p id="no-opportunities-message" class="text-center text-gray-500 mt-8 hidden">No opportunities found.</p>
             <div id="opportunities-grid-container" class="mt-6"></div>
         </section>
+
 
 
 
