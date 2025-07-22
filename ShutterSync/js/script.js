@@ -212,6 +212,34 @@ let messageContent;
 let messageConfirmBtn;
 let messageCancelBtn;
 
+// --- Firestore Utility Functions ---
+
+/**
+ * Gets a Firestore collection reference for a top-level collection.
+ * This function should ONLY be used for top-level collections like 'customers', 'opportunities', 'quotes', 'leads', 'countries', 'currencies', 'priceBooks', 'users_data'.
+ * For subcollections (e.g., 'workLogs', 'quoteLines'), use `collection(doc(db, parentCollection, parentDocId), subcollectionName)`.
+ * @param {string} collectionName The name of the top-level collection (e.g., 'customers').
+ * @returns {import('firebase/firestore').CollectionReference} A Firestore CollectionReference.
+ */
+function getCollectionRef(collectionName) {
+    // According to your security rules, collections like 'customers', 'opportunities', 'quotes', 'leads', 'countries', 'currencies', 'priceBooks', 'users_data' are top-level.
+    return collection(db, collectionName);
+}
+
+/**
+ * Gets a Firestore document reference for a top-level document.
+ * This function should ONLY be used for top-level documents.
+ * For subcollection documents, use `doc(collection(doc(db, parentCollection, parentDocId), subcollectionName), docId)`.
+ * @param {string} collectionName The name of the top-level collection.
+ * @param {string} docId The ID of the document.
+ * @returns {import('firebase/firestore').DocumentReference} A Firestore DocumentReference.
+ */
+function getDocRef(collectionName, docId) {
+    return doc(db, collectionName, docId);
+}
+
+// --- End Firestore Utility Functions ---
+
 
 /**
  * Shows a custom message box (modal).
