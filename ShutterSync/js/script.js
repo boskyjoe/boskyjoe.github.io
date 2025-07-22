@@ -109,6 +109,7 @@ let leadServicesInterestedSelect; // For Leads: multi-select
 let leadSourceSelect;
 let leadFormMessage ;
 
+
 let addOpportunityBtn;
 let opportunityFormContainer;
 let opportunityForm;
@@ -136,6 +137,10 @@ let workLogsList;
 let noWorkLogsMessage;
 let workLogFormMessage;
 let workLogTypeSelect; // Added for easy access
+
+let mainOpportunityDetailsAccordion ;
+let opportunityAccordionsGrid ;
+
 
 let addQuoteBtn;
 let quoteFormContainer;
