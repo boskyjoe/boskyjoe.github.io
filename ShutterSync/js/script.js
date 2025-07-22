@@ -91,8 +91,12 @@ let customerTypeSelect;
 let customerCountrySelect ;
 let customerSearchInput;
 let customersGrid; // Grid.js instance
-let customer-industry ;
-let customer-details;
+let customerIndustrySelect ;
+let customerSourceSelect ;
+let customerActiveCheckbox ;
+let customerFormMessage ;
+let additionalDetails;
+
 
 let addLeadBtn;
 let leadFormContainer;
