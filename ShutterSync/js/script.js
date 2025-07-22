@@ -97,7 +97,6 @@ let customerActiveCheckbox ;
 let customerFormMessage ;
 let additionalDetails;
 
-
 let addLeadBtn;
 let leadFormContainer;
 let leadForm;
@@ -108,6 +107,7 @@ let leadSearchInput;
 let leadsGrid; // Grid.js instance
 let leadServicesInterestedSelect; // For Leads: multi-select
 let leadSourceSelect;
+let leadFormMessage ;
 
 let addOpportunityBtn;
 let opportunityFormContainer;
