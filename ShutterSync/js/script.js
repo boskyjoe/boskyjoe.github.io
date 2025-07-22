@@ -85,11 +85,14 @@ let customerFormContainer;
 let customerForm;
 let cancelCustomerBtn;
 let customersGridContainer;
+let customerContactMethodSelect ;
 let noCustomersMessage;
 let customerTypeSelect;
 let customerCountrySelect ;
 let customerSearchInput;
 let customersGrid; // Grid.js instance
+let customer-industry ;
+let customer-details;
 
 let addLeadBtn;
 let leadFormContainer;
