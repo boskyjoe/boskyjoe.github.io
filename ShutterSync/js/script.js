@@ -112,11 +112,16 @@ let addQuoteBtn;
 let quoteFormContainer;
 let quoteForm;
 let cancelQuoteBtn;
-let quotesGridContainer;
 let noQuotesMessage;
 let quoteSearchInput;
 let quotesGrid; // Grid.js instance
 let quoteOpportunitySelect; // Opportunity dropdown for quotes
+let quotesGridContainer;
+// NEW: Quote filter display elements
+let quotesFilterDisplay;
+let quotesFilterOpportunityName;
+let clearQuotesFilterBtn;
+
 
 // --- Quote Customer Contact Fields ---
 let customerContactNameInput;
@@ -126,11 +131,18 @@ let customerAddressInput;
 // --- End Quote Customer Contact Fields ---
 
 let quoteStatusSelect; // Status dropdown for quotes
+let quoteFormMessage
+let currentQuoteId = null; // To store the ID of the quote being edited
+let mainQuoteDetailsAccordion; // Reference to the main details accordion in Quotes
+let quoteAccordionsGrid; // Reference to the grid container for quote accordions
 
-// NEW: Quote filter display elements
-let quotesFilterDisplay;
-let quotesFilterOpportunityName;
-let clearQuotesFilterBtn;
+// Quote Line related DOM elements (ALL NEW)
+let quoteLinesSectionContainer, addQuoteLineEntryBtn, quoteLineFormContainer, quoteLineForm, cancelQuoteLineBtn;
+let quoteLinesList, noQuoteLinesMessage;
+let quoteLineServicesInput, quoteLineDescriptionInput, quoteLineStartDateInput, quoteLineEndDateInput;
+let quoteLineUnitPriceInput, quoteLineQuantityInput, quoteLineDiscountInput, quoteLineAdjustmentAmountInput, quoteLineFinalNetSpan;
+let quoteLineFormMessage;
+let currentQuoteLineId = null; // To store the ID of the quote line being edited
 
 
 let addCountryBtn;
@@ -182,6 +194,7 @@ let workLogFormMessage;
 let opportunityAccordionsGrid; // New: Reference to the grid container
 let mainOpportunityDetailsAccordion; // New: Reference to the main details accordion
 
+let unsubscribeQuoteLines = null; // For quote lines
 
 /**
  * Shows a custom message box (modal).
@@ -485,6 +498,20 @@ function setAccordionVisualState(accordionHeader, isOpen) {
     }
     console.log(`Accordion state set for ${accordionHeader.textContent.trim()}: ${isOpen ? 'OPEN' : 'CLOSED'}`);
 }
+
+/**
+ * Sets up click listeners for all accordion headers on the page.
+ * This should be called once on page load.
+ */
+function setupAccordionListeners() {
+    document.querySelectorAll('.accordion-header').forEach(header => {
+        // Remove any existing listeners to prevent duplicates if called multiple times (though it should only be called once)
+        header.removeEventListener('click', toggleAccordion);
+        header.addEventListener('click', toggleAccordion);
+    });
+    console.log("All accordion listeners set up.");
+}
+
 
 function toggleAccordion(event) {
     const header = event.currentTarget;
@@ -2528,82 +2555,310 @@ function clearQuotesFilter() {
     loadQuotes(); // This will now load all quotes
 }
 
-async function setupQuoteForm(quote = null) {
-    if (!db || !userId) {
-        showMessageBox("Authentication required to setup quote form.", false);
+async function setupQuoteForm(quoteData = null) {
+    console.log('setupQuoteForm called with quoteData:', quoteData);
+    await populateQuoteOpportunities();
+    await populateQuoteStatus();
+
+    if (quoteData) { // Edit mode
+        currentQuoteId = quoteData.id;
+        document.getElementById('quote-id').value = quoteData.id;
+        document.getElementById('quote-name').value = quoteData.quoteName || '';
+        document.getElementById('event-name').value = quoteData.eventName || '';
+        document.getElementById('quote-opportunity').value = quoteData.opportunityId || '';
+        document.getElementById('quote-amount').value = quoteData.quoteAmount !== undefined ? quoteData.quoteAmount.toFixed(2) : '0.00';
+        document.getElementById('quote-status').value = quoteData.status || 'Draft';
+        document.getElementById('quote-additional-details').value = quoteData.additionalDetails || '';
+
+        const eventDate = quoteData.eventDate ? new Date(quoteData.eventDate.seconds * 1000).toISOString().split('T')[0] : '';
+        document.getElementById('quote-event-date').value = eventDate;
+
+        await populateCustomerDetailsForQuote(quoteData.opportunityId);
+
+        // --- Layout Adjustment for EDIT mode ---
+        if (mainQuoteDetailsAccordion) {
+            mainQuoteDetailsAccordion.classList.remove('md:col-span-full'); // Main details takes half width
+            // Explicitly set Main Details accordion to OPEN
+            const mainDetailsHeader = mainQuoteDetailsAccordion.querySelector('.accordion-header');
+            setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
+        }
+
+        if (quoteLinesSectionContainer) {
+            quoteLinesSectionContainer.classList.remove('hidden'); // Show quote lines container
+            // Explicitly set Quote Lines accordion to CLOSED
+            const quoteLinesAccordionHeader = quoteLinesSectionContainer.querySelector('.accordion-header');
+            setAccordionVisualState(quoteLinesAccordionHeader, false); // False for CLOSED
+            // IMPORTANT: Remove novalidate when quote lines section is visible (in edit mode)
+            if (quoteLineForm) { // Add null check here
+                quoteLineForm.removeAttribute('novalidate');
+            }
+        }
+        await loadQuoteLines(quoteData.id); // Load quote lines for this quote
+        // --- End Layout Adjustment for EDIT mode ---
+
+    } else { // For a new quote (ADD mode)
+        if (quoteForm) quoteForm.reset();
+        const quoteIdInput = document.getElementById('quote-id');
+        if (quoteIdInput) quoteIdInput.value = '';
+        currentQuoteId = null;
+        populateCustomerDetailsForQuote(''); // Clear customer details
+        document.getElementById('quote-amount').value = '0.00'; // Reset quote amount for new quote
+        if (quoteLinesList) quoteLinesList.innerHTML = ''; // Clear existing quote lines
+        if (noQuoteLinesMessage) noQuoteLinesMessage.classList.remove('hidden'); // Show no lines message
+        hideQuoteLineForm(); // Hide the quote line entry form (this will set novalidate)
+
+        // --- Layout Adjustment for ADD mode ---
+        if (quoteLinesSectionContainer) {
+            quoteLinesSectionContainer.classList.add('hidden'); // Hide quote lines container
+            // IMPORTANT: Add novalidate when quote lines section is hidden (in add mode)
+            if (quoteLineForm) { // Add null check here
+                quoteLineForm.setAttribute('novalidate', 'novalidate');
+            }
+        }
+        if (mainQuoteDetailsAccordion) {
+            mainQuoteDetailsAccordion.classList.add('md:col-span-full'); // Main details spans full width
+            // Explicitly set Main Details accordion to OPEN
+            const mainDetailsHeader = mainQuoteDetailsAccordion.querySelector('.accordion-header');
+            setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
+        }
+        // --- End Layout Adjustment for ADD mode ---
+    }
+    showForm(quoteFormContainer);
+    console.log('Add/Edit Quote form setup complete. currentQuoteId:', currentQuoteId);
+}
+
+
+// --- Quote Lines Logic (Quotes Subcollection) ---
+async function loadQuoteLines(quoteId) {
+    if (unsubscribeQuoteLines) {
+        unsubscribeQuoteLines(); // Unsubscribe from previous listener
+    }
+
+    const quoteLinesCollectionRef = collection(getDocRef('quotes', quoteId), 'quoteLines');
+    unsubscribeQuoteLines = onSnapshot(query(quoteLinesCollectionRef, orderBy('createdAt', 'asc')), (snapshot) => {
+        const quoteLines = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderQuoteLines(quoteLines);
+        updateParentQuoteAmount(quoteLines); // Update parent quote amount whenever lines change
+    }, (error) => {
+        console.error("Error fetching quote lines:", error);
+        showMessageBox("Error loading quote lines.");
+    });
+}
+
+function renderQuoteLines(quoteLines) {
+    if (quoteLinesList) { // Null check for quoteLinesList
+        quoteLinesList.innerHTML = '';
+    }
+    if (quoteLines.length === 0) {
+        if (noQuoteLinesMessage) { // Null check for noQuoteLinesMessage
+            noQuoteLinesMessage.classList.remove('hidden');
+        }
+    } else {
+        if (noQuoteLinesMessage) { // Null check for noQuoteLinesMessage
+            noQuoteLinesMessage.classList.add('hidden');
+        }
+        quoteLines.forEach(line => {
+            const li = document.createElement('li');
+            li.className = 'bg-gray-50 p-3 rounded-md shadow-sm flex justify-between items-center';
+            const startDate = line.serviceStartDate ? new Date(line.serviceStartDate.seconds * 1000).toLocaleDateString() : 'N/A';
+            const endDate = line.serviceEndDate ? new Date(line.serviceEndDate.seconds * 1000).toLocaleDateString() : 'N/A';
+            li.innerHTML = `
+                <div>
+                    <p class="font-semibold">${line.services} (Qty: ${line.quantity})</p>
+                    <p class="text-sm text-gray-700">Net: ${line.finalNet ? line.finalNet.toFixed(2) : '0.00'}</p>
+                    <p class="text-xs text-gray-500">${startDate} - ${endDate}</p>
+                    <p class="text-xs text-gray-500">${line.serviceDescription || 'No description.'}</p>
+                </div>
+                <div>
+                    <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" data-id="${line.id}">Edit</button>
+                    <button class="text-red-600 hover:text-red-800 font-semibold" data-id="${line.id}">Delete</button>
+                </div>
+            `;
+            // Attach event listeners using delegation or directly
+            li.querySelector('button[data-id][class*="text-blue"]').addEventListener('click', () => handleEditQuoteLine(line.id, line));
+            li.querySelector('button[data-id][class*="text-red"]').addEventListener('click', () => handleDeleteQuoteLine(line.id));
+            if (quoteLinesList) { // Null check before appending
+                quoteLinesList.appendChild(li);
+            }
+        });
+    }
+}
+
+function showQuoteLineForm() {
+    if (quoteLineFormContainer) { // Null check
+        quoteLineFormContainer.classList.remove('hidden');
+    }
+    if (quoteLineForm) { // Null check
+        quoteLineForm.reset();
+        quoteLineForm.removeAttribute('novalidate'); // Enable validation when shown
+    }
+    if (document.getElementById('quote-line-id')) document.getElementById('quote-line-id').value = '';
+    if (document.getElementById('quote-line-parent-quote-id')) document.getElementById('quote-line-parent-quote-id').value = currentQuoteId;
+    if (quoteLineUnitPriceInput) quoteLineUnitPriceInput.value = 0;
+    if (quoteLineQuantityInput) quoteLineQuantityInput.value = 1;
+    if (quoteLineDiscountInput) quoteLineDiscountInput.value = 0;
+    if (quoteLineAdjustmentAmountInput) quoteLineAdjustmentAmountInput.value = 0;
+    
+    calculateQuoteLineFinalNet(); // Recalculate for new form
+    if (quoteLineFormMessage) { // Null check
+        showMessageBox(quoteLineFormMessage, '', false); // Clear previous messages
+    }
+}
+
+function hideQuoteLineForm() {
+    if (quoteLineFormContainer) { // Null check
+        quoteLineFormContainer.classList.add('hidden');
+    }
+    if (quoteLineForm) { // Null check
+        quoteLineForm.reset();
+        quoteLineForm.setAttribute('novalidate', 'novalidate'); // Disable validation when hidden
+    }
+    if (document.getElementById('quote-line-id')) document.getElementById('quote-line-id').value = '';
+    if (document.getElementById('quote-line-parent-quote-id')) document.getElementById('quote-line-parent-quote-id').value = '';
+    if (quoteLineFormMessage) { // Null check
+        showMessageBox(quoteLineFormMessage, '', false);
+    }
+}
+
+function calculateQuoteLineFinalNet() {
+    const unitPrice = parseFloat(quoteLineUnitPriceInput ? quoteLineUnitPriceInput.value : 0) || 0;
+    const quantity = parseFloat(quoteLineQuantityInput ? quoteLineQuantityInput.value : 0) || 0;
+    const discount = parseFloat(quoteLineDiscountInput ? quoteLineDiscountInput.value : 0) || 0;
+    const adjustment = parseFloat(quoteLineAdjustmentAmountInput ? quoteLineAdjustmentAmountInput.value : 0) || 0;
+
+    const subtotal = unitPrice * quantity;
+    const discountedValue = subtotal - (subtotal * (discount / 100));
+    const finalNet = discountedValue - adjustment;
+
+    if (quoteLineFinalNetSpan) { // Null check
+        quoteLineFinalNetSpan.textContent = finalNet.toFixed(2);
+    }
+}
+
+async function handleSaveQuoteLine(event) {
+    event.preventDefault();
+    const formData = new FormData(quoteLineForm);
+    const quoteLineId = document.getElementById('quote-line-id').value;
+    const parentQuoteId = document.getElementById('quote-line-parent-quote-id').value;
+
+    if (!parentQuoteId) {
+        if (quoteLineFormMessage) {
+            showMessageBox(quoteLineFormMessage, 'Parent quote not found. Cannot save quote line.', true);
+        }
         return;
     }
 
-    // Fetch only 'Won' opportunities created by the current user (if Standard) or all 'Won' (if Admin)
-    let opportunitiesQuery;
-    if (userRole === 'Admin') {
-        opportunitiesQuery = query(collection(db, 'opportunities'), where('salesStage', '==', 'Won'));
+    const data = {
+        services: formData.get('services'),
+        serviceDescription: formData.get('serviceDescription'),
+        serviceStartDate: formData.get('serviceStartDate') ? new Date(formData.get('serviceStartDate')) : null,
+        serviceEndDate: formData.get('serviceEndDate') ? new Date(formData.get('serviceEndDate')) : null,
+        unitPrice: parseFloat(formData.get('unitPrice')) || 0,
+        quantity: parseInt(formData.get('quantity')) || 0,
+        discount: parseFloat(formData.get('discount')) || 0,
+        adjustmentAmount: parseFloat(formData.get('adjustmentAmount')) || 0,
+        finalNet: parseFloat(quoteLineFinalNetSpan ? quoteLineFinalNetSpan.textContent : 0) || 0, // Use the calculated value
+        updatedAt: serverTimestamp(),
+    };
+
+    try {
+        const quoteLinesCollectionRef = collection(getDocRef('quotes', parentQuoteId), 'quoteLines');
+        if (quoteLineId) {
+            await updateDoc(doc(quoteLinesCollectionRef, quoteLineId), data);
+            if (quoteLineFormMessage) {
+                showMessageBox(quoteLineFormMessage, 'Quote line updated successfully!', false);
+            }
+        } else {
+            data.createdAt = serverTimestamp();
+            await addDoc(quoteLinesCollectionRef, data);
+            if (quoteLineFormMessage) {
+                showMessageBox(quoteLineFormMessage, 'Quote line added successfully!', false);
+            }
+        }
+        hideQuoteLineForm();
+    } catch (error) {
+        console.error("Error saving quote line:", error);
+        if (quoteLineFormMessage) {
+            showMessageBox(quoteLineFormMessage, `Error saving quote line: ${error.message}`, true);
+        }
+    }
+}
+
+function handleEditQuoteLine(quoteLineId, quoteLineData) {
+    showQuoteLineForm();
+    if (document.getElementById('quote-line-id')) document.getElementById('quote-line-id').value = quoteLineId;
+    if (document.getElementById('quote-line-services')) document.getElementById('quote-line-services').value = quoteLineData.services || '';
+    if (document.getElementById('quote-line-description')) document.getElementById('quote-line-description').value = quoteLineData.serviceDescription || '';
+    if (quoteLineUnitPriceInput) quoteLineUnitPriceInput.value = quoteLineData.unitPrice !== undefined ? quoteLineData.unitPrice : 0;
+    if (quoteLineQuantityInput) quoteLineQuantityInput.value = quoteLineData.quantity !== undefined ? quoteLineData.quantity : 1;
+    if (quoteLineDiscountInput) quoteLineDiscountInput.value = quoteLineData.discount !== undefined ? quoteLineData.discount : 0;
+    if (quoteLineAdjustmentAmountInput) quoteLineAdjustmentAmountInput.value = quoteLineData.adjustmentAmount !== undefined ? quoteLineData.adjustmentAmount : 0;
+
+    if (document.getElementById('quote-line-start-date')) document.getElementById('quote-line-start-date').value = quoteLineData.serviceStartDate ? new Date(quoteLineData.serviceStartDate.seconds * 1000).toISOString().split('T')[0] : '';
+    if (document.getElementById('quote-line-end-date')) document.getElementById('quote-line-end-date').value = quoteLineData.serviceEndDate ? new Date(quoteLineData.serviceEndDate.seconds * 1000).toISOString().split('T')[0] : '';
+
+    calculateQuoteLineFinalNet(); // Recalculate to update display
+}
+
+function handleDeleteQuote(quoteId) {
+    showMessageBox("Are you sure you want to delete this quote and all its quote lines? This action cannot be undone.", 'confirm', async (confirmed) => {
+        if (confirmed) {
+            try {
+                // Delete subcollection documents first
+                const quoteLinesSnapshot = await getDocs(collection(getDocRef('quotes', quoteId), 'quoteLines'));
+                const deletePromises = [];
+                quoteLinesSnapshot.forEach(doc => {
+                    deletePromises.push(deleteDoc(doc.ref));
+                });
+                await Promise.all(deletePromises);
+
+                // Then delete the parent document
+                await deleteDoc(getDocRef('quotes', quoteId));
+                showMessageBox("Quote and its lines deleted successfully!");
+            } catch (error) {
+                console.error("Error deleting quote:", error);
+                showMessageBox(`Error deleting quote: ${error.message}`);
+            }
+        }
+    });
+}
+
+
+// Function to update the parent quote's total amount based on its quote lines
+async function updateParentQuoteAmount(currentQuoteLines = null) {
+    if (!currentQuoteId) {
+        console.warn("No current quote ID to update parent amount.");
+        return;
+    }
+
+    let totalAmount = 0;
+    if (currentQuoteLines) {
+        // If quote lines are already provided (e.g., from onSnapshot callback)
+        totalAmount = currentQuoteLines.reduce((sum, line) => sum + (line.finalNet || 0), 0);
     } else {
-        // Standard users can only see their own 'Won' opportunities
-        opportunitiesQuery = query(collection(db, 'opportunities'), where('creatorId', '==', userId), where('salesStage', '==', 'Won'));
+        // Otherwise, fetch them
+        try {
+            const quoteLinesSnapshot = await getDocs(collection(getDocRef('quotes', currentQuoteId), 'quoteLines'));
+            totalAmount = quoteLinesSnapshot.docs.reduce((sum, doc) => sum + (doc.data().finalNet || 0), 0);
+        } catch (error) {
+            console.error("Error calculating total quote amount from lines:", error);
+            showMessageBox("Error calculating total quote amount.");
+            return;
+        }
     }
 
     try {
-        const opportunitiesSnapshot = await getDocs(opportunitiesQuery);
-        const wonOpportunities = opportunitiesSnapshot.docs.map(doc => ({
-            id: doc.id,
-            name: doc.data().name,
-            customerId: doc.data().customerId,
-            // We don't pre-fetch full customer details here for dropdown options,
-            // as handleOpportunityChangeForQuote will do that on selection.
-        }));
-
-        populateSelect(quoteOpportunitySelect, wonOpportunities, 'id', 'name', 'Select Opportunity (Won)');
-
+        await updateDoc(getDocRef('quotes', currentQuoteId), { quoteAmount: totalAmount });
+        if (document.getElementById('quote-amount')) { // Null check
+            document.getElementById('quote-amount').value = totalAmount.toFixed(2); // Update the displayed amount
+        }
+        console.log(`Parent quote ${currentQuoteId} amount updated to: ${totalAmount.toFixed(2)}`);
     } catch (error) {
-        console.error("Error fetching 'Won' opportunities:", error);
-        showMessageBox(`Error loading opportunities for quotes: ${error.message}`, false);
-        // Ensure dropdown is empty on error
-        populateSelect(quoteOpportunitySelect, [], 'id', 'name', 'Error loading opportunities');
+        console.error("Error updating parent quote amount:", error);
+        showMessageBox(`Error updating parent quote amount: ${error.message}`);
     }
-
-    // Populate Status dropdown
-    const quoteStatuses = [
-        { id: 'Draft', name: 'Draft' },
-        { id: 'Review', name: 'Review' },
-        { id: 'Finalized', name: 'Finalized' }
-    ];
-    populateSelect(quoteStatusSelect, quoteStatuses, 'id', 'name', 'Select Status');
-
-
-    if (quote) {
-        document.getElementById('quote-id').value = quote.id;
-        document.getElementById('quote-name').value = quote.quoteName || '';
-        quoteOpportunitySelect.value = quote.opportunityId || '';
-        document.getElementById('event-name').value = quote.eventName || '';
-
-        // Populate customer details from the existing quote data
-        // Add null checks before setting values
-        if (customerContactNameInput) customerContactNameInput.value = quote.customerContactName || '';
-        if (customerPhoneInput) customerPhoneInput.value = quote.phone || '';
-        if (customerEmailInput) customerEmailInput.value = quote.email || '';
-        if (customerAddressInput) customerAddressInput.value = quote.customerAddress || '';
-
-        const eventDate = quote.eventDate ? new Date(quote.eventDate.seconds * 1000).toISOString().split('T')[0] : '';
-        document.getElementById('quote-event-date').value = eventDate;
-        document.getElementById('quote-additional-details').value = quote.additionalDetails || '';
-        document.getElementById('quote-amount').value = quote.quoteAmount !== undefined ? quote.quoteAmount : '';
-        quoteStatusSelect.value = quote.status || 'Draft';
-
-    } else {
-        // Reset form for new quote
-        if (quoteForm) quoteForm.reset();
-        document.getElementById('quote-id').value = '';
-        // Clear auto-filled fields for new quote
-        // Add null checks before setting values
-        if (customerContactNameInput) customerContactNameInput.value = '';
-        if (customerPhoneInput) customerPhoneInput.value = '';
-        if (customerEmailInput) customerEmailInput.value = '';
-        if (customerAddressInput) customerAddressInput.value = '';
-        quoteStatusSelect.value = 'Draft'; // Default status for new quotes
-    }
-    showQuoteForm();
 }
+
 
 /**
  * Handles the change event on the Opportunity dropdown in the Quote form.
@@ -2905,10 +3160,8 @@ async function deleteQuote(quoteId) {
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', initializePage);
 
-function initializePage() {
-    console.log('DOMContentLoaded: Initializing page.');
-
-    // Assign DOM elements here to ensure they are available
+async function initializePage() {
+    // Get DOM elements
     authSection = document.getElementById('auth-section');
     dashboardSection = document.getElementById('dashboard-section');
     customersSection = document.getElementById('customers-section');
@@ -2919,65 +3172,56 @@ function initializePage() {
     currenciesSection = document.getElementById('currencies-section');
     priceBooksSection = document.getElementById('price-books-section');
 
-    navDashboard = document.getElementById('nav-dashboard');
-    navCustomers = document.getElementById('nav-customers');
-    navLeads = document.getElementById('nav-leads');
-    navOpportunities = document.getElementById('nav-opportunities');
-    navQuotes = document.getElementById('nav-quotes');
-    navCountries = document.getElementById('nav-countries');
-    navCurrencies = document.getElementById('nav-currencies');
-    navPriceBooks = document.getElementById('nav-price-books');
-    navLogout = document.getElementById('nav-logout');
-    adminMenuItem = document.getElementById('admin-menu-item');
-
-    googleSignInBtn = document.getElementById('google-signin-btn');
-    authStatus = document.getElementById('auth-status');
     userDisplayName = document.getElementById('user-display-name');
     userIdDisplay = document.getElementById('user-id-display');
-    userRoleDisplay = document.getElementById('user-role'); // Ensure this element exists in HTML if you want to display role
-    authErrorMessage = document.getElementById('auth-error-message');
+    userRole = document.getElementById('user-role');
+    googleSignInBtn = document.getElementById('google-signin-btn');
+    logoutBtn = document.getElementById('nav-logout');
 
-    dashboardTotalCustomers = document.getElementById('dashboard-total-customers');
-    dashboardTotalOpportunities = document.getElementById('dashboard-total-opportunities');
-    dashboardOpenOpportunities = document.getElementById('dashboard-open-opportunities');
-    dashboardWonOpportunities = document.getElementById('dashboard-won-opportunities');
-
+    // Customer elements
     addCustomerBtn = document.getElementById('add-customer-btn');
     customerFormContainer = document.getElementById('customer-form-container');
     customerForm = document.getElementById('customer-form');
     cancelCustomerBtn = document.getElementById('cancel-customer-btn');
+    customerSearchInput = document.getElementById('customer-search');
     customersGridContainer = document.getElementById('customers-grid-container');
     noCustomersMessage = document.getElementById('no-customers-message');
-    customerSearchInput = document.getElementById('customer-search');
+    customerTypeSelect = document.getElementById('customer-type');
+    customerCountrySelect = document.getElementById('customer-country');
+    customerContactMethodSelect = document.getElementById('customer-contact-method');
+    customerIndustrySelect = document.getElementById('customer-industry');
+    customerSourceSelect = document.getElementById('customer-source');
+    customerActiveCheckbox = document.getElementById('customer-active');
+    customerFormMessage = document.getElementById('customer-form-message');
 
+    // Lead elements
     addLeadBtn = document.getElementById('add-lead-btn');
     leadFormContainer = document.getElementById('lead-form-container');
     leadForm = document.getElementById('lead-form');
     cancelLeadBtn = document.getElementById('cancel-lead-btn');
+    leadSearchInput = document.getElementById('lead-search');
     leadsGridContainer = document.getElementById('leads-grid-container');
     noLeadsMessage = document.getElementById('no-leads-message');
-    leadSearchInput = document.getElementById('lead-search');
     leadServicesInterestedSelect = document.getElementById('lead-services-interested');
+    leadSourceSelect = document.getElementById('lead-source');
+    leadFormMessage = document.getElementById('lead-form-message');
 
+    // Opportunity elements
     addOpportunityBtn = document.getElementById('add-opportunity-btn');
     opportunityFormContainer = document.getElementById('opportunity-form-container');
     opportunityForm = document.getElementById('opportunity-form');
     cancelOpportunityBtn = document.getElementById('cancel-opportunity-btn');
+    opportunitySearchInput = document.getElementById('opportunity-search');
     opportunitiesGridContainer = document.getElementById('opportunities-grid-container');
     noOpportunitiesMessage = document.getElementById('no-opportunities-message');
-    opportunitySearchInput = document.getElementById('opportunity-search');
-
-    // NEW: Two colum layout of opportunity
-    opportunityAccordionsGrid = document.getElementById('opportunity-accordions-grid');
-    mainOpportunityDetailsAccordion = document.getElementById('main-opportunity-details-accordion');
-
-    // NEW: Assign opportunity calculation fields
-    opportunityValueInput = document.getElementById('opportunity-value');
+    opportunityCustomerSelect = document.getElementById('opportunity-customer');
+    opportunityCurrencySelect = document.getElementById('opportunity-currency');
+    opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
+    opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested');
     opportunityDiscountInput = document.getElementById('opportunity-discount');
     adjustmentAmtInput = document.getElementById('adjustment-amt');
-    opportunityNetDisplay = document.getElementById('opportunity-net');
-
-
+    opportunityNetSpan = document.getElementById('opportunity-net');
+    opportunityFormMessage = document.getElementById('opportunity-form-message');
     workLogsSectionContainer = document.getElementById('work-logs-section-container');
     addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
     workLogFormContainer = document.getElementById('work-log-form-container');
@@ -2985,212 +3229,563 @@ function initializePage() {
     cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
     workLogsList = document.getElementById('work-logs-list');
     noWorkLogsMessage = document.getElementById('no-work-logs-message');
-    workLogTypeSelect = document.getElementById('work-log-type');
+    workLogFormMessage = document.getElementById('work-log-form-message');
+    currentOpportunityId = null; // To store the ID of the opportunity being edited
+    mainOpportunityDetailsAccordion = document.getElementById('main-opportunity-details-accordion');
+    opportunityAccordionsGrid = document.getElementById('opportunity-accordions-grid');
 
+
+    // Quote elements (UPDATED)
     addQuoteBtn = document.getElementById('add-quote-btn');
     quoteFormContainer = document.getElementById('quote-form-container');
     quoteForm = document.getElementById('quote-form');
     cancelQuoteBtn = document.getElementById('cancel-quote-btn');
+    quoteSearchInput = document.getElementById('quote-search');
     quotesGridContainer = document.getElementById('quotes-grid-container');
     noQuotesMessage = document.getElementById('no-quotes-message');
-    quoteSearchInput = document.getElementById('quote-search');
     quoteOpportunitySelect = document.getElementById('quote-opportunity');
-
-    // --- CRITICAL: Assign all quote-related input elements using their NEW, UNIQUE IDs ---
-    customerContactNameInput = document.getElementById('quote-customer-contact-name');
-    console.log('initializePage: Assigned customerContactNameInput:', customerContactNameInput);
-    console.assert(customerContactNameInput !== null, 'ERROR: quote-customer-contact-name element not found! Check HTML ID.');
-
-    customerPhoneInput = document.getElementById('quote-customer-phone');
-    console.log('initializePage: Assigned customerPhoneInput:', customerPhoneInput);
-    console.assert(customerPhoneInput !== null, 'ERROR: quote-customer-phone element not found! Check HTML ID.');
-
-    customerEmailInput = document.getElementById('quote-customer-email');
-    console.log('initializePage: Assigned customerEmailInput:', customerEmailInput);
-    console.assert(customerEmailInput !== null, 'ERROR: quote-customer-email element not found! Check HTML ID.');
-
-    customerAddressInput = document.getElementById('quote-customer-address');
-    console.log('initializePage: Assigned customerAddressInput:', customerAddressInput);
-    console.assert(customerAddressInput !== null, 'ERROR: quote-customer-address element not found! Check HTML ID.');
-    // --- END CRITICAL ASSIGNMENT ---
-
     quoteStatusSelect = document.getElementById('quote-status');
-
-    // NEW: Assign quote filter display elements
     quotesFilterDisplay = document.getElementById('quotes-filter-display');
     quotesFilterOpportunityName = document.getElementById('quotes-filter-opportunity-name');
     clearQuotesFilterBtn = document.getElementById('clear-quotes-filter-btn');
+    quoteCustomerContactNameInput = document.getElementById('quote-customer-contact-name');
+    quoteCustomerPhoneInput = document.getElementById('quote-customer-phone');
+    quoteCustomerEmailInput = document.getElementById('quote-customer-email');
+    quoteCustomerAddressInput = document.getElementById('quote-customer-address');
+    quoteFormMessage = document.getElementById('quote-form-message');
+    mainQuoteDetailsAccordion = document.getElementById('main-quote-details-accordion');
+    quoteAccordionsGrid = document.getElementById('quote-accordions-grid');
 
+    // Quote Line elements (ALL NEW)
+    quoteLinesSectionContainer = document.getElementById('quote-lines-section-container');
+    addQuoteLineEntryBtn = document.getElementById('add-quote-line-entry-btn');
+    quoteLineFormContainer = document.getElementById('quote-line-form-container');
+    quoteLineForm = document.getElementById('quote-line-form');
+    cancelQuoteLineBtn = document.getElementById('cancel-quote-line-btn');
+    quoteLinesList = document.getElementById('quote-lines-list');
+    noQuoteLinesMessage = document.getElementById('no-quote-lines-message');
+    quoteLineServicesInput = document.getElementById('quote-line-services');
+    quoteLineDescriptionInput = document.getElementById('quote-line-description');
+    quoteLineStartDateInput = document.getElementById('quote-line-start-date');
+    quoteLineEndDateInput = document.getElementById('quote-line-end-date');
+    quoteLineUnitPriceInput = document.getElementById('quote-line-unit-price');
+    quoteLineQuantityInput = document.getElementById('quote-line-quantity');
+    quoteLineDiscountInput = document.getElementById('quote-line-discount');
+    quoteLineAdjustmentAmountInput = document.getElementById('quote-line-adjustment-amount');
+    quoteLineFinalNetSpan = document.getElementById('quote-line-final-net');
+    quoteLineFormMessage = document.getElementById('quote-line-form-message');
+
+
+    // Admin elements
+    adminMenuItem = document.getElementById('admin-menu-item');
     addCountryBtn = document.getElementById('add-country-btn');
     countryFormContainer = document.getElementById('country-form-container');
     countryForm = document.getElementById('country-form');
     cancelCountryBtn = document.getElementById('cancel-country-btn');
+    countrySearchInput = document.getElementById('country-search');
     countriesGridContainer = document.getElementById('countries-grid-container');
     noCountriesMessage = document.getElementById('no-countries-message');
-    countrySearchInput = document.getElementById('country-search');
+    countryFormMessage = document.getElementById('country-form-message');
 
     addCurrencyBtn = document.getElementById('add-currency-btn');
     currencyFormContainer = document.getElementById('currency-form-container');
     currencyForm = document.getElementById('currency-form');
     cancelCurrencyBtn = document.getElementById('cancel-currency-btn');
+    currencySearchInput = document.getElementById('currency-search');
     currenciesGridContainer = document.getElementById('currencies-grid-container');
     noCurrenciesMessage = document.getElementById('no-currencies-message');
-    currencySearchInput = document.getElementById('currency-search');
+    currencyCountrySelect = document.getElementById('currency-country');
+    currencyFormMessage = document.getElementById('currency-form-message');
 
     addPriceBookBtn = document.getElementById('add-price-book-btn');
     priceBookFormContainer = document.getElementById('price-book-form-container');
     priceBookForm = document.getElementById('price-book-form');
     cancelPriceBookBtn = document.getElementById('cancel-price-book-btn');
+    priceBookSearchInput = document.getElementById('price-book-search');
     priceBooksGridContainer = document.getElementById('price-books-grid-container');
     noPriceBooksMessage = document.getElementById('no-price-books-message');
-    priceBookSearchInput = document.getElementById('price-book-search');
+    priceBookCurrencySelect = document.getElementById('price-book-currency');
+    priceBookActiveCheckbox = document.getElementById('price-book-active');
+    priceBookFormMessage = document.getElementById('price-book-form-message');
 
-    messageBox = document.getElementById('message-box');
-    messageContent = document.getElementById('message-content');
-    messageConfirmBtn = document.getElementById('message-confirm-btn');
-    messageCancelBtn = document.getElementById('message-cancel-btn');
-
-    // Assign opportunity specific dropdowns
-    opportunityCurrencySelect = document.getElementById('opportunity-currency');
-    opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
-    opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested');
-
-
-    // Setup Auth
-    setupAuth();
-
-    // Navigation Event Listeners (ensure elements exist before adding listeners)
-    if (navDashboard) navDashboard.addEventListener('click', () => {
-        showSection(dashboardSection);
-        updateDashboard();
-    });
-    if (navCustomers) navCustomers.addEventListener('click', () => {
-        showSection(customersSection);
-        loadCustomers();
-    });
-    if (navLeads) navLeads.addEventListener('click', () => {
-        showSection(leadsSection);
-        loadLeads();
-    });
-    if (navOpportunities) navOpportunities.addEventListener('click', () => {
-        showSection(opportunitiesSection);
-        loadOpportunities();
-    });
-
-    if (navQuotes) {
-        navQuotes.addEventListener('click', () => {
-            console.log('Navigating to Quotes section...');
-            // When navigating to quotes, clear any existing filter by default
-            clearQuotesFilter(); // This will call loadQuotes()
-            showSection(quotesSection);
-        });
-        console.log('navQuotes listener attached successfully.');
-    } else {
-        console.error('ERROR: navQuotes element not found during initializePage! Quotes navigation will not work.');
-    }
-
-    if (navCountries) navCountries.addEventListener('click', () => {
-        if (userRole === 'Admin') {
-            showSection(countriesSection);
-            loadCountries();
-        } else {
-            showMessageBox("You do not have permission to access this section.", false);
-        }
-    });
-    if (navCurrencies) navCurrencies.addEventListener('click', () => {
-        if (userRole === 'Admin') {
-            showSection(currenciesSection);
-            loadCurrencies();
-        } else {
-            showMessageBox("You do not have permission to access this section.", false);
-        }
-    });
-    if (navPriceBooks) navPriceBooks.addEventListener('click', () => {
-        if (userRole === 'Admin') {
-            showSection(priceBooksSection);
-            loadPriceBooks();
-        } else {
-            showMessageBox("You do not have permission to access this section.", false);
-        }
-    });
+    // Setup Event Listeners
     if (googleSignInBtn) googleSignInBtn.addEventListener('click', handleGoogleSignIn);
-    if (navLogout) navLogout.addEventListener('click', handleLogout);
-
-    // Customer Event Listeners
-    if (addCustomerBtn) addCustomerBtn.addEventListener('click', () => setupCustomerForm());
-    if (cancelCustomerBtn) cancelCustomerBtn.addEventListener('click', hideCustomerForm);
+    if (addCustomerBtn) addCustomerBtn.addEventListener('click', () => { hideForm(customerFormContainer, customerFormMessage); showForm(customerFormContainer); customerForm.reset(); document.getElementById('customer-id').value = ''; customerActiveCheckbox.checked = true; });
+    if (cancelCustomerBtn) cancelCustomerBtn.addEventListener('click', () => hideForm(customerFormContainer, customerFormMessage));
     if (customerForm) customerForm.addEventListener('submit', handleSaveCustomer);
     if (customerSearchInput) customerSearchInput.addEventListener('input', (event) => { if (customersGrid) customersGrid.search(event.target.value); });
 
-    // Lead Event Listeners
-    if (addLeadBtn) addLeadBtn.addEventListener('click', () => setupLeadForm());
-    if (cancelLeadBtn) cancelLeadBtn.addEventListener('click', hideLeadForm);
+    if (addLeadBtn) addLeadBtn.addEventListener('click', () => { hideForm(leadFormContainer, leadFormMessage); showForm(leadFormContainer); leadForm.reset(); document.getElementById('lead-id').value = ''; Array.from(leadServicesInterestedSelect.options).forEach(option => option.selected = false); });
+    if (cancelLeadBtn) cancelLeadBtn.addEventListener('click', () => hideForm(leadFormContainer, leadFormMessage));
     if (leadForm) leadForm.addEventListener('submit', handleSaveLead);
     if (leadSearchInput) leadSearchInput.addEventListener('input', (event) => { if (leadsGrid) leadsGrid.search(event.target.value); });
 
-    // Opportunity Event Listeners
-    if (addOpportunityBtn) addOpportunityBtn.addEventListener('click', () => {
-        console.log('Add Opportunity button clicked.');
-        currentOpportunityId = null; // Reset current opportunity being edited
-        setupOpportunityForm(); // This will now correctly handle visibility and initial accordion state
-        console.log('addOpportunityBtn click: currentOpportunityId reset to null.');
-    });
-    if (cancelOpportunityBtn) cancelOpportunityBtn.addEventListener('click', hideOpportunityForm);
-
-    if (opportunityForm) {
-        opportunityForm.addEventListener('submit', handleSaveOpportunity);
-    } else {
-        console.error('ERROR: opportunityForm element not found during initialization, cannot attach submit listener!');
-    }
-
-    // Add listener for currency change to filter price books
-    if (opportunityCurrencySelect) {
-        opportunityCurrencySelect.addEventListener('change', (event) => {
-            filterAndPopulatePriceBooks(event.target.value);
-        });
-    }
-
-    // NEW: Add event listeners for opportunity net calculation
+    if (addOpportunityBtn) addOpportunityBtn.addEventListener('click', () => setupOpportunityForm());
+    if (cancelOpportunityBtn) cancelOpportunityBtn.addEventListener('click', () => hideForm(opportunityFormContainer, opportunityFormMessage));
+    if (opportunityForm) opportunityForm.addEventListener('submit', handleSaveOpportunity);
+    if (opportunitySearchInput) opportunitySearchInput.addEventListener('input', (event) => { if (opportunitiesGrid) opportunitiesGrid.search(event.target.value); });
+    if (opportunityCurrencySelect) opportunityCurrencySelect.addEventListener('change', (event) => filterAndPopulatePriceBooks(event.target.value));
     if (opportunityValueInput) opportunityValueInput.addEventListener('input', calculateOpportunityNet);
     if (opportunityDiscountInput) opportunityDiscountInput.addEventListener('input', calculateOpportunityNet);
     if (adjustmentAmtInput) adjustmentAmtInput.addEventListener('input', calculateOpportunityNet);
 
-
-    if (opportunitySearchInput) opportunitySearchInput.addEventListener('input', (event) => { if (opportunitiesGrid) opportunitiesGrid.search(event.target.value); });
-
-    // Work Log Event Listeners
-    if (addWorkLogEntryBtn) addWorkLogEntryBtn.addEventListener('click', () => setupWorkLogForm());
+    // Work Log Listeners
+    if (addWorkLogEntryBtn) addWorkLogEntryBtn.addEventListener('click', showWorkLogForm);
     if (cancelWorkLogBtn) cancelWorkLogBtn.addEventListener('click', hideWorkLogForm);
     if (workLogForm) workLogForm.addEventListener('submit', handleSaveWorkLog);
 
-    // NEW: Quote Event Listeners
+    // Quote Listeners (PRESERVED FROM YOUR BASELINE)
     if (addQuoteBtn) addQuoteBtn.addEventListener('click', () => setupQuoteForm());
-    if (cancelQuoteBtn) cancelQuoteBtn.addEventListener('click', hideQuoteForm);
+    if (cancelQuoteBtn) cancelQuoteBtn.addEventListener('click', () => hideForm(quoteFormContainer, quoteFormMessage));
     if (quoteForm) quoteForm.addEventListener('submit', handleSaveQuote);
-    if (quoteOpportunitySelect) quoteOpportunitySelect.addEventListener('change', handleOpportunityChangeForQuote); // Auto-fill customer details
     if (quoteSearchInput) quoteSearchInput.addEventListener('input', (event) => { if (quotesGrid) quotesGrid.search(event.target.value); });
+    if (quoteOpportunitySelect) quoteOpportunitySelect.addEventListener('change', handleOpportunityChangeForQuote); // Auto-fill customer details
     if (clearQuotesFilterBtn) clearQuotesFilterBtn.addEventListener('click', clearQuotesFilter);
 
+    // Quote Line Listeners (ALL NEW)
+    if (addQuoteLineEntryBtn) addQuoteLineEntryBtn.addEventListener('click', showQuoteLineForm);
+    if (cancelQuoteLineBtn) cancelQuoteLineBtn.addEventListener('click', hideQuoteLineForm);
+    if (quoteLineForm) quoteLineForm.addEventListener('submit', handleSaveQuoteLine);
+    if (quoteLineUnitPriceInput) quoteLineUnitPriceInput.addEventListener('input', calculateQuoteLineFinalNet);
+    if (quoteLineQuantityInput) quoteLineQuantityInput.addEventListener('input', calculateQuoteLineFinalNet);
+    if (quoteLineDiscountInput) quoteLineDiscountInput.addEventListener('input', calculateQuoteLineFinalNet);
+    if (quoteLineAdjustmentAmountInput) quoteLineAdjustmentAmountInput.addEventListener('input', calculateQuoteLineFinalNet);
 
-    // Admin Event Listeners
-    if (addCountryBtn) addCountryBtn.addEventListener('click', () => setupCountryForm());
-    if (cancelCountryBtn) cancelCountryBtn.addEventListener('click', hideCountryForm);
+    // Admin Listeners
+    if (addCountryBtn) addCountryBtn.addEventListener('click', () => { hideForm(countryFormContainer, countryFormMessage); showForm(countryFormContainer); countryForm.reset(); document.getElementById('country-id').value = ''; });
+    if (cancelCountryBtn) cancelCountryBtn.addEventListener('click', () => hideForm(countryFormContainer, countryFormMessage));
     if (countryForm) countryForm.addEventListener('submit', handleSaveCountry);
     if (countrySearchInput) countrySearchInput.addEventListener('input', (event) => { if (countriesGrid) countriesGrid.search(event.target.value); });
 
-    if (addCurrencyBtn) addCurrencyBtn.addEventListener('click', () => setupCurrencyForm());
-    if (cancelCurrencyBtn) cancelCurrencyBtn.addEventListener('click', hideCurrencyForm);
+    if (addCurrencyBtn) addCurrencyBtn.addEventListener('click', () => { hideForm(currencyFormContainer, currencyFormMessage); showForm(currencyFormContainer); currencyForm.reset(); document.getElementById('currency-id').value = ''; populateCurrencyCountries(); });
+    if (cancelCurrencyBtn) cancelCurrencyBtn.addEventListener('click', () => hideForm(currencyFormContainer, currencyFormMessage));
     if (currencyForm) currencyForm.addEventListener('submit', handleSaveCurrency);
     if (currencySearchInput) currencySearchInput.addEventListener('input', (event) => { if (currenciesGrid) currenciesGrid.search(event.target.value); });
 
-    if (addPriceBookBtn) addPriceBookBtn.addEventListener('click', () => setupPriceBookForm());
-    if (cancelPriceBookBtn) cancelPriceBookBtn.addEventListener('click', hidePriceBookForm);
+    if (addPriceBookBtn) addPriceBookBtn.addEventListener('click', () => { hideForm(priceBookFormContainer, priceBookFormMessage); showForm(priceBookFormContainer); priceBookForm.reset(); document.getElementById('price-book-id').value = ''; priceBookActiveCheckbox.checked = true; populatePriceBookCurrencies(); });
+    if (cancelPriceBookBtn) cancelPriceBookBtn.addEventListener('click', () => hideForm(priceBookFormContainer, priceBookFormMessage));
     if (priceBookForm) priceBookForm.addEventListener('submit', handleSavePriceBook);
     if (priceBookSearchInput) priceBookSearchInput.addEventListener('input', (event) => { if (priceBooksGrid) priceBooksGrid.search(event.target.value); });
 
-    // Initial accordion setup
-    setupAccordions();
+
+    // Setup Grids (Existing initializations, now with column widths)
+    customersGrid = new gridjs.Grid({
+        columns: [
+            { id: 'name', name: 'Name', width: 'auto' },
+            { id: 'type', name: 'Type', width: '120px' },
+            { id: 'email', name: 'Email', width: '200px' },
+            { id: 'phone', name: 'Phone', width: '150px' },
+            { id: 'country', name: 'Country', width: '120px' },
+            { id: 'preferredContactMethod', name: 'Contact Method', width: '180px' },
+            { id: 'source', name: 'Source', width: '120px' },
+            {
+                name: 'Actions',
+                width: '120px',
+                formatter: (cell, row) => {
+                    const customerId = row.cells[row.cells.length - 1].data;
+                    return gridjs.html(`
+                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditCustomer('${customerId}')">Edit</button>
+                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteCustomer('${customerId}')">Delete</button>
+                    `);
+                }
+            }
+        ],
+        data: [], // Will be populated by onSnapshot
+        search: {
+            selector: (cell, rowIndex, cellIndex) => {
+                // Exclude 'Actions' column from search
+                return cellIndex < 7 ? cell : undefined;
+            }
+        },
+        pagination: {
+            enabled: true,
+            limit: 10,
+        },
+        sort: true,
+        resizable: true,
+        style: {
+            table: {
+                'min-width': '100%'
+            },
+            th: {
+                'white-space': 'nowrap'
+            }
+        }
+    }).render(customersGridContainer);
+
+    unsubscribeCustomers = onSnapshot(getCollectionRef('customers'), (snapshot) => {
+        const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (customers.length === 0) {
+            if (noCustomersMessage) noCustomersMessage.classList.remove('hidden');
+            if (customersGridContainer) customersGridContainer.classList.add('hidden');
+        } else {
+            if (noCustomersMessage) noCustomersMessage.classList.add('hidden');
+            if (customersGridContainer) customersGridContainer.classList.remove('hidden');
+        }
+        customersGrid.updateConfig({ data: customers }).forceRender();
+    }, (error) => {
+        console.error("Error fetching customers:", error);
+        showMessageBox("Error loading customers.");
+    });
+
+
+    leadsGrid = new gridjs.Grid({
+        columns: [
+            { id: 'contactName', name: 'Contact Name', width: 'auto' },
+            { id: 'phone', name: 'Phone', width: '150px' },
+            { id: 'email', name: 'Email', width: '200px' },
+            { id: 'servicesInterested', name: 'Services', width: 'auto', formatter: (cell) => cell ? cell.join(', ') : '' },
+            { id: 'eventDate', name: 'Event Date', width: '120px', formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : '' },
+            { id: 'source', name: 'Source', width: '120px' },
+            {
+                name: 'Actions',
+                width: '120px',
+                formatter: (cell, row) => {
+                    const leadId = row.cells[row.cells.length - 1].data;
+                    return gridjs.html(`
+                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditLead('${leadId}')">Edit</button>
+                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteLead('${leadId}')">Delete</button>
+                    `);
+                }
+            }
+        ],
+        data: [],
+        search: true,
+        pagination: {
+            enabled: true,
+            limit: 10,
+        },
+        sort: true,
+        resizable: true,
+        style: {
+            table: {
+                'min-width': '100%'
+            },
+            th: {
+                'white-space': 'nowrap'
+            }
+        }
+    }).render(leadsGridContainer);
+
+    unsubscribeLeads = onSnapshot(getCollectionRef('leads'), (snapshot) => {
+        const leads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (leads.length === 0) {
+            if (noLeadsMessage) noLeadsMessage.classList.remove('hidden');
+            if (leadsGridContainer) leadsGridContainer.classList.add('hidden');
+        } else {
+            if (noLeadsMessage) noLeadsMessage.classList.add('hidden');
+            if (leadsGridContainer) leadsGridContainer.classList.remove('hidden');
+        }
+        leadsGrid.updateConfig({ data: leads }).forceRender();
+    }, (error) => {
+        console.error("Error fetching leads:", error);
+        showMessageBox("Error loading leads.");
+    });
+
+
+    opportunitiesGrid = new gridjs.Grid({
+        columns: [
+            { id: 'name', name: 'Opportunity Name', width: 'auto' },
+            { id: 'customerName', name: 'Customer', width: '180px' },
+            { id: 'currency', name: 'Currency', width: '100px' },
+            { id: 'salesStage', name: 'Sales Stage', width: '150px' },
+            { id: 'opportunityNet', name: 'Net Value', width: '120px', formatter: (cell) => cell ? cell.toFixed(2) : '0.00' },
+            { id: 'expectedCloseDate', name: 'Close Date', width: '120px', formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : '' },
+            { id: 'probability', name: 'Probability (%)', width: '120px' },
+            {
+                name: 'Actions',
+                width: '120px',
+                formatter: (cell, row) => {
+                    const opportunityId = row.cells[row.cells.length - 1].data;
+                    return gridjs.html(`
+                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditOpportunity('${opportunityId}')">Edit</button>
+                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteOpportunity('${opportunityId}')">Delete</button>
+                    `);
+                }
+            }
+        ],
+        data: [],
+        search: true,
+        pagination: {
+            enabled: true,
+            limit: 10,
+        },
+        sort: true,
+        resizable: true,
+        style: {
+            table: {
+                'min-width': '100%'
+            },
+            th: {
+                'white-space': 'nowrap'
+            }
+        }
+    }).render(opportunitiesGridContainer);
+
+    unsubscribeOpportunities = onSnapshot(getCollectionRef('opportunities'), (snapshot) => {
+        const opportunities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (opportunities.length === 0) {
+            if (noOpportunitiesMessage) noOpportunitiesMessage.classList.remove('hidden');
+            if (opportunitiesGridContainer) opportunitiesGridContainer.classList.add('hidden');
+        } else {
+            if (noOpportunitiesMessage) noOpportunitiesMessage.classList.add('hidden');
+            if (opportunitiesGridContainer) opportunitiesGridContainer.classList.remove('hidden');
+        }
+        opportunitiesGrid.updateConfig({ data: opportunities }).forceRender();
+    }, (error) => {
+        console.error("Error fetching opportunities:", error);
+        showMessageBox("Error loading opportunities.");
+    });
+
+
+    // QUOTES GRID INITIALIZATION (UPDATED with column widths)
+    quotesGrid = new gridjs.Grid({
+        columns: [
+            { id: 'quoteName', name: 'Quote Name', width: 'auto' },
+            { id: 'opportunityId', name: 'Opportunity ID', width: '150px' },
+            { id: 'eventName', name: 'Event Name', width: 'auto' },
+            { id: 'eventDate', name: 'Event Date', width: '120px', formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : '' },
+            { id: 'quoteAmount', name: 'Quote Amount', width: '120px', formatter: (cell) => cell ? cell.toFixed(2) : '0.00' },
+            { id: 'status', name: 'Status', width: '100px' },
+            {
+                name: 'Actions',
+                width: '120px',
+                formatter: (cell, row) => {
+                    const quoteId = row.cells[row.cells.length - 1].data;
+                    return gridjs.html(`
+                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditQuote('${quoteId}')">Edit</button>
+                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteQuote('${quoteId}')">Delete</button>
+                    `);
+                }
+            }
+        ],
+        data: [],
+        search: true,
+        pagination: {
+            enabled: true,
+            limit: 10,
+        },
+        sort: true,
+        resizable: true,
+        style: {
+            table: {
+                'min-width': '100%'
+            },
+            th: {
+                'white-space': 'nowrap'
+            }
+        }
+    }).render(quotesGridContainer);
+
+    unsubscribeQuotes = onSnapshot(getCollectionRef('quotes'), (snapshot) => {
+        const quotes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (quotes.length === 0) {
+            if (noQuotesMessage) noQuotesMessage.classList.remove('hidden');
+            if (quotesGridContainer) quotesGridContainer.classList.add('hidden');
+        } else {
+            if (noQuotesMessage) noQuotesMessage.classList.add('hidden');
+            if (quotesGridContainer) quotesGridContainer.classList.remove('hidden');
+        }
+        quotesGrid.updateConfig({ data: quotes }).forceRender();
+    }, (error) => {
+        console.error("Error fetching quotes:", error);
+        showMessageBox("Error loading quotes.");
+    });
+
+
+    countriesGrid = new gridjs.Grid({
+        columns: [
+            { id: 'name', name: 'Country Name', width: 'auto' },
+            { id: 'code', name: 'Code', width: '80px' },
+            { id: 'states', name: 'States/Provinces', width: 'auto', formatter: (cell) => cell ? cell.join(', ') : '' },
+            {
+                name: 'Actions',
+                width: '120px',
+                formatter: (cell, row) => {
+                    const countryId = row.cells[row.cells.length - 1].data;
+                    return gridjs.html(`
+                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditCountry('${countryId}')">Edit</button>
+                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteCountry('${countryId}')">Delete</button>
+                    `);
+                }
+            }
+        ],
+        data: [],
+        search: true,
+        pagination: { enabled: true, limit: 10 },
+        sort: true,
+        resizable: true,
+        style: { table: { 'min-width': '100%' }, th: { 'white-space': 'nowrap' } }
+    }).render(countriesGridContainer);
+
+    onSnapshot(getCollectionRef('countries'), (snapshot) => {
+        const countries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (countries.length === 0) {
+            if (noCountriesMessage) noCountriesMessage.classList.remove('hidden');
+            if (countriesGridContainer) countriesGridContainer.classList.add('hidden');
+        } else {
+            if (noCountriesMessage) noCountriesMessage.classList.add('hidden');
+            if (countriesGridContainer) countriesGridContainer.classList.remove('hidden');
+        }
+        countriesGrid.updateConfig({ data: countries }).forceRender();
+    }, (error) => {
+        console.error("Error fetching countries:", error);
+        showMessageBox("Error loading countries.");
+    });
+
+
+    currenciesGrid = new gridjs.Grid({
+        columns: [
+            { id: 'name', name: 'Currency Name', width: 'auto' },
+            { id: 'code', name: 'Code', width: '80px' },
+            { id: 'symbol', name: 'Symbol', width: '80px' },
+            { id: 'countryCode', name: 'Country', width: '100px' },
+            {
+                name: 'Actions',
+                width: '120px',
+                formatter: (cell, row) => {
+                    const currencyId = row.cells[row.cells.length - 1].data;
+                    return gridjs.html(`
+                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditCurrency('${currencyId}')">Edit</button>
+                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteCurrency('${currencyId}')">Delete</button>
+                    `);
+                }
+            }
+        ],
+        data: [],
+        search: true,
+        pagination: { enabled: true, limit: 10 },
+        sort: true,
+        resizable: true,
+        style: { table: { 'min-width': '100%' }, th: { 'white-space': 'nowrap' } }
+    }).render(currenciesGridContainer);
+
+    onSnapshot(getCollectionRef('currencies'), (snapshot) => {
+        const currencies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (currencies.length === 0) {
+            if (noCurrenciesMessage) noCurrenciesMessage.classList.remove('hidden');
+            if (currenciesGridContainer) currenciesGridContainer.classList.add('hidden');
+        } else {
+            if (noCurrenciesMessage) noCurrenciesMessage.classList.add('hidden');
+            if (currenciesGridContainer) currenciesGridContainer.classList.remove('hidden');
+        }
+        currenciesGrid.updateConfig({ data: currencies }).forceRender();
+    }, (error) => {
+        console.error("Error fetching currencies:", error);
+        showMessageBox("Error loading currencies.");
+    });
+
+
+    priceBooksGrid = new gridjs.Grid({
+        columns: [
+            { id: 'name', name: 'Price Book Name', width: 'auto' },
+            { id: 'currency', name: 'Currency', width: '100px' },
+            { id: 'description', name: 'Description', width: 'auto' },
+            { id: 'isActive', name: 'Active', width: '80px', formatter: (cell) => cell ? 'Yes' : 'No' },
+            {
+                name: 'Actions',
+                width: '120px',
+                formatter: (cell, row) => {
+                    const priceBookId = row.cells[row.cells.length - 1].data;
+                    return gridjs.html(`
+                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditPriceBook('${priceBookId}')">Edit</button>
+                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeletePriceBook('${priceBookId}')">Delete</button>
+                    `);
+                }
+            }
+        ],
+        data: [],
+        search: true,
+        pagination: { enabled: true, limit: 10 },
+        sort: true,
+        resizable: true,
+        style: { table: { 'min-width': '100%' }, th: { 'white-space': 'nowrap' } }
+    }).render(priceBooksGridContainer);
+
+    onSnapshot(getCollectionRef('priceBooks'), (snapshot) => {
+        const priceBooks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (priceBooks.length === 0) {
+            if (noPriceBooksMessage) noPriceBooksMessage.classList.remove('hidden');
+            if (priceBooksGridContainer) priceBooksGridContainer.classList.add('hidden');
+        } else {
+            if (noPriceBooksMessage) noPriceBooksMessage.classList.add('hidden');
+            if (priceBooksGridContainer) priceBooksGridContainer.classList.remove('hidden');
+        }
+        priceBooksGrid.updateConfig({ data: priceBooks }).forceRender();
+    }, (error) => {
+        console.error("Error fetching price books:", error);
+        showMessageBox("Error loading price books.");
+    });
+
+
+    // NEW: Setup all accordion click listeners centrally
+    setupAccordionListeners();
+
+    // Initial authentication check
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            console.log("User is authenticated:", user.uid);
+            if (userDisplayName) userDisplayName.textContent = user.displayName || user.email || 'User';
+            if (userIdDisplay) userIdDisplay.textContent = `(ID: ${user.uid})`;
+
+            // Fetch user role
+            try {
+                const userDoc = await getDoc(getDocRef('users_data', user.uid));
+                let role = 'Standard';
+                if (userDoc.exists()) {
+                    role = userDoc.data().role || 'Standard';
+                } else {
+                    // Create user_data entry if it doesn't exist (first time sign-in)
+                    await setDoc(getDocRef('users_data', user.uid), {
+                        email: user.email,
+                        displayName: user.displayName || user.email,
+                        role: 'Standard', // Default role
+                        createdAt: serverTimestamp(),
+                        lastLogin: serverTimestamp(),
+                    }, { merge: true }); // Use merge to avoid overwriting existing data if any
+                }
+                if (userRole) userRole.textContent = `(Role: ${role})`;
+                if (adminMenuItem) {
+                    if (role === 'Admin') {
+                        adminMenuItem.classList.remove('hidden');
+                    } else {
+                        adminMenuItem.classList.add('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching/setting user role:", error);
+                showMessageBox("Error loading user profile.");
+                if (userRole) userRole.textContent = `(Role: Error)`;
+            }
+
+            if (authSection) authSection.classList.add('hidden');
+            showSection('dashboard-section'); // Show dashboard by default after login
+            loadDashboardData(); // Load dashboard data after user is authenticated
+        } else {
+            console.log("User is not authenticated. Signing in anonymously...");
+            try {
+                // Use __initial_auth_token if provided by Canvas, otherwise sign in anonymously
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                    console.log("Signed in with custom token.");
+                } else {
+                    await signInAnonymously(auth);
+                    console.log("Signed in anonymously.");
+                }
+            } catch (anonError) {
+                console.error("Anonymous Sign-In Error:", anonError);
+                const authErrorMessage = document.getElementById('auth-error-message');
+                if (authErrorMessage) {
+                    authErrorMessage.textContent = `Anonymous sign-in failed: ${anonError.message}`;
+                    authErrorMessage.classList.remove('hidden');
+                }
+            }
+            if (authSection) authSection.classList.remove('hidden');
+            showSection('auth-section');
+        }
+    });
 }
+
 
 // Make functions globally accessible for inline onclick attributes (e.g., in Grid.js formatters)
 window.editCustomer = editCustomer;
