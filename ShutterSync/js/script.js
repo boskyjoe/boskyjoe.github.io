@@ -28,6 +28,13 @@ let userRole = 'guest'; // Default role
 let currentOpportunityId = null; // To track the opportunity being edited
 let logoutBtn ;
 
+// Global Firestore unsubscribe functions
+let unsubscribeCustomers = null;
+let unsubscribeLeads = null;
+let unsubscribeOpportunities = null;
+let unsubscribeQuotes = null;
+let unsubscribeQuoteLines = null; // For quote lines
+
 // Global cache for price books to enable filtering without re-fetching
 let allPriceBooks = [];
 
@@ -79,6 +86,7 @@ let customerForm;
 let cancelCustomerBtn;
 let customersGridContainer;
 let noCustomersMessage;
+let customerTypeSelect ;
 let customerSearchInput;
 let customersGrid; // Grid.js instance
 
@@ -195,7 +203,6 @@ let workLogFormMessage;
 let opportunityAccordionsGrid; // New: Reference to the grid container
 let mainOpportunityDetailsAccordion; // New: Reference to the main details accordion
 
-let unsubscribeQuoteLines = null; // For quote lines
 
 /**
  * Shows a custom message box (modal).
