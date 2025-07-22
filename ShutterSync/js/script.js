@@ -181,6 +181,7 @@ let countriesGridContainer;
 let noCountriesMessage;
 let countrySearchInput;
 let countriesGrid;
+let countryFormMessage ;
 
 let addCurrencyBtn;
 let currencyFormContainer;
@@ -191,6 +192,8 @@ let noCurrenciesMessage;
 let currencySearchInput;
 let currenciesGrid;
 let currencyCountrySelect;
+let currencyFormMessage ;
+
 
 let addPriceBookBtn;
 let priceBookFormContainer;
