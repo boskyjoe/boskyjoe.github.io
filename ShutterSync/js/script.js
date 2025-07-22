@@ -87,6 +87,7 @@ let cancelCustomerBtn;
 let customersGridContainer;
 let noCustomersMessage;
 let customerTypeSelect;
+let customerCountrySelect ;
 let customerSearchInput;
 let customersGrid; // Grid.js instance
 
