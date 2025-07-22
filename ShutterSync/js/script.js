@@ -26,6 +26,7 @@ let auth;
 let userId = null; // Will be set after authentication
 let userRole = 'guest'; // Default role
 let currentOpportunityId = null; // To track the opportunity being edited
+let logoutBtn ;
 
 // Global cache for price books to enable filtering without re-fetching
 let allPriceBooks = [];
