@@ -20,13 +20,7 @@ const appId = firebaseConfig.appId;
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 // Firebase App and Services (initialized in setupAuth)
-let app;
-let db;
-let auth;
-let userId = null; // Will be set after authentication
-let userRole = 'guest'; // Default role
-let currentOpportunityId = null; // To track the opportunity being edited
-let logoutBtn ;
+let app, db, auth;
 
 // Global Firestore unsubscribe functions
 let unsubscribeCustomers = null;
@@ -34,6 +28,12 @@ let unsubscribeLeads = null;
 let unsubscribeOpportunities = null;
 let unsubscribeQuotes = null;
 let unsubscribeQuoteLines = null; // For quote lines
+
+let userId = null; // Will be set after authentication
+let currentUserRole = 'guest'; // Renamed to avoid confusion with DOM element 'userRole'
+let currentOpportunityId = null; // To track the opportunity being edited
+let currentQuoteId = null; // To store the ID of the quote being edited
+let currentQuoteLineId = null; // To store the ID of the quote line being edited
 
 // Global cache for price books to enable filtering without re-fetching
 let allPriceBooks = [];
@@ -65,15 +65,15 @@ let navQuotes;
 let navCountries;
 let navCurrencies;
 let navPriceBooks;
-let navLogout;
+let logoutBtn; // Use logoutBtn consistently, matching HTML ID 'nav-logout'
 let adminMenuItem;
 
 let googleSignInBtn;
 let authStatus;
 let userDisplayName;
 let userIdDisplay;
-let userRoleDisplay;
-let authErrorMessage;
+let userRole; // This will hold the DOM element for the user's role display
+let authErrorMessage; // Global variable for the error message element
 
 let dashboardTotalCustomers;
 let dashboardTotalOpportunities;
@@ -86,7 +86,7 @@ let customerForm;
 let cancelCustomerBtn;
 let customersGridContainer;
 let noCustomersMessage;
-let customerTypeSelect ;
+let customerTypeSelect;
 let customerSearchInput;
 let customersGrid; // Grid.js instance
 
@@ -98,6 +98,8 @@ let leadsGridContainer;
 let noLeadsMessage;
 let leadSearchInput;
 let leadsGrid; // Grid.js instance
+let leadServicesInterestedSelect; // For Leads: multi-select
+let leadSourceSelect;
 
 let addOpportunityBtn;
 let opportunityFormContainer;
@@ -107,14 +109,24 @@ let opportunitiesGridContainer;
 let noOpportunitiesMessage;
 let opportunitySearchInput;
 let opportunitiesGrid; // Grid.js instance
+let opportunityCustomerSelect;
+let opportunityCurrencySelect;
+let opportunityPriceBookSelect;
+let opportunityServicesInterestedSelect; // For Opportunities: multi-select
+let opportunityValueInput; // Opportunity form calculation fields
+let opportunityDiscountInput;
+let adjustmentAmtInput;
+let opportunityNetSpan; // Renamed to match HTML ID and usage
+let opportunityFormMessage;
 
-let workLogsSectionContainer; // New: Container for work logs list and add button
+let workLogsSectionContainer;
 let addWorkLogEntryBtn;
 let workLogFormContainer;
 let workLogForm;
 let cancelWorkLogBtn;
 let workLogsList;
 let noWorkLogsMessage;
+let workLogFormMessage;
 let workLogTypeSelect; // Added for easy access
 
 let addQuoteBtn;
@@ -126,33 +138,27 @@ let quoteSearchInput;
 let quotesGrid; // Grid.js instance
 let quoteOpportunitySelect; // Opportunity dropdown for quotes
 let quotesGridContainer;
-// NEW: Quote filter display elements
 let quotesFilterDisplay;
 let quotesFilterOpportunityName;
 let clearQuotesFilterBtn;
 
-
-// --- Quote Customer Contact Fields ---
-let customerContactNameInput;
-let customerPhoneInput;
-let customerEmailInput;
-let customerAddressInput;
-// --- End Quote Customer Contact Fields ---
+// Quote Customer Contact Fields (Corrected to match usage)
+let quoteCustomerContactNameInput;
+let quoteCustomerPhoneInput;
+let quoteCustomerEmailInput;
+let quoteCustomerAddressInput;
 
 let quoteStatusSelect; // Status dropdown for quotes
-let quoteFormMessage
-let currentQuoteId = null; // To store the ID of the quote being edited
+let quoteFormMessage;
 let mainQuoteDetailsAccordion; // Reference to the main details accordion in Quotes
 let quoteAccordionsGrid; // Reference to the grid container for quote accordions
 
-// Quote Line related DOM elements (ALL NEW)
+// Quote Line related DOM elements
 let quoteLinesSectionContainer, addQuoteLineEntryBtn, quoteLineFormContainer, quoteLineForm, cancelQuoteLineBtn;
 let quoteLinesList, noQuoteLinesMessage;
 let quoteLineServicesInput, quoteLineDescriptionInput, quoteLineStartDateInput, quoteLineEndDateInput;
 let quoteLineUnitPriceInput, quoteLineQuantityInput, quoteLineDiscountInput, quoteLineAdjustmentAmountInput, quoteLineFinalNetSpan;
 let quoteLineFormMessage;
-let currentQuoteLineId = null; // To store the ID of the quote line being edited
-
 
 let addCountryBtn;
 let countryFormContainer;
@@ -171,6 +177,7 @@ let currenciesGridContainer;
 let noCurrenciesMessage;
 let currencySearchInput;
 let currenciesGrid;
+let currencyCountrySelect;
 
 let addPriceBookBtn;
 let priceBookFormContainer;
@@ -180,28 +187,14 @@ let priceBooksGridContainer;
 let noPriceBooksMessage;
 let priceBookSearchInput;
 let priceBooksGrid;
+let priceBookCurrencySelect;
+let priceBookActiveCheckbox;
+let priceBookFormMessage;
 
 let messageBox;
 let messageContent;
 let messageConfirmBtn;
 let messageCancelBtn;
-
-let opportunityCurrencySelect; // Added for easy access
-let opportunityPriceBookSelect; // Added for easy access
-let opportunityServicesInterestedSelect; // For Opportunities: multi-select
-let leadServicesInterestedSelect; // For Leads: multi-select
-
-// NEW: Opportunity form calculation fields
-let opportunityValueInput;
-let opportunityDiscountInput;
-let adjustmentAmtInput;
-let opportunityNetDisplay;
-
-let opportunityFormMessage;
-let workLogFormMessage;
-
-let opportunityAccordionsGrid; // New: Reference to the grid container
-let mainOpportunityDetailsAccordion; // New: Reference to the main details accordion
 
 
 /**
@@ -513,12 +506,12 @@ function setAccordionVisualState(accordionHeader, isOpen) {
  */
 function setupAccordionListeners() {
     document.querySelectorAll('.accordion-header').forEach(header => {
-        // Remove any existing listeners to prevent duplicates if called multiple times (though it should only be called once)
-        header.removeEventListener('click', toggleAccordion);
+        header.removeEventListener('click', toggleAccordion); // Ensure no duplicate listeners
         header.addEventListener('click', toggleAccordion);
     });
     console.log("All accordion listeners set up.");
 }
+
 
 
 function toggleAccordion(event) {
@@ -638,22 +631,19 @@ function showWorkLogForm() { // Made this function explicitly separate for clari
 }
 
 function hideWorkLogForm() {
-    if (workLogFormContainer) { // Check if container exists
+    if (workLogFormContainer) {
         workLogFormContainer.classList.add('hidden');
     }
-    if (workLogForm) { // Check if form element exists
+    if (workLogForm) {
         workLogForm.reset();
-        workLogForm.setAttribute('novalidate', 'novalidate'); // This line was causing the error
+        workLogForm.setAttribute('novalidate', 'novalidate');
     }
-    
-    // Ensure these elements exist before trying to set their value
     const workLogIdInput = document.getElementById('work-log-id');
     const workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
 
     if (workLogIdInput) workLogIdInput.value = '';
     if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = '';
     
-    // Check if message element exists before using it
     if (workLogFormMessage) {
         showMessageBox(workLogFormMessage, '', false);
     } else {
@@ -1345,139 +1335,105 @@ const opportunityServicesOptions = [
     { id: 'Others', name: 'Others' }
 ];
 
-async function setupOpportunityForm(opportunity = null) {
-    let opportunityData = opportunity;
-    if (typeof opportunity === 'string') { // If only an ID is passed
-        console.log("setupOpportunityForm: Fetching opportunity data for ID:", opportunity);
-        const docRef = doc(db, 'opportunities', opportunity);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            opportunityData = { id: docSnap.id, ...docSnap.data() };
-        } else {
-            console.error("setupOpportunityForm: Opportunity not found for ID:", opportunity);
-            showMessageBox("Opportunity not found!", false);
-            return;
-        }
-    }
+async function setupOpportunityForm(opportunityData = null) {
+    console.log('setupOpportunityForm called with opportunityData:', opportunityData);
+    await populateOpportunityCustomers();
+    await populateOpportunityCurrencies();
+    populateServicesInterested(opportunityServicesInterestedSelect);
 
-    const customers = await fetchData('customers'); // Customers are top-level
-    populateSelect(document.getElementById('opportunity-customer'), customers, 'id', 'name', 'Select a Customer');
-
-    const currencies = await fetchData('currencies'); // Currencies are top-level
-    // Populate currency dropdown with name, but value remains code
-    populateSelect(opportunityCurrencySelect, currencies, 'code', 'code', 'Select...'); // Changed to 'code' for display as well
-
-    // Fetch all price books once and store them
-    allPriceBooks = await fetchData('priceBooks'); // Price books are top-level
-
-    // Populate Services Interested multi-select
-    // Ensure servicesInterested is an array for populateMultiSelect
-    const currentServices = opportunityData && Array.isArray(opportunityData.servicesInterested)
-        ? opportunityData.servicesInterested
-        : [];
-    populateMultiSelect(opportunityServicesInterestedSelect, opportunityServicesOptions, 'id', 'name', currentServices);
-
-
-    if (opportunityData) { // Use opportunityData consistently
+    if (opportunityData) { // Edit mode
         currentOpportunityId = opportunityData.id;
         document.getElementById('opportunity-id').value = opportunityData.id;
         document.getElementById('opportunity-name').value = opportunityData.name || '';
         document.getElementById('opportunity-customer').value = opportunityData.customerId || '';
-        opportunityCurrencySelect.value = opportunityData.currency || ''; // Set selected currency
+        if (opportunityCurrencySelect) opportunityCurrencySelect.value = opportunityData.currency || '';
 
-        // Now filter and populate price books based on the opportunity's currency
-        filterAndPopulatePriceBooks(opportunityData.currency, opportunityData.priceBookId);
+        await filterAndPopulatePriceBooks(opportunityData.currency, opportunityData.priceBookId);
 
-        // Convert Firestore Timestamp to YYYY-MM-DD string for input type="date"
         const startDate = opportunityData.expectedStartDate ? new Date(opportunityData.expectedStartDate.seconds * 1000).toISOString().split('T')[0] : '';
         const closeDate = opportunityData.expectedCloseDate ? new Date(opportunityData.expectedCloseDate.seconds * 1000).toISOString().split('T')[0] : '';
 
-        document.getElementById('opportunity-start-date').value = startDate;
-        document.getElementById('opportunity-close-date').value = closeDate;
-        document.getElementById('opportunity-sales-stage').value = opportunityData.salesStage || 'Prospect';
-        document.getElementById('opportunity-probability').value = opportunityData.probability !== undefined ? opportunityData.probability : '';
-        document.getElementById('opportunity-value').value = opportunityData.value !== undefined ? opportunityData.value : '';
-        document.getElementById('opportunity-notes').value = opportunityData.notes || '';
+        if (document.getElementById('opportunity-start-date')) document.getElementById('opportunity-start-date').value = startDate;
+        if (document.getElementById('opportunity-close-date')) document.getElementById('opportunity-close-date').value = closeDate;
+        if (document.getElementById('opportunity-sales-stage')) document.getElementById('opportunity-sales-stage').value = opportunityData.salesStage || 'Prospect';
+        if (document.getElementById('opportunity-probability')) document.getElementById('opportunity-probability').value = opportunityData.probability !== undefined ? opportunityData.probability : '';
+        if (document.getElementById('opportunity-value')) document.getElementById('opportunity-value').value = opportunityData.value !== undefined ? opportunityData.value : '';
+        if (document.getElementById('opportunity-notes')) document.getElementById('opportunity-notes').value = opportunityData.notes || '';
 
-        // NEW: Populate new opportunity fields
-        opportunityDiscountInput.value = opportunityData.opportunityDiscount !== undefined ? opportunityData.opportunityDiscount : 0;
-        adjustmentAmtInput.value = opportunityData.adjustmentAmt !== undefined ? opportunityData.adjustmentAmt : 0;
-        // opportunityNetDisplay will be calculated by calculateOpportunityNet()
+        if (opportunityDiscountInput) opportunityDiscountInput.value = opportunityData.opportunityDiscount !== undefined ? opportunityData.opportunityDiscount : 0;
+        if (adjustmentAmtInput) adjustmentAmtInput.value = opportunityData.adjustmentAmt !== undefined ? opportunityData.adjustmentAmt : 0;
 
-        // Call calculateOpportunityNet after all relevant fields are populated
         calculateOpportunityNet();
+
+        // Set selected options for multi-select
+        if (opportunityServicesInterestedSelect) {
+            Array.from(opportunityServicesInterestedSelect.options).forEach(option => {
+                option.selected = opportunityData.servicesInterested && opportunityData.servicesInterested.includes(option.value);
+            });
+        }
 
         // --- Layout Adjustment for EDIT mode ---
         if (mainOpportunityDetailsAccordion) {
             mainOpportunityDetailsAccordion.classList.remove('md:col-span-full'); // Main details takes half width
-            // Ensure Main Details accordion is OPEN (right arrow rotated down)
             const mainDetailsHeader = mainOpportunityDetailsAccordion.querySelector('.accordion-header');
-            setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
+            if (mainDetailsHeader) {
+                setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
+            }
         }
 
-        // Show work logs section when editing/viewing an opportunity
         if (workLogsSectionContainer) {
-            workLogsSectionContainer.classList.remove('hidden');// Show work logs
-            // Ensure Work Logs accordion is minimized when loading an existing opportunity
-            // Explicitly set Work Logs accordion to CLOSED
+            workLogsSectionContainer.classList.remove('hidden'); // Show work logs container
             const workLogsAccordionHeader = workLogsSectionContainer.querySelector('.accordion-header');
-            if (workLogsAccordionHeader) { // Check if header exists
+            if (workLogsAccordionHeader) {
                 setAccordionVisualState(workLogsAccordionHeader, false); // False for CLOSED
             }
-            // IMPORTANT: Remove novalidate when work logs section is visible (in edit mode)
-            if (workLogForm) { // Add null check here
+            if (workLogForm) {
                 workLogForm.removeAttribute('novalidate');
             }
         }
         await loadWorkLogs(opportunityData.id); // Load work logs for this opportunity
         // --- End Layout Adjustment for EDIT mode ---
 
-    } else {
-        // For a new opportunity
+    } else { // For a new opportunity (ADD mode)
         if (opportunityForm) opportunityForm.reset();
         const opportunityIdInput = document.getElementById('opportunity-id');
         if (opportunityIdInput) opportunityIdInput.value = '';
         currentOpportunityId = null;
-        if (workLogsList) workLogsList.innerHTML = ''; // Clear work logs for new opportunity
+        if (workLogsList) workLogsList.innerHTML = '';
         if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden');
-        hideWorkLogForm(); // Hide work log entry form
+        
+        hideWorkLogForm(); // Call hideWorkLogForm, which now handles its own null checks for elements
+
+        // Clear multi-select
+        if (opportunityServicesInterestedSelect) {
+            Array.from(opportunityServicesInterestedSelect.options).forEach(option => option.selected = false);
+        }
 
         // --- Layout Adjustment for ADD mode ---
         if (workLogsSectionContainer) {
-            workLogsSectionContainer.classList.add('hidden'); // Hide work logs
-            // IMPORTANT: Add novalidate when work logs section is hidden (in add mode)
-            // IMPORTANT: Add novalidate when work logs section is hidden (in add mode)
-            if (workLogForm) { // Check if form exists before acting on it
+            workLogsSectionContainer.classList.add('hidden'); // Hide work logs container
+            if (workLogForm) {
                 workLogForm.setAttribute('novalidate', 'novalidate');
             }
         }
-
         if (mainOpportunityDetailsAccordion) {
             mainOpportunityDetailsAccordion.classList.add('md:col-span-full'); // Main details spans full width
-
-            // Explicitly set Main Details accordion to OPEN
             const mainDetailsHeader = mainOpportunityDetailsAccordion.querySelector('.accordion-header');
-            if (mainDetailsHeader) { // Check if header exists
+            if (mainDetailsHeader) {
                 setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
             }
         }
         // --- End Layout Adjustment for ADD mode ---
 
-
-
-        // Hide work logs section when creating a brand new opportunity
-        //if (workLogsSectionContainer) workLogsSectionContainer.classList.add('hidden');
-        // For new opportunities, populate price books with all active ones initially
-        filterAndPopulatePriceBooks(''); // Pass empty string to show all active price books
-
-        // NEW: Reset new opportunity fields to default for new record
-        opportunityDiscountInput.value = 0;
-        adjustmentAmtInput.value = 0;
-        calculateOpportunityNet(); // Calculate initial net
+        filterAndPopulatePriceBooks('');
+        if (opportunityDiscountInput) opportunityDiscountInput.value = 0;
+        if (adjustmentAmtInput) adjustmentAmtInput.value = 0;
+        calculateOpportunityNet();
     }
-    showOpportunityForm(); // Call showOpportunityForm to handle main form visibility and its accordion
+    showOpportunityForm();
     console.log('Add/Edit Opportunity form setup complete. currentOpportunityId:', currentOpportunityId);
 }
+
 
 async function handleSaveOpportunity(event) {
     event.preventDefault(); // Prevent default form submission
@@ -2570,34 +2526,35 @@ async function setupQuoteForm(quoteData = null) {
 
     if (quoteData) { // Edit mode
         currentQuoteId = quoteData.id;
-        document.getElementById('quote-id').value = quoteData.id;
-        document.getElementById('quote-name').value = quoteData.quoteName || '';
-        document.getElementById('event-name').value = quoteData.eventName || '';
-        document.getElementById('quote-opportunity').value = quoteData.opportunityId || '';
-        document.getElementById('quote-amount').value = quoteData.quoteAmount !== undefined ? quoteData.quoteAmount.toFixed(2) : '0.00';
-        document.getElementById('quote-status').value = quoteData.status || 'Draft';
-        document.getElementById('quote-additional-details').value = quoteData.additionalDetails || '';
+        if (document.getElementById('quote-id')) document.getElementById('quote-id').value = quoteData.id;
+        if (document.getElementById('quote-name')) document.getElementById('quote-name').value = quoteData.quoteName || '';
+        if (document.getElementById('event-name')) document.getElementById('event-name').value = quoteData.eventName || '';
+        if (quoteOpportunitySelect) quoteOpportunitySelect.value = quoteData.opportunityId || '';
+        if (document.getElementById('quote-amount')) document.getElementById('quote-amount').value = quoteData.quoteAmount !== undefined ? quoteData.quoteAmount.toFixed(2) : '0.00';
+        if (quoteStatusSelect) quoteStatusSelect.value = quoteData.status || 'Draft';
+        if (document.getElementById('quote-additional-details')) document.getElementById('quote-additional-details').value = quoteData.additionalDetails || '';
 
         const eventDate = quoteData.eventDate ? new Date(quoteData.eventDate.seconds * 1000).toISOString().split('T')[0] : '';
-        document.getElementById('quote-event-date').value = eventDate;
+        if (document.getElementById('quote-event-date')) document.getElementById('quote-event-date').value = eventDate;
 
         await populateCustomerDetailsForQuote(quoteData.opportunityId);
 
         // --- Layout Adjustment for EDIT mode ---
         if (mainQuoteDetailsAccordion) {
             mainQuoteDetailsAccordion.classList.remove('md:col-span-full'); // Main details takes half width
-            // Explicitly set Main Details accordion to OPEN
             const mainDetailsHeader = mainQuoteDetailsAccordion.querySelector('.accordion-header');
-            setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
+            if (mainDetailsHeader) {
+                setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
+            }
         }
 
         if (quoteLinesSectionContainer) {
             quoteLinesSectionContainer.classList.remove('hidden'); // Show quote lines container
-            // Explicitly set Quote Lines accordion to CLOSED
             const quoteLinesAccordionHeader = quoteLinesSectionContainer.querySelector('.accordion-header');
-            setAccordionVisualState(quoteLinesAccordionHeader, false); // False for CLOSED
-            // IMPORTANT: Remove novalidate when quote lines section is visible (in edit mode)
-            if (quoteLineForm) { // Add null check here
+            if (quoteLinesAccordionHeader) {
+                setAccordionVisualState(quoteLinesAccordionHeader, false); // False for CLOSED
+            }
+            if (quoteLineForm) {
                 quoteLineForm.removeAttribute('novalidate');
             }
         }
@@ -2610,7 +2567,7 @@ async function setupQuoteForm(quoteData = null) {
         if (quoteIdInput) quoteIdInput.value = '';
         currentQuoteId = null;
         populateCustomerDetailsForQuote(''); // Clear customer details
-        document.getElementById('quote-amount').value = '0.00'; // Reset quote amount for new quote
+        if (document.getElementById('quote-amount')) document.getElementById('quote-amount').value = '0.00'; // Reset quote amount for new quote
         if (quoteLinesList) quoteLinesList.innerHTML = ''; // Clear existing quote lines
         if (noQuoteLinesMessage) noQuoteLinesMessage.classList.remove('hidden'); // Show no lines message
         hideQuoteLineForm(); // Hide the quote line entry form (this will set novalidate)
@@ -2618,16 +2575,16 @@ async function setupQuoteForm(quoteData = null) {
         // --- Layout Adjustment for ADD mode ---
         if (quoteLinesSectionContainer) {
             quoteLinesSectionContainer.classList.add('hidden'); // Hide quote lines container
-            // IMPORTANT: Add novalidate when quote lines section is hidden (in add mode)
-            if (quoteLineForm) { // Add null check here
+            if (quoteLineForm) {
                 quoteLineForm.setAttribute('novalidate', 'novalidate');
             }
         }
         if (mainQuoteDetailsAccordion) {
             mainQuoteDetailsAccordion.classList.add('md:col-span-full'); // Main details spans full width
-            // Explicitly set Main Details accordion to OPEN
             const mainDetailsHeader = mainQuoteDetailsAccordion.querySelector('.accordion-header');
-            setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
+            if (mainDetailsHeader) {
+                setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
+            }
         }
         // --- End Layout Adjustment for ADD mode ---
     }
@@ -2745,6 +2702,14 @@ function calculateQuoteLineFinalNet() {
 
 async function handleSaveQuoteLine(event) {
     event.preventDefault();
+    // Ensure quoteLineForm is not null before creating FormData
+    if (!quoteLineForm) {
+        console.error("quoteLineForm is null. Cannot save quote line.");
+        if (quoteLineFormMessage) {
+            showMessageBox(quoteLineFormMessage, 'Error: Quote line form not found.', true);
+        }
+        return;
+    }
     const formData = new FormData(quoteLineForm);
     const quoteLineId = document.getElementById('quote-line-id').value;
     const parentQuoteId = document.getElementById('quote-line-parent-quote-id').value;
@@ -2795,15 +2760,15 @@ async function handleSaveQuoteLine(event) {
 function handleEditQuoteLine(quoteLineId, quoteLineData) {
     showQuoteLineForm();
     if (document.getElementById('quote-line-id')) document.getElementById('quote-line-id').value = quoteLineId;
-    if (document.getElementById('quote-line-services')) document.getElementById('quote-line-services').value = quoteLineData.services || '';
-    if (document.getElementById('quote-line-description')) document.getElementById('quote-line-description').value = quoteLineData.serviceDescription || '';
+    if (quoteLineServicesInput) quoteLineServicesInput.value = quoteLineData.services || '';
+    if (quoteLineDescriptionInput) quoteLineDescriptionInput.value = quoteLineData.serviceDescription || '';
     if (quoteLineUnitPriceInput) quoteLineUnitPriceInput.value = quoteLineData.unitPrice !== undefined ? quoteLineData.unitPrice : 0;
     if (quoteLineQuantityInput) quoteLineQuantityInput.value = quoteLineData.quantity !== undefined ? quoteLineData.quantity : 1;
     if (quoteLineDiscountInput) quoteLineDiscountInput.value = quoteLineData.discount !== undefined ? quoteLineData.discount : 0;
     if (quoteLineAdjustmentAmountInput) quoteLineAdjustmentAmountInput.value = quoteLineData.adjustmentAmount !== undefined ? quoteLineData.adjustmentAmount : 0;
 
-    if (document.getElementById('quote-line-start-date')) document.getElementById('quote-line-start-date').value = quoteLineData.serviceStartDate ? new Date(quoteLineData.serviceStartDate.seconds * 1000).toISOString().split('T')[0] : '';
-    if (document.getElementById('quote-line-end-date')) document.getElementById('quote-line-end-date').value = quoteLineData.serviceEndDate ? new Date(quoteLineData.serviceEndDate.seconds * 1000).toISOString().split('T')[0] : '';
+    if (quoteLineStartDateInput) quoteLineStartDateInput.value = quoteLineData.serviceStartDate ? new Date(quoteLineData.serviceStartDate.seconds * 1000).toISOString().split('T')[0] : '';
+    if (quoteLineEndDateInput) quoteLineEndDateInput.value = quoteLineData.serviceEndDate ? new Date(quoteLineData.serviceEndDate.seconds * 1000).toISOString().split('T')[0] : '';
 
     calculateQuoteLineFinalNet(); // Recalculate to update display
 }
@@ -2866,6 +2831,7 @@ async function updateParentQuoteAmount(currentQuoteLines = null) {
         showMessageBox(`Error updating parent quote amount: ${error.message}`);
     }
 }
+
 
 
 /**
@@ -3182,9 +3148,29 @@ async function initializePage() {
 
     userDisplayName = document.getElementById('user-display-name');
     userIdDisplay = document.getElementById('user-id-display');
-    userRole = document.getElementById('user-role');
+    userRole = document.getElementById('user-role'); // This is the DOM element
     googleSignInBtn = document.getElementById('google-signin-btn');
-    logoutBtn = document.getElementById('nav-logout');
+    logoutBtn = document.getElementById('nav-logout'); // Correctly assigned here
+    adminMenuItem = document.getElementById('admin-menu-item');
+    authErrorMessage = document.getElementById('auth-error-message'); // Correctly assigned globally
+
+    // Nav links
+    navDashboard = document.getElementById('nav-dashboard');
+    navCustomers = document.getElementById('nav-customers');
+    navLeads = document.getElementById('nav-leads');
+    navOpportunities = document.getElementById('nav-opportunities');
+    navQuotes = document.getElementById('nav-quotes');
+    navCountries = document.getElementById('nav-countries');
+    navCurrencies = document.getElementById('nav-currencies');
+    navPriceBooks = document.getElementById('nav-price-books');
+    authStatus = document.getElementById('auth-status'); // Assuming this is where userDisplayName/userIdDisplay are nested
+
+    // Dashboard elements
+    dashboardTotalCustomers = document.getElementById('dashboard-total-customers');
+    dashboardTotalOpportunities = document.getElementById('dashboard-total-opportunities');
+    dashboardOpenOpportunities = document.getElementById('dashboard-open-opportunities');
+    dashboardWonOpportunities = document.getElementById('dashboard-won-opportunities');
+
 
     // Customer elements
     addCustomerBtn = document.getElementById('add-customer-btn');
@@ -3228,7 +3214,7 @@ async function initializePage() {
     opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested');
     opportunityDiscountInput = document.getElementById('opportunity-discount');
     adjustmentAmtInput = document.getElementById('adjustment-amt');
-    opportunityNetSpan = document.getElementById('opportunity-net');
+    opportunityNetSpan = document.getElementById('opportunity-net'); // Corrected name
     opportunityFormMessage = document.getElementById('opportunity-form-message');
     workLogsSectionContainer = document.getElementById('work-logs-section-container');
     addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
@@ -3238,12 +3224,12 @@ async function initializePage() {
     workLogsList = document.getElementById('work-logs-list');
     noWorkLogsMessage = document.getElementById('no-work-logs-message');
     workLogFormMessage = document.getElementById('work-log-form-message');
-    currentOpportunityId = null; // To store the ID of the opportunity being edited
+    workLogTypeSelect = document.getElementById('work-log-type'); // Assigned
     mainOpportunityDetailsAccordion = document.getElementById('main-opportunity-details-accordion');
     opportunityAccordionsGrid = document.getElementById('opportunity-accordions-grid');
 
 
-    // Quote elements (UPDATED)
+    // Quote elements
     addQuoteBtn = document.getElementById('add-quote-btn');
     quoteFormContainer = document.getElementById('quote-form-container');
     quoteForm = document.getElementById('quote-form');
@@ -3316,14 +3302,34 @@ async function initializePage() {
     priceBookActiveCheckbox = document.getElementById('price-book-active');
     priceBookFormMessage = document.getElementById('price-book-form-message');
 
+    // Message Box elements
+    messageBox = document.getElementById('message-box');
+    messageContent = document.getElementById('message-content');
+    messageConfirmBtn = document.getElementById('message-confirm-btn');
+    messageCancelBtn = document.getElementById('message-cancel-btn');
+
+
     // Setup Event Listeners
     if (googleSignInBtn) googleSignInBtn.addEventListener('click', handleGoogleSignIn);
-    if (addCustomerBtn) addCustomerBtn.addEventListener('click', () => { hideForm(customerFormContainer, customerFormMessage); showForm(customerFormContainer); customerForm.reset(); document.getElementById('customer-id').value = ''; customerActiveCheckbox.checked = true; });
+    if (logoutBtn) logoutBtn.addEventListener('click', handleLogout); // Corrected listener for logoutBtn
+    
+    // Navigation Listeners
+    if (navDashboard) navDashboard.addEventListener('click', () => showSection('dashboard-section'));
+    if (navCustomers) navCustomers.addEventListener('click', () => showSection('customers-section'));
+    if (navLeads) navLeads.addEventListener('click', () => showSection('leads-section'));
+    if (navOpportunities) navOpportunities.addEventListener('click', () => showSection('opportunities-section'));
+    if (navQuotes) navQuotes.addEventListener('click', () => showSection('quotes-section'));
+    if (navCountries) navCountries.addEventListener('click', () => showSection('countries-section'));
+    if (navCurrencies) navCurrencies.addEventListener('click', () => showSection('currencies-section'));
+    if (navPriceBooks) navPriceBooks.addEventListener('click', () => showSection('price-books-section'));
+
+
+    if (addCustomerBtn) addCustomerBtn.addEventListener('click', () => { hideForm(customerFormContainer, customerFormMessage); showForm(customerFormContainer); customerForm.reset(); document.getElementById('customer-id').value = ''; if (customerActiveCheckbox) customerActiveCheckbox.checked = true; });
     if (cancelCustomerBtn) cancelCustomerBtn.addEventListener('click', () => hideForm(customerFormContainer, customerFormMessage));
     if (customerForm) customerForm.addEventListener('submit', handleSaveCustomer);
     if (customerSearchInput) customerSearchInput.addEventListener('input', (event) => { if (customersGrid) customersGrid.search(event.target.value); });
 
-    if (addLeadBtn) addLeadBtn.addEventListener('click', () => { hideForm(leadFormContainer, leadFormMessage); showForm(leadFormContainer); leadForm.reset(); document.getElementById('lead-id').value = ''; Array.from(leadServicesInterestedSelect.options).forEach(option => option.selected = false); });
+    if (addLeadBtn) addLeadBtn.addEventListener('click', () => { hideForm(leadFormContainer, leadFormMessage); showForm(leadFormContainer); leadForm.reset(); document.getElementById('lead-id').value = ''; if (leadServicesInterestedSelect) Array.from(leadServicesInterestedSelect.options).forEach(option => option.selected = false); });
     if (cancelLeadBtn) cancelLeadBtn.addEventListener('click', () => hideForm(leadFormContainer, leadFormMessage));
     if (leadForm) leadForm.addEventListener('submit', handleSaveLead);
     if (leadSearchInput) leadSearchInput.addEventListener('input', (event) => { if (leadsGrid) leadsGrid.search(event.target.value); });
@@ -3370,13 +3376,13 @@ async function initializePage() {
     if (currencyForm) currencyForm.addEventListener('submit', handleSaveCurrency);
     if (currencySearchInput) currencySearchInput.addEventListener('input', (event) => { if (currenciesGrid) currenciesGrid.search(event.target.value); });
 
-    if (addPriceBookBtn) addPriceBookBtn.addEventListener('click', () => { hideForm(priceBookFormContainer, priceBookFormMessage); showForm(priceBookFormContainer); priceBookForm.reset(); document.getElementById('price-book-id').value = ''; priceBookActiveCheckbox.checked = true; populatePriceBookCurrencies(); });
+    if (addPriceBookBtn) addPriceBookBtn.addEventListener('click', () => { hideForm(priceBookFormContainer, priceBookFormMessage); showForm(priceBookFormContainer); priceBookForm.reset(); document.getElementById('price-book-id').value = ''; if (priceBookActiveCheckbox) priceBookActiveCheckbox.checked = true; populatePriceBookCurrencies(); });
     if (cancelPriceBookBtn) cancelPriceBookBtn.addEventListener('click', () => hideForm(priceBookFormContainer, priceBookFormMessage));
     if (priceBookForm) priceBookForm.addEventListener('submit', handleSavePriceBook);
     if (priceBookSearchInput) priceBookSearchInput.addEventListener('input', (event) => { if (priceBooksGrid) priceBooksGrid.search(event.target.value); });
 
 
-    // Setup Grids (Existing initializations, now with column widths)
+    // Setup Grids (Existing initializations, now with column widths and null checks)
     customersGrid = new gridjs.Grid({
         columns: [
             { id: 'name', name: 'Name', width: 'auto' },
@@ -3752,7 +3758,8 @@ async function initializePage() {
                         lastLogin: serverTimestamp(),
                     }, { merge: true }); // Use merge to avoid overwriting existing data if any
                 }
-                if (userRole) userRole.textContent = `(Role: ${role})`;
+                currentUserRole = role; // Assign to the data variable
+                if (userRole) userRole.textContent = `(Role: ${role})`; // Update DOM element
                 if (adminMenuItem) {
                     if (role === 'Admin') {
                         adminMenuItem.classList.remove('hidden');
@@ -3782,8 +3789,7 @@ async function initializePage() {
                 }
             } catch (anonError) {
                 console.error("Anonymous Sign-In Error:", anonError);
-                const authErrorMessage = document.getElementById('auth-error-message');
-                if (authErrorMessage) {
+                if (authErrorMessage) { // Null check
                     authErrorMessage.textContent = `Anonymous sign-in failed: ${anonError.message}`;
                     authErrorMessage.classList.remove('hidden');
                 }
