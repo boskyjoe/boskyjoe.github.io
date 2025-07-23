@@ -20,7 +20,12 @@ const appId = firebaseConfig.appId;
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 // Firebase App and Services (initialized in setupAuth)
-let app, db, auth;
+// --- ACTUAL FIREBASE INITIALIZATION ---
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+// --- END ACTUAL FIREBASE INITIALIZATION ---
+
 
 // Global Firestore unsubscribe functions
 let unsubscribeCustomers = null;
@@ -215,26 +220,27 @@ let messageCancelBtn;
 // --- Firestore Utility Functions ---
 
 /**
- * Gets a Firestore collection reference for a top-level collection.
- * This function should ONLY be used for top-level collections like 'customers', 'opportunities', 'quotes', 'leads', 'countries', 'currencies', 'priceBooks', 'users_data'.
- * For subcollections (e.g., 'workLogs', 'quoteLines'), use `collection(doc(db, parentCollection, parentDocId), subcollectionName)`.
- * @param {string} collectionName The name of the top-level collection (e.g., 'customers').
+ * Gets a Firestore collection reference for a top-level collection,
+ * using the collection name directly as defined in Firestore security rules.
+ * The Canvas environment implicitly handles the 'artifacts/{appId}/users/{userId}/' or 'artifacts/{appId}/public/data/' prefixing.
+ * @param {string} collectionName The name of the top-level collection (e.g., 'customers', 'countries').
  * @returns {import('firebase/firestore').CollectionReference} A Firestore CollectionReference.
  */
 function getCollectionRef(collectionName) {
-    // According to your security rules, collections like 'customers', 'opportunities', 'quotes', 'leads', 'countries', 'currencies', 'priceBooks', 'users_data' are top-level.
+    // Use the collection name directly. Canvas handles the environment-specific pathing.
     return collection(db, collectionName);
 }
 
 /**
- * Gets a Firestore document reference for a top-level document.
- * This function should ONLY be used for top-level documents.
- * For subcollection documents, use `doc(collection(doc(db, parentCollection, parentDocId), subcollectionName), docId)`.
+ * Gets a Firestore document reference for a top-level document,
+ * using the collection name and document ID directly as defined in Firestore security rules.
+ * The Canvas environment implicitly handles the 'artifacts/{appId}/users/{userId}/' or 'artifacts/{appId}/public/data/' prefixing.
  * @param {string} collectionName The name of the top-level collection.
  * @param {string} docId The ID of the document.
  * @returns {import('firebase/firestore').DocumentReference} A Firestore DocumentReference.
  */
 function getDocRef(collectionName, docId) {
+    // Use the collection name and doc ID directly. Canvas handles the environment-specific pathing.
     return doc(db, collectionName, docId);
 }
 
