@@ -290,7 +290,6 @@ function showMessageBox(message, isConfirm = false) {
 }
 
 
-
 /**
  * Shows a specific section of the application and hides all others.
  * Includes null checks for robustness against early calls or missing elements.
@@ -339,6 +338,7 @@ function showSection(sectionId) {
         activeNavLink.classList.remove('text-blue-200'); // Remove inactive style
     }
 }
+
 
 
 /**
