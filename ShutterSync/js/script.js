@@ -246,47 +246,47 @@ function getDocRef(collectionName, docId) {
 
 // --- End Firestore Utility Functions ---
 
-
 /**
- * Shows a custom message box (modal).
- * @param {string} message - The message to display.
- * @param {boolean} isConfirm - If true, shows Confirm/Cancel buttons. If false, shows only an OK button.
- * @returns {Promise<boolean>} Resolves true if confirmed, false if cancelled/OK.
+ * Displays a message in the global modal message box.
+ * @param {string} message The message text to display.
+ * @param {string} type The type of message box ('alert' or 'confirm').
+ * @param {boolean} isError True if the message is an error, for styling.
+ * @param {function | null} callback Optional callback function for 'confirm' type.
  */
-function showMessageBox(message, isConfirm = false) {
-    return new Promise((resolve) => {
-        // Ensure messageBox and its children are available
-        if (!messageBox || !messageContent || !messageConfirmBtn || !messageCancelBtn) {
-            console.error("Message box elements not found. Cannot display message.");
-            // Fallback to console log if elements is missing
-            console.log(`Message: ${message} (isConfirm: ${isConfirm})`);
-            resolve(false); // Assume cancellation if message box can't be shown
-            return;
-        }
+function showMessageBox(message, type = 'alert', isError = false, callback = null) {
+    // Ensure all global message box elements are assigned
+    if (!messageBox || !messageContent || !messageConfirmBtn || !messageCancelBtn) {
+        console.error("MessageBox DOM elements not found. Cannot display message.");
+        return;
+    }
 
-        messageContent.textContent = message;
-        messageConfirmBtn.classList.toggle('hidden', !isConfirm);
-        messageCancelBtn.textContent = isConfirm ? 'Cancel' : 'OK';
+    messageContent.textContent = message; // This is where the message string goes
+    messageBox.classList.remove('hidden');
+    messageContent.classList.toggle('text-red-600', isError);
+    messageContent.classList.toggle('text-gray-800', !isError);
 
-        messageBox.classList.remove('hidden');
-
-        const handleConfirm = () => {
+    if (type === 'confirm') {
+        messageConfirmBtn.classList.remove('hidden');
+        messageCancelBtn.classList.remove('hidden');
+        messageConfirmBtn.onclick = () => {
             messageBox.classList.add('hidden');
-            messageConfirmBtn.removeEventListener('click', handleConfirm);
-            messageCancelBtn.removeEventListener('click', handleCancel);
-            resolve(true);
+            if (callback) callback(true);
         };
-
-        const handleCancel = () => {
+        messageCancelBtn.onclick = () => {
             messageBox.classList.add('hidden');
-            messageConfirmBtn.removeEventListener('click', handleConfirm);
-            messageCancelBtn.removeEventListener('click', handleCancel);
-            resolve(false);
+            if (callback) callback(false);
         };
-
-        messageConfirmBtn.addEventListener('click', handleConfirm);
-        messageCancelBtn.addEventListener('click', handleCancel);
-    });
+    } else { // 'alert' type
+        messageConfirmBtn.classList.add('hidden');
+        messageCancelBtn.classList.add('hidden');
+        // For simple alerts, allow clicking anywhere on the overlay to close
+        messageBox.onclick = () => {
+            messageBox.classList.add('hidden');
+            messageBox.onclick = null; // Remove listener
+            if (callback) callback(); // Call callback if exists
+        };
+        messageContent.onclick = (e) => e.stopPropagation(); // Prevent clicks on content from closing
+    }
 }
 
 
@@ -340,36 +340,39 @@ function showSection(sectionId) {
 }
 
 /**
- * Shows a form container and optionally clears a message box.
+ * Shows a form container and optionally clears a form-specific message box.
  * @param {HTMLElement} formContainer The container element of the form to show.
- * @param {HTMLElement | null} messageBoxElement Optional: The message box element to clear.
+ * @param {HTMLElement | null} formMessageElement Optional: The form-specific message paragraph element to clear.
  */
-function showForm(formContainer, messageBoxElement = null) {
+function showForm(formContainer, formMessageElement = null) {
     if (formContainer) {
         formContainer.classList.remove('hidden');
     } else {
         console.warn("showForm: formContainer is null or undefined.");
     }
-    if (messageBoxElement) {
-        showMessageBox(messageBoxElement, '', false); // Clear any previous messages
+    if (formMessageElement) {
+        formMessageElement.textContent = ''; // Directly clear the form's message text
+        formMessageElement.classList.add('hidden'); // Hide the message element
     }
 }
 
 /**
- * Hides a form container and optionally clears a message box.
+ * Hides a form container and optionally clears a form-specific message box.
  * @param {HTMLElement} formContainer The container element of the form to hide.
- * @param {HTMLElement | null} messageBoxElement Optional: The message box element to clear.
+ * @param {HTMLElement | null} formMessageElement Optional: The form-specific message paragraph element to clear.
  */
-function hideForm(formContainer, messageBoxElement = null) {
+function hideForm(formContainer, formMessageElement = null) {
     if (formContainer) {
         formContainer.classList.add('hidden');
     } else {
         console.warn("hideForm: formContainer is null or undefined.");
     }
-    if (messageBoxElement) {
-        showMessageBox(messageBoxElement, '', false); // Clear any previous messages
+    if (formMessageElement) {
+        formMessageElement.textContent = ''; // Directly clear the form's message text
+        formMessageElement.classList.add('hidden'); // Hide the message element
     }
 }
+
 
 
 /**
