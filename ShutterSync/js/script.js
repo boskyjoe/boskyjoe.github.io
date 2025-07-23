@@ -1066,6 +1066,48 @@ async function handleSaveCustomer(event) {
     }
 }
 
+/**
+ * Handles the editing of an existing customer.
+ * Populates the customer form with existing data and shows the form.
+ * @param {string} customerId The ID of the customer document to edit.
+ */
+async function handleEditCustomer(customerId) {
+    showForm(customerFormContainer); // Show the form container
+    if (customerForm) customerForm.reset(); // Reset form fields
+    if (document.getElementById('customer-id')) document.getElementById('customer-id').value = customerId; // Set hidden ID
+
+    try {
+        const docSnap = await getDoc(getDocRef('customers', customerId));
+        if (docSnap.exists()) {
+            const customerData = { id: docSnap.id, ...docSnap.data() };
+
+            // Populate form fields using their IDs
+            if (document.getElementById('customer-name')) document.getElementById('customer-name').value = customerData.name || '';
+            if (customerTypeSelect) customerTypeSelect.value = customerData.type || '';
+            if (document.getElementById('customer-email')) document.getElementById('customer-email').value = customerData.email || '';
+            if (document.getElementById('customer-phone')) document.getElementById('customer-phone').value = customerData.phone || '';
+            if (document.getElementById('customer-address')) document.getElementById('customer-address').value = customerData.address || '';
+            
+            // Populate countries dropdown before setting the value
+            await populateCustomerCountries(); 
+            if (customerCountrySelect) customerCountrySelect.value = customerData.country || '';
+
+            if (customerContactMethodSelect) customerContactMethodSelect.value = customerData.preferredContactMethod || '';
+            if (customerIndustrySelect) customerIndustrySelect.value = customerData.industry || '';
+            if (document.getElementById('customer-additional-details')) document.getElementById('customer-additional-details').value = customerData.additionalDetails || '';
+            if (customerSourceSelect) customerSourceSelect.value = customerData.source || '';
+            if (customerActiveCheckbox) customerActiveCheckbox.checked = customerData.active || false;
+
+        } else {
+            showMessageBox("Customer not found.", 'alert', true);
+            hideForm(customerFormContainer);
+        }
+    } catch (error) {
+        console.error("Error editing customer:", error);
+        showMessageBox(`Error loading customer data for edit: ${error.message}`, 'alert', true);
+        hideForm(customerFormContainer);
+    }
+}
 
 async function loadCustomers() {
     if (!db || !userId) {
@@ -1331,6 +1373,51 @@ async function handleSaveLead(event) {
             messageElement.textContent = `Error saving lead: ${error.message}`;
             messageElement.classList.remove('hidden');
         }
+    }
+}
+
+/**
+ * Handles the editing of an existing lead.
+ * Populates the lead form with existing data and shows the form.
+ * @param {string} leadId The ID of the lead document to edit.
+ */
+async function handleEditLead(leadId) {
+    showForm(leadFormContainer); // Show the form container
+    if (leadForm) leadForm.reset(); // Reset form fields
+    if (document.getElementById('lead-id')) document.getElementById('lead-id').value = leadId; // Set hidden ID
+
+    try {
+        const docSnap = await getDoc(getDocRef('leads', leadId));
+        if (docSnap.exists()) {
+            const leadData = { id: docSnap.id, ...docSnap.data() };
+
+            // Populate form fields using their IDs
+            if (document.getElementById('lead-contact-name')) document.getElementById('lead-contact-name').value = leadData.contactName || '';
+            if (document.getElementById('lead-phone')) document.getElementById('lead-phone').value = leadData.phone || '';
+            if (document.getElementById('lead-email')) document.getElementById('lead-email').value = leadData.email || '';
+            
+            // Populate services interested dropdown before setting values
+            populateServicesInterested(leadServicesInterestedSelect); // Assuming this populates the options
+            if (leadServicesInterestedSelect && leadData.servicesInterested && Array.isArray(leadData.servicesInterested)) {
+                Array.from(leadServicesInterestedSelect.options).forEach(option => {
+                    option.selected = leadData.servicesInterested.includes(option.value);
+                });
+            }
+
+            const eventDate = leadData.eventDate ? new Date(leadData.eventDate.seconds * 1000).toISOString().split('T')[0] : '';
+            if (document.getElementById('lead-event-date')) document.getElementById('lead-event-date').value = eventDate;
+            
+            if (leadSourceSelect) leadSourceSelect.value = leadData.source || '';
+            if (document.getElementById('lead-additional-details')) document.getElementById('lead-additional-details').value = leadData.additionalDetails || '';
+
+        } else {
+            showMessageBox("Lead not found.", 'alert', true);
+            hideForm(leadFormContainer);
+        }
+    } catch (error) {
+        console.error("Error editing lead:", error);
+        showMessageBox(`Error loading lead data for edit: ${error.message}`, 'alert', true);
+        hideForm(leadFormContainer);
     }
 }
 
@@ -1769,6 +1856,27 @@ async function handleSaveOpportunity(event) {
         }
     }
 }
+/**
+ * Handles the editing of an existing opportunity.
+ * Fetches the opportunity data and passes it to setupOpportunityForm.
+ * @param {string} opportunityId The ID of the opportunity document to edit.
+ */
+async function handleEditOpportunity(opportunityId) {
+    try {
+        const docSnap = await getDoc(getDocRef('opportunities', opportunityId));
+        if (docSnap.exists()) {
+            const opportunityData = { id: docSnap.id, ...docSnap.data() };
+            await setupOpportunityForm(opportunityData); // Pass the data to setupOpportunityForm
+        } else {
+            showMessageBox("Opportunity not found.", 'alert', true);
+            hideForm(opportunityFormContainer);
+        }
+    } catch (error) {
+        console.error("Error editing opportunity:", error);
+        showMessageBox(`Error loading opportunity data for edit: ${error.message}`, 'alert', true);
+        hideForm(opportunityFormContainer);
+    }
+}
 
 async function loadOpportunities() {
     if (!db || !userId) {
@@ -2114,6 +2222,33 @@ async function editWorkLog(workLogId, opportunityId) { // Pass opportunityId to 
     }
 }
 
+/**
+ * Handles the editing of an existing work log entry.
+ * Populates the work log form with existing data and shows the form.
+ * @param {string} workLogId The ID of the work log document to edit.
+ * @param {object} workLogData The data of the work log entry (passed from renderWorkLogs).
+ */
+function handleEditWorkLog(workLogId, workLogData) {
+    showWorkLogForm(); // Show the work log form
+    if (document.getElementById('work-log-id')) document.getElementById('work-log-id').value = workLogId;
+    if (document.getElementById('work-log-opportunity-id')) document.getElementById('work-log-opportunity-id').value = currentOpportunityId; // Ensure parent ID is set
+
+    // Populate form fields
+    if (document.getElementById('work-log-date')) {
+        const date = workLogData.date ? new Date(workLogData.date.seconds * 1000).toISOString().split('T')[0] : '';
+        document.getElementById('work-log-date').value = date;
+    }
+    
+    // Populate work log type dropdown (assuming populateWorkLogTypes exists and is called)
+    populateWorkLogTypes(); // Ensure dropdown is populated before setting value
+    if (workLogTypeSelect) workLogTypeSelect.value = workLogData.type || '';
+    
+    if (document.getElementById('work-log-details')) document.getElementById('work-log-details').value = workLogData.details || '';
+
+    if (workLogFormMessage) showMessageBox(workLogFormMessage, '', false); // Clear any previous messages
+}
+
+
 async function deleteWorkLog(workLogId, opportunityId) { // Pass opportunityId to correctly build docRef
     const confirmDelete = await showMessageBox("Are you sure you want to delete this work log entry?", true);
     if (!confirmDelete) return;
@@ -2127,6 +2262,29 @@ async function deleteWorkLog(workLogId, opportunityId) { // Pass opportunityId t
     } catch (error) {
         console.error("Error deleting work log:", error);
         showMessageBox(`Error deleting work log: ${error.message}`, false);
+    }
+}
+
+
+/**
+ * Handles the editing of an existing quote.
+ * Fetches the quote data and passes it to setupQuoteForm.
+ * @param {string} quoteId The ID of the quote document to edit.
+ */
+async function handleEditQuote(quoteId) {
+    try {
+        const docSnap = await getDoc(getDocRef('quotes', quoteId));
+        if (docSnap.exists()) {
+            const quoteData = { id: docSnap.id, ...docSnap.data() };
+            await setupQuoteForm(quoteData); // Pass the data to setupQuoteForm
+        } else {
+            showMessageBox("Quote not found.", 'alert', true);
+            hideForm(quoteFormContainer);
+        }
+    } catch (error) {
+        console.error("Error editing quote:", error);
+        showMessageBox(`Error loading quote data for edit: ${error.message}`, 'alert', true);
+        hideForm(quoteFormContainer);
     }
 }
 
@@ -2189,6 +2347,40 @@ async function handleSaveCountry(event) {
         }
     }
 }
+
+
+
+/**
+ * Handles the editing of an existing country.
+ * Populates the country form with existing data and shows the form.
+ * @param {string} countryId The ID of the country document to edit.
+ */
+async function handleEditCountry(countryId) {
+    showForm(countryFormContainer); // Show the form container
+    if (countryForm) countryForm.reset(); // Reset form fields
+    if (document.getElementById('country-id')) document.getElementById('country-id').value = countryId; // Set hidden ID
+
+    try {
+        const docSnap = await getDoc(getDocRef('countries', countryId));
+        if (docSnap.exists()) {
+            const countryData = { id: docSnap.id, ...docSnap.data() };
+
+            // Populate form fields
+            if (document.getElementById('country-name')) document.getElementById('country-name').value = countryData.name || '';
+            if (document.getElementById('country-code')) document.getElementById('country-code').value = countryData.code || '';
+            if (document.getElementById('country-states')) document.getElementById('country-states').value = (countryData.states && Array.isArray(countryData.states)) ? countryData.states.join(', ') : '';
+
+        } else {
+            showMessageBox("Country not found.", 'alert', true);
+            hideForm(countryFormContainer);
+        }
+    } catch (error) {
+        console.error("Error editing country:", error);
+        showMessageBox(`Error loading country data for edit: ${error.message}`, 'alert', true);
+        hideForm(countryFormContainer);
+    }
+}
+
 
 async function loadCountries() {
     if (!db || userRole !== 'Admin') { // Check for 'Admin' role
@@ -2294,6 +2486,42 @@ async function editCountry(countryId) {
         showMessageBox(`Error loading country for edit: ${error.message}`, false);
     }
 }
+
+/**
+ * Handles the editing of an existing currency.
+ * Populates the currency form with existing data and shows the form.
+ * @param {string} currencyId The ID of the currency document to edit.
+ */
+async function handleEditCurrency(currencyId) {
+    showForm(currencyFormContainer); // Show the form container
+    if (currencyForm) currencyForm.reset(); // Reset form fields
+    if (document.getElementById('currency-id')) document.getElementById('currency-id').value = currencyId; // Set hidden ID
+
+    try {
+        const docSnap = await getDoc(getDocRef('currencies', currencyId));
+        if (docSnap.exists()) {
+            const currencyData = { id: docSnap.id, ...docSnap.data() };
+
+            // Populate form fields
+            if (document.getElementById('currency-name')) document.getElementById('currency-name').value = currencyData.name || '';
+            if (document.getElementById('currency-code')) document.getElementById('currency-code').value = currencyData.code || '';
+            if (document.getElementById('currency-symbol')) document.getElementById('currency-symbol').value = currencyData.symbol || '';
+            
+            // Populate countries dropdown before setting the value
+            await populateCurrencyCountries(); // Assuming this populates the options
+            if (currencyCountrySelect) currencyCountrySelect.value = currencyData.countryCode || '';
+
+        } else {
+            showMessageBox("Currency not found.", 'alert', true);
+            hideForm(currencyFormContainer);
+        }
+    } catch (error) {
+        console.error("Error editing currency:", error);
+        showMessageBox(`Error loading currency data for edit: ${error.message}`, 'alert', true);
+        hideForm(currencyFormContainer);
+    }
+}
+
 
 async function deleteCountry(countryId) {
     const confirmDelete = await showMessageBox("Are you sure you want to delete this country?", true);
@@ -2671,6 +2899,42 @@ async function editPriceBook(priceBookId) {
         showMessageBox(`Error loading price book for edit: ${error.message}`, false);
     }
 }
+
+/**
+ * Handles the editing of an existing price book.
+ * Populates the price book form with existing data and shows the form.
+ * @param {string} priceBookId The ID of the price book document to edit.
+ */
+async function handleEditPriceBook(priceBookId) {
+    showForm(priceBookFormContainer); // Show the form container
+    if (priceBookForm) priceBookForm.reset(); // Reset form fields
+    if (document.getElementById('price-book-id')) document.getElementById('price-book-id').value = priceBookId; // Set hidden ID
+
+    try {
+        const docSnap = await getDoc(getDocRef('priceBooks', priceBookId));
+        if (docSnap.exists()) {
+            const priceBookData = { id: docSnap.id, ...docSnap.data() };
+
+            // Populate form fields
+            if (document.getElementById('price-book-name')) document.getElementById('price-book-name').value = priceBookData.name || '';
+            if (document.getElementById('price-book-description')) document.getElementById('price-book-description').value = priceBookData.description || '';
+            if (priceBookActiveCheckbox) priceBookActiveCheckbox.checked = priceBookData.isActive || false;
+
+            // Populate currencies dropdown before setting the value
+            await populatePriceBookCurrencies(); // Assuming this populates the options
+            if (priceBookCurrencySelect) priceBookCurrencySelect.value = priceBookData.currency || '';
+
+        } else {
+            showMessageBox("Price Book not found.", 'alert', true);
+            hideForm(priceBookFormContainer);
+        }
+    } catch (error) {
+        console.error("Error editing price book:", error);
+        showMessageBox(`Error loading price book data for edit: ${error.message}`, 'alert', true);
+        hideForm(priceBookFormContainer);
+    }
+}
+
 
 async function deletePriceBook(priceBookId) {
     const confirmDelete = await showMessageBox("Are you sure you want to delete this price book?", true);
@@ -3306,6 +3570,29 @@ async function editQuote(quoteId) {
     }
 }
 
+/**
+ * Handles the editing of an existing quote.
+ * Fetches the quote data and passes it to setupQuoteForm.
+ * @param {string} quoteId The ID of the quote document to edit.
+ */
+async function handleEditQuote(quoteId) {
+    try {
+        const docSnap = await getDoc(getDocRef('quotes', quoteId));
+        if (docSnap.exists()) {
+            const quoteData = { id: docSnap.id, ...docSnap.data() };
+            await setupQuoteForm(quoteData); // Pass the data to setupQuoteForm
+        } else {
+            showMessageBox("Quote not found.", 'alert', true);
+            hideForm(quoteFormContainer);
+        }
+    } catch (error) {
+        console.error("Error editing quote:", error);
+        showMessageBox(`Error loading quote data for edit: ${error.message}`, 'alert', true);
+        hideForm(quoteFormContainer);
+    }
+}
+
+
 async function deleteQuote(quoteId) {
     const confirmDelete = await showMessageBox("Are you sure you want to delete this quote?", true);
     if (!confirmDelete) return;
@@ -3320,6 +3607,39 @@ async function deleteQuote(quoteId) {
         console.error("Error deleting quote:", error);
         showMessageBox(`Error deleting quote: ${error.message}`, false);
     }
+}
+
+
+/**
+ * Handles the editing of an existing quote line entry.
+ * Populates the quote line form with existing data and shows the form.
+ * @param {string} quoteLineId The ID of the quote line document to edit.
+ * @param {object} quoteLineData The data of the quote line entry (passed from renderQuoteLines).
+ */
+function handleEditQuoteLine(quoteLineId, quoteLineData) {
+    showQuoteLineForm(); // Show the quote line form
+    if (document.getElementById('quote-line-id')) document.getElementById('quote-line-id').value = quoteLineId;
+    if (document.getElementById('quote-line-parent-quote-id')) document.getElementById('quote-line-parent-quote-id').value = currentQuoteId; // Ensure parent ID is set
+
+    // Populate form fields
+    if (quoteLineServicesInput) quoteLineServicesInput.value = quoteLineData.services || '';
+    if (quoteLineDescriptionInput) quoteLineDescriptionInput.value = quoteLineData.serviceDescription || '';
+    if (quoteLineUnitPriceInput) quoteLineUnitPriceInput.value = quoteLineData.unitPrice !== undefined ? quoteLineData.unitPrice : 0;
+    if (quoteLineQuantityInput) quoteLineQuantityInput.value = quoteLineData.quantity !== undefined ? quoteLineData.quantity : 1;
+    if (quoteLineDiscountInput) quoteLineDiscountInput.value = quoteLineData.discount !== undefined ? quoteLineData.discount : 0;
+    if (quoteLineAdjustmentAmountInput) quoteLineAdjustmentAmountInput.value = quoteLineData.adjustmentAmount !== undefined ? quoteLineData.adjustmentAmount : 0;
+
+    if (quoteLineStartDateInput) {
+        const startDate = quoteLineData.serviceStartDate ? new Date(quoteLineData.serviceStartDate.seconds * 1000).toISOString().split('T')[0] : '';
+        quoteLineStartDateInput.value = startDate;
+    }
+    if (quoteLineEndDateInput) {
+        const endDate = quoteLineData.serviceEndDate ? new Date(quoteLineData.serviceEndDate.seconds * 1000).toISOString().split('T')[0] : '';
+        quoteLineEndDateInput.value = endDate;
+    }
+
+    calculateQuoteLineFinalNet(); // Recalculate to update display
+    if (quoteLineFormMessage) showMessageBox(quoteLineFormMessage, '', false); // Clear any previous messages
 }
 
 
@@ -4067,24 +4387,28 @@ async function initializePage() {
 
 
 // Make functions globally accessible for inline onclick attributes (e.g., in Grid.js formatters)
-window.editCustomer = editCustomer;
-window.deleteCustomer = deleteCustomer;
-window.editLead = editLead;
-window.deleteLead = deleteLead;
-window.editOpportunity = editOpportunity;
-window.deleteOpportunity = deleteOpportunity;
-window.editWorkLog = editWorkLog;
-window.deleteWorkLog = deleteWorkLog;
-window.editCountry = editCountry;
-window.deleteCountry = deleteCountry;
-window.editCurrency = editCurrency;
-window.deleteCurrency = deleteCurrency;
-window.editPriceBook = editPriceBook;
-window.deletePriceBook = deletePriceBook;
-window.editQuote = editQuote;
-window.deleteQuote = deleteQuote;
-window.showMessageBox = showMessageBox;
-window.setupWorkLogForm = setupWorkLogForm;
-window.showWorkLogForm = showWorkLogForm;
-window.showQuotesForOpportunity = showQuotesForOpportunity; // Make global for Grid.js formatter
-window.clearQuotesFilter = clearQuotesFilter; // Make global for button
+window.handleEditCustomer = handleEditCustomer;
+window.handleDeleteCustomer = handleDeleteCustomer;
+window.handleEditLead = handleEditLead;
+window.handleDeleteLead = handleDeleteLead;
+window.handleEditOpportunity = handleEditOpportunity;
+window.handleDeleteOpportunity = handleDeleteOpportunity;
+window.handleEditWorkLog = handleEditWorkLog; // For editing individual work logs
+window.handleDeleteWorkLog = handleDeleteWorkLog; // For deleting individual work logs
+window.handleEditQuote = handleEditQuote;
+window.handleDeleteQuote = handleDeleteQuote;
+window.handleEditQuoteLine = handleEditQuoteLine; // For editing individual quote lines
+window.handleDeleteQuoteLine = handleDeleteQuoteLine; // For deleting individual quote lines
+window.handleEditCountry = handleEditCountry;
+window.handleDeleteCountry = handleDeleteCountry;
+window.handleEditCurrency = handleEditCurrency;
+window.handleDeleteCurrency = handleDeleteCurrency;
+window.handleEditPriceBook = handleEditPriceBook;
+window.handleDeletePriceBook = handleDeletePriceBook;
+
+// Other globally used functions
+window.showMessageBox = showMessageBox; // For modal alerts/confirms
+window.showWorkLogForm = showWorkLogForm; // If called directly from HTML (e.g. from Add button in Opportunity)
+window.showQuotesForOpportunity = showQuotesForOpportunity; // For filtering quotes grid
+window.clearQuotesFilter = clearQuotesFilter; // For clearing quotes filter
+
