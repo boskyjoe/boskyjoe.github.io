@@ -277,13 +277,13 @@ function showMessageBox(message, type = 'alert', isError = false, callback = nul
         
         // Use an anonymous async function for the click handler
         messageConfirmBtn.onclick = async () => {
+            console.log("MessageBox: Confirm button clicked, executing callback."); // NEW DEBUG LOG
             messageBox.classList.add('hidden');
             if (callback) {
                 try {
                     await callback(true); // Await the callback if it's async
                 } catch (e) {
                     console.error("Error during showMessageBox confirm callback:", e);
-                    // Optionally, display this error in the main app's message box
                     showMessageBox(`An error occurred: ${e.message || e}`, 'alert', true);
                 }
             }
@@ -303,7 +303,6 @@ function showMessageBox(message, type = 'alert', isError = false, callback = nul
         messageContent.onclick = (e) => e.stopPropagation();
     }
 }
-
 
 
 /**
