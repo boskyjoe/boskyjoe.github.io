@@ -1240,6 +1240,25 @@ async function deleteCustomer(customerDataId) {
     }
 }
 
+/**
+ * Handles the deletion of a customer document from Firestore.
+ * Prompts for confirmation before proceeding with deletion.
+ * @param {string} customerId The ID of the customer document to delete.
+ */
+function handleDeleteCustomer(customerId) {
+    showMessageBox("Are you sure you want to delete this customer? This action cannot be undone.", 'confirm', async (confirmed) => {
+        if (confirmed) {
+            try {
+                await deleteDoc(getDocRef('customers', customerId));
+                showMessageBox("Customer deleted successfully!");
+            } catch (error) {
+                console.error("Error deleting customer:", error);
+                showMessageBox(`Error deleting customer: ${error.message}`, 'alert', true);
+            }
+        }
+    });
+}
+
 // --- Lead Logic ---
 
 async function setupLeadForm(lead = null) {
@@ -4313,7 +4332,7 @@ async function initializePage() {
 
 // Make functions globally accessible for inline onclick attributes (e.g., in Grid.js formatters)
 window.handleEditCustomer = handleEditCustomer;
-window.handleDeleteCustomer = handleDeleteCustomer;
+window.handleDeleteCustomer = handleDeleteCustomer; // ADDED THIS LINE
 window.handleEditLead = handleEditLead;
 window.handleDeleteLead = handleDeleteLead;
 window.handleEditOpportunity = handleEditOpportunity;
@@ -4336,4 +4355,5 @@ window.showMessageBox = showMessageBox; // For modal alerts/confirms
 window.showWorkLogForm = showWorkLogForm; // If called directly from HTML (e.g. from Add button in Opportunity)
 window.showQuotesForOpportunity = showQuotesForOpportunity; // For filtering quotes grid
 window.clearQuotesFilter = clearQuotesFilter; // For clearing quotes filter
+
 
