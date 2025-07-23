@@ -4060,21 +4060,28 @@ async function initializePage() {
     // Setup Grids (Existing initializations, now with column widths and null checks)
     customersGrid = new gridjs.Grid({
         columns: [
-            { id: 'id', name: 'ID', hidden: true }, // ADDED: Explicit ID column, hidden
+            { id: 'id', name: 'ID', hidden: true }, // Explicit ID column, hidden
             { id: 'name', name: 'Name', width: 'auto' },
             { id: 'type', name: 'Type', width: '120px' },
             { id: 'email', name: 'Email', width: '200px' },
             { id: 'phone', name: 'Phone', width: '150px' },
             { id: 'country', name: 'Country', width: '120px' },
             { id: 'preferredContactMethod', name: 'Contact Method', width: '180px' },
-            { id: 'industry', name: 'Industry', width: '120px' }, // Assuming you want to display industry
+            { id: 'industry', name: 'Industry', width: '120px' },
             { id: 'source', name: 'Source', width: '120px' },
             {
                 name: 'Actions',
                 width: '120px',
                 formatter: (cell, row) => {
-                    // Access the ID from the explicitly defined 'id' column
-                    const customerId = row.cells.find(c => c.id === 'id').data;
+                    // CORRECTED: Access the ID from the `column.id` property of the cell
+                    const customerIdCell = row.cells.find(c => c.column && c.column.id === 'id');
+                    const customerId = customerIdCell ? customerIdCell.data : null;
+
+                    if (!customerId) {
+                        console.error("Error: Customer ID not found in grid row for actions.");
+                        return gridjs.html(`<span>Error</span>`); // Or some other fallback
+                    }
+
                     return gridjs.html(`
                         <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditCustomer('${customerId}')">Edit</button>
                         <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteCustomer('${customerId}')">Delete</button>
@@ -4085,11 +4092,11 @@ async function initializePage() {
         data: [], // Will be populated by onSnapshot
         search: {
             selector: (cell, rowIndex, cellIndex) => {
-                // Exclude 'Actions' column from search. Adjust index if you add/remove columns.
-                // If 'id' is hidden, it's still part of the cells array.
-                // Assuming 'id' is at index 0, 'name' at 1, etc. Actions is last.
-                // So, exclude the last column (Actions) and the hidden 'id' column (index 0) from search.
-                return cellIndex > 0 && cellIndex < 9 ? cell : undefined; // Adjust 9 if more columns are added
+                // Exclude 'Actions' column from search and the hidden 'id' column.
+                // Assuming 'id' is at index 0, and 'Actions' is the last.
+                // Visible columns are name (1), type (2), email (3), phone (4), country (5), contact (6), industry (7), source (8).
+                // So, search from index 1 up to (but not including) the 'Actions' column.
+                return cellIndex > 0 && cellIndex < 9 ? cell : undefined;
             }
         },
         pagination: {
