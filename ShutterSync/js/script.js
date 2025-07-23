@@ -4058,9 +4058,9 @@ async function initializePage() {
 
 
     // Setup Grids (Existing initializations, now with column widths and null checks)
-    customersGrid = new gridjs.Grid({
+   customersGrid = new gridjs.Grid({
         columns: [
-            { id: 'id', name: 'ID', hidden: true }, // Explicit ID column, hidden
+            { id: 'id', name: 'ID', hidden: true }, // Explicit ID column, hidden, and now reliably at index 0
             { id: 'name', name: 'Name', width: 'auto' },
             { id: 'type', name: 'Type', width: '120px' },
             { id: 'email', name: 'Email', width: '200px' },
@@ -4073,12 +4073,11 @@ async function initializePage() {
                 name: 'Actions',
                 width: '120px',
                 formatter: (cell, row) => {
-                    // CORRECTED: Access the ID from the `column.id` property of the cell
-                    const customerIdCell = row.cells.find(c => c.column && c.column.id === 'id');
-                    const customerId = customerIdCell ? customerIdCell.data : null;
+                    // CORRECTED: Access the ID directly from the first cell (index 0)
+                    const customerId = row.cells[0].data;
 
                     if (!customerId) {
-                        console.error("Error: Customer ID not found in grid row for actions.");
+                        console.error("Error: Customer ID not found at row.cells[0].data for actions.");
                         return gridjs.html(`<span>Error</span>`); // Or some other fallback
                     }
 
@@ -4092,8 +4091,7 @@ async function initializePage() {
         data: [], // Will be populated by onSnapshot
         search: {
             selector: (cell, rowIndex, cellIndex) => {
-                // Exclude 'Actions' column from search and the hidden 'id' column.
-                // Assuming 'id' is at index 0, and 'Actions' is the last.
+                // Exclude 'Actions' column (last) and the hidden 'id' column (index 0) from search.
                 // Visible columns are name (1), type (2), email (3), phone (4), country (5), contact (6), industry (7), source (8).
                 // So, search from index 1 up to (but not including) the 'Actions' column.
                 return cellIndex > 0 && cellIndex < 9 ? cell : undefined;
