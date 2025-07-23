@@ -1245,7 +1245,7 @@ async function deleteCustomer(customerDataId) {
  * Prompts for confirmation before proceeding with deletion.
  * @param {string} customerId The ID of the customer document to delete.
  */
-function handleDeleteCustomer(customerId) {
+async function handleDeleteCustomer(customerId) { // Now async
     showMessageBox("Are you sure you want to delete this customer? This action cannot be undone.", 'confirm', async (confirmed) => {
         if (confirmed) {
             try {
@@ -1258,6 +1258,7 @@ function handleDeleteCustomer(customerId) {
         }
     });
 }
+
 
 // --- Lead Logic ---
 
@@ -1558,36 +1559,26 @@ async function editLead(leadId) {
     }
 }
 
-async function handleDeleteLead(leadId) {
-    const confirmDelete = await showMessageBox("Are you sure you want to delete this lead?", true);
-    if (!confirmDelete) return;
 
-    if (!db || !userId) return;
-    try {
-        await deleteDoc(doc(db, 'leads', leadId)); // Top-level collection
-        showMessageBox("Lead deleted successfully!", false);
-        await loadLeads(); // Reload grid
-    } catch (error) {
-        console.error("Error deleting lead:", error);
-        showMessageBox(`Error deleting lead: ${error.message}`, false);
-    }
+/**
+ * Handles the deletion of a lead document from Firestore.
+ * Prompts for confirmation before proceeding with deletion.
+ * @param {string} leadId The ID of the lead document to delete.
+ */
+async function handleDeleteLead(leadId) { // Now async
+    showMessageBox("Are you sure you want to delete this lead? This action cannot be undone.", 'confirm', async (confirmed) => {
+        if (confirmed) {
+            try {
+                await deleteDoc(getDocRef('leads', leadId));
+                showMessageBox("Lead deleted successfully!");
+            } catch (error) {
+                console.error("Error deleting lead:", error);
+                showMessageBox(`Error deleting lead: ${error.message}`, 'alert', true);
+            }
+        }
+    });
 }
 
-
-async function deleteLead(leadId) {
-    const confirmDelete = await showMessageBox("Are you sure you want to delete this lead?", true);
-    if (!confirmDelete) return;
-
-    if (!db || !userId) return;
-    try {
-        await deleteDoc(doc(db, 'leads', leadId)); // Top-level collection
-        showMessageBox("Lead deleted successfully!", false);
-        await loadLeads(); // Reload grid
-    } catch (error) {
-        console.error("Error deleting lead:", error);
-        showMessageBox(`Error deleting lead: ${error.message}`, false);
-    }
-}
 
 // --- Opportunity Logic ---
 
@@ -1913,7 +1904,38 @@ async function handleEditOpportunity(opportunityId) {
     }
 }
 
-async function loadOpportunities() {
+
+/**
+ * Handles the deletion of an opportunity document and its associated work logs from Firestore.
+ * Prompts for confirmation before proceeding with deletion.
+ * @param {string} opportunityId The ID of the opportunity document to delete.
+ */
+async function handleDeleteOpportunity(opportunityId) { // Now async
+    showMessageBox("Are you sure you want to delete this opportunity and all its work logs? This action cannot be undone.", 'confirm', async (confirmed) => {
+        if (confirmed) {
+            try {
+                // Delete subcollection documents first (workLogs)
+                const workLogsSnapshot = await getDocs(collection(getDocRef('opportunities', opportunityId), 'workLogs'));
+                const deleteWorkLogPromises = [];
+                workLogsSnapshot.forEach(doc => {
+                    deleteWorkLogPromises.push(deleteDoc(doc.ref));
+                });
+                await Promise.all(deleteWorkLogPromises);
+
+                // Then delete the parent opportunity document
+                await deleteDoc(getDocRef('opportunities', opportunityId));
+                showMessageBox("Opportunity and its work logs deleted successfully!");
+            } catch (error) {
+                console.error("Error deleting opportunity:", error);
+                showMessageBox(`Error deleting opportunity: ${error.message}`, 'alert', true);
+            }
+        }
+    });
+}
+
+
+
+async loadOpportunities() {
     if (!db || !userId) {
         if (noOpportunitiesMessage) noOpportunitiesMessage.classList.remove('hidden');
         if (opportunitiesGrid) opportunitiesGrid.updateConfig({ data: [] }).forceRender();
@@ -2284,21 +2306,33 @@ function handleEditWorkLog(workLogId, workLogData) {
 }
 
 
-async function deleteWorkLog(workLogId, opportunityId) { // Pass opportunityId to correctly build docRef
-    const confirmDelete = await showMessageBox("Are you sure you want to delete this work log entry?", true);
-    if (!confirmDelete) return;
 
-    if (!db || !userId || !opportunityId) return;
-    try {
-        // Work logs are a subcollection of top-level opportunities
-        await deleteDoc(doc(db, `opportunities/${opportunityId}/workLogs`, workLogId));
-        showMessageBox("Work log deleted successfully!", false);
-        // loadWorkLogs is already onSnapshot, so it will update automatically
-    } catch (error) {
-        console.error("Error deleting work log:", error);
-        showMessageBox(`Error deleting work log: ${error.message}`, false);
-    }
+/**
+ * Handles the deletion of a specific work log entry within an opportunity.
+ * Prompts for confirmation before proceeding with deletion.
+ * @param {string} workLogId The ID of the work log document to delete.
+ */
+async function handleDeleteWorkLog(workLogId) { // Now async
+    showMessageBox("Are you sure you want to delete this work log entry? This action cannot be undone.", 'confirm', async (confirmed) => {
+        if (confirmed) {
+            try {
+                const parentOpportunityId = document.getElementById('work-log-opportunity-id')?.value || currentOpportunityId;
+                
+                if (!parentOpportunityId) {
+                    showMessageBox('Parent opportunity ID is missing. Cannot delete work log.', 'alert', true);
+                    return;
+                }
+
+                await deleteDoc(doc(collection(getDocRef('opportunities', parentOpportunityId), 'workLogs'), workLogId));
+                showMessageBox("Work log entry deleted successfully!");
+            } catch (error) {
+                console.error("Error deleting work log:", error);
+                showMessageBox(`Error deleting work log: ${error.message}`, 'alert', true);
+            }
+        }
+    });
 }
+
 
 
 
@@ -2393,6 +2427,26 @@ async function handleEditCountry(countryId) {
         showMessageBox(`Error loading country data for edit: ${error.message}`, 'alert', true);
         hideForm(countryFormContainer);
     }
+}
+
+
+/**
+ * Handles the deletion of a country document from Firestore.
+ * Prompts for confirmation before proceeding with deletion.
+ * @param {string} countryId The ID of the country document to delete.
+ */
+async function handleDeleteCountry(countryId) { // Now async
+    showMessageBox("Are you sure you want to delete this country? This action cannot be undone.", 'confirm', async (confirmed) => {
+        if (confirmed) {
+            try {
+                await deleteDoc(getDocRef('countries', countryId));
+                showMessageBox("Country deleted successfully!");
+            } catch (error) {
+                console.error("Error deleting country:", error);
+                showMessageBox(`Error deleting country: ${error.message}`, 'alert', true);
+            }
+        }
+    });
 }
 
 
@@ -2534,6 +2588,26 @@ async function handleEditCurrency(currencyId) {
         showMessageBox(`Error loading currency data for edit: ${error.message}`, 'alert', true);
         hideForm(currencyFormContainer);
     }
+}
+
+
+/**
+ * Handles the deletion of a currency document from Firestore.
+ * Prompts for confirmation before proceeding with deletion.
+ * @param {string} currencyId The ID of the currency document to delete.
+ */
+async function handleDeleteCurrency(currencyId) { // Now async
+    showMessageBox("Are you sure you want to delete this currency? This action cannot be undone.", 'confirm', async (confirmed) => {
+        if (confirmed) {
+            try {
+                await deleteDoc(getDocRef('currencies', currencyId));
+                showMessageBox("Currency deleted successfully!");
+            } catch (error) {
+                console.error("Error deleting currency:", error);
+                showMessageBox(`Error deleting currency: ${error.message}`, 'alert', true);
+            }
+        }
+    });
 }
 
 
@@ -2947,6 +3021,26 @@ async function handleEditPriceBook(priceBookId) {
         showMessageBox(`Error loading price book data for edit: ${error.message}`, 'alert', true);
         hideForm(priceBookFormContainer);
     }
+}
+
+
+/**
+ * Handles the deletion of a price book document from Firestore.
+ * Prompts for confirmation before proceeding with deletion.
+ * @param {string} priceBookId The ID of the price book document to delete.
+ */
+async function handleDeletePriceBook(priceBookId) { // Now async
+    showMessageBox("Are you sure you want to delete this price book? This action cannot be undone.", 'confirm', async (confirmed) => {
+        if (confirmed) {
+            try {
+                await deleteDoc(getDocRef('priceBooks', priceBookId));
+                showMessageBox("Price Book deleted successfully!");
+            } catch (error) {
+                console.error("Error deleting price book:", error);
+                showMessageBox(`Error deleting price book: ${error.message}`, 'alert', true);
+            }
+        }
+    });
 }
 
 
