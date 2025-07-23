@@ -1066,19 +1066,25 @@ async function handleSaveCustomer(event) {
     }
 }
 
+
 /**
  * Handles the editing of an existing customer.
  * Populates the customer form with existing data and shows the form.
  * @param {string} customerId The ID of the customer document to edit.
  */
 async function handleEditCustomer(customerId) {
+    console.log(`handleEditCustomer called for customerId: ${customerId}`); // DEBUG LOG
     showForm(customerFormContainer); // Show the form container
     if (customerForm) customerForm.reset(); // Reset form fields
     if (document.getElementById('customer-id')) document.getElementById('customer-id').value = customerId; // Set hidden ID
 
     try {
-        const docSnap = await getDoc(getDocRef('customers', customerId));
+        const customerDocRef = getDocRef('customers', customerId);
+        console.log(`Attempting to get document from path: ${customerDocRef.path}`); // DEBUG LOG
+        const docSnap = await getDoc(customerDocRef);
+
         if (docSnap.exists()) {
+            console.log("Customer document found:", docSnap.data()); // DEBUG LOG
             const customerData = { id: docSnap.id, ...docSnap.data() };
 
             // Populate form fields using their IDs
@@ -1099,15 +1105,17 @@ async function handleEditCustomer(customerId) {
             if (customerActiveCheckbox) customerActiveCheckbox.checked = customerData.active || false;
 
         } else {
+            console.warn(`Customer with ID ${customerId} not found in Firestore.`); // DEBUG LOG
             showMessageBox("Customer not found.", 'alert', true);
             hideForm(customerFormContainer);
         }
     } catch (error) {
-        console.error("Error editing customer:", error);
+        console.error("Error editing customer:", error); // DEBUG LOG
         showMessageBox(`Error loading customer data for edit: ${error.message}`, 'alert', true);
         hideForm(customerFormContainer);
     }
 }
+
 
 async function loadCustomers() {
     if (!db || !userId) {
@@ -4052,18 +4060,21 @@ async function initializePage() {
     // Setup Grids (Existing initializations, now with column widths and null checks)
     customersGrid = new gridjs.Grid({
         columns: [
+            { id: 'id', name: 'ID', hidden: true }, // ADDED: Explicit ID column, hidden
             { id: 'name', name: 'Name', width: 'auto' },
             { id: 'type', name: 'Type', width: '120px' },
             { id: 'email', name: 'Email', width: '200px' },
             { id: 'phone', name: 'Phone', width: '150px' },
             { id: 'country', name: 'Country', width: '120px' },
             { id: 'preferredContactMethod', name: 'Contact Method', width: '180px' },
+            { id: 'industry', name: 'Industry', width: '120px' }, // Assuming you want to display industry
             { id: 'source', name: 'Source', width: '120px' },
             {
                 name: 'Actions',
                 width: '120px',
                 formatter: (cell, row) => {
-                    const customerId = row.cells[row.cells.length - 1].data;
+                    // Access the ID from the explicitly defined 'id' column
+                    const customerId = row.cells.find(c => c.id === 'id').data;
                     return gridjs.html(`
                         <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditCustomer('${customerId}')">Edit</button>
                         <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteCustomer('${customerId}')">Delete</button>
@@ -4074,8 +4085,11 @@ async function initializePage() {
         data: [], // Will be populated by onSnapshot
         search: {
             selector: (cell, rowIndex, cellIndex) => {
-                // Exclude 'Actions' column from search
-                return cellIndex < 7 ? cell : undefined;
+                // Exclude 'Actions' column from search. Adjust index if you add/remove columns.
+                // If 'id' is hidden, it's still part of the cells array.
+                // Assuming 'id' is at index 0, 'name' at 1, etc. Actions is last.
+                // So, exclude the last column (Actions) and the hidden 'id' column (index 0) from search.
+                return cellIndex > 0 && cellIndex < 9 ? cell : undefined; // Adjust 9 if more columns are added
             }
         },
         pagination: {
@@ -4093,6 +4107,7 @@ async function initializePage() {
             }
         }
     }).render(customersGridContainer);
+
 
     unsubscribeCustomers = onSnapshot(getCollectionRef('customers'), (snapshot) => {
         const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
