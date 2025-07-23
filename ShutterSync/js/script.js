@@ -3632,45 +3632,6 @@ async function populateCustomerCountries() {
 }
 
 
-// Inside handleEditCustomer() function:
-
-async function handleEditCustomer(customerId) {
-    showForm(customerFormContainer);
-    if (customerForm) customerForm.reset(); // Reset form first
-    if (document.getElementById('customer-id')) document.getElementById('customer-id').value = customerId;
-
-    try {
-        const docSnap = await getDoc(getDocRef('customers', customerId));
-        if (docSnap.exists()) {
-            const customerData = { id: docSnap.id, ...docSnap.data() };
-            document.getElementById('customer-name').value = customerData.name || '';
-            if (customerTypeSelect) customerTypeSelect.value = customerData.type || '';
-            document.getElementById('customer-email').value = customerData.email || '';
-            document.getElementById('customer-phone').value = customerData.phone || '';
-            document.getElementById('customer-address').value = customerData.address || '';
-            if (customerContactMethodSelect) customerContactMethodSelect.value = customerData.preferredContactMethod || '';
-            if (customerIndustrySelect) customerIndustrySelect.value = customerData.industry || '';
-            document.getElementById('customer-additional-details').value = customerData.additionalDetails || '';
-            if (customerSourceSelect) customerSourceSelect.value = customerData.source || '';
-            if (customerActiveCheckbox) customerActiveCheckbox.checked = customerData.active || false;
-
-            // ADD THIS LINE: Populate countries before setting the value
-            await populateCustomerCountries(); 
-            if (customerCountrySelect) customerCountrySelect.value = customerData.country || '';
-
-        } else {
-            showMessageBox("Customer not found.", 'alert', true);
-            hideForm(customerFormContainer);
-        }
-    } catch (error) {
-        console.error("Error editing customer:", error);
-        showMessageBox(`Error loading customer data for edit: ${error.message}`, 'alert', true);
-        hideForm(customerFormContainer);
-    }
-}
-
-
-
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', initializePage);
 
