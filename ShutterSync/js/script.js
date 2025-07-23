@@ -289,24 +289,57 @@ function showMessageBox(message, isConfirm = false) {
     });
 }
 
+
+
 /**
- * Displays a specific section and hides all others.
- * @param {HTMLElement} sectionToShow - The section to make visible.
+ * Shows a specific section of the application and hides all others.
+ * Includes null checks for robustness against early calls or missing elements.
+ * @param {string} sectionId The ID of the section to show (e.g., 'dashboard-section').
  */
-function showSection(sectionToShow) {
-    const sections = [
-        authSection, dashboardSection, customersSection, leadsSection,
-        opportunitiesSection, quotesSection, countriesSection, currenciesSection, priceBooksSection
-    ];
-    sections.forEach(section => {
-        if (section) { // Ensure the section element exists
-            section.classList.add('hidden');
+function showSection(sectionId) {
+    // Get all section elements by their IDs.
+    // We get them dynamically here to ensure they are available when this function is called,
+    // even if global variables haven't been fully assigned yet during initial load.
+    const sections = {
+        'dashboard-section': document.getElementById('dashboard-section'),
+        'customers-section': document.getElementById('customers-section'),
+        'leads-section': document.getElementById('leads-section'),
+        'opportunities-section': document.getElementById('opportunities-section'),
+        'quotes-section': document.getElementById('quotes-section'),
+        'countries-section': document.getElementById('countries-section'),
+        'currencies-section': document.getElementById('currencies-section'),
+        'price-books-section': document.getElementById('price-books-section'),
+        'auth-section': document.getElementById('auth-section') // Include auth section for completeness
+    };
+
+    // Hide all sections first
+    for (const id in sections) {
+        if (sections[id]) { // Check if the element exists
+            sections[id].classList.add('hidden');
         }
+    }
+
+    // Show the requested section
+    const targetSection = sections[sectionId];
+    if (targetSection) { // Check if the target section element exists
+        targetSection.classList.remove('hidden');
+    } else {
+        console.warn(`Attempted to show section with ID '${sectionId}', but the element was not found.`);
+    }
+
+    // Update active navigation link styling
+    document.querySelectorAll('nav .nav-link, nav a[id^="nav-"]').forEach(link => {
+        link.classList.remove('bg-blue-700', 'text-white'); // Remove active style
+        link.classList.add('text-blue-200'); // Add inactive style
     });
-    if (sectionToShow) {
-        sectionToShow.classList.remove('hidden');
+
+    const activeNavLink = document.getElementById(`nav-${sectionId.replace('-section', '')}`);
+    if (activeNavLink) {
+        activeNavLink.classList.add('bg-blue-700', 'text-white'); // Add active style
+        activeNavLink.classList.remove('text-blue-200'); // Remove inactive style
     }
 }
+
 
 /**
  * Sets up the authentication state listener and handles UI updates.
