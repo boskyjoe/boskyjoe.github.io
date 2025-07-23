@@ -509,35 +509,47 @@ async function handleLogout() {
 async function loadDashboardData() {
     console.log("Loading dashboard data...");
 
-    // Ensure userId is available before proceeding, as getCollectionRef depends on it.
+    // Ensure user is authenticated and userId is available before proceeding.
     // userId is set by onAuthStateChanged.
     if (!auth.currentUser?.uid) {
-        console.warn("User ID not available yet for dashboard data loading.");
-        // Potentially show a loading state or message
+        console.warn("User ID not available yet for dashboard data loading. Skipping dashboard data load.");
+        // Potentially clear dashboard display or show a message indicating data is not available
+        if (dashboardTotalCustomers) dashboardTotalCustomers.textContent = 'N/A';
+        if (dashboardTotalOpportunities) dashboardTotalOpportunities.textContent = 'N/A';
+        if (dashboardOpenOpportunities) dashboardOpenOpportunities.textContent = 'N/A';
+        if (dashboardWonOpportunities) dashboardWonOpportunities.textContent = 'N/A';
         return;
     }
 
     try {
         // Fetch Total Customers
         const customersSnapshot = await getDocs(getCollectionRef('customers'));
-        if (dashboardTotalCustomers) { // Null check
+        if (dashboardTotalCustomers) {
             dashboardTotalCustomers.textContent = customersSnapshot.size;
         }
 
         // Fetch Total Opportunities
         const opportunitiesSnapshot = await getDocs(getCollectionRef('opportunities'));
-        if (dashboardTotalOpportunities) { // Null check
+        if (dashboardTotalOpportunities) {
             dashboardTotalOpportunities.textContent = opportunitiesSnapshot.size;
         }
 
-        // Fetch Open Opportunities (Sales Stage not 'Won' or 'Lost')
-        const openOpportunitiesQuery = query(
-            getCollectionRef('opportunities'),
-            where('salesStage', 'not in', ['Won', 'Lost'])
-        );
-        const openOpportunitiesSnapshot = await getDocs(openOpportunitiesQuery);
-        if (dashboardOpenOpportunities) { // Null check
-            dashboardOpenOpportunities.textContent = openOpportunitiesSnapshot.size;
+        // Fetch Open Opportunities (Sales Stage 'Prospect', 'Qualification', 'Proposal', 'Negotiation')
+        // Firestore does not support 'not in' for field filters. Query for each "open" stage.
+        let openOpportunitiesCount = 0;
+        const openStages = ['Prospect', 'Qualification', 'Proposal', 'Negotiation'];
+
+        for (const stage of openStages) {
+            const stageQuery = query(
+                getCollectionRef('opportunities'),
+                where('salesStage', '==', stage)
+            );
+            const stageSnapshot = await getDocs(stageQuery);
+            openOpportunitiesCount += stageSnapshot.size;
+        }
+        
+        if (dashboardOpenOpportunities) {
+            dashboardOpenOpportunities.textContent = openOpportunitiesCount;
         }
 
         // Fetch Won Opportunities (Sales Stage 'Won')
@@ -546,7 +558,7 @@ async function loadDashboardData() {
             where('salesStage', '==', 'Won')
         );
         const wonOpportunitiesSnapshot = await getDocs(wonOpportunitiesQuery);
-        if (dashboardWonOpportunities) { // Null check
+        if (dashboardWonOpportunities) {
             dashboardWonOpportunities.textContent = wonOpportunitiesSnapshot.size;
         }
 
