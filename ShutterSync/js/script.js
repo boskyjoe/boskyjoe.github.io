@@ -1558,6 +1558,22 @@ async function editLead(leadId) {
     }
 }
 
+async function handleDeleteLead(leadId) {
+    const confirmDelete = await showMessageBox("Are you sure you want to delete this lead?", true);
+    if (!confirmDelete) return;
+
+    if (!db || !userId) return;
+    try {
+        await deleteDoc(doc(db, 'leads', leadId)); // Top-level collection
+        showMessageBox("Lead deleted successfully!", false);
+        await loadLeads(); // Reload grid
+    } catch (error) {
+        console.error("Error deleting lead:", error);
+        showMessageBox(`Error deleting lead: ${error.message}`, false);
+    }
+}
+
+
 async function deleteLead(leadId) {
     const confirmDelete = await showMessageBox("Are you sure you want to delete this lead?", true);
     if (!confirmDelete) return;
