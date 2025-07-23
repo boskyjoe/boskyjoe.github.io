@@ -1253,19 +1253,32 @@ async function deleteCustomer(customerDataId) {
  * Prompts for confirmation before proceeding with deletion.
  * @param {string} customerId The ID of the customer document to delete.
  */
-async function handleDeleteCustomer(customerId) { // Now async
+async function handleDeleteCustomer(customerId) {
+    console.log(`Attempting to delete customer with ID: ${customerId}`); // DEBUG LOG
+
     showMessageBox("Are you sure you want to delete this customer? This action cannot be undone.", 'confirm', async (confirmed) => {
         if (confirmed) {
             try {
-                await deleteDoc(getDocRef('customers', customerId));
+                // Get the document reference
+                const customerDocRef = getDocRef('customers', customerId);
+                console.log(`Deleting document at path: ${customerDocRef.path}`); // DEBUG LOG
+
+                await deleteDoc(customerDocRef);
                 showMessageBox("Customer deleted successfully!");
+                console.log(`Customer ${customerId} deleted successfully.`); // SUCCESS LOG
             } catch (error) {
-                console.error("Error deleting customer:", error);
-                showMessageBox(`Error deleting customer: ${error.message}`, 'alert', true);
+                console.error("Error deleting customer:", error); // Log the full error object
+                // Check if it's a Firebase error and extract more details
+                if (error.code && error.message) {
+                    showMessageBox(`Error deleting customer: ${error.message} (Code: ${error.code})`, 'alert', true);
+                } else {
+                    showMessageBox(`Error deleting customer: An unexpected error occurred.`, 'alert', true);
+                }
             }
         }
     });
 }
+
 
 
 // --- Lead Logic ---
