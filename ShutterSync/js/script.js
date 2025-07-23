@@ -3735,6 +3735,34 @@ function handleEditQuoteLine(quoteLineId, quoteLineData) {
     if (quoteLineFormMessage) showMessageBox(quoteLineFormMessage, '', false); // Clear any previous messages
 }
 
+/**
+ * Handles the deletion of a specific quote line entry within a quote.
+ * Prompts for confirmation before proceeding with deletion.
+ * @param {string} quoteLineId The ID of the quote line document to delete.
+ */
+async function handleDeleteQuoteLine(quoteLineId) { // Now async
+    showMessageBox("Are you sure you want to delete this quote line entry? This action cannot be undone.", 'confirm', async (confirmed) => {
+        if (confirmed) {
+            try {
+                // The parent quote ID is needed to get the correct subcollection reference
+                // This assumes `currentQuoteId` is correctly set when in the quote form context
+                const parentQuoteId = document.getElementById('quote-line-parent-quote-id')?.value || currentQuoteId;
+                
+                if (!parentQuoteId) {
+                    showMessageBox('Parent quote ID is missing. Cannot delete quote line.', 'alert', true);
+                    return;
+                }
+
+                await deleteDoc(doc(collection(getDocRef('quotes', parentQuoteId), 'quoteLines'), quoteLineId));
+                showMessageBox("Quote line entry deleted successfully!");
+            } catch (error) {
+                console.error("Error deleting quote line:", error);
+                showMessageBox(`Error deleting quote line: ${error.message}`, 'alert', true);
+            }
+        }
+    });
+}
+
 
 /**
  * Populates the customer country dropdown with data from the 'countries' collection.
