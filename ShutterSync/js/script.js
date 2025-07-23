@@ -503,6 +503,63 @@ async function handleLogout() {
 }
 
 /**
+ * Loads and displays the dashboard data, including counts for customers and opportunities.
+ * This function respects user roles (standard users see their own data, admins see all data).
+ */
+async function loadDashboardData() {
+    console.log("Loading dashboard data...");
+
+    // Ensure userId is available before proceeding, as getCollectionRef depends on it.
+    // userId is set by onAuthStateChanged.
+    if (!auth.currentUser?.uid) {
+        console.warn("User ID not available yet for dashboard data loading.");
+        // Potentially show a loading state or message
+        return;
+    }
+
+    try {
+        // Fetch Total Customers
+        const customersSnapshot = await getDocs(getCollectionRef('customers'));
+        if (dashboardTotalCustomers) { // Null check
+            dashboardTotalCustomers.textContent = customersSnapshot.size;
+        }
+
+        // Fetch Total Opportunities
+        const opportunitiesSnapshot = await getDocs(getCollectionRef('opportunities'));
+        if (dashboardTotalOpportunities) { // Null check
+            dashboardTotalOpportunities.textContent = opportunitiesSnapshot.size;
+        }
+
+        // Fetch Open Opportunities (Sales Stage not 'Won' or 'Lost')
+        const openOpportunitiesQuery = query(
+            getCollectionRef('opportunities'),
+            where('salesStage', 'not in', ['Won', 'Lost'])
+        );
+        const openOpportunitiesSnapshot = await getDocs(openOpportunitiesQuery);
+        if (dashboardOpenOpportunities) { // Null check
+            dashboardOpenOpportunities.textContent = openOpportunitiesSnapshot.size;
+        }
+
+        // Fetch Won Opportunities (Sales Stage 'Won')
+        const wonOpportunitiesQuery = query(
+            getCollectionRef('opportunities'),
+            where('salesStage', '==', 'Won')
+        );
+        const wonOpportunitiesSnapshot = await getDocs(wonOpportunitiesQuery);
+        if (dashboardWonOpportunities) { // Null check
+            dashboardWonOpportunities.textContent = wonOpportunitiesSnapshot.size;
+        }
+
+        console.log("Dashboard data loaded successfully.");
+
+    } catch (error) {
+        console.error("Error loading dashboard data:", error);
+        showMessageBox("Error loading dashboard data. Please check console for details.");
+    }
+}
+
+
+/**
  * Updates dashboard statistics.
  */
 async function updateDashboard() {
