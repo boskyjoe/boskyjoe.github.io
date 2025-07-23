@@ -1010,56 +1010,62 @@ async function setupCustomerForm(customer = null) {
     showCustomerForm();
 }
 
+// Inside handleSaveCustomer() function:
+
 async function handleSaveCustomer(event) {
-    event.preventDefault(); // Prevent default form submission
-    if (!db || !userId) {
-        showMessageBox("Authentication required to save customer.", false);
+    event.preventDefault();
+    const customerId = document.getElementById('customer-id').value;
+
+    // Get the current authenticated user's UID
+    const creatorId = auth.currentUser?.uid;
+
+    if (!creatorId) {
+        showMessageBox("Authentication required to save customer.", 'alert', true);
+        console.error("Error saving customer: User not authenticated or UID not available.");
         return;
     }
 
-    const customerId = document.getElementById('customer-id').value;
-    const messageElement = document.getElementById('customer-form-message');
-    if (messageElement) messageElement.classList.add('hidden');
-
-    const customerData = {
-        type: document.getElementById('customer-type').value,
-        name: document.getElementById('customer-name').value,
-        email: document.getElementById('customer-email').value,
-        phone: document.getElementById('customer-phone').value,
-        address: document.getElementById('customer-address').value,
-        country: document.getElementById('customer-country').value,
-        preferredContactMethod: document.getElementById('customer-contact-method').value,
-        industry: document.getElementById('customer-industry').value,
-        additionalDetails: document.getElementById('customer-details').value,
-        source: document.getElementById('customer-source').value,
-        active: document.getElementById('customer-active').checked,
-        creatorId: userId, // Added creatorId as per rules
+    // Collect data directly from DOM elements using their IDs
+    const data = {
+        name: document.getElementById('customer-name').value || '',
+        type: document.getElementById('customer-type').value || '',
+        email: document.getElementById('customer-email').value || '',
+        phone: document.getElementById('customer-phone').value || '',
+        address: document.getElementById('customer-address').value || '',
+        country: document.getElementById('customer-country').value || '',
+        preferredContactMethod: document.getElementById('customer-contact-method').value || '',
+        industry: document.getElementById('customer-industry').value || '',
+        additionalDetails: document.getElementById('customer-additional-details').value || '',
+        source: document.getElementById('customer-source').value || '',
+        active: customerActiveCheckbox ? customerActiveCheckbox.checked : false, // Checkbox value
         updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp()
+        creatorId: creatorId // Explicitly set creatorId
     };
 
     try {
-        const collectionRef = collection(db, 'customers'); // Top-level collection
         if (customerId) {
-            // For update, only update updatedAt, not createdAt
-            delete customerData.createdAt;
-            await updateDoc(doc(collectionRef, customerId), customerData);
-            showMessageBox("Customer updated successfully!", false);
+            // For update, ensure createdAt is preserved
+            const existingDoc = await getDoc(getDocRef('customers', customerId));
+            if (existingDoc.exists()) {
+                data.createdAt = existingDoc.data().createdAt;
+            } else {
+                showMessageBox("Error: Cannot update non-existent customer.", 'alert', true);
+                return;
+            }
+            await updateDoc(getDocRef('customers', customerId), data);
+            showMessageBox("Customer updated successfully!");
         } else {
-            await addDoc(collectionRef, customerData);
-            showMessageBox("Customer added successfully!", false);
+            data.createdAt = serverTimestamp();
+            await addDoc(getCollectionRef('customers'), data);
+            showMessageBox("Customer added successfully!");
         }
-        hideCustomerForm();
-        await loadCustomers(); // Reload grid
-        await updateDashboard();
+        hideForm(customerFormContainer, customerFormMessage);
     } catch (error) {
         console.error("Error saving customer:", error);
-        if (messageElement) {
-            messageElement.textContent = `Error saving customer: ${error.message}`;
-            messageElement.classList.remove('hidden');
-        }
+        showMessageBox(`Error saving customer: ${error.message}`, 'alert', true);
     }
 }
+
 
 async function loadCustomers() {
     if (!db || !userId) {
