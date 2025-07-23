@@ -997,7 +997,7 @@ async function setupCustomerForm(customer = null) {
         document.getElementById('customer-country').value = customer.country || '';
         document.getElementById('customer-contact-method').value = customer.preferredContactMethod || 'Email';
         document.getElementById('customer-industry').value = customer.industry || '';
-        document.getElementById('customer-details').value = customer.additionalDetails || '';
+        document.getElementById('ccustomer-additional-details').value = customer.additionalDetails || '';
         document.getElementById('customer-source').value = customer.source || '';
         document.getElementById('customer-active').checked = customer.active !== undefined ? customer.active : true;
     } else {
