@@ -260,17 +260,33 @@ function showMessageBox(message, type = 'alert', isError = false, callback = nul
         return;
     }
 
-    messageContent.textContent = message; // This is where the message string goes
+    messageContent.textContent = message;
     messageBox.classList.remove('hidden');
     messageContent.classList.toggle('text-red-600', isError);
     messageContent.classList.toggle('text-gray-800', !isError);
 
+    // Clear previous event listeners to prevent multiple executions
+    messageConfirmBtn.onclick = null;
+    messageCancelBtn.onclick = null;
+    messageBox.onclick = null; // For alert type
+    messageContent.onclick = null; // For alert type
+
     if (type === 'confirm') {
         messageConfirmBtn.classList.remove('hidden');
         messageCancelBtn.classList.remove('hidden');
-        messageConfirmBtn.onclick = () => {
+        
+        // Use an anonymous async function for the click handler
+        messageConfirmBtn.onclick = async () => {
             messageBox.classList.add('hidden');
-            if (callback) callback(true);
+            if (callback) {
+                try {
+                    await callback(true); // Await the callback if it's async
+                } catch (e) {
+                    console.error("Error during showMessageBox confirm callback:", e);
+                    // Optionally, display this error in the main app's message box
+                    showMessageBox(`An error occurred: ${e.message || e}`, 'alert', true);
+                }
+            }
         };
         messageCancelBtn.onclick = () => {
             messageBox.classList.add('hidden');
@@ -279,15 +295,15 @@ function showMessageBox(message, type = 'alert', isError = false, callback = nul
     } else { // 'alert' type
         messageConfirmBtn.classList.add('hidden');
         messageCancelBtn.classList.add('hidden');
-        // For simple alerts, allow clicking anywhere on the overlay to close
+        
         messageBox.onclick = () => {
             messageBox.classList.add('hidden');
-            messageBox.onclick = null; // Remove listener
-            if (callback) callback(); // Call callback if exists
+            if (callback) callback();
         };
-        messageContent.onclick = (e) => e.stopPropagation(); // Prevent clicks on content from closing
+        messageContent.onclick = (e) => e.stopPropagation();
     }
 }
+
 
 
 /**
