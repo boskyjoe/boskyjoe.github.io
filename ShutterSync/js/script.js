@@ -339,6 +339,37 @@ function showSection(sectionId) {
     }
 }
 
+/**
+ * Shows a form container and optionally clears a message box.
+ * @param {HTMLElement} formContainer The container element of the form to show.
+ * @param {HTMLElement | null} messageBoxElement Optional: The message box element to clear.
+ */
+function showForm(formContainer, messageBoxElement = null) {
+    if (formContainer) {
+        formContainer.classList.remove('hidden');
+    } else {
+        console.warn("showForm: formContainer is null or undefined.");
+    }
+    if (messageBoxElement) {
+        showMessageBox(messageBoxElement, '', false); // Clear any previous messages
+    }
+}
+
+/**
+ * Hides a form container and optionally clears a message box.
+ * @param {HTMLElement} formContainer The container element of the form to hide.
+ * @param {HTMLElement | null} messageBoxElement Optional: The message box element to clear.
+ */
+function hideForm(formContainer, messageBoxElement = null) {
+    if (formContainer) {
+        formContainer.classList.add('hidden');
+    } else {
+        console.warn("hideForm: formContainer is null or undefined.");
+    }
+    if (messageBoxElement) {
+        showMessageBox(messageBoxElement, '', false); // Clear any previous messages
+    }
+}
 
 
 /**
