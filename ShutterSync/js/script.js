@@ -3317,6 +3317,70 @@ async function deleteQuote(quoteId) {
 }
 
 
+/**
+ * Populates the customer country dropdown with data from the 'countries' collection.
+ */
+async function populateCustomerCountries() {
+    if (!customerCountrySelect) {
+        console.warn("customerCountrySelect element not found. Cannot populate countries.");
+        return;
+    }
+    customerCountrySelect.innerHTML = '<option value="">Select Country</option>'; // Clear existing options and add default
+    try {
+        const countriesSnapshot = await getDocs(getCollectionRef('countries'));
+        countriesSnapshot.forEach(doc => {
+            const country = doc.data();
+            const option = document.createElement('option');
+            option.value = country.name;
+            option.textContent = country.name;
+            customerCountrySelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Error populating countries for customer form:", error);
+        showMessageBox("Error loading countries for dropdown.", 'alert', true);
+    }
+}
+
+
+// Inside handleEditCustomer() function:
+
+async function handleEditCustomer(customerId) {
+    showForm(customerFormContainer);
+    if (customerForm) customerForm.reset(); // Reset form first
+    if (document.getElementById('customer-id')) document.getElementById('customer-id').value = customerId;
+
+    try {
+        const docSnap = await getDoc(getDocRef('customers', customerId));
+        if (docSnap.exists()) {
+            const customerData = { id: docSnap.id, ...docSnap.data() };
+            document.getElementById('customer-name').value = customerData.name || '';
+            if (customerTypeSelect) customerTypeSelect.value = customerData.type || '';
+            document.getElementById('customer-email').value = customerData.email || '';
+            document.getElementById('customer-phone').value = customerData.phone || '';
+            document.getElementById('customer-address').value = customerData.address || '';
+            if (customerContactMethodSelect) customerContactMethodSelect.value = customerData.preferredContactMethod || '';
+            if (customerIndustrySelect) customerIndustrySelect.value = customerData.industry || '';
+            document.getElementById('customer-additional-details').value = customerData.additionalDetails || '';
+            if (customerSourceSelect) customerSourceSelect.value = customerData.source || '';
+            if (customerActiveCheckbox) customerActiveCheckbox.checked = customerData.active || false;
+
+            // ADD THIS LINE: Populate countries before setting the value
+            await populateCustomerCountries(); 
+            if (customerCountrySelect) customerCountrySelect.value = customerData.country || '';
+
+        } else {
+            showMessageBox("Customer not found.", 'alert', true);
+            hideForm(customerFormContainer);
+        }
+    } catch (error) {
+        console.error("Error editing customer:", error);
+        showMessageBox(`Error loading customer data for edit: ${error.message}`, 'alert', true);
+        hideForm(customerFormContainer);
+    }
+}
+
+
+
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', initializePage);
 
@@ -3510,7 +3574,16 @@ async function initializePage() {
     if (navPriceBooks) navPriceBooks.addEventListener('click', () => showSection('price-books-section'));
 
 
-    if (addCustomerBtn) addCustomerBtn.addEventListener('click', () => { hideForm(customerFormContainer, customerFormMessage); showForm(customerFormContainer); customerForm.reset(); document.getElementById('customer-id').value = ''; if (customerActiveCheckbox) customerActiveCheckbox.checked = true; });
+ if (addCustomerBtn) addCustomerBtn.addEventListener('click', () => {
+        hideForm(customerFormContainer, customerFormMessage);
+        showForm(customerFormContainer);
+        customerForm.reset();
+        document.getElementById('customer-id').value = '';
+        if (customerActiveCheckbox) customerActiveCheckbox.checked = true;
+        
+        // ADD THIS LINE: Populate countries when adding a new customer
+        populateCustomerCountries(); 
+    });
     if (cancelCustomerBtn) cancelCustomerBtn.addEventListener('click', () => hideForm(customerFormContainer, customerFormMessage));
     if (customerForm) customerForm.addEventListener('submit', handleSaveCustomer);
     if (customerSearchInput) customerSearchInput.addEventListener('input', (event) => { if (customersGrid) customersGrid.search(event.target.value); });
