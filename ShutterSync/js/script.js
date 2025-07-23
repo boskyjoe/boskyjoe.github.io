@@ -2266,27 +2266,6 @@ async function deleteWorkLog(workLogId, opportunityId) { // Pass opportunityId t
 }
 
 
-/**
- * Handles the editing of an existing quote.
- * Fetches the quote data and passes it to setupQuoteForm.
- * @param {string} quoteId The ID of the quote document to edit.
- */
-async function handleEditQuote(quoteId) {
-    try {
-        const docSnap = await getDoc(getDocRef('quotes', quoteId));
-        if (docSnap.exists()) {
-            const quoteData = { id: docSnap.id, ...docSnap.data() };
-            await setupQuoteForm(quoteData); // Pass the data to setupQuoteForm
-        } else {
-            showMessageBox("Quote not found.", 'alert', true);
-            hideForm(quoteFormContainer);
-        }
-    } catch (error) {
-        console.error("Error editing quote:", error);
-        showMessageBox(`Error loading quote data for edit: ${error.message}`, 'alert', true);
-        hideForm(quoteFormContainer);
-    }
-}
 
 // --- Admin Logic - Countries ---
 
@@ -3213,21 +3192,6 @@ async function handleSaveQuoteLine(event) {
     }
 }
 
-function handleEditQuoteLine(quoteLineId, quoteLineData) {
-    showQuoteLineForm();
-    if (document.getElementById('quote-line-id')) document.getElementById('quote-line-id').value = quoteLineId;
-    if (quoteLineServicesInput) quoteLineServicesInput.value = quoteLineData.services || '';
-    if (quoteLineDescriptionInput) quoteLineDescriptionInput.value = quoteLineData.serviceDescription || '';
-    if (quoteLineUnitPriceInput) quoteLineUnitPriceInput.value = quoteLineData.unitPrice !== undefined ? quoteLineData.unitPrice : 0;
-    if (quoteLineQuantityInput) quoteLineQuantityInput.value = quoteLineData.quantity !== undefined ? quoteLineData.quantity : 1;
-    if (quoteLineDiscountInput) quoteLineDiscountInput.value = quoteLineData.discount !== undefined ? quoteLineData.discount : 0;
-    if (quoteLineAdjustmentAmountInput) quoteLineAdjustmentAmountInput.value = quoteLineData.adjustmentAmount !== undefined ? quoteLineData.adjustmentAmount : 0;
-
-    if (quoteLineStartDateInput) quoteLineStartDateInput.value = quoteLineData.serviceStartDate ? new Date(quoteLineData.serviceStartDate.seconds * 1000).toISOString().split('T')[0] : '';
-    if (quoteLineEndDateInput) quoteLineEndDateInput.value = quoteLineData.serviceEndDate ? new Date(quoteLineData.serviceEndDate.seconds * 1000).toISOString().split('T')[0] : '';
-
-    calculateQuoteLineFinalNet(); // Recalculate to update display
-}
 
 function handleDeleteQuote(quoteId) {
     showMessageBox("Are you sure you want to delete this quote and all its quote lines? This action cannot be undone.", 'confirm', async (confirmed) => {
