@@ -1935,7 +1935,7 @@ async function handleDeleteOpportunity(opportunityId) { // Now async
 
 
 
-async loadOpportunities() {
+async function loadOpportunities() {
     if (!db || !userId) {
         if (noOpportunitiesMessage) noOpportunitiesMessage.classList.remove('hidden');
         if (opportunitiesGrid) opportunitiesGrid.updateConfig({ data: [] }).forceRender();
