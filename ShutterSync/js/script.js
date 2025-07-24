@@ -949,6 +949,34 @@ async function fetchData(collectionName) {
     }
 }
 
+
+/**
+ * Populates the lead source dropdown with predefined options.
+ * This list should match the allowed sources in Firestore security rules.
+ */
+function populateLeadSource() {
+    if (!leadSourceSelect) {
+        console.warn("populateLeadSource: leadSourceSelect element not found. Cannot populate sources.");
+        return;
+    }
+
+    // Clear existing options and add a default placeholder
+    leadSourceSelect.innerHTML = '<option value="">Select Source</option>';
+
+    // This list must match the one defined in your Firestore security rules for 'source'
+    const allowedSources = ['Website', 'Referral', 'Advertisement', 'Social Media', 'Event', 'Others'];
+
+    allowedSources.forEach(source => {
+        const option = document.createElement('option');
+        option.value = source;
+        option.textContent = source;
+        leadSourceSelect.appendChild(option);
+    });
+}
+
+
+
+
 /**
  * Populates a multi-select dropdown with predefined service options.
  * This list should match the 'getAllowedServicesList()' in Firestore security rules.
@@ -1490,8 +1518,7 @@ async function handleEditLead(leadId) {
             if (document.getElementById('lead-phone')) document.getElementById('lead-phone').value = leadData.phone || '';
             if (document.getElementById('lead-email')) document.getElementById('lead-email').value = leadData.email || '';
             
-            // Populate services interested dropdown before setting values
-            populateServicesInterested(leadServicesInterestedSelect); // ADDED/CONFIRMED THIS LINE
+            populateServicesInterested(leadServicesInterestedSelect);
             if (leadServicesInterestedSelect && leadData.servicesInterested && Array.isArray(leadData.servicesInterested)) {
                 Array.from(leadServicesInterestedSelect.options).forEach(option => {
                     option.selected = leadData.servicesInterested.includes(option.value);
@@ -1501,7 +1528,10 @@ async function handleEditLead(leadId) {
             const eventDate = leadData.eventDate ? new Date(leadData.eventDate.seconds * 1000).toISOString().split('T')[0] : '';
             if (document.getElementById('lead-event-date')) document.getElementById('lead-event-date').value = eventDate;
             
+            // ADD THIS LINE: Populate lead source before setting the value
+            populateLeadSource(); 
             if (leadSourceSelect) leadSourceSelect.value = leadData.source || '';
+
             if (document.getElementById('lead-additional-details')) document.getElementById('lead-additional-details').value = leadData.additionalDetails || '';
 
         } else {
@@ -1514,6 +1544,8 @@ async function handleEditLead(leadId) {
         hideForm(leadFormContainer);
     }
 }
+
+
 
 async function loadLeads() {
     if (!db || !userId) {
@@ -4076,10 +4108,12 @@ async function initializePage() {
         if (leadForm) leadForm.reset();
         if (document.getElementById('lead-id')) document.getElementById('lead-id').value = '';
         
-        // Ensure services dropdown is populated for new lead
-        populateServicesInterested(leadServicesInterestedSelect); // ADDED/CONFIRMED THIS LINE
+        populateServicesInterested(leadServicesInterestedSelect);
         if (leadServicesInterestedSelect) Array.from(leadServicesInterestedSelect.options).forEach(option => option.selected = false);
-    });  
+
+        // ADD THIS LINE: Populate lead source when adding a new lead
+        populateLeadSource(); 
+    });
 
     if (cancelLeadBtn) cancelLeadBtn.addEventListener('click', () => hideForm(leadFormContainer, leadFormMessage));
     if (leadForm) leadForm.addEventListener('submit', handleSaveLead);
