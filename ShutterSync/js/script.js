@@ -950,6 +950,39 @@ async function fetchData(collectionName) {
 }
 
 /**
+ * Populates a multi-select dropdown with predefined service options.
+ * This list should match the 'getAllowedServicesList()' in Firestore security rules.
+ * @param {HTMLSelectElement} selectElement The select element to populate.
+ */
+function populateServicesInterested(selectElement) {
+    if (!selectElement) {
+        console.warn("populateServicesInterested: Select element is null or undefined.");
+        return;
+    }
+
+    // Clear existing options, but keep the first default if it's a placeholder
+    // For multi-select, we usually just clear all and add new ones.
+    selectElement.innerHTML = ''; 
+
+    // This list must match the one defined in your Firestore security rules (getAllowedServicesList)
+    const allowedServices = [
+        'Save the Day', 'Pre-Wedding Photo Shoot', 'Wedding',
+        'Post-Wedding Photo Shoot', 'Baby Shower', 'Corporate Event',
+        'Product Launch', 'Political Meeting', 'Others'
+    ];
+
+    allowedServices.forEach(service => {
+        const option = document.createElement('option');
+        option.value = service;
+        option.textContent = service;
+        selectElement.appendChild(option);
+    });
+}
+
+
+
+
+/**
  * Populates a select element with options from Firestore.
  * @param {HTMLElement} selectElement - The select element to populate.
  * @param {Array<Object>} data - Array of objects with id and name properties.
@@ -1458,7 +1491,7 @@ async function handleEditLead(leadId) {
             if (document.getElementById('lead-email')) document.getElementById('lead-email').value = leadData.email || '';
             
             // Populate services interested dropdown before setting values
-            populateServicesInterested(leadServicesInterestedSelect); // Assuming this populates the options
+            populateServicesInterested(leadServicesInterestedSelect); // ADDED/CONFIRMED THIS LINE
             if (leadServicesInterestedSelect && leadData.servicesInterested && Array.isArray(leadData.servicesInterested)) {
                 Array.from(leadServicesInterestedSelect.options).forEach(option => {
                     option.selected = leadData.servicesInterested.includes(option.value);
@@ -4037,7 +4070,17 @@ async function initializePage() {
     if (customerForm) customerForm.addEventListener('submit', handleSaveCustomer);
     if (customerSearchInput) customerSearchInput.addEventListener('input', (event) => { if (customersGrid) customersGrid.search(event.target.value); });
 
-    if (addLeadBtn) addLeadBtn.addEventListener('click', () => { hideForm(leadFormContainer, leadFormMessage); showForm(leadFormContainer); leadForm.reset(); document.getElementById('lead-id').value = ''; if (leadServicesInterestedSelect) Array.from(leadServicesInterestedSelect.options).forEach(option => option.selected = false); });
+    if (addLeadBtn) addLeadBtn.addEventListener('click', () => {
+        hideForm(leadFormContainer, leadFormMessage);
+        showForm(leadFormContainer);
+        if (leadForm) leadForm.reset();
+        if (document.getElementById('lead-id')) document.getElementById('lead-id').value = '';
+        
+        // Ensure services dropdown is populated for new lead
+        populateServicesInterested(leadServicesInterestedSelect); // ADDED/CONFIRMED THIS LINE
+        if (leadServicesInterestedSelect) Array.from(leadServicesInterestedSelect.options).forEach(option => option.selected = false);
+    });  
+
     if (cancelLeadBtn) cancelLeadBtn.addEventListener('click', () => hideForm(leadFormContainer, leadFormMessage));
     if (leadForm) leadForm.addEventListener('submit', handleSaveLead);
     if (leadSearchInput) leadSearchInput.addEventListener('input', (event) => { if (leadsGrid) leadsGrid.search(event.target.value); });
