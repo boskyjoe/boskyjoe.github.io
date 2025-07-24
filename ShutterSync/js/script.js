@@ -245,64 +245,64 @@ function getDocRef(collectionName, docId) {
 }
 
 // --- End Firestore Utility Functions ---
+
+
 /**
- * Displays a message in the global modal message box.
+ * Displays a message in the global modal message box and returns a Promise.
+ * For 'confirm' type, the Promise resolves to true (Confirm) or false (Cancel).
+ * For 'alert' type, the Promise resolves to void when closed.
  * @param {string} message The message text to display.
  * @param {string} type The type of message box ('alert' or 'confirm').
- * @param {boolean} isError True if the message is an error, for styling.
- * @param {function | null} callback Optional callback function for 'confirm' type.
+ * @param {boolean} isError True if the message is an error, for styling. (Optional, default false)
+ * @returns {Promise<boolean | void>} A Promise that resolves based on user interaction.
  */
-function showMessageBox(message, type = 'alert', isError = false, callback = null) {
-    // Ensure all global message box elements are assigned
-    if (!messageBox || !messageContent || !messageConfirmBtn || !messageCancelBtn) {
-        console.error("MessageBox DOM elements not found. Cannot display message.");
-        return;
-    }
+function showMessageBox(message, type = 'alert', isError = false) { // Removed callback parameter
+    return new Promise((resolve) => {
+        // Ensure all global message box elements are assigned
+        if (!messageBox || !messageContent || !messageConfirmBtn || !messageCancelBtn) {
+            console.error("MessageBox DOM elements not found. Cannot display message.");
+            // Resolve the promise immediately if elements are missing to prevent hanging
+            resolve(false); // For confirm, assume false; for alert, just resolve.
+            return;
+        }
 
-    messageContent.textContent = message;
-    messageBox.classList.remove('hidden');
-    messageContent.classList.toggle('text-red-600', isError);
-    messageContent.classList.toggle('text-gray-800', !isError);
+        messageContent.textContent = message;
+        messageBox.classList.remove('hidden');
+        messageContent.classList.toggle('text-red-600', isError);
+        messageContent.classList.toggle('text-gray-800', !isError);
 
-    // Clear previous event listeners to prevent multiple executions
-    messageConfirmBtn.onclick = null;
-    messageCancelBtn.onclick = null;
-    messageBox.onclick = null; // For alert type
-    messageContent.onclick = null; // For alert type
+        // Clear previous event listeners to prevent multiple executions
+        messageConfirmBtn.onclick = null;
+        messageCancelBtn.onclick = null;
+        messageBox.onclick = null; // For alert type
+        messageContent.onclick = null; // For alert type
 
-    if (type === 'confirm') {
-        messageConfirmBtn.classList.remove('hidden');
-        messageCancelBtn.classList.remove('hidden');
-        
-        // Use an anonymous async function for the click handler
-        messageConfirmBtn.onclick = async () => {
-            console.log("MessageBox: Confirm button clicked, executing callback.");
-            console.log("MessageBox: Callback function received:", callback); // THIS IS THE CRITICAL LOG
-            messageBox.classList.add('hidden');
-            if (callback) {
-                try {
-                    await callback(true); // Await the callback if it's async
-                } catch (e) {
-                    console.error("Error during showMessageBox confirm callback:", e);
-                    showMessageBox(`An error occurred: ${e.message || e}`, 'alert', true);
-                }
-            }
-        };
-        messageCancelBtn.onclick = () => {
-            messageBox.classList.add('hidden');
-            if (callback) callback(false);
-        };
-    } else { // 'alert' type
-        messageConfirmBtn.classList.add('hidden');
-        messageCancelBtn.classList.add('hidden');
-        
-        messageBox.onclick = () => {
-            messageBox.classList.add('hidden');
-            if (callback) callback();
-        };
-        messageContent.onclick = (e) => e.stopPropagation();
-    }
+        if (type === 'confirm') {
+            messageConfirmBtn.classList.remove('hidden');
+            messageCancelBtn.classList.remove('hidden');
+            
+            messageConfirmBtn.onclick = () => {
+                messageBox.classList.add('hidden');
+                resolve(true); // Resolve with true for Confirm
+            };
+            messageCancelBtn.onclick = () => {
+                messageBox.classList.add('hidden');
+                resolve(false); // Resolve with false for Cancel
+            };
+        } else { // 'alert' type
+            messageConfirmBtn.classList.add('hidden');
+            messageCancelBtn.classList.add('hidden');
+            
+            // For simple alerts, allow clicking anywhere on the overlay to close
+            messageBox.onclick = () => {
+                messageBox.classList.add('hidden');
+                resolve(); // Resolve with void for Alert
+            };
+            messageContent.onclick = (e) => e.stopPropagation(); // Prevent clicks on content from closing
+        }
+    });
 }
+
 
 
 /**
@@ -1263,7 +1263,6 @@ async function deleteCustomer(customerDataId) {
     }
 }
 
-
 /**
  * Handles the deletion of a customer document from Firestore.
  * Prompts for confirmation before proceeding with deletion.
@@ -1272,34 +1271,32 @@ async function deleteCustomer(customerDataId) {
 async function handleDeleteCustomer(customerId) {
     console.log(`handleDeleteCustomer: Attempting to delete customer with ID: ${customerId}`); // DEBUG LOG
 
-    // Define the callback function explicitly
-    const deletionConfirmedCallback = async (confirmed) => {
-        console.log(`handleDeleteCustomer callback: Confirmed status: ${confirmed}`); // DEBUG LOG: Check confirmed value
-        if (confirmed) {
-            console.log("handleDeleteCustomer callback: Confirmed is true, proceeding with deletion logic."); // DEBUG LOG: Confirm block entered
-            try {
-                // Get the document reference
-                const customerDocRef = getDocRef('customers', customerId);
-                console.log(`handleDeleteCustomer callback: Deleting document at path: ${customerDocRef.path}`); // DEBUG LOG
+    // Await the result from showMessageBox directly
+    const confirmed = await showMessageBox("Are you sure you want to delete this customer? This action cannot be undone.", 'confirm');
+    
+    console.log(`handleDeleteCustomer: Confirmed status from MessageBox: ${confirmed}`); // DEBUG LOG: Check confirmed value
+    
+    if (confirmed) {
+        console.log("handleDeleteCustomer: Confirmed is true, proceeding with deletion logic."); // DEBUG LOG: Confirm block entered
+        try {
+            // Get the document reference
+            const customerDocRef = getDocRef('customers', customerId);
+            console.log(`handleDeleteCustomer: Deleting document at path: ${customerDocRef.path}`); // DEBUG LOG
 
-                await deleteDoc(customerDocRef);
-                showMessageBox("Customer deleted successfully!");
-                console.log(`handleDeleteCustomer callback: Customer ${customerId} deleted successfully.`); // SUCCESS LOG
-            } catch (error) {
-                console.error("handleDeleteCustomer callback: Error deleting customer:", error); // Log the full error object
-                if (error.code && error.message) {
-                    showMessageBox(`Error deleting customer: ${error.message} (Code: ${error.code})`, 'alert', true);
-                } else {
-                    showMessageBox(`Error deleting customer: An unexpected error occurred.`, 'alert', true);
-                }
+            await deleteDoc(customerDocRef);
+            showMessageBox("Customer deleted successfully!", 'alert', false); // Use 'alert' type for success message
+            console.log(`handleDeleteCustomer: Customer ${customerId} deleted successfully.`); // SUCCESS LOG
+        } catch (error) {
+            console.error("handleDeleteCustomer: Error deleting customer:", error); // Log the full error object
+            if (error.code && error.message) {
+                showMessageBox(`Error deleting customer: ${error.message} (Code: ${error.code})`, 'alert', true);
+            } else {
+                showMessageBox(`Error deleting customer: An unexpected error occurred.`, 'alert', true);
             }
-        } else {
-            console.log("handleDeleteCustomer callback: Deletion cancelled by user."); // DEBUG LOG: If user cancels
         }
-    };
-
-    // Pass the named callback function to showMessageBox
-    showMessageBox("Are you sure you want to delete this customer? This action cannot be undone.", 'confirm', deletionConfirmedCallback);
+    } else {
+        console.log("handleDeleteCustomer: Deletion cancelled by user."); // DEBUG LOG: If user cancels
+    }
 }
 
 
