@@ -277,7 +277,8 @@ function showMessageBox(message, type = 'alert', isError = false, callback = nul
         
         // Use an anonymous async function for the click handler
         messageConfirmBtn.onclick = async () => {
-            console.log("MessageBox: Confirm button clicked, executing callback."); // NEW DEBUG LOG
+            console.log("MessageBox: Confirm button clicked, executing callback.");
+            console.log("MessageBox: Callback function received:", callback); // NEW DEBUG LOG: Inspect the callback
             messageBox.classList.add('hidden');
             if (callback) {
                 try {
@@ -1272,9 +1273,9 @@ async function handleDeleteCustomer(customerId) {
     console.log(`handleDeleteCustomer: Attempting to delete customer with ID: ${customerId}`); // DEBUG LOG
 
     showMessageBox("Are you sure you want to delete this customer? This action cannot be undone.", 'confirm', async (confirmed) => {
-        console.log(`handleDeleteCustomer callback: Confirmed status: ${confirmed}`); // NEW DEBUG LOG: Check confirmed value
+        console.log(`handleDeleteCustomer callback: Confirmed status: ${confirmed}`); // DEBUG LOG: Check confirmed value
         if (confirmed) {
-            console.log("handleDeleteCustomer callback: Confirmed is true, proceeding with deletion logic."); // NEW DEBUG LOG: Confirm block entered
+            console.log("handleDeleteCustomer callback: Confirmed is true, proceeding with deletion logic."); // DEBUG LOG: Confirm block entered
             try {
                 // Get the document reference
                 const customerDocRef = getDocRef('customers', customerId);
