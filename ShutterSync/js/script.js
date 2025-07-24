@@ -1269,27 +1269,30 @@ async function deleteCustomer(customerDataId) {
  * @param {string} customerId The ID of the customer document to delete.
  */
 async function handleDeleteCustomer(customerId) {
-    console.log(`Attempting to delete customer with ID: ${customerId}`); // DEBUG LOG
+    console.log(`handleDeleteCustomer: Attempting to delete customer with ID: ${customerId}`); // DEBUG LOG
 
     showMessageBox("Are you sure you want to delete this customer? This action cannot be undone.", 'confirm', async (confirmed) => {
+        console.log(`handleDeleteCustomer callback: Confirmed status: ${confirmed}`); // NEW DEBUG LOG: Check confirmed value
         if (confirmed) {
+            console.log("handleDeleteCustomer callback: Confirmed is true, proceeding with deletion logic."); // NEW DEBUG LOG: Confirm block entered
             try {
                 // Get the document reference
                 const customerDocRef = getDocRef('customers', customerId);
-                console.log(`Deleting document at path: ${customerDocRef.path}`); // DEBUG LOG
+                console.log(`handleDeleteCustomer callback: Deleting document at path: ${customerDocRef.path}`); // DEBUG LOG
 
                 await deleteDoc(customerDocRef);
                 showMessageBox("Customer deleted successfully!");
-                console.log(`Customer ${customerId} deleted successfully.`); // SUCCESS LOG
+                console.log(`handleDeleteCustomer callback: Customer ${customerId} deleted successfully.`); // SUCCESS LOG
             } catch (error) {
-                console.error("Error deleting customer:", error); // Log the full error object
-                // Check if it's a Firebase error and extract more details
+                console.error("handleDeleteCustomer callback: Error deleting customer:", error); // Log the full error object
                 if (error.code && error.message) {
                     showMessageBox(`Error deleting customer: ${error.message} (Code: ${error.code})`, 'alert', true);
                 } else {
                     showMessageBox(`Error deleting customer: An unexpected error occurred.`, 'alert', true);
                 }
             }
+        } else {
+            console.log("handleDeleteCustomer callback: Deletion cancelled by user."); // DEBUG LOG: If user cancels
         }
     });
 }
