@@ -245,7 +245,6 @@ function getDocRef(collectionName, docId) {
 }
 
 // --- End Firestore Utility Functions ---
-
 /**
  * Displays a message in the global modal message box.
  * @param {string} message The message text to display.
@@ -278,7 +277,7 @@ function showMessageBox(message, type = 'alert', isError = false, callback = nul
         // Use an anonymous async function for the click handler
         messageConfirmBtn.onclick = async () => {
             console.log("MessageBox: Confirm button clicked, executing callback.");
-            console.log("MessageBox: Callback function received:", callback); // NEW DEBUG LOG: Inspect the callback
+            console.log("MessageBox: Callback function received:", callback); // THIS IS THE CRITICAL LOG
             messageBox.classList.add('hidden');
             if (callback) {
                 try {
@@ -1264,6 +1263,7 @@ async function deleteCustomer(customerDataId) {
     }
 }
 
+
 /**
  * Handles the deletion of a customer document from Firestore.
  * Prompts for confirmation before proceeding with deletion.
@@ -1272,7 +1272,8 @@ async function deleteCustomer(customerDataId) {
 async function handleDeleteCustomer(customerId) {
     console.log(`handleDeleteCustomer: Attempting to delete customer with ID: ${customerId}`); // DEBUG LOG
 
-    showMessageBox("Are you sure you want to delete this customer? This action cannot be undone.", 'confirm', async (confirmed) => {
+    // Define the callback function explicitly
+    const deletionConfirmedCallback = async (confirmed) => {
         console.log(`handleDeleteCustomer callback: Confirmed status: ${confirmed}`); // DEBUG LOG: Check confirmed value
         if (confirmed) {
             console.log("handleDeleteCustomer callback: Confirmed is true, proceeding with deletion logic."); // DEBUG LOG: Confirm block entered
@@ -1295,7 +1296,10 @@ async function handleDeleteCustomer(customerId) {
         } else {
             console.log("handleDeleteCustomer callback: Deletion cancelled by user."); // DEBUG LOG: If user cancels
         }
-    });
+    };
+
+    // Pass the named callback function to showMessageBox
+    showMessageBox("Are you sure you want to delete this customer? This action cannot be undone.", 'confirm', deletionConfirmedCallback);
 }
 
 
