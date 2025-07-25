@@ -2793,19 +2793,37 @@ async function handleEditCurrency(currencyId) {
  * Prompts for confirmation before proceeding with deletion.
  * @param {string} currencyId The ID of the currency document to delete.
  */
-async function handleDeleteCurrency(currencyId) { // Now async
-    showMessageBox("Are you sure you want to delete this currency? This action cannot be undone.", 'confirm', async (confirmed) => {
-        if (confirmed) {
-            try {
-                await deleteDoc(getDocRef('currencies', currencyId));
-                showMessageBox("Currency deleted successfully!");
-            } catch (error) {
-                console.error("Error deleting currency:", error);
-                showMessageBox(`Error deleting currency: ${error.message}`, 'alert', true);
+async function handleDeleteCurrency(currencyId) {
+    console.log(`handleDeleteCurrency: Attempting to delete currency with ID: ${currencyId}`); // DEBUG LOG
+
+    // Await the result from showMessageBox directly
+    const confirmed = await showMessageBox("Are you sure you want to delete this currency? This action cannot be undone.", 'confirm');
+    
+    console.log(`handleDeleteCurrency: Confirmed status from MessageBox: ${confirmed}`); // DEBUG LOG: Check confirmed value
+    
+    if (confirmed) {
+        console.log("handleDeleteCurrency: Confirmed is true, proceeding with deletion logic."); // DEBUG LOG: Confirm block entered
+        try {
+            // Get the document reference
+            const currencyDocRef = getDocRef('currencies', currencyId);
+            console.log(`handleDeleteCurrency: Deleting document at path: ${currencyDocRef.path}`); // DEBUG LOG
+
+            await deleteDoc(currencyDocRef);
+            showMessageBox("Currency deleted successfully!", 'alert', false); // Use 'alert' type for success message
+            console.log(`handleDeleteCurrency: Currency ${currencyId} deleted successfully.`); // SUCCESS LOG
+        } catch (error) {
+            console.error("handleDeleteCurrency: Error deleting currency:", error); // Log the full error object
+            if (error.code && error.message) {
+                showMessageBox(`Error deleting currency: ${error.message} (Code: ${error.code})`, 'alert', true);
+            } else {
+                showMessageBox(`Error deleting currency: An unexpected error occurred.`, 'alert', true);
             }
         }
-    });
+    } else {
+        console.log("handleDeleteCurrency: Deletion cancelled by user."); // DEBUG LOG: If user cancels
+    }
 }
+
 
 
 async function deleteCountry(countryId) {
@@ -4607,17 +4625,26 @@ async function initializePage() {
     });
 
 
+
     currenciesGrid = new gridjs.Grid({
         columns: [
+            { id: 'id', name: 'ID', hidden: true }, // ADDED: Explicit ID column, hidden, and now reliably at index 0
             { id: 'name', name: 'Currency Name', width: '200px' },
             { id: 'code', name: 'Code', width: '100px' },
-            { id: 'symbol', name: 'Symbol', width: '80px' },
+            { id: 'symbol', name: 'Symbol', width: '100px' },
             { id: 'countryCode', name: 'Country', width: '100px' },
             {
                 name: 'Actions',
                 width: '120px',
                 formatter: (cell, row) => {
-                    const currencyId = row.cells[row.cells.length - 1].data;
+                    // CORRECTED: Access the ID directly from the first cell (index 0)
+                    const currencyId = row.cells[0].data;
+
+                    if (!currencyId) {
+                        console.error("Error: Currency ID not found at row.cells[0].data for actions.");
+                        return gridjs.html(`<span>Error</span>`); // Or some other fallback
+                    }
+
                     return gridjs.html(`
                         <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditCurrency('${currencyId}')">Edit</button>
                         <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteCurrency('${currencyId}')">Delete</button>
@@ -4626,12 +4653,20 @@ async function initializePage() {
             }
         ],
         data: [],
-        search: true,
+        search: {
+            selector: (cell, rowIndex, cellIndex) => {
+                // Exclude 'Actions' column (last) and the hidden 'id' column (index 0) from search.
+                // Visible columns are name (1), code (2), symbol (3), countryCode (4).
+                // So, search from index 1 up to (but not including) the 'Actions' column (index 5).
+                return cellIndex > 0 && cellIndex < 5 ? cell : undefined;
+            }
+        },
         pagination: { enabled: true, limit: 10 },
         sort: true,
         resizable: true,
         style: { table: { 'min-width': '100%' }, th: { 'white-space': 'nowrap' } }
     }).render(currenciesGridContainer);
+
 
     onSnapshot(getCollectionRef('currencies'), (snapshot) => {
         const currencies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
