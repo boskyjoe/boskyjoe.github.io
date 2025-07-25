@@ -1413,6 +1413,7 @@ async function setupLeadForm(lead = null) {
     showLeadForm();
 }
 
+/**
 async function handleSaveLead(event) {
     event.preventDefault(); // Prevent default form submission
     if (!db || !userId) {
@@ -1496,7 +1497,61 @@ async function handleSaveLead(event) {
             messageElement.classList.remove('hidden');
         }
     }
+}*/
+
+async function handleSaveLead(event) {
+    event.preventDefault();
+    const leadId = document.getElementById('lead-id').value;
+
+    // Get the current authenticated user's UID
+    const creatorId = auth.currentUser?.uid;
+
+    if (!creatorId) {
+        showMessageBox("Authentication required to save lead.", 'alert', true);
+        console.error("Error saving lead: User not authenticated or UID not available.");
+        return;
+    }
+
+    // Collect data directly from DOM elements using their IDs
+    const servicesInterested = leadServicesInterestedSelect ? 
+        Array.from(leadServicesInterestedSelect.selectedOptions).map(option => option.value) : [];
+
+    const data = {
+        contactName: document.getElementById('lead-contact-name').value || '',
+        phone: document.getElementById('lead-phone').value || '',
+        email: document.getElementById('lead-email').value || '',
+        servicesInterested: servicesInterested,
+        eventDate: document.getElementById('lead-event-date').value ? new Date(document.getElementById('lead-event-date').value) : null,
+        source: leadSourceSelect ? leadSourceSelect.value : '',
+        additionalDetails: document.getElementById('lead-additional-details').value || '',
+        updatedAt: serverTimestamp(),
+        creatorId: creatorId // Explicitly set creatorId
+    };
+
+    try {
+        if (leadId) {
+            // For update, ensure createdAt is preserved
+            const existingDoc = await getDoc(getDocRef('leads', leadId));
+            if (existingDoc.exists()) {
+                data.createdAt = existingDoc.data().createdAt;
+            } else {
+                showMessageBox("Error: Cannot update non-existent lead.", 'alert', true);
+                return;
+            }
+            await updateDoc(getDocRef('leads', leadId), data);
+            showMessageBox("Lead updated successfully!", 'alert', false);
+        } else {
+            data.createdAt = serverTimestamp();
+            await addDoc(getCollectionRef('leads'), data);
+            showMessageBox("Lead added successfully!", 'alert', false);
+        }
+        hideForm(leadFormContainer, leadFormMessage);
+    } catch (error) {
+        console.error("Error saving lead:", error);
+        showMessageBox(`Error saving lead: ${error.message}`, 'alert', true);
+    }
 }
+
 
 /**
  * Handles the editing of an existing lead.
