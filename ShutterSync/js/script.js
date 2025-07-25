@@ -2774,7 +2774,7 @@ async function handleEditCurrency(currencyId) {
             if (document.getElementById('currency-symbol')) document.getElementById('currency-symbol').value = currencyData.symbol || '';
             
             // Populate countries dropdown before setting the value
-            await populateCurrencyCountries(); // Assuming this populates the options
+            await populateCurrencyCountries(); // ADDED/CONFIRMED THIS LINE
             if (currencyCountrySelect) currencyCountrySelect.value = currencyData.countryCode || '';
 
         } else {
@@ -2787,7 +2787,6 @@ async function handleEditCurrency(currencyId) {
         hideForm(currencyFormContainer);
     }
 }
-
 
 /**
  * Handles the deletion of a currency document from Firestore.
@@ -2826,6 +2825,31 @@ async function deleteCountry(countryId) {
 }
 
 // --- Admin Logic - Currencies ---
+
+/**
+ * Populates the currency country dropdown with data from the 'countries' collection.
+ */
+async function populateCurrencyCountries() {
+    if (!currencyCountrySelect) {
+        console.warn("currencyCountrySelect element not found. Cannot populate countries for currency.");
+        return;
+    }
+    currencyCountrySelect.innerHTML = '<option value="">Select Country</option>'; // Clear existing options and add default
+    try {
+        const countriesSnapshot = await getDocs(getCollectionRef('countries'));
+        countriesSnapshot.forEach(doc => {
+            const country = doc.data();
+            const option = document.createElement('option');
+            option.value = country.code; // Use country code as value for currency-country select
+            option.textContent = country.name;
+            currencyCountrySelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Error populating countries for currency form:", error);
+        showMessageBox("Error loading countries for currency dropdown.", 'alert', true);
+    }
+}
+
 
 async function setupCurrencyForm(currency = null) {
     const countries = await fetchData('countries'); // Countries are top-level
@@ -4254,7 +4278,16 @@ async function initializePage() {
     if (countryForm) countryForm.addEventListener('submit', handleSaveCountry);
     if (countrySearchInput) countrySearchInput.addEventListener('input', (event) => { if (countriesGrid) countriesGrid.search(event.target.value); });
 
-    if (addCurrencyBtn) addCurrencyBtn.addEventListener('click', () => { hideForm(currencyFormContainer, currencyFormMessage); showForm(currencyFormContainer); currencyForm.reset(); document.getElementById('currency-id').value = ''; populateCurrencyCountries(); });
+    if (addCurrencyBtn) addCurrencyBtn.addEventListener('click', () => {
+        hideForm(currencyFormContainer, currencyFormMessage);
+        showForm(currencyFormContainer);
+        if (currencyForm) currencyForm.reset();
+        if (document.getElementById('currency-id')) document.getElementById('currency-id').value = '';
+        
+        // ADD THIS LINE: Populate countries when adding a new currency
+        populateCurrencyCountries(); 
+    });  
+
     if (cancelCurrencyBtn) cancelCurrencyBtn.addEventListener('click', () => hideForm(currencyFormContainer, currencyFormMessage));
     if (currencyForm) currencyForm.addEventListener('submit', handleSaveCurrency);
     if (currencySearchInput) currencySearchInput.addEventListener('input', (event) => { if (currenciesGrid) currenciesGrid.search(event.target.value); });
