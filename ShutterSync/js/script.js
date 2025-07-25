@@ -2553,22 +2553,22 @@ async function handleSaveCountry(event) {
         // Split states by comma and trim whitespace for array storage
         states: document.getElementById('country-states').value.split(',').map(s => s.trim()).filter(s => s.length > 0),
         updatedAt: serverTimestamp(),
-        // No creatorId needed as per security rules for 'countries'
     };
 
     try {
-        if (countryId) {
+        if (countryId) { // This is the update path
             // For update, ensure createdAt is preserved
             const existingDoc = await getDoc(getDocRef('countries', countryId));
             if (existingDoc.exists()) {
-                data.createdAt = existingDoc.data().createdAt;
+                // CORRECTED: Assign existing createdAt, or null if it's undefined/missing
+                data.createdAt = existingDoc.data().createdAt !== undefined ? existingDoc.data().createdAt : null;
             } else {
                 showMessageBox("Error: Cannot update non-existent country.", 'alert', true);
                 return;
             }
             await updateDoc(getDocRef('countries', countryId), data);
             showMessageBox("Country updated successfully!", 'alert', false);
-        } else {
+        } else { // This is the add path
             data.createdAt = serverTimestamp();
             await addDoc(getCollectionRef('countries'), data);
             showMessageBox("Country added successfully!", 'alert', false);
@@ -2579,6 +2579,7 @@ async function handleSaveCountry(event) {
         showMessageBox(`Error saving country: ${error.message}`, 'alert', true);
     }
 }
+
 
 /**
  * Handles the editing of an existing country.
