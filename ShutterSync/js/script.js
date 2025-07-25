@@ -3060,6 +3060,31 @@ async function deleteCurrency(currencyId) {
 
 // --- Admin Logic - Price Books ---
 
+/**
+ * Populates the price book currency dropdown with data from the 'currencies' collection.
+ */
+async function populatePriceBookCurrencies() {
+    if (!priceBookCurrencySelect) {
+        console.warn("priceBookCurrencySelect element not found. Cannot populate currencies for price book.");
+        return;
+    }
+    priceBookCurrencySelect.innerHTML = '<option value="">Select Currency</option>'; // Clear existing options and add default
+    try {
+        const currenciesSnapshot = await getDocs(getCollectionRef('currencies'));
+        currenciesSnapshot.forEach(doc => {
+            const currency = doc.data();
+            const option = document.createElement('option');
+            option.value = currency.code; // Use currency code as value
+            option.textContent = `${currency.name} (${currency.symbol})`;
+            priceBookCurrencySelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Error populating currencies for price book form:", error);
+        showMessageBox("Error loading currencies for price book dropdown.", 'alert', true);
+    }
+}
+
+
 async function setupPriceBookForm(priceBook = null) {
     const currencies = await fetchData('currencies'); // Currencies are top-level
     populateSelect(document.getElementById('price-book-currency'), currencies, 'code', 'code', 'Select Currency'); // Changed to 'code' for display as well
@@ -3080,50 +3105,55 @@ async function setupPriceBookForm(priceBook = null) {
     showPriceBookForm();
 }
 
+
 async function handleSavePriceBook(event) {
     event.preventDefault();
-    if (!db || userRole !== 'Admin') { // Check for 'Admin' role
-        showMessageBox("Admin privileges required to save price book.", false);
+    const priceBookId = document.getElementById('price-book-id').value;
+
+    // --- IMPORTANT: Check user role before attempting to save ---
+    if (currentUserRole !== 'Admin') {
+        showMessageBox("Permission Denied: Only users with 'Admin' role can manage price books.", 'alert', true);
+        console.warn("Attempted to save price book without Admin privileges.");
         return;
     }
+    // --- End Role Check ---
 
-    const priceBookId = document.getElementById('price-book-id').value;
-    const messageElement = document.getElementById('price-book-form-message');
-    if (messageElement) messageElement.classList.add('hidden');
+    // Collect data directly from DOM elements using their IDs
+    const name = document.getElementById('price-book-name').value || '';
+    const currency = priceBookCurrencySelect ? priceBookCurrencySelect.value : '';
 
-    const name = document.getElementById('price-book-name').value;
-    const currency = document.getElementById('price-book-currency').value;
-
-    const priceBookData = {
+    const data = {
         name: name,
-        normalizedName: name.toLowerCase().replace(/\s/g, ''), // Add normalizedName
-        description: document.getElementById('price-book-description').value,
+        normalizedName: name.toLowerCase().replace(/\s/g, ''), // For security rule validation
+        description: document.getElementById('price-book-description').value || '',
         currency: currency,
-        normalizedCurrency: currency.toLowerCase().replace(/\s/g, ''), // Add normalizedCurrency
-        isActive: document.getElementById('price-book-active').checked, // Use isActive
+        normalizedCurrency: currency.toLowerCase().replace(/\s/g, ''), // For security rule validation
+        isActive: priceBookActiveCheckbox ? priceBookActiveCheckbox.checked : false, // Checkbox value
         updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp()
     };
 
     try {
-        const collectionRef = collection(db, 'priceBooks'); // Top-level collection
-        if (priceBookId) {
-            // For update, only update updatedAt, not createdAt
-            delete priceBookData.createdAt;
-            await updateDoc(doc(collectionRef, priceBookId), priceBookData);
-            showMessageBox("Price Book updated successfully!", false);
-        } else {
-            await addDoc(collectionRef, priceBookData);
-            showMessageBox("Price Book added successfully!", false);
+        if (priceBookId) { // This is the update path
+            // For update, ensure createdAt is preserved
+            const existingDoc = await getDoc(getDocRef('priceBooks', priceBookId));
+            if (existingDoc.exists()) {
+                // Assign existing createdAt, or null if it's undefined/missing
+                data.createdAt = existingDoc.data().createdAt !== undefined ? existingDoc.data().createdAt : null;
+            } else {
+                showMessageBox("Error: Cannot update non-existent price book.", 'alert', true);
+                return;
+            }
+            await updateDoc(getDocRef('priceBooks', priceBookId), data);
+            showMessageBox("Price Book updated successfully!", 'alert', false);
+        } else { // This is the add path
+            data.createdAt = serverTimestamp();
+            await addDoc(getCollectionRef('priceBooks'), data);
+            showMessageBox("Price Book added successfully!", 'alert', false);
         }
-        hidePriceBookForm();
-        await loadPriceBooks();
+        hideForm(priceBookFormContainer, priceBookFormMessage);
     } catch (error) {
         console.error("Error saving price book:", error);
-        if (messageElement) {
-            messageElement.textContent = `Error saving price book: ${error.message}`;
-            messageElement.classList.remove('hidden');
-        }
+        showMessageBox(`Error saving price book: ${error.message}`, 'alert', true);
     }
 }
 
@@ -3255,7 +3285,7 @@ async function handleEditPriceBook(priceBookId) {
             if (priceBookActiveCheckbox) priceBookActiveCheckbox.checked = priceBookData.isActive || false;
 
             // Populate currencies dropdown before setting the value
-            await populatePriceBookCurrencies(); // Assuming this populates the options
+            await populatePriceBookCurrencies(); 
             if (priceBookCurrencySelect) priceBookCurrencySelect.value = priceBookData.currency || '';
 
         } else {
@@ -3275,18 +3305,35 @@ async function handleEditPriceBook(priceBookId) {
  * Prompts for confirmation before proceeding with deletion.
  * @param {string} priceBookId The ID of the price book document to delete.
  */
-async function handleDeletePriceBook(priceBookId) { // Now async
-    showMessageBox("Are you sure you want to delete this price book? This action cannot be undone.", 'confirm', async (confirmed) => {
-        if (confirmed) {
-            try {
-                await deleteDoc(getDocRef('priceBooks', priceBookId));
-                showMessageBox("Price Book deleted successfully!");
-            } catch (error) {
-                console.error("Error deleting price book:", error);
-                showMessageBox(`Error deleting price book: ${error.message}`, 'alert', true);
+async function handleDeletePriceBook(priceBookId) {
+    console.log(`handleDeletePriceBook: Attempting to delete price book with ID: ${priceBookId}`); // DEBUG LOG
+
+    // Await the result from showMessageBox directly
+    const confirmed = await showMessageBox("Are you sure you want to delete this price book? This action cannot be undone.", 'confirm');
+    
+    console.log(`handleDeletePriceBook: Confirmed status from MessageBox: ${confirmed}`); // DEBUG LOG: Check confirmed value
+    
+    if (confirmed) {
+        console.log("handleDeletePriceBook: Confirmed is true, proceeding with deletion logic."); // DEBUG LOG: Confirm block entered
+        try {
+            // Get the document reference
+            const priceBookDocRef = getDocRef('priceBooks', priceBookId);
+            console.log(`handleDeletePriceBook: Deleting document at path: ${priceBookDocRef.path}`); // DEBUG LOG
+
+            await deleteDoc(priceBookDocRef);
+            showMessageBox("Price Book deleted successfully!", 'alert', false); // Use 'alert' type for success message
+            console.log(`handleDeletePriceBook: Price Book ${priceBookId} deleted successfully.`); // SUCCESS LOG
+        } catch (error) {
+            console.error("handleDeletePriceBook: Error deleting price book:", error); // Log the full error object
+            if (error.code && error.message) {
+                showMessageBox(`Error deleting price book: ${error.message} (Code: ${error.code})`, 'alert', true);
+            } else {
+                showMessageBox(`Error deleting price book: An unexpected error occurred.`, 'alert', true);
             }
         }
-    });
+    } else {
+        console.log("handleDeletePriceBook: Deletion cancelled by user."); // DEBUG LOG: If user cancels
+    }
 }
 
 
@@ -4686,6 +4733,7 @@ async function initializePage() {
 
     priceBooksGrid = new gridjs.Grid({
         columns: [
+            { id: 'id', name: 'ID', hidden: true }, // ADDED: Explicit ID column, hidden, and now reliably at index 0
             { id: 'name', name: 'Price Book Name', width: 'auto' },
             { id: 'currency', name: 'Currency', width: '100px' },
             { id: 'description', name: 'Description', width: 'auto' },
@@ -4694,7 +4742,14 @@ async function initializePage() {
                 name: 'Actions',
                 width: '120px',
                 formatter: (cell, row) => {
-                    const priceBookId = row.cells[row.cells.length - 1].data;
+                    // CORRECTED: Access the ID directly from the first cell (index 0)
+                    const priceBookId = row.cells[0].data;
+
+                    if (!priceBookId) {
+                        console.error("Error: Price Book ID not found at row.cells[0].data for actions.");
+                        return gridjs.html(`<span>Error</span>`); // Or some other fallback
+                    }
+
                     return gridjs.html(`
                         <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditPriceBook('${priceBookId}')">Edit</button>
                         <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeletePriceBook('${priceBookId}')">Delete</button>
@@ -4703,12 +4758,21 @@ async function initializePage() {
             }
         ],
         data: [],
-        search: true,
+        search: {
+            selector: (cell, rowIndex, cellIndex) => {
+                // Exclude 'Actions' column (last) and the hidden 'id' column (index 0) from search.
+                // Visible columns are name (1), currency (2), description (3), isActive (4).
+                // So, search from index 1 up to (but not including) the 'Actions' column (index 5).
+                return cellIndex > 0 && cellIndex < 5 ? cell : undefined;
+            }
+        },
         pagination: { enabled: true, limit: 10 },
         sort: true,
         resizable: true,
         style: { table: { 'min-width': '100%' }, th: { 'white-space': 'nowrap' } }
     }).render(priceBooksGridContainer);
+
+
 
     onSnapshot(getCollectionRef('priceBooks'), (snapshot) => {
         const priceBooks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
