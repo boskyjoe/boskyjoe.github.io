@@ -3105,7 +3105,6 @@ async function setupPriceBookForm(priceBook = null) {
     showPriceBookForm();
 }
 
-// Inside handleSavePriceBook() function:
 
 async function handleSavePriceBook(event) {
     event.preventDefault();
@@ -3137,11 +3136,12 @@ async function handleSavePriceBook(event) {
             if (existingDoc.exists()) {
                 const existingData = existingDoc.data();
 
-                // CRITICAL FIX: For updates, ensure these fields match the existing document's values
-                // as required by security rules (they cannot be changed on update).
+                // CRITICAL FIX: Ensure normalizedName, normalizedCurrency, and createdAt
+                // are explicitly copied from existing data, handling 'undefined' for createdAt.
                 data.normalizedName = existingData.normalizedName;
                 data.normalizedCurrency = existingData.normalizedCurrency;
-                data.createdAt = existingData.createdAt; // Ensure createdAt is explicitly carried over
+                // If existingData.createdAt is undefined, set it to null (Firestore allows null)
+                data.createdAt = existingData.createdAt !== undefined ? existingData.createdAt : null;
 
                 await updateDoc(getDocRef('priceBooks', priceBookId), data);
                 showMessageBox("Price Book updated successfully!", 'alert', false);
@@ -3163,7 +3163,6 @@ async function handleSavePriceBook(event) {
         showMessageBox(`Error saving price book: ${error.message}`, 'alert', true);
     }
 }
-
 
 async function loadPriceBooks() {
     if (!db || userRole !== 'Admin') { // Check for 'Admin' role
