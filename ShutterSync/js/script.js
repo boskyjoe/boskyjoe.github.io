@@ -2845,47 +2845,53 @@ async function setupCurrencyForm(currency = null) {
     showCurrencyForm();
 }
 
+
 async function handleSaveCurrency(event) {
     event.preventDefault();
-    if (!db || userRole !== 'Admin') { // Check for 'Admin' role
-        showMessageBox("Admin privileges required to save currency.", false);
+    const currencyId = document.getElementById('currency-id').value;
+
+    // --- IMPORTANT: Check user role before attempting to save ---
+    if (currentUserRole !== 'Admin') {
+        showMessageBox("Permission Denied: Only users with 'Admin' role can manage currencies.", 'alert', true);
+        console.warn("Attempted to save currency without Admin privileges.");
         return;
     }
+    // --- End Role Check ---
 
-    const currencyId = document.getElementById('currency-id').value;
-    const messageElement = document.getElementById('currency-form-message');
-    if (messageElement) messageElement.classList.add('hidden');
-
-    const currencyData = {
-        name: document.getElementById('currency-name').value,
-        code: document.getElementById('currency-code').value.toUpperCase(),
-        symbol: document.getElementById('currency-symbol').value,
-        countryCode: document.getElementById('currency-country').value || null, // Save country code
+    // Collect data directly from DOM elements using their IDs
+    const data = {
+        name: document.getElementById('currency-name').value || '',
+        code: document.getElementById('currency-code').value || '',
+        symbol: document.getElementById('currency-symbol').value || '',
+        countryCode: currencyCountrySelect ? currencyCountrySelect.value : '', // Value from dropdown
         updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp()
     };
 
     try {
-        const collectionRef = collection(db, 'currencies'); // Top-level collection
-        if (currencyId) {
-            // For update, only update updatedAt, not createdAt
-            delete currencyData.createdAt;
-            await updateDoc(doc(collectionRef, currencyId), currencyData);
-            showMessageBox("Currency updated successfully!", false);
-        } else {
-            await addDoc(collectionRef, currencyData);
-            showMessageBox("Currency added successfully!", false);
+        if (currencyId) { // This is the update path
+            // For update, ensure createdAt is preserved
+            const existingDoc = await getDoc(getDocRef('currencies', currencyId));
+            if (existingDoc.exists()) {
+                // Assign existing createdAt, or null if it's undefined/missing
+                data.createdAt = existingDoc.data().createdAt !== undefined ? existingDoc.data().createdAt : null;
+            } else {
+                showMessageBox("Error: Cannot update non-existent currency.", 'alert', true);
+                return;
+            }
+            await updateDoc(getDocRef('currencies', currencyId), data);
+            showMessageBox("Currency updated successfully!", 'alert', false);
+        } else { // This is the add path
+            data.createdAt = serverTimestamp();
+            await addDoc(getCollectionRef('currencies'), data);
+            showMessageBox("Currency added successfully!", 'alert', false);
         }
-        hideCurrencyForm();
-        await loadCurrencies();
+        hideForm(currencyFormContainer, currencyFormMessage);
     } catch (error) {
         console.error("Error saving currency:", error);
-        if (messageElement) {
-            messageElement.textContent = `Error saving currency: ${error.message}`;
-            messageElement.classList.remove('hidden');
-        }
+        showMessageBox(`Error saving currency: ${error.message}`, 'alert', true);
     }
 }
+
 
 async function loadCurrencies() {
     if (!db || userRole !== 'Admin') { // Check for 'Admin' role
