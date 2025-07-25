@@ -2533,48 +2533,52 @@ async function setupCountryForm(country = null) {
     showCountryForm();
 }
 
+
 async function handleSaveCountry(event) {
     event.preventDefault();
-    if (!db || userRole !== 'Admin') { // Check for 'Admin' role
-        showMessageBox("Admin privileges required to save country.", false);
+    const countryId = document.getElementById('country-id').value;
+
+    // --- IMPORTANT: Check user role before attempting to save ---
+    if (currentUserRole !== 'Admin') {
+        showMessageBox("Permission Denied: Only users with 'Admin' role can manage countries.", 'alert', true);
+        console.warn("Attempted to save country without Admin privileges.");
         return;
     }
+    // --- End Role Check ---
 
-    const countryId = document.getElementById('country-id').value;
-    const messageElement = document.getElementById('country-form-message');
-    if (messageElement) messageElement.classList.add('hidden');
-
-    const countryData = {
-        name: document.getElementById('country-name').value,
-        code: document.getElementById('country-code').value.toUpperCase(),
-        states: document.getElementById('country-states').value.split(',').map(s => s.trim()).filter(s => s !== ''),
+    // Collect data directly from DOM elements using their IDs
+    const data = {
+        name: document.getElementById('country-name').value || '',
+        code: document.getElementById('country-code').value || '',
+        // Split states by comma and trim whitespace for array storage
+        states: document.getElementById('country-states').value.split(',').map(s => s.trim()).filter(s => s.length > 0),
         updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp()
+        // No creatorId needed as per security rules for 'countries'
     };
 
     try {
-        const collectionRef = collection(db, 'countries'); // Top-level collection
         if (countryId) {
-            // For update, only update updatedAt, not createdAt
-            delete countryData.createdAt;
-            await updateDoc(doc(collectionRef, countryId), countryData);
-            showMessageBox("Country updated successfully!", false);
+            // For update, ensure createdAt is preserved
+            const existingDoc = await getDoc(getDocRef('countries', countryId));
+            if (existingDoc.exists()) {
+                data.createdAt = existingDoc.data().createdAt;
+            } else {
+                showMessageBox("Error: Cannot update non-existent country.", 'alert', true);
+                return;
+            }
+            await updateDoc(getDocRef('countries', countryId), data);
+            showMessageBox("Country updated successfully!", 'alert', false);
         } else {
-            await addDoc(collectionRef, countryData);
-            showMessageBox("Country added successfully!", false);
+            data.createdAt = serverTimestamp();
+            await addDoc(getCollectionRef('countries'), data);
+            showMessageBox("Country added successfully!", 'alert', false);
         }
-        hideCountryForm();
-        await loadCountries();
+        hideForm(countryFormContainer, countryFormMessage);
     } catch (error) {
         console.error("Error saving country:", error);
-        if (messageElement) {
-            messageElement.textContent = `Error saving country: ${error.message}`;
-            messageElement.classList.remove('hidden');
-        }
+        showMessageBox(`Error saving country: ${error.message}`, 'alert', true);
     }
 }
-
-
 
 /**
  * Handles the editing of an existing country.
