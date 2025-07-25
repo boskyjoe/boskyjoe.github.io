@@ -4570,8 +4570,8 @@ async function initializePage() {
 
     currenciesGrid = new gridjs.Grid({
         columns: [
-            { id: 'name', name: 'Currency Name', width: 'auto' },
-            { id: 'code', name: 'Code', width: '80px' },
+            { id: 'name', name: 'Currency Name', width: '200px' },
+            { id: 'code', name: 'Code', width: '100px' },
             { id: 'symbol', name: 'Symbol', width: '80px' },
             { id: 'countryCode', name: 'Country', width: '100px' },
             {
