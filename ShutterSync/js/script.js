@@ -4297,6 +4297,7 @@ async function initializePage() {
 
     leadsGrid = new gridjs.Grid({
         columns: [
+            { id: 'id', name: 'ID', hidden: true }, // ADDED: Explicit ID column, hidden, and now reliably at index 0
             { id: 'contactName', name: 'Contact Name', width: 'auto' },
             { id: 'phone', name: 'Phone', width: '150px' },
             { id: 'email', name: 'Email', width: '200px' },
@@ -4307,7 +4308,14 @@ async function initializePage() {
                 name: 'Actions',
                 width: '120px',
                 formatter: (cell, row) => {
-                    const leadId = row.cells[row.cells.length - 1].data;
+                    // CORRECTED: Access the ID directly from the first cell (index 0)
+                    const leadId = row.cells[0].data;
+
+                    if (!leadId) {
+                        console.error("Error: Lead ID not found at row.cells[0].data for actions.");
+                        return gridjs.html(`<span>Error</span>`); // Or some other fallback
+                    }
+
                     return gridjs.html(`
                         <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditLead('${leadId}')">Edit</button>
                         <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteLead('${leadId}')">Delete</button>
@@ -4316,7 +4324,14 @@ async function initializePage() {
             }
         ],
         data: [],
-        search: true,
+        search: {
+            selector: (cell, rowIndex, cellIndex) => {
+                // Exclude 'Actions' column (last) and the hidden 'id' column (index 0) from search.
+                // Visible columns are contactName (1), phone (2), email (3), services (4), eventDate (5), source (6).
+                // So, search from index 1 up to (but not including) the 'Actions' column (index 7).
+                return cellIndex > 0 && cellIndex < 7 ? cell : undefined;
+            }
+        },
         pagination: {
             enabled: true,
             limit: 10,
