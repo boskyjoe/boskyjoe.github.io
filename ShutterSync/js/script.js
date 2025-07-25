@@ -1720,25 +1720,42 @@ async function editLead(leadId) {
     }
 }
 
-
 /**
  * Handles the deletion of a lead document from Firestore.
  * Prompts for confirmation before proceeding with deletion.
  * @param {string} leadId The ID of the lead document to delete.
  */
-async function handleDeleteLead(leadId) { // Now async
-    showMessageBox("Are you sure you want to delete this lead? This action cannot be undone.", 'confirm', async (confirmed) => {
-        if (confirmed) {
-            try {
-                await deleteDoc(getDocRef('leads', leadId));
-                showMessageBox("Lead deleted successfully!");
-            } catch (error) {
-                console.error("Error deleting lead:", error);
-                showMessageBox(`Error deleting lead: ${error.message}`, 'alert', true);
+async function handleDeleteLead(leadId) {
+    console.log(`handleDeleteLead: Attempting to delete lead with ID: ${leadId}`); // DEBUG LOG
+
+    // Await the result from showMessageBox directly
+    const confirmed = await showMessageBox("Are you sure you want to delete this lead? This action cannot be undone.", 'confirm');
+    
+    console.log(`handleDeleteLead: Confirmed status from MessageBox: ${confirmed}`); // DEBUG LOG: Check confirmed value
+    
+    if (confirmed) {
+        console.log("handleDeleteLead: Confirmed is true, proceeding with deletion logic."); // DEBUG LOG: Confirm block entered
+        try {
+            // Get the document reference
+            const leadDocRef = getDocRef('leads', leadId);
+            console.log(`handleDeleteLead: Deleting document at path: ${leadDocRef.path}`); // DEBUG LOG
+
+            await deleteDoc(leadDocRef);
+            showMessageBox("Lead deleted successfully!", 'alert', false); // Use 'alert' type for success message
+            console.log(`handleDeleteLead: Lead ${leadId} deleted successfully.`); // SUCCESS LOG
+        } catch (error) {
+            console.error("handleDeleteLead: Error deleting lead:", error); // Log the full error object
+            if (error.code && error.message) {
+                showMessageBox(`Error deleting lead: ${error.message} (Code: ${error.code})`, 'alert', true);
+            } else {
+                showMessageBox(`Error deleting lead: An unexpected error occurred.`, 'alert', true);
             }
         }
-    });
+    } else {
+        console.log("handleDeleteLead: Deletion cancelled by user."); // DEBUG LOG: If user cancels
+    }
 }
+
 
 
 // --- Opportunity Logic ---
