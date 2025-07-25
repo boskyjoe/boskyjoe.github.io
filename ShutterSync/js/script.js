@@ -4497,6 +4497,7 @@ async function initializePage() {
 
     countriesGrid = new gridjs.Grid({
         columns: [
+            { id: 'id', name: 'ID', hidden: true }, // ADDED: Explicit ID column, hidden, and now reliably at index 0
             { id: 'name', name: 'Country Name', width: 'auto' },
             { id: 'code', name: 'Code', width: '80px' },
             { id: 'states', name: 'States/Provinces', width: 'auto', formatter: (cell) => cell ? cell.join(', ') : '' },
@@ -4504,7 +4505,14 @@ async function initializePage() {
                 name: 'Actions',
                 width: '120px',
                 formatter: (cell, row) => {
-                    const countryId = row.cells[row.cells.length - 1].data;
+                    // CORRECTED: Access the ID directly from the first cell (index 0)
+                    const countryId = row.cells[0].data;
+
+                    if (!countryId) {
+                        console.error("Error: Country ID not found at row.cells[0].data for actions.");
+                        return gridjs.html(`<span>Error</span>`); // Or some other fallback
+                    }
+
                     return gridjs.html(`
                         <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditCountry('${countryId}')">Edit</button>
                         <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteCountry('${countryId}')">Delete</button>
@@ -4513,12 +4521,20 @@ async function initializePage() {
             }
         ],
         data: [],
-        search: true,
+        search: {
+            selector: (cell, rowIndex, cellIndex) => {
+                // Exclude 'Actions' column (last) and the hidden 'id' column (index 0) from search.
+                // Visible columns are name (1), code (2), states (3).
+                // So, search from index 1 up to (but not including) the 'Actions' column (index 4).
+                return cellIndex > 0 && cellIndex < 4 ? cell : undefined;
+            }
+        },
         pagination: { enabled: true, limit: 10 },
         sort: true,
         resizable: true,
         style: { table: { 'min-width': '100%' }, th: { 'white-space': 'nowrap' } }
     }).render(countriesGridContainer);
+
 
     onSnapshot(getCollectionRef('countries'), (snapshot) => {
         const countries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
