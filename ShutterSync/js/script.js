@@ -3105,6 +3105,7 @@ async function setupPriceBookForm(priceBook = null) {
     showPriceBookForm();
 }
 
+// Inside handleSavePriceBook() function:
 
 async function handleSavePriceBook(event) {
     event.preventDefault();
@@ -3124,28 +3125,34 @@ async function handleSavePriceBook(event) {
 
     const data = {
         name: name,
-        normalizedName: name.toLowerCase().replace(/\s/g, ''), // For security rule validation
         description: document.getElementById('price-book-description').value || '',
         currency: currency,
-        normalizedCurrency: currency.toLowerCase().replace(/\s/g, ''), // For security rule validation
         isActive: priceBookActiveCheckbox ? priceBookActiveCheckbox.checked : false, // Checkbox value
         updatedAt: serverTimestamp(),
     };
 
     try {
         if (priceBookId) { // This is the update path
-            // For update, ensure createdAt is preserved
             const existingDoc = await getDoc(getDocRef('priceBooks', priceBookId));
             if (existingDoc.exists()) {
-                // Assign existing createdAt, or null if it's undefined/missing
-                data.createdAt = existingDoc.data().createdAt !== undefined ? existingDoc.data().createdAt : null;
+                const existingData = existingDoc.data();
+
+                // CRITICAL FIX: For updates, ensure these fields match the existing document's values
+                // as required by security rules (they cannot be changed on update).
+                data.normalizedName = existingData.normalizedName;
+                data.normalizedCurrency = existingData.normalizedCurrency;
+                data.createdAt = existingData.createdAt; // Ensure createdAt is explicitly carried over
+
+                await updateDoc(getDocRef('priceBooks', priceBookId), data);
+                showMessageBox("Price Book updated successfully!", 'alert', false);
             } else {
                 showMessageBox("Error: Cannot update non-existent price book.", 'alert', true);
                 return;
             }
-            await updateDoc(getDocRef('priceBooks', priceBookId), data);
-            showMessageBox("Price Book updated successfully!", 'alert', false);
-        } else { // This is the add path
+        } else { // This is the add path (new price book)
+            // For new documents, calculate normalized values
+            data.normalizedName = name.toLowerCase().replace(/\s/g, '');
+            data.normalizedCurrency = currency.toLowerCase().replace(/\s/g, '');
             data.createdAt = serverTimestamp();
             await addDoc(getCollectionRef('priceBooks'), data);
             showMessageBox("Price Book added successfully!", 'alert', false);
@@ -3156,6 +3163,7 @@ async function handleSavePriceBook(event) {
         showMessageBox(`Error saving price book: ${error.message}`, 'alert', true);
     }
 }
+
 
 async function loadPriceBooks() {
     if (!db || userRole !== 'Admin') { // Check for 'Admin' role
