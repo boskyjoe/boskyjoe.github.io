@@ -4393,7 +4393,7 @@ async function initializePage() {
     opportunityWorkLogForm = document.getElementById('work-log-form'); // Confirmed HTML ID
     //opportunityWorkLogFormMessage = document.getElementById('work-log-form-message'); // Confirmed HTML ID
     workLogTypeSelect = document.getElementById('work-log-type'); // Confirmed HTML ID
-    addWorkLogBtn = document.getElementById('add-work-log-entry-btn'); // Confirmed HTML ID
+    addWorkLogBtn = document.getElementById('add-work-log-btn'); // Confirmed HTML ID
     noWorkLogsMessage = document.getElementById('no-work-logs-message'); // Confirmed HTML ID
     cancelWorkLogBtn = document.getElementById('cancel-work-log-btn'); // Confirmed HTML ID
 
