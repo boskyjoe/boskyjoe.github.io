@@ -1801,20 +1801,29 @@ async function populateOpportunityCustomers() {
 
 
 /**
- * Calculates the Opportunity Net based on Value, Discount, and Adjustment.
- * Formula: Opportunity Net = (Value - (Value * (Opportunity Discount / 100))) - Adjustment Amt
+ * Calculates and displays the Opportunity Net value based on Opportunity Value, Discount, and Adjustment Amount.
  */
 function calculateOpportunityNet() {
+    // Ensure all input elements are available before attempting to read their values
+    if (!opportunityValueInput || !opportunityDiscountInput || !adjustmentAmtInput || !opportunityNetSpan) {
+        console.warn("calculateOpportunityNet: One or more required input elements are null. Cannot calculate net.");
+        return;
+    }
+
     const value = parseFloat(opportunityValueInput.value) || 0;
     const discount = parseFloat(opportunityDiscountInput.value) || 0;
-    const adjustment = parseFloat(adjustmentAmtInput.value) || 0;
+    const adjustment = parseFloat(adjustmentAmtInput.value) || 0; // This is the line causing the error
+
+    console.log(`calculateOpportunityNet: Value=${value}, Discount=${discount}, Adjustment=${adjustment}`); // DEBUG LOG
 
     let net = value - (value * (discount / 100));
     net = net - adjustment;
+    net = Math.max(0, net); // Ensure net is not negative
 
-    // Ensure net is not negative and format to 2 decimal places
-    opportunityNetDisplay.textContent = Math.max(0, net).toFixed(2);
+    opportunityNetSpan.textContent = net.toFixed(2);
+    console.log(`calculateOpportunityNet: Calculated Net=${net.toFixed(2)}`); // DEBUG LOG
 }
+
 
 /**
  * Filters price books based on the selected currency and populates the dropdown.
