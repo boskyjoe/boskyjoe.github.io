@@ -146,7 +146,7 @@ let mainOpportunityDetailsContent; // NEW: For the collapsible content of the ma
 
 
 
-
+let addWorkLogBtn;
 let workLogsSectionContainer;
 let addWorkLogEntryBtn;
 let workLogFormContainer;
