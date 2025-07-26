@@ -1804,6 +1804,10 @@ async function populateOpportunityCustomers() {
  */
 function calculateOpportunityNet() {
     // Ensure all input elements are available before attempting to read their values
+
+    console.warn('opportunityValueInput'); console.warn('opportunityDiscountInput');
+    console.warn('adjustmentAmtInput'); console.warn('opportunityNetSpan');
+
     if (!opportunityValueInput || !opportunityDiscountInput || !adjustmentAmtInput || !opportunityNetSpan) {
         console.warn("calculateOpportunityNet: One or more required input elements are null. Cannot calculate net.");
         return; // Exit if elements are not ready
