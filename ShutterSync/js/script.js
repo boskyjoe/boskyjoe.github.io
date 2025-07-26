@@ -4389,7 +4389,7 @@ async function initializePage() {
     opportunityWorkLogsContainer = document.getElementById('opportunity-work-logs-container'); // Confirmed HTML ID (the UL)
     opportunityWorkLogFormContainer = document.getElementById('work-log-form-container'); // Confirmed HTML ID
     opportunityWorkLogForm = document.getElementById('work-log-form'); // Confirmed HTML ID
-    opportunityWorkLogFormMessage = document.getElementById('work-log-form-message'); // Confirmed HTML ID
+    //opportunityWorkLogFormMessage = document.getElementById('work-log-form-message'); // Confirmed HTML ID
     workLogTypeSelect = document.getElementById('work-log-type'); // Confirmed HTML ID
     addWorkLogBtn = document.getElementById('add-work-log-btn'); // Confirmed HTML ID
     noWorkLogsMessage = document.getElementById('no-work-logs-message'); // Confirmed HTML ID
@@ -4409,7 +4409,7 @@ async function initializePage() {
     cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
     workLogsList = document.getElementById('work-logs-list');
     noWorkLogsMessage = document.getElementById('no-work-logs-message');
-    //workLogFormMessage = document.getElementById('work-log-form-message');
+    workLogFormMessage = document.getElementById('work-log-form-message');
 
 
     // Quote elements
