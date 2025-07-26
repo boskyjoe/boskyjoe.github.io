@@ -2563,7 +2563,7 @@ async function handleSaveWorkLog(event) {
     }
 
     const workLogId = document.getElementById('work-log-id').value;
-    const messageElement = document.getElementById('work-log-form-message');
+    const messageElement = workLogFormMessage;
     if (messageElement) messageElement.classList.add('hidden');
 
     // --- Start Client-Side Validation for Work Log ---
@@ -2616,8 +2616,9 @@ async function handleSaveWorkLog(event) {
     } catch (error) {
         console.error("Error saving work log:", error);
         if (messageElement) {
-            messageElement.textContent = `Error saving work log: ${error.message}`;
-            messageElement.classList.remove('hidden');
+            //messageElement.textContent = `Error saving work log: ${error.message}`;
+            //messageElement.classList.remove('hidden');
+            showMessageBox(`Error saving work log: ${error.message}`, 'alert', true);
         }
     }
 }
@@ -2649,7 +2650,7 @@ async function editWorkLog(workLogId, opportunityId) { // Pass opportunityId to 
  * @param {string} workLogId The ID of the work log document to edit.
  * @param {object} workLogData The data of the work log entry (passed from renderWorkLogs).
  */
-function handleEditWorkLog(workLogId, workLogData) {
+async function handleEditWorkLog(workLogId, workLogData) { // Made async for consistency
     showWorkLogForm(); // Show the work log form
     if (document.getElementById('work-log-id')) document.getElementById('work-log-id').value = workLogId;
     if (document.getElementById('work-log-opportunity-id')) document.getElementById('work-log-opportunity-id').value = currentOpportunityId; // Ensure parent ID is set
@@ -2666,7 +2667,8 @@ function handleEditWorkLog(workLogId, workLogData) {
     
     if (document.getElementById('work-log-details')) document.getElementById('work-log-details').value = workLogData.details || '';
 
-    if (workLogFormMessage) showMessageBox(workLogFormMessage, '', false); // Clear any previous messages
+    // Use the correct variable 'workLogFormMessage' here
+    if (workLogFormMessage) showMessageBox('', 'alert', false); // Clear any previous messages, using 'alert' type
 }
 
 
