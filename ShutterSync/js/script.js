@@ -88,6 +88,7 @@ let dashboardWonOpportunities;
 let addCustomerBtn;
 let customerFormContainer;
 let customerForm;
+
 let cancelCustomerBtn;
 let customersGridContainer;
 let customerContactMethodSelect ;
@@ -132,6 +133,19 @@ let opportunityDiscountInput;
 let adjustmentAmtInput;
 let opportunityNetSpan; // Renamed to match HTML ID and usage
 let opportunityFormMessage;
+
+// Opportunity form specific elements
+let opportunitySalesStageSelect;
+
+let opportunityWorkLogsSection; // Already declared in your list
+let opportunityWorkLogsContainer; // Already declared in your list
+let opportunityWorkLogFormContainer;
+let opportunityWorkLogForm;
+
+let mainOpportunityDetailsContent; // NEW: For the collapsible content of the main accordion
+
+
+
 
 let workLogsSectionContainer;
 let addWorkLogEntryBtn;
@@ -1955,74 +1969,137 @@ async function populateOpportunityCurrencies() {
 
 
 
-
 /**
  * Sets up the opportunity form for adding a new opportunity or editing an existing one.
+ * It handles clearing the form, populating dropdowns, setting default values for new opportunities,
+ * pre-populating fields for existing opportunities, and managing the visibility of accordions.
  * @param {object | null} opportunityData Optional: The opportunity data to pre-populate the form.
  */
 async function setupOpportunityForm(opportunityData = null) {
+    // 1. Show the form container and reset the form
     showForm(opportunityFormContainer);
     if (opportunityForm) opportunityForm.reset();
     if (document.getElementById('opportunity-id')) document.getElementById('opportunity-id').value = ''; // Clear ID for new
 
-    // Clear work logs section
+    // 2. Clear and hide work logs section initially
     if (opportunityWorkLogsContainer) opportunityWorkLogsContainer.innerHTML = '';
     if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.add('hidden');
 
-    // Populate dropdowns first (these calls are correct from previous step, but re-confirming their placement)
+    // 3. Populate all dropdowns (these are asynchronous, so await where necessary)
     await populateOpportunityCustomers();
-    populateOpportunitySalesStages(); // Assuming this exists
-    populateOpportunityServicesInterested(); // Assuming this exists
+    populateOpportunitySalesStages(); // This is synchronous, no await needed
+    populateOpportunityServicesInterested(); // This is synchronous, no await needed
     await populateOpportunityCurrencies();
-    await populateOpportunityPriceBooks();
+    await populateOpportunityPriceBooks(); // This populates allPriceBooks cache
 
+    // 4. Handle existing opportunity data (edit mode)
     if (opportunityData) {
-        // ... (existing code for populating form fields for editing) ...
-        
-        // Ensure Main Details accordion is open for existing opportunities
-        if (mainDetailsAccordionContent) mainDetailsAccordionContent.classList.remove('hidden');
-        if (mainDetailsAccordionHeader) mainDetailsAccordionHeader.querySelector('i').classList.replace('fa-chevron-down', 'fa-chevron-up');
+        console.log("setupOpportunityForm: Editing existing opportunity:", opportunityData); // DEBUG LOG
 
-    } else {
-        // For new opportunities, ensure default values and hide work logs
+        // Set currentOpportunityId for work logs subcollection context
+        currentOpportunityId = opportunityData.id;
+        if (document.getElementById('opportunity-id')) document.getElementById('opportunity-id').value = opportunityData.id;
+
+        // Populate form fields with existing data
+        if (document.getElementById('opportunity-name')) document.getElementById('opportunity-name').value = opportunityData.name || '';
+        if (opportunityCustomerSelect) opportunityCustomerSelect.value = opportunityData.customerId || '';
+        if (opportunityCurrencySelect) opportunityCurrencySelect.value = opportunityData.currency || '';
+        
+        // After populating all price books, set the specific one
+        if (opportunityPriceBookSelect) opportunityPriceBookSelect.value = opportunityData.priceBookId || '';
+
+        // Handle date inputs (convert Firestore Timestamp to YYYY-MM-DD string)
+        const expectedStartDate = opportunityData.expectedStartDate ? new Date(opportunityData.expectedStartDate.seconds * 1000).toISOString().split('T')[0] : '';
+        if (document.getElementById('opportunity-expected-start-date')) document.getElementById('opportunity-expected-start-date').value = expectedStartDate;
+        
+        const expectedCloseDate = opportunityData.expectedCloseDate ? new Date(opportunityData.expectedCloseDate.seconds * 1000).toISOString().split('T')[0] : '';
+        if (document.getElementById('opportunity-expected-close-date')) document.getElementById('opportunity-expected-close-date').value = expectedCloseDate;
+        
+        if (opportunitySalesStageSelect) opportunitySalesStageSelect.value = opportunityData.salesStage || '';
+
+        // Handle multi-select for services interested
+        if (opportunityServicesInterestedSelect && opportunityData.servicesInterested && Array.isArray(opportunityData.servicesInterested)) {
+            Array.from(opportunityServicesInterestedSelect.options).forEach(option => {
+                option.selected = opportunityData.servicesInterested.includes(option.value);
+            });
+        }
+
+        if (document.getElementById('opportunity-probability')) document.getElementById('opportunity-probability').value = opportunityData.probability !== undefined ? opportunityData.probability : 0;
+        if (opportunityValueInput) opportunityValueInput.value = opportunityData.value !== undefined ? opportunityData.value : 0;
+        if (opportunityDiscountInput) opportunityDiscountInput.value = opportunityData.opportunityDiscount !== undefined ? opportunityData.opportunityDiscount : 0;
+        if (adjustmentAmtInput) adjustmentAmtInput.value = opportunityData.adjustmentAmt !== undefined ? opportunityData.adjustmentAmt : 0;
+        if (document.getElementById('opportunity-notes')) document.getElementById('opportunity-notes').value = opportunityData.notes || '';
+        
+        // Calculate and display initial net for existing opportunity
+        calculateOpportunityNet();
+
+        // Show and load work logs section for existing opportunities
+        if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.remove('hidden');
+        await renderWorkLogs(opportunityData.id); // Load work logs for this opportunity
+
+        // Ensure Main Details accordion is open for existing opportunities
+        if (mainOpportunityDetailsContent) mainOpportunityDetailsContent.classList.remove('hidden');
+        if (mainOpportunityDetailsAccordion) {
+            const icon = mainOpportunityDetailsAccordion.querySelector('.accordion-icon'); // Use class selector for icon
+            if (icon) icon.textContent = '▲'; // Change to up arrow
+            // For font-awesome, it would be: icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+        }
+
+    } else { // Handle new opportunity (add mode)
+        console.log("setupOpportunityForm: Setting up for new opportunity."); // DEBUG LOG
         currentOpportunityId = null; // Clear ID for new opportunity
+
+        // Set default values for new opportunities
         if (opportunitySalesStageSelect) opportunitySalesStageSelect.value = 'Prospect'; // Default stage
         if (document.getElementById('opportunity-probability')) document.getElementById('opportunity-probability').value = 0;
-        if (document.getElementById('opportunity-value')) document.getElementById('opportunity-value').value = 0;
-        if (document.getElementById('opportunity-discount')) document.getElementById('opportunity-discount').value = 0;
-        if (document.getElementById('opportunity-adjustment-amt')) document.getElementById('opportunity-adjustment-amt').value = 0;
+        if (opportunityValueInput) opportunityValueInput.value = 0;
+        if (opportunityDiscountInput) opportunityDiscountInput.value = 0;
+        if (adjustmentAmtInput) adjustmentAmtInput.value = 0;
         calculateOpportunityNet(); // Calculate net for new opportunity
+
+        // Hide work logs section for new opportunities (until saved)
         if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.add('hidden');
 
-        // ADDED: Ensure Main Details accordion is open for new opportunities
-        if (mainDetailsAccordionContent) mainDetailsAccordionContent.classList.remove('hidden');
-        if (mainDetailsAccordionHeader) mainDetailsAccordionHeader.querySelector('i').classList.replace('fa-chevron-down', 'fa-chevron-up');
+        // Ensure Main Details accordion is open for new opportunities
+        if (mainOpportunityDetailsContent) mainOpportunityDetailsContent.classList.remove('hidden');
+        if (mainOpportunityDetailsAccordion) {
+            const icon = mainOpportunityDetailsAccordion.querySelector('.accordion-icon'); // Use class selector for icon
+            if (icon) icon.textContent = '▲'; // Change to up arrow
+            // For font-awesome, it would be: icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+        }
     }
 }
 
 
 
-
-
+/**
+ * Handles saving a new opportunity or updating an existing one.
+ * Performs client-side validation and interacts with Firestore.
+ * @param {Event} event The form submission event.
+ */
 async function handleSaveOpportunity(event) {
     event.preventDefault(); // Prevent default form submission
     console.log('handleSaveOpportunity: Form submit event triggered.'); // Diagnostic log
 
-    if (!db || !userId) {
-        showMessageBox("Authentication required to save opportunity.", false);
+    // Get the current authenticated user's UID
+    const creatorId = auth.currentUser?.uid;
+
+    if (!creatorId) {
+        showMessageBox("Authentication required to save opportunity.", 'alert', true);
+        console.error("Error saving opportunity: User not authenticated or UID not available.");
         return;
     }
 
     const opportunityId = document.getElementById('opportunity-id').value;
     const messageElement = document.getElementById('opportunity-form-message');
-    if (messageElement) messageElement.classList.add('hidden');
+    if (messageElement) messageElement.classList.add('hidden'); // Hide previous messages
 
     // --- Start Client-Side Validation ---
     const requiredFields = opportunityForm.querySelectorAll('[required]');
     let firstInvalidField = null;
 
     for (const field of requiredFields) {
-        if (!field.value) {
+        if (!field.value || (field.type === 'select-multiple' && field.selectedOptions.length === 0)) {
             firstInvalidField = field;
             break;
         }
@@ -2030,33 +2107,33 @@ async function handleSaveOpportunity(event) {
 
     if (firstInvalidField) {
         console.warn('Validation failed: Required field is empty.', firstInvalidField);
-        // Find the parent accordion of the invalid field
+        // Find the parent accordion of the invalid field and open it if hidden
         let parentAccordionContent = firstInvalidField.closest('.accordion-content');
         if (parentAccordionContent && parentAccordionContent.classList.contains('hidden')) {
             const parentAccordionHeader = parentAccordionContent.previousElementSibling;
             if (parentAccordionHeader) {
                 console.log('Opening parent accordion:', parentAccordionHeader.textContent.trim());
-                parentAccordionHeader.click(); // Programmatically click to open
+                // Simulate a click on the header to toggle it open
+                parentAccordionHeader.click(); 
             }
         }
         firstInvalidField.focus(); // Focus on the invalid field
-        messageElement.textContent = `Please fill in the required field: ${firstInvalidField.labels ? firstInvalidField.labels[0].textContent : firstInvalidField.id.replace(/-/g, ' ')}.`;
-        messageElement.classList.remove('hidden');
+        const fieldLabel = firstInvalidField.labels && firstInvalidField.labels.length > 0 ? firstInvalidField.labels[0].textContent.replace('*', '').trim() : firstInvalidField.id.replace(/-/g, ' ');
+        showMessageBox(`Please fill in the required field: ${fieldLabel}.`, 'alert', true);
         return; // Stop form submission
     }
     // --- End Client-Side Validation ---
 
     // Get selected services from multi-select
-    const selectedServices = Array.from(opportunityServicesInterestedSelect.options)
-        .filter(option => option.selected)
-        .map(option => option.value);
+    const selectedServices = opportunityServicesInterestedSelect ?
+        Array.from(opportunityServicesInterestedSelect.selectedOptions).map(option => option.value) : [];
 
-    const customerId = document.getElementById('opportunity-customer').value;
+    const customerId = opportunityCustomerSelect ? opportunityCustomerSelect.value : '';
     let customerName = '';
     if (customerId) {
         try {
             // Fetch customer name from the top-level customer collection
-            const customerSnap = await getDoc(doc(db, 'customers', customerId));
+            const customerSnap = await getDoc(getDocRef('customers', customerId));
             if (customerSnap.exists()) {
                 customerName = customerSnap.data().name;
             }
@@ -2066,86 +2143,109 @@ async function handleSaveOpportunity(event) {
         }
     }
 
-    const expectedStartDateValue = document.getElementById('opportunity-start-date').value;
+    // Get date values and convert to Date objects (Firestore will convert to Timestamps)
+    const expectedStartDateValue = document.getElementById('opportunity-expected-start-date').value;
     const expectedStartDateTimestamp = expectedStartDateValue ? new Date(expectedStartDateValue) : null;
 
-    const expectedCloseDateValue = document.getElementById('opportunity-close-date').value;
+    const expectedCloseDateValue = document.getElementById('opportunity-expected-close-date').value;
     const expectedCloseDateTimestamp = expectedCloseDateValue ? new Date(expectedCloseDateValue) : null;
 
-    // NEW: Get values for discount and adjustment
+    // Get numeric values, parse them, and default to 0 if invalid
+    const probability = parseFloat(document.getElementById('opportunity-probability').value) || 0;
     const opportunityValue = parseFloat(opportunityValueInput.value) || 0;
     const opportunityDiscount = parseFloat(opportunityDiscountInput.value) || 0;
     const adjustmentAmt = parseFloat(adjustmentAmtInput.value) || 0;
 
-    // NEW: Calculate Opportunity Net based on the formula
+    // Calculate Opportunity Net based on the formula
     let opportunityNet = opportunityValue - (opportunityValue * (opportunityDiscount / 100));
     opportunityNet = opportunityNet - adjustmentAmt;
     opportunityNet = Math.max(0, opportunityNet); // Ensure it's not negative
 
-    const opportunityData = {
-        name: document.getElementById('opportunity-name').value,
+    // Base data object for both add and update
+    let data = {
+        name: document.getElementById('opportunity-name').value || '',
         customerId: customerId,
-        customerName: customerName, // Added customerName as per rules
-        currency: opportunityCurrencySelect.value, // Get value from the select
-        priceBookId: opportunityPriceBookSelect.value, // Get value from the select
-        expectedStartDate: expectedStartDateTimestamp, // Save as Date object (Firestore converts to Timestamp)
-        expectedCloseDate: expectedCloseDateTimestamp, // Save as Date object (Firestore converts to Timestamp)
-        salesStage: document.getElementById('opportunity-sales-stage').value,
-        probability: parseFloat(document.getElementById('opportunity-probability').value) || 0,
-        value: opportunityValue, // Use parsed value
-        opportunityDiscount: opportunityDiscount, // NEW
-        adjustmentAmt: adjustmentAmt, // NEW
-        opportunityNet: opportunityNet, // NEW (calculated)
-        notes: document.getElementById('opportunity-notes').value,
-        servicesInterested: selectedServices, // NEW: Add selected services
-        creatorId: userId, // Added creatorId as per rules
+        customerName: customerName,
+        currency: opportunityCurrencySelect ? opportunityCurrencySelect.value : '',
+        priceBookId: opportunityPriceBookSelect ? opportunityPriceBookSelect.value : '',
+        expectedStartDate: expectedStartDateTimestamp,
+        expectedCloseDate: expectedCloseDateTimestamp,
+        salesStage: opportunitySalesStageSelect ? opportunitySalesStageSelect.value : '',
+        probability: probability,
+        value: opportunityValue,
+        opportunityDiscount: opportunityDiscount,
+        adjustmentAmt: adjustmentAmt,
+        opportunityNet: opportunityNet,
+        notes: document.getElementById('opportunity-notes').value || '',
+        servicesInterested: selectedServices,
+        creatorId: creatorId, // creatorId is always set for new and kept for updates
         updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp()
     };
 
     try {
-        // Opportunities are top-level as per provided rules
-        const collectionRef = collection(db, 'opportunities');
-        let savedOpportunityId; // Variable to hold the ID of the saved/created opportunity
+        if (opportunityId) { // Update existing opportunity
+            console.log(`handleSaveOpportunity: Attempting to update opportunity with ID: ${opportunityId}`); // DEBUG LOG
+            const existingDoc = await getDoc(getDocRef('opportunities', opportunityId));
+            if (existingDoc.exists()) {
+                const existingData = existingDoc.data();
+                console.log("handleSaveOpportunity: Existing document data for update:", existingData); // DEBUG LOG
 
-        if (opportunityId) {
-            // Update existing opportunity
-            delete opportunityData.createdAt;
-            await updateDoc(doc(collectionRef, opportunityId), opportunityData);
-            savedOpportunityId = opportunityId;
-            showMessageBox("Opportunity updated successfully!", false);
-            hideOpportunityForm(); // Hide form after update
-        } else {
-            // Create new opportunity
-            const docRef = await addDoc(collectionRef, opportunityData);
-            savedOpportunityId = docRef.id;
-            showMessageBox("Opportunity added successfully! You can now add work logs.", false);
+                // CRITICAL FOR RULES: Preserve original createdAt for updates
+                data.createdAt = existingData.createdAt !== undefined ? existingData.createdAt : null;
+                // Also, ensure existing normalized fields are preserved if your rules require them
+                // (Assuming normalizedName/Currency are not part of Opportunity rules, but good to check)
+                // If your rules for opportunities have similar immutability checks as priceBooks,
+                // you would add: data.normalizedName = existingData.normalizedName; etc.
 
-            // Instead of hiding, re-setup the form with the new ID to allow adding work logs
-            // This will keep the form open and load work logs for the newly created opportunity
-            // Fetch the full data of the newly created opportunity to pass to setupOpportunityForm
-            const newOpportunitySnap = await getDoc(doc(collectionRef, savedOpportunityId));
+                console.log("handleSaveOpportunity: Data payload for update:", data); // DEBUG LOG: Inspect final payload
+                await updateDoc(getDocRef('opportunities', opportunityId), data);
+                showMessageBox("Opportunity updated successfully!", 'alert', false);
+                console.log(`handleSaveOpportunity: Opportunity ${opportunityId} updated successfully.`); // SUCCESS LOG
+                hideForm(opportunityFormContainer, opportunityFormMessage); // Hide form after update
+            } else {
+                showMessageBox("Error: Cannot update non-existent opportunity.", 'alert', true);
+                return;
+            }
+        } else { // Create new opportunity
+            console.log("handleSaveOpportunity: Attempting to add new opportunity."); // DEBUG LOG
+            data.createdAt = serverTimestamp(); // Set createdAt for new document
+            console.log("handleSaveOpportunity: Data payload for add:", data); // DEBUG LOG: Inspect final payload
+
+            const docRef = await addDoc(getCollectionRef('opportunities'), data);
+            const savedOpportunityId = docRef.id;
+            
+            showMessageBox("Opportunity added successfully! You can now add work logs.", 'alert', false);
+            console.log(`handleSaveOpportunity: Opportunity ${savedOpportunityId} added successfully.`); // SUCCESS LOG
+
+            // Re-setup the form with the new ID to allow adding work logs and quotes
+            const newOpportunitySnap = await getDoc(getDocRef('opportunities', savedOpportunityId));
             if (newOpportunitySnap.exists()) {
                 await setupOpportunityForm({ id: newOpportunitySnap.id, ...newOpportunitySnap.data() });
             } else {
-                console.error("Could not retrieve newly created opportunity data.");
-                // Fallback: just set currentOpportunityId and hope for the best, or show error
+                console.error("Could not retrieve newly created opportunity data for re-setup.");
+                // Fallback: just set currentOpportunityId and ensure work logs section is visible
                 currentOpportunityId = savedOpportunityId;
-                if (workLogsSectionContainer) workLogsSectionContainer.classList.remove('hidden');
+                if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.remove('hidden');
             }
         }
 
-        await loadOpportunities(); // Reload grid
+        // Reload the opportunities grid and update dashboard after any save operation
+        await loadOpportunities();
         await updateDashboard();
 
     } catch (error) {
-        console.error("Error saving opportunity:", error);
-        if (messageElement) {
-            messageElement.textContent = `Error saving opportunity: ${error.message}`;
-            messageElement.classList.remove('hidden');
+        console.error("handleSaveOpportunity: Error saving opportunity:", error); // Log the full error object
+        if (error.code && error.message) {
+            showMessageBox(`Error saving opportunity: ${error.message} (Code: ${error.code})`, 'alert', true);
+        } else {
+            showMessageBox(`Error saving opportunity: An unexpected error occurred.`, 'alert', true);
         }
     }
 }
+
+
+
+
 /**
  * Handles the editing of an existing opportunity.
  * Fetches the opportunity data and passes it to setupOpportunityForm.
@@ -4262,21 +4362,46 @@ async function initializePage() {
     leadFormMessage = document.getElementById('lead-form-message');
 
     // Opportunity elements
-    addOpportunityBtn = document.getElementById('add-opportunity-btn');
+
     opportunityFormContainer = document.getElementById('opportunity-form-container');
     opportunityForm = document.getElementById('opportunity-form');
+    opportunityFormMessage = document.getElementById('opportunity-form-message');
+    opportunityCustomerSelect = document.getElementById('opportunity-customer');
+    opportunitySalesStageSelect = document.getElementById('opportunity-sales-stage');
+    opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested');
+    opportunityCurrencySelect = document.getElementById('opportunity-currency');
+    opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
+    opportunityValueInput = document.getElementById('opportunity-value'); // Corrected from your list
+    opportunityDiscountInput = document.getElementById('opportunity-discount'); // Corrected from your list
+    adjustmentAmtInput = document.getElementById('opportunity-adjustment-amt'); // Corrected from your list
+    opportunityNetSpan = document.getElementById('opportunity-net-span'); // Corrected from your list
+
+
+    addOpportunityBtn = document.getElementById('add-opportunity-btn');
     cancelOpportunityBtn = document.getElementById('cancel-opportunity-btn');
     opportunitySearchInput = document.getElementById('opportunity-search');
     opportunitiesGridContainer = document.getElementById('opportunities-grid-container');
     noOpportunitiesMessage = document.getElementById('no-opportunities-message');
-    opportunityCustomerSelect = document.getElementById('opportunity-customer');
-    opportunityCurrencySelect = document.getElementById('opportunity-currency');
-    opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
-    opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested');
-    opportunityDiscountInput = document.getElementById('opportunity-discount');
-    adjustmentAmtInput = document.getElementById('adjustment-amt');
-    opportunityNetSpan = document.getElementById('opportunity-net'); // Corrected name
-    opportunityFormMessage = document.getElementById('opportunity-form-message');
+
+
+    // Assign work log section elements
+    opportunityWorkLogsSection = document.getElementById('opportunity-work-logs-section'); // Confirmed HTML ID
+    opportunityWorkLogsContainer = document.getElementById('opportunity-work-logs-container'); // Confirmed HTML ID (the UL)
+    opportunityWorkLogFormContainer = document.getElementById('work-log-form-container'); // Confirmed HTML ID
+    opportunityWorkLogForm = document.getElementById('work-log-form'); // Confirmed HTML ID
+    opportunityWorkLogFormMessage = document.getElementById('work-log-form-message'); // Confirmed HTML ID
+    workLogTypeSelect = document.getElementById('work-log-type'); // Confirmed HTML ID
+    addWorkLogBtn = document.getElementById('add-work-log-btn'); // Confirmed HTML ID
+    noWorkLogsMessage = document.getElementById('no-work-logs-message'); // Confirmed HTML ID
+    cancelWorkLogBtn = document.getElementById('cancel-work-log-btn'); // Confirmed HTML ID
+
+
+ // Assign accordion elements
+    mainOpportunityDetailsAccordion = document.getElementById('main-opportunity-details-accordion'); // Confirmed HTML ID (header)
+    mainOpportunityDetailsContent = document.getElementById('main-details-content'); // Confirmed HTML ID (content body)
+    opportunityAccordionsGrid = document.getElementById('opportunity-accordions-grid'); // Confirmed HTML ID (parent grid for accordions)
+
+
     workLogsSectionContainer = document.getElementById('work-logs-section-container');
     addWorkLogEntryBtn = document.getElementById('add-work-log-entry-btn');
     workLogFormContainer = document.getElementById('work-log-form-container');
@@ -4285,9 +4410,6 @@ async function initializePage() {
     workLogsList = document.getElementById('work-logs-list');
     noWorkLogsMessage = document.getElementById('no-work-logs-message');
     workLogFormMessage = document.getElementById('work-log-form-message');
-    workLogTypeSelect = document.getElementById('work-log-type'); // Assigned
-    mainOpportunityDetailsAccordion = document.getElementById('main-opportunity-details-accordion');
-    opportunityAccordionsGrid = document.getElementById('opportunity-accordions-grid');
 
 
     // Quote elements
