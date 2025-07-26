@@ -3121,48 +3121,65 @@ async function handleSavePriceBook(event) {
     // Collect data directly from DOM elements using their IDs
     const name = document.getElementById('price-book-name').value || '';
     const currency = priceBookCurrencySelect ? priceBookCurrencySelect.value : '';
+    const description = document.getElementById('price-book-description').value || '';
+    const isActive = priceBookActiveCheckbox ? priceBookActiveCheckbox.checked : false;
 
-    const data = {
+    let data = { // Use let as we'll modify it
         name: name,
-        description: document.getElementById('price-book-description').value || '',
+        description: description,
         currency: currency,
-        isActive: priceBookActiveCheckbox ? priceBookActiveCheckbox.checked : false, // Checkbox value
-        updatedAt: serverTimestamp(),
+        isActive: isActive,
+        // updatedAt will be added below, after checking for existing doc
     };
 
     try {
         if (priceBookId) { // This is the update path
+            console.log(`handleSavePriceBook: Attempting to update price book with ID: ${priceBookId}`); // DEBUG LOG
             const existingDoc = await getDoc(getDocRef('priceBooks', priceBookId));
             if (existingDoc.exists()) {
                 const existingData = existingDoc.data();
+                console.log("handleSavePriceBook: Existing document data:", existingData); // DEBUG LOG
 
                 // CRITICAL FIX: Ensure normalizedName, normalizedCurrency, and createdAt
                 // are explicitly copied from existing data, handling 'undefined' for createdAt.
                 data.normalizedName = existingData.normalizedName;
                 data.normalizedCurrency = existingData.normalizedCurrency;
-                // If existingData.createdAt is undefined, set it to null (Firestore allows null)
                 data.createdAt = existingData.createdAt !== undefined ? existingData.createdAt : null;
+                data.updatedAt = serverTimestamp(); // Set updatedAt for the update operation
 
+                console.log("handleSavePriceBook: Data payload for update:", data); // DEBUG LOG: Inspect final payload
                 await updateDoc(getDocRef('priceBooks', priceBookId), data);
                 showMessageBox("Price Book updated successfully!", 'alert', false);
+                console.log(`handleSavePriceBook: Price Book ${priceBookId} updated successfully.`); // SUCCESS LOG
             } else {
                 showMessageBox("Error: Cannot update non-existent price book.", 'alert', true);
                 return;
             }
         } else { // This is the add path (new price book)
+            console.log("handleSavePriceBook: Attempting to add new price book."); // DEBUG LOG
             // For new documents, calculate normalized values
             data.normalizedName = name.toLowerCase().replace(/\s/g, '');
             data.normalizedCurrency = currency.toLowerCase().replace(/\s/g, '');
             data.createdAt = serverTimestamp();
+            data.updatedAt = serverTimestamp(); // Set updatedAt for new document
+            console.log("handleSavePriceBook: Data payload for add:", data); // DEBUG LOG: Inspect final payload
             await addDoc(getCollectionRef('priceBooks'), data);
             showMessageBox("Price Book added successfully!", 'alert', false);
+            console.log(`handleSavePriceBook: Price Book added successfully.`); // SUCCESS LOG
         }
         hideForm(priceBookFormContainer, priceBookFormMessage);
     } catch (error) {
-        console.error("Error saving price book:", error);
-        showMessageBox(`Error saving price book: ${error.message}`, 'alert', true);
+        console.error("handleSavePriceBook: Error saving price book:", error); // Log the full error object
+        if (error.code && error.message) {
+            showMessageBox(`Error saving price book: ${error.message} (Code: ${error.code})`, 'alert', true);
+        } else {
+            showMessageBox(`Error saving price book: An unexpected error occurred.`, 'alert', true);
+        }
     }
 }
+
+
+
 
 async function loadPriceBooks() {
     if (!db || userRole !== 'Admin') { // Check for 'Admin' role
