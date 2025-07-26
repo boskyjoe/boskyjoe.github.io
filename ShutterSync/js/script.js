@@ -4409,7 +4409,7 @@ async function initializePage() {
     cancelWorkLogBtn = document.getElementById('cancel-work-log-btn');
     workLogsList = document.getElementById('work-logs-list');
     noWorkLogsMessage = document.getElementById('no-work-logs-message');
-    workLogFormMessage = document.getElementById('work-log-form-message');
+    //workLogFormMessage = document.getElementById('work-log-form-message');
 
 
     // Quote elements
