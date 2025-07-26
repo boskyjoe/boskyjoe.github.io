@@ -1760,6 +1760,32 @@ async function handleDeleteLead(leadId) {
 
 // --- Opportunity Logic ---
 
+
+/**
+ * Populates the opportunity customer dropdown with data from the 'customers' collection.
+ */
+async function populateOpportunityCustomers() {
+    if (!opportunityCustomerSelect) {
+        console.warn("populateOpportunityCustomers: opportunityCustomerSelect element not found. Cannot populate customers.");
+        return;
+    }
+    opportunityCustomerSelect.innerHTML = '<option value="">Select Customer</option>'; // Clear existing options and add default
+    try {
+        const customersSnapshot = await getDocs(getCollectionRef('customers'));
+        customersSnapshot.forEach(doc => {
+            const customer = doc.data();
+            const option = document.createElement('option');
+            option.value = doc.id; // Use customer ID as value
+            option.textContent = customer.name; // Display customer name
+            opportunityCustomerSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Error populating customers for opportunity form:", error);
+        showMessageBox("Error loading customers for opportunity dropdown.", 'alert', true);
+    }
+}
+
+
 /**
  * Calculates the Opportunity Net based on Value, Discount, and Adjustment.
  * Formula: Opportunity Net = (Value - (Value * (Opportunity Discount / 100))) - Adjustment Amt
@@ -1818,105 +1844,76 @@ const opportunityServicesOptions = [
     { id: 'Others', name: 'Others' }
 ];
 
+/**
+ * Sets up the opportunity form for adding a new opportunity or editing an existing one.
+ * @param {object | null} opportunityData Optional: The opportunity data to pre-populate the form.
+ */
 async function setupOpportunityForm(opportunityData = null) {
-    console.log('setupOpportunityForm called with opportunityData:', opportunityData);
-    await populateOpportunityCustomers();
-    await populateOpportunityCurrencies();
-    populateServicesInterested(opportunityServicesInterestedSelect);
+    showForm(opportunityFormContainer);
+    if (opportunityForm) opportunityForm.reset();
+    if (document.getElementById('opportunity-id')) document.getElementById('opportunity-id').value = ''; // Clear ID for new
 
-    if (opportunityData) { // Edit mode
+    // Clear work logs section
+    if (opportunityWorkLogsContainer) opportunityWorkLogsContainer.innerHTML = '';
+    if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.add('hidden');
+
+    // Populate dropdowns first
+    await populateOpportunityCustomers(); // ADDED/CONFIRMED THIS LINE
+    populateOpportunitySalesStages(); // Assuming this exists
+    populateOpportunityServicesInterested(); // Assuming this exists
+    await populateOpportunityCurrencies(); // Assuming this exists
+    await populateOpportunityPriceBooks(); // Assuming this exists
+
+    if (opportunityData) {
+        // Set currentOpportunityId for work logs subcollection
         currentOpportunityId = opportunityData.id;
-        document.getElementById('opportunity-id').value = opportunityData.id;
-        document.getElementById('opportunity-name').value = opportunityData.name || '';
-        document.getElementById('opportunity-customer').value = opportunityData.customerId || '';
-        if (opportunityCurrencySelect) opportunityCurrencySelect.value = opportunityData.currency || '';
+        if (document.getElementById('opportunity-id')) document.getElementById('opportunity-id').value = opportunityData.id;
 
-        await filterAndPopulatePriceBooks(opportunityData.currency, opportunityData.priceBookId);
+        // Populate form fields
+        if (document.getElementById('opportunity-name')) document.getElementById('opportunity-name').value = opportunityData.name || '';
+        if (opportunityCustomerSelect) opportunityCustomerSelect.value = opportunityData.customerId || '';
+        if (opportunityCurrencySelect) opportunityCurrencySelect.value = opportunityData.currency || '';
+        if (opportunityPriceBookSelect) opportunityPriceBookSelect.value = opportunityData.priceBookId || '';
 
         const startDate = opportunityData.expectedStartDate ? new Date(opportunityData.expectedStartDate.seconds * 1000).toISOString().split('T')[0] : '';
+        if (document.getElementById('opportunity-expected-start-date')) document.getElementById('opportunity-expected-start-date').value = startDate;
+        
         const closeDate = opportunityData.expectedCloseDate ? new Date(opportunityData.expectedCloseDate.seconds * 1000).toISOString().split('T')[0] : '';
+        if (document.getElementById('opportunity-expected-close-date')) document.getElementById('opportunity-expected-close-date').value = closeDate;
+        
+        if (opportunitySalesStageSelect) opportunitySalesStageSelect.value = opportunityData.salesStage || '';
 
-        if (document.getElementById('opportunity-start-date')) document.getElementById('opportunity-start-date').value = startDate;
-        if (document.getElementById('opportunity-close-date')) document.getElementById('opportunity-close-date').value = closeDate;
-        if (document.getElementById('opportunity-sales-stage')) document.getElementById('opportunity-sales-stage').value = opportunityData.salesStage || 'Prospect';
-        if (document.getElementById('opportunity-probability')) document.getElementById('opportunity-probability').value = opportunityData.probability !== undefined ? opportunityData.probability : '';
-        if (document.getElementById('opportunity-value')) document.getElementById('opportunity-value').value = opportunityData.value !== undefined ? opportunityData.value : '';
-        if (document.getElementById('opportunity-notes')) document.getElementById('opportunity-notes').value = opportunityData.notes || '';
-
-        if (opportunityDiscountInput) opportunityDiscountInput.value = opportunityData.opportunityDiscount !== undefined ? opportunityData.opportunityDiscount : 0;
-        if (adjustmentAmtInput) adjustmentAmtInput.value = opportunityData.adjustmentAmt !== undefined ? opportunityData.adjustmentAmt : 0;
-
-        calculateOpportunityNet();
-
-        // Set selected options for multi-select
-        if (opportunityServicesInterestedSelect) {
+        if (opportunityServicesInterestedSelect && opportunityData.servicesInterested && Array.isArray(opportunityData.servicesInterested)) {
             Array.from(opportunityServicesInterestedSelect.options).forEach(option => {
-                option.selected = opportunityData.servicesInterested && opportunityData.servicesInterested.includes(option.value);
+                option.selected = opportunityData.servicesInterested.includes(option.value);
             });
         }
 
-        // --- Layout Adjustment for EDIT mode ---
-        if (mainOpportunityDetailsAccordion) {
-            mainOpportunityDetailsAccordion.classList.remove('md:col-span-full'); // Main details takes half width
-            const mainDetailsHeader = mainOpportunityDetailsAccordion.querySelector('.accordion-header');
-            if (mainDetailsHeader) {
-                setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
-            }
-        }
-
-        if (workLogsSectionContainer) {
-            workLogsSectionContainer.classList.remove('hidden'); // Show work logs container
-            const workLogsAccordionHeader = workLogsSectionContainer.querySelector('.accordion-header');
-            if (workLogsAccordionHeader) {
-                setAccordionVisualState(workLogsAccordionHeader, false); // False for CLOSED
-            }
-            if (workLogForm) {
-                workLogForm.removeAttribute('novalidate');
-            }
-        }
-        await loadWorkLogs(opportunityData.id); // Load work logs for this opportunity
-        // --- End Layout Adjustment for EDIT mode ---
-
-    } else { // For a new opportunity (ADD mode)
-        if (opportunityForm) opportunityForm.reset();
-        const opportunityIdInput = document.getElementById('opportunity-id');
-        if (opportunityIdInput) opportunityIdInput.value = '';
-        currentOpportunityId = null;
-        if (workLogsList) workLogsList.innerHTML = '';
-        if (noWorkLogsMessage) noWorkLogsMessage.classList.remove('hidden');
+        if (document.getElementById('opportunity-probability')) document.getElementById('opportunity-probability').value = opportunityData.probability !== undefined ? opportunityData.probability : 0;
+        if (document.getElementById('opportunity-value')) document.getElementById('opportunity-value').value = opportunityData.value !== undefined ? opportunityData.value : 0;
+        if (document.getElementById('opportunity-discount')) document.getElementById('opportunity-discount').value = opportunityData.opportunityDiscount !== undefined ? opportunityData.opportunityDiscount : 0;
+        if (document.getElementById('opportunity-adjustment-amt')) document.getElementById('opportunity-adjustment-amt').value = opportunityData.adjustmentAmt !== undefined ? opportunityData.adjustmentAmt : 0;
+        if (document.getElementById('opportunity-notes')) document.getElementById('opportunity-notes').value = opportunityData.notes || '';
         
-        hideWorkLogForm(); // Call hideWorkLogForm, which now handles its own null checks for elements
-
-        // Clear multi-select
-        if (opportunityServicesInterestedSelect) {
-            Array.from(opportunityServicesInterestedSelect.options).forEach(option => option.selected = false);
-        }
-
-        // --- Layout Adjustment for ADD mode ---
-        if (workLogsSectionContainer) {
-            workLogsSectionContainer.classList.add('hidden'); // Hide work logs container
-            if (workLogForm) {
-                workLogForm.setAttribute('novalidate', 'novalidate');
-            }
-        }
-        if (mainOpportunityDetailsAccordion) {
-            mainOpportunityDetailsAccordion.classList.add('md:col-span-full'); // Main details spans full width
-            const mainDetailsHeader = mainOpportunityDetailsAccordion.querySelector('.accordion-header');
-            if (mainDetailsHeader) {
-                setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
-            }
-        }
-        // --- End Layout Adjustment for ADD mode ---
-
-        filterAndPopulatePriceBooks('');
-        if (opportunityDiscountInput) opportunityDiscountInput.value = 0;
-        if (adjustmentAmtInput) adjustmentAmtInput.value = 0;
+        // Calculate and display initial net
         calculateOpportunityNet();
-    }
-    showOpportunityForm();
-    console.log('Add/Edit Opportunity form setup complete. currentOpportunityId:', currentOpportunityId);
-}
 
+        // Show and load work logs section for existing opportunities
+        if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.remove('hidden');
+        await renderWorkLogs(opportunityData.id);
+
+    } else {
+        // For new opportunities, ensure default values and hide work logs
+        currentOpportunityId = null; // Clear ID for new opportunity
+        if (opportunitySalesStageSelect) opportunitySalesStageSelect.value = 'Prospect'; // Default stage
+        if (document.getElementById('opportunity-probability')) document.getElementById('opportunity-probability').value = 0;
+        if (document.getElementById('opportunity-value')) document.getElementById('opportunity-value').value = 0;
+        if (document.getElementById('opportunity-discount')) document.getElementById('opportunity-discount').value = 0;
+        if (document.getElementById('opportunity-adjustment-amt')) document.getElementById('opportunity-adjustment-amt').value = 0;
+        calculateOpportunityNet(); // Calculate net for new opportunity
+        if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.add('hidden');
+    }
+}
 
 async function handleSaveOpportunity(event) {
     event.preventDefault(); // Prevent default form submission
@@ -4330,7 +4327,10 @@ async function initializePage() {
     if (leadForm) leadForm.addEventListener('submit', handleSaveLead);
     if (leadSearchInput) leadSearchInput.addEventListener('input', (event) => { if (leadsGrid) leadsGrid.search(event.target.value); });
 
-    if (addOpportunityBtn) addOpportunityBtn.addEventListener('click', () => setupOpportunityForm());
+    if (addOpportunityBtn) addOpportunityBtn.addEventListener('click', async () => { // Make this async
+        await setupOpportunityForm(); // Call setupOpportunityForm without data to reset/prepare for new
+    });
+
     if (cancelOpportunityBtn) cancelOpportunityBtn.addEventListener('click', () => hideForm(opportunityFormContainer, opportunityFormMessage));
     if (opportunityForm) opportunityForm.addEventListener('submit', handleSaveOpportunity);
     if (opportunitySearchInput) opportunitySearchInput.addEventListener('input', (event) => { if (opportunitiesGrid) opportunitiesGrid.search(event.target.value); });
