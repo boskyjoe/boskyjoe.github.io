@@ -1966,6 +1966,33 @@ async function populateOpportunityCurrencies() {
     }
 }
 
+/**
+ * Populates the opportunity services interested multi-select dropdown with predefined options.
+ * This list should match the allowed services in Firestore security rules.
+ */
+function populateOpportunityServicesInterested() {
+    if (!opportunityServicesInterestedSelect) {
+        console.warn("populateOpportunityServicesInterested: opportunityServicesInterestedSelect element not found.");
+        return;
+    }
+
+    // Clear existing options
+    opportunityServicesInterestedSelect.innerHTML = '';
+
+    // This list must match the one defined in your Firestore security rules for 'servicesInterested'
+    const allowedServices = [
+        'Save the Day', 'Pre-Wedding Photo Shoot', 'Wedding',
+        'Post-Wedding Photo Shoot', 'Baby Shower', 'Corporate Event',
+        'Product Launch', 'Political Meeting', 'Others'
+    ];
+
+    allowedServices.forEach(service => {
+        const option = document.createElement('option');
+        option.value = service;
+        option.textContent = service;
+        opportunityServicesInterestedSelect.appendChild(option);
+    });
+}
 
 
 
