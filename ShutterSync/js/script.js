@@ -1799,7 +1799,6 @@ async function populateOpportunityCustomers() {
     }
 }
 
-
 /**
  * Calculates and displays the Opportunity Net value based on Opportunity Value, Discount, and Adjustment Amount.
  */
@@ -1807,12 +1806,12 @@ function calculateOpportunityNet() {
     // Ensure all input elements are available before attempting to read their values
     if (!opportunityValueInput || !opportunityDiscountInput || !adjustmentAmtInput || !opportunityNetSpan) {
         console.warn("calculateOpportunityNet: One or more required input elements are null. Cannot calculate net.");
-        return;
+        return; // Exit if elements are not ready
     }
 
     const value = parseFloat(opportunityValueInput.value) || 0;
     const discount = parseFloat(opportunityDiscountInput.value) || 0;
-    const adjustment = parseFloat(adjustmentAmtInput.value) || 0; // This is the line causing the error
+    const adjustment = parseFloat(adjustmentAmtInput.value) || 0;
 
     console.log(`calculateOpportunityNet: Value=${value}, Discount=${discount}, Adjustment=${adjustment}`); // DEBUG LOG
 
@@ -2023,8 +2022,8 @@ async function setupOpportunityForm(opportunityData = null) {
 
     // 3. Populate all dropdowns (these are asynchronous, so await where necessary)
     await populateOpportunityCustomers();
-    populateOpportunitySalesStages(); // This is synchronous, no await needed
-    populateOpportunityServicesInterested(); // This is synchronous, no await needed
+    populateOpportunitySalesStages();
+    populateOpportunityServicesInterested();
     await populateOpportunityCurrencies();
     await populateOpportunityPriceBooks(); // This populates allPriceBooks cache
 
@@ -2040,11 +2039,8 @@ async function setupOpportunityForm(opportunityData = null) {
         if (document.getElementById('opportunity-name')) document.getElementById('opportunity-name').value = opportunityData.name || '';
         if (opportunityCustomerSelect) opportunityCustomerSelect.value = opportunityData.customerId || '';
         if (opportunityCurrencySelect) opportunityCurrencySelect.value = opportunityData.currency || '';
-        
-        // After populating all price books, set the specific one
         if (opportunityPriceBookSelect) opportunityPriceBookSelect.value = opportunityData.priceBookId || '';
 
-        // Handle date inputs (convert Firestore Timestamp to YYYY-MM-DD string)
         const expectedStartDate = opportunityData.expectedStartDate ? new Date(opportunityData.expectedStartDate.seconds * 1000).toISOString().split('T')[0] : '';
         if (document.getElementById('opportunity-expected-start-date')) document.getElementById('opportunity-expected-start-date').value = expectedStartDate;
         
@@ -2061,6 +2057,13 @@ async function setupOpportunityForm(opportunityData = null) {
         }
 
         if (document.getElementById('opportunity-probability')) document.getElementById('opportunity-probability').value = opportunityData.probability !== undefined ? opportunityData.probability : 0;
+        
+        // Explicitly re-assign elements before calculation for robustness in edit mode
+        opportunityValueInput = document.getElementById('opportunity-value');
+        opportunityDiscountInput = document.getElementById('opportunity-discount');
+        adjustmentAmtInput = document.getElementById('opportunity-adjustment-amt');
+        opportunityNetSpan = document.getElementById('opportunity-net-span');
+
         if (opportunityValueInput) opportunityValueInput.value = opportunityData.value !== undefined ? opportunityData.value : 0;
         if (opportunityDiscountInput) opportunityDiscountInput.value = opportunityData.opportunityDiscount !== undefined ? opportunityData.opportunityDiscount : 0;
         if (adjustmentAmtInput) adjustmentAmtInput.value = opportunityData.adjustmentAmt !== undefined ? opportunityData.adjustmentAmt : 0;
@@ -2076,9 +2079,8 @@ async function setupOpportunityForm(opportunityData = null) {
         // Ensure Main Details accordion is open for existing opportunities
         if (mainOpportunityDetailsContent) mainOpportunityDetailsContent.classList.remove('hidden');
         if (mainOpportunityDetailsAccordion) {
-            const icon = mainOpportunityDetailsAccordion.querySelector('.accordion-icon'); // Use class selector for icon
-            if (icon) icon.textContent = '▲'; // Change to up arrow
-            // For font-awesome, it would be: icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+            const icon = mainOpportunityDetailsAccordion.querySelector('.accordion-icon');
+            if (icon) icon.textContent = '▲';
         }
 
     } else { // Handle new opportunity (add mode)
@@ -2088,6 +2090,13 @@ async function setupOpportunityForm(opportunityData = null) {
         // Set default values for new opportunities
         if (opportunitySalesStageSelect) opportunitySalesStageSelect.value = 'Prospect'; // Default stage
         if (document.getElementById('opportunity-probability')) document.getElementById('opportunity-probability').value = 0;
+        
+        // Explicitly re-assign elements before calculation for robustness in new mode
+        opportunityValueInput = document.getElementById('opportunity-value');
+        opportunityDiscountInput = document.getElementById('opportunity-discount');
+        adjustmentAmtInput = document.getElementById('opportunity-adjustment-amt');
+        opportunityNetSpan = document.getElementById('opportunity-net-span');
+
         if (opportunityValueInput) opportunityValueInput.value = 0;
         if (opportunityDiscountInput) opportunityDiscountInput.value = 0;
         if (adjustmentAmtInput) adjustmentAmtInput.value = 0;
@@ -2099,12 +2108,12 @@ async function setupOpportunityForm(opportunityData = null) {
         // Ensure Main Details accordion is open for new opportunities
         if (mainOpportunityDetailsContent) mainOpportunityDetailsContent.classList.remove('hidden');
         if (mainOpportunityDetailsAccordion) {
-            const icon = mainOpportunityDetailsAccordion.querySelector('.accordion-icon'); // Use class selector for icon
-            if (icon) icon.textContent = '▲'; // Change to up arrow
-            // For font-awesome, it would be: icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+            const icon = mainOpportunityDetailsAccordion.querySelector('.accordion-icon');
+            if (icon) icon.textContent = '▲';
         }
     }
 }
+
 
 
 
