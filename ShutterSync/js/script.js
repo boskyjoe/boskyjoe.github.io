@@ -4590,9 +4590,18 @@ async function initializePage() {
     if (opportunityForm) opportunityForm.addEventListener('submit', handleSaveOpportunity);
     if (opportunitySearchInput) opportunitySearchInput.addEventListener('input', (event) => { if (opportunitiesGrid) opportunitiesGrid.search(event.target.value); });
     if (opportunityCurrencySelect) opportunityCurrencySelect.addEventListener('change', (event) => filterAndPopulatePriceBooks(event.target.value));
-    if (opportunityValueInput) opportunityValueInput.addEventListener('input', calculateOpportunityNet);
-    if (opportunityDiscountInput) opportunityDiscountInput.addEventListener('input', calculateOpportunityNet);
-    if (adjustmentAmtInput) adjustmentAmtInput.addEventListener('input', calculateOpportunityNet);
+
+
+    // Add event listeners for opportunity net calculation
+    if (opportunityValueInput) {
+        opportunityValueInput.addEventListener('input', calculateOpportunityNet);
+    }
+    if (opportunityDiscountInput) {
+        opportunityDiscountInput.addEventListener('input', calculateOpportunityNet);
+    }
+    if (adjustmentAmtInput) {
+        adjustmentAmtInput.addEventListener('input', calculateOpportunityNet);
+    }
 
     // Work Log Listeners
     if (addWorkLogEntryBtn) addWorkLogEntryBtn.addEventListener('click', showWorkLogForm);
