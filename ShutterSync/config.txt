@@ -4,7 +4,10 @@ service cloud.firestore {
 
     // Function to check if the authenticated user has an 'Admin' role.
     function is_admin() {
-      return request.auth != null && get(/databases/$(database)/documents/users_data/$(request.auth.uid)).data.role == 'Admin';
+      // Ensure the users_data document exists before trying to access its data
+      return request.auth != null &&
+             exists(/databases/$(database)/documents/users_data/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users_data/$(request.auth.uid)).data.role == 'Admin';
     }
 
     // Helper function to check if the request is from an authenticated user.
@@ -13,74 +16,84 @@ service cloud.firestore {
     }
 
     // Helper function to get the expected index ID for price books
-    // This function now expects 'normalizedName' and 'normalizedCurrency' fields
-    // to be present in the data, as they are pre-processed client-side.
     function getPriceBookIndexId(normalizedName, normalizedCurrency) {
       return normalizedName + '_' + normalizedCurrency;
     }
 
-    // Helper function to validate an incoming timestamp-like object from request.resource.data
-    function isValidTimestampObject(data) {
-      return data is map &&
-             data.keys().hasAll(['seconds', 'nanoseconds']) &&
-             data.seconds is number &&
-             data.nanoseconds is number;
+    // Helper function to validate an incoming client-generated Timestamp object (which is a map) or null
+    function isValidTimestampOrNull(data) {
+      return data == null || data is timestamp;
+    }
+
+    // Helper function to get the list of allowed services (used by multi-select for Opportunities and Leads)
+    function getAllowedServicesList() {
+      return [
+        'Save the Day', 'Pre-Wedding Photo Shoot', 'Wedding',
+        'Post-Wedding Photo Shoot', 'Baby Shower', 'Corporate Event',
+        'Product Launch', 'Political Meeting', 'Others'
+      ];
+    }
+
+    // Helper function for validating a list of services (for multi-select fields)
+    function isValidServicesInterestedList(services) {
+      let allowedServices = getAllowedServicesList();
+
+      return services is list &&
+             services.size() > 0 && // Ensure at least one service is selected
+             services.hasOnly(allowedServices); // Ensures all elements in 'services' are present in 'allowedServices'
     }
 
     // --- 1. Rules for the 'users_data' collection: ---
     match /users_data/{userId} {
       allow read: if is_authenticated() && (request.auth.uid == userId || is_admin());
       allow create: if is_authenticated() &&
-                        request.auth.uid == userId &&
-                        request.resource.data.keys().hasAll(['displayName', 'email', 'role', 'createdAt', 'lastLogin']) &&
-                        request.resource.data.keys().hasOnly(['displayName', 'email', 'role', 'createdAt', 'lastLogin']) &&
-                        request.resource.data.email == request.auth.token.email &&
-                        request.resource.data.role == 'Standard' &&
-                        request.resource.data.createdAt is timestamp &&
-                        request.resource.data.lastLogin is timestamp &&
-                        request.resource.data.createdAt <= request.time;
+                            request.auth.uid == userId &&
+                            request.resource.data.email == request.auth.token.email &&
+                            request.resource.data.role == 'Standard' &&
+                            request.resource.data.createdAt is timestamp &&
+                            request.resource.data.createdAt <= request.time &&
+                            request.resource.data.lastLogin is timestamp &&
+                            request.resource.data.lastLogin <= request.time &&
+                            request.resource.data.displayName is string &&
+                            request.resource.data.keys().hasAll(['displayName', 'email', 'role', 'createdAt', 'lastLogin']) &&
+                            request.resource.data.keys().size() == 5; // Strict check for new user data
       allow update: if is_authenticated() && (request.auth.uid == userId || is_admin()) &&
-                        request.resource.data.createdAt == resource.data.createdAt &&
-                        request.resource.data.email == resource.data.email &&
-                        request.resource.data.lastLogin is timestamp &&
-                        (is_admin() || (request.resource.data.role == resource.data.role));
-      allow delete: if false;
+                            resource.data.createdAt == request.resource.data.createdAt && // Existing createdAt should not change
+                            request.resource.data.email == resource.data.email && // Email should not change
+                            request.resource.data.lastLogin is timestamp &&
+                            request.resource.data.lastLogin <= request.time &&
+                            (is_admin() || (request.resource.data.role == resource.data.role)); // Only admin can change role
+      allow delete: if false; // Users_data should generally not be deleted by clients
     }
 
     // --- 2. Rules for 'customers' collection: ---
     match /customers/{customerId} {
-      allow read: if is_authenticated();
       function is_customer_owner() {
         return resource.data.creatorId == request.auth.uid;
       }
+      allow read: if is_authenticated(); // All authenticated users can read all customers (for dropdowns)
       allow create: if is_authenticated() &&
-                        request.resource.data.creatorId == request.auth.uid &&
-                        request.resource.data.keys().hasAll([
-                          'type', 'name', 'email', 'phone', 'address', 'country',
-                          'preferredContactMethod', 'industry', 'additionalDetails', 'source',
-                          'active', 'createdAt', 'updatedAt', 'creatorId'
-                        ]) &&
-                        request.resource.data.keys().hasOnly([
-                          'type', 'name', 'email', 'phone', 'address', 'country',
-                          'preferredContactMethod', 'industry', 'additionalDetails', 'source',
-                          'active', 'createdAt', 'updatedAt', 'creatorId'
-                        ]) &&
-                        request.resource.data.createdAt is timestamp &&
-                        request.resource.data.updatedAt is timestamp &&
-                        request.resource.data.type is string && request.resource.data.type in ['Individual', 'Business'] &&
-                        request.resource.data.name is string &&
-                        request.resource.data.email is string &&
-                        request.resource.data.phone is string &&
-                        request.resource.data.address is string &&
-                        request.resource.data.country is string &&
-                        request.resource.data.preferredContactMethod is string && request.resource.data.preferredContactMethod in ['Email', 'Phone', 'SMS'] &&
-                        request.resource.data.industry is string && request.resource.data.industry in ['Technology', 'Healthcare', 'Finance', 'Retail', 'Education', 'Other'] &&
-                        request.resource.data.additionalDetails is string &&
-                        request.resource.data.source is string && request.resource.data.source in ['Website', 'Referral', 'Advertisement', 'Social Media', 'Event', 'Other'] &&
-                        request.resource.data.active is bool;
+                            request.resource.data.creatorId == request.auth.uid &&
+                            request.resource.data.type is string && request.resource.data.type in ['Individual', 'Business'] &&
+                            request.resource.data.name is string && request.resource.data.name.size() > 0 &&
+                            request.resource.data.email is string &&
+                            request.resource.data.phone is string &&
+                            request.resource.data.address is string &&
+                            request.resource.data.country is string &&
+                            request.resource.data.preferredContactMethod is string && request.resource.data.preferredContactMethod in ['Email', 'Phone', 'SMS'] &&
+                            request.resource.data.industry is string && request.resource.data.industry in ['Technology', 'Healthcare', 'Finance', 'Retail', 'Education', 'Other'] &&
+                            request.resource.data.additionalDetails is string &&
+                            request.resource.data.source is string && request.resource.data.source in ['Website', 'Referral', 'Advertisement', 'Social Media', 'Event', 'Other'] &&
+                            request.resource.data.active is bool &&
+                            request.resource.data.createdAt is timestamp &&
+                            request.resource.data.createdAt <= request.time &&
+                            request.resource.data.updatedAt is timestamp &&
+                            request.resource.data.updatedAt <= request.time;
       allow update: if is_authenticated() && (is_customer_owner() || is_admin()) &&
-                        request.resource.data.creatorId == resource.data.creatorId &&
-                        request.resource.data.updatedAt is timestamp;
+                            request.resource.data.creatorId == resource.data.creatorId && // CreatorId cannot change
+                            request.resource.data.updatedAt is timestamp &&
+                            request.resource.data.updatedAt <= request.time &&
+                            resource.data.createdAt == request.resource.data.createdAt; // createdAt cannot change
       allow delete: if is_authenticated() && (is_customer_owner() || is_admin());
     }
 
@@ -89,45 +102,112 @@ service cloud.firestore {
       function is_opportunity_owner() {
         return resource.data.creatorId == request.auth.uid;
       }
+
+      // Helper for Opportunity Net calculation validation
+      function isValidOpportunityNet(value, discount, adjustment, net) {
+        // Calculate expected net in a single expression to avoid variable declaration issues
+        // Use 0.01 for percentage conversion to avoid division syntax issues
+        let calculatedNet = value - (value * discount * 0.01) - adjustment;
+        // Allow for minor floating point discrepancies
+        return net >= 0 && (net == calculatedNet || (net - calculatedNet).abs() < 0.01);
+      }
+
       allow read: if is_authenticated() && (is_opportunity_owner() || is_admin());
+
       allow create: if is_authenticated() &&
-                        request.auth.uid == request.resource.data.creatorId &&
-                        request.resource.data.keys().hasAll([
-                          'name', 'customerId', 'customerName', 'currency', 'priceBookId', 'expectedStartDate',
-                          'expectedCloseDate', 'salesStage', 'probability', 'value', 'notes',
-                          'createdAt', 'updatedAt', 'creatorId'
-                        ]) &&
-                        request.resource.data.keys().hasOnly([
-                          'name', 'customerId', 'customerName', 'currency', 'priceBookId', 'expectedStartDate',
-                          'expectedCloseDate', 'salesStage', 'probability', 'value', 'notes',
-                          'createdAt', 'updatedAt', 'creatorId'
-                        ]) &&
-                        request.resource.data.createdAt is timestamp &&
-                        request.resource.data.updatedAt is timestamp &&
-                        request.resource.data.name is string &&
-                        request.resource.data.customerId is string &&
-                        request.resource.data.customerName is string &&
-                        request.resource.data.currency is string &&
-                        request.resource.data.priceBookId is string &&
-                        (isValidTimestampObject(request.resource.data.expectedStartDate) || request.resource.data.expectedStartDate == null) &&
-                        (isValidTimestampObject(request.resource.data.expectedCloseDate) || request.resource.data.expectedCloseDate == null) &&
-                        request.resource.data.salesStage is string && request.resource.data.salesStage in ['Prospect', 'Qualification', 'Proposal', 'Negotiation', 'Won', 'Lost'] &&
-                        request.resource.data.probability is int && request.resource.data.probability >= 0 && request.resource.data.probability <= 100 &&
-                        request.resource.data.value is number && request.resource.data.value >= 0 &&
-                        request.resource.data.notes is string;
+                            request.resource.data.creatorId == request.auth.uid &&
+                            request.resource.data.name is string && request.resource.data.name.size() > 0 &&
+                            request.resource.data.customerId is string && request.resource.data.customerId.size() > 0 &&
+                            request.resource.data.customerName is string && request.resource.data.customerName.size() > 0 &&
+                            request.resource.data.currency is string && request.resource.data.currency.size() > 0 &&
+                            request.resource.data.priceBookId is string &&
+                            isValidTimestampOrNull(request.resource.data.expectedStartDate) &&
+                            isValidTimestampOrNull(request.resource.data.expectedCloseDate) &&
+                            request.resource.data.salesStage is string && request.resource.data.salesStage in ['Prospect', 'Qualification', 'Proposal', 'Negotiation', 'Won', 'Lost'] &&
+                            isValidServicesInterestedList(request.resource.data.servicesInterested) &&
+                            request.resource.data.probability is number && request.resource.data.probability >= 0 && request.resource.data.probability <= 100 &&
+                            request.resource.data.value is number && request.resource.data.value >= 0 &&
+                            request.resource.data.opportunityDiscount is number && request.resource.data.opportunityDiscount >= 0 && request.resource.data.opportunityDiscount <= 100 &&
+                            request.resource.data.adjustmentAmt is number &&
+                            request.resource.data.opportunityNet is number && request.resource.data.opportunityNet >= 0 &&
+                            isValidOpportunityNet(
+                                request.resource.data.value,
+                                request.resource.data.opportunityDiscount,
+                                request.resource.data.adjustmentAmt,
+                                request.resource.data.opportunityNet
+                            ) &&
+                            request.resource.data.notes is string &&
+                            request.resource.data.createdAt is timestamp &&
+                            request.resource.data.createdAt <= request.time &&
+                            request.resource.data.updatedAt is timestamp &&
+                            request.resource.data.updatedAt <= request.time;
+
       allow update: if is_authenticated() && (is_opportunity_owner() || is_admin()) &&
-                        request.resource.data.creatorId == resource.data.creatorId &&
-                        request.resource.data.updatedAt is timestamp;
+                            request.resource.data.creatorId == resource.data.creatorId && // creatorId cannot change on update
+                            request.resource.data.name is string && request.resource.data.name.size() > 0 &&
+                            request.resource.data.customerId is string && request.resource.data.customerId.size() > 0 &&
+                            request.resource.data.customerName is string && request.resource.data.customerName.size() > 0 &&
+                            request.resource.data.currency is string && request.resource.data.currency.size() > 0 &&
+                            request.resource.data.priceBookId is string &&
+                            isValidTimestampOrNull(request.resource.data.expectedStartDate) &&
+                            isValidTimestampOrNull(request.resource.data.expectedCloseDate) &&
+                            request.resource.data.salesStage is string && request.resource.data.salesStage in ['Prospect', 'Qualification', 'Proposal', 'Negotiation', 'Won', 'Lost'] &&
+                            isValidServicesInterestedList(request.resource.data.servicesInterested) &&
+                            request.resource.data.probability is number && request.resource.data.probability >= 0 && request.resource.data.probability <= 100 &&
+                            request.resource.data.value is number && request.resource.data.value >= 0 &&
+                            request.resource.data.opportunityDiscount is number && request.resource.data.opportunityDiscount >= 0 && request.resource.data.opportunityDiscount <= 100 &&
+                            request.resource.data.adjustmentAmt is number &&
+                            request.resource.data.opportunityNet is number && request.resource.data.opportunityNet >= 0 &&
+                            isValidOpportunityNet(
+                                request.resource.data.value,
+                                request.resource.data.opportunityDiscount,
+                                request.resource.data.adjustmentAmt,
+                                request.resource.data.opportunityNet
+                            ) &&
+                            request.resource.data.notes is string &&
+                            resource.data.createdAt == request.resource.data.createdAt && // createdAt cannot change on update
+                            request.resource.data.updatedAt is timestamp &&
+                            request.resource.data.updatedAt <= request.time;
+
       allow delete: if is_authenticated() && (is_opportunity_owner() || is_admin());
+
+      // NEW: Rules for 'workLogs' subcollection within 'opportunities'
+      match /workLogs/{workLogId} {
+        // Authenticated users can read work logs if they are the opportunity creator or an Admin
+        allow read: if is_authenticated() && (get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.creatorId == request.auth.uid || is_admin());
+
+        // Authenticated users can create work logs if they are the opportunity creator or an Admin
+        // And the work log's creatorId must match the authenticated user's UID
+        allow create: if is_authenticated()
+                      && (get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.creatorId == request.auth.uid || is_admin())
+                      && request.resource.data.creatorId == request.auth.uid
+                      && request.resource.data.date is timestamp &&
+                      request.resource.data.type is string && request.resource.data.type.size() > 0 &&
+                      request.resource.data.type in ['Call', 'Email', 'Meeting', 'Task', 'Note', 'Other'] &&
+                      request.resource.data.details is string &&
+                      request.resource.data.createdAt is timestamp &&
+                      request.resource.data.createdAt <= request.time &&
+                      request.resource.data.updatedAt is timestamp &&
+                      request.resource.data.updatedAt <= request.time;
+
+
+        // Authenticated users can update/delete work logs if they are the work log's creator or an Admin
+        // And the parent opportunity's creator must also be the authenticated user or an Admin
+        allow update, delete: if is_authenticated()
+                              && (request.auth.uid == resource.data.creatorId || is_admin())
+                              && (get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.creatorId == request.auth.uid || is_admin())
+                              && request.resource.data.date is timestamp &&
+                              request.resource.data.type is string && request.resource.data.type.size() > 0 &&
+                              request.resource.data.type in ['Call', 'Email', 'Meeting', 'Task', 'Note', 'Other'] &&
+                              request.resource.data.details is string &&
+                              resource.data.createdAt == request.resource.data.createdAt &&
+                              request.resource.data.updatedAt is timestamp &&
+                              request.resource.data.updatedAt <= request.time &&
+                              resource.data.creatorId == request.resource.data.creatorId;
+      }
     }
 
-    // --- 4. Rules for sub-collections of 'opportunities' ---
-    match /opportunities/{opportunityId}/{subcollection=**} {
-      allow read, create, update, delete: if is_authenticated() &&
-                                          (get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.creatorId == request.auth.uid || is_admin());
-    }
-
-    // --- 5. Rules for App Metadata Collections (Settings, Countries, Currencies, Price Books): ---
+    // --- 4. Rules for App Metadata Collections (Settings, Countries, Currencies, Price Books): ---
 
     // Global settings for the app (single document)
     match /settings/{documentId} {
@@ -147,97 +227,216 @@ service cloud.firestore {
       allow create, update, delete: if is_admin();
     }
 
-    // Price Book data (for dropdowns)
-    // Rules for the actual priceBook documents. Uniqueness is enforced via priceBookNameCurrencyIndexes.
+    // Price Book data (for actual priceBook documents)
     match /priceBooks/{documentId} {
       allow read: if is_authenticated();
-      
-      // Create: Admin only, with validation and uniqueness check.
       allow create: if is_admin() &&
-                        request.resource.data.keys().hasAll([
-                          'name', 'normalizedName', 'description', 'country', 'currency', 'normalizedCurrency', 'isActive', 'validFrom'
-                        ]) &&
-                        request.resource.data.keys().hasOnly([
-                          'name', 'normalizedName', 'description', 'country', 'currency', 'normalizedCurrency', 'isActive', 'validFrom', 'validTo' // Added validTo to hasOnly
-                        ]) &&
-                        request.resource.data.name is string &&
-                        request.resource.data.normalizedName is string &&
-                        request.resource.data.description is string &&
-                        request.resource.data.country is string && // NEW: Validate 'country' field
-                        request.resource.data.currency is string &&
-                        request.resource.data.normalizedCurrency is string &&
-                        request.resource.data.isActive is bool &&
-                        (isValidTimestampObject(request.resource.data.validFrom) || request.resource.data.validFrom == null) &&
-                        (isValidTimestampObject(request.resource.data.validTo) || request.resource.data.validTo == null) &&
-                        // Ensure normalizedName and normalizedCurrency are lowercase and contain no whitespace
-                        request.resource.data.normalizedName == request.resource.data.normalizedName.lower() &&
-                        !request.resource.data.normalizedName.matches('.*\\s.*') &&
-                        request.resource.data.normalizedCurrency == request.resource.data.normalizedCurrency.lower() &&
-                        !request.resource.data.normalizedCurrency.matches('.*\\s.*') &&
-                        // Ensure no index with this normalized name_currency combo already exists
-                        !exists(/databases/$(database)/documents/priceBookNameCurrencyIndexes/$(getPriceBookIndexId(request.resource.data.normalizedName, request.resource.data.normalizedCurrency)));
-
-      // Update: Admin only, with validation.
+                            request.resource.data.keys().hasAll([
+                                'name', 'normalizedName', 'description', 'currency', 'normalizedCurrency', 'isActive', 'createdAt', 'updatedAt'
+                            ]) &&
+                            request.resource.data.keys().hasOnly([
+                                'name', 'normalizedName', 'description', 'currency', 'normalizedCurrency', 'isActive', 'createdAt', 'updatedAt'
+                            ]) &&
+                            request.resource.data.name is string && request.resource.data.name.size() > 0 &&
+                            request.resource.data.normalizedName is string && request.resource.data.normalizedName.size() > 0 &&
+                            request.resource.data.description is string &&
+                            request.resource.data.currency is string && request.resource.data.currency.size() > 0 &&
+                            request.resource.data.normalizedCurrency is string && request.resource.data.normalizedCurrency.size() > 0 &&
+                            request.resource.data.isActive is bool &&
+                            request.resource.data.normalizedName == request.resource.data.name.lower().replace(' ', '') &&
+                            !request.resource.data.normalizedName.matches('.*\\s.*') && // No spaces
+                            request.resource.data.normalizedCurrency == request.resource.data.currency.lower().replace(' ', '') &&
+                            !request.resource.data.normalizedCurrency.matches('.*\\s.*') && // No spaces
+                            request.resource.data.createdAt is timestamp &&
+                            request.resource.data.createdAt <= request.time &&
+                            request.resource.data.updatedAt is timestamp &&
+                            request.resource.data.updatedAt <= request.time;
       allow update: if is_admin() &&
-                        request.resource.data.name is string &&
-                        request.resource.data.normalizedName is string &&
-                        request.resource.data.description is string &&
-                        request.resource.data.country is string && // NEW: Validate 'country' field
-                        request.resource.data.currency is string &&
-                        request.resource.data.normalizedCurrency is string &&
-                        request.resource.data.isActive is bool &&
-                        (isValidTimestampObject(request.resource.data.validFrom) || request.resource.data.validFrom == null) &&
-                        (isValidTimestampObject(request.resource.data.validTo) || request.resource.data.validTo == null) &&
-                        // Ensure normalizedName and normalizedCurrency are lowercase and contain no whitespace
-                        request.resource.data.normalizedName == request.resource.data.normalizedName.lower() &&
-                        !request.resource.data.normalizedName.matches('.*\\s.*') &&
-                        request.resource.data.normalizedCurrency == request.resource.data.normalizedCurrency.lower() &&
-                        !request.resource.data.normalizedCurrency.matches('.*\\s.*');
-      
+                            request.resource.data.keys().hasAll([
+                                'name', 'normalizedName', 'description', 'currency', 'normalizedCurrency', 'isActive', 'createdAt', 'updatedAt'
+                            ]) &&
+                            request.resource.data.keys().hasOnly([
+                                'name', 'normalizedName', 'description', 'currency', 'normalizedCurrency', 'isActive', 'createdAt', 'updatedAt'
+                            ]) &&
+                            request.resource.data.name is string && request.resource.data.name.size() > 0 &&
+                            request.resource.data.normalizedName is string && request.resource.data.normalizedName.size() > 0 &&
+                            request.resource.data.description is string &&
+                            request.resource.data.currency is string && request.resource.data.currency.size() > 0 &&
+                            request.resource.data.normalizedCurrency is string && request.resource.data.normalizedCurrency.size() > 0 &&
+                            request.resource.data.isActive is bool &&
+                            request.resource.data.normalizedName == resource.data.normalizedName && // normalizedName should not change on update
+                            !request.resource.data.normalizedName.matches('.*\\s.*') && // No spaces
+                            request.resource.data.normalizedCurrency == resource.data.normalizedCurrency && // normalizedCurrency should not change on update
+                            !request.resource.data.normalizedCurrency.matches('.*\\s.*') && // No spaces
+                            resource.data.createdAt == request.resource.data.createdAt && // createdAt cannot change
+                            request.resource.data.updatedAt is timestamp &&
+                            request.resource.data.updatedAt <= request.time;
       allow delete: if is_admin();
     }
 
-    // --- NEW COLLECTION: priceBookNameCurrencyIndexes ---
-    // This collection stores unique combinations of name+currency as document IDs
-    // to enforce uniqueness across the 'priceBooks' collection via security rules.
-    match /priceBookNameCurrencyIndexes/{indexId} {
-      // Only Admins can write to this index collection.
-      // The indexId must match the expected format (normalizedName_normalizedCurrency).
-      // The data must contain the actual priceBookId, normalizedName, and normalizedCurrency.
+    // --- NEW COLLECTION: 'quotes' ---
+    match /quotes/{quoteId} {
+      // Read Rule: Admin can read all, standard users can read quotes tied to opportunities they own.
+      allow read: if is_authenticated() && (
+                    is_admin() ||
+                    (resource.data.opportunityId != null &&
+                     exists(/databases/$(database)/documents/opportunities/$(resource.data.opportunityId)) &&
+                     get(/databases/$(database)/documents/opportunities/$(resource.data.opportunityId)).data.creatorId == request.auth.uid)
+                  );
 
-      // Create: Allows creation of a new index, but only if it doesn't already exist.
+      // Create Rule: Only Admin can create quotes.
       allow create: if is_admin() &&
-                        request.resource.id == getPriceBookIndexId(request.resource.data.priceBookName, request.resource.data.priceBookCurrency) &&
-                        request.resource.data.priceBookId is string &&
-                        request.resource.data.priceBookName is string && // This is the normalized name for the index
-                        request.resource.data.priceBookCurrency is string && // This is the normalized currency for the index
-                        // Ensure the stored normalized values are actually normalized
-                        request.resource.data.priceBookName == request.resource.data.priceBookName.lower() &&
-                        !request.resource.data.priceBookName.matches('.*\\s.*') &&
-                        request.resource.data.priceBookCurrency == request.resource.data.priceBookCurrency.lower() &&
-                        !request.resource.data.priceBookCurrency.matches('.*\\s.*') &&
-                        // Ensure this index ID does not exist BEFORE the write.
-                        !exists(request.resource.__path__);
-      
-      // Update: Only Admins can update.
-      allow update: if is_admin() &&
-                        request.resource.id == getPriceBookIndexId(request.resource.data.priceBookName, request.resource.data.priceBookCurrency) &&
-                        request.resource.data.priceBookId is string &&
-                        request.resource.data.priceBookName is string &&
-                        request.resource.data.priceBookCurrency is string &&
-                        // Ensure the stored normalized values are actually normalized
-                        request.resource.data.priceBookName == request.resource.data.priceBookName.lower() &&
-                        !request.resource.data.priceBookName.matches('.*\\s.*') &&
-                        request.resource.data.priceBookCurrency == request.resource.data.priceBookCurrency.lower() &&
-                        !request.resource.data.priceBookCurrency.matches('.*\\s.*') &&
-                        // Ensure the priceBookId for this index document doesn't change
-                        resource.data.priceBookId == request.resource.data.priceBookId;
+                    request.resource.data.quoteName is string && request.resource.data.quoteName.size() > 0 &&
+                    request.resource.data.opportunityId is string && request.resource.data.opportunityId.size() > 0 &&
+                    // Validate opportunity exists and has salesStage 'Won'
+                    exists(/databases/$(database)/documents/opportunities/$(request.resource.data.opportunityId)) &&
+                    get(/databases/$(database)/documents/opportunities/$(request.resource.data.opportunityId)).data.salesStage == 'Won' &&
+                    // Customer details are copied, so just validate their type and presence
+                    request.resource.data.customerContactName is string &&
+                    request.resource.data.phone is string &&
+                    request.resource.data.email is string &&
+                    request.resource.data.customerAddress is string &&
+                    request.resource.data.eventName is string && request.resource.data.eventName.size() > 0 &&
+                    isValidTimestampOrNull(request.resource.data.eventDate) &&
+                    request.resource.data.additionalDetails is string &&
+                    request.resource.data.quoteAmount is number && request.resource.data.quoteAmount >= 0 &&
+                    request.resource.data.status is string && request.resource.data.status in ['Draft', 'Review', 'Finalized'] &&
+                    request.resource.data.creatorId == request.auth.uid &&
+                    request.resource.data.createdAt is timestamp && request.resource.data.createdAt <= request.time &&
+                    request.resource.data.updatedAt is timestamp && request.resource.data.updatedAt <= request.time;
 
-      // Delete: Only Admins can delete index entries.
+      // Update Rule: Only Admin can update quotes.
+      allow update: if is_admin() &&
+                    // Ensure core fields don't change
+                    request.resource.data.creatorId == resource.data.creatorId &&
+                    request.resource.data.createdAt == resource.data.createdAt &&
+                    request.resource.data.opportunityId == resource.data.opportunityId && // Opportunity cannot change after creation
+                    // Validate customer details (copied fields) - just check type
+                    request.resource.data.customerContactName is string &&
+                    request.resource.data.phone is string &&
+                    request.resource.data.email is string &&
+                    request.resource.data.customerAddress is string &&
+                    // Validate other fields
+                    request.resource.data.quoteName is string && request.resource.data.quoteName.size() > 0 &&
+                    request.resource.data.eventName is string && request.resource.data.eventName.size() > 0 &&
+                    isValidTimestampOrNull(request.resource.data.eventDate) &&
+                    request.resource.data.additionalDetails is string &&
+                    request.resource.data.quoteAmount is number && request.resource.data.quoteAmount >= 0 &&
+                    request.resource.data.status is string && request.resource.data.status in ['Draft', 'Review', 'Finalized'] &&
+                    request.resource.data.updatedAt is timestamp &&
+                    request.resource.data.updatedAt <= request.time;
+
+      // Delete Rule: Only Admin can delete quotes.
       allow delete: if is_admin();
       
-      // No one can read this collection directly (it's purely for indexing)
-      allow read: if false;
+      // --- NEW: Rules for 'quoteLines' subcollection within 'quotes' ---
+      match /quoteLines/{quoteLineId} {
+        // Helper function to check if the user is the creator of the parent quote or an admin
+        function is_parent_quote_owner_or_admin() {
+          return is_admin() || (
+            exists(/databases/$(database)/documents/quotes/$(quoteId)) &&
+            get(/databases/$(database)/documents/quotes/$(quoteId)).data.creatorId == request.auth.uid
+          );
+        }
+
+        // Read: Only the parent quote owner or admin can read quote lines.
+        allow read: if is_authenticated() && is_parent_quote_owner_or_admin();
+
+        // Create: Only the parent quote owner or admin can create quote lines.
+        allow create: if is_authenticated() && is_parent_quote_owner_or_admin() &&
+                      request.resource.data.services is string && request.resource.data.services.size() > 0 &&
+                      request.resource.data.serviceDescription is string &&
+                      isValidTimestampOrNull(request.resource.data.serviceStartDate) &&
+                      isValidTimestampOrNull(request.resource.data.serviceEndDate) &&
+                      request.resource.data.unitPrice is number && request.resource.data.unitPrice >= 0 &&
+                      request.resource.data.quantity is number && request.resource.data.quantity >= 0 &&
+                      request.resource.data.discount is number && request.resource.data.discount >= 0 && request.resource.data.discount <= 100 &&
+                      request.resource.data.adjustmentAmount is number &&
+                      request.resource.data.finalNet is number && request.resource.data.finalNet >= 0 &&
+                      // Validate Final Net calculation
+                      (request.resource.data.finalNet == (request.resource.data.unitPrice * request.resource.data.quantity - (request.resource.data.unitPrice * request.resource.data.quantity * request.resource.data.discount / 100.0) - request.resource.data.adjustmentAmount) ||
+                       (request.resource.data.finalNet - (request.resource.data.unitPrice * request.resource.data.quantity - (request.resource.data.unitPrice * request.resource.data.quantity * request.resource.data.discount / 100.0) - request.resource.data.adjustmentAmount)).abs() < 0.01) &&
+                      request.resource.data.createdAt is timestamp &&
+                      request.resource.data.createdAt <= request.time &&
+                      request.resource.data.updatedAt is timestamp &&
+                      request.resource.data.updatedAt <= request.time;
+
+
+        // Update: Only the parent quote owner or admin can update quote lines.
+        allow update: if is_authenticated() && is_parent_quote_owner_or_admin() &&
+                      request.resource.data.services is string && request.resource.data.services.size() > 0 &&
+                      request.resource.data.serviceDescription is string &&
+                      isValidTimestampOrNull(request.resource.data.serviceStartDate) &&
+                      isValidTimestampOrNull(request.resource.data.serviceEndDate) &&
+                      request.resource.data.unitPrice is number && request.resource.data.unitPrice >= 0 &&
+                      request.resource.data.quantity is number && request.resource.data.quantity >= 0 &&
+                      request.resource.data.discount is number && request.resource.data.discount >= 0 && request.resource.data.discount <= 100 &&
+                      request.resource.data.adjustmentAmount is number &&
+                      request.resource.data.finalNet is number && request.resource.data.finalNet >= 0 &&
+                      // Validate Final Net calculation
+                      (request.resource.data.finalNet == (request.resource.data.unitPrice * request.resource.data.quantity - (request.resource.data.unitPrice * request.resource.data.quantity * request.resource.data.discount / 100.0) - request.resource.data.adjustmentAmount) ||
+                       (request.resource.data.finalNet - (request.resource.data.unitPrice * request.resource.data.quantity - (request.resource.data.unitPrice * request.resource.data.quantity * request.resource.data.discount / 100.0) - request.resource.data.adjustmentAmount)).abs() < 0.01) &&
+                      resource.data.createdAt == request.resource.data.createdAt && // createdAt cannot change
+                      request.resource.data.updatedAt is timestamp &&
+                      request.resource.data.updatedAt <= request.time;
+
+
+        // Delete: Only the parent quote owner or admin can delete quote lines.
+        allow delete: if is_authenticated() && is_parent_quote_owner_or_admin();
+      }
+     
+    }
+
+    // --- NEW COLLECTION: 'leads' ---
+    match /leads/{leadId} {
+      function is_lead_owner() {
+        return resource.data.creatorId == request.auth.uid;
+      }
+
+      // Read: Any authenticated user can read leads they created, or an Admin can read all.
+      allow read: if is_authenticated() && (is_lead_owner() || is_admin());
+
+      // Create: Any authenticated user can create a lead, but must be the creator.
+      allow create: if is_authenticated() &&
+                    request.auth.uid == request.resource.data.creatorId &&
+                    request.resource.data.keys().hasAll([
+                      'contactName', 'phone', 'email', 'servicesInterested', 'eventDate',
+                      'source', 'additionalDetails', 'createdAt', 'updatedAt', 'creatorId'
+                    ]) &&
+                    request.resource.data.keys().hasOnly([
+                      'contactName', 'phone', 'email', 'servicesInterested', 'eventDate',
+                      'source', 'additionalDetails', 'createdAt', 'updatedAt', 'creatorId'
+                    ]) &&
+                    request.resource.data.contactName is string && request.resource.data.contactName.size() > 0 &&
+                    request.resource.data.phone is string &&
+                    request.resource.data.email is string &&
+                    isValidServicesInterestedList(request.resource.data.servicesInterested) &&
+                    isValidTimestampOrNull(request.resource.data.eventDate) &&
+                    request.resource.data.source is string && request.resource.data.source.size() > 0 &&
+                    request.resource.data.source in ['Website', 'Referral', 'Social Media', 'Advertisement', 'Event', 'Others'] &&
+                    request.resource.data.additionalDetails is string &&
+                    request.resource.data.createdAt is timestamp &&
+                    request.resource.data.createdAt <= request.time &&
+                    request.resource.data.updatedAt is timestamp &&
+                    request.resource.data.updatedAt <= request.time;
+
+      // Update: Owner or Admin can update. CreatorId must remain unchanged.
+      allow update: if is_authenticated() && (is_lead_owner() || is_admin()) &&
+                    request.resource.data.creatorId == resource.data.creatorId &&
+                    request.resource.data.contactName is string && request.resource.data.contactName.size() > 0 &&
+                    request.resource.data.phone is string &&
+                    request.resource.data.email is string &&
+                    isValidServicesInterestedList(request.resource.data.servicesInterested) &&
+                    isValidTimestampOrNull(request.resource.data.eventDate) &&
+                    request.resource.data.source is string && request.resource.data.source.size() > 0 &&
+                    request.resource.data.source in ['Website', 'Referral', 'Social Media', 'Advertisement', 'Event', 'Others'] &&
+                    request.resource.data.additionalDetails is string &&
+                    resource.data.createdAt == request.resource.data.createdAt &&
+                    request.resource.data.updatedAt is timestamp &&
+                    request.resource.data.updatedAt <= request.time;
+
+      // Delete: Owner or Admin can delete.
+      allow delete: if is_authenticated() && (is_lead_owner() || is_admin());
     }
   }
 }
