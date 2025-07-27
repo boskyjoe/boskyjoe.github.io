@@ -2847,7 +2847,6 @@ async function renderWorkLogs(opportunityId) {
 
 
 
-
 /**
  * Handles the editing of an existing work log entry.
  * Populates the work log form with existing data and shows the form.
@@ -2856,6 +2855,14 @@ async function renderWorkLogs(opportunityId) {
  */
 async function handleEditWorkLog(workLogId, workLogData) {
     console.log(`handleEditWorkLog: Editing work log ID: ${workLogId}`, workLogData); // DEBUG LOG
+
+    // --- IMPORTANT: Client-side role check for editing ---
+    if (currentUserRole !== 'Admin') {
+        showMessageBox("Permission Denied: Only users with 'Admin' role can edit work logs.", 'alert', true);
+        console.warn("Attempted to edit work log without Admin privileges.");
+        return;
+    }
+    // --- End Role Check ---
 
     showForm(opportunityWorkLogFormContainer); // Show the work log form
     if (opportunityWorkLogForm) opportunityWorkLogForm.reset();
@@ -2868,7 +2875,6 @@ async function handleEditWorkLog(workLogId, workLogData) {
         document.getElementById('work-log-date').value = date;
     }
     
-    // Populate work log type dropdown (assuming populateWorkLogTypes exists and is called)
     populateWorkLogTypes(); // Ensure dropdown is populated before setting value
     if (workLogTypeSelect) workLogTypeSelect.value = workLogData.type || '';
     
@@ -2878,7 +2884,6 @@ async function handleEditWorkLog(workLogId, workLogData) {
     if (workLogFormMessage) workLogFormMessage.classList.add('hidden');
 }
 
-
 /**
  * Handles the deletion of a work log document from Firestore.
  * Prompts for confirmation before proceeding with deletion.
@@ -2886,6 +2891,14 @@ async function handleEditWorkLog(workLogId, workLogData) {
  */
 async function handleDeleteWorkLog(workLogId) {
     console.log(`handleDeleteWorkLog: Attempting to delete work log with ID: ${workLogId}`); // DEBUG LOG
+
+    // --- IMPORTANT: Client-side role check for deleting ---
+    if (currentUserRole !== 'Admin') {
+        showMessageBox("Permission Denied: Only users with 'Admin' role can delete work logs.", 'alert', true);
+        console.warn("Attempted to delete work log without Admin privileges.");
+        return;
+    }
+    // --- End Role Check ---
 
     if (!currentOpportunityId) {
         showMessageBox("Error: Cannot delete work log. Parent opportunity ID is missing.", 'alert', true);
@@ -2915,7 +2928,7 @@ async function handleDeleteWorkLog(workLogId) {
         } catch (error) {
             console.error("handleDeleteWorkLog: Error deleting work log:", error); // Log the full error object
             if (error.code && error.message) {
-                showMessageBox(`Error deleting work log: ${error.message} (Code: ${error.code})`, 'alert', true);
+                showMessageBox(`Error deleting work log: ${error.message}`, 'alert', true);
             } else {
                 showMessageBox(`Error deleting work log: An unexpected error occurred.`, 'alert', true);
             }
@@ -2924,7 +2937,6 @@ async function handleDeleteWorkLog(workLogId) {
         console.log("handleDeleteWorkLog: Deletion cancelled by user."); // DEBUG LOG: If user cancels
     }
 }
-
 
 
 
