@@ -279,7 +279,8 @@
                         </select>
                     </div>
                     <div>
-                        <label for="customer-additional-details" class="block text-sm font-medium text-gray-700">Additional
+                        <label for="customer-additional-details"
+                            class="block text-sm font-medium text-gray-700">Additional
                             Details</label>
                         <textarea id="customer-additional-details" rows="3"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
@@ -402,11 +403,9 @@
             <div id="opportunity-form-container" class="hidden bg-white p-6 rounded-lg shadow-md mb-6">
                 <h3 class="text-2xl font-bold text-gray-800 mb-4">Opportunity Details</h3>
 
-                <!-- Grid container for dynamic side-by-side or full-width accordions -->
-                <!-- This wraps both the main opportunity details accordion AND the work logs accordion -->
                 <div id="opportunity-accordions-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                    <!-- Main Opportunity Details Accordion (Left Column / Full Span dynamically) -->
+                    <!-- Main Opportunity Details Accordion -->
                     <div id="main-opportunity-details-accordion"
                         class="accordion-item bg-white rounded-lg shadow-md md:col-span-full">
                         <div
@@ -414,9 +413,8 @@
                             <h3 class="text-lg font-semibold text-gray-800">Main Details</h3>
                             <span class="accordion-icon transform transition-transform duration-200">&#9660;</span>
                         </div>
-                        <!-- Content starts hidden, JS will open it and set icon -->
-                        <div class="accordion-content hidden pt-4">
-                            <!-- THE OPPORTUNITY FORM IS NOW INSIDE THIS ACCORDION CONTENT -->
+                        <!-- CRITICAL HTML FIX 1: Add ID to accordion content -->
+                        <div id="main-details-content" class="accordion-content hidden pt-4">
                             <form id="opportunity-form" class="space-y-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <input type="hidden" id="opportunity-id">
 
@@ -454,16 +452,22 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="opportunity-start-date"
+                                    <label for="opportunity-expected-start-date" <!-- CRITICAL HTML FIX 2: Correct ID
+                                        -->
                                         class="block text-sm font-medium text-gray-700">Expected Start Date</label>
-                                    <input type="date" id="opportunity-expected-start-date"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <input type="date" id="opportunity-expected-start-date" <!-- CRITICAL HTML FIX 2:
+                                        Correct ID -->
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
+                                    focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 </div>
                                 <div>
-                                    <label for="opportunity-close-date"
+                                    <label for="opportunity-expected-close-date" <!-- CRITICAL HTML FIX 3: Correct ID
+                                        -->
                                         class="block text-sm font-medium text-gray-700">Expected Close Date</label>
-                                    <input type="date" id="opportunity-expected-close-date"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <input type="date" id="opportunity-expected-close-date" <!-- CRITICAL HTML FIX 3:
+                                        Correct ID -->
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
+                                    focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 </div>
                                 <div>
                                     <label for="opportunity-sales-stage"
@@ -502,20 +506,23 @@
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 </div>
                                 <div>
-                                    <label for="adjustment-amt"
+                                    <label for="opportunity-adjustment-amt" <!-- CRITICAL HTML FIX 4: Correct ID -->
                                         class="block text-sm font-medium text-gray-700">Adjustment Amt</label>
-                                    <input type="number" step="0.01" id="opportunity-adjustment-amt" name="adjustmentAmt" value="0"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <input type="number" step="0.01" id="opportunity-adjustment-amt"
+                                        name="adjustmentAmt" value="0" <!-- CRITICAL HTML FIX 4: Correct ID -->
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
+                                    focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 </div>
                                 <div>
-                                    <label for="opportunity-net"
+                                    <label for="opportunity-net-span" <!-- CRITICAL HTML FIX 5: Correct ID -->
                                         class="block text-sm font-medium text-gray-700">Opportunity Net</label>
-                                    <span id="opportunity-net-span"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-md shadow-sm sm:text-sm">0.00</span>
+                                    <span id="opportunity-net-span" <!-- CRITICAL HTML FIX 5: Correct ID -->
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-md
+                                        shadow-sm sm:text-sm">0.00</span>
                                 </div>
                                 <!-- End New Fields -->
 
-                                <div class="col-span-full"> <!-- Make this span full width in grid -->
+                                <div class="col-span-full">
                                     <label for="opportunity-services-interested"
                                         class="block text-sm font-medium text-gray-700">Services Interested <span
                                             class="text-red-500">*</span></label>
@@ -526,7 +533,7 @@
                                     </select>
                                     <p class="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
                                 </div>
-                                <div class="col-span-full"> <!-- Make this span full width in grid -->
+                                <div class="col-span-full">
                                     <label for="opportunity-notes"
                                         class="block text-sm font-medium text-gray-700">Notes</label>
                                     <textarea id="opportunity-notes" rows="3"
@@ -548,24 +555,29 @@
                     </div>
 
                     <!-- Work Logs Accordion (Right Column, hidden by default) -->
-                    <div id="work-logs-section-container" class="accordion-item bg-white rounded-lg shadow-md hidden">
+                    <div id="opportunity-work-logs-section" <!-- CRITICAL HTML FIX 6: Correct ID -->
+                        class="accordion-item bg-white rounded-lg shadow-md hidden">
                         <div
                             class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200">
                             <h3 class="text-lg font-semibold text-gray-800">Work Logs</h3>
                             <span class="accordion-icon transform transition-transform duration-200">&#9660;</span>
                         </div>
-                        <div class="accordion-content hidden pt-4">
-                            <div id="work-logs-list-container" class="mb-4">
+                        <!-- CRITICAL HTML FIX 7: Add ID to accordion content -->
+                        <div id="opportunity-work-logs-content" class="accordion-content hidden pt-4">
+                            <div id="work-logs-list-wrapper" class="mb-4">
+                                <!-- Renamed for clarity, not strictly necessary -->
                                 <p id="no-work-logs-message" class="text-center text-gray-500 hidden">No work logs found
                                     for this opportunity.</p>
-                                <ul id="work-logs-list" class="space-y-2"></ul>
+                                <ul id="opportunity-work-logs-container" class="space-y-2"></ul>
+                                <!-- CRITICAL HTML FIX 8: Correct ID for UL -->
                             </div>
 
-                            <button id="add-work-log-btn" type="button"
-                                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300 mb-4">Add
+                            <button id="add-work-log-btn" type="button" <!-- CRITICAL HTML FIX 9: Correct ID -->
+                                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition
+                                duration-300 mb-4">Add
                                 New Work Log Entry</button>
 
-                            <!-- Work Log Entry Form (NOW A SEPARATE FORM, NOT NESTED) -->
+                            <!-- Work Log Entry Form -->
                             <div id="work-log-form-container" class="hidden bg-gray-50 p-4 rounded-lg shadow-inner">
                                 <h4 class="text-md font-semibold text-gray-700 mb-3">Add/Edit Work Log Entry</h4>
                                 <form id="work-log-form" class="space-y-4">
