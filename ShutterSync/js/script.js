@@ -320,6 +320,28 @@ function showMessageBox(message, type = 'alert', isError = false) { // Removed c
     });
 }
 
+/**
+ * Sets the active state for a navigation link, highlighting it and removing active state from others.
+ * @param {string} activeLinkId The ID of the navigation link to set as active (e.g., 'nav-dashboard').
+ */
+function setActiveNavLink(activeLinkId) {
+    // Get all navigation links within the header
+    const navLinks = document.querySelectorAll('header nav ul li a');
+
+    navLinks.forEach(link => {
+        // Remove active styling from all links
+        link.classList.remove('bg-blue-700', 'text-white', 'font-bold'); // Example active classes
+        link.classList.add('hover:text-blue-200', 'transition', 'duration-300', 'px-3', 'py-2', 'rounded-md'); // Restore default styling
+    });
+
+    // Add active styling to the specified link
+    const activeLink = document.getElementById(activeLinkId);
+    if (activeLink) {
+        activeLink.classList.add('bg-blue-700', 'text-white', 'font-bold'); // Apply active styling
+        activeLink.classList.remove('hover:text-blue-200'); // Remove hover effect if it conflicts with active
+    }
+}
+
 
 
 /**
