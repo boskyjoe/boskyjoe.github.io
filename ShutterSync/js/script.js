@@ -342,6 +342,35 @@ function setActiveNavLink(activeLinkId) {
     }
 }
 
+/**
+ * Hides all main content sections by adding the 'hidden' class to them.
+ * This is crucial for single-page application navigation.
+ */
+function hideAllSections() {
+    console.log("Hiding all main content sections."); // Debug log
+
+    // Get references to all main content sections.
+    // Ensure these global variables are correctly assigned in initializePage()
+    // and correspond to the IDs in your HTML.
+    if (dashboardSection) dashboardSection.classList.add('hidden');
+    if (customersSection) customersSection.classList.add('hidden');
+    if (leadsSection) leadsSection.classList.add('hidden');
+    if (opportunitiesSection) opportunitiesSection.classList.add('hidden');
+    if (quotesSection) quotesSection.classList.add('hidden');
+    if (countriesSection) countriesSection.classList.add('hidden');
+    if (currenciesSection) currenciesSection.classList.add('hidden');
+    if (priceBooksSection) priceBooksSection.classList.add('hidden');
+
+    // Also hide any active forms that might be open across sections
+    if (customerFormContainer) hideForm(customerFormContainer);
+    if (leadFormContainer) hideForm(leadFormContainer);
+    if (opportunityFormContainer) hideForm(opportunityFormContainer);
+    if (quoteFormContainer) hideForm(quoteFormContainer); // Assuming you have one
+    if (countryFormContainer) hideForm(countryFormContainer); // Assuming you have one
+    if (currencyFormContainer) hideForm(currencyFormContainer); // Assuming you have one
+    if (priceBookFormContainer) hideForm(priceBookFormContainer); // Assuming you have one
+}
+
 
 
 /**
