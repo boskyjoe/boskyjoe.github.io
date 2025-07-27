@@ -844,29 +844,38 @@ async function setupWorkLogForm(workLog = null) {
     showWorkLogForm();
 }
 
-function showWorkLogForm() { // Made this function explicitly separate for clarity and global access
-    if (workLogFormContainer) workLogFormContainer.classList.remove('hidden');
+
+/**
+ * Shows the work log entry form and resets it.
+ */
+function showWorkLogForm() {
+    if (opportunityWorkLogFormContainer) {
+        opportunityWorkLogFormContainer.classList.remove('hidden');
+    }
+    if (opportunityWorkLogForm) {
+        opportunityWorkLogForm.reset();
+    }
+    // Clear any previous messages
+    if (workLogFormMessage) workLogFormMessage.classList.add('hidden');
+    // Set opportunity ID in hidden field for new work log
+    if (document.getElementById('work-log-opportunity-id')) {
+        document.getElementById('work-log-opportunity-id').value = currentOpportunityId;
+    }
+    // Populate dropdowns for the work log form
+    populateWorkLogTypes();
 }
 
+/**
+ * Hides the work log entry form.
+ */
 function hideWorkLogForm() {
-    if (workLogFormContainer) {
-        workLogFormContainer.classList.add('hidden');
+    if (opportunityWorkLogFormContainer) {
+        opportunityWorkLogFormContainer.classList.add('hidden');
     }
-    if (workLogForm) {
-        workLogForm.reset();
-        workLogForm.setAttribute('novalidate', 'novalidate');
+    if (opportunityWorkLogForm) {
+        opportunityWorkLogForm.reset();
     }
-    const workLogIdInput = document.getElementById('work-log-id');
-    const workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
-
-    if (workLogIdInput) workLogIdInput.value = '';
-    if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = '';
-    
-    if (workLogFormMessage) {
-        showMessageBox(workLogFormMessage, '', false);
-    } else {
-        console.warn("workLogFormMessage element not found or not yet initialized in hideWorkLogForm.");
-    }
+    if (workLogFormMessage) workLogFormMessage.classList.add('hidden');
 }
 
 
@@ -2030,6 +2039,8 @@ function populateOpportunityServicesInterested() {
 
 /**
  * Sets up the opportunity form for adding a new opportunity or editing an existing one.
+ * It handles clearing the form, populating dropdowns, setting default values for new opportunities,
+ * pre-populating fields for existing opportunities, and managing the visibility of accordions.
  * @param {object | null} opportunityData Optional: The opportunity data to pre-populate the form.
  */
 async function setupOpportunityForm(opportunityData = null) {
@@ -2038,9 +2049,10 @@ async function setupOpportunityForm(opportunityData = null) {
     if (opportunityForm) opportunityForm.reset();
     if (document.getElementById('opportunity-id')) document.getElementById('opportunity-id').value = ''; // Clear ID for new
 
-    // 2. Clear and hide work logs section initially
+    // 2. Clear work logs section content initially
     if (opportunityWorkLogsContainer) opportunityWorkLogsContainer.innerHTML = '';
-    if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.add('hidden'); // Hide the whole accordion
+    // Also hide the work log form
+    hideForm(opportunityWorkLogFormContainer);
 
     // 3. Populate all dropdowns
     await populateOpportunityCustomers();
@@ -2077,17 +2089,19 @@ async function setupOpportunityForm(opportunityData = null) {
         }
 
         if (document.getElementById('opportunity-probability')) document.getElementById('opportunity-probability').value = opportunityData.probability !== undefined ? opportunityData.probability : 0;
-        if (opportunityValueInput) opportunityValueInput.value = opportunityData.value !== undefined ? opportunityData.value : 0;
-        if (opportunityDiscountInput) opportunityDiscountInput.value = opportunityData.opportunityDiscount !== undefined ? opportunityData.opportunityDiscount : 0;
-        if (adjustmentAmtInput) adjustmentAmtInput.value = opportunityData.adjustmentAmt !== undefined ? opportunityData.adjustmentAmt : 0;
+        if (document.getElementById('opportunity-value')) document.getElementById('opportunity-value').value = opportunityData.value !== undefined ? opportunityData.value : 0;
+        if (document.getElementById('opportunity-discount')) document.getElementById('opportunity-discount').value = opportunityData.opportunityDiscount !== undefined ? opportunityData.opportunityDiscount : 0;
+        if (document.getElementById('opportunity-adjustment-amt')) document.getElementById('opportunity-adjustment-amt').value = opportunityData.adjustmentAmt !== undefined ? opportunityData.adjustmentAmt : 0;
         if (document.getElementById('opportunity-notes')) document.getElementById('opportunity-notes').value = opportunityData.notes || '';
         
         calculateOpportunityNet();
 
-        // Show work logs section for existing opportunities
+        // Layout adjustment for existing opportunities: Main Details takes 1 column, Work Logs visible
+        if (mainOpportunityDetailsAccordion) mainOpportunityDetailsAccordion.classList.remove('md:col-span-full');
         if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.remove('hidden');
-        if (opportunityWorkLogsContent) opportunityWorkLogsContent.classList.remove('hidden'); // Also show the content
-        // CRITICAL FIX: No setTimeout needed here, elements should be available now
+        if (opportunityWorkLogsContent) opportunityWorkLogsContent.classList.remove('hidden'); // Ensure content is also visible
+        
+        // Load and render work logs
         await renderWorkLogs(opportunityData.id);
 
         // Ensure Main Details accordion is open
@@ -2104,12 +2118,13 @@ async function setupOpportunityForm(opportunityData = null) {
         // Set default values for new opportunities
         if (opportunitySalesStageSelect) opportunitySalesStageSelect.value = 'Prospect';
         if (document.getElementById('opportunity-probability')) document.getElementById('opportunity-probability').value = 0;
-        if (opportunityValueInput) opportunityValueInput.value = 0;
-        if (opportunityDiscountInput) opportunityDiscountInput.value = 0;
-        if (adjustmentAmtInput) adjustmentAmtInput.value = 0;
+        if (document.getElementById('opportunity-value')) document.getElementById('opportunity-value').value = 0;
+        if (document.getElementById('opportunity-discount')) document.getElementById('opportunity-discount').value = 0;
+        if (document.getElementById('opportunity-adjustment-amt')) document.getElementById('opportunity-adjustment-amt').value = 0;
         calculateOpportunityNet();
 
-        // Hide work logs section for new opportunities (until saved)
+        // Layout adjustment for new opportunities: Main Details takes full width, Work Logs hidden
+        if (mainOpportunityDetailsAccordion) mainOpportunityDetailsAccordion.classList.add('md:col-span-full');
         if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.add('hidden');
         if (opportunityWorkLogsContent) opportunityWorkLogsContent.classList.add('hidden'); // Ensure content is hidden
 
@@ -2121,6 +2136,7 @@ async function setupOpportunityForm(opportunityData = null) {
         }
     }
 }
+
 
 
 
@@ -2644,74 +2660,85 @@ async function loadWorkLogs(opportunityId) {
         });
 }
 
+/**
+ * Handles saving a new work log entry or updating an existing one within an opportunity.
+ * @param {Event} event The form submission event.
+ */
 async function handleSaveWorkLog(event) {
     event.preventDefault();
-    console.log('handleSaveWorkLog: Form submit event triggered.'); // Diagnostic log
-    if (!db || !userId || !currentOpportunityId) {
-        showMessageBox("Authentication or selected opportunity required to save work log.", false);
+    console.log('handleSaveWorkLog: Form submit event triggered.');
+
+    if (!db || !auth.currentUser?.uid) {
+        showMessageBox("Authentication required to save work log.", 'alert', true);
+        return;
+    }
+
+    if (!currentOpportunityId) {
+        showMessageBox("Error: Cannot save work log. Parent opportunity ID is missing.", 'alert', true);
+        console.error("handleSaveWorkLog: currentOpportunityId is null, cannot save work log.");
         return;
     }
 
     const workLogId = document.getElementById('work-log-id').value;
-    const messageElement = workLogFormMessage;
-    if (messageElement) messageElement.classList.add('hidden');
+    const workLogOpportunityId = document.getElementById('work-log-opportunity-id').value; // Should be currentOpportunityId
 
-    // --- Start Client-Side Validation for Work Log ---
-    const requiredFields = workLogForm.querySelectorAll('[required]');
-    let firstInvalidField = null;
-
-    for (const field of requiredFields) {
-        if (!field.value) {
-            firstInvalidField = field;
-            break;
-        }
+    if (workLogOpportunityId !== currentOpportunityId) {
+        console.warn("Work log's opportunity ID mismatch. Using currentOpportunityId.");
     }
 
-    if (firstInvalidField) {
-        console.warn('Work Log Validation failed: Required field is empty.', firstInvalidField);
-        firstInvalidField.focus(); // Focus on the invalid field
-        messageElement.textContent = `Please fill in the required field: ${firstInvalidField.labels ? firstInvalidField.labels[0].textContent : firstInvalidField.id.replace(/-/g, ' ')}.`;
-        messageElement.classList.remove('hidden');
-        return; // Stop form submission
+    // Collect data directly from DOM elements
+    const workLogDate = document.getElementById('work-log-date').value;
+    const workLogType = workLogTypeSelect ? workLogTypeSelect.value : '';
+    const workLogDetails = document.getElementById('work-log-details').value;
+
+    // Client-side validation
+    if (!workLogDate || !workLogType || !workLogDetails) {
+        showMessageBox("Please fill in all required work log fields.", 'alert', true);
+        return;
     }
-    // --- End Client-Side Validation for Work Log ---
 
-    const workLogDateValue = document.getElementById('work-log-date').value;
-    const workLogDateTimestamp = workLogDateValue ? new Date(workLogDateValue) : null;
-
-    const workLogData = {
-        opportunityId: currentOpportunityId, // Stored for reference, but path is now subcollection
-        date: workLogDateTimestamp, // Save as Date object (Firestore converts to Timestamp)
-        type: workLogTypeSelect.value, // Get value from the select
-        details: document.getElementById('work-log-details').value,
-        creatorId: userId, // Added creatorId as per rules
+    let data = {
+        date: new Date(workLogDate), // Convert to Date object for Firestore Timestamp
+        type: workLogType,
+        details: workLogDetails,
+        creatorId: auth.currentUser.uid,
         updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp()
     };
 
     try {
-        // Work logs are a subcollection of top-level opportunities
-        const collectionRef = collection(db, `opportunities/${currentOpportunityId}/workLogs`);
-        if (workLogId) {
-            // For update, only update updatedAt, not createdAt
-            delete workLogData.createdAt;
-            await updateDoc(doc(collectionRef, workLogId), workLogData);
-            showMessageBox("Work log updated successfully!", false);
-        } else {
-            await addDoc(collectionRef, workLogData);
-            showMessageBox("Work log added successfully!", false);
+        // Reference to the work logs subcollection
+        const workLogsCollectionRef = collection(db, 'opportunities', currentOpportunityId, 'workLogs');
+
+        if (workLogId) { // Update existing work log
+            console.log(`handleSaveWorkLog: Attempting to update work log with ID: ${workLogId}`);
+            const existingDoc = await getDoc(doc(workLogsCollectionRef, workLogId));
+            if (existingDoc.exists()) {
+                data.createdAt = existingDoc.data().createdAt !== undefined ? existingDoc.data().createdAt : null;
+            } else {
+                showMessageBox("Error: Cannot update non-existent work log.", 'alert', true);
+                return;
+            }
+            await updateDoc(doc(workLogsCollectionRef, workLogId), data);
+            showMessageBox("Work log entry updated successfully!", 'alert', false);
+            console.log(`handleSaveWorkLog: Work log ${workLogId} updated successfully.`);
+        } else { // Create new work log
+            console.log("handleSaveWorkLog: Attempting to add new work log.");
+            data.createdAt = serverTimestamp();
+            await addDoc(workLogsCollectionRef, data);
+            showMessageBox("Work log entry added successfully!", 'alert', false);
+            console.log("handleSaveWorkLog: New work log added.");
         }
-        hideWorkLogForm();
-        // loadWorkLogs is already onSnapshot, so it will update automatically
+
+        hideWorkLogForm(); // Hide the work log form after saving
+        await renderWorkLogs(currentOpportunityId); // Re-render the list of work logs
+
     } catch (error) {
-        console.error("Error saving work log:", error);
-        if (messageElement) {
-            //messageElement.textContent = `Error saving work log: ${error.message}`;
-            //messageElement.classList.remove('hidden');
-            showMessageBox(`Error saving work log: ${error.message}`, 'alert', true);
-        }
+        console.error("handleSaveWorkLog: Error saving work log:", error);
+        showMessageBox(`Error saving work log: ${error.message}`, 'alert', true);
     }
 }
+
+
 
 async function editWorkLog(workLogId, opportunityId) { // Pass opportunityId to correctly build docRef
     if (!db || !userId || !opportunityId) return;
@@ -4775,9 +4802,26 @@ async function initializePage() {
     }
 
     // Work Log Listeners
-    if (addWorkLogEntryBtn) addWorkLogEntryBtn.addEventListener('click', showWorkLogForm);
-    if (cancelWorkLogBtn) cancelWorkLogBtn.addEventListener('click', hideWorkLogForm);
-    if (workLogForm) workLogForm.addEventListener('submit', handleSaveWorkLog);
+    if (addWorkLogBtn) {
+        addWorkLogBtn.addEventListener('click', () => {
+            if (!currentOpportunityId) {
+                showMessageBox("Please save the opportunity first to add work logs.", 'alert', true);
+                return;
+            }
+            showWorkLogForm();
+        });
+    }
+
+    if (cancelWorkLogBtn) {
+        cancelWorkLogBtn.addEventListener('click', () => {
+            hideWorkLogForm();
+        });
+    }
+
+    // Attach submit listener for the work log form
+    if (opportunityWorkLogForm) {
+        opportunityWorkLogForm.addEventListener('submit', handleSaveWorkLog);
+    }
 
     // Quote Listeners (PRESERVED FROM YOUR BASELINE)
     if (addQuoteBtn) addQuoteBtn.addEventListener('click', () => setupQuoteForm());
