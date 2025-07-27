@@ -637,45 +637,68 @@ async function loadDashboardData() {
 }
 
 
+
 /**
- * Updates dashboard statistics.
+ * Updates the dashboard summary cards with the latest statistics from Firestore.
  */
 async function updateDashboard() {
-    if (!db || !userId) return;
+    console.log("Updating dashboard statistics..."); // Debug log
+
+    if (!db) {
+        console.error("Firestore DB not initialized. Cannot update dashboard.");
+        return;
+    }
 
     try {
-        // Customers are top-level, filtered by creatorId
-        const customersRef = collection(db, 'customers');
-        // Opportunities are top-level, filtered by creatorId
-        const opportunitiesRef = collection(db, 'opportunities');
+        // Fetch total opportunities
+        const opportunitiesSnap = await getDocs(collection(db, 'opportunities'));
+        const totalOpportunities = opportunitiesSnap.size;
+        let totalOpportunityValue = 0;
+        let totalOpportunityNet = 0;
+        let wonOpportunities = 0;
+        let lostOpportunities = 0;
+        let inProgressOpportunities = 0;
 
-        const totalCustomersQuery = query(customersRef, where('creatorId', '==', userId));
-        const totalCustomersSnap = await getDocs(totalCustomersQuery);
-        if (dashboardTotalCustomers) dashboardTotalCustomers.textContent = totalCustomersSnap.size;
+        opportunitiesSnap.forEach(doc => {
+            const data = doc.data();
+            totalOpportunityValue += data.value || 0;
+            totalOpportunityNet += data.opportunityNet || 0; // Assuming opportunityNet exists
+            if (data.salesStage === 'Won') {
+                wonOpportunities++;
+            } else if (data.salesStage === 'Lost') {
+                lostOpportunities++;
+            } else {
+                inProgressOpportunities++; // All other stages are considered in-progress
+            }
+        });
 
-        const totalOpportunitiesQuery = query(opportunitiesRef, where('creatorId', '==', userId));
-        const totalOpportunitiesSnap = await getDocs(totalOpportunitiesQuery);
-        if (dashboardTotalOpportunities) dashboardTotalOpportunities.textContent = totalOpportunitiesSnap.size;
+        // Fetch total customers
+        const customersSnap = await getDocs(collection(db, 'customers'));
+        const totalCustomers = customersSnap.size;
 
-        const openOpportunitiesQuery = query(opportunitiesRef,
-            where('creatorId', '==', userId),
-            where('salesStage', 'in', ['Prospect', 'Qualification', 'Proposal', 'Negotiation'])
-        );
-        const openOpportunitiesSnap = await getDocs(openOpportunitiesQuery);
-        if (dashboardOpenOpportunities) dashboardOpenOpportunities.textContent = openOpportunitiesSnap.size;
+        // Fetch total leads
+        const leadsSnap = await getDocs(collection(db, 'leads'));
+        const totalLeads = leadsSnap.size;
 
-        const wonOpportunitiesQuery = query(opportunitiesRef,
-            where('creatorId', '==', userId),
-            where('salesStage', '==', 'Won')
-        );
-        const wonOpportunitiesSnap = await getDocs(wonOpportunitiesQuery);
-        if (dashboardWonOpportunities) dashboardWonOpportunities.textContent = wonOpportunitiesSnap.size;
+        // Update DOM elements
+        if (document.getElementById('total-opportunities')) document.getElementById('total-opportunities').textContent = totalOpportunities;
+        if (document.getElementById('total-customers')) document.getElementById('total-customers').textContent = totalCustomers;
+        if (document.getElementById('total-leads')) document.getElementById('total-leads').textContent = totalLeads;
+        if (document.getElementById('total-opportunity-value')) document.getElementById('total-opportunity-value').textContent = totalOpportunityValue.toFixed(2);
+        if (document.getElementById('total-opportunity-net')) document.getElementById('total-opportunity-net').textContent = totalOpportunityNet.toFixed(2);
+        if (document.getElementById('won-opportunities')) document.getElementById('won-opportunities').textContent = wonOpportunities;
+        if (document.getElementById('lost-opportunities')) document.getElementById('lost-opportunities').textContent = lostOpportunities;
+        if (document.getElementById('in-progress-opportunities')) document.getElementById('in-progress-opportunities').textContent = inProgressOpportunities;
+
+        console.log("Dashboard statistics updated successfully."); // Debug log
 
     } catch (error) {
-        console.error("Error updating dashboard:", error);
-        showMessageBox(`Error loading dashboard data: ${error.message}`, false);
+        console.error("Error updating dashboard statistics:", error);
+        showMessageBox(`Error updating dashboard: ${error.message}`, 'alert', true);
     }
 }
+
+
 
 // --- Accordion Logic ---
 function setupAccordions() {
@@ -4834,15 +4857,118 @@ async function initializePage() {
     if (logoutBtn) logoutBtn.addEventListener('click', handleLogout); // Corrected listener for logoutBtn
 
     // Navigation Listeners
-    if (navDashboard) navDashboard.addEventListener('click', () => showSection('dashboard-section'));
-    if (navCustomers) navCustomers.addEventListener('click', () => showSection('customers-section'));
-    if (navLeads) navLeads.addEventListener('click', () => showSection('leads-section'));
-    if (navOpportunities) navOpportunities.addEventListener('click', () => showSection('opportunities-section'));
-    if (navQuotes) navQuotes.addEventListener('click', () => showSection('quotes-section'));
-    if (navCountries) navCountries.addEventListener('click', () => showSection('countries-section'));
-    if (navCurrencies) navCurrencies.addEventListener('click', () => showSection('currencies-section'));
-    if (navPriceBooks) navPriceBooks.addEventListener('click', () => showSection('price-books-section'));
 
+    // Dashboard Navigation Link
+    const dashboardLink = document.getElementById('nav-dashboard'); // CRITICAL FIX: Use 'nav-dashboard'
+    if (dashboardLink) {
+        dashboardLink.addEventListener('click', async (event) => {
+            event.preventDefault();
+            hideAllSections(); 
+            if (dashboardSection) {
+                dashboardSection.classList.remove('hidden');
+                await updateDashboard(); 
+            }
+            setActiveNavLink('nav-dashboard'); // CRITICAL FIX: Use 'nav-dashboard'
+        });
+    }
+
+
+
+    // Customers Navigation Link
+    const customersLink = document.getElementById('nav-customers');
+    if (customersLink) {
+        customersLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideAllSections();
+            if (customersSection) customersSection.classList.remove('hidden');
+            loadCustomers(); // Assuming this loads customer data
+            setActiveNavLink('nav-customers');
+        });
+    }
+
+    // Leads Navigation Link
+    const leadsLink = document.getElementById('nav-leads');
+    if (leadsLink) {
+        leadsLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideAllSections();
+            if (leadsSection) leadsSection.classList.remove('hidden');
+            loadLeads(); // Assuming this loads lead data
+            setActiveNavLink('nav-leads');
+        });
+    }
+
+    // Opportunities Navigation Link
+    const opportunitiesLink = document.getElementById('nav-opportunities');
+    if (opportunitiesLink) {
+        opportunitiesLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideAllSections();
+            if (opportunitiesSection) opportunitiesSection.classList.remove('hidden');
+            loadOpportunities(); // Assuming this loads opportunity data
+            setActiveNavLink('nav-opportunities');
+        });
+    }
+
+    // Quotes Navigation Link
+    const quotesLink = document.getElementById('nav-quotes');
+    if (quotesLink) {
+        quotesLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideAllSections();
+            if (quotesSection) quotesSection.classList.remove('hidden');
+            loadQuotes(); // Assuming this loads quote data
+            setActiveNavLink('nav-quotes');
+        });
+    }
+
+    // Admin Menu Items (assuming these functions exist)
+    const countriesLink = document.getElementById('nav-countries');
+    if (countriesLink) {
+        countriesLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideAllSections();
+            if (countriesSection) countriesSection.classList.remove('hidden');
+            loadCountries();
+            setActiveNavLink('nav-countries');
+        });
+    }
+
+    const currenciesLink = document.getElementById('nav-currencies');
+    if (currenciesLink) {
+        currenciesLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideAllSections();
+            if (currenciesSection) currenciesSection.classList.remove('hidden');
+            loadCurrencies();
+            setActiveNavLink('nav-currencies');
+        });
+    }
+
+    const priceBooksLink = document.getElementById('nav-price-books');
+    if (priceBooksLink) {
+        priceBooksLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideAllSections();
+            if (priceBooksSection) priceBooksSection.classList.remove('hidden');
+            loadPriceBooks();
+            setActiveNavLink('nav-price-books');
+        });
+    }
+
+     // Logout Link
+    const logoutLink = document.getElementById('nav-logout');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', handleLogout);
+    }
+
+    // Initial load: show dashboard and update it
+    if (dashboardSection) {
+        dashboardSection.classList.remove('hidden');
+        await updateDashboard(); 
+    }
+
+    setActiveNavLink('dashboard-link');
 
     if (addCustomerBtn) addCustomerBtn.addEventListener('click', () => {
         hideForm(customerFormContainer, customerFormMessage);
