@@ -128,10 +128,10 @@ let opportunityCustomerSelect;
 let opportunityCurrencySelect;
 let opportunityPriceBookSelect;
 let opportunityServicesInterestedSelect; // For Opportunities: multi-select
-let opportunityValueInput; // Opportunity form calculation fields
-let opportunityDiscountInput;
-let adjustmentAmtInput;
-let opportunityNetSpan; // Renamed to match HTML ID and usage
+//let opportunityValueInput; // Opportunity form calculation fields
+//let opportunityDiscountInput;
+//let adjustmentAmtInput;
+//let opportunityNetSpan; // Renamed to match HTML ID and usage
 let opportunityFormMessage;
 
 // Opportunity form specific elements
@@ -1801,21 +1801,25 @@ async function populateOpportunityCustomers() {
 
 /**
  * Calculates and displays the Opportunity Net value based on Opportunity Value, Discount, and Adjustment Amount.
+ * This function now gets its own DOM element references for robustness.
  */
 function calculateOpportunityNet() {
-    // Ensure all input elements are available before attempting to read their values
+    // Get element references directly within the function call
+    const valueInput = document.getElementById('opportunity-value');
+    const discountInput = document.getElementById('opportunity-discount');
+    const adjustmentInput = document.getElementById('opportunity-adjustment-amt');
+    const netSpan = document.getElementById('opportunity-net-span');
 
-    console.warn('opportunityValueInput'); console.warn('opportunityDiscountInput');
-    console.warn('adjustmentAmtInput'); console.warn('opportunityNetSpan');
-
-    if (!opportunityValueInput || !opportunityDiscountInput || !adjustmentAmtInput || !opportunityNetSpan) {
-        console.warn("calculateOpportunityNet: One or more required input elements are null. Cannot calculate net.");
+    // Defensive check: if any element is still null, log and exit.
+    // This should ideally not happen now, but it's a good fallback.
+    if (!valueInput || !discountInput || !adjustmentInput || !netSpan) {
+        console.warn("calculateOpportunityNet: One or more required input/span elements are null. Cannot calculate net.");
         return; // Exit if elements are not ready
     }
 
-    const value = parseFloat(opportunityValueInput.value) || 0;
-    const discount = parseFloat(opportunityDiscountInput.value) || 0;
-    const adjustment = parseFloat(adjustmentAmtInput.value) || 0;
+    const value = parseFloat(valueInput.value) || 0;
+    const discount = parseFloat(discountInput.value) || 0;
+    const adjustment = parseFloat(adjustmentInput.value) || 0;
 
     console.log(`calculateOpportunityNet: Value=${value}, Discount=${discount}, Adjustment=${adjustment}`); // DEBUG LOG
 
@@ -1823,7 +1827,7 @@ function calculateOpportunityNet() {
     net = net - adjustment;
     net = Math.max(0, net); // Ensure net is not negative
 
-    opportunityNetSpan.textContent = net.toFixed(2);
+    netSpan.textContent = net.toFixed(2);
     console.log(`calculateOpportunityNet: Calculated Net=${net.toFixed(2)}`); // DEBUG LOG
 }
 
@@ -2007,11 +2011,9 @@ function populateOpportunityServicesInterested() {
 }
 
 
-
+// --- In setupOpportunityForm() function: ---
 /**
  * Sets up the opportunity form for adding a new opportunity or editing an existing one.
- * It handles clearing the form, populating dropdowns, setting default values for new opportunities,
- * pre-populating fields for existing opportunities, and managing the visibility of accordions.
  * @param {object | null} opportunityData Optional: The opportunity data to pre-populate the form.
  */
 async function setupOpportunityForm(opportunityData = null) {
@@ -2024,7 +2026,7 @@ async function setupOpportunityForm(opportunityData = null) {
     if (opportunityWorkLogsContainer) opportunityWorkLogsContainer.innerHTML = '';
     if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.add('hidden');
 
-    // 3. Populate all dropdowns (these are asynchronous, so await where necessary)
+    // 3. Populate all dropdowns
     await populateOpportunityCustomers();
     populateOpportunitySalesStages();
     populateOpportunityServicesInterested();
@@ -2062,15 +2064,10 @@ async function setupOpportunityForm(opportunityData = null) {
 
         if (document.getElementById('opportunity-probability')) document.getElementById('opportunity-probability').value = opportunityData.probability !== undefined ? opportunityData.probability : 0;
         
-        // Explicitly re-assign elements before calculation for robustness in edit mode
-        opportunityValueInput = document.getElementById('opportunity-value');
-        opportunityDiscountInput = document.getElementById('opportunity-discount');
-        adjustmentAmtInput = document.getElementById('opportunity-adjustment-amt');
-        opportunityNetSpan = document.getElementById('opportunity-net-span');
-
-        if (opportunityValueInput) opportunityValueInput.value = opportunityData.value !== undefined ? opportunityData.value : 0;
-        if (opportunityDiscountInput) opportunityDiscountInput.value = opportunityData.opportunityDiscount !== undefined ? opportunityData.opportunityDiscount : 0;
-        if (adjustmentAmtInput) adjustmentAmtInput.value = opportunityData.adjustmentAmt !== undefined ? opportunityData.adjustmentAmt : 0;
+        // Use direct document.getElementById for setting values
+        if (document.getElementById('opportunity-value')) document.getElementById('opportunity-value').value = opportunityData.value !== undefined ? opportunityData.value : 0;
+        if (document.getElementById('opportunity-discount')) document.getElementById('opportunity-discount').value = opportunityData.opportunityDiscount !== undefined ? opportunityData.opportunityDiscount : 0;
+        if (document.getElementById('opportunity-adjustment-amt')) document.getElementById('opportunity-adjustment-amt').value = opportunityData.adjustmentAmt !== undefined ? opportunityData.adjustmentAmt : 0;
         if (document.getElementById('opportunity-notes')) document.getElementById('opportunity-notes').value = opportunityData.notes || '';
         
         // Calculate and display initial net for existing opportunity
@@ -2095,15 +2092,10 @@ async function setupOpportunityForm(opportunityData = null) {
         if (opportunitySalesStageSelect) opportunitySalesStageSelect.value = 'Prospect'; // Default stage
         if (document.getElementById('opportunity-probability')) document.getElementById('opportunity-probability').value = 0;
         
-        // Explicitly re-assign elements before calculation for robustness in new mode
-        opportunityValueInput = document.getElementById('opportunity-value');
-        opportunityDiscountInput = document.getElementById('opportunity-discount');
-        adjustmentAmtInput = document.getElementById('opportunity-adjustment-amt');
-        opportunityNetSpan = document.getElementById('opportunity-net-span');
-
-        if (opportunityValueInput) opportunityValueInput.value = 0;
-        if (opportunityDiscountInput) opportunityDiscountInput.value = 0;
-        if (adjustmentAmtInput) adjustmentAmtInput.value = 0;
+        // Use direct document.getElementById for setting values
+        if (document.getElementById('opportunity-value')) document.getElementById('opportunity-value').value = 0;
+        if (document.getElementById('opportunity-discount')) document.getElementById('opportunity-discount').value = 0;
+        if (document.getElementById('opportunity-adjustment-amt')) document.getElementById('opportunity-adjustment-amt').value = 0;
         calculateOpportunityNet(); // Calculate net for new opportunity
 
         // Hide work logs section for new opportunities (until saved)
@@ -2201,9 +2193,11 @@ async function handleSaveOpportunity(event) {
 
     // Get numeric values, parse them, and default to 0 if invalid
     const probability = parseFloat(document.getElementById('opportunity-probability').value) || 0;
-    const opportunityValue = parseFloat(opportunityValueInput.value) || 0;
-    const opportunityDiscount = parseFloat(opportunityDiscountInput.value) || 0;
-    const adjustmentAmt = parseFloat(adjustmentAmtInput.value) || 0;
+
+    // Use direct document.getElementById for getting values
+    const opportunityValue = parseFloat(document.getElementById('opportunity-value').value) || 0;
+    const opportunityDiscount = parseFloat(document.getElementById('opportunity-discount').value) || 0;
+    const adjustmentAmt = parseFloat(document.getElementById('opportunity-adjustment-amt').value) || 0;
 
     // Calculate Opportunity Net based on the formula
     let opportunityNet = opportunityValue - (opportunityValue * (opportunityDiscount / 100));
