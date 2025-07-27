@@ -1748,33 +1748,85 @@ async function handleEditLead(leadId) {
 }
 
 
-
+/**
+ * Loads lead data from Firestore and renders it in the leads grid.
+ * Sets up a real-time listener for updates.
+ */
 async function loadLeads() {
-    if (!db || !userId) {
+    console.log("loadLeads: Loading lead data for grid."); // Debug log
+
+    // Ensure DOM elements are available. Log error and exit if not.
+    if (!leadsGridContainer || !noLeadsMessage || !leadsGrid) {
+        console.error("loadLeads: Required DOM elements for leads grid are null. Check initializePage() and HTML IDs.");
+        // If elements are null, ensure the message is shown as a fallback
         if (noLeadsMessage) noLeadsMessage.classList.remove('hidden');
-        if (leadsGrid) leadsGrid.updateConfig({ data: [] }).forceRender();
         return;
     }
 
-    // Query only for current user's leads (top-level collection)
-    onSnapshot(query(collection(db, 'leads'), where('creatorId', '==', userId)), snapshot => {
-        const leads = [];
-        snapshot.forEach(doc => {
-            const leadData = doc.data();
-            // Convert Firestore Timestamp to YYYY-MM-DD string for display
-            const eventDateDisplay = leadData.eventDate && leadData.eventDate.toDate ? leadData.eventDate.toDate().toISOString().split('T')[0] : 'N/A';
-            // Display services as a comma-separated string
-            const servicesInterestedDisplay = Array.isArray(leadData.servicesInterested) ? leadData.servicesInterested.join(', ') : 'N/A';
-            leads.push({ id: doc.id, ...leadData, eventDate: eventDateDisplay, servicesInterestedDisplay: servicesInterestedDisplay });
+    // Stop previous listener if it exists
+    if (unsubscribeLeads) {
+        unsubscribeLeads();
+        unsubscribeLeads = null;
+        console.log("loadLeads: Unsubscribed from previous leads listener.");
+    }
+
+    // IMPORTANT: Hide "No leads" message initially, before fetching data
+    noLeadsMessage.classList.add('hidden');
+    // The parent section (leadsSection) is assumed to be visible by the nav click handler.
+    // No need to touch leadsGridContainer's 'hidden' class here.
+
+    try {
+        const leadsCollectionRef = getCollectionRef('leads');
+        // Query only for current user's leads or all if admin
+        const q = query(leadsCollectionRef, 
+                        where('creatorId', '==', auth.currentUser.uid), // Filter by current user
+                        orderBy('createdAt', 'desc')); // Order by creation date descending
+
+        console.log("loadLeads: Setting up real-time listener for leads.");
+        unsubscribeLeads = onSnapshot(q, (querySnapshot) => {
+            const leads = [];
+            querySnapshot.forEach(doc => {
+                const leadData = doc.data();
+                // Convert Firestore Timestamp to YYYY-MM-DD string for display
+                const eventDateDisplay = leadData.eventDate && leadData.eventDate.seconds ? new Date(leadData.eventDate.seconds * 1000).toLocaleDateString() : 'N/A';
+                // Display services as a comma-separated string
+                const servicesInterestedDisplay = Array.isArray(leadData.servicesInterested) ? leadData.servicesInterested.join(', ') : 'N/A';
+                
+                leads.push({ 
+                    id: doc.id, // Ensure ID is included for Grid.js actions
+                    ...leadData, 
+                    eventDate: eventDateDisplay, // Use formatted date for display column
+                    servicesInterested: servicesInterestedDisplay // Use formatted string for display column
+                });
+            });
+
+            console.log(`loadLeads: Fetched ${leads.length} leads for grid.`);
+            console.log("loadLeads: Leads data for grid:", leads); // DEBUG LOG: Inspect the data
+
+            if (leads.length === 0) {
+                // If no data, show the "No leads" message and clear the grid
+                noLeadsMessage.classList.remove('hidden');
+                leadsGrid.updateConfig({ data: [] }).forceRender();
+                console.log("loadLeads: No leads found, displaying message.");
+            } else {
+                // If data exists, hide the "No leads" message and render the grid
+                noLeadsMessage.classList.add('hidden');
+                leadsGrid.updateConfig({ data: leads }).forceRender();
+                console.log("loadLeads: Leads data rendered in grid.");
+            }
+        }, (error) => {
+            console.error("loadLeads: Error listening to leads:", error);
+            showMessageBox(`Error loading leads: ${error.message}`, 'alert', true);
+            noLeadsMessage.classList.remove('hidden'); // Show message on error
         });
-        renderLeadsGrid(leads);
-    }, error => {
-        console.error("Error loading leads in real-time:", error);
-        showMessageBox(`Error loading leads: ${error.message}`, false);
-        if (noLeadsMessage) noLeadsMessage.classList.remove('hidden');
-        if (leadsGrid) leadsGrid.updateConfig({ data: [] }).forceRender();
-    });
+    } catch (error) {
+        console.error("loadLeads: Error setting up leads listener:", error);
+        showMessageBox(`Error setting up leads listener: ${error.message}`, 'alert', true);
+        noLeadsMessage.classList.remove('hidden'); // Show message on error
+    }
 }
+
+
 
 function renderLeadsGrid(leads) {
     const data = leads.map(lead => [
