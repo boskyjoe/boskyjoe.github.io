@@ -343,15 +343,13 @@ function setActiveNavLink(activeLinkId) {
 }
 
 /**
- * Hides all main content sections by adding the 'hidden' class to them.
+ * Hides all main content sections and forms by adding the 'hidden' class to them.
  * This is crucial for single-page application navigation.
  */
 function hideAllSections() {
-    console.log("Hiding all main content sections."); // Debug log
+    console.log("hideAllSections: Hiding all main content sections and forms."); // Debug log
 
-    // Get references to all main content sections.
-    // Ensure these global variables are correctly assigned in initializePage()
-    // and correspond to the IDs in your HTML.
+    // Hide main content sections
     if (dashboardSection) dashboardSection.classList.add('hidden');
     if (customersSection) customersSection.classList.add('hidden');
     if (leadsSection) leadsSection.classList.add('hidden');
@@ -361,15 +359,17 @@ function hideAllSections() {
     if (currenciesSection) currenciesSection.classList.add('hidden');
     if (priceBooksSection) priceBooksSection.classList.add('hidden');
 
-    // Also hide any active forms that might be open across sections
-    if (customerFormContainer) hideForm(customerFormContainer);
-    if (leadFormContainer) hideForm(leadFormContainer);
-    if (opportunityFormContainer) hideForm(opportunityFormContainer);
-    if (quoteFormContainer) hideForm(quoteFormContainer); // Assuming you have one
-    if (countryFormContainer) hideForm(countryFormContainer); // Assuming you have one
-    if (currencyFormContainer) hideForm(currencyFormContainer); // Assuming you have one
-    if (priceBookFormContainer) hideForm(priceBookFormContainer); // Assuming you have one
+    // Hide all forms
+    if (customerFormContainer) customerFormContainer.classList.add('hidden');
+    if (leadFormContainer) leadFormContainer.classList.add('hidden');
+    if (opportunityFormContainer) opportunityFormContainer.classList.add('hidden');
+    if (quoteFormContainer) quoteFormContainer.classList.add('hidden'); // Assuming you have this
+    if (countryFormContainer) countryFormContainer.classList.add('hidden'); // Assuming you have this
+    if (currencyFormContainer) currencyFormContainer.classList.add('hidden'); // Assuming you have this
+    if (priceBookFormContainer) priceBookFormContainer.classList.add('hidden'); // Assuming you have this
+    if (opportunityWorkLogFormContainer) opportunityWorkLogFormContainer.classList.add('hidden'); // Also hide the work log form
 }
+
 
 
 
