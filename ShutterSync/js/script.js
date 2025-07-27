@@ -2343,32 +2343,93 @@ async function handleEditOpportunity(opportunityId) {
 
 
 /**
- * Handles the deletion of an opportunity document and its associated work logs from Firestore.
- * Prompts for confirmation before proceeding with deletion.
+ * Handles the deletion of an opportunity document from Firestore.
+ * Prompts for confirmation and performs client-side role check.
  * @param {string} opportunityId The ID of the opportunity document to delete.
  */
-async function handleDeleteOpportunity(opportunityId) { // Now async
-    showMessageBox("Are you sure you want to delete this opportunity and all its work logs? This action cannot be undone.", 'confirm', async (confirmed) => {
-        if (confirmed) {
-            try {
-                // Delete subcollection documents first (workLogs)
-                const workLogsSnapshot = await getDocs(collection(getDocRef('opportunities', opportunityId), 'workLogs'));
-                const deleteWorkLogPromises = [];
-                workLogsSnapshot.forEach(doc => {
-                    deleteWorkLogPromises.push(deleteDoc(doc.ref));
-                });
-                await Promise.all(deleteWorkLogPromises);
+async function handleDeleteOpportunity(opportunityId) {
+    console.log(`handleDeleteOpportunity: Attempting to delete opportunity with ID: ${opportunityId}`); // DEBUG LOG
 
-                // Then delete the parent opportunity document
-                await deleteDoc(getDocRef('opportunities', opportunityId));
-                showMessageBox("Opportunity and its work logs deleted successfully!");
-            } catch (error) {
-                console.error("Error deleting opportunity:", error);
-                showMessageBox(`Error deleting opportunity: ${error.message}`, 'alert', true);
+    if (!db || !auth.currentUser?.uid) {
+        showMessageBox("Authentication required to delete opportunity.", 'alert', true);
+        console.error("handleDeleteOpportunity: User not authenticated.");
+        return;
+    }
+
+    if (!opportunityId) {
+        showMessageBox("Error: No opportunity ID provided for deletion.", 'alert', true);
+        console.error("handleDeleteOpportunity: opportunityId is null or empty.");
+        return;
+    }
+
+    // Fetch the opportunity data to check creatorId for permission logic
+    let opportunityData;
+    try {
+        const opportunityDocRef = doc(db, 'opportunities', opportunityId);
+        const opportunitySnap = await getDoc(opportunityDocRef);
+
+        if (opportunitySnap.exists()) {
+            opportunityData = opportunitySnap.data();
+            console.log("handleDeleteOpportunity: Fetched opportunity data for permission check:", opportunityData);
+        } else {
+            showMessageBox("Error: Opportunity not found for deletion.", 'alert', true);
+            console.error(`handleDeleteOpportunity: Opportunity with ID ${opportunityId} not found.`);
+            return;
+        }
+    } catch (error) {
+        console.error("handleDeleteOpportunity: Error fetching opportunity for permission check:", error);
+        showMessageBox(`Error checking opportunity permissions: ${error.message}`, 'alert', true);
+        return;
+    }
+
+    // --- IMPORTANT: Client-side role/ownership check for deleting ---
+    const isOwner = opportunityData.creatorId === auth.currentUser.uid;
+    const isAdmin = currentUserRole === 'Admin';
+
+    if (!isOwner && !isAdmin) {
+        showMessageBox("Permission Denied: Only the creator or an 'Admin' can delete this opportunity.", 'alert', true);
+        console.warn("Attempted to delete opportunity without sufficient privileges.");
+        return;
+    }
+    // --- End Role/Ownership Check ---
+
+    // Await the result from showMessageBox directly for user confirmation
+    const confirmed = await showMessageBox("Are you sure you want to delete this opportunity? This action cannot be undone.", 'confirm');
+    
+    console.log(`handleDeleteOpportunity: Confirmed status from MessageBox: ${confirmed}`);
+    
+    if (confirmed) {
+        console.log("handleDeleteOpportunity: User confirmed deletion. Proceeding with Firestore delete.");
+        try {
+            // Delete the main opportunity document
+            const opportunityDocRef = doc(db, 'opportunities', opportunityId);
+            await deleteDoc(opportunityDocRef);
+            console.log(`handleDeleteOpportunity: Opportunity ${opportunityId} deleted successfully.`);
+
+            // Optional: Delete its subcollections (like workLogs, quotes, quoteLines)
+            // Firestore does NOT automatically delete subcollections when a parent document is deleted.
+            // You would need to implement a Cloud Function for recursive deletion for production.
+            // For client-side, you'd have to fetch and delete each subdocument, which can be slow for many docs.
+            // For now, we'll just delete the main doc and rely on security rules to prevent access to orphaned subcollection data.
+            // If you need full recursive deletion, let me know, and we can discuss Cloud Functions.
+
+            showMessageBox("Opportunity deleted successfully!", 'alert', false);
+            await loadOpportunities(); // Reload grid
+            await updateDashboard(); // Update dashboard stats
+
+        } catch (error) {
+            console.error("handleDeleteOpportunity: Error deleting opportunity:", error);
+            if (error.code && error.message) {
+                showMessageBox(`Error deleting opportunity: ${error.message} (Code: ${error.code})`, 'alert', true);
+            } else {
+                showMessageBox(`Error deleting opportunity: An unexpected error occurred.`, 'alert', true);
             }
         }
-    });
+    } else {
+        console.log("handleDeleteOpportunity: Deletion cancelled by user.");
+    }
 }
+
 
 
 /**
