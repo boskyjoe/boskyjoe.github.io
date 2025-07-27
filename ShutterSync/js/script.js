@@ -1801,47 +1801,47 @@ async function populateOpportunityCustomers() {
 
 /**
  * Calculates and displays the Opportunity Net value based on Opportunity Value, Discount, and Adjustment Amount.
- * This function now gets its own DOM element references for robustness.
+ * This function now includes a retry mechanism to ensure DOM elements are available.
+ * @param {number} [retries=5] The number of times to retry finding elements if initially null.
+ * @param {number} [delay=50] The delay in milliseconds between retries.
  */
-function calculateOpportunityNet() {
-    console.log("calculateOpportunityNet: Attempting to get DOM elements."); // Debug start
-
-    // Get element references directly within the function call
+function calculateOpportunityNet(retries = 5, delay = 50) {
     const valueInput = document.getElementById('opportunity-value');
-    console.log("calculateOpportunityNet: opportunity-value element:", valueInput);
-
     const discountInput = document.getElementById('opportunity-discount');
-    console.log("calculateOpportunityNet: opportunity-discount element:", discountInput);
-
     const adjustmentInput = document.getElementById('opportunity-adjustment-amt');
-    console.log("calculateOpportunityNet: opportunity-adjustment-amt element:", adjustmentInput);
-
     const netSpan = document.getElementById('opportunity-net-span');
-    console.log("calculateOpportunityNet: opportunity-net-span element:", netSpan);
 
-    // Defensive check: if any element is still null, log and exit.
-    if (!valueInput || !discountInput || !adjustmentInput || !netSpan) {
-        console.warn("calculateOpportunityNet: One or more required input/span elements are null. Cannot calculate net.");
-        // Log which specific element is null
-        if (!valueInput) console.error("Missing: opportunity-value");
-        if (!discountInput) console.error("Missing: opportunity-discount");
-        if (!adjustmentInput) console.error("Missing: opportunity-adjustment-amt");
-        if (!netSpan) console.error("Missing: opportunity-net-span");
-        return; // Exit if elements are not ready
+    // Check if all elements are found
+    if (valueInput && discountInput && adjustmentInput && netSpan) {
+        const value = parseFloat(valueInput.value) || 0;
+        const discount = parseFloat(discountInput.value) || 0;
+        const adjustment = parseFloat(adjustmentInput.value) || 0;
+
+        console.log(`calculateOpportunityNet: Elements found. Value=${value}, Discount=${discount}, Adjustment=${adjustment}`);
+
+        let net = value - (value * (discount / 100));
+        net = net - adjustment;
+        net = Math.max(0, net); // Ensure net is not negative
+
+        netSpan.textContent = net.toFixed(2);
+        console.log(`calculateOpportunityNet: Calculated Net=${net.toFixed(2)}`);
+    } else if (retries > 0) {
+        // If elements are not found and retries remain, try again after a delay
+        console.warn(`calculateOpportunityNet: Elements not found (retries left: ${retries}). Retrying in ${delay}ms.`);
+        if (!valueInput) console.error("Missing in retry: opportunity-value");
+        if (!discountInput) console.error("Missing in retry: opportunity-discount");
+        if (!adjustmentInput) console.error("Missing in retry: opportunity-adjustment-amt");
+        if (!netSpan) console.error("Missing in retry: opportunity-net-span");
+
+        setTimeout(() => calculateOpportunityNet(retries - 1, delay), delay);
+    } else {
+        // No retries left, and elements still not found
+        console.error("calculateOpportunityNet: Failed to find required input/span elements after multiple retries. Cannot calculate net.");
+        if (!valueInput) console.error("FINAL MISSING: opportunity-value");
+        if (!discountInput) console.error("FINAL MISSING: opportunity-discount");
+        if (!adjustmentInput) console.error("FINAL MISSING: opportunity-adjustment-amt");
+        if (!netSpan) console.error("FINAL MISSING: opportunity-net-span");
     }
-
-    const value = parseFloat(valueInput.value) || 0;
-    const discount = parseFloat(discountInput.value) || 0;
-    const adjustment = parseFloat(adjustmentInput.value) || 0;
-
-    console.log(`calculateOpportunityNet: Value=${value}, Discount=${discount}, Adjustment=${adjustment}`); // DEBUG LOG
-
-    let net = value - (value * (discount / 100));
-    net = net - adjustment;
-    net = Math.max(0, net); // Ensure net is not negative
-
-    netSpan.textContent = net.toFixed(2);
-    console.log(`calculateOpportunityNet: Calculated Net=${net.toFixed(2)}`); // DEBUG LOG
 }
 
 
@@ -2025,14 +2025,13 @@ function populateOpportunityServicesInterested() {
     });
 }
 
-// --- In setupOpportunityForm() function: ---
 /**
  * Sets up the opportunity form for adding a new opportunity or editing an existing one.
  * @param {object | null} opportunityData Optional: The opportunity data to pre-populate the form.
  */
 async function setupOpportunityForm(opportunityData = null) {
     // 1. Show the form container and reset the form
-    showForm(opportunityFormContainer);
+    showForm(opportunityFormContainer); // This makes the container visible
     if (opportunityForm) opportunityForm.reset();
     if (document.getElementById('opportunity-id')) document.getElementById('opportunity-id').value = ''; // Clear ID for new
 
@@ -2049,13 +2048,12 @@ async function setupOpportunityForm(opportunityData = null) {
 
     // 4. Handle existing opportunity data (edit mode)
     if (opportunityData) {
-        console.log("setupOpportunityForm: Editing existing opportunity:", opportunityData); // DEBUG LOG
+        console.log("setupOpportunityForm: Editing existing opportunity:", opportunityData);
 
-        // Set currentOpportunityId for work logs subcollection context
         currentOpportunityId = opportunityData.id;
         if (document.getElementById('opportunity-id')) document.getElementById('opportunity-id').value = opportunityData.id;
 
-        // Populate form fields with existing data
+        // Populate form fields
         if (document.getElementById('opportunity-name')) document.getElementById('opportunity-name').value = opportunityData.name || '';
         if (opportunityCustomerSelect) opportunityCustomerSelect.value = opportunityData.customerId || '';
         if (opportunityCurrencySelect) opportunityCurrencySelect.value = opportunityData.currency || '';
@@ -2069,7 +2067,6 @@ async function setupOpportunityForm(opportunityData = null) {
         
         if (opportunitySalesStageSelect) opportunitySalesStageSelect.value = opportunityData.salesStage || '';
 
-        // Handle multi-select for services interested
         if (opportunityServicesInterestedSelect && opportunityData.servicesInterested && Array.isArray(opportunityData.servicesInterested)) {
             Array.from(opportunityServicesInterestedSelect.options).forEach(option => {
                 option.selected = opportunityData.servicesInterested.includes(option.value);
@@ -2084,14 +2081,18 @@ async function setupOpportunityForm(opportunityData = null) {
         if (document.getElementById('opportunity-adjustment-amt')) document.getElementById('opportunity-adjustment-amt').value = opportunityData.adjustmentAmt !== undefined ? opportunityData.adjustmentAmt : 0;
         if (document.getElementById('opportunity-notes')) document.getElementById('opportunity-notes').value = opportunityData.notes || '';
         
-        // Calculate and display initial net for existing opportunity
+        // Call calculateOpportunityNet directly; it will handle retries internally if needed
         calculateOpportunityNet();
 
-        // Show and load work logs section for existing opportunities
+        // Show work logs section for existing opportunities
         if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.remove('hidden');
-        await renderWorkLogs(opportunityData.id); // Load work logs for this opportunity
+        
+        // Defer renderWorkLogs to ensure DOM elements are ready
+        setTimeout(async () => {
+            await renderWorkLogs(opportunityData.id);
+        }, 0);
 
-        // Ensure Main Details accordion is open for existing opportunities
+        // Ensure Main Details accordion is open
         if (mainOpportunityDetailsContent) mainOpportunityDetailsContent.classList.remove('hidden');
         if (mainOpportunityDetailsAccordion) {
             const icon = mainOpportunityDetailsAccordion.querySelector('.accordion-icon');
@@ -2099,23 +2100,25 @@ async function setupOpportunityForm(opportunityData = null) {
         }
 
     } else { // Handle new opportunity (add mode)
-        console.log("setupOpportunityForm: Setting up for new opportunity."); // DEBUG LOG
-        currentOpportunityId = null; // Clear ID for new opportunity
+        console.log("setupOpportunityForm: Setting up for new opportunity.");
+        currentOpportunityId = null;
 
         // Set default values for new opportunities
-        if (opportunitySalesStageSelect) opportunitySalesStageSelect.value = 'Prospect'; // Default stage
+        if (opportunitySalesStageSelect) opportunitySalesStageSelect.value = 'Prospect';
         if (document.getElementById('opportunity-probability')) document.getElementById('opportunity-probability').value = 0;
         
         // Use direct document.getElementById for setting values
         if (document.getElementById('opportunity-value')) document.getElementById('opportunity-value').value = 0;
         if (document.getElementById('opportunity-discount')) document.getElementById('opportunity-discount').value = 0;
         if (document.getElementById('opportunity-adjustment-amt')) document.getElementById('opportunity-adjustment-amt').value = 0;
-        calculateOpportunityNet(); // Calculate net for new opportunity
+        
+        // Call calculateOpportunityNet directly; it will handle retries internally if needed
+        calculateOpportunityNet();
 
         // Hide work logs section for new opportunities (until saved)
         if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.add('hidden');
 
-        // Ensure Main Details accordion is open for new opportunities
+        // Ensure Main Details accordion is open
         if (mainOpportunityDetailsContent) mainOpportunityDetailsContent.classList.remove('hidden');
         if (mainOpportunityDetailsAccordion) {
             const icon = mainOpportunityDetailsAccordion.querySelector('.accordion-icon');
@@ -2123,6 +2126,7 @@ async function setupOpportunityForm(opportunityData = null) {
         }
     }
 }
+
 
 
 
@@ -4719,15 +4723,19 @@ async function initializePage() {
 
 
     // Add event listeners for opportunity net calculation
-    //if (opportunityValueInput) {
-   //     opportunityValueInput.addEventListener('input', calculateOpportunityNet);
-  //  }
-   // if (opportunityDiscountInput) {
-   //     opportunityDiscountInput.addEventListener('input', calculateOpportunityNet);
- //   }
-  //  if (adjustmentAmtInput) {
-  //      adjustmentAmtInput.addEventListener('input', calculateOpportunityNet);
- //   }
+    const valueInputForListener = document.getElementById('opportunity-value');
+    const discountInputForListener = document.getElementById('opportunity-discount');
+    const adjustmentInputForListener = document.getElementById('opportunity-adjustment-amt');
+
+    if (valueInputForListener) {
+        valueInputForListener.addEventListener('input', calculateOpportunityNet);
+    }
+    if (discountInputForListener) {
+        discountInputForListener.addEventListener('input', calculateOpportunityNet);
+    }
+    if (adjustmentInputForListener) {
+        adjustmentInputForListener.addEventListener('input', calculateOpportunityNet);
+    }
 
     // Work Log Listeners
     if (addWorkLogEntryBtn) addWorkLogEntryBtn.addEventListener('click', showWorkLogForm);
