@@ -116,6 +116,7 @@ let leadSourceSelect;
 let leadFormMessage ;
 
 
+
 let addOpportunityBtn;
 let opportunityFormContainer;
 let opportunityForm;
@@ -128,10 +129,10 @@ let opportunityCustomerSelect;
 let opportunityCurrencySelect;
 let opportunityPriceBookSelect;
 let opportunityServicesInterestedSelect; // For Opportunities: multi-select
-//let opportunityValueInput; // Opportunity form calculation fields
-//let opportunityDiscountInput;
-//let adjustmentAmtInput;
-//let opportunityNetSpan; // Renamed to match HTML ID and usage
+let opportunityValueInput; // Opportunity form calculation fields
+let opportunityDiscountInput;
+let adjustmentAmtInput;
+let opportunityNetSpan; // Renamed to match HTML ID and usage
 let opportunityFormMessage;
 
 // Opportunity form specific elements
@@ -143,6 +144,9 @@ let opportunityWorkLogFormContainer;
 let opportunityWorkLogForm;
 
 let mainOpportunityDetailsContent; // NEW: For the collapsible content of the main accordion
+
+let opportunityWorkLogsContent; // NEW: For the collapsible content of work logs accordion
+let opportunityWorkLogsContent; // NEW: For the collapsible content of work logs accordion
 
 
 
@@ -2031,20 +2035,20 @@ function populateOpportunityServicesInterested() {
  */
 async function setupOpportunityForm(opportunityData = null) {
     // 1. Show the form container and reset the form
-    showForm(opportunityFormContainer); // This makes the container visible
+    showForm(opportunityFormContainer);
     if (opportunityForm) opportunityForm.reset();
     if (document.getElementById('opportunity-id')) document.getElementById('opportunity-id').value = ''; // Clear ID for new
 
     // 2. Clear and hide work logs section initially
     if (opportunityWorkLogsContainer) opportunityWorkLogsContainer.innerHTML = '';
-    if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.add('hidden');
+    if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.add('hidden'); // Hide the whole accordion
 
     // 3. Populate all dropdowns
     await populateOpportunityCustomers();
     populateOpportunitySalesStages();
     populateOpportunityServicesInterested();
     await populateOpportunityCurrencies();
-    await populateOpportunityPriceBooks(); // This populates allPriceBooks cache
+    await populateOpportunityPriceBooks();
 
     // 4. Handle existing opportunity data (edit mode)
     if (opportunityData) {
@@ -2074,23 +2078,18 @@ async function setupOpportunityForm(opportunityData = null) {
         }
 
         if (document.getElementById('opportunity-probability')) document.getElementById('opportunity-probability').value = opportunityData.probability !== undefined ? opportunityData.probability : 0;
-        
-        // Use direct document.getElementById for setting values
-        if (document.getElementById('opportunity-value')) document.getElementById('opportunity-value').value = opportunityData.value !== undefined ? opportunityData.value : 0;
-        if (document.getElementById('opportunity-discount')) document.getElementById('opportunity-discount').value = opportunityData.opportunityDiscount !== undefined ? opportunityData.opportunityDiscount : 0;
-        if (document.getElementById('opportunity-adjustment-amt')) document.getElementById('opportunity-adjustment-amt').value = opportunityData.adjustmentAmt !== undefined ? opportunityData.adjustmentAmt : 0;
+        if (opportunityValueInput) opportunityValueInput.value = opportunityData.value !== undefined ? opportunityData.value : 0;
+        if (opportunityDiscountInput) opportunityDiscountInput.value = opportunityData.opportunityDiscount !== undefined ? opportunityData.opportunityDiscount : 0;
+        if (adjustmentAmtInput) adjustmentAmtInput.value = opportunityData.adjustmentAmt !== undefined ? opportunityData.adjustmentAmt : 0;
         if (document.getElementById('opportunity-notes')) document.getElementById('opportunity-notes').value = opportunityData.notes || '';
         
-        // Call calculateOpportunityNet directly; it will handle retries internally if needed
         calculateOpportunityNet();
 
         // Show work logs section for existing opportunities
         if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.remove('hidden');
-        
-        // Defer renderWorkLogs to ensure DOM elements are ready
-        setTimeout(async () => {
-            await renderWorkLogs(opportunityData.id);
-        }, 0);
+        if (opportunityWorkLogsContent) opportunityWorkLogsContent.classList.remove('hidden'); // Also show the content
+        // CRITICAL FIX: No setTimeout needed here, elements should be available now
+        await renderWorkLogs(opportunityData.id);
 
         // Ensure Main Details accordion is open
         if (mainOpportunityDetailsContent) mainOpportunityDetailsContent.classList.remove('hidden');
@@ -2106,17 +2105,14 @@ async function setupOpportunityForm(opportunityData = null) {
         // Set default values for new opportunities
         if (opportunitySalesStageSelect) opportunitySalesStageSelect.value = 'Prospect';
         if (document.getElementById('opportunity-probability')) document.getElementById('opportunity-probability').value = 0;
-        
-        // Use direct document.getElementById for setting values
-        if (document.getElementById('opportunity-value')) document.getElementById('opportunity-value').value = 0;
-        if (document.getElementById('opportunity-discount')) document.getElementById('opportunity-discount').value = 0;
-        if (document.getElementById('opportunity-adjustment-amt')) document.getElementById('opportunity-adjustment-amt').value = 0;
-        
-        // Call calculateOpportunityNet directly; it will handle retries internally if needed
+        if (opportunityValueInput) opportunityValueInput.value = 0;
+        if (opportunityDiscountInput) opportunityDiscountInput.value = 0;
+        if (adjustmentAmtInput) adjustmentAmtInput.value = 0;
         calculateOpportunityNet();
 
         // Hide work logs section for new opportunities (until saved)
         if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.add('hidden');
+        if (opportunityWorkLogsContent) opportunityWorkLogsContent.classList.add('hidden'); // Ensure content is hidden
 
         // Ensure Main Details accordion is open
         if (mainOpportunityDetailsContent) mainOpportunityDetailsContent.classList.remove('hidden');
@@ -2358,39 +2354,74 @@ async function handleDeleteOpportunity(opportunityId) { // Now async
 }
 
 
-
+/**
+ * Loads opportunities from Firestore and renders them in the opportunities grid.
+ * Sets up a real-time listener for updates.
+ */
 async function loadOpportunities() {
-    if (!db || !userId) {
-        if (noOpportunitiesMessage) noOpportunitiesMessage.classList.remove('hidden');
-        if (opportunitiesGrid) opportunitiesGrid.updateConfig({ data: [] }).forceRender();
+    if (!opportunitiesGridContainer || !noOpportunitiesMessage) {
+        console.error("loadOpportunities: Required DOM elements for opportunities grid not found.");
         return;
     }
 
-    // Query only for current user's opportunities (top-level collection)
-    onSnapshot(query(collection(db, 'opportunities'), where('creatorId', '==', userId)), async snapshot => {
-        const opportunities = [];
-        for (const docSnap of snapshot.docs) { // Renamed doc to docSnap to avoid conflict with import
-            const opp = { id: docSnap.id, ...docSnap.data() };
-            // customerName is now stored directly in the opportunity document, no need to fetch
-            // Convert Firestore Timestamps to YYYY-MM-DD string for display
-            opp.expectedStartDate = opp.expectedStartDate && opp.expectedStartDate.toDate ? opp.expectedStartDate.toDate().toISOString().split('T')[0] : 'N/A';
-            opp.expectedCloseDate = opp.expectedCloseDate && opp.expectedCloseDate.toDate ? opp.expectedCloseDate.toDate().toISOString().split('T')[0] : 'N/A';
-            // Display services as a comma-separated string
-            opp.servicesInterestedDisplay = Array.isArray(opp.servicesInterested) ? opp.servicesInterested.join(', ') : 'N/A';
+    // Stop previous listener if it exists
+    if (unsubscribeOpportunities) {
+        unsubscribeOpportunities();
+        unsubscribeOpportunities = null;
+        console.log("loadOpportunities: Unsubscribed from previous opportunities listener.");
+    }
 
-            // Add quote count to the opportunity data
-            opp.quoteCount = opportunityQuoteCounts.get(opp.id) || 0;
+    // Hide "No opportunities" message initially
+    noOpportunitiesMessage.classList.add('hidden');
 
-            opportunities.push(opp);
-        }
-        renderOpportunitiesGrid(opportunities);
-    }, error => {
-        console.error("Error loading opportunities in real-time:", error);
-        showMessageBox(`Error loading opportunities: ${error.message}`, false);
-        if (noOpportunitiesMessage) noOpportunitiesMessage.classList.remove('hidden');
-        if (opportunitiesGrid) opportunitiesGrid.updateConfig({ data: [] }).forceRender();
-    });
+    try {
+        const opportunitiesCollectionRef = getCollectionRef('opportunities');
+        // Order by createdAt descending for latest opportunities first
+        const q = query(opportunitiesCollectionRef, orderBy('createdAt', 'desc'));
+
+        console.log("loadOpportunities: Setting up real-time listener for opportunities."); // DEBUG LOG
+        unsubscribeOpportunities = onSnapshot(q, async (querySnapshot) => {
+            const opportunities = [];
+            querySnapshot.forEach(doc => {
+                const data = doc.data();
+                opportunities.push({
+                    id: doc.id, // Ensure ID is included for Grid.js actions
+                    contactName: data.contactName || 'N/A', // Assuming contactName is desired
+                    // Add other fields needed for the grid here
+                    name: data.name || 'N/A',
+                    customerName: data.customerName || 'N/A',
+                    salesStage: data.salesStage || 'N/A',
+                    value: data.value !== undefined ? data.value : 0,
+                    opportunityNet: data.opportunityNet !== undefined ? data.opportunityNet : 0,
+                    currency: data.currency || 'N/A',
+                    expectedCloseDate: data.expectedCloseDate, // Keep as Timestamp for formatter
+                    createdAt: data.createdAt // Keep as Timestamp for sorting/display
+                });
+            });
+
+            console.log(`loadOpportunities: Fetched ${opportunities.length} opportunities for grid.`); // DEBUG LOG
+            console.log("loadOpportunities: Opportunities data for grid:", opportunities); // DEBUG LOG: Inspect the data
+
+            if (opportunities.length === 0) {
+                noOpportunitiesMessage.classList.remove('hidden');
+                opportunitiesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid
+            } else {
+                noOpportunitiesMessage.classList.add('hidden');
+                opportunitiesGrid.updateConfig({ data: opportunities }).forceRender();
+            }
+        }, (error) => {
+            console.error("loadOpportunities: Error listening to opportunities:", error);
+            showMessageBox(`Error loading opportunities: ${error.message}`, 'alert', true);
+            noOpportunitiesMessage.classList.remove('hidden');
+        });
+    } catch (error) {
+        console.error("loadOpportunities: Error setting up opportunities listener:", error);
+        showMessageBox(`Error setting up opportunities listener: ${error.message}`, 'alert', true);
+        noOpportunitiesMessage.classList.remove('hidden');
+    }
 }
+
+
 
 function renderOpportunitiesGrid(opportunities) {
     const data = opportunities.map(opportunity => [
@@ -2726,17 +2757,18 @@ function populateWorkLogTypes() {
     });
 }
 
-
 /**
  * Renders the work logs for a given opportunity.
  * It fetches work logs from the 'workLogs' subcollection of the specified opportunity.
  * @param {string} opportunityId The ID of the opportunity whose work logs are to be rendered.
  */
 async function renderWorkLogs(opportunityId) {
-    console.log(`renderWorkLogs: Attempting to render work logs for Opportunity ID: ${opportunityId}`); // DEBUG LOG
+    console.log(`renderWorkLogs: Attempting to render work logs for Opportunity ID: ${opportunityId}`);
 
+    // These elements should now be reliably assigned in initializePage()
+    // If they are still null here, the problem is in initializePage() or HTML IDs.
     if (!opportunityWorkLogsContainer || !noWorkLogsMessage) {
-        console.error("renderWorkLogs: Required DOM elements for work logs are not found.");
+        console.error("renderWorkLogs: CRITICAL: Work log DOM elements are still null. Check initializePage() and HTML IDs.");
         return;
     }
 
@@ -2750,15 +2782,14 @@ async function renderWorkLogs(opportunityId) {
     }
 
     try {
-        // Create a reference to the 'workLogs' subcollection under the specific opportunity
         const workLogsCollectionRef = collection(db, 'opportunities', opportunityId, 'workLogs');
-        const q = query(workLogsCollectionRef, orderBy('date', 'desc')); // Order by date descending
+        const q = query(workLogsCollectionRef, orderBy('date', 'desc'));
 
-        const querySnapshot = await getDocs(q); // Use getDocs for a one-time fetch
+        const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
             noWorkLogsMessage.classList.remove('hidden');
-            console.log(`renderWorkLogs: No work logs found for opportunity ${opportunityId}.`); // DEBUG LOG
+            console.log(`renderWorkLogs: No work logs found for opportunity ${opportunityId}.`);
         } else {
             querySnapshot.forEach(doc => {
                 const workLog = doc.data();
@@ -2779,7 +2810,7 @@ async function renderWorkLogs(opportunityId) {
                 `;
                 opportunityWorkLogsContainer.appendChild(li);
             });
-            console.log(`renderWorkLogs: Successfully rendered ${querySnapshot.size} work logs for opportunity ${opportunityId}.`); // DEBUG LOG
+            console.log(`renderWorkLogs: Successfully rendered ${querySnapshot.size} work logs for opportunity ${opportunityId}.`);
         }
     } catch (error) {
         console.error("renderWorkLogs: Error fetching work logs:", error);
@@ -2787,6 +2818,9 @@ async function renderWorkLogs(opportunityId) {
         noWorkLogsMessage.classList.remove('hidden');
     }
 }
+
+
+
 
 /**
  * Handles the editing of an existing work log entry.
@@ -4539,10 +4573,13 @@ async function initializePage() {
     opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested');
     opportunityCurrencySelect = document.getElementById('opportunity-currency');
     opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
-    //opportunityValueInput = document.getElementById('opportunity-value'); // Corrected from your list
-    //opportunityDiscountInput = document.getElementById('opportunity-discount'); // Corrected from your list
-    //adjustmentAmtInput = document.getElementById('opportunity-adjustment-amt'); // Corrected from your list
-    //opportunityNetSpan = document.getElementById('opportunity-net-span'); // Corrected from your list
+
+    // Calculation inputs/span - these are now globally assigned for event listeners
+    opportunityValueInput = document.getElementById('opportunity-value');
+    opportunityDiscountInput = document.getElementById('opportunity-discount');
+    adjustmentAmtInput = document.getElementById('opportunity-adjustment-amt');
+    opportunityNetSpan = document.getElementById('opportunity-net-span');
+
 
 
     addOpportunityBtn = document.getElementById('add-opportunity-btn');
@@ -4554,10 +4591,11 @@ async function initializePage() {
 
     // Assign work log section elements
     opportunityWorkLogsSection = document.getElementById('opportunity-work-logs-section'); // Confirmed HTML ID
+    opportunityWorkLogsContent = document.getElementById('opportunity-work-logs-content'); // NEW Assignment
     opportunityWorkLogsContainer = document.getElementById('opportunity-work-logs-container'); // Confirmed HTML ID (the UL)
     opportunityWorkLogFormContainer = document.getElementById('work-log-form-container'); // Confirmed HTML ID
     opportunityWorkLogForm = document.getElementById('work-log-form'); // Confirmed HTML ID
-    //opportunityWorkLogFormMessage = document.getElementById('work-log-form-message'); // Confirmed HTML ID
+    workLogFormMessage = document.getElementById('work-log-form-message'); // Correct variable name
     workLogTypeSelect = document.getElementById('work-log-type'); // Confirmed HTML ID
     addWorkLogBtn = document.getElementById('add-work-log-btn'); // Confirmed HTML ID
     noWorkLogsMessage = document.getElementById('no-work-logs-message'); // Confirmed HTML ID
