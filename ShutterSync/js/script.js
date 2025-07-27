@@ -1832,6 +1832,7 @@ function calculateOpportunityNet() {
 }
 
 
+
 /**
  * Filters price books based on the selected currency and populates the dropdown.
  * @param {string} selectedCurrencyCode - The currency code to filter by.
@@ -2010,7 +2011,6 @@ function populateOpportunityServicesInterested() {
     });
 }
 
-
 // --- In setupOpportunityForm() function: ---
 /**
  * Sets up the opportunity form for adding a new opportunity or editing an existing one.
@@ -2109,7 +2109,6 @@ async function setupOpportunityForm(opportunityData = null) {
         }
     }
 }
-
 
 
 
@@ -4416,10 +4415,10 @@ async function initializePage() {
     opportunityServicesInterestedSelect = document.getElementById('opportunity-services-interested');
     opportunityCurrencySelect = document.getElementById('opportunity-currency');
     opportunityPriceBookSelect = document.getElementById('opportunity-price-book');
-    opportunityValueInput = document.getElementById('opportunity-value'); // Corrected from your list
-    opportunityDiscountInput = document.getElementById('opportunity-discount'); // Corrected from your list
-    adjustmentAmtInput = document.getElementById('opportunity-adjustment-amt'); // Corrected from your list
-    opportunityNetSpan = document.getElementById('opportunity-net-span'); // Corrected from your list
+    //opportunityValueInput = document.getElementById('opportunity-value'); // Corrected from your list
+    //opportunityDiscountInput = document.getElementById('opportunity-discount'); // Corrected from your list
+    //adjustmentAmtInput = document.getElementById('opportunity-adjustment-amt'); // Corrected from your list
+    //opportunityNetSpan = document.getElementById('opportunity-net-span'); // Corrected from your list
 
 
     addOpportunityBtn = document.getElementById('add-opportunity-btn');
@@ -4600,15 +4599,15 @@ async function initializePage() {
 
 
     // Add event listeners for opportunity net calculation
-    if (opportunityValueInput) {
-        opportunityValueInput.addEventListener('input', calculateOpportunityNet);
-    }
-    if (opportunityDiscountInput) {
-        opportunityDiscountInput.addEventListener('input', calculateOpportunityNet);
-    }
-    if (adjustmentAmtInput) {
-        adjustmentAmtInput.addEventListener('input', calculateOpportunityNet);
-    }
+    //if (opportunityValueInput) {
+   //     opportunityValueInput.addEventListener('input', calculateOpportunityNet);
+  //  }
+   // if (opportunityDiscountInput) {
+   //     opportunityDiscountInput.addEventListener('input', calculateOpportunityNet);
+ //   }
+  //  if (adjustmentAmtInput) {
+  //      adjustmentAmtInput.addEventListener('input', calculateOpportunityNet);
+ //   }
 
     // Work Log Listeners
     if (addWorkLogEntryBtn) addWorkLogEntryBtn.addEventListener('click', showWorkLogForm);
