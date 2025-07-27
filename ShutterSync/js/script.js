@@ -2791,8 +2791,6 @@ function populateWorkLogTypes() {
 async function renderWorkLogs(opportunityId) {
     console.log(`renderWorkLogs: Attempting to render work logs for Opportunity ID: ${opportunityId}`);
 
-    // These elements should now be reliably assigned in initializePage()
-    // If they are still null here, the problem is in initializePage() or HTML IDs.
     if (!opportunityWorkLogsContainer || !noWorkLogsMessage) {
         console.error("renderWorkLogs: CRITICAL: Work log DOM elements are still null. Check initializePage() and HTML IDs.");
         return;
@@ -2830,7 +2828,7 @@ async function renderWorkLogs(opportunityId) {
                         <p class="text-gray-600 text-sm">${workLog.details}</p>
                     </div>
                     <div>
-                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditWorkLog('${workLogId}', ${JSON.stringify(workLog).replace(/'/g, "\\'")})">Edit</button>
+                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditWorkLog('${workLogId}')">Edit</button>
                         <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteWorkLog('${workLogId}')">Delete</button>
                     </div>
                 `;
@@ -2849,12 +2847,11 @@ async function renderWorkLogs(opportunityId) {
 
 /**
  * Handles the editing of an existing work log entry.
- * Populates the work log form with existing data and shows the form.
+ * Fetches the work log data from Firestore and populates the form.
  * @param {string} workLogId The ID of the work log document to edit.
- * @param {object} workLogData The data of the work log entry.
  */
-async function handleEditWorkLog(workLogId, workLogData) {
-    console.log(`handleEditWorkLog: Editing work log ID: ${workLogId}`, workLogData); // DEBUG LOG
+async function handleEditWorkLog(workLogId) {
+    console.log(`handleEditWorkLog: Attempting to edit work log ID: ${workLogId}`); // DEBUG LOG
 
     // --- IMPORTANT: Client-side role check for editing ---
     if (currentUserRole !== 'Admin') {
@@ -2864,25 +2861,52 @@ async function handleEditWorkLog(workLogId, workLogData) {
     }
     // --- End Role Check ---
 
-    showForm(opportunityWorkLogFormContainer); // Show the work log form
-    if (opportunityWorkLogForm) opportunityWorkLogForm.reset();
-    if (document.getElementById('work-log-id')) document.getElementById('work-log-id').value = workLogId;
-    if (document.getElementById('work-log-opportunity-id')) document.getElementById('work-log-opportunity-id').value = currentOpportunityId; // Ensure parent ID is set
-
-    // Populate form fields
-    if (document.getElementById('work-log-date')) {
-        const date = workLogData.date ? new Date(workLogData.date.seconds * 1000).toISOString().split('T')[0] : '';
-        document.getElementById('work-log-date').value = date;
+    if (!currentOpportunityId) {
+        showMessageBox("Error: Cannot edit work log. Parent opportunity ID is missing.", 'alert', true);
+        console.error("handleEditWorkLog: currentOpportunityId is null.");
+        return;
     }
-    
-    populateWorkLogTypes(); // Ensure dropdown is populated before setting value
-    if (workLogTypeSelect) workLogTypeSelect.value = workLogData.type || '';
-    
-    if (document.getElementById('work-log-details')) document.getElementById('work-log-details').value = workLogData.details || '';
 
-    // Clear any previous messages on the work log form
-    if (workLogFormMessage) workLogFormMessage.classList.add('hidden');
+    try {
+        const workLogDocRef = doc(db, 'opportunities', currentOpportunityId, 'workLogs', workLogId);
+        const workLogSnap = await getDoc(workLogDocRef);
+
+        if (!workLogSnap.exists()) {
+            showMessageBox("Error: Work log not found.", 'alert', true);
+            console.error(`handleEditWorkLog: Work log with ID ${workLogId} not found.`);
+            return;
+        }
+
+        const workLogData = workLogSnap.data();
+        console.log("handleEditWorkLog: Fetched work log data:", workLogData); // DEBUG LOG
+
+        showForm(opportunityWorkLogFormContainer); // Show the work log form
+        if (opportunityWorkLogForm) opportunityWorkLogForm.reset();
+        if (document.getElementById('work-log-id')) document.getElementById('work-log-id').value = workLogId;
+        if (document.getElementById('work-log-opportunity-id')) document.getElementById('work-log-opportunity-id').value = currentOpportunityId;
+
+        // Populate form fields
+        if (document.getElementById('work-log-date')) {
+            const date = workLogData.date ? new Date(workLogData.date.seconds * 1000).toISOString().split('T')[0] : '';
+            document.getElementById('work-log-date').value = date;
+        }
+        
+        populateWorkLogTypes(); // Ensure dropdown is populated before setting value
+        if (workLogTypeSelect) workLogTypeSelect.value = workLogData.type || '';
+        
+        if (document.getElementById('work-log-details')) document.getElementById('work-log-details').value = workLogData.details || '';
+
+        // Clear any previous messages on the work log form
+        if (workLogFormMessage) workLogFormMessage.classList.add('hidden');
+
+    } catch (error) {
+        console.error("handleEditWorkLog: Error fetching work log for edit:", error);
+        showMessageBox(`Error loading work log for edit: ${error.message}`, 'alert', true);
+    }
 }
+
+
+
 
 /**
  * Handles the deletion of a work log document from Firestore.
