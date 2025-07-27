@@ -91,16 +91,16 @@ let customerForm;
 
 let cancelCustomerBtn;
 let customersGridContainer;
-let customerContactMethodSelect ;
+let customerContactMethodSelect;
 let noCustomersMessage;
 let customerTypeSelect;
-let customerCountrySelect ;
+let customerCountrySelect;
 let customerSearchInput;
 let customersGrid; // Grid.js instance
-let customerIndustrySelect ;
-let customerSourceSelect ;
-let customerActiveCheckbox ;
-let customerFormMessage ;
+let customerIndustrySelect;
+let customerSourceSelect;
+let customerActiveCheckbox;
+let customerFormMessage;
 let additionalDetails;
 
 let addLeadBtn;
@@ -113,7 +113,7 @@ let leadSearchInput;
 let leadsGrid; // Grid.js instance
 let leadServicesInterestedSelect; // For Leads: multi-select
 let leadSourceSelect;
-let leadFormMessage ;
+let leadFormMessage;
 
 
 
@@ -160,8 +160,8 @@ let noWorkLogsMessage;
 let workLogFormMessage;
 let workLogTypeSelect; // Added for easy access
 
-let mainOpportunityDetailsAccordion ;
-let opportunityAccordionsGrid ;
+let mainOpportunityDetailsAccordion;
+let opportunityAccordionsGrid;
 
 
 let addQuoteBtn;
@@ -203,7 +203,7 @@ let countriesGridContainer;
 let noCountriesMessage;
 let countrySearchInput;
 let countriesGrid;
-let countryFormMessage ;
+let countryFormMessage;
 
 let addCurrencyBtn;
 let currencyFormContainer;
@@ -214,7 +214,7 @@ let noCurrenciesMessage;
 let currencySearchInput;
 let currenciesGrid;
 let currencyCountrySelect;
-let currencyFormMessage ;
+let currencyFormMessage;
 
 
 let addPriceBookBtn;
@@ -297,7 +297,7 @@ function showMessageBox(message, type = 'alert', isError = false) { // Removed c
         if (type === 'confirm') {
             messageConfirmBtn.classList.remove('hidden');
             messageCancelBtn.classList.remove('hidden');
-            
+
             messageConfirmBtn.onclick = () => {
                 messageBox.classList.add('hidden');
                 resolve(true); // Resolve with true for Confirm
@@ -309,7 +309,7 @@ function showMessageBox(message, type = 'alert', isError = false) { // Removed c
         } else { // 'alert' type
             messageConfirmBtn.classList.add('hidden');
             messageCancelBtn.classList.add('hidden');
-            
+
             // For simple alerts, allow clicking anywhere on the overlay to close
             messageBox.onclick = () => {
                 messageBox.classList.add('hidden');
@@ -613,7 +613,7 @@ async function loadDashboardData() {
             const stageSnapshot = await getDocs(stageQuery);
             openOpportunitiesCount += stageSnapshot.size;
         }
-        
+
         if (dashboardOpenOpportunities) {
             dashboardOpenOpportunities.textContent = openOpportunitiesCount;
         }
@@ -1016,7 +1016,7 @@ function populateServicesInterested(selectElement) {
 
     // Clear existing options, but keep the first default if it's a placeholder
     // For multi-select, we usually just clear all and add new ones.
-    selectElement.innerHTML = ''; 
+    selectElement.innerHTML = '';
 
     // This list must match the one defined in your Firestore security rules (getAllowedServicesList)
     const allowedServices = [
@@ -1195,9 +1195,9 @@ async function handleEditCustomer(customerId) {
             if (document.getElementById('customer-email')) document.getElementById('customer-email').value = customerData.email || '';
             if (document.getElementById('customer-phone')) document.getElementById('customer-phone').value = customerData.phone || '';
             if (document.getElementById('customer-address')) document.getElementById('customer-address').value = customerData.address || '';
-            
+
             // Populate countries dropdown before setting the value
-            await populateCustomerCountries(); 
+            await populateCustomerCountries();
             if (customerCountrySelect) customerCountrySelect.value = customerData.country || '';
 
             if (customerContactMethodSelect) customerContactMethodSelect.value = customerData.preferredContactMethod || '';
@@ -1360,9 +1360,9 @@ async function handleDeleteCustomer(customerId) {
 
     // Await the result from showMessageBox directly
     const confirmed = await showMessageBox("Are you sure you want to delete this customer? This action cannot be undone.", 'confirm');
-    
+
     console.log(`handleDeleteCustomer: Confirmed status from MessageBox: ${confirmed}`); // DEBUG LOG: Check confirmed value
-    
+
     if (confirmed) {
         console.log("handleDeleteCustomer: Confirmed is true, proceeding with deletion logic."); // DEBUG LOG: Confirm block entered
         try {
@@ -1539,7 +1539,7 @@ async function handleSaveLead(event) {
     }
 
     // Collect data directly from DOM elements using their IDs
-    const servicesInterested = leadServicesInterestedSelect ? 
+    const servicesInterested = leadServicesInterestedSelect ?
         Array.from(leadServicesInterestedSelect.selectedOptions).map(option => option.value) : [];
 
     const data = {
@@ -1598,7 +1598,7 @@ async function handleEditLead(leadId) {
             if (document.getElementById('lead-contact-name')) document.getElementById('lead-contact-name').value = leadData.contactName || '';
             if (document.getElementById('lead-phone')) document.getElementById('lead-phone').value = leadData.phone || '';
             if (document.getElementById('lead-email')) document.getElementById('lead-email').value = leadData.email || '';
-            
+
             populateServicesInterested(leadServicesInterestedSelect);
             if (leadServicesInterestedSelect && leadData.servicesInterested && Array.isArray(leadData.servicesInterested)) {
                 Array.from(leadServicesInterestedSelect.options).forEach(option => {
@@ -1608,9 +1608,9 @@ async function handleEditLead(leadId) {
 
             const eventDate = leadData.eventDate ? new Date(leadData.eventDate.seconds * 1000).toISOString().split('T')[0] : '';
             if (document.getElementById('lead-event-date')) document.getElementById('lead-event-date').value = eventDate;
-            
+
             // ADD THIS LINE: Populate lead source before setting the value
-            populateLeadSource(); 
+            populateLeadSource();
             if (leadSourceSelect) leadSourceSelect.value = leadData.source || '';
 
             if (document.getElementById('lead-additional-details')) document.getElementById('lead-additional-details').value = leadData.additionalDetails || '';
@@ -1756,9 +1756,9 @@ async function handleDeleteLead(leadId) {
 
     // Await the result from showMessageBox directly
     const confirmed = await showMessageBox("Are you sure you want to delete this lead? This action cannot be undone.", 'confirm');
-    
+
     console.log(`handleDeleteLead: Confirmed status from MessageBox: ${confirmed}`); // DEBUG LOG: Check confirmed value
-    
+
     if (confirmed) {
         console.log("handleDeleteLead: Confirmed is true, proceeding with deletion logic."); // DEBUG LOG: Confirm block entered
         try {
@@ -1936,7 +1936,7 @@ function filterPriceBooksByCurrency() {
     const selectedCurrencyCode = opportunityCurrencySelect.value;
     opportunityPriceBookSelect.innerHTML = '<option value="">Select Price Book</option>'; // Clear and add default
 
-    const filteredPriceBooks = allPriceBooks.filter(pb => 
+    const filteredPriceBooks = allPriceBooks.filter(pb =>
         pb.isActive && (selectedCurrencyCode === '' || pb.currency === selectedCurrencyCode)
     );
 
@@ -1965,7 +1965,7 @@ async function populateOpportunityPriceBooks() {
         return;
     }
     opportunityPriceBookSelect.innerHTML = '<option value="">Select Price Book</option>'; // Clear existing options and add default
-    
+
     try {
         const priceBooksSnapshot = await getDocs(getCollectionRef('priceBooks'));
         // Cache all price books for filtering based on currency later
@@ -2076,10 +2076,10 @@ async function setupOpportunityForm(opportunityData = null) {
 
         const expectedStartDate = opportunityData.expectedStartDate ? new Date(opportunityData.expectedStartDate.seconds * 1000).toISOString().split('T')[0] : '';
         if (document.getElementById('opportunity-expected-start-date')) document.getElementById('opportunity-expected-start-date').value = expectedStartDate;
-        
+
         const expectedCloseDate = opportunityData.expectedCloseDate ? new Date(opportunityData.expectedCloseDate.seconds * 1000).toISOString().split('T')[0] : '';
         if (document.getElementById('opportunity-expected-close-date')) document.getElementById('opportunity-expected-close-date').value = expectedCloseDate;
-        
+
         if (opportunitySalesStageSelect) opportunitySalesStageSelect.value = opportunityData.salesStage || '';
 
         if (opportunityServicesInterestedSelect && opportunityData.servicesInterested && Array.isArray(opportunityData.servicesInterested)) {
@@ -2093,14 +2093,14 @@ async function setupOpportunityForm(opportunityData = null) {
         if (document.getElementById('opportunity-discount')) document.getElementById('opportunity-discount').value = opportunityData.opportunityDiscount !== undefined ? opportunityData.opportunityDiscount : 0;
         if (document.getElementById('opportunity-adjustment-amt')) document.getElementById('opportunity-adjustment-amt').value = opportunityData.adjustmentAmt !== undefined ? opportunityData.adjustmentAmt : 0;
         if (document.getElementById('opportunity-notes')) document.getElementById('opportunity-notes').value = opportunityData.notes || '';
-        
+
         calculateOpportunityNet();
 
         // Layout adjustment for existing opportunities: Main Details takes 1 column, Work Logs visible
         if (mainOpportunityDetailsAccordion) mainOpportunityDetailsAccordion.classList.remove('md:col-span-full');
         if (opportunityWorkLogsSection) opportunityWorkLogsSection.classList.remove('hidden');
         if (opportunityWorkLogsContent) opportunityWorkLogsContent.classList.remove('hidden'); // Ensure content is also visible
-        
+
         // Load and render work logs
         await renderWorkLogs(opportunityData.id);
 
@@ -2183,7 +2183,7 @@ async function handleSaveOpportunity(event) {
             if (parentAccordionHeader) {
                 console.log('Opening parent accordion:', parentAccordionHeader.textContent.trim());
                 // Simulate a click on the header to toggle it open
-                parentAccordionHeader.click(); 
+                parentAccordionHeader.click();
             }
         }
         firstInvalidField.focus(); // Focus on the invalid field
@@ -2284,7 +2284,7 @@ async function handleSaveOpportunity(event) {
 
             const docRef = await addDoc(getCollectionRef('opportunities'), data);
             const savedOpportunityId = docRef.id;
-            
+
             showMessageBox("Opportunity added successfully! You can now add work logs.", 'alert', false);
             console.log(`handleSaveOpportunity: Opportunity ${savedOpportunityId} added successfully.`); // SUCCESS LOG
 
@@ -2323,6 +2323,8 @@ async function handleSaveOpportunity(event) {
  * @param {string} opportunityId The ID of the opportunity document to edit.
  */
 async function handleEditOpportunity(opportunityId) {
+     console.log(`handleEditOpportunity: Attempting to edit opportunity with ID: ${opportunityId}`); // This log will be key!
+
     try {
         const docSnap = await getDoc(getDocRef('opportunities', opportunityId));
         if (docSnap.exists()) {
@@ -2890,10 +2892,10 @@ async function handleEditWorkLog(workLogId) {
             const date = workLogData.date ? new Date(workLogData.date.seconds * 1000).toISOString().split('T')[0] : '';
             document.getElementById('work-log-date').value = date;
         }
-        
+
         populateWorkLogTypes(); // Ensure dropdown is populated before setting value
         if (workLogTypeSelect) workLogTypeSelect.value = workLogData.type || '';
-        
+
         if (document.getElementById('work-log-details')) document.getElementById('work-log-details').value = workLogData.details || '';
 
         // Clear any previous messages on the work log form
@@ -2932,9 +2934,9 @@ async function handleDeleteWorkLog(workLogId) {
 
     // Await the result from showMessageBox directly
     const confirmed = await showMessageBox("Are you sure you want to delete this work log entry? This action cannot be undone.", 'confirm');
-    
+
     console.log(`handleDeleteWorkLog: Confirmed status from MessageBox: ${confirmed}`); // DEBUG LOG: Check confirmed value
-    
+
     if (confirmed) {
         console.log("handleDeleteWorkLog: Confirmed is true, proceeding with deletion logic."); // DEBUG LOG: Confirm block entered
         try {
@@ -3072,9 +3074,9 @@ async function handleDeleteCountry(countryId) {
 
     // Await the result from showMessageBox directly
     const confirmed = await showMessageBox("Are you sure you want to delete this country? This action cannot be undone.", 'confirm');
-    
+
     console.log(`handleDeleteCountry: Confirmed status from MessageBox: ${confirmed}`); // DEBUG LOG: Check confirmed value
-    
+
     if (confirmed) {
         console.log("handleDeleteCountry: Confirmed is true, proceeding with deletion logic."); // DEBUG LOG: Confirm block entered
         try {
@@ -3222,7 +3224,7 @@ async function handleEditCurrency(currencyId) {
             if (document.getElementById('currency-name')) document.getElementById('currency-name').value = currencyData.name || '';
             if (document.getElementById('currency-code')) document.getElementById('currency-code').value = currencyData.code || '';
             if (document.getElementById('currency-symbol')) document.getElementById('currency-symbol').value = currencyData.symbol || '';
-            
+
             // Populate countries dropdown before setting the value
             await populateCurrencyCountries(); // ADDED/CONFIRMED THIS LINE
             if (currencyCountrySelect) currencyCountrySelect.value = currencyData.countryCode || '';
@@ -3248,9 +3250,9 @@ async function handleDeleteCurrency(currencyId) {
 
     // Await the result from showMessageBox directly
     const confirmed = await showMessageBox("Are you sure you want to delete this currency? This action cannot be undone.", 'confirm');
-    
+
     console.log(`handleDeleteCurrency: Confirmed status from MessageBox: ${confirmed}`); // DEBUG LOG: Check confirmed value
-    
+
     if (confirmed) {
         console.log("handleDeleteCurrency: Confirmed is true, proceeding with deletion logic."); // DEBUG LOG: Confirm block entered
         try {
@@ -3759,7 +3761,7 @@ async function handleEditPriceBook(priceBookId) {
             if (priceBookActiveCheckbox) priceBookActiveCheckbox.checked = priceBookData.isActive || false;
 
             // Populate currencies dropdown before setting the value
-            await populatePriceBookCurrencies(); 
+            await populatePriceBookCurrencies();
             if (priceBookCurrencySelect) priceBookCurrencySelect.value = priceBookData.currency || '';
 
         } else {
@@ -3784,9 +3786,9 @@ async function handleDeletePriceBook(priceBookId) {
 
     // Await the result from showMessageBox directly
     const confirmed = await showMessageBox("Are you sure you want to delete this price book? This action cannot be undone.", 'confirm');
-    
+
     console.log(`handleDeletePriceBook: Confirmed status from MessageBox: ${confirmed}`); // DEBUG LOG: Check confirmed value
-    
+
     if (confirmed) {
         console.log("handleDeletePriceBook: Confirmed is true, proceeding with deletion logic."); // DEBUG LOG: Confirm block entered
         try {
@@ -3994,7 +3996,7 @@ function showQuoteLineForm() {
     if (quoteLineQuantityInput) quoteLineQuantityInput.value = 1;
     if (quoteLineDiscountInput) quoteLineDiscountInput.value = 0;
     if (quoteLineAdjustmentAmountInput) quoteLineAdjustmentAmountInput.value = 0;
-    
+
     calculateQuoteLineFinalNet(); // Recalculate for new form
     if (quoteLineFormMessage) { // Null check
         showMessageBox(quoteLineFormMessage, '', false); // Clear previous messages
@@ -4514,7 +4516,7 @@ async function handleDeleteQuoteLine(quoteLineId) { // Now async
                 // The parent quote ID is needed to get the correct subcollection reference
                 // This assumes `currentQuoteId` is correctly set when in the quote form context
                 const parentQuoteId = document.getElementById('quote-line-parent-quote-id')?.value || currentQuoteId;
-                
+
                 if (!parentQuoteId) {
                     showMessageBox('Parent quote ID is missing. Cannot delete quote line.', 'alert', true);
                     return;
@@ -4664,7 +4666,7 @@ async function initializePage() {
     cancelWorkLogBtn = document.getElementById('cancel-work-log-btn'); // Confirmed HTML ID
 
 
- // Assign accordion elements
+    // Assign accordion elements
     mainOpportunityDetailsAccordion = document.getElementById('main-opportunity-details-accordion'); // Confirmed HTML ID (header)
     mainOpportunityDetailsContent = document.getElementById('main-details-content'); // Confirmed HTML ID (content body)
     opportunityAccordionsGrid = document.getElementById('opportunity-accordions-grid'); // Confirmed HTML ID (parent grid for accordions)
@@ -4769,7 +4771,7 @@ async function initializePage() {
     // Setup Event Listeners
     if (googleSignInBtn) googleSignInBtn.addEventListener('click', handleGoogleSignIn);
     if (logoutBtn) logoutBtn.addEventListener('click', handleLogout); // Corrected listener for logoutBtn
-    
+
     // Navigation Listeners
     if (navDashboard) navDashboard.addEventListener('click', () => showSection('dashboard-section'));
     if (navCustomers) navCustomers.addEventListener('click', () => showSection('customers-section'));
@@ -4781,15 +4783,15 @@ async function initializePage() {
     if (navPriceBooks) navPriceBooks.addEventListener('click', () => showSection('price-books-section'));
 
 
- if (addCustomerBtn) addCustomerBtn.addEventListener('click', () => {
+    if (addCustomerBtn) addCustomerBtn.addEventListener('click', () => {
         hideForm(customerFormContainer, customerFormMessage);
         showForm(customerFormContainer);
         customerForm.reset();
         document.getElementById('customer-id').value = '';
         if (customerActiveCheckbox) customerActiveCheckbox.checked = true;
-        
+
         // ADD THIS LINE: Populate countries when adding a new customer
-        populateCustomerCountries(); 
+        populateCustomerCountries();
     });
     if (cancelCustomerBtn) cancelCustomerBtn.addEventListener('click', () => hideForm(customerFormContainer, customerFormMessage));
     if (customerForm) customerForm.addEventListener('submit', handleSaveCustomer);
@@ -4800,12 +4802,12 @@ async function initializePage() {
         showForm(leadFormContainer);
         if (leadForm) leadForm.reset();
         if (document.getElementById('lead-id')) document.getElementById('lead-id').value = '';
-        
+
         populateServicesInterested(leadServicesInterestedSelect);
         if (leadServicesInterestedSelect) Array.from(leadServicesInterestedSelect.options).forEach(option => option.selected = false);
 
         // ADD THIS LINE: Populate lead source when adding a new lead
-        populateLeadSource(); 
+        populateLeadSource();
     });
 
     if (cancelLeadBtn) cancelLeadBtn.addEventListener('click', () => hideForm(leadFormContainer, leadFormMessage));
@@ -4887,10 +4889,10 @@ async function initializePage() {
         showForm(currencyFormContainer);
         if (currencyForm) currencyForm.reset();
         if (document.getElementById('currency-id')) document.getElementById('currency-id').value = '';
-        
+
         // ADD THIS LINE: Populate countries when adding a new currency
-        populateCurrencyCountries(); 
-    });  
+        populateCurrencyCountries();
+    });
 
     if (cancelCurrencyBtn) cancelCurrencyBtn.addEventListener('click', () => hideForm(currencyFormContainer, currencyFormMessage));
     if (currencyForm) currencyForm.addEventListener('submit', handleSaveCurrency);
@@ -4903,7 +4905,7 @@ async function initializePage() {
 
 
     // Setup Grids (Existing initializations, now with column widths and null checks)
-   customersGrid = new gridjs.Grid({
+    customersGrid = new gridjs.Grid({
         columns: [
             { id: 'id', name: 'ID', hidden: true }, // Explicit ID column, hidden, and now reliably at index 0
             { id: 'name', name: 'Name', width: 'auto' },
@@ -5044,8 +5046,12 @@ async function initializePage() {
     });
 
 
+
     opportunitiesGrid = new gridjs.Grid({
         columns: [
+            // CRITICAL FIX: Add a hidden 'id' column first
+            { id: 'id', name: 'ID', hidden: true },
+
             { id: 'name', name: 'Opportunity Name', width: 'auto' },
             { id: 'customerName', name: 'Customer', width: '180px' },
             { id: 'currency', name: 'Currency', width: '100px' },
@@ -5057,11 +5063,12 @@ async function initializePage() {
                 name: 'Actions',
                 width: '120px',
                 formatter: (cell, row) => {
-                    const opportunityId = row.cells[row.cells.length - 1].data;
+                    // CRITICAL FIX: Get the ID from the first cell (index 0)
+                    const opportunityId = row.cells[0].data;
                     return gridjs.html(`
-                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditOpportunity('${opportunityId}')">Edit</button>
-                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteOpportunity('${opportunityId}')">Delete</button>
-                    `);
+                    <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditOpportunity('${opportunityId}')">Edit</button>
+                    <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteOpportunity('${opportunityId}')">Delete</button>
+                `);
                 }
             }
         ],
@@ -5082,6 +5089,8 @@ async function initializePage() {
             }
         }
     }).render(opportunitiesGridContainer);
+
+
 
     unsubscribeOpportunities = onSnapshot(getCollectionRef('opportunities'), (snapshot) => {
         const opportunities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -5423,5 +5432,3 @@ window.showMessageBox = showMessageBox; // For modal alerts/confirms
 window.showWorkLogForm = showWorkLogForm; // If called directly from HTML (e.g. from Add button in Opportunity)
 window.showQuotesForOpportunity = showQuotesForOpportunity; // For filtering quotes grid
 window.clearQuotesFilter = clearQuotesFilter; // For clearing quotes filter
-
-
