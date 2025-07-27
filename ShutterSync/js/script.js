@@ -1804,16 +1804,29 @@ async function populateOpportunityCustomers() {
  * This function now gets its own DOM element references for robustness.
  */
 function calculateOpportunityNet() {
+    console.log("calculateOpportunityNet: Attempting to get DOM elements."); // Debug start
+
     // Get element references directly within the function call
     const valueInput = document.getElementById('opportunity-value');
+    console.log("calculateOpportunityNet: opportunity-value element:", valueInput);
+
     const discountInput = document.getElementById('opportunity-discount');
+    console.log("calculateOpportunityNet: opportunity-discount element:", discountInput);
+
     const adjustmentInput = document.getElementById('opportunity-adjustment-amt');
+    console.log("calculateOpportunityNet: opportunity-adjustment-amt element:", adjustmentInput);
+
     const netSpan = document.getElementById('opportunity-net-span');
+    console.log("calculateOpportunityNet: opportunity-net-span element:", netSpan);
 
     // Defensive check: if any element is still null, log and exit.
-    // This should ideally not happen now, but it's a good fallback.
     if (!valueInput || !discountInput || !adjustmentInput || !netSpan) {
         console.warn("calculateOpportunityNet: One or more required input/span elements are null. Cannot calculate net.");
+        // Log which specific element is null
+        if (!valueInput) console.error("Missing: opportunity-value");
+        if (!discountInput) console.error("Missing: opportunity-discount");
+        if (!adjustmentInput) console.error("Missing: opportunity-adjustment-amt");
+        if (!netSpan) console.error("Missing: opportunity-net-span");
         return; // Exit if elements are not ready
     }
 
@@ -1830,6 +1843,7 @@ function calculateOpportunityNet() {
     netSpan.textContent = net.toFixed(2);
     console.log(`calculateOpportunityNet: Calculated Net=${net.toFixed(2)}`); // DEBUG LOG
 }
+
 
 
 
