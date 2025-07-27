@@ -146,7 +146,6 @@ let opportunityWorkLogForm;
 let mainOpportunityDetailsContent; // NEW: For the collapsible content of the main accordion
 
 let opportunityWorkLogsContent; // NEW: For the collapsible content of work logs accordion
-let opportunityWorkLogsContent; // NEW: For the collapsible content of work logs accordion
 
 
 
