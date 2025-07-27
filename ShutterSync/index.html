@@ -406,8 +406,8 @@
                 <div id="opportunity-accordions-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                     <!-- Main Opportunity Details Accordion -->
-                    <div id="main-opportunity-details-accordion"
-                        class="accordion-item bg-white rounded-lg shadow-md md:col-span-full">
+                    <div id="main-opportunity-details-accordion" class="accordion-item bg-white rounded-lg shadow-md">
+                        <!-- REMOVED md:col-span-full HERE -->
                         <div
                             class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200">
                             <h3 class="text-lg font-semibold text-gray-800">Main Details</h3>
@@ -452,17 +452,15 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="opportunity-expected-start-date" 
+                                    <label for="opportunity-expected-start-date"
                                         class="block text-sm font-medium text-gray-700">Expected Start Date</label>
-                                    <input type="date" id="opportunity-expected-start-date" 
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
+                                    <input type="date" id="opportunity-expected-start-date" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
                                     focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 </div>
                                 <div>
-                                    <label for="opportunity-expected-close-date" 
+                                    <label for="opportunity-expected-close-date"
                                         class="block text-sm font-medium text-gray-700">Expected Close Date</label>
-                                    <input type="date" id="opportunity-expected-close-date" 
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
+                                    <input type="date" id="opportunity-expected-close-date" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
                                     focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 </div>
                                 <div>
@@ -502,18 +500,16 @@
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 </div>
                                 <div>
-                                    <label for="opportunity-adjustment-amt" 
+                                    <label for="opportunity-adjustment-amt"
                                         class="block text-sm font-medium text-gray-700">Adjustment Amt</label>
                                     <input type="number" step="0.01" id="opportunity-adjustment-amt"
-                                        name="adjustmentAmt" value="0" 
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
+                                        name="adjustmentAmt" value="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
                                     focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 </div>
                                 <div>
-                                    <label for="opportunity-net-span" 
+                                    <label for="opportunity-net-span"
                                         class="block text-sm font-medium text-gray-700">Opportunity Net</label>
-                                    <span id="opportunity-net-span" 
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-md
+                                    <span id="opportunity-net-span" class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-md
                                         shadow-sm sm:text-sm">0.00</span>
                                 </div>
                                 <!-- End New Fields -->
@@ -551,8 +547,7 @@
                     </div>
 
                     <!-- Work Logs Accordion (Right Column, hidden by default) -->
-                    <div id="opportunity-work-logs-section" 
-                        class="accordion-item bg-white rounded-lg shadow-md hidden">
+                    <div id="opportunity-work-logs-section" class="accordion-item bg-white rounded-lg shadow-md hidden">
                         <div
                             class="accordion-header flex justify-between items-center cursor-pointer p-3 rounded-t-lg bg-gray-100 hover:bg-gray-200 transition duration-200">
                             <h3 class="text-lg font-semibold text-gray-800">Work Logs</h3>
@@ -568,8 +563,7 @@
                                 <!-- CRITICAL HTML FIX 8: Correct ID for UL -->
                             </div>
 
-                            <button id="add-work-log-btn" type="button" 
-                                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition
+                            <button id="add-work-log-btn" type="button" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition
                                 duration-300 mb-4">Add
                                 New Work Log Entry</button>
 
