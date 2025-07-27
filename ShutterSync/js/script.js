@@ -2701,13 +2701,100 @@ async function editWorkLog(workLogId, opportunityId) { // Pass opportunityId to 
 }
 
 /**
+ * Populates the work log type dropdown with predefined options.
+ * This list should match the allowed types in Firestore security rules.
+ */
+function populateWorkLogTypes() {
+    if (!workLogTypeSelect) {
+        console.warn("populateWorkLogTypes: workLogTypeSelect element not found.");
+        return;
+    }
+    workLogTypeSelect.innerHTML = '<option value="">Select Type</option>'; // Clear existing options and add default
+
+    // This list must match the one defined in your Firestore security rules for work log types
+    const allowedTypes = ['Call', 'Email', 'Meeting', 'Task', 'Site Visit', 'Follow-up', 'Other'];
+
+    allowedTypes.forEach(type => {
+        const option = document.createElement('option');
+        option.value = type;
+        option.textContent = type;
+        workLogTypeSelect.appendChild(option);
+    });
+}
+
+
+/**
+ * Renders the work logs for a given opportunity.
+ * It fetches work logs from the 'workLogs' subcollection of the specified opportunity.
+ * @param {string} opportunityId The ID of the opportunity whose work logs are to be rendered.
+ */
+async function renderWorkLogs(opportunityId) {
+    console.log(`renderWorkLogs: Attempting to render work logs for Opportunity ID: ${opportunityId}`); // DEBUG LOG
+
+    if (!opportunityWorkLogsContainer || !noWorkLogsMessage) {
+        console.error("renderWorkLogs: Required DOM elements for work logs are not found.");
+        return;
+    }
+
+    opportunityWorkLogsContainer.innerHTML = ''; // Clear existing work logs
+    noWorkLogsMessage.classList.add('hidden'); // Hide "No work logs" message initially
+
+    if (!opportunityId) {
+        console.log("renderWorkLogs: No opportunity ID provided, hiding work logs section.");
+        noWorkLogsMessage.classList.remove('hidden');
+        return;
+    }
+
+    try {
+        // Create a reference to the 'workLogs' subcollection under the specific opportunity
+        const workLogsCollectionRef = collection(db, 'opportunities', opportunityId, 'workLogs');
+        const q = query(workLogsCollectionRef, orderBy('date', 'desc')); // Order by date descending
+
+        const querySnapshot = await getDocs(q); // Use getDocs for a one-time fetch
+
+        if (querySnapshot.empty) {
+            noWorkLogsMessage.classList.remove('hidden');
+            console.log(`renderWorkLogs: No work logs found for opportunity ${opportunityId}.`); // DEBUG LOG
+        } else {
+            querySnapshot.forEach(doc => {
+                const workLog = doc.data();
+                const workLogId = doc.id;
+                const date = workLog.date ? new Date(workLog.date.seconds * 1000).toLocaleDateString() : 'N/A';
+
+                const li = document.createElement('li');
+                li.className = 'bg-gray-100 p-3 rounded-md shadow-sm flex justify-between items-center';
+                li.innerHTML = `
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700">${date} - ${workLog.type}</p>
+                        <p class="text-gray-600 text-sm">${workLog.details}</p>
+                    </div>
+                    <div>
+                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditWorkLog('${workLogId}', ${JSON.stringify(workLog).replace(/'/g, "\\'")})">Edit</button>
+                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteWorkLog('${workLogId}')">Delete</button>
+                    </div>
+                `;
+                opportunityWorkLogsContainer.appendChild(li);
+            });
+            console.log(`renderWorkLogs: Successfully rendered ${querySnapshot.size} work logs for opportunity ${opportunityId}.`); // DEBUG LOG
+        }
+    } catch (error) {
+        console.error("renderWorkLogs: Error fetching work logs:", error);
+        showMessageBox(`Error loading work logs: ${error.message}`, 'alert', true);
+        noWorkLogsMessage.classList.remove('hidden');
+    }
+}
+
+/**
  * Handles the editing of an existing work log entry.
  * Populates the work log form with existing data and shows the form.
  * @param {string} workLogId The ID of the work log document to edit.
- * @param {object} workLogData The data of the work log entry (passed from renderWorkLogs).
+ * @param {object} workLogData The data of the work log entry.
  */
-async function handleEditWorkLog(workLogId, workLogData) { // Made async for consistency
-    showWorkLogForm(); // Show the work log form
+async function handleEditWorkLog(workLogId, workLogData) {
+    console.log(`handleEditWorkLog: Editing work log ID: ${workLogId}`, workLogData); // DEBUG LOG
+
+    showForm(opportunityWorkLogFormContainer); // Show the work log form
+    if (opportunityWorkLogForm) opportunityWorkLogForm.reset();
     if (document.getElementById('work-log-id')) document.getElementById('work-log-id').value = workLogId;
     if (document.getElementById('work-log-opportunity-id')) document.getElementById('work-log-opportunity-id').value = currentOpportunityId; // Ensure parent ID is set
 
@@ -2723,36 +2810,55 @@ async function handleEditWorkLog(workLogId, workLogData) { // Made async for con
     
     if (document.getElementById('work-log-details')) document.getElementById('work-log-details').value = workLogData.details || '';
 
-    // Use the correct variable 'workLogFormMessage' here
-    if (workLogFormMessage) showMessageBox('', 'alert', false); // Clear any previous messages, using 'alert' type
+    // Clear any previous messages on the work log form
+    if (workLogFormMessage) workLogFormMessage.classList.add('hidden');
 }
 
 
-
 /**
- * Handles the deletion of a specific work log entry within an opportunity.
+ * Handles the deletion of a work log document from Firestore.
  * Prompts for confirmation before proceeding with deletion.
  * @param {string} workLogId The ID of the work log document to delete.
  */
-async function handleDeleteWorkLog(workLogId) { // Now async
-    showMessageBox("Are you sure you want to delete this work log entry? This action cannot be undone.", 'confirm', async (confirmed) => {
-        if (confirmed) {
-            try {
-                const parentOpportunityId = document.getElementById('work-log-opportunity-id')?.value || currentOpportunityId;
-                
-                if (!parentOpportunityId) {
-                    showMessageBox('Parent opportunity ID is missing. Cannot delete work log.', 'alert', true);
-                    return;
-                }
+async function handleDeleteWorkLog(workLogId) {
+    console.log(`handleDeleteWorkLog: Attempting to delete work log with ID: ${workLogId}`); // DEBUG LOG
 
-                await deleteDoc(doc(collection(getDocRef('opportunities', parentOpportunityId), 'workLogs'), workLogId));
-                showMessageBox("Work log entry deleted successfully!");
-            } catch (error) {
-                console.error("Error deleting work log:", error);
-                showMessageBox(`Error deleting work log: ${error.message}`, 'alert', true);
+    if (!currentOpportunityId) {
+        showMessageBox("Error: Cannot delete work log. Parent opportunity ID is missing.", 'alert', true);
+        console.error("handleDeleteWorkLog: currentOpportunityId is null.");
+        return;
+    }
+
+    // Await the result from showMessageBox directly
+    const confirmed = await showMessageBox("Are you sure you want to delete this work log entry? This action cannot be undone.", 'confirm');
+    
+    console.log(`handleDeleteWorkLog: Confirmed status from MessageBox: ${confirmed}`); // DEBUG LOG: Check confirmed value
+    
+    if (confirmed) {
+        console.log("handleDeleteWorkLog: Confirmed is true, proceeding with deletion logic."); // DEBUG LOG: Confirm block entered
+        try {
+            // Reference to the work log document within the subcollection
+            const workLogDocRef = doc(db, 'opportunities', currentOpportunityId, 'workLogs', workLogId);
+            console.log(`handleDeleteWorkLog: Deleting document at path: ${workLogDocRef.path}`); // DEBUG LOG
+
+            await deleteDoc(workLogDocRef);
+            showMessageBox("Work log entry deleted successfully!", 'alert', false); // Use 'alert' type for success message
+            console.log(`handleDeleteWorkLog: Work log ${workLogId} deleted successfully.`); // SUCCESS LOG
+
+            // Re-render work logs to update the list
+            await renderWorkLogs(currentOpportunityId);
+
+        } catch (error) {
+            console.error("handleDeleteWorkLog: Error deleting work log:", error); // Log the full error object
+            if (error.code && error.message) {
+                showMessageBox(`Error deleting work log: ${error.message} (Code: ${error.code})`, 'alert', true);
+            } else {
+                showMessageBox(`Error deleting work log: An unexpected error occurred.`, 'alert', true);
             }
         }
-    });
+    } else {
+        console.log("handleDeleteWorkLog: Deletion cancelled by user."); // DEBUG LOG: If user cancels
+    }
 }
 
 
