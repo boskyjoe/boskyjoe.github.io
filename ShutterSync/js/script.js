@@ -4114,11 +4114,12 @@ async function setupQuoteForm(quoteData = null) {
 
 
     if (quoteData) { // Edit mode
+        console.log("setupQuoteForm: Entering EDIT mode for quote:", quoteData);
         currentQuoteId = quoteData.id;
         if (document.getElementById('quote-id')) document.getElementById('quote-id').value = quoteData.id;
         if (document.getElementById('quote-name')) document.getElementById('quote-name').value = quoteData.quoteName || '';
         
-        // CRITICAL FIX: Use the correct ID 'quote-event-name'
+        // Use the correct ID 'quote-event-name'
         if (document.getElementById('quote-event-name')) document.getElementById('quote-event-name').value = quoteData.eventName || '';
         
         if (quoteOpportunitySelect) {
@@ -4136,20 +4137,22 @@ async function setupQuoteForm(quoteData = null) {
         const eventDate = quoteData.eventDate ? new Date(quoteData.eventDate.seconds * 1000).toISOString().split('T')[0] : '';
         if (document.getElementById('quote-event-date')) document.getElementById('quote-event-date').value = eventDate;
 
-        // --- Layout Adjustment for EDIT mode (similar to Opportunity/Work Logs) ---
+        // --- Layout Adjustment for EDIT mode ---
+        // Main details takes half width (by removing full-span class)
         if (mainQuoteDetailsAccordion) {
-            mainQuoteDetailsAccordion.classList.remove('md:col-span-full'); // Main details takes half width
+            mainQuoteDetailsAccordion.classList.remove('md:col-span-full'); 
             const mainDetailsHeader = mainQuoteDetailsAccordion.querySelector('.accordion-header');
             if (mainDetailsHeader) {
                 setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
             }
         }
 
+        // Show quote lines container and ensure it's open
         if (quoteLinesSectionContainer) {
-            quoteLinesSectionContainer.classList.remove('hidden'); // Show quote lines container
+            quoteLinesSectionContainer.classList.remove('hidden'); 
             const quoteLinesAccordionHeader = quoteLinesSectionContainer.querySelector('.accordion-header');
             if (quoteLinesAccordionHeader) {
-                setAccordionVisualState(quoteLinesAccordionHeader, true); // CRITICAL FIX: Set to TRUE for OPEN on edit
+                setAccordionVisualState(quoteLinesAccordionHeader, true); // True for OPEN
             }
             // Ensure novalidate is removed when quote line form is potentially used
             if (quoteLineForm) {
@@ -4161,37 +4164,37 @@ async function setupQuoteForm(quoteData = null) {
         await renderQuoteLines(quoteData.id); 
 
     } else { // For a new quote (ADD mode)
+        console.log("setupQuoteForm: Entering ADD NEW mode.");
         currentQuoteId = null; // Reset currentQuoteId for new quote
         
         // Clear customer details (important for new quotes)
-        // Ensure quoteOpportunitySelect is reset, then call populateCustomerDetailsForQuote without arguments
         if (quoteOpportunitySelect) quoteOpportunitySelect.value = ''; // Ensure dropdown is reset
         await populateCustomerDetailsForQuote(); // Call to clear fields based on empty select
 
         if (document.getElementById('quote-amount')) document.getElementById('quote-amount').value = '0.00'; // Reset quote amount
         if (quoteLinesList) quoteLinesList.innerHTML = ''; // Clear existing quote lines display
         if (noQuoteLinesMessage) noQuoteLinesMessage.classList.remove('hidden'); // Show no lines message
-        hideQuoteLineForm(); // CRITICAL: Call hideQuoteLineForm() for new quotes to apply novalidate
+        hideQuoteLineForm(); // Call hideQuoteLineForm() for new quotes to apply novalidate and hide form
 
         // --- Layout Adjustment for ADD mode ---
-        if (quoteLinesSectionContainer) {
-            quoteLinesSectionContainer.classList.add('hidden'); // Hide quote lines container
-            // The novalidate is handled by hideQuoteLineForm() now.
-        }
+        // Main details spans full width
         if (mainQuoteDetailsAccordion) {
-            mainQuoteDetailsAccordion.classList.add('md:col-span-full'); // Main details spans full width
+            mainQuoteDetailsAccordion.classList.add('md:col-span-full'); 
             const mainDetailsHeader = mainQuoteDetailsAccordion.querySelector('.accordion-header');
             if (mainDetailsHeader) {
                 setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
             }
+        }
+        // Hide quote lines container
+        if (quoteLinesSectionContainer) {
+            quoteLinesSectionContainer.classList.add('hidden'); 
+            // The novalidate is handled by hideQuoteLineForm() now.
         }
     }
     // Show the main quote form container
     showForm(quoteFormContainer);
     console.log('Add/Edit Quote form setup complete. currentQuoteId:', currentQuoteId);
 }
-
-
 
 
 /**
