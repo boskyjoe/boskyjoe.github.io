@@ -1561,126 +1561,69 @@ async function setupLeadForm(lead = null) {
 }
 
 /**
-async function handleSaveLead(event) {
-    event.preventDefault(); // Prevent default form submission
-    if (!db || !userId) {
-        showMessageBox("Authentication required to save lead.", false);
-        return;
-    }
-
-    const leadId = document.getElementById('lead-id').value;
-    const messageElement = document.getElementById('lead-form-message');
-    if (messageElement) messageElement.classList.add('hidden');
-
-    // --- Start Client-Side Validation ---
-    const requiredFields = leadForm.querySelectorAll('[required]');
-    let firstInvalidField = null;
-
-    for (const field of requiredFields) {
-        // Special handling for multi-select: check if at least one option is selected
-        if (field.tagName === 'SELECT' && field.multiple) {
-            const selectedOptions = Array.from(field.options).filter(option => option.selected);
-            if (selectedOptions.length === 0) {
-                firstInvalidField = field;
-                break;
-            }
-        } else if (!field.value) {
-            firstInvalidField = field;
-            break;
-        }
-    }
-
-    if (firstInvalidField) {
-        console.warn('Validation failed: Required field is empty.', firstInvalidField);
-        firstInvalidField.focus(); // Focus on the invalid field
-        messageElement.textContent = `Please fill in the required field: ${firstInvalidField.labels ? firstInvalidField.labels[0].textContent : firstInvalidField.id.replace(/-/g, ' ')}.`;
-        messageElement.classList.remove('hidden');
-        return; // Stop form submission
-    }
-    // --- End Client-Side Validation ---
-
-    const eventDateValue = document.getElementById('lead-event-date').value;
-    const eventDateTimestamp = eventDateValue ? new Date(eventDateValue) : null;
-
-    // NEW: Capture selected services from multi-select as an array
-    const selectedServices = Array.from(leadServicesInterestedSelect.options)
-        .filter(option => option.selected)
-        .map(option => option.value);
-
-    const leadData = {
-        contactName: document.getElementById('lead-contact-name').value,
-        phone: document.getElementById('lead-phone').value,
-        email: document.getElementById('lead-email').value,
-        servicesInterested: selectedServices, // NEW: Save as array
-        eventDate: eventDateTimestamp, // Save as Date object (Firestore converts to Timestamp)
-        source: document.getElementById('lead-source').value,
-        additionalDetails: document.getElementById('lead-additional-details').value,
-        creatorId: userId, // Added creatorId as per rules
-        updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp()
-    };
-
-    // --- START DEBUG LOGGING ---
-    console.log("Attempting to save lead with data:", JSON.stringify(leadData, null, 2));
-    // --- END DEBUG LOGGING ---
-
-    try {
-        const collectionRef = collection(db, 'leads'); // Top-level collection
-        if (leadId) {
-            // For update, only update updatedAt, not createdAt
-            delete leadData.createdAt; // Ensure createdAt is not sent on update
-            await updateDoc(doc(collectionRef, leadId), leadData);
-            showMessageBox("Lead updated successfully!", false);
-        } else {
-            await addDoc(collectionRef, leadData);
-            showMessageBox("Lead added successfully!", false);
-        }
-        hideLeadForm();
-        await loadLeads(); // Reload grid
-    } catch (error) {
-        console.error("Error saving lead:", error);
-        if (messageElement) {
-            messageElement.textContent = `Error saving lead: ${error.message}`;
-            messageElement.classList.remove('hidden');
-        }
-    }
-}*/
-
+ * Handles saving a new lead or updating an existing one.
+ * @param {Event} event The form submission event.
+ */
 async function handleSaveLead(event) {
     event.preventDefault();
+    console.log('handleSaveLead: Form submit event triggered.'); // Diagnostic log
+
     const leadId = document.getElementById('lead-id').value;
+    console.log("handleSaveLead: leadId:", leadId);
 
-    // Get the current authenticated user's UID
     const creatorId = auth.currentUser?.uid;
-
     if (!creatorId) {
         showMessageBox("Authentication required to save lead.", 'alert', true);
         console.error("Error saving lead: User not authenticated or UID not available.");
         return;
     }
+    console.log("handleSaveLead: creatorId:", creatorId);
+
+    // --- CRITICAL DEBUGGING: Log element references and their values ---
+    const leadContactNameInput = document.getElementById('lead-contact-name');
+    console.log("handleSaveLead: leadContactNameInput:", leadContactNameInput);
+    const leadPhoneInput = document.getElementById('lead-phone');
+    console.log("handleSaveLead: leadPhoneInput:", leadPhoneInput);
+    const leadEmailInput = document.getElementById('lead-email');
+    console.log("handleSaveLead: leadEmailInput:", leadEmailInput);
+    
+    // Check global select elements
+    console.log("handleSaveLead: leadServicesInterestedSelect (global):", leadServicesInterestedSelect); // <-- THIS IS KEY
+    console.log("handleSaveLead: leadSourceSelect (global):", leadSourceSelect); // <-- THIS IS KEY
+
+    const leadEventDateInput = document.getElementById('lead-event-date');
+    console.log("handleSaveLead: leadEventDateInput:", leadEventDateInput);
+    const leadAdditionalDetailsInput = document.getElementById('lead-additional-details');
+    console.log("handleSaveLead: leadAdditionalDetailsInput:", leadAdditionalDetailsInput);
 
     // Collect data directly from DOM elements using their IDs
     const servicesInterested = leadServicesInterestedSelect ?
         Array.from(leadServicesInterestedSelect.selectedOptions).map(option => option.value) : [];
+    console.log("handleSaveLead: servicesInterested (collected):", servicesInterested);
+
+    const sourceValue = leadSourceSelect ? leadSourceSelect.value : '';
+    console.log("handleSaveLead: sourceValue (collected):", sourceValue);
 
     const data = {
-        contactName: document.getElementById('lead-contact-name').value || '',
-        phone: document.getElementById('lead-phone').value || '',
-        email: document.getElementById('lead-email').value || '',
+        contactName: leadContactNameInput ? leadContactNameInput.value || '' : '',
+        phone: leadPhoneInput ? leadPhoneInput.value || '' : '',
+        email: leadEmailInput ? leadEmailInput.value || '' : '',
         servicesInterested: servicesInterested,
-        eventDate: document.getElementById('lead-event-date').value ? new Date(document.getElementById('lead-event-date').value) : null,
-        source: leadSourceSelect ? leadSourceSelect.value : '',
-        additionalDetails: document.getElementById('lead-additional-details').value || '',
+        eventDate: leadEventDateInput && leadEventDateInput.value ? new Date(leadEventDateInput.value) : null,
+        source: sourceValue,
+        additionalDetails: leadAdditionalDetailsInput ? leadAdditionalDetailsInput.value || '' : '',
         updatedAt: serverTimestamp(),
-        creatorId: creatorId // Explicitly set creatorId
+        creatorId: creatorId
     };
+
+    console.log("handleSaveLead: Data object being prepared for Firestore:", data); // CRITICAL DEBUG LOG
 
     try {
         if (leadId) {
-            // For update, ensure createdAt is preserved
             const existingDoc = await getDoc(getDocRef('leads', leadId));
             if (existingDoc.exists()) {
                 data.createdAt = existingDoc.data().createdAt;
+                console.log("handleSaveLead: Updating lead. Final data with createdAt:", data); // DEBUG LOG for update
             } else {
                 showMessageBox("Error: Cannot update non-existent lead.", 'alert', true);
                 return;
@@ -1689,15 +1632,17 @@ async function handleSaveLead(event) {
             showMessageBox("Lead updated successfully!", 'alert', false);
         } else {
             data.createdAt = serverTimestamp();
+            console.log("handleSaveLead: Adding new lead. Final data with createdAt:", data); // DEBUG LOG for create
             await addDoc(getCollectionRef('leads'), data);
             showMessageBox("Lead added successfully!", 'alert', false);
         }
         hideForm(leadFormContainer, leadFormMessage);
     } catch (error) {
-        console.error("Error saving lead:", error);
+        console.error("Error saving lead:", error); // Log the full error object
         showMessageBox(`Error saving lead: ${error.message}`, 'alert', true);
     }
 }
+
 
 
 /**
@@ -4801,6 +4746,7 @@ async function initializePage() {
     dashboardSection = document.getElementById('dashboard-section');
     customersSection = document.getElementById('customers-section');
     leadsSection = document.getElementById('leads-section');
+    console.log("initializePage: leadsSection:", leadsSection);
     opportunitiesSection = document.getElementById('opportunities-section');
     quotesSection = document.getElementById('quotes-section');
     countriesSection = document.getElementById('countries-section');
@@ -4852,14 +4798,21 @@ async function initializePage() {
     // Lead elements
     addLeadBtn = document.getElementById('add-lead-btn');
     leadFormContainer = document.getElementById('lead-form-container');
+    console.log("initializePage: leadFormContainer:", leadFormContainer);
     leadForm = document.getElementById('lead-form');
+    console.log("initializePage: leadForm:", leadForm);
     cancelLeadBtn = document.getElementById('cancel-lead-btn');
     leadSearchInput = document.getElementById('lead-search');
     leadsGridContainer = document.getElementById('leads-grid-container');
+    console.log("initializePage: leadsGridContainer:", leadsGridContainer);
     noLeadsMessage = document.getElementById('no-leads-message');
+    console.log("initializePage: noLeadsMessage:", noLeadsMessage);
     leadServicesInterestedSelect = document.getElementById('lead-services-interested');
+    console.log("initializePage: leadServicesInterestedSelect:", leadServicesInterestedSelect);
     leadSourceSelect = document.getElementById('lead-source');
+    console.log("initializePage: leadSourceSelect:", leadSourceSelect);
     leadFormMessage = document.getElementById('lead-form-message');
+    console.log("initializePage: leadFormMessage:", leadFormMessage);
 
     // Opportunity elements
 
