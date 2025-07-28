@@ -4357,7 +4357,6 @@ async function renderQuoteLines(quoteId) {
     }
 }
 
-
 /**
  * Shows the quote line entry form, resets it, and populates it with data if editing.
  * It also manages the 'novalidate' attribute to control browser validation.
@@ -4372,7 +4371,8 @@ function showQuoteLineForm(quoteLineId = null, quoteLineData = null) {
     }
     if (quoteLineForm) {
         quoteLineForm.reset(); // Reset form fields
-        quoteLineForm.removeAttribute('novalidate'); // Enable validation when shown
+        quoteLineForm.removeAttribute('novalidate'); // CRITICAL: Enable validation when shown
+        console.log("showQuoteLineForm: novalidate removed from quoteLineForm. Current state:", quoteLineForm.hasAttribute('novalidate'));
     }
 
     // Set hidden IDs for the quote line and its parent quote
@@ -4421,6 +4421,22 @@ function showQuoteLineForm(quoteLineId = null, quoteLineData = null) {
         quoteLineFormMessage.classList.add('hidden'); // Ensure message is hidden
     }
 }
+
+/**
+ * Hides the quote line entry form and applies novalidate to prevent browser validation.
+ */
+function hideQuoteLineForm() {
+    if (quoteLineFormContainer) {
+        quoteLineFormContainer.classList.add('hidden');
+    }
+    if (quoteLineForm) {
+        quoteLineForm.reset(); // Reset form fields when hiding
+        quoteLineForm.setAttribute('novalidate', 'novalidate'); // CRITICAL: Add novalidate when hiding
+    }
+    if (quoteLineFormMessage) quoteLineFormMessage.classList.add('hidden'); // Hide any messages
+    console.log("hideQuoteLineForm: Quote line form hidden and novalidate applied.");
+}
+
 
 /**
  * Hides the quote line entry form and applies novalidate to prevent browser validation.
@@ -5167,7 +5183,6 @@ async function initializePage() {
     mainQuoteDetailsAccordion = document.getElementById('main-quote-details-accordion');
     mainQuoteDetailsContent = document.getElementById('main-quote-details-content'); // NEW ID from HTML fix
     quoteAccordionsGrid = document.getElementById('quote-accordions-grid');
-
 
     quoteSearchInput = document.getElementById('quote-search');
     quotesGridContainer = document.getElementById('quotes-grid-container');
