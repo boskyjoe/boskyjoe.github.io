@@ -4268,7 +4268,6 @@ async function loadQuoteLines(quoteId) {
     });
 }
 
-
 /**
  * Renders the quote lines for a given quote ID.
  * It fetches quote lines from the 'quoteLines' subcollection of the specified quote
@@ -4322,8 +4321,9 @@ async function renderQuoteLines(quoteId) {
                     const quoteLine = doc.data();
                     const quoteLineId = doc.id;
                     // Format dates for display
+                    // CRITICAL FIX: Corrected 'toLocaleDateDateString' to 'toLocaleDateString'
                     const startDate = quoteLine.serviceStartDate ? new Date(quoteLine.serviceStartDate.seconds * 1000).toLocaleDateString() : 'N/A';
-                    const endDate = quoteLine.serviceEndDate ? new Date(quoteLine.serviceEndDate.seconds * 1000).toLocaleDateDateString() : 'N/A';
+                    const endDate = quoteLine.serviceEndDate ? new Date(quoteLine.serviceEndDate.seconds * 1000).toLocaleDateString() : 'N/A';
 
                     // Create a list item for each quote line
                     const li = document.createElement('li');
@@ -4356,6 +4356,7 @@ async function renderQuoteLines(quoteId) {
         noQuoteLinesMessage.classList.remove('hidden'); // Show message on error
     }
 }
+
 
 
 /**
