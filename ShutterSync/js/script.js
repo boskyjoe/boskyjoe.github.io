@@ -6040,3 +6040,4 @@ window.showMessageBox = showMessageBox; // For modal alerts/confirms
 window.showWorkLogForm = showWorkLogForm; // If called directly from HTML (e.g. from Add button in Opportunity)
 window.showQuotesForOpportunity = showQuotesForOpportunity; // For filtering quotes grid
 window.clearQuotesFilter = clearQuotesFilter; // For clearing quotes filter
+
