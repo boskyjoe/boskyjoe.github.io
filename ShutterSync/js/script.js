@@ -1299,27 +1299,23 @@ async function handleEditCustomer(customerId) {
 async function loadCustomers() {
     console.log("loadCustomers: Loading customer data for grid."); // Debug log
 
-    // Ensure DOM elements are available. If not, log error and exit.
-    if (!customersGridContainer || !noCustomersMessage) {
+    if (!customersGridContainer || !noCustomersMessage || !customersGrid) {
         console.error("loadCustomers: Required DOM elements for customers grid are null. Check initializePage() and HTML IDs.");
+        if (noCustomersMessage) noCustomersMessage.classList.remove('hidden');
         return;
     }
 
-    // Stop previous listener if it exists
     if (unsubscribeCustomers) {
         unsubscribeCustomers();
         unsubscribeCustomers = null;
         console.log("loadCustomers: Unsubscribed from previous customers listener.");
     }
 
-    // IMPORTANT: Hide "No customers" message initially, before fetching data
     noCustomersMessage.classList.add('hidden');
-    // We assume the parent section (customersSection) is already visible at this point.
-    // So, no need to touch customersGridContainer's 'hidden' class here.
 
     try {
         const customersCollectionRef = getCollectionRef('customers');
-        const q = query(customersCollectionRef, orderBy('createdAt', 'desc')); // Order by creation date descending
+        const q = query(customersCollectionRef, orderBy('createdAt', 'desc'));
 
         console.log("loadCustomers: Setting up real-time listener for customers.");
         unsubscribeCustomers = onSnapshot(q, (querySnapshot) => {
@@ -1327,27 +1323,28 @@ async function loadCustomers() {
             querySnapshot.forEach(doc => {
                 const data = doc.data();
                 customers.push({
-                    id: doc.id, // Ensure ID is included for Grid.js actions
+                    id: doc.id,
                     name: data.name || 'N/A',
                     type: data.type || 'N/A',
                     email: data.email || 'N/A',
                     phone: data.phone || 'N/A',
                     country: data.country || 'N/A',
-                    active: data.active ? 'Yes' : 'No',
-                    createdAt: data.createdAt // Keep as Timestamp for formatter
+                    preferredContactMethod: data.preferredContactMethod || 'N/A',
+                    industry: data.industry || 'N/A',
+                    source: data.source || 'N/A',
+                    active: data.active ? 'Yes' : 'No', // Assuming 'active' is a boolean
+                    createdAt: data.createdAt // Keep as Timestamp
                 });
             });
 
-            console.log(`loadCustomers: Fetched ${customers.length} customers for grid.`);
-            console.log("loadCustomers: Customers data for grid:", customers); // DEBUG LOG: Inspect the data
+            // CRITICAL DEBUG LOG: Inspect the exact data being sent to the grid
+            console.log("loadCustomers: FINAL DATA FOR GRID:", customers); 
 
             if (customers.length === 0) {
-                // If no data, show the "No customers" message and clear the grid
                 noCustomersMessage.classList.remove('hidden');
                 customersGrid.updateConfig({ data: [] }).forceRender();
                 console.log("loadCustomers: No customers found, displaying message.");
             } else {
-                // If data exists, hide the "No customers" message and render the grid
                 noCustomersMessage.classList.add('hidden');
                 customersGrid.updateConfig({ data: customers }).forceRender();
                 console.log("loadCustomers: Customers data rendered in grid.");
@@ -1355,14 +1352,17 @@ async function loadCustomers() {
         }, (error) => {
             console.error("loadCustomers: Error listening to customers:", error);
             showMessageBox(`Error loading customers: ${error.message}`, 'alert', true);
-            noCustomersMessage.classList.remove('hidden'); // Show message on error
+            noCustomersMessage.classList.remove('hidden');
         });
     } catch (error) {
         console.error("loadCustomers: Error setting up customers listener:", error);
         showMessageBox(`Error setting up customers listener: ${error.message}`, 'alert', true);
-        noCustomersMessage.classList.remove('hidden'); // Show message on error
+        noCustomersMessage.classList.remove('hidden');
     }
 }
+
+
+
 
 function renderCustomersGrid(customers) {
     const data = customers.map(customer => [
