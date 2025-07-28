@@ -4250,6 +4250,28 @@ function updateMainQuoteAmount() {
     console.log(`updateMainQuoteAmount: Total quote amount updated to ${totalAmount.toFixed(2)}.`);
 }
 
+
+
+
+
+// --- Quote Lines Logic (Quotes Subcollection) ---
+async function loadQuoteLines(quoteId) {
+    if (unsubscribeQuoteLines) {
+        unsubscribeQuoteLines(); // Unsubscribe from previous listener
+    }
+
+    const quoteLinesCollectionRef = collection(getDocRef('quotes', quoteId), 'quoteLines');
+    unsubscribeQuoteLines = onSnapshot(query(quoteLinesCollectionRef, orderBy('createdAt', 'asc')), (snapshot) => {
+        const quoteLines = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderQuoteLines(quoteLines);
+        updateParentQuoteAmount(quoteLines); // Update parent quote amount whenever lines change
+    }, (error) => {
+        console.error("Error fetching quote lines:", error);
+        showMessageBox("Error loading quote lines.");
+    });
+}
+
+
 /**
  * Renders the quote lines for a given quote ID.
  * It fetches quote lines from the 'quoteLines' subcollection of the specified quote
@@ -4340,62 +4362,6 @@ async function renderQuoteLines(quoteId) {
 
 
 
-
-// --- Quote Lines Logic (Quotes Subcollection) ---
-async function loadQuoteLines(quoteId) {
-    if (unsubscribeQuoteLines) {
-        unsubscribeQuoteLines(); // Unsubscribe from previous listener
-    }
-
-    const quoteLinesCollectionRef = collection(getDocRef('quotes', quoteId), 'quoteLines');
-    unsubscribeQuoteLines = onSnapshot(query(quoteLinesCollectionRef, orderBy('createdAt', 'asc')), (snapshot) => {
-        const quoteLines = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderQuoteLines(quoteLines);
-        updateParentQuoteAmount(quoteLines); // Update parent quote amount whenever lines change
-    }, (error) => {
-        console.error("Error fetching quote lines:", error);
-        showMessageBox("Error loading quote lines.");
-    });
-}
-
-function renderQuoteLines(quoteLines) {
-    if (quoteLinesList) { // Null check for quoteLinesList
-        quoteLinesList.innerHTML = '';
-    }
-    if (quoteLines.length === 0) {
-        if (noQuoteLinesMessage) { // Null check for noQuoteLinesMessage
-            noQuoteLinesMessage.classList.remove('hidden');
-        }
-    } else {
-        if (noQuoteLinesMessage) { // Null check for noQuoteLinesMessage
-            noQuoteLinesMessage.classList.add('hidden');
-        }
-        quoteLines.forEach(line => {
-            const li = document.createElement('li');
-            li.className = 'bg-gray-50 p-3 rounded-md shadow-sm flex justify-between items-center';
-            const startDate = line.serviceStartDate ? new Date(line.serviceStartDate.seconds * 1000).toLocaleDateString() : 'N/A';
-            const endDate = line.serviceEndDate ? new Date(line.serviceEndDate.seconds * 1000).toLocaleDateString() : 'N/A';
-            li.innerHTML = `
-                <div>
-                    <p class="font-semibold">${line.services} (Qty: ${line.quantity})</p>
-                    <p class="text-sm text-gray-700">Net: ${line.finalNet ? line.finalNet.toFixed(2) : '0.00'}</p>
-                    <p class="text-xs text-gray-500">${startDate} - ${endDate}</p>
-                    <p class="text-xs text-gray-500">${line.serviceDescription || 'No description.'}</p>
-                </div>
-                <div>
-                    <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" data-id="${line.id}">Edit</button>
-                    <button class="text-red-600 hover:text-red-800 font-semibold" data-id="${line.id}">Delete</button>
-                </div>
-            `;
-            // Attach event listeners using delegation or directly
-            li.querySelector('button[data-id][class*="text-blue"]').addEventListener('click', () => handleEditQuoteLine(line.id, line));
-            li.querySelector('button[data-id][class*="text-red"]').addEventListener('click', () => handleDeleteQuoteLine(line.id));
-            if (quoteLinesList) { // Null check before appending
-                quoteLinesList.appendChild(li);
-            }
-        });
-    }
-}
 
 function showQuoteLineForm() {
     if (quoteLineFormContainer) { // Null check
