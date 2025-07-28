@@ -4091,6 +4091,7 @@ function clearQuotesFilter() {
  * @param {object | null} quoteData Optional: The quote data to pre-populate the form.
  */
 async function setupQuoteForm(quoteData = null) {
+    console.group("setupQuoteForm");
     console.log('setupQuoteForm called with quoteData:', quoteData);
 
     // Ensure the main form container is visible and clear any previous messages
@@ -4114,7 +4115,7 @@ async function setupQuoteForm(quoteData = null) {
 
 
     if (quoteData) { // Edit mode
-        console.log("setupQuoteForm: Entering EDIT mode for quote:", quoteData);
+        console.log("Entering EDIT mode for quote:", quoteData);
         currentQuoteId = quoteData.id;
         if (document.getElementById('quote-id')) document.getElementById('quote-id').value = quoteData.id;
         if (document.getElementById('quote-name')) document.getElementById('quote-name').value = quoteData.quoteName || '';
@@ -4138,9 +4139,15 @@ async function setupQuoteForm(quoteData = null) {
         if (document.getElementById('quote-event-date')) document.getElementById('quote-event-date').value = eventDate;
 
         // --- Layout Adjustment for EDIT mode ---
-        // Main details takes half width (by removing full-span class)
+        // Set parent grid to 2 columns for side-by-side layout
+        if (quoteAccordionsGrid) {
+            quoteAccordionsGrid.classList.remove('md:grid-cols-1'); // Ensure 1-col is removed if present
+            quoteAccordionsGrid.classList.add('md:grid-cols-2');
+            console.log("Edit mode: quoteAccordionsGrid classes after update:", quoteAccordionsGrid.className);
+        }
+
+        // Ensure main details accordion is open (it will naturally take 1 of 2 columns)
         if (mainQuoteDetailsAccordion) {
-            mainQuoteDetailsAccordion.classList.remove('md:col-span-full'); 
             const mainDetailsHeader = mainQuoteDetailsAccordion.querySelector('.accordion-header');
             if (mainDetailsHeader) {
                 setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
@@ -4154,17 +4161,15 @@ async function setupQuoteForm(quoteData = null) {
             if (quoteLinesAccordionHeader) {
                 setAccordionVisualState(quoteLinesAccordionHeader, true); // True for OPEN
             }
-            // Ensure novalidate is removed when quote line form is potentially used
             if (quoteLineForm) {
                 quoteLineForm.removeAttribute('novalidate');
             }
         }
         
-        // Load and render quote lines for this quote
         await renderQuoteLines(quoteData.id); 
 
     } else { // For a new quote (ADD mode)
-        console.log("setupQuoteForm: Entering ADD NEW mode.");
+        console.log("Entering ADD NEW mode.");
         currentQuoteId = null; // Reset currentQuoteId for new quote
         
         // Clear customer details (important for new quotes)
@@ -4177,10 +4182,15 @@ async function setupQuoteForm(quoteData = null) {
         hideQuoteLineForm(); // Call hideQuoteLineForm() for new quotes to apply novalidate and hide form
 
         // --- Layout Adjustment for ADD mode ---
-        // Main details spans full width
+        // Set parent grid to 1 column for full width display of main details
+        if (quoteAccordionsGrid) {
+            quoteAccordionsGrid.classList.remove('md:grid-cols-2'); // Ensure 2-col is removed
+            quoteAccordionsGrid.classList.add('md:grid-cols-1');
+            console.log("Add New mode: quoteAccordionsGrid classes after update:", quoteAccordionsGrid.className);
+        }
+
+        // Ensure main details accordion is open (it will naturally take full width in a 1-column grid)
         if (mainQuoteDetailsAccordion) {
-            console.log("setupQuoteForm: Entering ADD NEW mode. full accordion");
-            mainQuoteDetailsAccordion.classList.add('md:col-span-full'); 
             const mainDetailsHeader = mainQuoteDetailsAccordion.querySelector('.accordion-header');
             if (mainDetailsHeader) {
                 setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
@@ -4189,13 +4199,14 @@ async function setupQuoteForm(quoteData = null) {
         // Hide quote lines container
         if (quoteLinesSectionContainer) {
             quoteLinesSectionContainer.classList.add('hidden'); 
-            // The novalidate is handled by hideQuoteLineForm() now.
         }
     }
     // Show the main quote form container
     showForm(quoteFormContainer);
     console.log('Add/Edit Quote form setup complete. currentQuoteId:', currentQuoteId);
+    console.groupEnd();
 }
+
 
 
 /**
