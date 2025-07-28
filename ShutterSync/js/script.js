@@ -164,6 +164,14 @@ let mainOpportunityDetailsAccordion;
 let opportunityAccordionsGrid;
 
 
+// Quote Accordion Elements (CRITICAL: Ensure these exist and are assigned in initializePage)
+let mainQuoteDetailsAccordion; // Main Quote Details accordion header
+let mainQuoteDetailsContent; // Main Quote Details accordion content
+let quoteAccordionsGrid; // Parent grid for quote accordions
+
+
+
+
 let addQuoteBtn;
 let quoteFormContainer;
 let quoteForm;
@@ -185,12 +193,10 @@ let quoteCustomerAddressInput;
 
 let quoteStatusSelect; // Status dropdown for quotes
 let quoteFormMessage;
-let mainQuoteDetailsAccordion; // Reference to the main details accordion in Quotes
-let quoteAccordionsGrid; // Reference to the grid container for quote accordions
 
 // Quote Line related DOM elements
 let quoteLinesSectionContainer, addQuoteLineEntryBtn, quoteLineFormContainer, quoteLineForm, cancelQuoteLineBtn;
-let quoteLinesList, noQuoteLinesMessage;
+let quoteLinesList, noQuoteLinesMessage,quoteLinesContent;
 let quoteLineServicesInput, quoteLineDescriptionInput, quoteLineStartDateInput, quoteLineEndDateInput;
 let quoteLineUnitPriceInput, quoteLineQuantityInput, quoteLineDiscountInput, quoteLineAdjustmentAmountInput, quoteLineFinalNetSpan;
 let quoteLineFormMessage;
@@ -688,10 +694,11 @@ function setupAccordions() {
     });
 }
 
+
 /**
  * Sets the visual state of an accordion (content visibility and icon rotation).
  * @param {HTMLElement} accordionHeader - The header element of the accordion.
- * @param {boolean} isOpen - True to open (show content, arrow down), false to close (hide content, arrow up).
+ * @param {boolean} isOpen - True to open (show content, arrow up), false to close (hide content, arrow down).
  */
 function setAccordionVisualState(accordionHeader, isOpen) {
     if (!accordionHeader) {
@@ -708,15 +715,16 @@ function setAccordionVisualState(accordionHeader, isOpen) {
 
     if (isOpen) {
         content.classList.remove('hidden');
-        icon.style.transform = 'rotate(0deg)'; // Down arrow for open state
+        icon.style.transform = 'rotate(180deg)'; // Arrow points UP when content is OPEN
         accordionHeader.classList.add('expanded');
     } else {
         content.classList.add('hidden');
-        icon.style.transform = 'rotate(180deg)'; // Up arrow for closed state
+        icon.style.transform = 'rotate(0deg)'; // Arrow points DOWN when content is CLOSED
         accordionHeader.classList.remove('expanded');
     }
     console.log(`Accordion state set for ${accordionHeader.textContent.trim()}: ${isOpen ? 'OPEN' : 'CLOSED'}`);
 }
+
 
 /**
  * Sets up click listeners for all accordion headers on the page.
@@ -3974,6 +3982,87 @@ function populateQuoteStatus() {
 }
 
 
+/**
+ * Populates customer contact details (name, phone, email, address) in the Quote form
+ * based on the selected Opportunity.
+ */
+async function populateCustomerDetailsForQuote() {
+    console.log("populateCustomerDetailsForQuote: Attempting to populate customer details.");
+
+    if (!quoteOpportunitySelect || !document.getElementById('quote-customer-contact-name') ||
+        !document.getElementById('quote-phone') || !document.getElementById('quote-email') ||
+        !document.getElementById('quote-customer-address')) {
+        console.error("populateCustomerDetailsForQuote: Required DOM elements for customer details not found.");
+        return;
+    }
+
+    const selectedOpportunityId = quoteOpportunitySelect.value;
+    console.log("populateCustomerDetailsForQuote: Selected Opportunity ID:", selectedOpportunityId);
+
+    // Clear previous customer details if no opportunity is selected
+    if (!selectedOpportunityId) {
+        document.getElementById('quote-customer-contact-name').value = '';
+        document.getElementById('quote-phone').value = '';
+        document.getElementById('quote-email').value = '';
+        document.getElementById('quote-customer-address').value = '';
+        console.log("populateCustomerDetailsForQuote: No opportunity selected, cleared customer details.");
+        return;
+    }
+
+    if (!db) {
+        console.warn("populateCustomerDetailsForQuote: Firestore DB not initialized.");
+        return;
+    }
+
+    try {
+        // 1. Fetch the selected Opportunity to get its customerId
+        const opportunityDocRef = doc(db, 'opportunities', selectedOpportunityId);
+        const opportunitySnap = await getDoc(opportunityDocRef);
+
+        if (!opportunitySnap.exists()) {
+            console.error("populateCustomerDetailsForQuote: Selected opportunity not found:", selectedOpportunityId);
+            showMessageBox("Error: Selected opportunity not found.", 'alert', true);
+            return;
+        }
+
+        const opportunityData = opportunitySnap.data();
+        const customerId = opportunityData.customerId; // Get customerId from opportunity
+        const customerNameFromOpportunity = opportunityData.customerName; // Get customerName from opportunity (for contact name)
+        console.log("populateCustomerDetailsForQuote: Found customerId from opportunity:", customerId);
+
+        if (!customerId) {
+            console.warn("populateCustomerDetailsForQuote: No customerId found for selected opportunity.");
+            showMessageBox("Warning: No customer associated with this opportunity.", 'alert', false);
+            return;
+        }
+
+        // 2. Fetch the Customer details using the customerId
+        const customerDocRef = doc(db, 'customers', customerId);
+        const customerSnap = await getDoc(customerDocRef);
+
+        if (!customerSnap.exists()) {
+            console.error("populateCustomerDetailsForQuote: Customer not found for customerId:", customerId);
+            showMessageBox("Error: Associated customer not found.", 'alert', true);
+            return;
+        }
+
+        const customerData = customerSnap.data();
+        console.log("populateCustomerDetailsForQuote: Fetched customer data:", customerData);
+
+        // 3. Populate the Quote form fields
+        document.getElementById('quote-customer-contact-name').value = customerNameFromOpportunity || customerData.name || ''; // Use customerName from opportunity if available, else customer name
+        document.getElementById('quote-phone').value = customerData.phone || '';
+        document.getElementById('quote-email').value = customerData.email || '';
+        document.getElementById('quote-customer-address').value = customerData.address || '';
+
+        console.log("populateCustomerDetailsForQuote: Customer details populated successfully.");
+
+    } catch (error) {
+        console.error("populateCustomerDetailsForQuote: Error fetching customer details:", error);
+        showMessageBox(`Error populating customer details: ${error.message}`, 'alert', true);
+    }
+}
+
 
 
 /**
@@ -3997,17 +4086,49 @@ function clearQuotesFilter() {
     loadQuotes(); // This will now load all quotes
 }
 
+/**
+ * Sets up the Quote form for adding a new quote or editing an existing one.
+ * @param {object | null} quoteData Optional: The quote data to pre-populate the form.
+ */
 async function setupQuoteForm(quoteData = null) {
     console.log('setupQuoteForm called with quoteData:', quoteData);
-    await populateQuoteOpportunities();
-    await populateQuoteStatus();
+
+    // Ensure the main form container is visible and clear any previous messages
+    showForm(quoteFormContainer, quoteFormMessage);
+    if (quoteForm) quoteForm.reset(); // Reset the main quote form
+    if (document.getElementById('quote-id')) document.getElementById('quote-id').value = ''; // Clear hidden ID
+
+    // Populate dropdowns (Opportunities and Status)
+    await populateQuoteOpportunities(); // Ensure opportunities are loaded first
+    populateQuoteStatus();
+
+    // Reset customer details fields and quote amount initially
+    document.getElementById('quote-customer-contact-name').value = '';
+    document.getElementById('quote-phone').value = '';
+    document.getElementById('quote-email').value = '';
+    document.getElementById('quote-customer-address').value = '';
+    if (document.getElementById('quote-amount')) document.getElementById('quote-amount').value = '0.00';
+
+    // Clear any previous form-specific messages
+    if (quoteFormMessage) quoteFormMessage.classList.add('hidden');
+
 
     if (quoteData) { // Edit mode
         currentQuoteId = quoteData.id;
         if (document.getElementById('quote-id')) document.getElementById('quote-id').value = quoteData.id;
         if (document.getElementById('quote-name')) document.getElementById('quote-name').value = quoteData.quoteName || '';
-        if (document.getElementById('event-name')) document.getElementById('event-name').value = quoteData.eventName || '';
-        if (quoteOpportunitySelect) quoteOpportunitySelect.value = quoteData.opportunityId || '';
+        
+        // CRITICAL FIX: Use the correct ID 'quote-event-name'
+        if (document.getElementById('quote-event-name')) document.getElementById('quote-event-name').value = quoteData.eventName || '';
+        
+        if (quoteOpportunitySelect) {
+            quoteOpportunitySelect.value = quoteData.opportunityId || '';
+            // Manually trigger customer details population after setting opportunity value
+            if (quoteData.opportunityId) {
+                await populateCustomerDetailsForQuote(); // This reads from quoteOpportunitySelect.value
+            }
+        }
+        
         if (document.getElementById('quote-amount')) document.getElementById('quote-amount').value = quoteData.quoteAmount !== undefined ? quoteData.quoteAmount.toFixed(2) : '0.00';
         if (quoteStatusSelect) quoteStatusSelect.value = quoteData.status || 'Draft';
         if (document.getElementById('quote-additional-details')) document.getElementById('quote-additional-details').value = quoteData.additionalDetails || '';
@@ -4015,9 +4136,7 @@ async function setupQuoteForm(quoteData = null) {
         const eventDate = quoteData.eventDate ? new Date(quoteData.eventDate.seconds * 1000).toISOString().split('T')[0] : '';
         if (document.getElementById('quote-event-date')) document.getElementById('quote-event-date').value = eventDate;
 
-        await populateCustomerDetailsForQuote(quoteData.opportunityId);
-
-        // --- Layout Adjustment for EDIT mode ---
+        // --- Layout Adjustment for EDIT mode (similar to Opportunity/Work Logs) ---
         if (mainQuoteDetailsAccordion) {
             mainQuoteDetailsAccordion.classList.remove('md:col-span-full'); // Main details takes half width
             const mainDetailsHeader = mainQuoteDetailsAccordion.querySelector('.accordion-header');
@@ -4030,29 +4149,35 @@ async function setupQuoteForm(quoteData = null) {
             quoteLinesSectionContainer.classList.remove('hidden'); // Show quote lines container
             const quoteLinesAccordionHeader = quoteLinesSectionContainer.querySelector('.accordion-header');
             if (quoteLinesAccordionHeader) {
-                setAccordionVisualState(quoteLinesAccordionHeader, false); // False for CLOSED
+                setAccordionVisualState(quoteLinesAccordionHeader, true); // CRITICAL FIX: Set to TRUE for OPEN on edit
             }
+            // Ensure novalidate is removed when quote line form is potentially used
             if (quoteLineForm) {
                 quoteLineForm.removeAttribute('novalidate');
             }
         }
-        await loadQuoteLines(quoteData.id); // Load quote lines for this quote
-        // --- End Layout Adjustment for EDIT mode ---
+        
+        // Load and render quote lines for this quote
+        // CRITICAL FIX: Call renderQuoteLines, not loadQuoteLines
+        await renderQuoteLines(quoteData.id); 
 
     } else { // For a new quote (ADD mode)
-        if (quoteForm) quoteForm.reset();
-        const quoteIdInput = document.getElementById('quote-id');
-        if (quoteIdInput) quoteIdInput.value = '';
-        currentQuoteId = null;
-        populateCustomerDetailsForQuote(''); // Clear customer details
-        if (document.getElementById('quote-amount')) document.getElementById('quote-amount').value = '0.00'; // Reset quote amount for new quote
-        if (quoteLinesList) quoteLinesList.innerHTML = ''; // Clear existing quote lines
+        currentQuoteId = null; // Reset currentQuoteId for new quote
+        
+        // Clear customer details (important for new quotes)
+        // Ensure quoteOpportunitySelect is reset, then call populateCustomerDetailsForQuote without arguments
+        if (quoteOpportunitySelect) quoteOpportunitySelect.value = ''; // Ensure dropdown is reset
+        await populateCustomerDetailsForQuote(); // Call to clear fields based on empty select
+
+        if (document.getElementById('quote-amount')) document.getElementById('quote-amount').value = '0.00'; // Reset quote amount
+        if (quoteLinesList) quoteLinesList.innerHTML = ''; // Clear existing quote lines display
         if (noQuoteLinesMessage) noQuoteLinesMessage.classList.remove('hidden'); // Show no lines message
-        hideQuoteLineForm(); // Hide the quote line entry form (this will set novalidate)
+        hideQuoteLineForm(); // Hide the quote line entry form and reset it
 
         // --- Layout Adjustment for ADD mode ---
         if (quoteLinesSectionContainer) {
             quoteLinesSectionContainer.classList.add('hidden'); // Hide quote lines container
+            // Add novalidate attribute when quote line form is hidden/not in use
             if (quoteLineForm) {
                 quoteLineForm.setAttribute('novalidate', 'novalidate');
             }
@@ -4064,11 +4189,156 @@ async function setupQuoteForm(quoteData = null) {
                 setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
             }
         }
-        // --- End Layout Adjustment for ADD mode ---
     }
+    // Show the main quote form container
     showForm(quoteFormContainer);
     console.log('Add/Edit Quote form setup complete. currentQuoteId:', currentQuoteId);
 }
+
+
+/**
+ * Calculates the Final Net value for a Quote Line based on its inputs.
+ */
+function calculateQuoteLineNet() {
+    // Ensure all necessary input elements are available
+    if (!quoteLineUnitPriceInput || !quoteLineQuantityInput || !quoteLineDiscountInput || !quoteLineAdjustmentAmountInput || !quoteLineFinalNetSpan) {
+        console.warn("calculateQuoteLineNet: One or more calculation elements not found for quote line. Skipping calculation.");
+        return;
+    }
+
+    // Parse values, defaulting to 0 if empty or invalid
+    const unitPrice = parseFloat(quoteLineUnitPriceInput.value) || 0;
+    const quantity = parseFloat(quoteLineQuantityInput.value) || 0;
+    const discount = parseFloat(quoteLineDiscountInput.value) || 0; // Percentage
+    const adjustment = parseFloat(quoteLineAdjustmentAmountInput.value) || 0;
+
+    // Perform the calculation
+    const subtotal = unitPrice * quantity;
+    const discountAmount = subtotal * (discount / 100);
+    const finalNet = subtotal - discountAmount - adjustment;
+
+    // Update the displayed final net value
+    quoteLineFinalNetSpan.textContent = finalNet.toFixed(2);
+
+    // CRITICAL: Call this to update the main quote's total amount
+    updateMainQuoteAmount();
+}
+
+/**
+ * Updates the total Quote Amount in the main Quote form
+ * by summing the Final Net of all currently displayed quote line items.
+ * This function should be called whenever quote lines are added, edited, or deleted.
+ */
+function updateMainQuoteAmount() {
+    let totalAmount = 0;
+    // Ensure the list of quote lines exists
+    if (quoteLinesList) {
+        // Query all list items that represent a quote line
+        const quoteLineElements = quoteLinesList.querySelectorAll('li');
+        quoteLineElements.forEach(li => {
+            // Find the span that displays the final net for each line
+            const finalNetSpan = li.querySelector('.quote-line-final-net-display');
+            if (finalNetSpan) {
+                totalAmount += parseFloat(finalNetSpan.textContent) || 0;
+            }
+        });
+    }
+    // Update the main quote amount input field
+    if (document.getElementById('quote-amount')) {
+        document.getElementById('quote-amount').value = totalAmount.toFixed(2);
+    }
+    console.log(`updateMainQuoteAmount: Total quote amount updated to ${totalAmount.toFixed(2)}.`);
+}
+
+/**
+ * Renders the quote lines for a given quote ID.
+ * It fetches quote lines from the 'quoteLines' subcollection of the specified quote
+ * and updates the UI in real-time.
+ * @param {string} quoteId The ID of the parent quote whose lines are to be rendered.
+ */
+async function renderQuoteLines(quoteId) {
+    console.log(`renderQuoteLines: Attempting to render quote lines for Quote ID: ${quoteId}`);
+
+    // Ensure necessary DOM elements are available
+    if (!quoteLinesList || !noQuoteLinesMessage) {
+        console.error("renderQuoteLines: Required DOM elements for quote lines not found. Check initializePage() and HTML IDs.");
+        return;
+    }
+
+    // Clear existing content and hide the "no lines" message initially
+    quoteLinesList.innerHTML = '';
+    noQuoteLinesMessage.classList.add('hidden');
+
+    // If no quote ID is provided (e.g., for a new quote), just show the "no lines" message
+    if (!quoteId) {
+        console.log("renderQuoteLines: No quote ID provided, displaying 'no quote lines' message.");
+        noQuoteLinesMessage.classList.remove('hidden');
+        updateMainQuoteAmount(); // Ensure main quote amount is 0
+        return;
+    }
+
+    // Unsubscribe from any previous real-time listener to prevent memory leaks/duplicate updates
+    if (unsubscribeQuoteLines) {
+        unsubscribeQuoteLines();
+        unsubscribeQuoteLines = null;
+        console.log("renderQuoteLines: Unsubscribed from previous quote lines listener.");
+    }
+
+    try {
+        // Create a reference to the 'quoteLines' subcollection under the specific quote
+        const quoteLinesCollectionRef = collection(db, 'quotes', quoteId, 'quoteLines');
+        // Order by creation time to maintain a consistent display order
+        const q = query(quoteLinesCollectionRef, orderBy('createdAt', 'asc'));
+
+        console.log(`renderQuoteLines: Setting up real-time listener for quote lines under quote ${quoteId}.`);
+        // Set up a real-time listener using onSnapshot
+        unsubscribeQuoteLines = onSnapshot(q, (querySnapshot) => {
+            quoteLinesList.innerHTML = ''; // Clear content again on each snapshot update
+            if (querySnapshot.empty) {
+                noQuoteLinesMessage.classList.remove('hidden');
+                console.log(`renderQuoteLines: No quote lines found for quote ${quoteId}. Displaying message.`);
+            } else {
+                noQuoteLinesMessage.classList.add('hidden'); // Hide message if lines are found
+                querySnapshot.forEach(doc => {
+                    const quoteLine = doc.data();
+                    const quoteLineId = doc.id;
+                    // Format dates for display
+                    const startDate = quoteLine.serviceStartDate ? new Date(quoteLine.serviceStartDate.seconds * 1000).toLocaleDateString() : 'N/A';
+                    const endDate = quoteLine.serviceEndDate ? new Date(quoteLine.serviceEndDate.seconds * 1000).toLocaleDateDateString() : 'N/A';
+
+                    // Create a list item for each quote line
+                    const li = document.createElement('li');
+                    li.className = 'bg-gray-100 p-3 rounded-md shadow-sm flex justify-between items-center mb-2';
+                    li.innerHTML = `
+                        <div>
+                            <p class="text-sm font-semibold text-gray-700">${quoteLine.services} - ${quoteLine.serviceDescription || 'No Description'}</p>
+                            <p class="text-gray-600 text-xs">Price: ${quoteLine.unitPrice.toFixed(2)} x Qty: ${quoteLine.quantity} | Disc: ${quoteLine.discount}% | Adj: ${quoteLine.adjustmentAmount.toFixed(2)}</p>
+                            <p class="text-gray-600 text-xs">Dates: ${startDate} to ${endDate}</p>
+                            <p class="text-sm font-bold text-gray-800">Net: <span class="quote-line-final-net-display">${quoteLine.finalNet.toFixed(2)}</span></p>
+                        </div>
+                        <div>
+                            <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditQuoteLine('${quoteLineId}')">Edit</button>
+                            <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteQuoteLine('${quoteLineId}')">Delete</button>
+                        </div>
+                    `;
+                    quoteLinesList.appendChild(li);
+                });
+                console.log(`renderQuoteLines: Successfully rendered ${querySnapshot.size} quote lines for quote ${quoteId}.`);
+                updateMainQuoteAmount(); // Update the main quote's total amount after rendering lines
+            }
+        }, (error) => {
+            console.error("renderQuoteLines: Error listening to quote lines:", error);
+            showMessageBox(`Error loading quote lines: ${error.message}`, 'alert', true);
+            noQuoteLinesMessage.classList.remove('hidden'); // Show message on error
+        });
+    } catch (error) {
+        console.error("renderQuoteLines: Error setting up quote lines listener:", error);
+        showMessageBox(`Error setting up quote lines listener: ${error.message}`, 'alert', true);
+        noQuoteLinesMessage.classList.remove('hidden'); // Show message on error
+    }
+}
+
+
 
 
 // --- Quote Lines Logic (Quotes Subcollection) ---
@@ -4828,15 +5098,23 @@ async function initializePage() {
 
 
     // Quote elements
-    addQuoteBtn = document.getElementById('add-quote-btn');
     quoteFormContainer = document.getElementById('quote-form-container');
     quoteForm = document.getElementById('quote-form');
+    quoteFormMessage = document.getElementById('quote-form-message');
+    addQuoteBtn = document.getElementById('add-quote-btn');
     cancelQuoteBtn = document.getElementById('cancel-quote-btn');
+    quoteOpportunitySelect = document.getElementById('quote-opportunity');
+    quoteStatusSelect = document.getElementById('quote-status');
+
+    // Quote Accordion Elements (CRITICAL: Assign these new HTML IDs here)
+    mainQuoteDetailsAccordion = document.getElementById('main-quote-details-accordion');
+    mainQuoteDetailsContent = document.getElementById('main-quote-details-content'); // NEW ID from HTML fix
+    quoteAccordionsGrid = document.getElementById('quote-accordions-grid');
+
+
     quoteSearchInput = document.getElementById('quote-search');
     quotesGridContainer = document.getElementById('quotes-grid-container');
     noQuotesMessage = document.getElementById('no-quotes-message');
-    quoteOpportunitySelect = document.getElementById('quote-opportunity');
-    quoteStatusSelect = document.getElementById('quote-status');
     quotesFilterDisplay = document.getElementById('quotes-filter-display');
     quotesFilterOpportunityName = document.getElementById('quotes-filter-opportunity-name');
     clearQuotesFilterBtn = document.getElementById('clear-quotes-filter-btn');
@@ -4844,18 +5122,14 @@ async function initializePage() {
     quoteCustomerPhoneInput = document.getElementById('quote-customer-phone');
     quoteCustomerEmailInput = document.getElementById('quote-customer-email');
     quoteCustomerAddressInput = document.getElementById('quote-customer-address');
-    quoteFormMessage = document.getElementById('quote-form-message');
-    mainQuoteDetailsAccordion = document.getElementById('main-quote-details-accordion');
-    quoteAccordionsGrid = document.getElementById('quote-accordions-grid');
 
-    // Quote Line elements (ALL NEW)
+    // Quote Line Elements (CRITICAL: Assign these new HTML IDs here)
     quoteLinesSectionContainer = document.getElementById('quote-lines-section-container');
+    quoteLinesContent = document.getElementById('quote-lines-content'); // NEW ID from HTML fix
     addQuoteLineEntryBtn = document.getElementById('add-quote-line-entry-btn');
     quoteLineFormContainer = document.getElementById('quote-line-form-container');
     quoteLineForm = document.getElementById('quote-line-form');
-    cancelQuoteLineBtn = document.getElementById('cancel-quote-line-btn');
-    quoteLinesList = document.getElementById('quote-lines-list');
-    noQuoteLinesMessage = document.getElementById('no-quote-lines-message');
+    quoteLineFormMessage = document.getElementById('quote-line-form-message');
     quoteLineServicesInput = document.getElementById('quote-line-services');
     quoteLineDescriptionInput = document.getElementById('quote-line-description');
     quoteLineStartDateInput = document.getElementById('quote-line-start-date');
@@ -4865,7 +5139,13 @@ async function initializePage() {
     quoteLineDiscountInput = document.getElementById('quote-line-discount');
     quoteLineAdjustmentAmountInput = document.getElementById('quote-line-adjustment-amount');
     quoteLineFinalNetSpan = document.getElementById('quote-line-final-net');
-    quoteLineFormMessage = document.getElementById('quote-line-form-message');
+    cancelQuoteLineBtn = document.getElementById('cancel-quote-line-btn');
+    quoteLinesList = document.getElementById('quote-lines-list');
+    noQuoteLinesMessage = document.getElementById('no-quote-lines-message');
+
+
+
+
 
 
     // Admin elements
@@ -5006,12 +5286,19 @@ async function initializePage() {
         opportunityWorkLogForm.addEventListener('submit', handleSaveWorkLog);
     }
 
+
     // Quote Listeners (PRESERVED FROM YOUR BASELINE)
+    
+    // Event listener for Opportunity selection change in Quote form
+    if (quoteOpportunitySelect) {
+        quoteOpportunitySelect.addEventListener('change', populateCustomerDetailsForQuote);
+        console.log("initializePage: Added change listener for quoteOpportunitySelect.");
+    }
     if (addQuoteBtn) addQuoteBtn.addEventListener('click', () => setupQuoteForm());
     if (cancelQuoteBtn) cancelQuoteBtn.addEventListener('click', () => hideForm(quoteFormContainer, quoteFormMessage));
     if (quoteForm) quoteForm.addEventListener('submit', handleSaveQuote);
     if (quoteSearchInput) quoteSearchInput.addEventListener('input', (event) => { if (quotesGrid) quotesGrid.search(event.target.value); });
-    if (quoteOpportunitySelect) quoteOpportunitySelect.addEventListener('change', handleOpportunityChangeForQuote); // Auto-fill customer details
+        
     if (clearQuotesFilterBtn) clearQuotesFilterBtn.addEventListener('click', clearQuotesFilter);
 
     // Quote Line Listeners (ALL NEW)
