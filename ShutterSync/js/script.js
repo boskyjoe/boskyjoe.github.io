@@ -1778,9 +1778,9 @@ async function loadLeads() {
     try {
         const leadsCollectionRef = getCollectionRef('leads');
         // Query only for current user's leads or all if admin
-        const q = query(leadsCollectionRef, 
-                        where('creatorId', '==', auth.currentUser.uid), // Filter by current user
-                        orderBy('createdAt', 'desc')); // Order by creation date descending
+        const q = query(leadsCollectionRef,
+            where('creatorId', '==', auth.currentUser.uid), // Filter by current user
+            orderBy('createdAt', 'desc')); // Order by creation date descending
 
         console.log("loadLeads: Setting up real-time listener for leads.");
         unsubscribeLeads = onSnapshot(q, (querySnapshot) => {
@@ -1791,10 +1791,10 @@ async function loadLeads() {
                 const eventDateDisplay = leadData.eventDate && leadData.eventDate.seconds ? new Date(leadData.eventDate.seconds * 1000).toLocaleDateString() : 'N/A';
                 // Display services as a comma-separated string
                 const servicesInterestedDisplay = Array.isArray(leadData.servicesInterested) ? leadData.servicesInterested.join(', ') : 'N/A';
-                
-                leads.push({ 
+
+                leads.push({
                     id: doc.id, // Ensure ID is included for Grid.js actions
-                    ...leadData, 
+                    ...leadData,
                     eventDate: eventDateDisplay, // Use formatted date for display column
                     servicesInterested: servicesInterestedDisplay // Use formatted string for display column
                 });
@@ -2496,7 +2496,7 @@ async function handleSaveOpportunity(event) {
  * @param {string} opportunityId The ID of the opportunity document to edit.
  */
 async function handleEditOpportunity(opportunityId) {
-     console.log(`handleEditOpportunity: Attempting to edit opportunity with ID: ${opportunityId}`); // This log will be key!
+    console.log(`handleEditOpportunity: Attempting to edit opportunity with ID: ${opportunityId}`); // This log will be key!
 
     try {
         const docSnap = await getDoc(getDocRef('opportunities', opportunityId));
@@ -2568,9 +2568,9 @@ async function handleDeleteOpportunity(opportunityId) {
 
     // Await the result from showMessageBox directly for user confirmation
     const confirmed = await showMessageBox("Are you sure you want to delete this opportunity? This action cannot be undone.", 'confirm');
-    
+
     console.log(`handleDeleteOpportunity: Confirmed status from MessageBox: ${confirmed}`);
-    
+
     if (confirmed) {
         console.log("handleDeleteOpportunity: User confirmed deletion. Proceeding with Firestore delete.");
         try {
@@ -5013,10 +5013,10 @@ async function initializePage() {
     if (dashboardLink) {
         dashboardLink.addEventListener('click', async (event) => {
             event.preventDefault();
-            hideAllSections(); 
+            hideAllSections();
             if (dashboardSection) {
                 dashboardSection.classList.remove('hidden');
-                await updateDashboard(); 
+                await updateDashboard();
             }
             setActiveNavLink('nav-dashboard'); // CRITICAL FIX: Use 'nav-dashboard'
         });
@@ -5106,7 +5106,7 @@ async function initializePage() {
         });
     }
 
-     // Logout Link
+    // Logout Link
     const logoutLink = document.getElementById('nav-logout');
     if (logoutLink) {
         logoutLink.addEventListener('click', handleLogout);
@@ -5115,7 +5115,7 @@ async function initializePage() {
     // Initial load: show dashboard and update it
     if (dashboardSection) {
         dashboardSection.classList.remove('hidden');
-        await updateDashboard(); 
+        await updateDashboard();
     }
 
     setActiveNavLink('dashboard-link');
@@ -5316,56 +5316,50 @@ async function initializePage() {
 
     leadsGrid = new gridjs.Grid({
         columns: [
-            { id: 'id', name: 'ID', hidden: true }, // ADDED: Explicit ID column, hidden, and now reliably at index 0
-            { id: 'contactName', name: 'Contact Name', width: 'auto' },
-            { id: 'phone', name: 'Phone', width: '150px' },
-            { id: 'email', name: 'Email', width: '200px' },
-            { id: 'servicesInterested', name: 'Services', width: 'auto', formatter: (cell) => cell ? cell.join(', ') : '' },
-            { id: 'eventDate', name: 'Event Date', width: '120px', formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : '' },
-            { id: 'source', name: 'Source', width: '120px' },
+            { id: 'id', name: 'ID', hidden: true },
+            { id: 'contactName', name: 'Contact Name' },
+            { id: 'phone', name: 'Phone' },
+            { id: 'email', name: 'Email' },
+            // CRITICAL FIX: Remove the formatter here, as loadLeads() already formats it
+            { id: 'servicesInterested', name: 'Services' },
+            { id: 'eventDate', name: 'Event Date' },
+            { id: 'source', name: 'Source' },
             {
                 name: 'Actions',
-                width: '120px',
+                sort: false,
                 formatter: (cell, row) => {
-                    // CORRECTED: Access the ID directly from the first cell (index 0)
                     const leadId = row.cells[0].data;
-
-                    if (!leadId) {
-                        console.error("Error: Lead ID not found at row.cells[0].data for actions.");
-                        return gridjs.html(`<span>Error</span>`); // Or some other fallback
-                    }
-
                     return gridjs.html(`
-                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditLead('${leadId}')">Edit</button>
-                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteLead('${leadId}')">Delete</button>
-                    `);
+                    <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditLead('${leadId}')">Edit</button>
+                    <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteLead('${leadId}')">Delete</button>
+                `);
                 }
             }
         ],
-        data: [],
-        search: {
-            selector: (cell, rowIndex, cellIndex) => {
-                // Exclude 'Actions' column (last) and the hidden 'id' column (index 0) from search.
-                // Visible columns are contactName (1), phone (2), email (3), services (4), eventDate (5), source (6).
-                // So, search from index 1 up to (but not including) the 'Actions' column (index 7).
-                return cellIndex > 0 && cellIndex < 7 ? cell : undefined;
-            }
-        },
+        data: [], // Initial empty data, will be populated by loadLeads
+        search: true,
+        sort: true,
         pagination: {
             enabled: true,
             limit: 10,
+            summary: true
         },
-        sort: true,
-        resizable: true,
-        style: {
-            table: {
-                'min-width': '100%'
-            },
-            th: {
-                'white-space': 'nowrap'
-            }
+        className: {
+            table: 'min-w-full divide-y divide-gray-200',
+            thead: 'bg-gray-50',
+            th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+            tbody: 'bg-white divide-y divide-gray-200',
+            td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+            footer: 'px-6 py-3',
+            pagination: 'flex justify-end items-center space-x-2',
+            paginationButton: 'px-3 py-1 rounded-md text-sm font-medium bg-gray-200 hover:bg-gray-300',
+            paginationButtonCurrent: 'bg-blue-600 text-white',
+            search: 'mb-4 px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm',
+            container: 'overflow-x-auto'
         }
     }).render(leadsGridContainer);
+
+
 
     unsubscribeLeads = onSnapshot(getCollectionRef('leads'), (snapshot) => {
         const leads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
