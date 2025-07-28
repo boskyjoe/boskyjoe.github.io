@@ -3893,6 +3893,90 @@ async function deletePriceBook(priceBookId) {
 // --- Quote Logic ---
 
 /**
+ * Populates the 'Opportunity' dropdown in the Quote form with opportunities
+ * that are in the 'Won' sales stage.
+ */
+async function populateQuoteOpportunities() {
+    console.log("populateQuoteOpportunities: Populating quote opportunities dropdown.");
+
+    if (!quoteOpportunitySelect) {
+        console.error("populateQuoteOpportunities: quoteOpportunitySelect element not found.");
+        return;
+    }
+
+    // Clear existing options and add a default "Select Opportunity" option
+    quoteOpportunitySelect.innerHTML = '<option value="">Select Opportunity</option>';
+
+    if (!db || !auth.currentUser?.uid) {
+        console.warn("populateQuoteOpportunities: DB or user not authenticated, cannot fetch opportunities.");
+        return;
+    }
+
+    try {
+        const opportunitiesCollectionRef = getCollectionRef('opportunities');
+        // Query for opportunities that are 'Won' and either owned by the current user or if user is Admin
+        // Note: Client-side filtering is for UX. Security rules will enforce the actual access.
+        let q;
+        if (currentUserRole === 'Admin') {
+            q = query(opportunitiesCollectionRef, where('salesStage', '==', 'Won'), orderBy('name'));
+        } else {
+            q = query(opportunitiesCollectionRef, where('salesStage', '==', 'Won'), where('creatorId', '==', auth.currentUser.uid), orderBy('name'));
+        }
+
+        const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) {
+            console.log("populateQuoteOpportunities: No 'Won' opportunities found.");
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No Won Opportunities Available';
+            option.disabled = true;
+            quoteOpportunitySelect.appendChild(option);
+        } else {
+            querySnapshot.forEach(doc => {
+                const opportunity = doc.data();
+                const option = document.createElement('option');
+                option.value = doc.id; // Store opportunity ID as value
+                option.textContent = `${opportunity.name} (${opportunity.customerName || 'N/A'})`;
+                quoteOpportunitySelect.appendChild(option);
+            });
+            console.log(`populateQuoteOpportunities: Populated ${querySnapshot.size} opportunities.`);
+        }
+    } catch (error) {
+        console.error("populateQuoteOpportunities: Error fetching opportunities:", error);
+        showMessageBox(`Error loading opportunities for quotes: ${error.message}`, 'alert', true);
+    }
+}
+
+
+/**
+ * Populates the 'Status' dropdown in the Quote form with predefined options.
+ */
+function populateQuoteStatus() {
+    console.log("populateQuoteStatus: Populating quote status dropdown.");
+
+    if (!quoteStatusSelect) {
+        console.error("populateQuoteStatus: quoteStatusSelect element not found.");
+        return;
+    }
+
+    quoteStatusSelect.innerHTML = '<option value="">Select Status</option>'; // Clear existing options and add default
+
+    // These statuses should align with your Firestore security rules for quotes
+    const statuses = ['Draft', 'Review', 'Finalized'];
+
+    statuses.forEach(status => {
+        const option = document.createElement('option');
+        option.value = status;
+        option.textContent = status;
+        quoteStatusSelect.appendChild(option);
+    });
+    console.log(`populateQuoteStatus: Populated ${statuses.length} statuses.`);
+}
+
+
+
+
+/**
  * Navigates to the Quotes section and filters the grid for a specific opportunity.
  * @param {string} opportunityId - The ID of the opportunity to filter by.
  * @param {string} opportunityName - The name of the opportunity to display in the filter message.
