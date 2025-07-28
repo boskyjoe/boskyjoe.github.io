@@ -4179,6 +4179,7 @@ async function setupQuoteForm(quoteData = null) {
         // --- Layout Adjustment for ADD mode ---
         // Main details spans full width
         if (mainQuoteDetailsAccordion) {
+            console.log("setupQuoteForm: Entering ADD NEW mode. full accordion");
             mainQuoteDetailsAccordion.classList.add('md:col-span-full'); 
             const mainDetailsHeader = mainQuoteDetailsAccordion.querySelector('.accordion-header');
             if (mainDetailsHeader) {
@@ -6040,4 +6041,3 @@ window.showMessageBox = showMessageBox; // For modal alerts/confirms
 window.showWorkLogForm = showWorkLogForm; // If called directly from HTML (e.g. from Add button in Opportunity)
 window.showQuotesForOpportunity = showQuotesForOpportunity; // For filtering quotes grid
 window.clearQuotesFilter = clearQuotesFilter; // For clearing quotes filter
-
