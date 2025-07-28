@@ -320,6 +320,57 @@ function showMessageBox(message, type = 'alert', isError = false) { // Removed c
     });
 }
 
+/**
+ * Sets the active state for a navigation link, highlighting it and removing active state from others.
+ * @param {string} activeLinkId The ID of the navigation link to set as active (e.g., 'nav-dashboard').
+ */
+function setActiveNavLink(activeLinkId) {
+    // Get all navigation links within the header
+    const navLinks = document.querySelectorAll('header nav ul li a');
+
+    navLinks.forEach(link => {
+        // Remove active styling from all links
+        link.classList.remove('bg-blue-700', 'text-white', 'font-bold'); // Example active classes
+        link.classList.add('hover:text-blue-200', 'transition', 'duration-300', 'px-3', 'py-2', 'rounded-md'); // Restore default styling
+    });
+
+    // Add active styling to the specified link
+    const activeLink = document.getElementById(activeLinkId);
+    if (activeLink) {
+        activeLink.classList.add('bg-blue-700', 'text-white', 'font-bold'); // Apply active styling
+        activeLink.classList.remove('hover:text-blue-200'); // Remove hover effect if it conflicts with active
+    }
+}
+
+/**
+ * Hides all main content sections and forms by adding the 'hidden' class to them.
+ * This is crucial for single-page application navigation.
+ */
+function hideAllSections() {
+    console.log("hideAllSections: Hiding all main content sections and forms."); // Debug log
+
+    // Hide main content sections
+    if (dashboardSection) dashboardSection.classList.add('hidden');
+    if (customersSection) customersSection.classList.add('hidden');
+    if (leadsSection) leadsSection.classList.add('hidden');
+    if (opportunitiesSection) opportunitiesSection.classList.add('hidden');
+    if (quotesSection) quotesSection.classList.add('hidden');
+    if (countriesSection) countriesSection.classList.add('hidden');
+    if (currenciesSection) currenciesSection.classList.add('hidden');
+    if (priceBooksSection) priceBooksSection.classList.add('hidden');
+
+    // Hide all forms
+    if (customerFormContainer) customerFormContainer.classList.add('hidden');
+    if (leadFormContainer) leadFormContainer.classList.add('hidden');
+    if (opportunityFormContainer) opportunityFormContainer.classList.add('hidden');
+    if (quoteFormContainer) quoteFormContainer.classList.add('hidden'); // Assuming you have this
+    if (countryFormContainer) countryFormContainer.classList.add('hidden'); // Assuming you have this
+    if (currencyFormContainer) currencyFormContainer.classList.add('hidden'); // Assuming you have this
+    if (priceBookFormContainer) priceBookFormContainer.classList.add('hidden'); // Assuming you have this
+    if (opportunityWorkLogFormContainer) opportunityWorkLogFormContainer.classList.add('hidden'); // Also hide the work log form
+}
+
+
 
 
 /**
@@ -637,45 +688,68 @@ async function loadDashboardData() {
 }
 
 
+
 /**
- * Updates dashboard statistics.
+ * Updates the dashboard summary cards with the latest statistics from Firestore.
  */
 async function updateDashboard() {
-    if (!db || !userId) return;
+    console.log("Updating dashboard statistics..."); // Debug log
+
+    if (!db) {
+        console.error("Firestore DB not initialized. Cannot update dashboard.");
+        return;
+    }
 
     try {
-        // Customers are top-level, filtered by creatorId
-        const customersRef = collection(db, 'customers');
-        // Opportunities are top-level, filtered by creatorId
-        const opportunitiesRef = collection(db, 'opportunities');
+        // Fetch total opportunities
+        const opportunitiesSnap = await getDocs(collection(db, 'opportunities'));
+        const totalOpportunities = opportunitiesSnap.size;
+        let totalOpportunityValue = 0;
+        let totalOpportunityNet = 0;
+        let wonOpportunities = 0;
+        let lostOpportunities = 0;
+        let inProgressOpportunities = 0;
 
-        const totalCustomersQuery = query(customersRef, where('creatorId', '==', userId));
-        const totalCustomersSnap = await getDocs(totalCustomersQuery);
-        if (dashboardTotalCustomers) dashboardTotalCustomers.textContent = totalCustomersSnap.size;
+        opportunitiesSnap.forEach(doc => {
+            const data = doc.data();
+            totalOpportunityValue += data.value || 0;
+            totalOpportunityNet += data.opportunityNet || 0; // Assuming opportunityNet exists
+            if (data.salesStage === 'Won') {
+                wonOpportunities++;
+            } else if (data.salesStage === 'Lost') {
+                lostOpportunities++;
+            } else {
+                inProgressOpportunities++; // All other stages are considered in-progress
+            }
+        });
 
-        const totalOpportunitiesQuery = query(opportunitiesRef, where('creatorId', '==', userId));
-        const totalOpportunitiesSnap = await getDocs(totalOpportunitiesQuery);
-        if (dashboardTotalOpportunities) dashboardTotalOpportunities.textContent = totalOpportunitiesSnap.size;
+        // Fetch total customers
+        const customersSnap = await getDocs(collection(db, 'customers'));
+        const totalCustomers = customersSnap.size;
 
-        const openOpportunitiesQuery = query(opportunitiesRef,
-            where('creatorId', '==', userId),
-            where('salesStage', 'in', ['Prospect', 'Qualification', 'Proposal', 'Negotiation'])
-        );
-        const openOpportunitiesSnap = await getDocs(openOpportunitiesQuery);
-        if (dashboardOpenOpportunities) dashboardOpenOpportunities.textContent = openOpportunitiesSnap.size;
+        // Fetch total leads
+        const leadsSnap = await getDocs(collection(db, 'leads'));
+        const totalLeads = leadsSnap.size;
 
-        const wonOpportunitiesQuery = query(opportunitiesRef,
-            where('creatorId', '==', userId),
-            where('salesStage', '==', 'Won')
-        );
-        const wonOpportunitiesSnap = await getDocs(wonOpportunitiesQuery);
-        if (dashboardWonOpportunities) dashboardWonOpportunities.textContent = wonOpportunitiesSnap.size;
+        // Update DOM elements
+        if (document.getElementById('total-opportunities')) document.getElementById('total-opportunities').textContent = totalOpportunities;
+        if (document.getElementById('total-customers')) document.getElementById('total-customers').textContent = totalCustomers;
+        if (document.getElementById('total-leads')) document.getElementById('total-leads').textContent = totalLeads;
+        if (document.getElementById('total-opportunity-value')) document.getElementById('total-opportunity-value').textContent = totalOpportunityValue.toFixed(2);
+        if (document.getElementById('total-opportunity-net')) document.getElementById('total-opportunity-net').textContent = totalOpportunityNet.toFixed(2);
+        if (document.getElementById('won-opportunities')) document.getElementById('won-opportunities').textContent = wonOpportunities;
+        if (document.getElementById('lost-opportunities')) document.getElementById('lost-opportunities').textContent = lostOpportunities;
+        if (document.getElementById('in-progress-opportunities')) document.getElementById('in-progress-opportunities').textContent = inProgressOpportunities;
+
+        console.log("Dashboard statistics updated successfully."); // Debug log
 
     } catch (error) {
-        console.error("Error updating dashboard:", error);
-        showMessageBox(`Error loading dashboard data: ${error.message}`, false);
+        console.error("Error updating dashboard statistics:", error);
+        showMessageBox(`Error updating dashboard: ${error.message}`, 'alert', true);
     }
 }
+
+
 
 // --- Accordion Logic ---
 function setupAccordions() {
@@ -1218,30 +1292,77 @@ async function handleEditCustomer(customerId) {
     }
 }
 
-
+/**
+ * Loads customer data from Firestore and renders it in the customers grid.
+ * Sets up a real-time listener for updates.
+ */
 async function loadCustomers() {
-    if (!db || !userId) {
+    console.log("loadCustomers: Loading customer data for grid."); // Debug log
+
+    if (!customersGridContainer || !noCustomersMessage || !customersGrid) {
+        console.error("loadCustomers: Required DOM elements for customers grid are null. Check initializePage() and HTML IDs.");
         if (noCustomersMessage) noCustomersMessage.classList.remove('hidden');
-        if (customersGrid) customersGrid.updateConfig({ data: [] }).forceRender();
         return;
     }
 
-    const customersCollectionRef = collection(db, 'customers'); // Top-level collection
+    if (unsubscribeCustomers) {
+        unsubscribeCustomers();
+        unsubscribeCustomers = null;
+        console.log("loadCustomers: Unsubscribed from previous customers listener.");
+    }
 
-    // Setup real-time listener, query only for current user's customers
-    onSnapshot(query(customersCollectionRef, where('creatorId', '==', userId)), snapshot => {
-        const customers = [];
-        snapshot.forEach(doc => {
-            customers.push({ id: doc.id, ...doc.data() });
+    noCustomersMessage.classList.add('hidden');
+
+    try {
+        const customersCollectionRef = getCollectionRef('customers');
+        const q = query(customersCollectionRef, orderBy('createdAt', 'desc'));
+
+        console.log("loadCustomers: Setting up real-time listener for customers.");
+        unsubscribeCustomers = onSnapshot(q, (querySnapshot) => {
+            const customers = [];
+            querySnapshot.forEach(doc => {
+                const data = doc.data();
+                customers.push({
+                    id: doc.id,
+                    name: data.name || 'N/A',
+                    type: data.type || 'N/A',
+                    email: data.email || 'N/A',
+                    phone: data.phone || 'N/A',
+                    country: data.country || 'N/A',
+                    preferredContactMethod: data.preferredContactMethod || 'N/A',
+                    industry: data.industry || 'N/A',
+                    source: data.source || 'N/A',
+                    active: data.active ? 'Yes' : 'No', // Assuming 'active' is a boolean
+                    createdAt: data.createdAt // Keep as Timestamp
+                });
+            });
+
+            // CRITICAL DEBUG LOG: Inspect the exact data being sent to the grid
+            console.log("loadCustomers: FINAL DATA FOR GRID:", customers); 
+
+            if (customers.length === 0) {
+                noCustomersMessage.classList.remove('hidden');
+                customersGrid.updateConfig({ data: [] }).forceRender();
+                console.log("loadCustomers: No customers found, displaying message.");
+            } else {
+                noCustomersMessage.classList.add('hidden');
+                customersGrid.updateConfig({ data: customers }).forceRender();
+                console.log("loadCustomers: Customers data rendered in grid.");
+            }
+        }, (error) => {
+            console.error("loadCustomers: Error listening to customers:", error);
+            showMessageBox(`Error loading customers: ${error.message}`, 'alert', true);
+            noCustomersMessage.classList.remove('hidden');
         });
-        renderCustomersGrid(customers);
-    }, error => {
-        console.error("Error loading customers in real-time:", error);
-        showMessageBox(`Error loading customers: ${error.message}`, false);
-        if (noCustomersMessage) noCustomersMessage.classList.remove('hidden');
-        if (customersGrid) customersGrid.updateConfig({ data: [] }).forceRender();
-    });
+    } catch (error) {
+        console.error("loadCustomers: Error setting up customers listener:", error);
+        showMessageBox(`Error setting up customers listener: ${error.message}`, 'alert', true);
+        noCustomersMessage.classList.remove('hidden');
+    }
 }
+
+
+
 
 function renderCustomersGrid(customers) {
     const data = customers.map(customer => [
@@ -1440,126 +1561,69 @@ async function setupLeadForm(lead = null) {
 }
 
 /**
-async function handleSaveLead(event) {
-    event.preventDefault(); // Prevent default form submission
-    if (!db || !userId) {
-        showMessageBox("Authentication required to save lead.", false);
-        return;
-    }
-
-    const leadId = document.getElementById('lead-id').value;
-    const messageElement = document.getElementById('lead-form-message');
-    if (messageElement) messageElement.classList.add('hidden');
-
-    // --- Start Client-Side Validation ---
-    const requiredFields = leadForm.querySelectorAll('[required]');
-    let firstInvalidField = null;
-
-    for (const field of requiredFields) {
-        // Special handling for multi-select: check if at least one option is selected
-        if (field.tagName === 'SELECT' && field.multiple) {
-            const selectedOptions = Array.from(field.options).filter(option => option.selected);
-            if (selectedOptions.length === 0) {
-                firstInvalidField = field;
-                break;
-            }
-        } else if (!field.value) {
-            firstInvalidField = field;
-            break;
-        }
-    }
-
-    if (firstInvalidField) {
-        console.warn('Validation failed: Required field is empty.', firstInvalidField);
-        firstInvalidField.focus(); // Focus on the invalid field
-        messageElement.textContent = `Please fill in the required field: ${firstInvalidField.labels ? firstInvalidField.labels[0].textContent : firstInvalidField.id.replace(/-/g, ' ')}.`;
-        messageElement.classList.remove('hidden');
-        return; // Stop form submission
-    }
-    // --- End Client-Side Validation ---
-
-    const eventDateValue = document.getElementById('lead-event-date').value;
-    const eventDateTimestamp = eventDateValue ? new Date(eventDateValue) : null;
-
-    // NEW: Capture selected services from multi-select as an array
-    const selectedServices = Array.from(leadServicesInterestedSelect.options)
-        .filter(option => option.selected)
-        .map(option => option.value);
-
-    const leadData = {
-        contactName: document.getElementById('lead-contact-name').value,
-        phone: document.getElementById('lead-phone').value,
-        email: document.getElementById('lead-email').value,
-        servicesInterested: selectedServices, // NEW: Save as array
-        eventDate: eventDateTimestamp, // Save as Date object (Firestore converts to Timestamp)
-        source: document.getElementById('lead-source').value,
-        additionalDetails: document.getElementById('lead-additional-details').value,
-        creatorId: userId, // Added creatorId as per rules
-        updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp()
-    };
-
-    // --- START DEBUG LOGGING ---
-    console.log("Attempting to save lead with data:", JSON.stringify(leadData, null, 2));
-    // --- END DEBUG LOGGING ---
-
-    try {
-        const collectionRef = collection(db, 'leads'); // Top-level collection
-        if (leadId) {
-            // For update, only update updatedAt, not createdAt
-            delete leadData.createdAt; // Ensure createdAt is not sent on update
-            await updateDoc(doc(collectionRef, leadId), leadData);
-            showMessageBox("Lead updated successfully!", false);
-        } else {
-            await addDoc(collectionRef, leadData);
-            showMessageBox("Lead added successfully!", false);
-        }
-        hideLeadForm();
-        await loadLeads(); // Reload grid
-    } catch (error) {
-        console.error("Error saving lead:", error);
-        if (messageElement) {
-            messageElement.textContent = `Error saving lead: ${error.message}`;
-            messageElement.classList.remove('hidden');
-        }
-    }
-}*/
-
+ * Handles saving a new lead or updating an existing one.
+ * @param {Event} event The form submission event.
+ */
 async function handleSaveLead(event) {
     event.preventDefault();
+    console.log('handleSaveLead: Form submit event triggered.'); // Diagnostic log
+
     const leadId = document.getElementById('lead-id').value;
+    console.log("handleSaveLead: leadId:", leadId);
 
-    // Get the current authenticated user's UID
     const creatorId = auth.currentUser?.uid;
-
     if (!creatorId) {
         showMessageBox("Authentication required to save lead.", 'alert', true);
         console.error("Error saving lead: User not authenticated or UID not available.");
         return;
     }
+    console.log("handleSaveLead: creatorId:", creatorId);
+
+    // --- CRITICAL DEBUGGING: Log element references and their values ---
+    const leadContactNameInput = document.getElementById('lead-contact-name');
+    console.log("handleSaveLead: leadContactNameInput:", leadContactNameInput);
+    const leadPhoneInput = document.getElementById('lead-phone');
+    console.log("handleSaveLead: leadPhoneInput:", leadPhoneInput);
+    const leadEmailInput = document.getElementById('lead-email');
+    console.log("handleSaveLead: leadEmailInput:", leadEmailInput);
+    
+    // Check global select elements
+    console.log("handleSaveLead: leadServicesInterestedSelect (global):", leadServicesInterestedSelect); // <-- THIS IS KEY
+    console.log("handleSaveLead: leadSourceSelect (global):", leadSourceSelect); // <-- THIS IS KEY
+
+    const leadEventDateInput = document.getElementById('lead-event-date');
+    console.log("handleSaveLead: leadEventDateInput:", leadEventDateInput);
+    const leadAdditionalDetailsInput = document.getElementById('lead-additional-details');
+    console.log("handleSaveLead: leadAdditionalDetailsInput:", leadAdditionalDetailsInput);
 
     // Collect data directly from DOM elements using their IDs
     const servicesInterested = leadServicesInterestedSelect ?
         Array.from(leadServicesInterestedSelect.selectedOptions).map(option => option.value) : [];
+    console.log("handleSaveLead: servicesInterested (collected):", servicesInterested);
+
+    const sourceValue = leadSourceSelect ? leadSourceSelect.value : '';
+    console.log("handleSaveLead: sourceValue (collected):", sourceValue);
 
     const data = {
-        contactName: document.getElementById('lead-contact-name').value || '',
-        phone: document.getElementById('lead-phone').value || '',
-        email: document.getElementById('lead-email').value || '',
+        contactName: leadContactNameInput ? leadContactNameInput.value || '' : '',
+        phone: leadPhoneInput ? leadPhoneInput.value || '' : '',
+        email: leadEmailInput ? leadEmailInput.value || '' : '',
         servicesInterested: servicesInterested,
-        eventDate: document.getElementById('lead-event-date').value ? new Date(document.getElementById('lead-event-date').value) : null,
-        source: leadSourceSelect ? leadSourceSelect.value : '',
-        additionalDetails: document.getElementById('lead-additional-details').value || '',
+        eventDate: leadEventDateInput && leadEventDateInput.value ? new Date(leadEventDateInput.value) : null,
+        source: sourceValue,
+        additionalDetails: leadAdditionalDetailsInput ? leadAdditionalDetailsInput.value || '' : '',
         updatedAt: serverTimestamp(),
-        creatorId: creatorId // Explicitly set creatorId
+        creatorId: creatorId
     };
+
+    console.log("handleSaveLead: Data object being prepared for Firestore:", data); // CRITICAL DEBUG LOG
 
     try {
         if (leadId) {
-            // For update, ensure createdAt is preserved
             const existingDoc = await getDoc(getDocRef('leads', leadId));
             if (existingDoc.exists()) {
                 data.createdAt = existingDoc.data().createdAt;
+                console.log("handleSaveLead: Updating lead. Final data with createdAt:", data); // DEBUG LOG for update
             } else {
                 showMessageBox("Error: Cannot update non-existent lead.", 'alert', true);
                 return;
@@ -1568,15 +1632,17 @@ async function handleSaveLead(event) {
             showMessageBox("Lead updated successfully!", 'alert', false);
         } else {
             data.createdAt = serverTimestamp();
+            console.log("handleSaveLead: Adding new lead. Final data with createdAt:", data); // DEBUG LOG for create
             await addDoc(getCollectionRef('leads'), data);
             showMessageBox("Lead added successfully!", 'alert', false);
         }
         hideForm(leadFormContainer, leadFormMessage);
     } catch (error) {
-        console.error("Error saving lead:", error);
+        console.error("Error saving lead:", error); // Log the full error object
         showMessageBox(`Error saving lead: ${error.message}`, 'alert', true);
     }
 }
+
 
 
 /**
@@ -1627,33 +1693,85 @@ async function handleEditLead(leadId) {
 }
 
 
-
+/**
+ * Loads lead data from Firestore and renders it in the leads grid.
+ * Sets up a real-time listener for updates.
+ */
 async function loadLeads() {
-    if (!db || !userId) {
+    console.log("loadLeads: Loading lead data for grid."); // Debug log
+
+    // Ensure DOM elements are available. Log error and exit if not.
+    if (!leadsGridContainer || !noLeadsMessage || !leadsGrid) {
+        console.error("loadLeads: Required DOM elements for leads grid are null. Check initializePage() and HTML IDs.");
+        // If elements are null, ensure the message is shown as a fallback
         if (noLeadsMessage) noLeadsMessage.classList.remove('hidden');
-        if (leadsGrid) leadsGrid.updateConfig({ data: [] }).forceRender();
         return;
     }
 
-    // Query only for current user's leads (top-level collection)
-    onSnapshot(query(collection(db, 'leads'), where('creatorId', '==', userId)), snapshot => {
-        const leads = [];
-        snapshot.forEach(doc => {
-            const leadData = doc.data();
-            // Convert Firestore Timestamp to YYYY-MM-DD string for display
-            const eventDateDisplay = leadData.eventDate && leadData.eventDate.toDate ? leadData.eventDate.toDate().toISOString().split('T')[0] : 'N/A';
-            // Display services as a comma-separated string
-            const servicesInterestedDisplay = Array.isArray(leadData.servicesInterested) ? leadData.servicesInterested.join(', ') : 'N/A';
-            leads.push({ id: doc.id, ...leadData, eventDate: eventDateDisplay, servicesInterestedDisplay: servicesInterestedDisplay });
+    // Stop previous listener if it exists
+    if (unsubscribeLeads) {
+        unsubscribeLeads();
+        unsubscribeLeads = null;
+        console.log("loadLeads: Unsubscribed from previous leads listener.");
+    }
+
+    // IMPORTANT: Hide "No leads" message initially, before fetching data
+    noLeadsMessage.classList.add('hidden');
+    // The parent section (leadsSection) is assumed to be visible by the nav click handler.
+    // No need to touch leadsGridContainer's 'hidden' class here.
+
+    try {
+        const leadsCollectionRef = getCollectionRef('leads');
+        // Query only for current user's leads or all if admin
+        const q = query(leadsCollectionRef,
+            where('creatorId', '==', auth.currentUser.uid), // Filter by current user
+            orderBy('createdAt', 'desc')); // Order by creation date descending
+
+        console.log("loadLeads: Setting up real-time listener for leads.");
+        unsubscribeLeads = onSnapshot(q, (querySnapshot) => {
+            const leads = [];
+            querySnapshot.forEach(doc => {
+                const leadData = doc.data();
+                // Convert Firestore Timestamp to YYYY-MM-DD string for display
+                const eventDateDisplay = leadData.eventDate && leadData.eventDate.seconds ? new Date(leadData.eventDate.seconds * 1000).toLocaleDateString() : 'N/A';
+                // Display services as a comma-separated string
+                const servicesInterestedDisplay = Array.isArray(leadData.servicesInterested) ? leadData.servicesInterested.join(', ') : 'N/A';
+
+                leads.push({
+                    id: doc.id, // Ensure ID is included for Grid.js actions
+                    ...leadData,
+                    eventDate: eventDateDisplay, // Use formatted date for display column
+                    servicesInterested: servicesInterestedDisplay // Use formatted string for display column
+                });
+            });
+
+            console.log(`loadLeads: Fetched ${leads.length} leads for grid.`);
+            console.log("loadLeads: Leads data for grid:", leads); // DEBUG LOG: Inspect the data
+
+            if (leads.length === 0) {
+                // If no data, show the "No leads" message and clear the grid
+                noLeadsMessage.classList.remove('hidden');
+                leadsGrid.updateConfig({ data: [] }).forceRender();
+                console.log("loadLeads: No leads found, displaying message.");
+            } else {
+                // If data exists, hide the "No leads" message and render the grid
+                noLeadsMessage.classList.add('hidden');
+                leadsGrid.updateConfig({ data: leads }).forceRender();
+                console.log("loadLeads: Leads data rendered in grid.");
+            }
+        }, (error) => {
+            console.error("loadLeads: Error listening to leads:", error);
+            showMessageBox(`Error loading leads: ${error.message}`, 'alert', true);
+            noLeadsMessage.classList.remove('hidden'); // Show message on error
         });
-        renderLeadsGrid(leads);
-    }, error => {
-        console.error("Error loading leads in real-time:", error);
-        showMessageBox(`Error loading leads: ${error.message}`, false);
-        if (noLeadsMessage) noLeadsMessage.classList.remove('hidden');
-        if (leadsGrid) leadsGrid.updateConfig({ data: [] }).forceRender();
-    });
+    } catch (error) {
+        console.error("loadLeads: Error setting up leads listener:", error);
+        showMessageBox(`Error setting up leads listener: ${error.message}`, 'alert', true);
+        noLeadsMessage.classList.remove('hidden'); // Show message on error
+    }
 }
+
+
 
 function renderLeadsGrid(leads) {
     const data = leads.map(lead => [
@@ -2323,7 +2441,7 @@ async function handleSaveOpportunity(event) {
  * @param {string} opportunityId The ID of the opportunity document to edit.
  */
 async function handleEditOpportunity(opportunityId) {
-     console.log(`handleEditOpportunity: Attempting to edit opportunity with ID: ${opportunityId}`); // This log will be key!
+    console.log(`handleEditOpportunity: Attempting to edit opportunity with ID: ${opportunityId}`); // This log will be key!
 
     try {
         const docSnap = await getDoc(getDocRef('opportunities', opportunityId));
@@ -2395,9 +2513,9 @@ async function handleDeleteOpportunity(opportunityId) {
 
     // Await the result from showMessageBox directly for user confirmation
     const confirmed = await showMessageBox("Are you sure you want to delete this opportunity? This action cannot be undone.", 'confirm');
-    
+
     console.log(`handleDeleteOpportunity: Confirmed status from MessageBox: ${confirmed}`);
-    
+
     if (confirmed) {
         console.log("handleDeleteOpportunity: User confirmed deletion. Proceeding with Firestore delete.");
         try {
@@ -3913,6 +4031,89 @@ function clearQuotesFilter() {
     loadQuotes(); // This will now load all quotes
 }
 
+/**
+ * Populates the 'Opportunity' dropdown in the Quote form with opportunities
+ * that are in the 'Won' sales stage.
+ */
+async function populateQuoteOpportunities() {
+    console.log("populateQuoteOpportunities: Populating quote opportunities dropdown.");
+
+    if (!quoteOpportunitySelect) {
+        console.error("populateQuoteOpportunities: quoteOpportunitySelect element not found.");
+        return;
+    }
+
+    // Clear existing options and add a default "Select Opportunity" option
+    quoteOpportunitySelect.innerHTML = '<option value="">Select Opportunity</option>';
+
+    if (!db || !auth.currentUser?.uid) {
+        console.warn("populateQuoteOpportunities: DB or user not authenticated, cannot fetch opportunities.");
+        return;
+    }
+
+    try {
+        const opportunitiesCollectionRef = getCollectionRef('opportunities');
+        // Query for opportunities that are 'Won' and either owned by the current user or if user is Admin
+        // Note: Client-side filtering is for UX. Security rules will enforce the actual access.
+        let q;
+        if (currentUserRole === 'Admin') {
+            q = query(opportunitiesCollectionRef, where('salesStage', '==', 'Won'), orderBy('name'));
+        } else {
+            q = query(opportunitiesCollectionRef, where('salesStage', '==', 'Won'), where('creatorId', '==', auth.currentUser.uid), orderBy('name'));
+        }
+
+        const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) {
+            console.log("populateQuoteOpportunities: No 'Won' opportunities found.");
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No Won Opportunities Available';
+            option.disabled = true;
+            quoteOpportunitySelect.appendChild(option);
+        } else {
+            querySnapshot.forEach(doc => {
+                const opportunity = doc.data();
+                const option = document.createElement('option');
+                option.value = doc.id; // Store opportunity ID as value
+                option.textContent = `${opportunity.name} (${opportunity.customerName || 'N/A'})`;
+                quoteOpportunitySelect.appendChild(option);
+            });
+            console.log(`populateQuoteOpportunities: Populated ${querySnapshot.size} opportunities.`);
+        }
+    } catch (error) {
+        console.error("populateQuoteOpportunities: Error fetching opportunities:", error);
+        showMessageBox(`Error loading opportunities for quotes: ${error.message}`, 'alert', true);
+    }
+}
+
+
+/**
+ * Populates the 'Status' dropdown in the Quote form with predefined options.
+ */
+function populateQuoteStatus() {
+    console.log("populateQuoteStatus: Populating quote status dropdown.");
+
+    if (!quoteStatusSelect) {
+        console.error("populateQuoteStatus: quoteStatusSelect element not found.");
+        return;
+    }
+
+    quoteStatusSelect.innerHTML = '<option value="">Select Status</option>'; // Clear existing options and add default
+
+    // These statuses should align with your Firestore security rules for quotes
+    const statuses = ['Draft', 'Review', 'Finalized'];
+
+    statuses.forEach(status => {
+        const option = document.createElement('option');
+        option.value = status;
+        option.textContent = status;
+        quoteStatusSelect.appendChild(option);
+    });
+    console.log(`populateQuoteStatus: Populated ${statuses.length} statuses.`);
+}
+
+
+
 async function setupQuoteForm(quoteData = null) {
     console.log('setupQuoteForm called with quoteData:', quoteData);
     await populateQuoteOpportunities();
@@ -4628,6 +4829,7 @@ async function initializePage() {
     dashboardSection = document.getElementById('dashboard-section');
     customersSection = document.getElementById('customers-section');
     leadsSection = document.getElementById('leads-section');
+    console.log("initializePage: leadsSection:", leadsSection);
     opportunitiesSection = document.getElementById('opportunities-section');
     quotesSection = document.getElementById('quotes-section');
     countriesSection = document.getElementById('countries-section');
@@ -4679,14 +4881,21 @@ async function initializePage() {
     // Lead elements
     addLeadBtn = document.getElementById('add-lead-btn');
     leadFormContainer = document.getElementById('lead-form-container');
+    console.log("initializePage: leadFormContainer:", leadFormContainer);
     leadForm = document.getElementById('lead-form');
+    console.log("initializePage: leadForm:", leadForm);
     cancelLeadBtn = document.getElementById('cancel-lead-btn');
     leadSearchInput = document.getElementById('lead-search');
     leadsGridContainer = document.getElementById('leads-grid-container');
+    console.log("initializePage: leadsGridContainer:", leadsGridContainer);
     noLeadsMessage = document.getElementById('no-leads-message');
+    console.log("initializePage: noLeadsMessage:", noLeadsMessage);
     leadServicesInterestedSelect = document.getElementById('lead-services-interested');
+    console.log("initializePage: leadServicesInterestedSelect:", leadServicesInterestedSelect);
     leadSourceSelect = document.getElementById('lead-source');
+    console.log("initializePage: leadSourceSelect:", leadSourceSelect);
     leadFormMessage = document.getElementById('lead-form-message');
+    console.log("initializePage: leadFormMessage:", leadFormMessage);
 
     // Opportunity elements
 
@@ -4834,15 +5043,118 @@ async function initializePage() {
     if (logoutBtn) logoutBtn.addEventListener('click', handleLogout); // Corrected listener for logoutBtn
 
     // Navigation Listeners
-    if (navDashboard) navDashboard.addEventListener('click', () => showSection('dashboard-section'));
-    if (navCustomers) navCustomers.addEventListener('click', () => showSection('customers-section'));
-    if (navLeads) navLeads.addEventListener('click', () => showSection('leads-section'));
-    if (navOpportunities) navOpportunities.addEventListener('click', () => showSection('opportunities-section'));
-    if (navQuotes) navQuotes.addEventListener('click', () => showSection('quotes-section'));
-    if (navCountries) navCountries.addEventListener('click', () => showSection('countries-section'));
-    if (navCurrencies) navCurrencies.addEventListener('click', () => showSection('currencies-section'));
-    if (navPriceBooks) navPriceBooks.addEventListener('click', () => showSection('price-books-section'));
 
+    // Dashboard Navigation Link
+    const dashboardLink = document.getElementById('nav-dashboard'); // CRITICAL FIX: Use 'nav-dashboard'
+    if (dashboardLink) {
+        dashboardLink.addEventListener('click', async (event) => {
+            event.preventDefault();
+            hideAllSections();
+            if (dashboardSection) {
+                dashboardSection.classList.remove('hidden');
+                await updateDashboard();
+            }
+            setActiveNavLink('nav-dashboard'); // CRITICAL FIX: Use 'nav-dashboard'
+        });
+    }
+
+
+
+    // Customers Navigation Link
+    const customersLink = document.getElementById('nav-customers');
+    if (customersLink) {
+        customersLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideAllSections();
+            if (customersSection) customersSection.classList.remove('hidden');
+            loadCustomers(); // Assuming this loads customer data
+            setActiveNavLink('nav-customers');
+        });
+    }
+
+    // Leads Navigation Link
+    const leadsLink = document.getElementById('nav-leads');
+    if (leadsLink) {
+        leadsLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideAllSections();
+            if (leadsSection) leadsSection.classList.remove('hidden');
+            loadLeads(); // Assuming this loads lead data
+            setActiveNavLink('nav-leads');
+        });
+    }
+
+    // Opportunities Navigation Link
+    const opportunitiesLink = document.getElementById('nav-opportunities');
+    if (opportunitiesLink) {
+        opportunitiesLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideAllSections();
+            if (opportunitiesSection) opportunitiesSection.classList.remove('hidden');
+            loadOpportunities(); // Assuming this loads opportunity data
+            setActiveNavLink('nav-opportunities');
+        });
+    }
+
+    // Quotes Navigation Link
+    const quotesLink = document.getElementById('nav-quotes');
+    if (quotesLink) {
+        quotesLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideAllSections();
+            if (quotesSection) quotesSection.classList.remove('hidden');
+            loadQuotes(); // Assuming this loads quote data
+            setActiveNavLink('nav-quotes');
+        });
+    }
+
+    // Admin Menu Items (assuming these functions exist)
+    const countriesLink = document.getElementById('nav-countries');
+    if (countriesLink) {
+        countriesLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideAllSections();
+            if (countriesSection) countriesSection.classList.remove('hidden');
+            loadCountries();
+            setActiveNavLink('nav-countries');
+        });
+    }
+
+    const currenciesLink = document.getElementById('nav-currencies');
+    if (currenciesLink) {
+        currenciesLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideAllSections();
+            if (currenciesSection) currenciesSection.classList.remove('hidden');
+            loadCurrencies();
+            setActiveNavLink('nav-currencies');
+        });
+    }
+
+    const priceBooksLink = document.getElementById('nav-price-books');
+    if (priceBooksLink) {
+        priceBooksLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideAllSections();
+            if (priceBooksSection) priceBooksSection.classList.remove('hidden');
+            loadPriceBooks();
+            setActiveNavLink('nav-price-books');
+        });
+    }
+
+    // Logout Link
+    const logoutLink = document.getElementById('nav-logout');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', handleLogout);
+    }
+
+    // Initial load: show dashboard and update it
+    if (dashboardSection) {
+        dashboardSection.classList.remove('hidden');
+        await updateDashboard();
+    }
+
+    setActiveNavLink('dashboard-link');
 
     if (addCustomerBtn) addCustomerBtn.addEventListener('click', () => {
         hideForm(customerFormContainer, customerFormMessage);
@@ -5040,56 +5352,50 @@ async function initializePage() {
 
     leadsGrid = new gridjs.Grid({
         columns: [
-            { id: 'id', name: 'ID', hidden: true }, // ADDED: Explicit ID column, hidden, and now reliably at index 0
-            { id: 'contactName', name: 'Contact Name', width: 'auto' },
-            { id: 'phone', name: 'Phone', width: '150px' },
-            { id: 'email', name: 'Email', width: '200px' },
-            { id: 'servicesInterested', name: 'Services', width: 'auto', formatter: (cell) => cell ? cell.join(', ') : '' },
-            { id: 'eventDate', name: 'Event Date', width: '120px', formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : '' },
-            { id: 'source', name: 'Source', width: '120px' },
+            { id: 'id', name: 'ID', hidden: true },
+            { id: 'contactName', name: 'Contact Name' },
+            { id: 'phone', name: 'Phone' },
+            { id: 'email', name: 'Email' },
+            // CRITICAL FIX: Remove the formatter here, as loadLeads() already formats it
+            { id: 'servicesInterested', name: 'Services' },
+            { id: 'eventDate', name: 'Event Date' },
+            { id: 'source', name: 'Source' },
             {
                 name: 'Actions',
-                width: '120px',
+                sort: false,
                 formatter: (cell, row) => {
-                    // CORRECTED: Access the ID directly from the first cell (index 0)
                     const leadId = row.cells[0].data;
-
-                    if (!leadId) {
-                        console.error("Error: Lead ID not found at row.cells[0].data for actions.");
-                        return gridjs.html(`<span>Error</span>`); // Or some other fallback
-                    }
-
                     return gridjs.html(`
-                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditLead('${leadId}')">Edit</button>
-                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteLead('${leadId}')">Delete</button>
-                    `);
+                    <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditLead('${leadId}')">Edit</button>
+                    <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteLead('${leadId}')">Delete</button>
+                `);
                 }
             }
         ],
-        data: [],
-        search: {
-            selector: (cell, rowIndex, cellIndex) => {
-                // Exclude 'Actions' column (last) and the hidden 'id' column (index 0) from search.
-                // Visible columns are contactName (1), phone (2), email (3), services (4), eventDate (5), source (6).
-                // So, search from index 1 up to (but not including) the 'Actions' column (index 7).
-                return cellIndex > 0 && cellIndex < 7 ? cell : undefined;
-            }
-        },
+        data: [], // Initial empty data, will be populated by loadLeads
+        search: true,
+        sort: true,
         pagination: {
             enabled: true,
             limit: 10,
+            summary: true
         },
-        sort: true,
-        resizable: true,
-        style: {
-            table: {
-                'min-width': '100%'
-            },
-            th: {
-                'white-space': 'nowrap'
-            }
+        className: {
+            table: 'min-w-full divide-y divide-gray-200',
+            thead: 'bg-gray-50',
+            th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+            tbody: 'bg-white divide-y divide-gray-200',
+            td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+            footer: 'px-6 py-3',
+            pagination: 'flex justify-end items-center space-x-2',
+            paginationButton: 'px-3 py-1 rounded-md text-sm font-medium bg-gray-200 hover:bg-gray-300',
+            paginationButtonCurrent: 'bg-blue-600 text-white',
+            search: 'mb-4 px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm',
+            container: 'overflow-x-auto'
         }
     }).render(leadsGridContainer);
+
+
 
     unsubscribeLeads = onSnapshot(getCollectionRef('leads'), (snapshot) => {
         const leads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
