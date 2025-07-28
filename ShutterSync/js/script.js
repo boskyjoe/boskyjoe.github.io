@@ -4437,23 +4437,6 @@ function hideQuoteLineForm() {
     console.log("hideQuoteLineForm: Quote line form hidden and novalidate applied.");
 }
 
-
-/**
- * Hides the quote line entry form and applies novalidate to prevent browser validation.
- */
-function hideQuoteLineForm() {
-    if (quoteLineFormContainer) {
-        quoteLineFormContainer.classList.add('hidden');
-    }
-    if (quoteLineForm) {
-        quoteLineForm.reset(); // Reset form fields when hiding
-        quoteLineForm.setAttribute('novalidate', 'novalidate'); // CRITICAL: Add novalidate when hiding
-    }
-    if (quoteLineFormMessage) quoteLineFormMessage.classList.add('hidden'); // Hide any messages
-    console.log("hideQuoteLineForm: Quote line form hidden and novalidate applied.");
-}
-
-
 /**
  * Calculates the Final Net value for a Quote Line based on its inputs.
  * This function should be called whenever unit price, quantity, discount, or adjustment amount changes.
