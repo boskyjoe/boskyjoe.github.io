@@ -5377,24 +5377,50 @@ async function initializePage() {
     if (quoteLineDiscountInput) quoteLineDiscountInput.addEventListener('input', calculateQuoteLineFinalNet); // CRITICAL: Use calculateQuoteLineFinalNet
     if (quoteLineAdjustmentAmountInput) quoteLineAdjustmentAmountInput.addEventListener('input', calculateQuoteLineFinalNet); // CRITICAL: Use calculateQuoteLineFinalNet
 
-    // Accordion event listeners for Quotes
+     // Accordion event listeners for Quotes
     if (mainQuoteDetailsAccordion) {
-        mainQuoteDetailsAccordion.addEventListener('click', () => {
-            if (mainQuoteDetailsContent) {
-                mainQuoteDetailsContent.classList.toggle('hidden');
-                // Pass the header and the new visibility state to setAccordionVisualState
-                setAccordionVisualState(mainQuoteDetailsAccordion.querySelector('.accordion-header'), !mainQuoteDetailsContent.classList.contains('hidden'));
+        // Listener for the header to toggle the accordion
+        mainQuoteDetailsAccordion.addEventListener('click', (event) => {
+            // Check if the click originated directly on the header or its immediate children (like h3 or icon)
+            // This prevents clicks on inputs/labels inside the content from toggling the header
+            if (event.target.closest('.accordion-header') === mainQuoteDetailsAccordion.querySelector('.accordion-header')) {
+                if (mainQuoteDetailsContent) {
+                    const isHidden = mainQuoteDetailsContent.classList.contains('hidden');
+                    mainQuoteDetailsContent.classList.toggle('hidden', !isHidden);
+                    setAccordionVisualState(mainQuoteDetailsAccordion.querySelector('.accordion-header'), !isHidden);
+                }
             }
         });
+
+        // CRITICAL FIX: Add a listener to the content area to stop propagation
+        if (mainQuoteDetailsContent) {
+            mainQuoteDetailsContent.addEventListener('click', (event) => {
+                event.stopPropagation(); // Prevent clicks inside content from bubbling up to the header
+            });
+        }
     }
+
+
+
     if (quoteLinesSectionContainer) { // This is the header of the quote lines accordion
-        quoteLinesSectionContainer.addEventListener('click', () => {
-            if (quoteLinesContent) { // This is the content div of the quote lines accordion
-                quoteLinesContent.classList.toggle('hidden');
-                // Pass the header and the new visibility state to setAccordionVisualState
-                setAccordionVisualState(quoteLinesSectionContainer.querySelector('.accordion-header'), !quoteLinesContent.classList.contains('hidden'));
+        // Listener for the header to toggle the accordion
+        quoteLinesSectionContainer.addEventListener('click', (event) => {
+            // Check if the click originated directly on the header or its immediate children
+            if (event.target.closest('.accordion-header') === quoteLinesSectionContainer.querySelector('.accordion-header')) {
+                if (quoteLinesContent) {
+                    const isHidden = quoteLinesContent.classList.contains('hidden');
+                    quoteLinesContent.classList.toggle('hidden', !isHidden);
+                    setAccordionVisualState(quoteLinesSectionContainer.querySelector('.accordion-header'), !isHidden);
+                }
             }
         });
+
+        // CRITICAL FIX: Add a listener to the content area to stop propagation
+        if (quoteLinesContent) {
+            quoteLinesContent.addEventListener('click', (event) => {
+                event.stopPropagation(); // Prevent clicks inside content from bubbling up to the header
+            });
+        }
     }
 
 
