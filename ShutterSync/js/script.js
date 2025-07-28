@@ -4357,6 +4357,7 @@ async function renderQuoteLines(quoteId) {
     }
 }
 
+
 /**
  * Shows the quote line entry form, resets it, and populates it with data if editing.
  * It also manages the 'novalidate' attribute to control browser validation.
@@ -4364,15 +4365,25 @@ async function renderQuoteLines(quoteId) {
  * @param {object | null} quoteLineData Optional: The data of the quote line to pre-populate.
  */
 function showQuoteLineForm(quoteLineId = null, quoteLineData = null) {
-    console.log("showQuoteLineForm: Setting up quote line form. ID:", quoteLineId, "Data:", quoteLineData);
+    console.group("showQuoteLineForm");
+    console.log("Called with quoteLineId:", quoteLineId, "quoteLineData:", quoteLineData);
 
     if (quoteLineFormContainer) {
         quoteLineFormContainer.classList.remove('hidden');
+    } else {
+        console.error("showQuoteLineForm: quoteLineFormContainer is null. Cannot show form.");
+        console.groupEnd();
+        return;
     }
+
     if (quoteLineForm) {
         quoteLineForm.reset(); // Reset form fields
         quoteLineForm.removeAttribute('novalidate'); // CRITICAL: Enable validation when shown
         console.log("showQuoteLineForm: novalidate removed from quoteLineForm. Current state:", quoteLineForm.hasAttribute('novalidate'));
+    } else {
+        console.error("showQuoteLineForm: quoteLineForm is null. Cannot remove novalidate.");
+        console.groupEnd();
+        return;
     }
 
     // Set hidden IDs for the quote line and its parent quote
@@ -4420,7 +4431,134 @@ function showQuoteLineForm(quoteLineId = null, quoteLineData = null) {
     if (quoteLineFormMessage) {
         quoteLineFormMessage.classList.add('hidden'); // Ensure message is hidden
     }
+    console.groupEnd();
 }
+
+/**
+ * Hides the quote line entry form and applies novalidate to prevent browser validation.
+ */
+function hideQuoteLineForm() {
+    console.group("hideQuoteLineForm");
+    console.log("Called.");
+
+    if (quoteLineFormContainer) {
+        quoteLineFormContainer.classList.add('hidden');
+    } else {
+        console.error("hideQuoteLineForm: quoteLineFormContainer is null. Cannot hide form.");
+        console.groupEnd();
+        return;
+    }
+
+    if (quoteLineForm) {
+        quoteLineForm.reset(); // Reset form fields when hiding
+        quoteLineForm.setAttribute('novalidate', 'novalidate'); // CRITICAL: Add novalidate when hiding
+        console.log("hideQuoteLineForm: novalidate applied to quoteLineForm. Current state:", quoteLineForm.hasAttribute('novalidate'));
+    } else {
+        console.error("hideQuoteLineForm: quoteLineForm is null. Cannot apply novalidate.");
+        console.groupEnd();
+        return;
+    }
+    if (quoteLineFormMessage) {
+        quoteLineFormMessage.classList.add('hidden'); // Hide any messages
+    }
+    console.log("hideQuoteLineForm: Quote line form hidden.");
+    console.groupEnd();
+}
+
+/**
+ * Handles saving a new quote or updating an existing one.
+ * @param {Event} event The form submission event.
+ */
+async function handleSaveQuote(event) {
+    event.preventDefault();
+    console.group("handleSaveQuote");
+    console.log('Form submit event triggered.');
+
+    if (!db || !auth.currentUser?.uid) {
+        showMessageBox("Authentication required to save quote.", 'alert', true);
+        console.groupEnd();
+        return;
+    }
+
+    const quoteId = document.getElementById('quote-id').value; // Will be empty for new, has ID for edit
+    const creatorId = auth.currentUser.uid;
+
+    // Collect data from the main quote form
+    const data = {
+        quoteName: document.getElementById('quote-name').value || '',
+        opportunityId: quoteOpportunitySelect ? quoteOpportunitySelect.value : '',
+        customerContactName: document.getElementById('quote-customer-contact-name').value || '',
+        phone: document.getElementById('quote-phone').value || '',
+        email: document.getElementById('quote-email').value || '',
+        customerAddress: document.getElementById('quote-customer-address').value || '',
+        eventName: document.getElementById('quote-event-name').value || '', // Corrected ID
+        eventDate: document.getElementById('quote-event-date').value ? new Date(document.getElementById('quote-event-date').value) : null,
+        additionalDetails: document.getElementById('quote-additional-details').value || '',
+        quoteAmount: parseFloat(document.getElementById('quote-amount').value) || 0, // This will be updated by quote lines
+        status: quoteStatusSelect ? quoteStatusSelect.value : '',
+        updatedAt: serverTimestamp(),
+        creatorId: creatorId,
+    };
+
+    // CRITICAL DEBUGGING STEP: Check novalidate status just before attempting save
+    if (quoteLineForm) {
+        console.log("handleSaveQuote: Before saving, quoteLineForm novalidate state:", quoteLineForm.hasAttribute('novalidate'));
+    } else {
+        console.error("handleSaveQuote: quoteLineForm is null before saving.");
+    }
+
+    try {
+        if (quoteId) {
+            // Update existing quote
+            const existingDoc = await getDoc(getDocRef('quotes', quoteId));
+            if (existingDoc.exists()) {
+                data.createdAt = existingDoc.data().createdAt; // Preserve original createdAt
+            } else {
+                showMessageBox("Error: Cannot update non-existent quote.", 'alert', true);
+                console.groupEnd();
+                return;
+            }
+            await updateDoc(getDocRef('quotes', quoteId), data);
+            showMessageBox("Quote updated successfully! You can now add/edit quote lines.", 'alert', false);
+            currentQuoteId = quoteId; // Keep currentQuoteId set for managing lines
+        } else {
+            // Add new quote
+            data.createdAt = serverTimestamp();
+            const docRef = await addDoc(getCollectionRef('quotes'), data);
+            showMessageBox("Quote added successfully! You can now add quote lines.", 'alert', false);
+            currentQuoteId = docRef.id; // Set currentQuoteId for newly created quote
+            document.getElementById('quote-id').value = docRef.id; // Update hidden ID field in form
+        }
+
+        // After saving (either new or update), adjust accordion layout and render quote lines
+        if (mainQuoteDetailsAccordion) mainQuoteDetailsAccordion.classList.remove('md:col-span-full'); // Make main details take one column
+        if (quoteLinesSectionContainer) quoteLinesSectionContainer.classList.remove('hidden'); // Show quote lines section
+        
+        // Ensure both accordions are open
+        if (mainQuoteDetailsContent) mainQuoteDetailsContent.classList.remove('hidden');
+        if (mainQuoteDetailsAccordion) {
+            const icon = mainQuoteDetailsAccordion.querySelector('.accordion-icon');
+            if (icon) setAccordionVisualState(mainQuoteDetailsAccordion.querySelector('.accordion-header'), true);
+        }
+        if (quoteLinesContent) quoteLinesContent.classList.remove('hidden');
+        if (quoteLinesSectionContainer) {
+            const icon = quoteLinesSectionContainer.querySelector('.accordion-header');
+            if (icon) setAccordionVisualState(quoteLinesSectionContainer.querySelector('.accordion-header'), true);
+        }
+
+        await renderQuoteLines(currentQuoteId); // Render lines for the saved/newly created quote
+
+        await loadQuotes(); // Reload main quotes grid
+        await updateDashboard(); // Update dashboard stats
+
+    } catch (error) {
+        console.error("handleSaveQuote: Error saving quote:", error);
+        showMessageBox(`Error saving quote: ${error.message}`, 'alert', true);
+    }
+    console.groupEnd();
+}
+
+
 
 /**
  * Hides the quote line entry form and applies novalidate to prevent browser validation.
