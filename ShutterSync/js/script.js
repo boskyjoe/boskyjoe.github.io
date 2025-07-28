@@ -5231,7 +5231,18 @@ async function initializePage() {
     quoteLinesContent = document.getElementById('quote-lines-content'); // NEW ID from HTML fix
     addQuoteLineEntryBtn = document.getElementById('add-quote-line-entry-btn');
     quoteLineFormContainer = document.getElementById('quote-line-form-container');
+    
+    // *** THE CRITICAL DEBUGGING LINE ***
     quoteLineForm = document.getElementById('quote-line-form');
+    console.log("initializePage: Attempting to get 'quote-line-form'. Result:", quoteLineForm);
+    if (quoteLineForm) {
+        console.log("initializePage: 'quote-line-form' found. Its outerHTML:", quoteLineForm.outerHTML);
+    } else {
+        console.error("initializePage: 'quote-line-form' is null. The element might not exist or ID is incorrect.");
+    }
+    // *** END CRITICAL DEBUGGING LINE ***
+
+
     quoteLineFormMessage = document.getElementById('quote-line-form-message');
     quoteLineServicesInput = document.getElementById('quote-line-services');
     quoteLineDescriptionInput = document.getElementById('quote-line-description');
