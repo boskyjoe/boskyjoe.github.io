@@ -5874,43 +5874,7 @@ async function initializePage() {
 
 
     // QUOTES GRID INITIALIZATION (UPDATED with column widths)
-    quotesGrid = new gridjs.Grid({
-        columns: [
-            { id: 'quoteName', name: 'Quote Name', width: 'auto' },
-            { id: 'opportunityId', name: 'Opportunity ID', width: '150px' },
-            { id: 'eventName', name: 'Event Name', width: 'auto' },
-            { id: 'eventDate', name: 'Event Date', width: '120px', formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : '' },
-            { id: 'quoteAmount', name: 'Quote Amount', width: '120px', formatter: (cell) => cell ? cell.toFixed(2) : '0.00' },
-            { id: 'status', name: 'Status', width: '100px' },
-            {
-                name: 'Actions',
-                width: '120px',
-                formatter: (cell, row) => {
-                    const quoteId = row.cells[row.cells.length - 1].data;
-                    return gridjs.html(`
-                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditQuote('${quoteId}')">Edit</button>
-                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteQuote('${quoteId}')">Delete</button>
-                    `);
-                }
-            }
-        ],
-        data: [],
-        search: true,
-        pagination: {
-            enabled: true,
-            limit: 10,
-        },
-        sort: true,
-        resizable: true,
-        style: {
-            table: {
-                'min-width': '100%'
-            },
-            th: {
-                'white-space': 'nowrap'
-            }
-        }
-    }).render(quotesGridContainer);
+    
 
     unsubscribeQuotes = onSnapshot(getCollectionRef('quotes'), (snapshot) => {
         const quotes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
