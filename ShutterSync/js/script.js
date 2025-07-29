@@ -4910,7 +4910,6 @@ async function loadQuotes(opportunityId = null) {
                     quoteAmount: data.quoteAmount,
                     status: data.status,
                     updatedAt: data.updatedAt ? new Date(data.updatedAt.seconds * 1000).toLocaleString() : 'N/A',
-                    // actions: null // No longer needed as we'll use row.cells[0].data for the ID
                 });
             });
 
@@ -4922,9 +4921,9 @@ async function loadQuotes(opportunityId = null) {
                 if (quotesData.length > 0) {
                     document.getElementById('no-quotes-message').classList.add('hidden');
                     new gridjs.Grid({
-                        // CRITICAL: Ensure 'id' is the first column, even if hidden
                         columns: [
-                            { id: 'id', name: 'ID', hidden: true }, // Make sure 'id' is the very first column and hidden
+                            // CRITICAL FIX: Changed hidden: true to hidden: false to display the ID
+                            { id: 'id', name: 'Quote ID', hidden: false }, 
                             { id: 'quoteName', name: 'Quote Name' },
                             { id: 'eventName', name: 'Event Name' },
                             { id: 'eventDate', name: 'Event Date' },
