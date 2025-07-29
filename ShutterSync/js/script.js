@@ -5874,22 +5874,6 @@ async function initializePage() {
 
 
     // QUOTES GRID INITIALIZATION (UPDATED with column widths)
-    
-
-    unsubscribeQuotes = onSnapshot(getCollectionRef('quotes'), (snapshot) => {
-        const quotes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (quotes.length === 0) {
-            if (noQuotesMessage) noQuotesMessage.classList.remove('hidden');
-            if (quotesGridContainer) quotesGridContainer.classList.add('hidden');
-        } else {
-            if (noQuotesMessage) noQuotesMessage.classList.add('hidden');
-            if (quotesGridContainer) quotesGridContainer.classList.remove('hidden');
-        }
-        quotesGrid.updateConfig({ data: quotes }).forceRender();
-    }, (error) => {
-        console.error("Error fetching quotes:", error);
-        showMessageBox("Error loading quotes.");
-    });
 
 
     countriesGrid = new gridjs.Grid({
