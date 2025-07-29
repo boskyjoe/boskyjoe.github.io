@@ -5843,14 +5843,33 @@ async function initializePage() {
     if (quotesGridContainer) { // Ensure container exists before initializing grid
         quotesGrid = new gridjs.Grid({
             columns: [
-                // Display ID for validation (can change to hidden: true later)
-                { id: 'id', name: 'Quote ID', hidden: false }, 
+                { id: 'id', name: 'Quote ID', hidden: false }, // Keep visible for now for debugging
                 { id: 'quoteName', name: 'Quote Name' },
                 { id: 'eventName', name: 'Event Name' },
-                { id: 'eventDate', name: 'Event Date', formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : 'N/A' },
-                { id: 'quoteAmount', name: 'Amount', formatter: (cell) => `$${cell.toFixed(2)}` },
+                { 
+                    id: 'eventDate', 
+                    name: 'Event Date', 
+                    formatter: (cell) => {
+                        // CRITICAL FIX: Check if cell is a valid Timestamp-like object before converting
+                        if (cell && typeof cell.seconds === 'number' && typeof cell.nanoseconds === 'number') {
+                            return new Date(cell.seconds * 1000).toLocaleDateString();
+                        }
+                        return 'N/A'; // Default for invalid/missing date
+                    } 
+                },
+                { id: 'quoteAmount', name: 'Amount', formatter: (cell) => `$${cell ? cell.toFixed(2) : '0.00'}` },
                 { id: 'status', name: 'Status' },
-                { id: 'updatedAt', name: 'Last Updated', formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleString() : 'N/A' },
+                { 
+                    id: 'updatedAt', 
+                    name: 'Last Updated', 
+                    formatter: (cell) => {
+                        // CRITICAL FIX: Check if cell is a valid Timestamp-like object before converting
+                        if (cell && typeof cell.seconds === 'number' && typeof cell.nanoseconds === 'number') {
+                            return new Date(cell.seconds * 1000).toLocaleString();
+                        }
+                        return 'N/A'; // Default for invalid/missing date
+                    } 
+                },
                 {
                     name: 'Actions',
                     formatter: (cell, row) => {
@@ -5890,6 +5909,7 @@ async function initializePage() {
     } else {
         console.error("initializePage: quotesGridContainer not found, cannot initialize quotesGrid.");
     }
+
 
 
     unsubscribeQuotes = onSnapshot(getCollectionRef('quotes'), (snapshot) => {
