@@ -169,9 +169,6 @@ let mainQuoteDetailsAccordion; // Main Quote Details accordion header
 let mainQuoteDetailsContent; // Main Quote Details accordion content
 let quoteAccordionsGrid; // Parent grid for quote accordions
 
-
-
-
 let addQuoteBtn;
 let quoteFormContainer;
 let quoteForm;
@@ -4866,11 +4863,26 @@ async function handleOpportunityChangeForQuote() {
 async function loadQuotes(opportunityId = null) {
     console.group("loadQuotes");
     console.log(`Loading quotes for opportunity ID: ${opportunityId || 'All'}`);
+    const noQuotesMessage = document.getElementById('no-quotes-message'); // Ensure this is correctly assigned
+
     if (!db) {
         console.warn("loadQuotes: Firestore DB not initialized.");
         console.groupEnd();
         return;
     }
+    // CRITICAL: Check for quotesGrid to be initialized
+    if (!quotesGrid || !noQuotesMessage) { 
+        console.error("loadQuotes: Required elements (quotesGrid or noQuotesMessage) not found. Grid might not be initialized.");
+        console.groupEnd();
+        return;
+    }
+
+    // Hide "No quotes" message initially
+    noQuotesMessage.classList.add('hidden');
+    // Ensure grid container is visible (quotesGrid.render handles content)
+    if (quotesGridContainer) quotesGridContainer.classList.remove('hidden'); 
+    console.log("loadQuotes: Initial state - noQuotesMessage hidden, quotesGridContainer visible.");
+
 
     if (unsubscribeQuotes) {
         unsubscribeQuotes();
@@ -4900,10 +4912,9 @@ async function loadQuotes(opportunityId = null) {
             const quotesData = [];
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                // DEBUG: Log the ID and data being pushed into quotesData
-                console.log("loadQuotes: Preparing data for grid row. ID:", doc.id, "Data:", data);
+                console.log("loadQuotes: Inside forEach - doc.id:", doc.id, "doc.data():", data); 
                 quotesData.push({
-                    id: doc.id, // Ensure ID is explicitly set here and is the first property
+                    id: doc.id, 
                     quoteName: data.quoteName,
                     eventName: data.eventName || 'N/A',
                     eventDate: data.eventDate ? new Date(data.eventDate.seconds * 1000).toLocaleDateString() : 'N/A',
@@ -4913,80 +4924,35 @@ async function loadQuotes(opportunityId = null) {
                 });
             });
 
-            const gridContainer = document.getElementById('quotes-grid-container');
-            if (gridContainer) {
-                // Clear existing grid if any to prevent duplicates on re-render
-                gridContainer.innerHTML = ''; 
+            console.log(`loadQuotes: onSnapshot received ${quotesData.length} quotes.`);
 
-                if (quotesData.length > 0) {
-                    document.getElementById('no-quotes-message').classList.add('hidden');
-                    new gridjs.Grid({
-                        columns: [
-                            // CRITICAL FIX: Changed hidden: true to hidden: false to display the ID
-                            { id: 'id', name: 'Quote ID', hidden: false }, 
-                            { id: 'quoteName', name: 'Quote Name' },
-                            { id: 'eventName', name: 'Event Name' },
-                            { id: 'eventDate', name: 'Event Date' },
-                            { id: 'quoteAmount', name: 'Amount', formatter: (cell) => `$${cell.toFixed(2)}` },
-                            { id: 'status', name: 'Status' },
-                            { id: 'updatedAt', name: 'Last Updated' },
-                            {
-                                name: 'Actions',
-                                formatter: (cell, row) => {
-                                    // DEBUG: Log the entire row object and the specific cell data
-                                    console.log("Grid.js formatter: Full row object:", row);
-                                    // Access the ID from the first cell's data
-                                    const quoteId = row.cells[0].data; 
-                                    console.log("Grid.js formatter: ID from row.cells[0].data:", quoteId);
-                                    
-                                    return gridjs.h('div', {
-                                        className: 'flex space-x-2'
-                                    },
-                                        gridjs.h('button', {
-                                            className: 'px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-300 text-sm',
-                                            onClick: () => handleEditQuote(quoteId) // Pass the extracted ID
-                                        }, 'Edit'),
-                                        gridjs.h('button', {
-                                            className: 'px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-sm',
-                                            onClick: () => handleDeleteQuote(quoteId) // Pass the extracted ID
-                                        }, 'Delete')
-                                    );
-                                }
-                            }
-                        ],
-                        data: quotesData,
-                        search: true,
-                        pagination: {
-                            enabled: true,
-                            limit: 5
-                        },
-                        sort: true,
-                        className: {
-                            table: 'min-w-full divide-y divide-gray-200',
-                            thead: 'bg-gray-50',
-                            th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
-                            tbody: 'bg-white divide-y divide-gray-200',
-                            td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
-                            footer: 'py-3 px-6',
-                        }
-                    }).render(gridContainer);
-                } else {
-                    gridContainer.innerHTML = ''; // Clear grid if no data
-                    document.getElementById('no-quotes-message').classList.remove('hidden');
-                }
+            if (quotesData.length > 0) {
+                noQuotesMessage.classList.add('hidden'); // Hide "no quotes" message
+                quotesGridContainer.classList.remove('hidden'); // Ensure grid container is visible
+                quotesGrid.updateConfig({ data: quotesData }).forceRender(); // CRITICAL: Update existing grid
+                console.log(`loadQuotes: Successfully updated grid with ${quotesData.length} quotes.`);
+            } else {
+                quotesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid if no data
+                quotesGridContainer.classList.add('hidden'); // Hide grid container if no data
+                noQuotesMessage.classList.remove('hidden'); // Show "no quotes" message
+                console.log("loadQuotes: No quotes found, clearing grid and showing message.");
             }
-            console.log(`loadQuotes: Loaded ${quotesData.length} quotes.`);
         }, (error) => {
             console.error("loadQuotes: Error listening to quotes:", error);
             showMessageBox(`Error loading quotes: ${error.message}`, 'alert', true);
+            if (quotesGrid) quotesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid on error
+            if (quotesGridContainer) quotesGridContainer.classList.add('hidden'); // Hide grid on error
+            if (noQuotesMessage) noQuotesMessage.classList.remove('hidden'); // Show message on error
         });
     } catch (error) {
         console.error("loadQuotes: Error setting up quotes listener:", error);
         showMessageBox(`Error setting up quotes listener: ${error.message}`, 'alert', true);
+        if (quotesGrid) quotesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid on error
+        if (quotesGridContainer) quotesGridContainer.classList.add('hidden'); // Hide grid on error
+        if (noQuotesMessage) noQuotesMessage.classList.remove('hidden'); // Show message on error
     }
     console.groupEnd();
 }
-
 
 
 /**
@@ -5873,7 +5839,73 @@ async function initializePage() {
     });
 
 
-    // QUOTES GRID INITIALIZATION (UPDATED with column widths)
+    // QUOTES GRID INITIALIZATION (Aligned with opportunitiesGrid pattern)
+    if (quotesGridContainer) { // Ensure container exists before initializing grid
+        quotesGrid = new gridjs.Grid({
+            columns: [
+                // Display ID for validation (can change to hidden: true later)
+                { id: 'id', name: 'Quote ID', hidden: false }, 
+                { id: 'quoteName', name: 'Quote Name' },
+                { id: 'eventName', name: 'Event Name' },
+                { id: 'eventDate', name: 'Event Date', formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : 'N/A' },
+                { id: 'quoteAmount', name: 'Amount', formatter: (cell) => `$${cell.toFixed(2)}` },
+                { id: 'status', name: 'Status' },
+                { id: 'updatedAt', name: 'Last Updated', formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleString() : 'N/A' },
+                {
+                    name: 'Actions',
+                    formatter: (cell, row) => {
+                        const quoteId = row.cells[0].data; // Access ID from the first cell
+                        return gridjs.h('div', {
+                            className: 'flex space-x-2'
+                        },
+                            gridjs.h('button', {
+                                className: 'px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-300 text-sm',
+                                onClick: () => handleEditQuote(quoteId)
+                            }, 'Edit'),
+                            gridjs.h('button', {
+                                className: 'px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-sm',
+                                onClick: () => handleDeleteQuote(quoteId)
+                            }, 'Delete')
+                        );
+                    }
+                }
+            ],
+            data: [], // Initialize with empty data
+            search: true,
+            pagination: {
+                enabled: true,
+                limit: 5 // Or 10, consistent with opportunities
+            },
+            sort: true,
+            className: {
+                table: 'min-w-full divide-y divide-gray-200',
+                thead: 'bg-gray-50',
+                th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+                tbody: 'bg-white divide-y divide-gray-200',
+                td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                footer: 'py-3 px-6',
+            }
+        }).render(quotesGridContainer);
+        console.log("initializePage: quotesGrid initialized.");
+    } else {
+        console.error("initializePage: quotesGridContainer not found, cannot initialize quotesGrid.");
+    }
+
+
+    unsubscribeQuotes = onSnapshot(getCollectionRef('quotes'), (snapshot) => {
+        const quotes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (quotes.length === 0) {
+            if (noQuotesMessage) noQuotesMessage.classList.remove('hidden');
+            if (quotesGridContainer) quotesGridContainer.classList.add('hidden');
+        } else {
+            if (noQuotesMessage) noQuotesMessage.classList.add('hidden');
+            if (quotesGridContainer) quotesGridContainer.classList.remove('hidden');
+        }
+        quotesGrid.updateConfig({ data: quotes }).forceRender();
+    }, (error) => {
+        console.error("Error fetching quotes:", error);
+        showMessageBox("Error loading quotes.");
+    });
 
 
     countriesGrid = new gridjs.Grid({
