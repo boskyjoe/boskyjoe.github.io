@@ -4859,7 +4859,6 @@ async function handleOpportunityChangeForQuote() {
     }
 }
 
-
 /**
  * Loads and displays quotes in the Grid.js table.
  * @param {string | null} opportunityId Optional: Filter quotes by this opportunity ID.
@@ -4911,7 +4910,7 @@ async function loadQuotes(opportunityId = null) {
                     quoteAmount: data.quoteAmount,
                     status: data.status,
                     updatedAt: data.updatedAt ? new Date(data.updatedAt.seconds * 1000).toLocaleString() : 'N/A',
-                    actions: null // Placeholder for actions column
+                    // actions: null // No longer needed as we'll use row.cells[0].data for the ID
                 });
             });
 
@@ -4937,17 +4936,20 @@ async function loadQuotes(opportunityId = null) {
                                 formatter: (cell, row) => {
                                     // DEBUG: Log the entire row object and the specific cell data
                                     console.log("Grid.js formatter: Full row object:", row);
-                                    console.log("Grid.js formatter: ID from row.cells[0].data:", row.cells[0].data);
+                                    // Access the ID from the first cell's data
+                                    const quoteId = row.cells[0].data; 
+                                    console.log("Grid.js formatter: ID from row.cells[0].data:", quoteId);
+                                    
                                     return gridjs.h('div', {
                                         className: 'flex space-x-2'
                                     },
                                         gridjs.h('button', {
                                             className: 'px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-300 text-sm',
-                                            onClick: () => handleEditQuote(row.cells[0].data)
+                                            onClick: () => handleEditQuote(quoteId) // Pass the extracted ID
                                         }, 'Edit'),
                                         gridjs.h('button', {
                                             className: 'px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-sm',
-                                            onClick: () => handleDeleteQuote(row.cells[0].data)
+                                            onClick: () => handleDeleteQuote(quoteId) // Pass the extracted ID
                                         }, 'Delete')
                                     );
                                 }
@@ -4985,6 +4987,7 @@ async function loadQuotes(opportunityId = null) {
     }
     console.groupEnd();
 }
+
 
 
 /**
