@@ -200,7 +200,7 @@ let quoteLinesList, noQuoteLinesMessage,quoteLinesContent;
 let quoteLineServicesInput, quoteLineDescriptionInput, quoteLineStartDateInput, quoteLineEndDateInput;
 let quoteLineUnitPriceInput, quoteLineQuantityInput, quoteLineDiscountInput, quoteLineAdjustmentAmountInput, quoteLineFinalNetSpan;
 let quoteLineFormMessage;
-let currentFilterOpportunityId = null;
+let currentFilterOpportunityId ;
 
 let addCountryBtn;
 let countryFormContainer;
@@ -4860,7 +4860,6 @@ async function handleOpportunityChangeForQuote() {
 }
 
 
-
 /**
  * Loads and displays quotes in the Grid.js table.
  * @param {string | null} opportunityId Optional: Filter quotes by this opportunity ID.
@@ -4902,10 +4901,10 @@ async function loadQuotes(opportunityId = null) {
             const quotesData = [];
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                // CRITICAL DEBUG: Log the ID being pushed into quotesData
-                console.log("loadQuotes: Adding quote to grid data. ID:", doc.id, "Name:", data.quoteName);
+                // DEBUG: Log the ID and data being pushed into quotesData
+                console.log("loadQuotes: Preparing data for grid row. ID:", doc.id, "Data:", data);
                 quotesData.push({
-                    id: doc.id, // Ensure ID is explicitly set here
+                    id: doc.id, // Ensure ID is explicitly set here and is the first property
                     quoteName: data.quoteName,
                     eventName: data.eventName || 'N/A',
                     eventDate: data.eventDate ? new Date(data.eventDate.seconds * 1000).toLocaleDateString() : 'N/A',
@@ -4924,7 +4923,9 @@ async function loadQuotes(opportunityId = null) {
                 if (quotesData.length > 0) {
                     document.getElementById('no-quotes-message').classList.add('hidden');
                     new gridjs.Grid({
+                        // CRITICAL: Ensure 'id' is the first column, even if hidden
                         columns: [
+                            { id: 'id', name: 'ID', hidden: true }, // Make sure 'id' is the very first column and hidden
                             { id: 'quoteName', name: 'Quote Name' },
                             { id: 'eventName', name: 'Event Name' },
                             { id: 'eventDate', name: 'Event Date' },
@@ -4934,8 +4935,9 @@ async function loadQuotes(opportunityId = null) {
                             {
                                 name: 'Actions',
                                 formatter: (cell, row) => {
-                                    // CRITICAL DEBUG: Log the ID being passed to handleEditQuote
-                                    console.log("Grid.js formatter: ID for Edit button:", row.cells[0].data);
+                                    // DEBUG: Log the entire row object and the specific cell data
+                                    console.log("Grid.js formatter: Full row object:", row);
+                                    console.log("Grid.js formatter: ID from row.cells[0].data:", row.cells[0].data);
                                     return gridjs.h('div', {
                                         className: 'flex space-x-2'
                                     },
@@ -4983,6 +4985,7 @@ async function loadQuotes(opportunityId = null) {
     }
     console.groupEnd();
 }
+
 
 /**
  * Handles editing an existing quote.
