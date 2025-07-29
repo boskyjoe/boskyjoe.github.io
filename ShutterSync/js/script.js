@@ -200,6 +200,7 @@ let quoteLinesList, noQuoteLinesMessage,quoteLinesContent;
 let quoteLineServicesInput, quoteLineDescriptionInput, quoteLineStartDateInput, quoteLineEndDateInput;
 let quoteLineUnitPriceInput, quoteLineQuantityInput, quoteLineDiscountInput, quoteLineAdjustmentAmountInput, quoteLineFinalNetSpan;
 let quoteLineFormMessage;
+let currentFilterOpportunityId = null;
 
 let addCountryBtn;
 let countryFormContainer;
