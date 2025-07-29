@@ -4691,29 +4691,68 @@ async function handleSaveQuoteLine(event) {
 
 
 
+/**
+ * Handles deleting an existing quote.
+ * @param {string} quoteId The ID of the quote to delete.
+ */
+async function handleDeleteQuote(quoteId) {
+    console.group("handleDeleteQuote");
+    console.log(`Attempting to delete quote with ID: ${quoteId}`);
 
-function handleDeleteQuote(quoteId) {
-    showMessageBox("Are you sure you want to delete this quote and all its quote lines? This action cannot be undone.", 'confirm', async (confirmed) => {
-        if (confirmed) {
-            try {
-                // Delete subcollection documents first
-                const quoteLinesSnapshot = await getDocs(collection(getDocRef('quotes', quoteId), 'quoteLines'));
-                const deletePromises = [];
+    if (!db || !auth.currentUser?.uid) {
+        showMessageBox("Authentication required to delete quote.", 'alert', true);
+        console.groupEnd();
+        return;
+    }
+
+    if (!quoteId) {
+        showMessageBox("Error: No quote ID provided for deletion.", 'alert', true);
+        console.error("handleDeleteQuote: quoteId is null or empty.");
+        console.groupEnd();
+        return;
+    }
+
+    const confirmed = await showMessageBox("Are you sure you want to delete this quote and all its associated quote lines? This action cannot be undone.", 'confirm');
+    console.log("handleDeleteQuote: Confirmation result:", confirmed);
+
+    if (confirmed) {
+        try {
+            // 1. Delete all quote lines associated with this quote first
+            const quoteLinesCollectionRef = collection(db, 'quotes', quoteId, 'quoteLines');
+            const quoteLinesSnapshot = await getDocs(quoteLinesCollectionRef);
+            const deleteQuoteLinePromises = [];
+            
+            if (!quoteLinesSnapshot.empty) {
+                console.log(`handleDeleteQuote: Found ${quoteLinesSnapshot.size} quote lines to delete for quote ${quoteId}.`);
                 quoteLinesSnapshot.forEach(doc => {
-                    deletePromises.push(deleteDoc(doc.ref));
+                    deleteQuoteLinePromises.push(deleteDoc(doc.ref));
                 });
-                await Promise.all(deletePromises);
-
-                // Then delete the parent document
-                await deleteDoc(getDocRef('quotes', quoteId));
-                showMessageBox("Quote and its lines deleted successfully!");
-            } catch (error) {
-                console.error("Error deleting quote:", error);
-                showMessageBox(`Error deleting quote: ${error.message}`);
+                await Promise.all(deleteQuoteLinePromises);
+                console.log(`Successfully deleted all quote lines for quote ${quoteId}.`);
+            } else {
+                console.log(`handleDeleteQuote: No quote lines found for quote ${quoteId}.`);
             }
+
+            // 2. Then delete the main quote itself
+            await deleteDoc(getDocRef('quotes', quoteId));
+            showMessageBox("Quote and associated quote lines deleted successfully!", 'alert', false);
+            console.log(`Successfully deleted main quote document ${quoteId}.`);
+
+            // 3. Reload data and update UI
+            await loadQuotes(); // Reload main quotes grid
+            await updateDashboard(); // Update dashboard stats
+            hideForm(quoteFormContainer); // Hide the form if currently open for this quote
+
+        } catch (error) {
+            console.error("handleDeleteQuote: Error deleting quote or quote lines:", error);
+            showMessageBox(`Error deleting quote: ${error.message}`, 'alert', true);
         }
-    });
+    } else {
+        console.log("handleDeleteQuote: Quote deletion cancelled by user.");
+    }
+    console.groupEnd();
 }
+
 
 
 // Function to update the parent quote's total amount based on its quote lines
@@ -5078,28 +5117,6 @@ async function editQuote(quoteId) {
     } catch (error) {
         console.error("Error editing quote:", error);
         showMessageBox(`Error loading quote for edit: ${error.message}`, false);
-    }
-}
-
-/**
- * Handles the editing of an existing quote.
- * Fetches the quote data and passes it to setupQuoteForm.
- * @param {string} quoteId The ID of the quote document to edit.
- */
-async function handleEditQuote(quoteId) {
-    try {
-        const docSnap = await getDoc(getDocRef('quotes', quoteId));
-        if (docSnap.exists()) {
-            const quoteData = { id: docSnap.id, ...docSnap.data() };
-            await setupQuoteForm(quoteData); // Pass the data to setupQuoteForm
-        } else {
-            showMessageBox("Quote not found.", 'alert', true);
-            hideForm(quoteFormContainer);
-        }
-    } catch (error) {
-        console.error("Error editing quote:", error);
-        showMessageBox(`Error loading quote data for edit: ${error.message}`, 'alert', true);
-        hideForm(quoteFormContainer);
     }
 }
 
