@@ -47,6 +47,7 @@ let currentUserRole = 'guest'; // Renamed to avoid confusion with DOM element 'u
 let currentOpportunityId = null; // To track the opportunity being edited
 let currentQuoteId = null; // To store the ID of the quote being edited
 let currentQuoteLineId = null; // To store the ID of the quote line being edited
+let userEmailDisplay;
 
 // Global cache for price books to enable filtering without re-fetching
 let allPriceBooks = [];
@@ -6133,7 +6134,7 @@ async function initializePage() {
     setupAccordionListeners();
 
     // Initial authentication check
-    onAuthStateChanged(auth, async (user) => {
+    /* onAuthStateChanged(auth, async (user) => {
         if (user) {
             console.log("User is authenticated:", user.uid);
             if (userDisplayName) userDisplayName.textContent = user.displayName || user.email || 'User';
@@ -6194,13 +6195,13 @@ async function initializePage() {
             if (authSection) authSection.classList.remove('hidden');
             showSection('auth-section');
         }
-    });
+    }); */
 }
 
 // --- Event Listeners ---
 //document.addEventListener('DOMContentLoaded', initializePage);
 
-// --- Initial Load (Corrected Order with Firebase Config) ---
+// --- Initial Load (Corrected Order with Full Auth Logic) ---
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.group("DOMContentLoaded - Initializing App");
@@ -6210,15 +6211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializePage(); 
     console.log("initializePage function called (DOM elements and static listeners set up).");
 
-    // CRITICAL FIX: Re-add the firebaseConfig object here
-    const firebaseConfig = {
-        apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
-        authDomain: "shuttersync-96971.firebaseapp.com",
-        projectId: "shuttersync-96971",
-        storageBucket: "shuttersync-96971.firebasestorage.app",
-        appId: "1:10782416018:web:361db5572882a62f291a4b",
-        measurementId: "G-T0W9CES4D3"
-    };
+    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
 
     if (Object.keys(firebaseConfig).length === 0) {
         console.error("Firebase config is missing or empty.");
@@ -6234,27 +6227,69 @@ document.addEventListener('DOMContentLoaded', async () => {
         auth = getAuth(app);     
         console.log("Firebase app, db, and auth initialized.");
 
-        // 3. Set up Authentication State Listener
+        // 3. Set up Authentication State Listener (THIS IS THE PRIMARY AND ONLY ONE)
         onAuthStateChanged(auth, async (user) => {
             console.group("onAuthStateChanged");
             console.log("Authentication state changed. User:", user ? user.uid : "null");
 
             if (user) {
                 currentUserId = user.uid;
+                // Update user display elements (now safe as initializePage has run)
                 if (userEmailDisplay) userEmailDisplay.textContent = user.email || user.uid;
-                showSection('dashboard-section');
+                // Add your other display updates here, e.g., userDisplayName, userIdDisplay
+                if (userDisplayName) userDisplayName.textContent = user.displayName || user.email || 'User';
+                if (userIdDisplay) userIdDisplay.textContent = `(ID: ${user.uid})`;
+
+                // Fetch user role (logic moved from initializePage's old onAuthStateChanged)
+                try {
+                    // Ensure getDocRef is defined globally and accessible
+                    const userDoc = await getDoc(getDocRef('users_data', user.uid));
+                    let role = 'Standard';
+                    if (userDoc.exists()) {
+                        role = userDoc.data().role || 'Standard';
+                    } else {
+                        // Create user_data entry if it doesn't exist (first time sign-in)
+                        await setDoc(getDocRef('users_data', user.uid), {
+                            email: user.email,
+                            displayName: user.displayName || user.email,
+                            role: 'Standard', // Default role
+                            createdAt: serverTimestamp(),
+                            lastLogin: serverTimestamp(),
+                        }, { merge: true }); // Use merge to avoid overwriting existing data if any
+                    }
+                    currentUserRole = role; // Assign to the data variable
+                    if (userRole) userRole.textContent = `(Role: ${role})`; // Update DOM element
+                    if (adminMenuItem) {
+                        if (role === 'Admin') {
+                            adminMenuItem.classList.remove('hidden');
+                        } else {
+                            adminMenuItem.classList.add('hidden');
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error fetching/setting user role:", error);
+                    showMessageBox("Error loading user profile.");
+                    if (userRole) userRole.textContent = `(Role: Error)`;
+                }
+
+                if (authSection) authSection.classList.add('hidden'); // Hide auth section
+                showSection('dashboard-section'); // Show dashboard by default after login
                 console.log("User authenticated. Loading dynamic data...");
                 
+                // Call data loading functions
                 await updateDashboard();
                 await loadOpportunities();
                 await loadCustomers();
                 await loadQuotes(); 
                 await loadPriceBooks();
+                // Ensure loadDashboardData is called here if it's not part of updateDashboard
+                // If loadDashboardData is a separate function, call it here:
+                // loadDashboardData(); 
                 
                 console.log("User authenticated and dynamic data loading functions invoked.");
             } else {
                 currentUserId = null;
-                showSection('login-section');
+                showSection('login-section'); // Show login section
                 console.log("User not authenticated, showing login section. Attempting anonymous sign-in...");
                 const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
                 if (token) {
@@ -6264,7 +6299,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     await signInAnonymously(auth);
                     console.log("Signed in anonymously.");
                 }
-                console.log("signInUser logic completed.");
+                console.log("Sign-in logic completed.");
+                // Show auth error message if available (logic moved from initializePage's old onAuthStateChanged)
+                if (authErrorMessage) { // Null check
+                    authErrorMessage.textContent = ''; // Clear previous errors
+                    authErrorMessage.classList.add('hidden');
+                }
             }
             console.groupEnd(); // End onAuthStateChanged group
         });
@@ -6275,11 +6315,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     console.groupEnd(); // End DOMContentLoaded group
 });
-
-
-
-
-
 
 
 
