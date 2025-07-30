@@ -5853,41 +5853,43 @@ async function initializePage() {
     });
 
 
-    // QUOTES GRID INITIALIZATION (Aligned with opportunitiesGrid pattern)
+     // QUOTES GRID INITIALIZATION (Aligned with opportunitiesGrid pattern)
     if (quotesGridContainer) { // Ensure container exists before initializing grid
         quotesGrid = new gridjs.Grid({
             columns: [
-                { id: 'id', name: 'Quote ID', hidden: false }, // Keep visible for now for debugging
+                // Quote ID: Hidden again, but still present for actions
+                { id: 'id', name: 'Quote ID', hidden: true }, 
                 { id: 'quoteName', name: 'Quote Name' },
+                // NEW: Opportunity Name column
+                { id: 'opportunityName', name: 'Opportunity Name' },
                 { id: 'eventName', name: 'Event Name' },
                 { 
                     id: 'eventDate', 
                     name: 'Event Date', 
                     formatter: (cell) => {
-                        // CRITICAL FIX: Check if cell is a valid Timestamp-like object before converting
                         if (cell && typeof cell.seconds === 'number' && typeof cell.nanoseconds === 'number') {
                             return new Date(cell.seconds * 1000).toLocaleDateString();
                         }
-                        return 'N/A'; // Default for invalid/missing date
+                        return 'N/A'; 
                     } 
                 },
                 { id: 'quoteAmount', name: 'Amount', formatter: (cell) => `$${cell ? cell.toFixed(2) : '0.00'}` },
                 { id: 'status', name: 'Status' },
-                { 
-                    id: 'updatedAt', 
-                    name: 'Last Updated', 
-                    formatter: (cell) => {
-                        // CRITICAL FIX: Check if cell is a valid Timestamp-like object before converting
-                        if (cell && typeof cell.seconds === 'number' && typeof cell.nanoseconds === 'number') {
-                            return new Date(cell.seconds * 1000).toLocaleString();
-                        }
-                        return 'N/A'; // Default for invalid/missing date
-                    } 
-                },
+                // REMOVED: 'Last Updated' column
+                // { 
+                //     id: 'updatedAt', 
+                //     name: 'Last Updated', 
+                //     formatter: (cell) => {
+                //         if (cell && typeof cell.seconds === 'number' && typeof cell.nanoseconds === 'number') {
+                //             return new Date(cell.seconds * 1000).toLocaleString();
+                //         }
+                //         return 'N/A'; 
+                //     } 
+                // },
                 {
                     name: 'Actions',
                     formatter: (cell, row) => {
-                        const quoteId = row.cells[0].data; // Access ID from the first cell
+                        const quoteId = row.cells[0].data; 
                         return gridjs.h('div', {
                             className: 'flex space-x-2'
                         },
@@ -5903,11 +5905,11 @@ async function initializePage() {
                     }
                 }
             ],
-            data: [], // Initialize with empty data
+            data: [], 
             search: true,
             pagination: {
                 enabled: true,
-                limit: 5 // Or 10, consistent with opportunities
+                limit: 5 
             },
             sort: true,
             className: {
