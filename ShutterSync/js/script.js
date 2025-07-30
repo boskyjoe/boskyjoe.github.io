@@ -5233,22 +5233,18 @@ async function populateCustomerCountries() {
 // --- Event Listeners ---
 //document.addEventListener('DOMContentLoaded', initializePage);
 
-// --- Initial Load (This should be the ONLY DOMContentLoaded listener) ---
+// --- Initial Load (Corrected Order) ---
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.group("DOMContentLoaded - Initializing App");
-    console.log("DOMContentLoaded fired. Starting Firebase initialization...");
+    console.log("DOMContentLoaded fired. Calling initializePage first...");
 
-    // Use the firebaseConfig that is defined at the top of your script.js
-    const firebaseConfig = {
-        apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
-        authDomain: "shuttersync-96971.firebaseapp.com",
-        projectId: "shuttersync-96971",
-        storageBucket: "shuttersync-96971.firebasestorage.app",
-        appId: "1:10782416018:web:361db5572882a62f291a4b",
-        measurementId: "G-T0W9CES4D3"
-    };
+    // 1. Initialize Page DOM elements and static event listeners (including grid initializations)
+    // This must happen BEFORE any other code tries to access these DOM elements.
+    initializePage(); 
+    console.log("initializePage function called (DOM elements and static listeners set up).");
 
+    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
     if (Object.keys(firebaseConfig).length === 0) {
         console.error("Firebase config is missing or empty.");
         showMessageBox("Firebase configuration is missing. Please ensure __firebase_config is set.", 'alert', true);
@@ -5257,15 +5253,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-        // 1. Initialize Firebase (now happens here, inside DOMContentLoaded)
+        // 2. Initialize Firebase (now happens after DOM elements are referenced)
         const app = initializeApp(firebaseConfig);
-        db = getFirestore(app); // Assign to global 'let db'
-        auth = getAuth(app);     // Assign to global 'let auth'
+        db = getFirestore(app); 
+        auth = getAuth(app);     
         console.log("Firebase app, db, and auth initialized.");
-
-        // 2. Initialize Page DOM elements and static event listeners (including grid initializations)
-        initializePage(); 
-        console.log("initializePage function called (DOM elements and static listeners set up).");
 
         // 3. Set up Authentication State Listener
         onAuthStateChanged(auth, async (user) => {
@@ -5274,11 +5266,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (user) {
                 currentUserId = user.uid;
+                // Now userEmailDisplay is guaranteed to be defined
                 if (userEmailDisplay) userEmailDisplay.textContent = user.email || user.uid;
                 showSection('dashboard-section');
                 console.log("User authenticated. Loading dynamic data...");
                 
-                // Call data loading functions ONLY AFTER authentication
                 await updateDashboard();
                 await loadOpportunities();
                 await loadCustomers();
@@ -5290,7 +5282,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentUserId = null;
                 showSection('login-section');
                 console.log("User not authenticated, showing login section. Attempting anonymous sign-in...");
-                // Use the initialAuthToken here for custom sign-in
                 const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
                 if (token) {
                     await signInWithCustomToken(auth, token);
@@ -5310,6 +5301,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     console.groupEnd(); // End DOMContentLoaded group
 });
+
 
 
 
