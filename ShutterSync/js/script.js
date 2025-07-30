@@ -4856,7 +4856,6 @@ async function handleOpportunityChangeForQuote() {
     }
 }
 
-
 /**
  * Loads and displays quotes in the Grid.js table.
  * @param {string | null} opportunityId Optional: Filter quotes by this opportunity ID.
@@ -4972,7 +4971,6 @@ async function loadQuotes(opportunityId = null) {
     }
     console.groupEnd();
 }
-
 
 
 /**
@@ -5225,7 +5223,74 @@ async function populateCustomerCountries() {
 
 
 // --- Event Listeners ---
-document.addEventListener('DOMContentLoaded', initializePage);
+//document.addEventListener('DOMContentLoaded', initializePage);
+
+// --- Initial Load (Consolidated and Corrected) ---
+
+document.addEventListener('DOMContentLoaded', async () => {
+    console.group("DOMContentLoaded - Initializing App");
+    console.log("DOMContentLoaded fired. Starting Firebase initialization...");
+
+    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+    if (Object.keys(firebaseConfig).length === 0) {
+        console.error("Firebase config is missing or empty.");
+        showMessageBox("Firebase configuration is missing. Please ensure __firebase_config is set.", 'alert', true);
+        console.groupEnd();
+        return;
+    }
+
+    try {
+        // 1. Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+        console.log("Firebase app, db, and auth initialized.");
+
+        // 2. Initialize Page DOM elements and static event listeners (including grid initializations)
+        initializePage(); 
+        console.log("initializePage function called (DOM elements and static listeners set up).");
+
+        // 3. Set up Authentication State Listener
+        onAuthStateChanged(auth, async (user) => {
+            console.group("onAuthStateChanged");
+            console.log("Authentication state changed. User:", user ? user.uid : "null");
+
+            if (user) {
+                currentUserId = user.uid;
+                if (userEmailDisplay) userEmailDisplay.textContent = user.email || user.uid;
+                showSection('dashboard-section');
+                console.log("User authenticated. Loading dynamic data...");
+                
+                // CRITICAL: Call data loading functions ONLY AFTER authentication
+                await updateDashboard();
+                await loadOpportunities();
+                await loadCustomers();
+                await loadQuotes(); 
+                await loadPriceBooks();
+                
+                console.log("User authenticated and dynamic data loading functions invoked.");
+            } else {
+                currentUserId = null;
+                showSection('login-section');
+                console.log("User not authenticated, showing login section. Attempting anonymous sign-in...");
+                await signInUser(); // Attempt anonymous sign-in if no token is provided
+                console.log("signInUser function called.");
+            }
+            console.groupEnd(); // End onAuthStateChanged group
+        });
+
+    } catch (error) {
+        console.error("Firebase initialization error:", error);
+        showMessageBox(`Failed to initialize Firebase: ${error.message}`, 'alert', true);
+    }
+    console.groupEnd(); // End DOMContentLoaded group
+});
+
+
+
+
+
+
 
 async function initializePage() {
     // Get DOM elements
