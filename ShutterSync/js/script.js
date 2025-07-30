@@ -5381,12 +5381,12 @@ async function initializePage() {
     
     // *** THE CRITICAL DEBUGGING LINE ***
     quoteLineForm = document.getElementById('quote-line-form');
-    console.log("initializePage: Attempting to get 'quote-line-form'. Result:", quoteLineForm);
-    if (quoteLineForm) {
-        console.log("initializePage: 'quote-line-form' found. Its outerHTML:", quoteLineForm.outerHTML);
-    } else {
-        console.error("initializePage: 'quote-line-form' is null. The element might not exist or ID is incorrect.");
-    }
+    //console.log("initializePage: Attempting to get 'quote-line-form'. Result:", quoteLineForm);
+    //if (quoteLineForm) {
+    //    console.log("initializePage: 'quote-line-form' found. Its outerHTML:", quoteLineForm.outerHTML);
+    //} else {
+     //   console.error("initializePage: 'quote-line-form' is null. The element might not exist or ID is incorrect.");
+    //}
     // *** END CRITICAL DEBUGGING LINE ***
 
 
