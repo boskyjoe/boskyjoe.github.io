@@ -4863,7 +4863,7 @@ async function handleOpportunityChangeForQuote() {
 async function loadQuotes(opportunityId = null) {
     console.group("loadQuotes");
     console.log(`Loading quotes for opportunity ID: ${opportunityId || 'All'}`);
-    const noQuotesMessage = document.getElementById('no-quotes-message'); // Ensure this is correctly assigned
+    const noQuotesMessage = document.getElementById('no-quotes-message'); 
 
     if (!db) {
         console.warn("loadQuotes: Firestore DB not initialized.");
@@ -4876,9 +4876,7 @@ async function loadQuotes(opportunityId = null) {
         return;
     }
 
-    // Hide "No quotes" message initially
     noQuotesMessage.classList.add('hidden');
-    // Ensure grid container is visible (quotesGrid.render handles content)
     if (quotesGridContainer) quotesGridContainer.classList.remove('hidden'); 
     console.log("loadQuotes: Initial state - noQuotesMessage hidden, quotesGridContainer visible.");
 
@@ -4893,27 +4891,28 @@ async function loadQuotes(opportunityId = null) {
         const quotesCollectionRef = getCollectionRef('quotes');
         const opportunitiesCollectionRef = getCollectionRef('opportunities');
 
-        // CRITICAL: Fetch all opportunities once to create a lookup map
+        // CRITICAL DEBUG: Fetch all opportunities once to create a lookup map
         const opportunitiesSnapshot = await getDocs(opportunitiesCollectionRef);
         const opportunityMap = new Map();
         opportunitiesSnapshot.forEach(doc => {
-            opportunityMap.set(doc.id, doc.data().opportunityName || 'Unknown Opportunity');
+            const oppData = doc.data();
+            opportunityMap.set(doc.id, oppData.opportunityName || 'Unknown Opportunity (No Name)');
+            console.log(`loadQuotes: Populating opportunityMap - ID: ${doc.id}, Name: ${oppData.opportunityName}`);
         });
-        console.log("loadQuotes: Opportunity map created:", opportunityMap);
+        console.log("loadQuotes: Final Opportunity map:", opportunityMap);
 
 
         let q;
         if (opportunityId) {
             q = query(quotesCollectionRef, where('opportunityId', '==', opportunityId), orderBy('createdAt', 'desc'));
             currentFilterOpportunityId = opportunityId;
-            // Fetch opportunity name for display
             const opportunityDoc = await getDoc(getDocRef('opportunities', opportunityId));
             if (opportunityDoc.exists()) {
                 document.getElementById('quotes-filter-opportunity-name').textContent = opportunityDoc.data().opportunityName;
                 document.getElementById('quotes-filter-display').classList.remove('hidden');
             }
         } else {
-            q = query(quotesCollectionRef, orderBy('createdAt', 'desc')); // Changed to createdAt for consistency
+            q = query(quotesCollectionRef, orderBy('createdAt', 'desc')); 
             currentFilterOpportunityId = null;
             document.getElementById('quotes-filter-display').classList.add('hidden');
         }
@@ -4922,51 +4921,56 @@ async function loadQuotes(opportunityId = null) {
             const quotesData = [];
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                const oppName = opportunityMap.get(data.opportunityId) || 'N/A'; // Lookup opportunity name
+                // CRITICAL DEBUG: Check the opportunityId on the quote and the lookup result
+                const quoteOpportunityId = data.opportunityId;
+                const oppName = opportunityMap.get(quoteOpportunityId);
 
-                console.log("loadQuotes: Inside forEach - doc.id:", doc.id, "opportunityName:", oppName, "doc.data():", data); 
+                console.log(`loadQuotes: Processing Quote ID: ${doc.id}`);
+                console.log(`  - Quote's opportunityId: ${quoteOpportunityId}`);
+                console.log(`  - Looked up opportunityName: ${oppName}`);
+                console.log(`  - Full quote data:`, data);
+
                 quotesData.push({
                     id: doc.id, 
                     quoteName: data.quoteName,
-                    opportunityName: oppName, // Add opportunityName to the data
+                    opportunityName: oppName || 'N/A', // Use 'N/A' if lookup fails
                     eventName: data.eventName || 'N/A',
                     eventDate: data.eventDate ? new Date(data.eventDate.seconds * 1000).toLocaleDateString() : 'N/A',
                     quoteAmount: data.quoteAmount,
                     status: data.status,
-                    updatedAt: data.updatedAt, // Keep as Timestamp for formatter in grid init
+                    updatedAt: data.updatedAt, 
                 });
             });
 
             console.log(`loadQuotes: onSnapshot received ${quotesData.length} quotes.`);
 
             if (quotesData.length > 0) {
-                noQuotesMessage.classList.add('hidden'); // Hide "no quotes" message
-                quotesGridContainer.classList.remove('hidden'); // Ensure grid container is visible
-                quotesGrid.updateConfig({ data: quotesData }).forceRender(); // CRITICAL: Update existing grid
+                noQuotesMessage.classList.add('hidden'); 
+                quotesGridContainer.classList.remove('hidden'); 
+                quotesGrid.updateConfig({ data: quotesData }).forceRender(); 
                 console.log(`loadQuotes: Successfully updated grid with ${quotesData.length} quotes.`);
             } else {
-                quotesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid if no data
-                quotesGridContainer.classList.add('hidden'); // Hide grid container if no data
-                noQuotesMessage.classList.remove('hidden'); // Show "no quotes" message
+                quotesGrid.updateConfig({ data: [] }).forceRender(); 
+                quotesGridContainer.classList.add('hidden'); 
+                noQuotesMessage.classList.remove('hidden'); 
                 console.log("loadQuotes: No quotes found, clearing grid and showing message.");
             }
         }, (error) => {
             console.error("loadQuotes: Error listening to quotes:", error);
             showMessageBox(`Error loading quotes: ${error.message}`, 'alert', true);
-            if (quotesGrid) quotesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid on error
-            if (quotesGridContainer) quotesGridContainer.classList.add('hidden'); // Hide grid on error
-            if (noQuotesMessage) noQuotesMessage.classList.remove('hidden'); // Show message on error
+            if (quotesGrid) quotesGrid.updateConfig({ data: [] }).forceRender(); 
+            if (quotesGridContainer) quotesGridContainer.classList.add('hidden'); 
+            if (noQuotesMessage) noQuotesMessage.classList.remove('hidden'); 
         });
     } catch (error) {
         console.error("loadQuotes: Error setting up quotes listener:", error);
         showMessageBox(`Error setting up quotes listener: ${error.message}`, 'alert', true);
-        if (quotesGrid) quotesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid on error
-        if (quotesGridContainer) quotesGridContainer.classList.add('hidden'); // Hide grid on error
-        if (noQuotesMessage) noQuotesMessage.classList.remove('hidden'); // Show message on error
+        if (quotesGrid) quotesGrid.updateConfig({ data: [] }).forceRender(); 
+        if (quotesGridContainer) quotesGridContainer.classList.add('hidden'); 
+        if (noQuotesMessage) noQuotesMessage.classList.remove('hidden'); 
     }
     console.groupEnd();
 }
-
 
 
 /**
@@ -5219,7 +5223,74 @@ async function populateCustomerCountries() {
 
 
 // --- Event Listeners ---
-document.addEventListener('DOMContentLoaded', initializePage);
+//document.addEventListener('DOMContentLoaded', initializePage);
+
+// --- Initial Load (Consolidated and Corrected) ---
+
+document.addEventListener('DOMContentLoaded', async () => {
+    console.group("DOMContentLoaded - Initializing App");
+    console.log("DOMContentLoaded fired. Starting Firebase initialization...");
+
+    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+    if (Object.keys(firebaseConfig).length === 0) {
+        console.error("Firebase config is missing or empty.");
+        showMessageBox("Firebase configuration is missing. Please ensure __firebase_config is set.", 'alert', true);
+        console.groupEnd();
+        return;
+    }
+
+    try {
+        // 1. Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+        console.log("Firebase app, db, and auth initialized.");
+
+        // 2. Initialize Page DOM elements and static event listeners (including grid initializations)
+        initializePage(); 
+        console.log("initializePage function called (DOM elements and static listeners set up).");
+
+        // 3. Set up Authentication State Listener
+        onAuthStateChanged(auth, async (user) => {
+            console.group("onAuthStateChanged");
+            console.log("Authentication state changed. User:", user ? user.uid : "null");
+
+            if (user) {
+                currentUserId = user.uid;
+                if (userEmailDisplay) userEmailDisplay.textContent = user.email || user.uid;
+                showSection('dashboard-section');
+                console.log("User authenticated. Loading dynamic data...");
+                
+                // CRITICAL: Call data loading functions ONLY AFTER authentication
+                await updateDashboard();
+                await loadOpportunities();
+                await loadCustomers();
+                await loadQuotes(); 
+                await loadPriceBooks();
+                
+                console.log("User authenticated and dynamic data loading functions invoked.");
+            } else {
+                currentUserId = null;
+                showSection('login-section');
+                console.log("User not authenticated, showing login section. Attempting anonymous sign-in...");
+                await signInUser(); // Attempt anonymous sign-in if no token is provided
+                console.log("signInUser function called.");
+            }
+            console.groupEnd(); // End onAuthStateChanged group
+        });
+
+    } catch (error) {
+        console.error("Firebase initialization error:", error);
+        showMessageBox(`Failed to initialize Firebase: ${error.message}`, 'alert', true);
+    }
+    console.groupEnd(); // End DOMContentLoaded group
+});
+
+
+
+
+
+
 
 async function initializePage() {
     // Get DOM elements
@@ -5375,12 +5446,12 @@ async function initializePage() {
     
     // *** THE CRITICAL DEBUGGING LINE ***
     quoteLineForm = document.getElementById('quote-line-form');
-    console.log("initializePage: Attempting to get 'quote-line-form'. Result:", quoteLineForm);
-    if (quoteLineForm) {
-        console.log("initializePage: 'quote-line-form' found. Its outerHTML:", quoteLineForm.outerHTML);
-    } else {
-        console.error("initializePage: 'quote-line-form' is null. The element might not exist or ID is incorrect.");
-    }
+    //console.log("initializePage: Attempting to get 'quote-line-form'. Result:", quoteLineForm);
+    //if (quoteLineForm) {
+    //    console.log("initializePage: 'quote-line-form' found. Its outerHTML:", quoteLineForm.outerHTML);
+    //} else {
+     //   console.error("initializePage: 'quote-line-form' is null. The element might not exist or ID is incorrect.");
+    //}
     // *** END CRITICAL DEBUGGING LINE ***
 
 
@@ -5853,41 +5924,43 @@ async function initializePage() {
     });
 
 
-    // QUOTES GRID INITIALIZATION (Aligned with opportunitiesGrid pattern)
+     // QUOTES GRID INITIALIZATION (Aligned with opportunitiesGrid pattern)
     if (quotesGridContainer) { // Ensure container exists before initializing grid
         quotesGrid = new gridjs.Grid({
             columns: [
-                { id: 'id', name: 'Quote ID', hidden: false }, // Keep visible for now for debugging
+                // Quote ID: Hidden again, but still present for actions
+                { id: 'id', name: 'Quote ID', hidden: true }, 
                 { id: 'quoteName', name: 'Quote Name' },
+                // NEW: Opportunity Name column
+                { id: 'opportunityName', name: 'Opportunity Name' },
                 { id: 'eventName', name: 'Event Name' },
                 { 
                     id: 'eventDate', 
                     name: 'Event Date', 
                     formatter: (cell) => {
-                        // CRITICAL FIX: Check if cell is a valid Timestamp-like object before converting
                         if (cell && typeof cell.seconds === 'number' && typeof cell.nanoseconds === 'number') {
                             return new Date(cell.seconds * 1000).toLocaleDateString();
                         }
-                        return 'N/A'; // Default for invalid/missing date
+                        return 'N/A'; 
                     } 
                 },
                 { id: 'quoteAmount', name: 'Amount', formatter: (cell) => `$${cell ? cell.toFixed(2) : '0.00'}` },
                 { id: 'status', name: 'Status' },
-                { 
-                    id: 'updatedAt', 
-                    name: 'Last Updated', 
-                    formatter: (cell) => {
-                        // CRITICAL FIX: Check if cell is a valid Timestamp-like object before converting
-                        if (cell && typeof cell.seconds === 'number' && typeof cell.nanoseconds === 'number') {
-                            return new Date(cell.seconds * 1000).toLocaleString();
-                        }
-                        return 'N/A'; // Default for invalid/missing date
-                    } 
-                },
+                // REMOVED: 'Last Updated' column
+                // { 
+                //     id: 'updatedAt', 
+                //     name: 'Last Updated', 
+                //     formatter: (cell) => {
+                //         if (cell && typeof cell.seconds === 'number' && typeof cell.nanoseconds === 'number') {
+                //             return new Date(cell.seconds * 1000).toLocaleString();
+                //         }
+                //         return 'N/A'; 
+                //     } 
+                // },
                 {
                     name: 'Actions',
                     formatter: (cell, row) => {
-                        const quoteId = row.cells[0].data; // Access ID from the first cell
+                        const quoteId = row.cells[0].data; 
                         return gridjs.h('div', {
                             className: 'flex space-x-2'
                         },
@@ -5903,11 +5976,11 @@ async function initializePage() {
                     }
                 }
             ],
-            data: [], // Initialize with empty data
+            data: [], 
             search: true,
             pagination: {
                 enabled: true,
-                limit: 5 // Or 10, consistent with opportunities
+                limit: 5 
             },
             sort: true,
             className: {
