@@ -4856,6 +4856,7 @@ async function handleOpportunityChangeForQuote() {
     }
 }
 
+
 /**
  * Loads and displays quotes in the Grid.js table.
  * @param {string | null} opportunityId Optional: Filter quotes by this opportunity ID.
@@ -4863,7 +4864,7 @@ async function handleOpportunityChangeForQuote() {
 async function loadQuotes(opportunityId = null) {
     console.group("loadQuotes");
     console.log(`Loading quotes for opportunity ID: ${opportunityId || 'All'}`);
-    const noQuotesMessage = document.getElementById('no-quotes-message'); // Ensure this is correctly assigned
+    const noQuotesMessage = document.getElementById('no-quotes-message'); 
 
     if (!db) {
         console.warn("loadQuotes: Firestore DB not initialized.");
@@ -4876,9 +4877,7 @@ async function loadQuotes(opportunityId = null) {
         return;
     }
 
-    // Hide "No quotes" message initially
     noQuotesMessage.classList.add('hidden');
-    // Ensure grid container is visible (quotesGrid.render handles content)
     if (quotesGridContainer) quotesGridContainer.classList.remove('hidden'); 
     console.log("loadQuotes: Initial state - noQuotesMessage hidden, quotesGridContainer visible.");
 
@@ -4893,27 +4892,28 @@ async function loadQuotes(opportunityId = null) {
         const quotesCollectionRef = getCollectionRef('quotes');
         const opportunitiesCollectionRef = getCollectionRef('opportunities');
 
-        // CRITICAL: Fetch all opportunities once to create a lookup map
+        // CRITICAL DEBUG: Fetch all opportunities once to create a lookup map
         const opportunitiesSnapshot = await getDocs(opportunitiesCollectionRef);
         const opportunityMap = new Map();
         opportunitiesSnapshot.forEach(doc => {
-            opportunityMap.set(doc.id, doc.data().opportunityName || 'Unknown Opportunity');
+            const oppData = doc.data();
+            opportunityMap.set(doc.id, oppData.opportunityName || 'Unknown Opportunity (No Name)');
+            console.log(`loadQuotes: Populating opportunityMap - ID: ${doc.id}, Name: ${oppData.opportunityName}`);
         });
-        console.log("loadQuotes: Opportunity map created:", opportunityMap);
+        console.log("loadQuotes: Final Opportunity map:", opportunityMap);
 
 
         let q;
         if (opportunityId) {
             q = query(quotesCollectionRef, where('opportunityId', '==', opportunityId), orderBy('createdAt', 'desc'));
             currentFilterOpportunityId = opportunityId;
-            // Fetch opportunity name for display
             const opportunityDoc = await getDoc(getDocRef('opportunities', opportunityId));
             if (opportunityDoc.exists()) {
                 document.getElementById('quotes-filter-opportunity-name').textContent = opportunityDoc.data().opportunityName;
                 document.getElementById('quotes-filter-display').classList.remove('hidden');
             }
         } else {
-            q = query(quotesCollectionRef, orderBy('createdAt', 'desc')); // Changed to createdAt for consistency
+            q = query(quotesCollectionRef, orderBy('createdAt', 'desc')); 
             currentFilterOpportunityId = null;
             document.getElementById('quotes-filter-display').classList.add('hidden');
         }
@@ -4922,47 +4922,53 @@ async function loadQuotes(opportunityId = null) {
             const quotesData = [];
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                const oppName = opportunityMap.get(data.opportunityId) || 'N/A'; // Lookup opportunity name
+                // CRITICAL DEBUG: Check the opportunityId on the quote and the lookup result
+                const quoteOpportunityId = data.opportunityId;
+                const oppName = opportunityMap.get(quoteOpportunityId);
 
-                console.log("loadQuotes: Inside forEach - doc.id:", doc.id, "opportunityName:", oppName, "doc.data():", data); 
+                console.log(`loadQuotes: Processing Quote ID: ${doc.id}`);
+                console.log(`  - Quote's opportunityId: ${quoteOpportunityId}`);
+                console.log(`  - Looked up opportunityName: ${oppName}`);
+                console.log(`  - Full quote data:`, data);
+
                 quotesData.push({
                     id: doc.id, 
                     quoteName: data.quoteName,
-                    opportunityName: oppName, // Add opportunityName to the data
+                    opportunityName: oppName || 'N/A', // Use 'N/A' if lookup fails
                     eventName: data.eventName || 'N/A',
                     eventDate: data.eventDate ? new Date(data.eventDate.seconds * 1000).toLocaleDateString() : 'N/A',
                     quoteAmount: data.quoteAmount,
                     status: data.status,
-                    updatedAt: data.updatedAt, // Keep as Timestamp for formatter in grid init
+                    updatedAt: data.updatedAt, 
                 });
             });
 
             console.log(`loadQuotes: onSnapshot received ${quotesData.length} quotes.`);
 
             if (quotesData.length > 0) {
-                noQuotesMessage.classList.add('hidden'); // Hide "no quotes" message
-                quotesGridContainer.classList.remove('hidden'); // Ensure grid container is visible
-                quotesGrid.updateConfig({ data: quotesData }).forceRender(); // CRITICAL: Update existing grid
+                noQuotesMessage.classList.add('hidden'); 
+                quotesGridContainer.classList.remove('hidden'); 
+                quotesGrid.updateConfig({ data: quotesData }).forceRender(); 
                 console.log(`loadQuotes: Successfully updated grid with ${quotesData.length} quotes.`);
             } else {
-                quotesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid if no data
-                quotesGridContainer.classList.add('hidden'); // Hide grid container if no data
-                noQuotesMessage.classList.remove('hidden'); // Show "no quotes" message
+                quotesGrid.updateConfig({ data: [] }).forceRender(); 
+                quotesGridContainer.classList.add('hidden'); 
+                noQuotesMessage.classList.remove('hidden'); 
                 console.log("loadQuotes: No quotes found, clearing grid and showing message.");
             }
         }, (error) => {
             console.error("loadQuotes: Error listening to quotes:", error);
             showMessageBox(`Error loading quotes: ${error.message}`, 'alert', true);
-            if (quotesGrid) quotesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid on error
-            if (quotesGridContainer) quotesGridContainer.classList.add('hidden'); // Hide grid on error
-            if (noQuotesMessage) noQuotesMessage.classList.remove('hidden'); // Show message on error
+            if (quotesGrid) quotesGrid.updateConfig({ data: [] }).forceRender(); 
+            if (quotesGridContainer) quotesGridContainer.classList.add('hidden'); 
+            if (noQuotesMessage) noQuotesMessage.classList.remove('hidden'); 
         });
     } catch (error) {
         console.error("loadQuotes: Error setting up quotes listener:", error);
         showMessageBox(`Error setting up quotes listener: ${error.message}`, 'alert', true);
-        if (quotesGrid) quotesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid on error
-        if (quotesGridContainer) quotesGridContainer.classList.add('hidden'); // Hide grid on error
-        if (noQuotesMessage) noQuotesMessage.classList.remove('hidden'); // Show message on error
+        if (quotesGrid) quotesGrid.updateConfig({ data: [] }).forceRender(); 
+        if (quotesGridContainer) quotesGridContainer.classList.add('hidden'); 
+        if (noQuotesMessage) noQuotesMessage.classList.remove('hidden'); 
     }
     console.groupEnd();
 }
