@@ -21,9 +21,9 @@ const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial
 
 // Firebase App and Services (initialized in setupAuth)
 // --- ACTUAL FIREBASE INITIALIZATION ---
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+//const app = initializeApp(firebaseConfig);
+//const db = getFirestore(app);
+//const auth = getAuth(app);
 // --- END ACTUAL FIREBASE INITIALIZATION ---
 
 
@@ -33,6 +33,14 @@ let unsubscribeLeads = null;
 let unsubscribeOpportunities = null;
 let unsubscribeQuotes = null;
 let unsubscribeQuoteLines = null; // For quote lines
+
+// Change these from 'const' to 'let':
+let db; // CRITICAL: Must be 'let'
+let auth; // CRITICAL: Must be 'let'
+
+let currentUserId = null;
+
+
 
 let userId = null; // Will be set after authentication
 let currentUserRole = 'guest'; // Renamed to avoid confusion with DOM element 'userRole'
@@ -5225,13 +5233,22 @@ async function populateCustomerCountries() {
 // --- Event Listeners ---
 //document.addEventListener('DOMContentLoaded', initializePage);
 
-// --- Initial Load (Consolidated and Corrected) ---
+// --- Initial Load (This should be the ONLY DOMContentLoaded listener) ---
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.group("DOMContentLoaded - Initializing App");
     console.log("DOMContentLoaded fired. Starting Firebase initialization...");
 
-    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+    // Use the firebaseConfig that is defined at the top of your script.js
+    const firebaseConfig = {
+        apiKey: "AIzaSyDePPc0AYN6t7U1ygRaOvctR2CjIIjGODo",
+        authDomain: "shuttersync-96971.firebaseapp.com",
+        projectId: "shuttersync-96971",
+        storageBucket: "shuttersync-96971.firebasestorage.app",
+        appId: "1:10782416018:web:361db5572882a62f291a4b",
+        measurementId: "G-T0W9CES4D3"
+    };
+
     if (Object.keys(firebaseConfig).length === 0) {
         console.error("Firebase config is missing or empty.");
         showMessageBox("Firebase configuration is missing. Please ensure __firebase_config is set.", 'alert', true);
@@ -5240,10 +5257,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-        // 1. Initialize Firebase
+        // 1. Initialize Firebase (now happens here, inside DOMContentLoaded)
         const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
+        db = getFirestore(app); // Assign to global 'let db'
+        auth = getAuth(app);     // Assign to global 'let auth'
         console.log("Firebase app, db, and auth initialized.");
 
         // 2. Initialize Page DOM elements and static event listeners (including grid initializations)
@@ -5261,7 +5278,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showSection('dashboard-section');
                 console.log("User authenticated. Loading dynamic data...");
                 
-                // CRITICAL: Call data loading functions ONLY AFTER authentication
+                // Call data loading functions ONLY AFTER authentication
                 await updateDashboard();
                 await loadOpportunities();
                 await loadCustomers();
@@ -5273,8 +5290,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentUserId = null;
                 showSection('login-section');
                 console.log("User not authenticated, showing login section. Attempting anonymous sign-in...");
-                await signInUser(); // Attempt anonymous sign-in if no token is provided
-                console.log("signInUser function called.");
+                // Use the initialAuthToken here for custom sign-in
+                const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                if (token) {
+                    await signInWithCustomToken(auth, token);
+                    console.log("Signed in with custom token.");
+                } else {
+                    await signInAnonymously(auth);
+                    console.log("Signed in anonymously.");
+                }
+                console.log("signInUser logic completed.");
             }
             console.groupEnd(); // End onAuthStateChanged group
         });
@@ -5285,6 +5310,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     console.groupEnd(); // End DOMContentLoaded group
 });
+
 
 
 
