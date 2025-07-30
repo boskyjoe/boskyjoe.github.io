@@ -4870,7 +4870,6 @@ async function loadQuotes(opportunityId = null) {
         console.groupEnd();
         return;
     }
-    // CRITICAL: Check for quotesGrid to be initialized
     if (!quotesGrid || !noQuotesMessage) { 
         console.error("loadQuotes: Required elements (quotesGrid or noQuotesMessage) not found. Grid might not be initialized.");
         console.groupEnd();
@@ -4892,9 +4891,20 @@ async function loadQuotes(opportunityId = null) {
 
     try {
         const quotesCollectionRef = getCollectionRef('quotes');
+        const opportunitiesCollectionRef = getCollectionRef('opportunities');
+
+        // CRITICAL: Fetch all opportunities once to create a lookup map
+        const opportunitiesSnapshot = await getDocs(opportunitiesCollectionRef);
+        const opportunityMap = new Map();
+        opportunitiesSnapshot.forEach(doc => {
+            opportunityMap.set(doc.id, doc.data().opportunityName || 'Unknown Opportunity');
+        });
+        console.log("loadQuotes: Opportunity map created:", opportunityMap);
+
+
         let q;
         if (opportunityId) {
-            q = query(quotesCollectionRef, where('opportunityId', '==', opportunityId), orderBy('updatedAt', 'desc'));
+            q = query(quotesCollectionRef, where('opportunityId', '==', opportunityId), orderBy('createdAt', 'desc'));
             currentFilterOpportunityId = opportunityId;
             // Fetch opportunity name for display
             const opportunityDoc = await getDoc(getDocRef('opportunities', opportunityId));
@@ -4903,7 +4913,7 @@ async function loadQuotes(opportunityId = null) {
                 document.getElementById('quotes-filter-display').classList.remove('hidden');
             }
         } else {
-            q = query(quotesCollectionRef, orderBy('updatedAt', 'desc'));
+            q = query(quotesCollectionRef, orderBy('createdAt', 'desc')); // Changed to createdAt for consistency
             currentFilterOpportunityId = null;
             document.getElementById('quotes-filter-display').classList.add('hidden');
         }
@@ -4912,15 +4922,18 @@ async function loadQuotes(opportunityId = null) {
             const quotesData = [];
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                console.log("loadQuotes: Inside forEach - doc.id:", doc.id, "doc.data():", data); 
+                const oppName = opportunityMap.get(data.opportunityId) || 'N/A'; // Lookup opportunity name
+
+                console.log("loadQuotes: Inside forEach - doc.id:", doc.id, "opportunityName:", oppName, "doc.data():", data); 
                 quotesData.push({
                     id: doc.id, 
                     quoteName: data.quoteName,
+                    opportunityName: oppName, // Add opportunityName to the data
                     eventName: data.eventName || 'N/A',
                     eventDate: data.eventDate ? new Date(data.eventDate.seconds * 1000).toLocaleDateString() : 'N/A',
                     quoteAmount: data.quoteAmount,
                     status: data.status,
-                    updatedAt: data.updatedAt ? new Date(data.updatedAt.seconds * 1000).toLocaleString() : 'N/A',
+                    updatedAt: data.updatedAt, // Keep as Timestamp for formatter in grid init
                 });
             });
 
@@ -4953,6 +4966,7 @@ async function loadQuotes(opportunityId = null) {
     }
     console.groupEnd();
 }
+
 
 
 /**
