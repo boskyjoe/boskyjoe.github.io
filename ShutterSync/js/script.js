@@ -5656,9 +5656,9 @@ async function initializePage() {
     customersGrid = new gridjs.Grid({
         columns: [
             { id: 'id', name: 'ID', hidden: true }, // Explicit ID column, hidden, and now reliably at index 0
-            { id: 'name', name: 'Name', width: 'auto' },
+            { id: 'name', name: 'Name', width: 'auto' }, // Auto for flexibility
             { id: 'type', name: 'Type', width: '120px' },
-            { id: 'email', name: 'Email', width: '200px' },
+            { id: 'email', name: 'Email', width: 'auto' }, // Auto for flexibility
             { id: 'phone', name: 'Phone', width: '150px' },
             { id: 'country', name: 'Country', width: '120px' },
             { id: 'preferredContactMethod', name: 'Contact Method', width: '180px' },
@@ -5666,29 +5666,25 @@ async function initializePage() {
             { id: 'source', name: 'Source', width: '120px' },
             {
                 name: 'Actions',
-                width: '120px',
+                width: '180px', // Ensure enough space for buttons
                 formatter: (cell, row) => {
-                    // CORRECTED: Access the ID directly from the first cell (index 0)
                     const customerId = row.cells[0].data;
 
                     if (!customerId) {
                         console.error("Error: Customer ID not found at row.cells[0].data for actions.");
-                        return gridjs.html(`<span>Error</span>`); // Or some other fallback
+                        return gridjs.html(`<span>Error</span>`);
                     }
 
                     return gridjs.html(`
-                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditCustomer('${customerId}')">Edit</button>
-                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteCustomer('${customerId}')">Delete</button>
-                    `);
+                <button class="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-300 text-sm mr-2" onclick="handleEditCustomer('${customerId}')">Edit</button>
+                <button class="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-800 transition duration-300 text-sm" onclick="handleDeleteCustomer('${customerId}')">Delete</button>
+                `);
                 }
             }
         ],
         data: [], // Will be populated by onSnapshot
         search: {
             selector: (cell, rowIndex, cellIndex) => {
-                // Exclude 'Actions' column (last) and the hidden 'id' column (index 0) from search.
-                // Visible columns are name (1), type (2), email (3), phone (4), country (5), contact (6), industry (7), source (8).
-                // So, search from index 1 up to (but not including) the 'Actions' column.
                 return cellIndex > 0 && cellIndex < 9 ? cell : undefined;
             }
         },
@@ -5698,13 +5694,32 @@ async function initializePage() {
         },
         sort: true,
         resizable: true,
-        style: {
-            table: {
-                'min-width': '100%'
-            },
-            th: {
-                'white-space': 'nowrap'
-            }
+        className: {
+            // Overall table container styling
+            container: 'rounded-lg shadow-md border border-gray-200 overflow-x-auto', // Added rounded corners, shadow, border, and horizontal scroll
+
+            // Table element itself
+            table: 'min-w-full divide-y divide-gray-200',
+
+            // Table Header styling
+            thead: 'bg-gray-50', // Lighter header background
+            th: 'px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap min-w-[60px]', // Bolder, slightly larger padding, darker text
+
+            // Table Body styling
+            tbody: 'bg-white divide-y divide-gray-100', // Lighter divider
+            tr: 'hover:bg-gray-50', // Subtle row hover effect
+
+            // Table Data cells
+            td: 'px-4 py-3 whitespace-normal break-words text-sm text-gray-800', // Increased padding, normal whitespace, word break
+
+            // Footer styling (for pagination)
+            footer: 'py-3 px-4 bg-gray-50 rounded-b-lg text-sm', // Rounded bottom corners for footer
+
+            // Pagination buttons
+            paginationButton: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
+            paginationButtonCurrent: 'px-3 py-1 mx-1 rounded-md text-white bg-blue-600 border border-blue-600',
+            paginationButtonPrev: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
+            paginationButtonNext: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
         }
     }).render(customersGridContainer);
 
