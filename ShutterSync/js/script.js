@@ -5933,15 +5933,15 @@ async function initializePage() {
     // QUOTE LINES GRID INITIALIZATION
     if (quoteLinesGridContainer) {
         quoteLinesGrid = new gridjs.Grid({
-           columns: [
-                { id: 'id', name: 'ID', hidden: true },
-                { id: 'services', name: 'Service', width: '300px' }, // TEMPORARY: Large fixed width
-                { id: 'serviceDescription', name: 'Description', width: '400px' }, // TEMPORARY: Large fixed width
-                { id: 'unitPrice', name: 'Unit Price', formatter: (cell) => `$${cell.toFixed(2)}`, width: '120px' },
-                { id: 'quantity', name: 'Qty', width: '80px' },
-                { id: 'discount', name: 'Disc (%)', formatter: (cell) => `${cell}%`, width: '100px' },
-                { id: 'adjustmentAmount', name: 'Adj Amt', formatter: (cell) => `$${cell.toFixed(2)}`, width: '120px' },
-                { id: 'finalNet', name: 'Net', formatter: (cell) => `$${cell.toFixed(2)}`, width: '100px' },
+            columns: [
+                { id: 'id', name: 'ID', hidden: true }, // Hidden ID for actions
+                { id: 'services', name: 'Service', width: 'auto' }, // Back to 'auto'
+                { id: 'serviceDescription', name: 'Description', width: 'auto' }, // Back to 'auto'
+                { id: 'unitPrice', name: 'Unit Price', formatter: (cell) => `$${cell.toFixed(2)}`, width: '100px' }, // More compact
+                { id: 'quantity', name: 'Qty', width: '80px' }, // Compact
+                { id: 'discount', name: 'Disc (%)', formatter: (cell) => `${cell}%`, width: '90px' }, // Compact
+                { id: 'adjustmentAmount', name: 'Adj Amt', formatter: (cell) => `$${cell.toFixed(2)}`, width: '120px' }, // Moderate
+                { id: 'finalNet', name: 'Net', formatter: (cell) => `$${cell.toFixed(2)}`, width: '100px' }, // Compact
                 {
                     id: 'serviceStartDate',
                     name: 'Start Date', width: '120px',
@@ -5954,7 +5954,7 @@ async function initializePage() {
                 },
                 {
                     name: 'Actions',
-                    width: '180px',
+                    width: '180px', // Ensure enough space for buttons
                     formatter: (cell, row) => {
                         const quoteLineId = row.cells[0].data;
                         return gridjs.h('div', {
@@ -5972,25 +5972,24 @@ async function initializePage() {
                     }
                 }
             ],
-            data: [], // Initialize with empty data
-            search: false, // Usually no search for sub-grids
+            data: [],
+            search: false,
             pagination: {
                 enabled: true,
-                limit: 5 // Or adjust as needed
+                limit: 5
             },
             sort: true,
-            // Add resizable: true if you want columns to be resizable
-            // resizable: true, 
+            resizable: true, // Keep resizable for user adjustment
             style: {
                 table: {
-                    'min-width': '100%'
+                    'min-width': '100%' // Ensures table at least fills container, or overflows if wider
                 },
                 th: {
                     'white-space': 'nowrap',
-                    'min-width': '80px' // Ensure minimum width for all headers
+                    'min-width': '60px' // A reasonable minimum for headers
                 },
                 td: {
-                    'white-space': 'nowrap' // Prevent data cells from wrapping if too narrow
+                    'white-space': 'nowrap' // Prevents data cells from wrapping
                 }
             }
         }).render(quoteLinesGridContainer);
@@ -5998,6 +5997,7 @@ async function initializePage() {
     } else {
         console.error("initializePage: quoteLinesGridContainer not found, cannot initialize quoteLinesGrid.");
     }
+
 
 
 
