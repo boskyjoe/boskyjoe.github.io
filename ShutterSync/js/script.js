@@ -5950,7 +5950,7 @@ async function initializePage() {
         quoteLinesGrid = new gridjs.Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true }, // Hidden ID for actions
-                { id: 'services', name: 'Service' , width: '50px'},
+                { id: 'services', name: 'Service' , width: '180px'},
                 { id: 'serviceDescription', name: 'Description',width: '180px'},
                 { id: 'unitPrice', name: 'Unit Price', formatter: (cell) => `$${cell.toFixed(2)}` , width: '180px'},
                 { id: 'quantity', name: 'Qty' },
