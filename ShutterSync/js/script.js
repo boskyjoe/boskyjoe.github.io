@@ -193,11 +193,11 @@ let quoteFormMessage;
 
 // Quote Line related DOM elements
 let quoteLinesSectionContainer, addQuoteLineEntryBtn, quoteLineFormContainer, quoteLineForm, cancelQuoteLineBtn;
-let quoteLinesList, noQuoteLinesMessage,quoteLinesContent;
+let quoteLinesList, noQuoteLinesMessage, quoteLinesContent;
 let quoteLineServicesInput, quoteLineDescriptionInput, quoteLineStartDateInput, quoteLineEndDateInput;
 let quoteLineUnitPriceInput, quoteLineQuantityInput, quoteLineDiscountInput, quoteLineAdjustmentAmountInput, quoteLineFinalNetSpan;
 let quoteLineFormMessage;
-let currentFilterOpportunityId ;
+let currentFilterOpportunityId;
 
 let quoteLinesGrid; // CRITICAL: Declare quoteLinesGrid globally here
 let quoteLinesGridContainer; // Also declare its container
@@ -2333,7 +2333,7 @@ async function handleSaveOpportunity(event) {
  * @param {string} opportunityId The ID of the opportunity document to edit.
  */
 async function handleEditOpportunity(opportunityId) {
-     console.log(`handleEditOpportunity: Attempting to edit opportunity with ID: ${opportunityId}`); // This log will be key!
+    console.log(`handleEditOpportunity: Attempting to edit opportunity with ID: ${opportunityId}`); // This log will be key!
 
     try {
         const docSnap = await getDoc(getDocRef('opportunities', opportunityId));
@@ -2405,9 +2405,9 @@ async function handleDeleteOpportunity(opportunityId) {
 
     // Await the result from showMessageBox directly for user confirmation
     const confirmed = await showMessageBox("Are you sure you want to delete this opportunity? This action cannot be undone.", 'confirm');
-    
+
     console.log(`handleDeleteOpportunity: Confirmed status from MessageBox: ${confirmed}`);
-    
+
     if (confirmed) {
         console.log("handleDeleteOpportunity: User confirmed deletion. Proceeding with Firestore delete.");
         try {
@@ -4125,14 +4125,14 @@ async function setupQuoteForm(quoteData = null) {
         if (document.getElementById('quote-id')) document.getElementById('quote-id').value = quoteData.id;
         if (document.getElementById('quote-name')) document.getElementById('quote-name').value = quoteData.quoteName || '';
         if (document.getElementById('quote-event-name')) document.getElementById('quote-event-name').value = quoteData.eventName || '';
-        
+
         if (quoteOpportunitySelect) {
             quoteOpportunitySelect.value = quoteData.opportunityId || '';
             if (quoteData.opportunityId) {
                 await populateCustomerDetailsForQuote();
             }
         }
-        
+
         if (document.getElementById('quote-amount')) document.getElementById('quote-amount').value = quoteData.quoteAmount !== undefined ? quoteData.quoteAmount.toFixed(2) : '0.00';
         if (quoteStatusSelect) quoteStatusSelect.value = quoteData.status || 'Draft';
         if (document.getElementById('quote-additional-details')) document.getElementById('quote-additional-details').value = quoteData.additionalDetails || '';
@@ -4150,7 +4150,7 @@ async function setupQuoteForm(quoteData = null) {
 
         // Show quote lines container and ensure it's open
         if (quoteLinesSectionContainer) {
-            quoteLinesSectionContainer.classList.remove('hidden'); 
+            quoteLinesSectionContainer.classList.remove('hidden');
             const quoteLinesAccordionHeader = quoteLinesSectionContainer.querySelector('.accordion-header');
             if (quoteLinesAccordionHeader) {
                 setAccordionVisualState(quoteLinesAccordionHeader, true);
@@ -4159,13 +4159,13 @@ async function setupQuoteForm(quoteData = null) {
                 quoteLineForm.removeAttribute('novalidate');
             }
         }
-        
-        await renderQuoteLines(quoteData.id); 
+
+        await renderQuoteLines(quoteData.id);
 
     } else { // For a new quote (ADD mode)
         console.log("setupQuoteForm: Entering ADD NEW mode.");
         currentQuoteId = null;
-        
+
         if (quoteOpportunitySelect) quoteOpportunitySelect.value = '';
         await populateCustomerDetailsForQuote();
 
@@ -4184,7 +4184,7 @@ async function setupQuoteForm(quoteData = null) {
         }
         // Hide quote lines container
         if (quoteLinesSectionContainer) {
-            quoteLinesSectionContainer.classList.add('hidden'); 
+            quoteLinesSectionContainer.classList.add('hidden');
         }
     }
     showForm(quoteFormContainer);
@@ -4350,7 +4350,7 @@ async function renderQuoteLines(quoteId) {
                 console.log(`renderQuoteLines: Successfully updated grid with ${quoteLinesData.length} quote lines for quote ${quoteId}.`);
             }
             // Always update the main quote amount, even if no lines
-            updateMainQuoteAmount(totalQuoteLinesAmount); 
+            updateMainQuoteAmount(totalQuoteLinesAmount);
         }, (error) => {
             console.error("renderQuoteLines: Error listening to quote lines:", error);
             showMessageBox(`Error loading quote lines: ${error.message}`, 'alert', true);
@@ -4412,18 +4412,18 @@ function showQuoteLineForm(quoteLineId = null, quoteLineData = null) {
         // Populate form fields with existing data for editing
         if (quoteLineServicesInput) quoteLineServicesInput.value = quoteLineData.services || '';
         if (quoteLineDescriptionInput) quoteLineDescriptionInput.value = quoteLineData.serviceDescription || '';
-        
+
         const startDate = quoteLineData.serviceStartDate ? new Date(quoteLineData.serviceStartDate.seconds * 1000).toISOString().split('T')[0] : '';
         if (quoteLineStartDateInput) quoteLineStartDateInput.value = startDate;
-        
+
         const endDate = quoteLineData.serviceEndDate ? new Date(quoteLineData.serviceEndDate.seconds * 1000).toISOString().split('T')[0] : '';
         if (quoteLineEndDateInput) quoteLineEndDateInput.value = endDate;
-        
+
         if (quoteLineUnitPriceInput) quoteLineUnitPriceInput.value = quoteLineData.unitPrice !== undefined ? quoteLineData.unitPrice : 0;
         if (quoteLineQuantityInput) quoteLineQuantityInput.value = quoteLineData.quantity !== undefined ? quoteLineData.quantity : 1;
         if (quoteLineDiscountInput) quoteLineDiscountInput.value = quoteLineData.discount !== undefined ? quoteLineData.discount : 0;
         if (quoteLineAdjustmentAmountInput) quoteLineAdjustmentAmountInput.value = quoteLineData.adjustmentAmount !== undefined ? quoteLineData.adjustmentAmount : 0;
-        
+
         calculateQuoteLineFinalNet(); // Recalculate net for existing data after populating
     } else {
         console.log("showQuoteLineForm: Resetting form for new entry.");
@@ -4544,7 +4544,7 @@ async function handleSaveQuote(event) {
         // After saving (either new or update), adjust accordion layout and render quote lines
         if (mainQuoteDetailsAccordion) mainQuoteDetailsAccordion.classList.remove('md:col-span-full'); // Make main details take one column
         if (quoteLinesSectionContainer) quoteLinesSectionContainer.classList.remove('hidden'); // Show quote lines section
-        
+
         // Ensure both accordions are open
         if (mainQuoteDetailsContent) mainQuoteDetailsContent.classList.remove('hidden');
         if (mainQuoteDetailsAccordion) {
@@ -4716,7 +4716,7 @@ async function handleDeleteQuote(quoteId) {
             const quoteLinesCollectionRef = collection(db, 'quotes', quoteId, 'quoteLines');
             const quoteLinesSnapshot = await getDocs(quoteLinesCollectionRef);
             const deleteQuoteLinePromises = [];
-            
+
             if (!quoteLinesSnapshot.empty) {
                 console.log(`handleDeleteQuote: Found ${quoteLinesSnapshot.size} quote lines to delete for quote ${quoteId}.`);
                 quoteLinesSnapshot.forEach(doc => {
@@ -4861,21 +4861,21 @@ async function handleOpportunityChangeForQuote() {
 async function loadQuotes(opportunityId = null) {
     console.group("loadQuotes");
     console.log(`Loading quotes for opportunity ID: ${opportunityId || 'All'}`);
-    const noQuotesMessage = document.getElementById('no-quotes-message'); 
+    const noQuotesMessage = document.getElementById('no-quotes-message');
 
     if (!db) {
         console.warn("loadQuotes: Firestore DB not initialized.");
         console.groupEnd();
         return;
     }
-    if (!quotesGrid || !noQuotesMessage) { 
+    if (!quotesGrid || !noQuotesMessage) {
         console.error("loadQuotes: Required elements (quotesGrid or noQuotesMessage) not found. Grid might not be initialized.");
         console.groupEnd();
         return;
     }
 
     noQuotesMessage.classList.add('hidden');
-    if (quotesGridContainer) quotesGridContainer.classList.remove('hidden'); 
+    if (quotesGridContainer) quotesGridContainer.classList.remove('hidden');
     console.log("loadQuotes: Initial state - noQuotesMessage hidden, quotesGridContainer visible.");
 
 
@@ -4910,7 +4910,7 @@ async function loadQuotes(opportunityId = null) {
                 document.getElementById('quotes-filter-display').classList.remove('hidden');
             }
         } else {
-            q = query(quotesCollectionRef, orderBy('createdAt', 'desc')); 
+            q = query(quotesCollectionRef, orderBy('createdAt', 'desc'));
             currentFilterOpportunityId = null;
             document.getElementById('quotes-filter-display').classList.add('hidden');
         }
@@ -4929,43 +4929,43 @@ async function loadQuotes(opportunityId = null) {
                 console.log(`  - Full quote data:`, data);
 
                 quotesData.push({
-                    id: doc.id, 
+                    id: doc.id,
                     quoteName: data.quoteName,
                     opportunityName: oppName || 'N/A', // Use 'N/A' if lookup fails
                     eventName: data.eventName || 'N/A',
                     eventDate: data.eventDate ? new Date(data.eventDate.seconds * 1000).toLocaleDateString() : 'N/A',
                     quoteAmount: data.quoteAmount,
                     status: data.status,
-                    updatedAt: data.updatedAt, 
+                    updatedAt: data.updatedAt,
                 });
             });
 
             console.log(`loadQuotes: onSnapshot received ${quotesData.length} quotes.`);
 
             if (quotesData.length > 0) {
-                noQuotesMessage.classList.add('hidden'); 
-                quotesGridContainer.classList.remove('hidden'); 
-                quotesGrid.updateConfig({ data: quotesData }).forceRender(); 
+                noQuotesMessage.classList.add('hidden');
+                quotesGridContainer.classList.remove('hidden');
+                quotesGrid.updateConfig({ data: quotesData }).forceRender();
                 console.log(`loadQuotes: Successfully updated grid with ${quotesData.length} quotes.`);
             } else {
-                quotesGrid.updateConfig({ data: [] }).forceRender(); 
-                quotesGridContainer.classList.add('hidden'); 
-                noQuotesMessage.classList.remove('hidden'); 
+                quotesGrid.updateConfig({ data: [] }).forceRender();
+                quotesGridContainer.classList.add('hidden');
+                noQuotesMessage.classList.remove('hidden');
                 console.log("loadQuotes: No quotes found, clearing grid and showing message.");
             }
         }, (error) => {
             console.error("loadQuotes: Error listening to quotes:", error);
             showMessageBox(`Error loading quotes: ${error.message}`, 'alert', true);
-            if (quotesGrid) quotesGrid.updateConfig({ data: [] }).forceRender(); 
-            if (quotesGridContainer) quotesGridContainer.classList.add('hidden'); 
-            if (noQuotesMessage) noQuotesMessage.classList.remove('hidden'); 
+            if (quotesGrid) quotesGrid.updateConfig({ data: [] }).forceRender();
+            if (quotesGridContainer) quotesGridContainer.classList.add('hidden');
+            if (noQuotesMessage) noQuotesMessage.classList.remove('hidden');
         });
     } catch (error) {
         console.error("loadQuotes: Error setting up quotes listener:", error);
         showMessageBox(`Error setting up quotes listener: ${error.message}`, 'alert', true);
-        if (quotesGrid) quotesGrid.updateConfig({ data: [] }).forceRender(); 
-        if (quotesGridContainer) quotesGridContainer.classList.add('hidden'); 
-        if (noQuotesMessage) noQuotesMessage.classList.remove('hidden'); 
+        if (quotesGrid) quotesGrid.updateConfig({ data: [] }).forceRender();
+        if (quotesGridContainer) quotesGridContainer.classList.add('hidden');
+        if (noQuotesMessage) noQuotesMessage.classList.remove('hidden');
     }
     console.groupEnd();
 }
@@ -5375,14 +5375,14 @@ async function initializePage() {
     quoteLinesContent = document.getElementById('quote-lines-content'); // NEW ID from HTML fix
     addQuoteLineEntryBtn = document.getElementById('add-quote-line-entry-btn');
     quoteLineFormContainer = document.getElementById('quote-line-form-container');
-    
+
     // *** THE CRITICAL DEBUGGING LINE ***
     quoteLineForm = document.getElementById('quote-line-form');
     //console.log("initializePage: Attempting to get 'quote-line-form'. Result:", quoteLineForm);
     //if (quoteLineForm) {
     //    console.log("initializePage: 'quote-line-form' found. Its outerHTML:", quoteLineForm.outerHTML);
     //} else {
-     //   console.error("initializePage: 'quote-line-form' is null. The element might not exist or ID is incorrect.");
+    //   console.error("initializePage: 'quote-line-form' is null. The element might not exist or ID is incorrect.");
     //}
     // *** END CRITICAL DEBUGGING LINE ***
 
@@ -5545,7 +5545,7 @@ async function initializePage() {
 
 
     // Quote Listeners (PRESERVED FROM YOUR BASELINE)
-    
+
     // Event listener for Opportunity selection change in Quote form
     if (quoteOpportunitySelect) {
         quoteOpportunitySelect.addEventListener('change', populateCustomerDetailsForQuote);
@@ -5555,7 +5555,7 @@ async function initializePage() {
     if (cancelQuoteBtn) cancelQuoteBtn.addEventListener('click', () => hideForm(quoteFormContainer, quoteFormMessage));
     if (quoteForm) quoteForm.addEventListener('submit', handleSaveQuote);
     if (quoteSearchInput) quoteSearchInput.addEventListener('input', (event) => { if (quotesGrid) quotesGrid.search(event.target.value); });
-        
+
     if (clearQuotesFilterBtn) clearQuotesFilterBtn.addEventListener('click', clearQuotesFilter);
 
     // Quote Line Listeners (ALL NEW)
@@ -5577,7 +5577,7 @@ async function initializePage() {
     if (quoteLineDiscountInput) quoteLineDiscountInput.addEventListener('input', calculateQuoteLineFinalNet); // CRITICAL: Use calculateQuoteLineFinalNet
     if (quoteLineAdjustmentAmountInput) quoteLineAdjustmentAmountInput.addEventListener('input', calculateQuoteLineFinalNet); // CRITICAL: Use calculateQuoteLineFinalNet
 
-     // Accordion event listeners for Quotes
+    // Accordion event listeners for Quotes
     if (mainQuoteDetailsAccordion) {
         // Listener for the header to toggle the accordion
         mainQuoteDetailsAccordion.addEventListener('click', (event) => {
@@ -5855,25 +5855,25 @@ async function initializePage() {
     });
 
 
-     // QUOTES GRID INITIALIZATION (Aligned with opportunitiesGrid pattern)
+    // QUOTES GRID INITIALIZATION (Aligned with opportunitiesGrid pattern)
     if (quotesGridContainer) { // Ensure container exists before initializing grid
         quotesGrid = new gridjs.Grid({
             columns: [
                 // Quote ID: Hidden again, but still present for actions
-                { id: 'id', name: 'Quote ID', hidden: true }, 
+                { id: 'id', name: 'Quote ID', hidden: true },
                 { id: 'quoteName', name: 'Quote Name' },
                 // NEW: Opportunity Name column
                 { id: 'opportunityName', name: 'Opportunity Name' },
                 { id: 'eventName', name: 'Event Name' },
-                { 
-                    id: 'eventDate', 
-                    name: 'Event Date', 
+                {
+                    id: 'eventDate',
+                    name: 'Event Date',
                     formatter: (cell) => {
                         if (cell && typeof cell.seconds === 'number' && typeof cell.nanoseconds === 'number') {
                             return new Date(cell.seconds * 1000).toLocaleDateString();
                         }
-                        return 'N/A'; 
-                    } 
+                        return 'N/A';
+                    }
                 },
                 { id: 'quoteAmount', name: 'Amount', formatter: (cell) => `$${cell ? cell.toFixed(2) : '0.00'}` },
                 { id: 'status', name: 'Status' },
@@ -5891,7 +5891,7 @@ async function initializePage() {
                 {
                     name: 'Actions',
                     formatter: (cell, row) => {
-                        const quoteId = row.cells[0].data; 
+                        const quoteId = row.cells[0].data;
                         return gridjs.h('div', {
                             className: 'flex space-x-2'
                         },
@@ -5907,11 +5907,11 @@ async function initializePage() {
                     }
                 }
             ],
-            data: [], 
+            data: [],
             search: true,
             pagination: {
                 enabled: true,
-                limit: 5 
+                limit: 5
             },
             sort: true,
             className: {
@@ -5934,25 +5934,26 @@ async function initializePage() {
         quoteLinesGrid = new gridjs.Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true }, // Hidden ID for actions
-                { id: 'services', name: 'Service' , width: '180px'},
-                { id: 'serviceDescription', name: 'Description',width: '180px'},
-                { id: 'unitPrice', name: 'Unit Price', formatter: (cell) => `$${cell.toFixed(2)}` , width: '180px'},
-                { id: 'quantity', name: 'Qty' , width: '180px'},
-                { id: 'discount', name: 'Disc (%)', formatter: (cell) => `${cell}%` , width: '180px'},
-                { id: 'adjustmentAmount', name: 'Adj Amt', formatter: (cell) => `$${cell.toFixed(2)}` , width: '180px'},
-                { id: 'finalNet', name: 'Net', formatter: (cell) => `$${cell.toFixed(2)}` , width: '180px'},
-                { 
-                    id: 'serviceStartDate', 
-                    name: 'Start Date', style: { width: '150px' },
-                    formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : 'N/A' 
-                },
-                { 
-                    id: 'serviceEndDate', 
-                    name: 'End Date', style: { width: '150px' },
-                    formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : 'N/A' 
+                { id: 'services', name: 'Service', width: 'auto' }, // Changed to auto
+                { id: 'serviceDescription', name: 'Description', width: 'auto' }, // Changed to auto
+                { id: 'unitPrice', name: 'Unit Price', formatter: (cell) => `$${cell.toFixed(2)}`, width: '120px' }, // Adjusted width
+                { id: 'quantity', name: 'Qty', width: '80px' }, // Adjusted width
+                { id: 'discount', name: 'Disc (%)', formatter: (cell) => `${cell}%`, width: '100px' }, // Adjusted width
+                { id: 'adjustmentAmount', name: 'Adj Amt', formatter: (cell) => `$${cell.toFixed(2)}`, width: '120px' }, // Adjusted width
+                { id: 'finalNet', name: 'Net', formatter: (cell) => `$${cell.toFixed(2)}`, width: '100px' }, // Adjusted width
+                {
+                    id: 'serviceStartDate',
+                    name: 'Start Date', width: '120px', // Apply width directly
+                    formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : 'N/A'
                 },
                 {
-                    name: 'Actions',style: { width: '250px' },
+                    id: 'serviceEndDate',
+                    name: 'End Date', width: '120px', // Apply width directly
+                    formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : 'N/A'
+                },
+                {
+                    name: 'Actions',
+                    width: '180px', // CRITICAL FIX: Give Actions column a fixed width
                     formatter: (cell, row) => {
                         const quoteLineId = row.cells[0].data; // ID is in the first (hidden) column
                         return gridjs.h('div', {
@@ -5977,13 +5978,19 @@ async function initializePage() {
                 limit: 5 // Or adjust as needed
             },
             sort: true,
-            className: {
-                table: 'min-w-full divide-y divide-gray-200',
-                thead: 'bg-gray-50',
-                th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
-                tbody: 'bg-white divide-y divide-gray-200',
-                td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
-                footer: 'py-3 px-6',
+            // Add resizable: true if you want columns to be resizable
+            // resizable: true, 
+            style: {
+                table: {
+                    'min-width': '100%'
+                },
+                th: {
+                    'white-space': 'nowrap',
+                    'min-width': '80px' // Ensure minimum width for all headers
+                },
+                td: {
+                    'white-space': 'nowrap' // Prevent data cells from wrapping if too narrow
+                }
             }
         }).render(quoteLinesGridContainer);
         console.log("initializePage: quoteLinesGrid initialized.");
