@@ -5937,22 +5937,22 @@ async function initializePage() {
                 { id: 'services', name: 'Service' , width: '180px'},
                 { id: 'serviceDescription', name: 'Description',width: '180px'},
                 { id: 'unitPrice', name: 'Unit Price', formatter: (cell) => `$${cell.toFixed(2)}` , width: '180px'},
-                { id: 'quantity', name: 'Qty' },
+                { id: 'quantity', name: 'Qty' , width: '180px'},
                 { id: 'discount', name: 'Disc (%)', formatter: (cell) => `${cell}%` , width: '180px'},
                 { id: 'adjustmentAmount', name: 'Adj Amt', formatter: (cell) => `$${cell.toFixed(2)}` , width: '180px'},
                 { id: 'finalNet', name: 'Net', formatter: (cell) => `$${cell.toFixed(2)}` , width: '180px'},
                 { 
                     id: 'serviceStartDate', 
-                    name: 'Start Date', 
+                    name: 'Start Date', style: { width: '150px' },
                     formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : 'N/A' 
                 },
                 { 
                     id: 'serviceEndDate', 
-                    name: 'End Date', 
+                    name: 'End Date', style: { width: '150px' },
                     formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : 'N/A' 
                 },
                 {
-                    name: 'Actions',
+                    name: 'Actions',style: { width: '250px' },
                     formatter: (cell, row) => {
                         const quoteLineId = row.cells[0].data; // ID is in the first (hidden) column
                         return gridjs.h('div', {
