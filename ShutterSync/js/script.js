@@ -4269,6 +4269,7 @@ async function loadQuoteLines(quoteId) {
     });
 }
 
+
 /**
  * Renders the quote lines for a given quote ID.
  * It fetches quote lines from the 'quoteLines' subcollection of the specified quote
@@ -4276,29 +4277,28 @@ async function loadQuoteLines(quoteId) {
  * @param {string} quoteId The ID of the parent quote whose lines are to be rendered.
  */
 async function renderQuoteLines(quoteId) {
+    console.group("renderQuoteLines");
     console.log(`renderQuoteLines: Attempting to render quote lines for Quote ID: ${quoteId}`);
 
-    // Ensure necessary DOM elements and grid instance are available
     if (!quoteLinesGrid || !quoteLinesGridContainer || !noQuoteLinesMessage) {
         console.error("renderQuoteLines: Required DOM elements or quoteLinesGrid not found. Check initializePage() and HTML IDs.");
+        console.groupEnd();
         return;
     }
 
-    // Hide the "no lines" message initially and ensure grid container is visible
     noQuoteLinesMessage.classList.add('hidden');
     quoteLinesGridContainer.classList.remove('hidden');
 
-    // If no quote ID is provided (e.g., for a new quote), just clear the grid and show "no lines" message
     if (!quoteId) {
         console.log("renderQuoteLines: No quote ID provided, clearing grid and displaying 'no quote lines' message.");
-        quoteLinesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid
+        quoteLinesGrid.updateConfig({ data: [] }).forceRender();
         noQuoteLinesMessage.classList.remove('hidden');
-        quoteLinesGridContainer.classList.add('hidden'); // Hide grid container
-        updateMainQuoteAmount(); // Ensure main quote amount is 0
+        quoteLinesGridContainer.classList.add('hidden');
+        updateMainQuoteAmount();
+        console.groupEnd();
         return;
     }
 
-    // Unsubscribe from any previous real-time listener to prevent memory leaks/duplicate updates
     if (unsubscribeQuoteLines) {
         unsubscribeQuoteLines();
         unsubscribeQuoteLines = null;
@@ -4306,67 +4306,68 @@ async function renderQuoteLines(quoteId) {
     }
 
     try {
-        // Create a reference to the 'quoteLines' subcollection under the specific quote
         const quoteLinesCollectionRef = collection(db, 'quotes', quoteId, 'quoteLines');
-        // Order by creation time to maintain a consistent display order
         const q = query(quoteLinesCollectionRef, orderBy('createdAt', 'asc'));
 
         console.log(`renderQuoteLines: Setting up real-time listener for quote lines under quote ${quoteId}.`);
-        // Set up a real-time listener using onSnapshot
         unsubscribeQuoteLines = onSnapshot(q, (querySnapshot) => {
             const quoteLinesData = [];
-            let totalQuoteLinesAmount = 0; // For updating main quote amount
+            let totalQuoteLinesAmount = 0;
 
             if (querySnapshot.empty) {
                 noQuoteLinesMessage.classList.remove('hidden');
-                quoteLinesGridContainer.classList.add('hidden'); // Hide grid container
-                quoteLinesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid
+                quoteLinesGridContainer.classList.add('hidden');
+                quoteLinesGrid.updateConfig({ data: [] }).forceRender();
                 console.log(`renderQuoteLines: No quote lines found for quote ${quoteId}. Displaying message.`);
             } else {
-                noQuoteLinesMessage.classList.add('hidden'); // Hide message if lines are found
-                quoteLinesGridContainer.classList.remove('hidden'); // Ensure grid container is visible
+                noQuoteLinesMessage.classList.add('hidden');
+                quoteLinesGridContainer.classList.remove('hidden');
 
                 querySnapshot.forEach(doc => {
                     const quoteLine = doc.data();
                     const quoteLineId = doc.id;
 
-                    // Add to data for Grid.js
+                    // CRITICAL DEBUG: Log the full quoteLine data object before pushing
+                    console.log(`renderQuoteLines: Processing quote line ID: ${quoteLineId}, Data:`, quoteLine);
+
                     quoteLinesData.push({
-                        id: quoteLineId, // For actions
-                        services: quoteLine.services,
-                        serviceDescription: quoteLine.serviceDescription || '',
+                        id: quoteLineId,
+                        services: quoteLine.services, // Check if this property exists and has data
+                        serviceDescription: quoteLine.serviceDescription || '', // Check this too
                         unitPrice: quoteLine.unitPrice,
                         quantity: quoteLine.quantity,
                         discount: quoteLine.discount,
                         adjustmentAmount: quoteLine.adjustmentAmount,
                         finalNet: quoteLine.finalNet,
-                        serviceStartDate: quoteLine.serviceStartDate, // Keep as Timestamp for formatter
-                        serviceEndDate: quoteLine.serviceEndDate,     // Keep as Timestamp for formatter
+                        serviceStartDate: quoteLine.serviceStartDate,
+                        serviceEndDate: quoteLine.serviceEndDate,
                     });
                     totalQuoteLinesAmount += quoteLine.finalNet || 0;
                 });
 
-                quoteLinesGrid.updateConfig({ data: quoteLinesData }).forceRender(); // Update grid with new data
+                // CRITICAL DEBUG: Log the final array passed to the grid
+                console.log("renderQuoteLines: Final quoteLinesData array being passed to grid:", quoteLinesData);
+
+                quoteLinesGrid.updateConfig({ data: quoteLinesData }).forceRender();
                 console.log(`renderQuoteLines: Successfully updated grid with ${quoteLinesData.length} quote lines for quote ${quoteId}.`);
             }
-            // Always update the main quote amount, even if no lines
             updateMainQuoteAmount(totalQuoteLinesAmount);
         }, (error) => {
             console.error("renderQuoteLines: Error listening to quote lines:", error);
             showMessageBox(`Error loading quote lines: ${error.message}`, 'alert', true);
-            noQuoteLinesMessage.classList.remove('hidden'); // Show message on error
-            quoteLinesGridContainer.classList.add('hidden'); // Hide grid on error
-            quoteLinesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid on error
+            noQuoteLinesMessage.classList.remove('hidden');
+            quoteLinesGridContainer.classList.add('hidden');
+            quoteLinesGrid.updateConfig({ data: [] }).forceRender();
         });
     } catch (error) {
         console.error("renderQuoteLines: Error setting up quote lines listener:", error);
         showMessageBox(`Error setting up quote lines listener: ${error.message}`, 'alert', true);
-        noQuoteLinesMessage.classList.remove('hidden'); // Show message on error
-        quoteLinesGridContainer.classList.add('hidden'); // Hide grid on error
-        quoteLinesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid on error
+        noQuoteLinesMessage.classList.remove('hidden');
+        quoteLinesGridContainer.classList.add('hidden');
+        quoteLinesGrid.updateConfig({ data: [] }).forceRender();
     }
+    console.groupEnd();
 }
-
 
 
 /**
@@ -5932,30 +5933,30 @@ async function initializePage() {
     // QUOTE LINES GRID INITIALIZATION
     if (quoteLinesGridContainer) {
         quoteLinesGrid = new gridjs.Grid({
-            columns: [
-                { id: 'id', name: 'ID', hidden: true }, // Hidden ID for actions
-                { id: 'services', name: 'Service', width: 'auto' }, // Changed to auto
-                { id: 'serviceDescription', name: 'Description', width: 'auto' }, // Changed to auto
-                { id: 'unitPrice', name: 'Unit Price', formatter: (cell) => `$${cell.toFixed(2)}`, width: '200px' }, // Adjusted width
-                { id: 'quantity', name: 'Qty', width: '100px' }, // Adjusted width
-                { id: 'discount', name: 'Disc (%)', formatter: (cell) => `${cell}%`, width: '100px' }, // Adjusted width
-                { id: 'adjustmentAmount', name: 'Adj Amt', formatter: (cell) => `$${cell.toFixed(2)}`, width: '200px' }, // Adjusted width
-                { id: 'finalNet', name: 'Net', formatter: (cell) => `$${cell.toFixed(2)}`, width: '200px' }, // Adjusted width
+           columns: [
+                { id: 'id', name: 'ID', hidden: true },
+                { id: 'services', name: 'Service', width: '300px' }, // TEMPORARY: Large fixed width
+                { id: 'serviceDescription', name: 'Description', width: '400px' }, // TEMPORARY: Large fixed width
+                { id: 'unitPrice', name: 'Unit Price', formatter: (cell) => `$${cell.toFixed(2)}`, width: '120px' },
+                { id: 'quantity', name: 'Qty', width: '80px' },
+                { id: 'discount', name: 'Disc (%)', formatter: (cell) => `${cell}%`, width: '100px' },
+                { id: 'adjustmentAmount', name: 'Adj Amt', formatter: (cell) => `$${cell.toFixed(2)}`, width: '120px' },
+                { id: 'finalNet', name: 'Net', formatter: (cell) => `$${cell.toFixed(2)}`, width: '100px' },
                 {
                     id: 'serviceStartDate',
-                    name: 'Start Date', width: '120px', // Apply width directly
+                    name: 'Start Date', width: '120px',
                     formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : 'N/A'
                 },
                 {
                     id: 'serviceEndDate',
-                    name: 'End Date', width: '120px', // Apply width directly
+                    name: 'End Date', width: '120px',
                     formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : 'N/A'
                 },
                 {
                     name: 'Actions',
-                    width: '180px', // CRITICAL FIX: Give Actions column a fixed width
+                    width: '180px',
                     formatter: (cell, row) => {
-                        const quoteLineId = row.cells[0].data; // ID is in the first (hidden) column
+                        const quoteLineId = row.cells[0].data;
                         return gridjs.h('div', {
                             className: 'flex space-x-2'
                         },
