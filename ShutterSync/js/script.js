@@ -5935,13 +5935,13 @@ async function initializePage() {
         quoteLinesGrid = new gridjs.Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true }, // Hidden ID for actions
-                { id: 'services', name: 'Service', width: 'auto' }, // Back to 'auto'
-                { id: 'serviceDescription', name: 'Description', width: 'auto' }, // Back to 'auto'
-                { id: 'unitPrice', name: 'Unit Price', formatter: (cell) => `$${cell.toFixed(2)}`, width: '100px' }, // More compact
-                { id: 'quantity', name: 'Qty', width: '80px' }, // Compact
-                { id: 'discount', name: 'Disc (%)', formatter: (cell) => `${cell}%`, width: '90px' }, // Compact
-                { id: 'adjustmentAmount', name: 'Adj Amt', formatter: (cell) => `$${cell.toFixed(2)}`, width: '120px' }, // Moderate
-                { id: 'finalNet', name: 'Net', formatter: (cell) => `$${cell.toFixed(2)}`, width: '100px' }, // Compact
+                { id: 'services', name: 'Service', width: 'auto' }, // Auto for flexibility
+                { id: 'serviceDescription', name: 'Description', width: 'auto' }, // Auto for flexibility
+                { id: 'unitPrice', name: 'Unit Price', formatter: (cell) => `$${cell.toFixed(2)}`, width: '100px' },
+                { id: 'quantity', name: 'Qty', width: '80px' },
+                { id: 'discount', name: 'Disc (%)', formatter: (cell) => `${cell}%`, width: '90px' },
+                { id: 'adjustmentAmount', name: 'Adj Amt', formatter: (cell) => `$${cell.toFixed(2)}`, width: '120px' },
+                { id: 'finalNet', name: 'Net', formatter: (cell) => `$${cell.toFixed(2)}`, width: '100px' },
                 {
                     id: 'serviceStartDate',
                     name: 'Start Date', width: '120px',
@@ -5965,7 +5965,7 @@ async function initializePage() {
                                 onClick: () => handleEditQuoteLine(quoteLineId)
                             }, 'Edit'),
                             gridjs.h('button', {
-                                className: 'px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-sm',
+                                className: 'px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-800 transition duration-300 text-sm', // Darker red on hover
                                 onClick: () => handleDeleteQuoteLine(quoteLineId)
                             }, 'Delete')
                         );
@@ -5979,18 +5979,38 @@ async function initializePage() {
                 limit: 5
             },
             sort: true,
-            resizable: true, // Keep resizable for user adjustment
-            style: {
-                table: {
-                    'min-width': '100%' // Ensures table at least fills container, or overflows if wider
-                },
-                th: {
-                    'white-space': 'nowrap',
-                    'min-width': '60px' // A reasonable minimum for headers
-                },
-                td: {
-                    'white-space': 'nowrap' // Prevents data cells from wrapping
-                }
+            resizable: true,
+            className: {
+                // Overall table container styling
+                container: 'rounded-lg shadow-md border border-gray-200', // Added rounded corners, shadow, border
+
+                // Table element itself
+                table: 'min-w-full divide-y divide-gray-200',
+
+                // Table Header styling
+                thead: 'bg-gray-50', // Lighter header background
+                th: 'px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap min-w-[60px]', // Bolder, slightly larger padding, darker text
+
+                // Table Body styling
+                tbody: 'bg-white divide-y divide-gray-100', // Lighter divider
+                tr: 'hover:bg-gray-50', // Subtle row hover effect
+
+                // Alternating row colors (Zebra striping)
+                // Note: Grid.js default behavior usually handles this with tbody's bg-white,
+                // but for explicit zebra striping, you might need custom CSS or more advanced Grid.js options.
+                // For now, hover effect and general tbody background are good.
+
+                // Table Data cells
+                td: 'px-4 py-3 whitespace-normal break-words text-sm text-gray-800', // Increased padding, normal whitespace
+
+                // Footer styling (for pagination)
+                footer: 'py-3 px-4 bg-gray-50 rounded-b-lg text-sm', // Rounded bottom corners for footer
+
+                // Pagination buttons
+                paginationButton: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
+                paginationButtonCurrent: 'px-3 py-1 mx-1 rounded-md text-white bg-blue-600 border border-blue-600',
+                paginationButtonPrev: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
+                paginationButtonNext: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
             }
         }).render(quoteLinesGridContainer);
         console.log("initializePage: quoteLinesGrid initialized.");
