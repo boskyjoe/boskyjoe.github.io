@@ -4088,6 +4088,7 @@ function clearQuotesFilter() {
     loadQuotes(); // This will now load all quotes
 }
 
+
 /**
  * Sets up the Quote form for adding a new quote or editing an existing one.
  * @param {object | null} quoteData Optional: The quote data to pre-populate the form.
@@ -4096,40 +4097,39 @@ async function setupQuoteForm(quoteData = null) {
     console.group("setupQuoteForm");
     console.log('setupQuoteForm called with quoteData:', quoteData);
 
-    // Ensure the main form container is visible and clear any previous messages
     showForm(quoteFormContainer, quoteFormMessage);
-    if (quoteForm) quoteForm.reset(); // Reset the main quote form
-    if (document.getElementById('quote-id')) document.getElementById('quote-id').value = ''; // Clear hidden ID
+    if (quoteForm) quoteForm.reset();
+    if (document.getElementById('quote-id')) document.getElementById('quote-id').value = '';
 
-    // Populate dropdowns (Opportunities and Status)
-    await populateQuoteOpportunities(); // Ensure opportunities are loaded first
+    await populateQuoteOpportunities();
     populateQuoteStatus();
 
-    // Reset customer details fields and quote amount initially
     document.getElementById('quote-customer-contact-name').value = '';
     document.getElementById('quote-phone').value = '';
     document.getElementById('quote-email').value = '';
     document.getElementById('quote-customer-address').value = '';
     if (document.getElementById('quote-amount')) document.getElementById('quote-amount').value = '0.00';
 
-    // Clear any previous form-specific messages
     if (quoteFormMessage) quoteFormMessage.classList.add('hidden');
 
+    // CRITICAL LAYOUT FIX: Always ensure the parent grid is 1 column for stacked layout
+    if (quoteAccordionsGrid) {
+        quoteAccordionsGrid.classList.remove('md:grid-cols-2'); // Remove 2-column layout
+        quoteAccordionsGrid.classList.add('md:grid-cols-1');    // Force 1-column layout
+        console.log("setupQuoteForm: quoteAccordionsGrid forced to md:grid-cols-1 for stacked layout.");
+    }
 
     if (quoteData) { // Edit mode
-        console.log("Entering EDIT mode for quote:", quoteData);
+        console.log("setupQuoteForm: Entering EDIT mode for quote:", quoteData);
         currentQuoteId = quoteData.id;
         if (document.getElementById('quote-id')) document.getElementById('quote-id').value = quoteData.id;
         if (document.getElementById('quote-name')) document.getElementById('quote-name').value = quoteData.quoteName || '';
-        
-        // Use the correct ID 'quote-event-name'
         if (document.getElementById('quote-event-name')) document.getElementById('quote-event-name').value = quoteData.eventName || '';
         
         if (quoteOpportunitySelect) {
             quoteOpportunitySelect.value = quoteData.opportunityId || '';
-            // Manually trigger customer details population after setting opportunity value
             if (quoteData.opportunityId) {
-                await populateCustomerDetailsForQuote(); // This reads from quoteOpportunitySelect.value
+                await populateCustomerDetailsForQuote();
             }
         }
         
@@ -4140,19 +4140,11 @@ async function setupQuoteForm(quoteData = null) {
         const eventDate = quoteData.eventDate ? new Date(quoteData.eventDate.seconds * 1000).toISOString().split('T')[0] : '';
         if (document.getElementById('quote-event-date')) document.getElementById('quote-event-date').value = eventDate;
 
-        // --- Layout Adjustment for EDIT mode ---
-        // Set parent grid to 2 columns for side-by-side layout
-        if (quoteAccordionsGrid) {
-            quoteAccordionsGrid.classList.remove('md:grid-cols-1'); // Ensure 1-col is removed if present
-            quoteAccordionsGrid.classList.add('md:grid-cols-2');
-            console.log("Edit mode: quoteAccordionsGrid classes after update:", quoteAccordionsGrid.className);
-        }
-
-        // Ensure main details accordion is open (it will naturally take 1 of 2 columns)
+        // Ensure main details accordion is open
         if (mainQuoteDetailsAccordion) {
             const mainDetailsHeader = mainQuoteDetailsAccordion.querySelector('.accordion-header');
             if (mainDetailsHeader) {
-                setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
+                setAccordionVisualState(mainDetailsHeader, true);
             }
         }
 
@@ -4161,7 +4153,7 @@ async function setupQuoteForm(quoteData = null) {
             quoteLinesSectionContainer.classList.remove('hidden'); 
             const quoteLinesAccordionHeader = quoteLinesSectionContainer.querySelector('.accordion-header');
             if (quoteLinesAccordionHeader) {
-                setAccordionVisualState(quoteLinesAccordionHeader, true); // True for OPEN
+                setAccordionVisualState(quoteLinesAccordionHeader, true);
             }
             if (quoteLineForm) {
                 quoteLineForm.removeAttribute('novalidate');
@@ -4171,31 +4163,23 @@ async function setupQuoteForm(quoteData = null) {
         await renderQuoteLines(quoteData.id); 
 
     } else { // For a new quote (ADD mode)
-        console.log("Entering ADD NEW mode.");
-        currentQuoteId = null; // Reset currentQuoteId for new quote
+        console.log("setupQuoteForm: Entering ADD NEW mode.");
+        currentQuoteId = null;
         
-        // Clear customer details (important for new quotes)
-        if (quoteOpportunitySelect) quoteOpportunitySelect.value = ''; // Ensure dropdown is reset
-        await populateCustomerDetailsForQuote(); // Call to clear fields based on empty select
+        if (quoteOpportunitySelect) quoteOpportunitySelect.value = '';
+        await populateCustomerDetailsForQuote();
 
-        if (document.getElementById('quote-amount')) document.getElementById('quote-amount').value = '0.00'; // Reset quote amount
-        if (quoteLinesList) quoteLinesList.innerHTML = ''; // Clear existing quote lines display
-        if (noQuoteLinesMessage) noQuoteLinesMessage.classList.remove('hidden'); // Show no lines message
-        hideQuoteLineForm(); // Call hideQuoteLineForm() for new quotes to apply novalidate and hide form
+        if (document.getElementById('quote-amount')) document.getElementById('quote-amount').value = '0.00';
+        if (quoteLinesGrid) quoteLinesGrid.updateConfig({ data: [] }).forceRender(); // Clear quote lines grid
+        if (noQuoteLinesMessage) noQuoteLinesMessage.classList.remove('hidden');
+        if (quoteLinesGridContainer) quoteLinesGridContainer.classList.add('hidden'); // Hide quote lines grid container
+        hideQuoteLineForm();
 
-        // --- Layout Adjustment for ADD mode ---
-        // Set parent grid to 1 column for full width display of main details
-        if (quoteAccordionsGrid) {
-            quoteAccordionsGrid.classList.remove('md:grid-cols-2'); // Ensure 2-col is removed
-            quoteAccordionsGrid.classList.add('md:grid-cols-1');
-            console.log("Add New mode: quoteAccordionsGrid classes after update:", quoteAccordionsGrid.className);
-        }
-
-        // Ensure main details accordion is open (it will naturally take full width in a 1-column grid)
+        // Ensure main details accordion is open
         if (mainQuoteDetailsAccordion) {
             const mainDetailsHeader = mainQuoteDetailsAccordion.querySelector('.accordion-header');
             if (mainDetailsHeader) {
-                setAccordionVisualState(mainDetailsHeader, true); // True for OPEN
+                setAccordionVisualState(mainDetailsHeader, true);
             }
         }
         // Hide quote lines container
@@ -4203,11 +4187,11 @@ async function setupQuoteForm(quoteData = null) {
             quoteLinesSectionContainer.classList.add('hidden'); 
         }
     }
-    // Show the main quote form container
     showForm(quoteFormContainer);
     console.log('Add/Edit Quote form setup complete. currentQuoteId:', currentQuoteId);
     console.groupEnd();
 }
+
 
 
 
