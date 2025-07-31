@@ -199,6 +199,10 @@ let quoteLineUnitPriceInput, quoteLineQuantityInput, quoteLineDiscountInput, quo
 let quoteLineFormMessage;
 let currentFilterOpportunityId ;
 
+let quoteLinesGrid; // CRITICAL: Declare quoteLinesGrid globally here
+let quoteLinesGridContainer; // Also declare its container
+
+
 let addCountryBtn;
 let countryFormContainer;
 let countryForm;
@@ -4290,20 +4294,22 @@ async function loadQuoteLines(quoteId) {
 async function renderQuoteLines(quoteId) {
     console.log(`renderQuoteLines: Attempting to render quote lines for Quote ID: ${quoteId}`);
 
-    // Ensure necessary DOM elements are available
-    if (!quoteLinesList || !noQuoteLinesMessage) {
-        console.error("renderQuoteLines: Required DOM elements for quote lines not found. Check initializePage() and HTML IDs.");
+    // Ensure necessary DOM elements and grid instance are available
+    if (!quoteLinesGrid || !quoteLinesGridContainer || !noQuoteLinesMessage) {
+        console.error("renderQuoteLines: Required DOM elements or quoteLinesGrid not found. Check initializePage() and HTML IDs.");
         return;
     }
 
-    // Clear existing content and hide the "no lines" message initially
-    quoteLinesList.innerHTML = '';
+    // Hide the "no lines" message initially and ensure grid container is visible
     noQuoteLinesMessage.classList.add('hidden');
+    quoteLinesGridContainer.classList.remove('hidden');
 
-    // If no quote ID is provided (e.g., for a new quote), just show the "no lines" message
+    // If no quote ID is provided (e.g., for a new quote), just clear the grid and show "no lines" message
     if (!quoteId) {
-        console.log("renderQuoteLines: No quote ID provided, displaying 'no quote lines' message.");
+        console.log("renderQuoteLines: No quote ID provided, clearing grid and displaying 'no quote lines' message.");
+        quoteLinesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid
         noQuoteLinesMessage.classList.remove('hidden');
+        quoteLinesGridContainer.classList.add('hidden'); // Hide grid container
         updateMainQuoteAmount(); // Ensure main quote amount is 0
         return;
     }
@@ -4324,49 +4330,56 @@ async function renderQuoteLines(quoteId) {
         console.log(`renderQuoteLines: Setting up real-time listener for quote lines under quote ${quoteId}.`);
         // Set up a real-time listener using onSnapshot
         unsubscribeQuoteLines = onSnapshot(q, (querySnapshot) => {
-            quoteLinesList.innerHTML = ''; // Clear content again on each snapshot update
+            const quoteLinesData = [];
+            let totalQuoteLinesAmount = 0; // For updating main quote amount
+
             if (querySnapshot.empty) {
                 noQuoteLinesMessage.classList.remove('hidden');
+                quoteLinesGridContainer.classList.add('hidden'); // Hide grid container
+                quoteLinesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid
                 console.log(`renderQuoteLines: No quote lines found for quote ${quoteId}. Displaying message.`);
             } else {
                 noQuoteLinesMessage.classList.add('hidden'); // Hide message if lines are found
+                quoteLinesGridContainer.classList.remove('hidden'); // Ensure grid container is visible
+
                 querySnapshot.forEach(doc => {
                     const quoteLine = doc.data();
                     const quoteLineId = doc.id;
-                    // Format dates for display
-                    // CRITICAL FIX: Corrected 'toLocaleDateDateString' to 'toLocaleDateString'
-                    const startDate = quoteLine.serviceStartDate ? new Date(quoteLine.serviceStartDate.seconds * 1000).toLocaleDateString() : 'N/A';
-                    const endDate = quoteLine.serviceEndDate ? new Date(quoteLine.serviceEndDate.seconds * 1000).toLocaleDateString() : 'N/A';
 
-                    // Create a list item for each quote line
-                    const li = document.createElement('li');
-                    li.className = 'bg-gray-100 p-3 rounded-md shadow-sm flex justify-between items-center mb-2';
-                    li.innerHTML = `
-                        <div>
-                            <p class="text-sm font-semibold text-gray-700">${quoteLine.services} - ${quoteLine.serviceDescription || 'No Description'}</p>
-                            <p class="text-gray-600 text-xs">Price: ${quoteLine.unitPrice.toFixed(2)} x Qty: ${quoteLine.quantity} | Disc: ${quoteLine.discount}% | Adj: ${quoteLine.adjustmentAmount.toFixed(2)}</p>
-                            <p class="text-gray-600 text-xs">Dates: ${startDate} to ${endDate}</p>
-                            <p class="text-sm font-bold text-gray-800">Net: <span class="quote-line-final-net-display">${quoteLine.finalNet.toFixed(2)}</span></p>
-                        </div>
-                        <div>
-                            <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditQuoteLine('${quoteLineId}')">Edit</button>
-                            <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteQuoteLine('${quoteLineId}')">Delete</button>
-                        </div>
-                    `;
-                    quoteLinesList.appendChild(li);
+                    // Add to data for Grid.js
+                    quoteLinesData.push({
+                        id: quoteLineId, // For actions
+                        services: quoteLine.services,
+                        serviceDescription: quoteLine.serviceDescription || '',
+                        unitPrice: quoteLine.unitPrice,
+                        quantity: quoteLine.quantity,
+                        discount: quoteLine.discount,
+                        adjustmentAmount: quoteLine.adjustmentAmount,
+                        finalNet: quoteLine.finalNet,
+                        serviceStartDate: quoteLine.serviceStartDate, // Keep as Timestamp for formatter
+                        serviceEndDate: quoteLine.serviceEndDate,     // Keep as Timestamp for formatter
+                    });
+                    totalQuoteLinesAmount += quoteLine.finalNet || 0;
                 });
-                console.log(`renderQuoteLines: Successfully rendered ${querySnapshot.size} quote lines for quote ${quoteId}.`);
-                updateMainQuoteAmount(); // Update the main quote's total amount after rendering lines
+
+                quoteLinesGrid.updateConfig({ data: quoteLinesData }).forceRender(); // Update grid with new data
+                console.log(`renderQuoteLines: Successfully updated grid with ${quoteLinesData.length} quote lines for quote ${quoteId}.`);
             }
+            // Always update the main quote amount, even if no lines
+            updateMainQuoteAmount(totalQuoteLinesAmount); 
         }, (error) => {
             console.error("renderQuoteLines: Error listening to quote lines:", error);
             showMessageBox(`Error loading quote lines: ${error.message}`, 'alert', true);
             noQuoteLinesMessage.classList.remove('hidden'); // Show message on error
+            quoteLinesGridContainer.classList.add('hidden'); // Hide grid on error
+            quoteLinesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid on error
         });
     } catch (error) {
         console.error("renderQuoteLines: Error setting up quote lines listener:", error);
         showMessageBox(`Error setting up quote lines listener: ${error.message}`, 'alert', true);
         noQuoteLinesMessage.classList.remove('hidden'); // Show message on error
+        quoteLinesGridContainer.classList.add('hidden'); // Hide grid on error
+        quoteLinesGrid.updateConfig({ data: [] }).forceRender(); // Clear grid on error
     }
 }
 
@@ -5389,6 +5402,10 @@ async function initializePage() {
     //}
     // *** END CRITICAL DEBUGGING LINE ***
 
+    // Quote Lines Grid Container
+    quoteLinesGridContainer = document.getElementById('quote-lines-grid-container');
+
+
 
     quoteLineFormMessage = document.getElementById('quote-line-form-message');
     quoteLineServicesInput = document.getElementById('quote-line-services');
@@ -5403,11 +5420,6 @@ async function initializePage() {
     cancelQuoteLineBtn = document.getElementById('cancel-quote-line-btn');
     quoteLinesList = document.getElementById('quote-lines-list');
     noQuoteLinesMessage = document.getElementById('no-quote-lines-message');
-
-
-
-
-
 
     // Admin elements
     adminMenuItem = document.getElementById('admin-menu-item');
@@ -5931,6 +5943,70 @@ async function initializePage() {
     } else {
         console.error("initializePage: quotesGridContainer not found, cannot initialize quotesGrid.");
     }
+
+
+    // QUOTE LINES GRID INITIALIZATION
+    if (quoteLinesGridContainer) {
+        quoteLinesGrid = new gridjs.Grid({
+            columns: [
+                { id: 'id', name: 'ID', hidden: true }, // Hidden ID for actions
+                { id: 'services', name: 'Service' },
+                { id: 'serviceDescription', name: 'Description', width: 'auto' },
+                { id: 'unitPrice', name: 'Unit Price', formatter: (cell) => `$${cell.toFixed(2)}` },
+                { id: 'quantity', name: 'Qty' },
+                { id: 'discount', name: 'Disc (%)', formatter: (cell) => `${cell}%` },
+                { id: 'adjustmentAmount', name: 'Adj Amt', formatter: (cell) => `$${cell.toFixed(2)}` },
+                { id: 'finalNet', name: 'Net', formatter: (cell) => `$${cell.toFixed(2)}` },
+                { 
+                    id: 'serviceStartDate', 
+                    name: 'Start Date', 
+                    formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : 'N/A' 
+                },
+                { 
+                    id: 'serviceEndDate', 
+                    name: 'End Date', 
+                    formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : 'N/A' 
+                },
+                {
+                    name: 'Actions',
+                    formatter: (cell, row) => {
+                        const quoteLineId = row.cells[0].data; // ID is in the first (hidden) column
+                        return gridjs.h('div', {
+                            className: 'flex space-x-2'
+                        },
+                            gridjs.h('button', {
+                                className: 'px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-300 text-sm',
+                                onClick: () => handleEditQuoteLine(quoteLineId)
+                            }, 'Edit'),
+                            gridjs.h('button', {
+                                className: 'px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 text-sm',
+                                onClick: () => handleDeleteQuoteLine(quoteLineId)
+                            }, 'Delete')
+                        );
+                    }
+                }
+            ],
+            data: [], // Initialize with empty data
+            search: false, // Usually no search for sub-grids
+            pagination: {
+                enabled: true,
+                limit: 5 // Or adjust as needed
+            },
+            sort: true,
+            className: {
+                table: 'min-w-full divide-y divide-gray-200',
+                thead: 'bg-gray-50',
+                th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+                tbody: 'bg-white divide-y divide-gray-200',
+                td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                footer: 'py-3 px-6',
+            }
+        }).render(quoteLinesGridContainer);
+        console.log("initializePage: quoteLinesGrid initialized.");
+    } else {
+        console.error("initializePage: quoteLinesGridContainer not found, cannot initialize quoteLinesGrid.");
+    }
+
 
 
 
