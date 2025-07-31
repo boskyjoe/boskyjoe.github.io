@@ -5936,11 +5936,11 @@ async function initializePage() {
                 { id: 'id', name: 'ID', hidden: true }, // Hidden ID for actions
                 { id: 'services', name: 'Service', width: 'auto' }, // Changed to auto
                 { id: 'serviceDescription', name: 'Description', width: 'auto' }, // Changed to auto
-                { id: 'unitPrice', name: 'Unit Price', formatter: (cell) => `$${cell.toFixed(2)}`, width: '120px' }, // Adjusted width
-                { id: 'quantity', name: 'Qty', width: '80px' }, // Adjusted width
+                { id: 'unitPrice', name: 'Unit Price', formatter: (cell) => `$${cell.toFixed(2)}`, width: '200px' }, // Adjusted width
+                { id: 'quantity', name: 'Qty', width: '100px' }, // Adjusted width
                 { id: 'discount', name: 'Disc (%)', formatter: (cell) => `${cell}%`, width: '100px' }, // Adjusted width
-                { id: 'adjustmentAmount', name: 'Adj Amt', formatter: (cell) => `$${cell.toFixed(2)}`, width: '120px' }, // Adjusted width
-                { id: 'finalNet', name: 'Net', formatter: (cell) => `$${cell.toFixed(2)}`, width: '100px' }, // Adjusted width
+                { id: 'adjustmentAmount', name: 'Adj Amt', formatter: (cell) => `$${cell.toFixed(2)}`, width: '200px' }, // Adjusted width
+                { id: 'finalNet', name: 'Net', formatter: (cell) => `$${cell.toFixed(2)}`, width: '200px' }, // Adjusted width
                 {
                     id: 'serviceStartDate',
                     name: 'Start Date', width: '120px', // Apply width directly
