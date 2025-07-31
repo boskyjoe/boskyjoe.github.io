@@ -5950,13 +5950,13 @@ async function initializePage() {
         quoteLinesGrid = new gridjs.Grid({
             columns: [
                 { id: 'id', name: 'ID', hidden: true }, // Hidden ID for actions
-                { id: 'services', name: 'Service' },
-                { id: 'serviceDescription', name: 'Description', width: 'auto' },
-                { id: 'unitPrice', name: 'Unit Price', formatter: (cell) => `$${cell.toFixed(2)}` },
+                { id: 'services', name: 'Service' , width: '50px'},
+                { id: 'serviceDescription', name: 'Description',width: '180px'},
+                { id: 'unitPrice', name: 'Unit Price', formatter: (cell) => `$${cell.toFixed(2)}` , width: '180px'},
                 { id: 'quantity', name: 'Qty' },
-                { id: 'discount', name: 'Disc (%)', formatter: (cell) => `${cell}%` },
-                { id: 'adjustmentAmount', name: 'Adj Amt', formatter: (cell) => `$${cell.toFixed(2)}` },
-                { id: 'finalNet', name: 'Net', formatter: (cell) => `$${cell.toFixed(2)}` },
+                { id: 'discount', name: 'Disc (%)', formatter: (cell) => `${cell}%` , width: '180px'},
+                { id: 'adjustmentAmount', name: 'Adj Amt', formatter: (cell) => `$${cell.toFixed(2)}` , width: '180px'},
+                { id: 'finalNet', name: 'Net', formatter: (cell) => `$${cell.toFixed(2)}` , width: '180px'},
                 { 
                     id: 'serviceStartDate', 
                     name: 'Start Date', 
