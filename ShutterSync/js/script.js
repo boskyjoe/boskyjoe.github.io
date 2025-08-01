@@ -669,6 +669,31 @@ function calculateQuoteNetAmount() {
     }
 }
 
+
+/**
+ * Enables or disables the discount and adjustment fields based on the quote amount.
+ */
+function toggleDiscountAdjustmentFields() {
+    if (!quoteAmountInput || !quoteDiscountInput || !quoteAdjustmentInput) {
+        console.error("toggleDiscountAdjustmentFields: Required input elements are not defined.");
+        return;
+    }
+
+    const amount = parseFloat(quoteAmountInput.value) || 0;
+
+    if (amount > 0) {
+        // If amount is greater than 0, enable the fields
+        quoteDiscountInput.removeAttribute('disabled');
+        quoteAdjustmentInput.removeAttribute('disabled');
+    } else {
+        // If amount is 0 or less, disable the fields and reset their values
+        quoteDiscountInput.setAttribute('disabled', 'true');
+        quoteAdjustmentInput.setAttribute('disabled', 'true');
+        quoteDiscountInput.value = 0;
+        quoteAdjustmentInput.value = 0;
+    }
+}
+
 /**
  * Updates dashboard statistics.
  */
@@ -5601,9 +5626,14 @@ async function initializePage() {
 
     if (clearQuotesFilterBtn) clearQuotesFilterBtn.addEventListener('click', clearQuotesFilter);
 
+    // Update the event listeners for the new quote fields
+    if (quoteAmountInput) quoteAmountInput.addEventListener('input', () => {
+        toggleDiscountAdjustmentFields();
+        calculateQuoteNetAmount();
+    });
     if (quoteDiscountInput) quoteDiscountInput.addEventListener('input', calculateQuoteNetAmount);
     if (quoteAdjustmentInput) quoteAdjustmentInput.addEventListener('input', calculateQuoteNetAmount);
-    if (quoteAmountInput) quoteAmountInput.addEventListener('change', calculateQuoteNetAmount); // Use change for this one
+    
 
     // Quote Line Listeners (ALL NEW)
     if (addQuoteLineEntryBtn) {
