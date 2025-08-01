@@ -181,6 +181,7 @@ let quotesGridContainer;
 let quotesFilterDisplay;
 let quotesFilterOpportunityName;
 let clearQuotesFilterBtn;
+let quoteAmountInput ;
 
 // ADD THESE NEW VARIABLES:
 let quoteDiscountInput;
