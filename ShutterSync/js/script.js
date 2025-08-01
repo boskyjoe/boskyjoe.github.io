@@ -4476,6 +4476,42 @@ function showQuoteLineForm(quoteLineId = null, quoteLineData = null) {
     console.groupEnd();
 }
 
+
+/**
+ * Hides the quote line entry form and applies novalidate to prevent browser validation.
+ */
+function hideQuoteLineForm() {
+    console.group("hideQuoteLineForm");
+    console.log("Called.");
+
+    if (quoteLineFormContainer) {
+        quoteLineFormContainer.classList.add('hidden');
+    } else {
+        console.error("hideQuoteLineForm: quoteLineFormContainer is null. Cannot hide form.");
+        console.groupEnd();
+        return;
+    }
+
+    if (quoteLineForm) {
+        quoteLineForm.reset(); // Reset form fields when hiding
+        quoteLineForm.setAttribute('novalidate', 'novalidate'); // CRITICAL: Add novalidate when hiding
+        console.log("hideQuoteLineForm: novalidate applied to quoteLineForm. Current state:", quoteLineForm.hasAttribute('novalidate'));
+    } else {
+        console.error("hideQuoteLineForm: quoteLineForm is null. Cannot apply novalidate.");
+        console.groupEnd();
+        return;
+    }
+    if (quoteLineFormMessage) {
+        quoteLineFormMessage.classList.add('hidden'); // Hide any messages
+    }
+    console.log("hideQuoteLineForm: Quote line form hidden.");
+    console.groupEnd();
+}
+
+
+
+
+
 /**
  * Handles saving a new quote or updating an existing one.
  * @param {Event} event The form submission event.
