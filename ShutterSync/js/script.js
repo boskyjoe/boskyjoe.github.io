@@ -4101,7 +4101,7 @@ async function setupQuoteForm(quoteData = null) {
             }
         }
 
-        if (quoteAmountInput) quoteAmountInput.value = quoteData.quoteAmount !== undefined ? quoteData.quoteAmount.toFixed(2) : '0.00';
+        //if (quoteAmountInput) quoteAmountInput.value = quoteData.quoteAmount !== undefined ? quoteData.quoteAmount.toFixed(2) : '0.00';
 
         // --- NEW: Populate new fields for edit mode ---
         if (quoteDiscountInput) quoteDiscountInput.value = quoteData.quoteDiscount !== undefined ? quoteData.quoteDiscount.toFixed(2) : '0.00';
@@ -4133,6 +4133,8 @@ async function setupQuoteForm(quoteData = null) {
         }
 
         await renderQuoteLines(quoteData.id);
+        // --- NEW ADDITION: Call the new function to populate the quote amount from Firestore ---
+        await updateMainQuoteAmountFromFirestore(quoteData.id);
 
     } else { // For a new quote (ADD mode)
         console.log("setupQuoteForm: Entering ADD NEW mode.");
@@ -4221,6 +4223,40 @@ function updateMainQuoteAmount() {
     console.log(`updateMainQuoteAmount: Total quote amount updated to ${totalAmount.toFixed(2)}.`);
 }
 
+/**
+ * Asynchronously fetches all quote lines for a given quote ID from Firestore,
+ * calculates the total net amount, and updates the Quote Amount field
+ * on the quote edit form.
+ * @param {string} quoteId The ID of the parent quote.
+ */
+async function updateMainQuoteAmountFromFirestore(quoteId) {
+    if (!quoteId) {
+        console.error("updateMainQuoteAmountFromFirestore: No quoteId provided.");
+        return;
+    }
+
+    try {
+        const quoteLinesCollection = collection(db, 'quotes', quoteId, 'quoteLines');
+        const q = query(quoteLinesCollection);
+        const querySnapshot = await getDocs(q);
+
+        let totalAmount = 0;
+        querySnapshot.forEach(doc => {
+            const quoteLine = doc.data();
+            totalAmount += parseFloat(quoteLine.finalNet) || 0;
+        });
+
+        // Update the main quote amount input field
+        if (quoteAmountInput) {
+            quoteAmountInput.value = totalAmount.toFixed(2);
+        }
+
+        console.log(`updateMainQuoteAmountFromFirestore: Total quote amount updated to ${totalAmount.toFixed(2)}.`);
+
+    } catch (error) {
+        console.error("Error updating main quote amount from Firestore:", error);
+    }
+}
 
 
 
