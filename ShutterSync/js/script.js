@@ -1498,92 +1498,6 @@ async function setupLeadForm(lead = null) {
     showLeadForm();
 }
 
-/**
-async function handleSaveLead(event) {
-    event.preventDefault(); // Prevent default form submission
-    if (!db || !userId) {
-        showMessageBox("Authentication required to save lead.", false);
-        return;
-    }
-
-    const leadId = document.getElementById('lead-id').value;
-    const messageElement = document.getElementById('lead-form-message');
-    if (messageElement) messageElement.classList.add('hidden');
-
-    // --- Start Client-Side Validation ---
-    const requiredFields = leadForm.querySelectorAll('[required]');
-    let firstInvalidField = null;
-
-    for (const field of requiredFields) {
-        // Special handling for multi-select: check if at least one option is selected
-        if (field.tagName === 'SELECT' && field.multiple) {
-            const selectedOptions = Array.from(field.options).filter(option => option.selected);
-            if (selectedOptions.length === 0) {
-                firstInvalidField = field;
-                break;
-            }
-        } else if (!field.value) {
-            firstInvalidField = field;
-            break;
-        }
-    }
-
-    if (firstInvalidField) {
-        console.warn('Validation failed: Required field is empty.', firstInvalidField);
-        firstInvalidField.focus(); // Focus on the invalid field
-        messageElement.textContent = `Please fill in the required field: ${firstInvalidField.labels ? firstInvalidField.labels[0].textContent : firstInvalidField.id.replace(/-/g, ' ')}.`;
-        messageElement.classList.remove('hidden');
-        return; // Stop form submission
-    }
-    // --- End Client-Side Validation ---
-
-    const eventDateValue = document.getElementById('lead-event-date').value;
-    const eventDateTimestamp = eventDateValue ? new Date(eventDateValue) : null;
-
-    // NEW: Capture selected services from multi-select as an array
-    const selectedServices = Array.from(leadServicesInterestedSelect.options)
-        .filter(option => option.selected)
-        .map(option => option.value);
-
-    const leadData = {
-        contactName: document.getElementById('lead-contact-name').value,
-        phone: document.getElementById('lead-phone').value,
-        email: document.getElementById('lead-email').value,
-        servicesInterested: selectedServices, // NEW: Save as array
-        eventDate: eventDateTimestamp, // Save as Date object (Firestore converts to Timestamp)
-        source: document.getElementById('lead-source').value,
-        additionalDetails: document.getElementById('lead-additional-details').value,
-        creatorId: userId, // Added creatorId as per rules
-        updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp()
-    };
-
-    // --- START DEBUG LOGGING ---
-    console.log("Attempting to save lead with data:", JSON.stringify(leadData, null, 2));
-    // --- END DEBUG LOGGING ---
-
-    try {
-        const collectionRef = collection(db, 'leads'); // Top-level collection
-        if (leadId) {
-            // For update, only update updatedAt, not createdAt
-            delete leadData.createdAt; // Ensure createdAt is not sent on update
-            await updateDoc(doc(collectionRef, leadId), leadData);
-            showMessageBox("Lead updated successfully!", false);
-        } else {
-            await addDoc(collectionRef, leadData);
-            showMessageBox("Lead added successfully!", false);
-        }
-        hideLeadForm();
-        await loadLeads(); // Reload grid
-    } catch (error) {
-        console.error("Error saving lead:", error);
-        if (messageElement) {
-            messageElement.textContent = `Error saving lead: ${error.message}`;
-            messageElement.classList.remove('hidden');
-        }
-    }
-}*/
-
 async function handleSaveLead(event) {
     event.preventDefault();
     const leadId = document.getElementById('lead-id').value;
@@ -4277,7 +4191,6 @@ function calculateQuoteLineNet() {
     // CRITICAL: Call this to update the main quote's total amount
     updateMainQuoteAmount();
 }
-
 /**
  * Updates the total Quote Amount in the main Quote form
  * by summing the Final Net of all currently displayed quote line items.
@@ -4293,14 +4206,18 @@ function updateMainQuoteAmount() {
             // Find the span that displays the final net for each line
             const finalNetSpan = li.querySelector('.quote-line-final-net-display');
             if (finalNetSpan) {
-                totalAmount += parseFloat(finalNetSpan.textContent) || 0;
+                // Use a more robust way to parse the number, removing the '$' if present
+                const finalNetText = finalNetSpan.textContent.replace('$', '');
+                totalAmount += parseFloat(finalNetText) || 0;
             }
         });
     }
-    // Update the main quote amount input field
-    if (document.getElementById('quote-amount')) {
-        document.getElementById('quote-amount').value = totalAmount.toFixed(2);
+
+    // Update the main quote amount input field if it exists
+    if (quoteAmountInput) {
+        quoteAmountInput.value = totalAmount.toFixed(2);
     }
+
     console.log(`updateMainQuoteAmount: Total quote amount updated to ${totalAmount.toFixed(2)}.`);
 }
 
