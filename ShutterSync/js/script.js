@@ -181,7 +181,7 @@ let quotesGridContainer;
 let quotesFilterDisplay;
 let quotesFilterOpportunityName;
 let clearQuotesFilterBtn;
-let quoteAmountInput ;
+let quoteAmountInput;
 
 // ADD THESE NEW VARIABLES:
 let quoteDiscountInput;
@@ -4133,7 +4133,7 @@ async function setupQuoteForm(quoteData = null) {
     document.getElementById('quote-email').value = '';
     document.getElementById('quote-customer-address').value = '';
     if (quoteAmountInput) quoteAmountInput.value = '0.00';
-    
+
     // --- NEW: Reset new fields for new quotes ---
     if (quoteDiscountInput) quoteDiscountInput.value = '0.00';
     if (quoteAdjustmentInput) quoteAdjustmentInput.value = '0.00';
@@ -4154,16 +4154,16 @@ async function setupQuoteForm(quoteData = null) {
         if (document.getElementById('quote-id')) document.getElementById('quote-id').value = quoteData.id;
         if (document.getElementById('quote-name')) document.getElementById('quote-name').value = quoteData.quoteName || '';
         if (document.getElementById('quote-event-name')) document.getElementById('quote-event-name').value = quoteData.eventName || '';
-        
+
         if (quoteOpportunitySelect) {
             quoteOpportunitySelect.value = quoteData.opportunityId || '';
             if (quoteData.opportunityId) {
                 await populateCustomerDetailsForQuote();
             }
         }
-        
+
         if (quoteAmountInput) quoteAmountInput.value = quoteData.quoteAmount !== undefined ? quoteData.quoteAmount.toFixed(2) : '0.00';
-        
+
         // --- NEW: Populate new fields for edit mode ---
         if (quoteDiscountInput) quoteDiscountInput.value = quoteData.quoteDiscount !== undefined ? quoteData.quoteDiscount.toFixed(2) : '0.00';
         if (quoteAdjustmentInput) quoteAdjustmentInput.value = quoteData.quoteAdjustment !== undefined ? quoteData.quoteAdjustment.toFixed(2) : '0.00';
@@ -4183,7 +4183,7 @@ async function setupQuoteForm(quoteData = null) {
         }
 
         if (quoteLinesSectionContainer) {
-            quoteLinesSectionContainer.classList.remove('hidden'); 
+            quoteLinesSectionContainer.classList.remove('hidden');
             const quoteLinesAccordionHeader = quoteLinesSectionContainer.querySelector('.accordion-header');
             if (quoteLinesAccordionHeader) {
                 setAccordionVisualState(quoteLinesAccordionHeader, true);
@@ -4192,13 +4192,13 @@ async function setupQuoteForm(quoteData = null) {
                 quoteLineForm.removeAttribute('novalidate');
             }
         }
-        
-        await renderQuoteLines(quoteData.id); 
+
+        await renderQuoteLines(quoteData.id);
 
     } else { // For a new quote (ADD mode)
         console.log("setupQuoteForm: Entering ADD NEW mode.");
         currentQuoteId = null;
-        
+
         if (quoteOpportunitySelect) quoteOpportunitySelect.value = '';
         await populateCustomerDetailsForQuote();
 
@@ -4215,7 +4215,7 @@ async function setupQuoteForm(quoteData = null) {
             }
         }
         if (quoteLinesSectionContainer) {
-            quoteLinesSectionContainer.classList.add('hidden'); 
+            quoteLinesSectionContainer.classList.add('hidden');
         }
     }
     showForm(quoteFormContainer);
@@ -4505,12 +4505,12 @@ async function handleSaveQuote(event) {
         eventDate: document.getElementById('quote-event-date').value ? new Date(document.getElementById('quote-event-date').value) : null,
         additionalDetails: document.getElementById('quote-additional-details').value || '',
         quoteAmount: parseFloat(document.getElementById('quote-amount').value) || 0,
-        
+
         // --- NEW: Add the new fields to the data object ---
         quoteDiscount: parseFloat(document.getElementById('quote-discount').value) || 0,
         quoteAdjustment: parseFloat(document.getElementById('quote-adjustment').value) || 0,
         quoteNetAmount: parseFloat(document.getElementById('quote-net-amount').value) || 0,
-        
+
         status: quoteStatusSelect ? quoteStatusSelect.value : '',
         updatedAt: serverTimestamp(),
         creatorId: creatorId,
@@ -4930,12 +4930,12 @@ async function loadQuotes(opportunityId = null) {
                     eventName: data.eventName || 'N/A',
                     eventDate: data.eventDate ? new Date(data.eventDate.seconds * 1000).toLocaleDateString() : 'N/A',
                     quoteAmount: data.quoteAmount !== undefined ? data.quoteAmount : 0,
-                    
+
                     // --- NEW: Add the new fields here ---
                     quoteDiscount: data.quoteDiscount !== undefined ? data.quoteDiscount : 0,
                     quoteAdjustment: data.quoteAdjustment !== undefined ? data.quoteAdjustment : 0,
                     quoteNetAmount: data.quoteNetAmount !== undefined ? data.quoteNetAmount : 0,
-                    
+
                     status: data.status,
                     updatedAt: data.updatedAt,
                 });
@@ -5371,11 +5371,11 @@ async function initializePage() {
     quoteCustomerEmailInput = document.getElementById('quote-customer-email');
     quoteCustomerAddressInput = document.getElementById('quote-customer-address');
 
-     // --- ADD THESE NEW ELEMENT ASSIGNMENTS ---
+    // --- ADD THESE NEW ELEMENT ASSIGNMENTS ---
     quoteDiscountInput = document.getElementById('quote-discount');
     quoteAdjustmentInput = document.getElementById('quote-adjustment');
     quoteNetAmountInput = document.getElementById('quote-net-amount');
-        
+
 
     // Quote Line Elements (CRITICAL: Assign these new HTML IDs here)
     quoteLinesSectionContainer = document.getElementById('quote-lines-section-container');
@@ -5565,6 +5565,10 @@ async function initializePage() {
 
     if (clearQuotesFilterBtn) clearQuotesFilterBtn.addEventListener('click', clearQuotesFilter);
 
+    if (quoteDiscountInput) quoteDiscountInput.addEventListener('input', calculateQuoteNetAmount);
+    if (quoteAdjustmentInput) quoteAdjustmentInput.addEventListener('input', calculateQuoteNetAmount);
+    if (quoteAmountInput) quoteAmountInput.addEventListener('change', calculateQuoteNetAmount); // Use change for this one
+
     // Quote Line Listeners (ALL NEW)
     if (addQuoteLineEntryBtn) {
         addQuoteLineEntryBtn.addEventListener('click', () => {
@@ -5583,10 +5587,6 @@ async function initializePage() {
     if (quoteLineQuantityInput) quoteLineQuantityInput.addEventListener('input', calculateQuoteLineFinalNet); // CRITICAL: Use calculateQuoteLineFinalNet
     if (quoteLineDiscountInput) quoteLineDiscountInput.addEventListener('input', calculateQuoteLineFinalNet); // CRITICAL: Use calculateQuoteLineFinalNet
     if (quoteLineAdjustmentAmountInput) quoteLineAdjustmentAmountInput.addEventListener('input', calculateQuoteLineFinalNet); // CRITICAL: Use calculateQuoteLineFinalNet
-
-    if (quoteDiscountInput) quoteDiscountInput.addEventListener('input', calculateQuoteNetAmount);
-    if (quoteAdjustmentInput) quoteAdjustmentInput.addEventListener('input', calculateQuoteNetAmount);
-    if (quoteAmountInput) quoteAmountInput.addEventListener('change', calculateQuoteNetAmount); // Use change for this one
 
 
     // Accordion event listeners for Quotes
@@ -5904,20 +5904,19 @@ async function initializePage() {
                 },
                 { id: 'quoteAmount', name: 'Amount', formatter: (cell) => `$${cell ? cell.toFixed(2) : '0.00'}` },
                 { id: 'quoteDiscount', name: 'Discount (%)', formatter: (cell) => `${cell}%`, width: '100px' },
-                { id: 'quoteAdjustment', name: 'Adjustment', formatter: (cell) => `$${cell.toFixed(2)}`, width: '120px' },
-                { id: 'quoteNetAmount', name: 'Net Amount', formatter: (cell) => `$${cell.toFixed(2)}`, width: '120px' },
+                {
+                    id: 'quoteAdjustment',
+                    name: 'Adjustment',
+                    formatter: (cell) => `$${parseFloat(cell || 0).toFixed(2)}`,
+                    width: '120px'
+                },
+                {
+                    id: 'quoteNetAmount',
+                    name: 'Net Amount',
+                    formatter: (cell) => `$${parseFloat(cell || 0).toFixed(2)}`,
+                    width: '120px'
+                },
                 { id: 'status', name: 'Status' },
-                // REMOVED: 'Last Updated' column
-                // { 
-                //     id: 'updatedAt', 
-                //     name: 'Last Updated', 
-                //     formatter: (cell) => {
-                //         if (cell && typeof cell.seconds === 'number' && typeof cell.nanoseconds === 'number') {
-                //             return new Date(cell.seconds * 1000).toLocaleString();
-                //         }
-                //         return 'N/A'; 
-                //     } 
-                // },
                 {
                     name: 'Actions',
                     formatter: (cell, row) => {
