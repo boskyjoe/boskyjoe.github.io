@@ -4246,9 +4246,14 @@ async function updateMainQuoteAmountFromFirestore(quoteId) {
             totalAmount += parseFloat(quoteLine.finalNet) || 0;
         });
 
-        // Update the main quote amount input field
+        // --- FIX: Get the DOM element directly inside the function for robustness ---
+        const quoteAmountInput = document.getElementById('quote-amount');
         if (quoteAmountInput) {
             quoteAmountInput.value = totalAmount.toFixed(2);
+            // After setting the value, re-run the calculation and toggle function
+            // to ensure other fields are updated.
+            calculateQuoteNetAmount();
+            toggleDiscountAdjustmentFields();
         }
 
         console.log(`updateMainQuoteAmountFromFirestore: Total quote amount updated to ${totalAmount.toFixed(2)}.`);
