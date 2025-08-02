@@ -677,9 +677,8 @@ function calculateQuoteNetAmount() {
 
 /**
  * Asynchronously fetches all quote lines for a given quote ID from Firestore,
- * calculates the total quote amount, and then updates the Quote Amount,
- * Net Amount, and the enabled state of the discount/adjustment fields on the form.
- * Most importantly, this function saves the new totals back to the parent quote document.
+ * calculates the total quote amount, and then performs a full update on the
+ * parent quote document to satisfy strict security rules.
  * @param {string} quoteId The ID of the parent quote.
  */
 async function updateAllQuoteTotalsAndUI(quoteId) {
@@ -689,6 +688,17 @@ async function updateAllQuoteTotalsAndUI(quoteId) {
     }
 
     try {
+        // Step 1: Fetch the existing quote document to get all its data
+        const quoteRef = doc(db, 'quotes', quoteId);
+        const quoteDoc = await getDoc(quoteRef);
+        if (!quoteDoc.exists()) {
+            console.error("updateAllQuoteTotalsAndUI: Parent quote document does not exist.");
+            return;
+        }
+
+        let existingQuoteData = quoteDoc.data();
+
+        // Step 2: Fetch all quote lines to calculate the new total amount
         const quoteLinesCollection = collection(db, 'quotes', quoteId, 'quoteLines');
         const q = query(quoteLinesCollection);
         const querySnapshot = await getDocs(q);
@@ -699,18 +709,18 @@ async function updateAllQuoteTotalsAndUI(quoteId) {
             totalQuoteAmount += parseFloat(quoteLine.finalNet) || 0;
         });
 
-        // Get all relevant DOM elements directly for robustness
+        // Step 3: Get all relevant DOM elements to perform the UI update
         const quoteAmountInput = document.getElementById('quote-amount');
         const quoteDiscountInput = document.getElementById('quote-discount');
         const quoteAdjustmentInput = document.getElementById('quote-adjustment');
         const quoteNetAmountInput = document.getElementById('quote-net-amount');
 
-        // Step 1: Update the Quote Amount field in the UI
+        // Step 4: Update the Quote Amount field in the UI
         if (quoteAmountInput) {
             quoteAmountInput.value = totalQuoteAmount.toFixed(2);
         }
 
-        // Step 2: Enable/Disable discount and adjustment fields based on the new amount
+        // Step 5: Enable/Disable discount and adjustment fields based on the new amount
         const amountIsPositive = totalQuoteAmount > 0;
         if (quoteDiscountInput) {
             if (amountIsPositive) quoteDiscountInput.removeAttribute('disabled');
@@ -727,7 +737,7 @@ async function updateAllQuoteTotalsAndUI(quoteId) {
             }
         }
         
-        // Step 3: Calculate the Quote Net Amount
+        // Step 6: Calculate the Quote Net Amount
         const quoteDiscount = parseFloat(quoteDiscountInput.value) || 0;
         const quoteAdjustment = parseFloat(quoteAdjustmentInput.value) || 0;
         const discountAmount = (quoteDiscount / 100) * totalQuoteAmount;
@@ -737,13 +747,18 @@ async function updateAllQuoteTotalsAndUI(quoteId) {
             quoteNetAmountInput.value = netAmount.toFixed(2);
         }
 
-        // Step 4: Update the parent quote document in Firestore
-        const quoteRef = doc(db, 'quotes', quoteId);
-        await updateDoc(quoteRef, {
+        // Step 7: Prepare the full data object for the Firestore update
+        const updatedData = {
+            ...existingQuoteData, // Preserve all existing fields
             quoteAmount: totalQuoteAmount,
+            quoteDiscount: quoteDiscount,
+            quoteAdjustment: quoteAdjustment,
             quoteNetAmount: netAmount,
-            updatedAt: new Date()
-        });
+            updatedAt: new Date() // Use client-side timestamp as per your rule
+        };
+        
+        // Step 8: Perform the full update with the merged data
+        await updateDoc(quoteRef, updatedData);
 
         console.log(`updateAllQuoteTotalsAndUI: All totals updated in UI and Firestore.`);
 
@@ -751,6 +766,7 @@ async function updateAllQuoteTotalsAndUI(quoteId) {
         console.error("Error updating all quote totals and UI:", error);
     }
 }
+
 
 
 
