@@ -651,12 +651,17 @@ async function loadDashboardData() {
 }
 
 
-// --- Create this new function for the calculation ---
 /**
  * Calculates and updates the Quote Net Amount based on Quote Amount, Discount, and Adjustment.
+ * This function only updates the UI and does not write to the database.
  */
 function calculateQuoteNetAmount() {
     console.log("calculateQuoteNetAmount triggered.");
+    const quoteAmountInput = document.getElementById('quote-amount');
+    const quoteDiscountInput = document.getElementById('quote-discount');
+    const quoteAdjustmentInput = document.getElementById('quote-adjustment');
+    const quoteNetAmountInput = document.getElementById('quote-net-amount');
+    
     const quoteAmount = parseFloat(quoteAmountInput.value) || 0;
     const quoteDiscount = parseFloat(quoteDiscountInput.value) || 0;
     const quoteAdjustment = parseFloat(quoteAdjustmentInput.value) || 0;
@@ -668,6 +673,85 @@ function calculateQuoteNetAmount() {
         quoteNetAmountInput.value = netAmount.toFixed(2);
     }
 }
+
+
+/**
+ * Asynchronously fetches all quote lines for a given quote ID from Firestore,
+ * calculates the total quote amount, and then updates the Quote Amount,
+ * Net Amount, and the enabled state of the discount/adjustment fields on the form.
+ * Most importantly, this function saves the new totals back to the parent quote document.
+ * @param {string} quoteId The ID of the parent quote.
+ */
+async function updateAllQuoteTotalsAndUI(quoteId) {
+    if (!quoteId) {
+        console.error("updateAllQuoteTotalsAndUI: No quoteId provided.");
+        return;
+    }
+
+    try {
+        const quoteLinesCollection = collection(db, 'quotes', quoteId, 'quoteLines');
+        const q = query(quoteLinesCollection);
+        const querySnapshot = await getDocs(q);
+
+        let totalQuoteAmount = 0;
+        querySnapshot.forEach(doc => {
+            const quoteLine = doc.data();
+            totalQuoteAmount += parseFloat(quoteLine.finalNet) || 0;
+        });
+
+        // Get all relevant DOM elements directly for robustness
+        const quoteAmountInput = document.getElementById('quote-amount');
+        const quoteDiscountInput = document.getElementById('quote-discount');
+        const quoteAdjustmentInput = document.getElementById('quote-adjustment');
+        const quoteNetAmountInput = document.getElementById('quote-net-amount');
+
+        // Step 1: Update the Quote Amount field in the UI
+        if (quoteAmountInput) {
+            quoteAmountInput.value = totalQuoteAmount.toFixed(2);
+        }
+
+        // Step 2: Enable/Disable discount and adjustment fields based on the new amount
+        const amountIsPositive = totalQuoteAmount > 0;
+        if (quoteDiscountInput) {
+            if (amountIsPositive) quoteDiscountInput.removeAttribute('disabled');
+            else {
+                quoteDiscountInput.setAttribute('disabled', 'true');
+                quoteDiscountInput.value = '0';
+            }
+        }
+        if (quoteAdjustmentInput) {
+            if (amountIsPositive) quoteAdjustmentInput.removeAttribute('disabled');
+            else {
+                quoteAdjustmentInput.setAttribute('disabled', 'true');
+                quoteAdjustmentInput.value = '0';
+            }
+        }
+        
+        // Step 3: Calculate the Quote Net Amount
+        const quoteDiscount = parseFloat(quoteDiscountInput.value) || 0;
+        const quoteAdjustment = parseFloat(quoteAdjustmentInput.value) || 0;
+        const discountAmount = (quoteDiscount / 100) * totalQuoteAmount;
+        const netAmount = totalQuoteAmount - discountAmount - quoteAdjustment;
+
+        if (quoteNetAmountInput) {
+            quoteNetAmountInput.value = netAmount.toFixed(2);
+        }
+
+        // Step 4: Update the parent quote document in Firestore
+        const quoteRef = doc(db, 'quotes', quoteId);
+        await updateDoc(quoteRef, {
+            quoteAmount: totalQuoteAmount,
+            quoteNetAmount: netAmount,
+            updatedAt: new Date()
+        });
+
+        console.log(`updateAllQuoteTotalsAndUI: All totals updated in UI and Firestore.`);
+
+    } catch (error) {
+        console.error("Error updating all quote totals and UI:", error);
+    }
+}
+
 
 
 /**
@@ -4051,11 +4135,10 @@ function clearQuotesFilter() {
     loadQuotes(); // This will now load all quotes
 }
 
-
 /**
- * Sets up the Quote form for adding a new quote or editing an existing one.
- * @param {object | null} quoteData Optional: The quote data to pre-populate the form.
- */
+* Sets up the Quote form for adding a new quote or editing an existing one.
+* @param {object | null} quoteData Optional: The quote data to pre-populate the form.
+*/
 async function setupQuoteForm(quoteData = null) {
     console.group("setupQuoteForm");
     console.log('setupQuoteForm called with quoteData:', quoteData);
@@ -4071,11 +4154,17 @@ async function setupQuoteForm(quoteData = null) {
     document.getElementById('quote-phone').value = '';
     document.getElementById('quote-email').value = '';
     document.getElementById('quote-customer-address').value = '';
-    if (quoteAmountInput) quoteAmountInput.value = '0.00';
 
-    // --- NEW: Reset new fields for new quotes ---
-    if (quoteDiscountInput) quoteDiscountInput.value = '0.00';
-    if (quoteAdjustmentInput) quoteAdjustmentInput.value = '0.00';
+    // --- NEW: Reset fields for a new quote ---
+    if (quoteAmountInput) quoteAmountInput.value = '0.00';
+    if (quoteDiscountInput) {
+        quoteDiscountInput.value = '0.00';
+        quoteDiscountInput.setAttribute('disabled', 'true');
+    }
+    if (quoteAdjustmentInput) {
+        quoteAdjustmentInput.value = '0.00';
+        quoteAdjustmentInput.setAttribute('disabled', 'true');
+    }
     if (quoteNetAmountInput) quoteNetAmountInput.value = '0.00';
 
     if (quoteFormMessage) quoteFormMessage.classList.add('hidden');
@@ -4100,13 +4189,12 @@ async function setupQuoteForm(quoteData = null) {
                 await populateCustomerDetailsForQuote();
             }
         }
-
-        //if (quoteAmountInput) quoteAmountInput.value = quoteData.quoteAmount !== undefined ? quoteData.quoteAmount.toFixed(2) : '0.00';
-
-        // --- NEW: Populate new fields for edit mode ---
+        
+        // --- NEW: Populate discount and adjustment fields from Firestore
         if (quoteDiscountInput) quoteDiscountInput.value = quoteData.quoteDiscount !== undefined ? quoteData.quoteDiscount.toFixed(2) : '0.00';
         if (quoteAdjustmentInput) quoteAdjustmentInput.value = quoteData.quoteAdjustment !== undefined ? quoteData.quoteAdjustment.toFixed(2) : '0.00';
-        if (quoteNetAmountInput) quoteNetAmountInput.value = quoteData.quoteNetAmount !== undefined ? quoteData.quoteNetAmount.toFixed(2) : '0.00';
+        // Note: We don't populate quoteAmount or quoteNetAmount directly here.
+        // The updateAllQuoteTotalsAndUI function will handle that.
 
         if (quoteStatusSelect) quoteStatusSelect.value = quoteData.status || 'Draft';
         if (document.getElementById('quote-additional-details')) document.getElementById('quote-additional-details').value = quoteData.additionalDetails || '';
@@ -4133,8 +4221,18 @@ async function setupQuoteForm(quoteData = null) {
         }
 
         await renderQuoteLines(quoteData.id);
-        // --- NEW ADDITION: Call the new function to populate the quote amount from Firestore ---
-        await updateMainQuoteAmountFromFirestore(quoteData.id);
+
+        // --- NEW ADDITION: Call the new, comprehensive function after rendering lines ---
+        // This will fetch the sum, update all totals, and save them back to Firestore.
+        await updateAllQuoteTotalsAndUI(quoteData.id);
+
+        // --- NEW ADDITION: Add event listeners for manual changes ---
+        if (quoteDiscountInput) {
+            quoteDiscountInput.addEventListener('input', calculateQuoteNetAmount);
+        }
+        if (quoteAdjustmentInput) {
+            quoteAdjustmentInput.addEventListener('input', calculateQuoteNetAmount);
+        }
 
     } else { // For a new quote (ADD mode)
         console.log("setupQuoteForm: Entering ADD NEW mode.");
@@ -4225,7 +4323,7 @@ function updateMainQuoteAmount() {
 
 /**
  * Asynchronously fetches all quote lines for a given quote ID from Firestore,
- * calculates the total net amount, and updates the Quote Amount field
+ * calculates the total net amount, and updates the Quote Amount, Discount, and Net Amount fields
  * on the quote edit form.
  * @param {string} quoteId The ID of the parent quote.
  */
@@ -4246,14 +4344,25 @@ async function updateMainQuoteAmountFromFirestore(quoteId) {
             totalAmount += parseFloat(quoteLine.finalNet) || 0;
         });
 
-        // --- FIX: Get the DOM element directly inside the function for robustness ---
+        // Get all relevant DOM elements directly for robustness
         const quoteAmountInput = document.getElementById('quote-amount');
+        const quoteDiscountInput = document.getElementById('quote-discount');
+        const quoteAdjustmentInput = document.getElementById('quote-adjustment');
+        const quoteNetAmountInput = document.getElementById('quote-net-amount');
+        
         if (quoteAmountInput) {
             quoteAmountInput.value = totalAmount.toFixed(2);
-            // After setting the value, re-run the calculation and toggle function
-            // to ensure other fields are updated.
-            calculateQuoteNetAmount();
-            toggleDiscountAdjustmentFields();
+        }
+
+        // Now, perform the net amount calculation based on the new total amount
+        const quoteDiscount = parseFloat(quoteDiscountInput.value) || 0;
+        const quoteAdjustment = parseFloat(quoteAdjustmentInput.value) || 0;
+
+        const discountAmount = (quoteDiscount / 100) * totalAmount;
+        const netAmount = totalAmount - discountAmount - quoteAdjustment;
+
+        if (quoteNetAmountInput) {
+            quoteNetAmountInput.value = netAmount.toFixed(2);
         }
 
         console.log(`updateMainQuoteAmountFromFirestore: Total quote amount updated to ${totalAmount.toFixed(2)}.`);
@@ -4262,7 +4371,6 @@ async function updateMainQuoteAmountFromFirestore(quoteId) {
         console.error("Error updating main quote amount from Firestore:", error);
     }
 }
-
 
 
 // --- Quote Lines Logic (Quotes Subcollection) ---
@@ -4618,10 +4726,12 @@ function calculateQuoteLineFinalNet() { // Renamed from calculateQuoteLineNet fo
 }
 
 
+
+
 /**
- * Handles saving a new quote line or updating an existing one to Firestore.
- * @param {Event} event The form submission event.
- */
+* Handles saving a new quote line or updating an existing one to Firestore.
+* @param {Event} event The form submission event.
+*/
 async function handleSaveQuoteLine(event) {
     event.preventDefault();
     console.log('handleSaveQuoteLine: Form submit event triggered.');
@@ -4649,7 +4759,11 @@ async function handleSaveQuoteLine(event) {
     const quantity = parseFloat(quoteLineQuantityInput.value) || 0;
     const discount = parseFloat(quoteLineDiscountInput.value) || 0;
     const adjustmentAmount = parseFloat(quoteLineAdjustmentAmountInput.value) || 0;
-    const finalNet = parseFloat(quoteLineFinalNetSpan.textContent) || 0; // Get the currently calculated net value
+    
+    // --- NEW: Calculate finalNet directly from input values ---
+    const netAmount = unitPrice * quantity;
+    const discountAmount = netAmount * (discount / 100);
+    const finalNet = netAmount - discountAmount - adjustmentAmount;
 
     // Client-side validation
     if (!services || unitPrice === 0 || quantity === 0) {
@@ -4666,7 +4780,7 @@ async function handleSaveQuoteLine(event) {
         quantity,
         discount,
         adjustmentAmount,
-        finalNet, // Save the calculated final net
+        finalNet, // Save the newly calculated final net
         creatorId: auth.currentUser.uid, // Associate with the current user
         updatedAt: serverTimestamp(), // Set last updated timestamp
     };
@@ -4694,7 +4808,12 @@ async function handleSaveQuoteLine(event) {
         }
 
         hideQuoteLineForm(); // Hide the form after successful save
-        await renderQuoteLines(currentQuoteId); // Re-render lines to update the list and main quote total
+        
+        // --- NEW: After saving the quote line, update the parent quote's totals in Firestore and the UI ---
+        await updateAllQuoteTotalsAndUI(currentQuoteId);
+        
+        // After all updates are complete, re-render the quote lines list.
+        await renderQuoteLines(currentQuoteId);
 
     } catch (error) {
         console.error("handleSaveQuoteLine: Error saving quote line:", error);
