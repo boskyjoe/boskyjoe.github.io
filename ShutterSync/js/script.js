@@ -5828,7 +5828,7 @@ async function initializePage() {
             { id: 'id', name: 'ID', hidden: true }, // Explicit ID column, hidden, and now reliably at index 0
             { id: 'name', name: 'Name', width: '150px' }, // Auto for flexibility
             { id: 'type', name: 'Type', width: '120px' },
-            { id: 'email', name: 'Email', width: 'auto' }, // Auto for flexibility
+            { id: 'email', name: 'Email', width: '150px' }, // Auto for flexibility
             { id: 'phone', name: 'Phone', width: '150px' },
             { id: 'country', name: 'Country', width: '120px' },
             { id: 'preferredContactMethod', name: 'Contact Method', width: '180px' },
