@@ -6252,7 +6252,7 @@ async function initializePage() {
             { id: 'states', name: 'States/Provinces', width: 'auto', formatter: (cell) => cell ? cell.join(', ') : '' },
             {
                 name: 'Actions',
-                width: '120px',
+                width: '180px',
                 formatter: (cell, row) => {
                     // CORRECTED: Access the ID directly from the first cell (index 0)
                     const countryId = row.cells[0].data;
@@ -6336,7 +6336,7 @@ async function initializePage() {
             { id: 'countryCode', name: 'Country', width: '100px' },
             {
                 name: 'Actions',
-                width: 'auto',
+                width: '180px',
                 formatter: (cell, row) => {
                     // CORRECTED: Access the ID directly from the first cell (index 0)
                     const currencyId = row.cells[0].data;
