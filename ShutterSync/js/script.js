@@ -6107,7 +6107,7 @@ async function initializePage() {
             columns: [
                 // Quote ID: Hidden again, but still present for actions
                 { id: 'id', name: 'Quote ID', hidden: true },
-                { id: 'quoteName', name: 'Quote Name', width: 'auto'  },
+                { id: 'quoteName', name: 'Quote Name', width: '200px'  },
                 // NEW: Opportunity Name column
                 { id: 'opportunityName', name: 'Opportunity Name', width: '200px'  },
                 { id: 'eventName', name: 'Event Name' , width: '200px' },
