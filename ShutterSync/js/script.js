@@ -6122,7 +6122,7 @@ async function initializePage() {
                         return 'N/A';
                     }
                 },
-                { id: 'quoteAmount', name: 'Amount', formatter: (cell) => `$${cell ? cell.toFixed(2) : '0.00'}` },
+                { id: 'quoteAmount',   name: 'Amount', formatter: (cell) => `$${cell ? cell.toFixed(2) : '0.00'}`, width: '100px'  },
                 { id: 'quoteDiscount', name: 'Discount (%)', formatter: (cell) => `${cell}%`, width: '100px' },
                 {
                     id: 'quoteAdjustment',
@@ -6133,6 +6133,7 @@ async function initializePage() {
                 {
                     id: 'quoteNetAmount',
                     name: 'Net Amount',
+                    width: '200px',
                     formatter: (cell) => `$${parseFloat(cell || 0).toFixed(2)}`,
                     width: '120px'
                 },
