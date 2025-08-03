@@ -6336,7 +6336,7 @@ async function initializePage() {
             { id: 'countryCode', name: 'Country', width: '100px' },
             {
                 name: 'Actions',
-                width: '120px',
+                width: 'auto',
                 formatter: (cell, row) => {
                     // CORRECTED: Access the ID directly from the first cell (index 0)
                     const currencyId = row.cells[0].data;
