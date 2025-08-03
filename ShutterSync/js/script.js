@@ -6261,10 +6261,9 @@ async function initializePage() {
                         console.error("Error: Country ID not found at row.cells[0].data for actions.");
                         return gridjs.html(`<span>Error</span>`); // Or some other fallback
                     }
-
                     return gridjs.html(`
-                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditCountry('${countryId}')">Edit</button>
-                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteCountry('${countryId}')">Delete</button>
+                        <button class="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-300 text-sm mr-2" onclick="handleEditCountry('${countryId}')">Edit</button>
+                        <button class="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-800 transition duration-300 text-sm" onclick="handleDeleteCountry('${countryId}')">Delete</button>
                     `);
                 }
             }
@@ -6281,7 +6280,33 @@ async function initializePage() {
         pagination: { enabled: true, limit: 10 },
         sort: true,
         resizable: true,
-        style: { table: { 'min-width': '100%' }, th: { 'white-space': 'nowrap' } }
+        className: {
+            // Overall table container styling
+            container: 'rounded-lg shadow-md border border-gray-200 overflow-x-auto', // Added rounded corners, shadow, border, and horizontal scroll
+
+            // Table element itself
+            table: 'min-w-full divide-y divide-gray-200',
+
+            // Table Header styling
+            thead: 'bg-gray-50', // Lighter header background
+            th: 'px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap min-w-[60px]', // Bolder, slightly larger padding, darker text
+
+            // Table Body styling
+            tbody: 'bg-white divide-y divide-gray-100', // Lighter divider
+            tr: 'hover:bg-gray-50', // Subtle row hover effect
+
+            // Table Data cells
+            td: 'px-4 py-3 whitespace-normal break-words text-sm text-gray-800', // Increased padding, normal whitespace, word break
+
+            // Footer styling (for pagination)
+            footer: 'py-3 px-4 bg-gray-50 rounded-b-lg text-sm', // Rounded bottom corners for footer
+
+            // Pagination buttons
+            paginationButton: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
+            paginationButtonCurrent: 'px-3 py-1 mx-1 rounded-md text-white bg-blue-600 border border-blue-600',
+            paginationButtonPrev: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
+            paginationButtonNext: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
+        }
     }).render(countriesGridContainer);
 
 
@@ -6322,8 +6347,8 @@ async function initializePage() {
                     }
 
                     return gridjs.html(`
-                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditCurrency('${currencyId}')">Edit</button>
-                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteCurrency('${currencyId}')">Delete</button>
+                        <button class="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-300 text-sm mr-2" onclick="handleEditCurrency('${currencyId}')">Edit</button>
+                        <button class="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-800 transition duration-300 text-sm" onclick="handleDeleteCurrency('${currencyId}')">Delete</button>
                     `);
                 }
             }
@@ -6340,7 +6365,33 @@ async function initializePage() {
         pagination: { enabled: true, limit: 10 },
         sort: true,
         resizable: true,
-        style: { table: { 'min-width': '100%' }, th: { 'white-space': 'nowrap' } }
+        className: {
+            // Overall table container styling
+            container: 'rounded-lg shadow-md border border-gray-200 overflow-x-auto', // Added rounded corners, shadow, border, and horizontal scroll
+
+            // Table element itself
+            table: 'min-w-full divide-y divide-gray-200',
+
+            // Table Header styling
+            thead: 'bg-gray-50', // Lighter header background
+            th: 'px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap min-w-[60px]', // Bolder, slightly larger padding, darker text
+
+            // Table Body styling
+            tbody: 'bg-white divide-y divide-gray-100', // Lighter divider
+            tr: 'hover:bg-gray-50', // Subtle row hover effect
+
+            // Table Data cells
+            td: 'px-4 py-3 whitespace-normal break-words text-sm text-gray-800', // Increased padding, normal whitespace, word break
+
+            // Footer styling (for pagination)
+            footer: 'py-3 px-4 bg-gray-50 rounded-b-lg text-sm', // Rounded bottom corners for footer
+
+            // Pagination buttons
+            paginationButton: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
+            paginationButtonCurrent: 'px-3 py-1 mx-1 rounded-md text-white bg-blue-600 border border-blue-600',
+            paginationButtonPrev: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
+            paginationButtonNext: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
+        }
     }).render(currenciesGridContainer);
 
 
@@ -6380,8 +6431,8 @@ async function initializePage() {
                     }
 
                     return gridjs.html(`
-                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditPriceBook('${priceBookId}')">Edit</button>
-                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeletePriceBook('${priceBookId}')">Delete</button>
+                        <button class="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-300 text-sm mr-2" onclick="handleEditPriceBook('${priceBookId}')">Edit</button>
+                        <button class="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-800 transition duration-300 text-sm" onclick="handleDeletePriceBook('${priceBookId}')">Delete</button>
                     `);
                 }
             }
