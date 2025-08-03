@@ -6012,7 +6012,7 @@ async function initializePage() {
             { id: 'probability', name: 'Probability (%)', width: '120px' },
             {
                 name: 'Actions',
-                width: '120px',
+                width: '200px',
                 formatter: (cell, row) => {
                     // CRITICAL FIX: Get the ID from the first cell (index 0)
                     const opportunityId = row.cells[0].data;
