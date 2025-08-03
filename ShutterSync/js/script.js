@@ -6107,13 +6107,14 @@ async function initializePage() {
             columns: [
                 // Quote ID: Hidden again, but still present for actions
                 { id: 'id', name: 'Quote ID', hidden: true },
-                { id: 'quoteName', name: 'Quote Name' },
+                { id: 'quoteName', name: 'Quote Name', width: 'auto'  },
                 // NEW: Opportunity Name column
-                { id: 'opportunityName', name: 'Opportunity Name' },
-                { id: 'eventName', name: 'Event Name' },
+                { id: 'opportunityName', name: 'Opportunity Name', width: '200px'  },
+                { id: 'eventName', name: 'Event Name' , width: '200px' },
                 {
                     id: 'eventDate',
                     name: 'Event Date',
+                    width: '120px',
                     formatter: (cell) => {
                         if (cell && typeof cell.seconds === 'number' && typeof cell.nanoseconds === 'number') {
                             return new Date(cell.seconds * 1000).toLocaleDateString();
@@ -6135,9 +6136,10 @@ async function initializePage() {
                     formatter: (cell) => `$${parseFloat(cell || 0).toFixed(2)}`,
                     width: '120px'
                 },
-                { id: 'status', name: 'Status' },
+                { id: 'status', name: 'Status', width: '100px', },
                 {
                     name: 'Actions',
+                    width: '180px',
                     formatter: (cell, row) => {
                         const quoteId = row.cells[0].data;
                         return gridjs.h('div', {
@@ -6163,12 +6165,31 @@ async function initializePage() {
             },
             sort: true,
             className: {
+                // Overall table container styling
+                container: 'rounded-lg shadow-md border border-gray-200 overflow-x-auto', // Added rounded corners, shadow, border, and horizontal scroll
+
+                // Table element itself
                 table: 'min-w-full divide-y divide-gray-200',
-                thead: 'bg-gray-50',
-                th: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
-                tbody: 'bg-white divide-y divide-gray-200',
-                td: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
-                footer: 'py-3 px-6',
+
+                // Table Header styling
+                thead: 'bg-gray-50', // Lighter header background
+                th: 'px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap min-w-[60px]', // Bolder, slightly larger padding, darker text
+
+                // Table Body styling
+                tbody: 'bg-white divide-y divide-gray-100', // Lighter divider
+                tr: 'hover:bg-gray-50', // Subtle row hover effect
+
+                // Table Data cells
+                td: 'px-4 py-3 whitespace-normal break-words text-sm text-gray-800', // Increased padding, normal whitespace, word break
+
+                // Footer styling (for pagination)
+                footer: 'py-3 px-4 bg-gray-50 rounded-b-lg text-sm', // Rounded bottom corners for footer
+
+                // Pagination buttons
+                paginationButton: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
+                paginationButtonCurrent: 'px-3 py-1 mx-1 rounded-md text-white bg-blue-600 border border-blue-600',
+                paginationButtonPrev: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
+                paginationButtonNext: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
             }
         }).render(quotesGridContainer);
         console.log("initializePage: quotesGrid initialized.");
