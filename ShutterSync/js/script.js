@@ -5916,12 +5916,12 @@ async function initializePage() {
             { id: 'contactName', name: 'Contact Name', width: 'auto' },
             { id: 'phone', name: 'Phone', width: '150px' },
             { id: 'email', name: 'Email', width: '200px' },
-            { id: 'servicesInterested', name: 'Services', width: 'auto', formatter: (cell) => cell ? cell.join(', ') : '' },
+            { id: 'servicesInterested', name: 'Services', width: '300px', formatter: (cell) => cell ? cell.join(', ') : '' },
             { id: 'eventDate', name: 'Event Date', width: '120px', formatter: (cell) => cell ? new Date(cell.seconds * 1000).toLocaleDateString() : '' },
             { id: 'source', name: 'Source', width: '120px' },
             {
                 name: 'Actions',
-                width: '120px',
+                width: '180px',
                 formatter: (cell, row) => {
                     // CORRECTED: Access the ID directly from the first cell (index 0)
                     const leadId = row.cells[0].data;
@@ -5932,8 +5932,8 @@ async function initializePage() {
                     }
 
                     return gridjs.html(`
-                        <button class="text-blue-600 hover:text-blue-800 font-semibold mr-2" onclick="handleEditLead('${leadId}')">Edit</button>
-                        <button class="text-red-600 hover:text-red-800 font-semibold" onclick="handleDeleteLead('${leadId}')">Delete</button>
+                        <button class="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-300 text-sm mr-2" onclick="handleEditLead('${leadId}')">Edit</button>
+                        <button class="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-800 transition duration-300 text-sm" onclick="handleDeleteLead('${leadId}')">Delete</button>
                     `);
                 }
             }
