@@ -986,22 +986,38 @@ async function setupWorkLogForm(workLog = null) {
     ];
     populateSelect(workLogTypeSelect, workLogTypes, 'id', 'name', 'Select Type');
 
-    if (workLog) {
-        document.getElementById('work-log-id').value = workLog.id;
-        document.getElementById('work-log-opportunity-id').value = workLog.opportunityId;
-        const logDate = workLog.date ? new Date(workLog.date.seconds * 1000).toISOString().split('T')[0] : '';
-        document.getElementById('work-log-date').value = logDate;
-        workLogTypeSelect.value = log.type || '';
-        document.getElementById('work-log-details').value = log.details || '';
-    } else {
-        if (workLogForm) workLogForm.reset();
-        const workLogIdInput = document.getElementById('work-log-id');
-        if (workLogIdInput) workLogIdInput.value = '';
-        const workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
-        if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = currentOpportunityId || ''; // Ensure opportunity ID is set for new logs
+    const workLogIdInput = document.getElementById('work-log-id');
+    const workLogOpportunityIdInput = document.getElementById('work-log-opportunity-id');
+    const workLogDateInput = document.getElementById('work-log-date');
+    const workLogDetailsTextarea = document.getElementById('work-log-details');
+
+    if (workLogForm) {
+        workLogForm.reset(); // Always reset the form first to a clean state
     }
+
+    if (workLogIdInput) {
+        workLogIdInput.value = ''; // Always clear the ID input field
+    }
+
+    if (workLog) {
+        // Edit Mode: Populate with existing data
+        console.log("setupWorkLogForm: Entering EDIT mode for work log:", workLog.id);
+        if (workLogIdInput) workLogIdInput.value = workLog.id;
+        if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = currentOpportunityId || ''; // Keep parent ID
+        const logDate = workLog.date ? new Date(workLog.date.seconds * 1000).toISOString().split('T')[0] : '';
+        if (workLogDateInput) workLogDateInput.value = logDate;
+        if (workLogTypeSelect) workLogTypeSelect.value = workLog.type || ''; // CORRECTED variable from `log.type` to `workLog.type`
+        if (workLogDetailsTextarea) workLogDetailsTextarea.value = workLog.details || ''; // CORRECTED variable from `log.details` to `workLog.details`
+    } else {
+        // Add New Mode: Set default values
+        console.log("setupWorkLogForm: Entering ADD NEW mode.");
+        if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = currentOpportunityId || ''; // Ensure opportunity ID is set for new logs
+        if (workLogDateInput) workLogDateInput.valueAsDate = new Date();
+    }
+    
     showWorkLogForm();
 }
+
 
 
 /**
@@ -2798,6 +2814,8 @@ async function loadWorkLogs(opportunityId) {
 
 /**
  * Handles saving a new work log entry or updating an existing one within an opportunity.
+ * This version handles the case where an existing document may have been deleted,
+ * and falls back to creating a new one.
  * @param {Event} event The form submission event.
  */
 async function handleSaveWorkLog(event) {
@@ -2816,7 +2834,7 @@ async function handleSaveWorkLog(event) {
     }
 
     const workLogId = document.getElementById('work-log-id').value;
-    const workLogOpportunityId = document.getElementById('work-log-opportunity-id').value; // Should be currentOpportunityId
+    const workLogOpportunityId = document.getElementById('work-log-opportunity-id').value;
 
     if (workLogOpportunityId !== currentOpportunityId) {
         console.warn("Work log's opportunity ID mismatch. Using currentOpportunityId.");
@@ -2834,7 +2852,7 @@ async function handleSaveWorkLog(event) {
     }
 
     let data = {
-        date: new Date(workLogDate), // Convert to Date object for Firestore Timestamp
+        date: new Date(workLogDate),
         type: workLogType,
         details: workLogDetails,
         creatorId: auth.currentUser.uid,
@@ -2842,31 +2860,36 @@ async function handleSaveWorkLog(event) {
     };
 
     try {
-        // Reference to the work logs subcollection
         const workLogsCollectionRef = collection(db, 'opportunities', currentOpportunityId, 'workLogs');
+        let shouldCreateNew = false;
 
-        if (workLogId) { // Update existing work log
-            console.log(`handleSaveWorkLog: Attempting to update work log with ID: ${workLogId}`);
+        if (workLogId) { // Check if we should update an existing work log
             const existingDoc = await getDoc(doc(workLogsCollectionRef, workLogId));
             if (existingDoc.exists()) {
+                // The document exists, so we can update it
                 data.createdAt = existingDoc.data().createdAt !== undefined ? existingDoc.data().createdAt : null;
+                await updateDoc(doc(workLogsCollectionRef, workLogId), data);
+                showMessageBox("Work log entry updated successfully!", 'alert', false);
+                console.log(`handleSaveWorkLog: Work log ${workLogId} updated successfully.`);
             } else {
-                showMessageBox("Error: Cannot update non-existent work log.", 'alert', true);
-                return;
+                // The document does not exist, so we fall back to creating a new one.
+                console.warn(`handleSaveWorkLog: Work log with ID ${workLogId} not found. Creating a new one instead.`);
+                shouldCreateNew = true;
             }
-            await updateDoc(doc(workLogsCollectionRef, workLogId), data);
-            showMessageBox("Work log entry updated successfully!", 'alert', false);
-            console.log(`handleSaveWorkLog: Work log ${workLogId} updated successfully.`);
-        } else { // Create new work log
-            console.log("handleSaveWorkLog: Attempting to add new work log.");
+        } else {
+            // No ID was provided, so we should definitely create a new one
+            shouldCreateNew = true;
+        }
+
+        if (shouldCreateNew) {
             data.createdAt = serverTimestamp();
             await addDoc(workLogsCollectionRef, data);
             showMessageBox("Work log entry added successfully!", 'alert', false);
             console.log("handleSaveWorkLog: New work log added.");
         }
 
-        hideWorkLogForm(); // Hide the work log form after saving
-        await renderWorkLogs(currentOpportunityId); // Re-render the list of work logs
+        hideWorkLogForm();
+        await renderWorkLogs(currentOpportunityId);
 
     } catch (error) {
         console.error("handleSaveWorkLog: Error saving work log:", error);
