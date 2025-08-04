@@ -6107,10 +6107,10 @@ async function initializePage() {
             columns: [
                 // Quote ID: Hidden again, but still present for actions
                 { id: 'id', name: 'Quote ID', hidden: true },
-                { id: 'quoteName', name: 'Quote Name', width: '200px'  },
+                { id: 'quoteName', name: 'Quote Name', width: '150px'  },
                 // NEW: Opportunity Name column
-                { id: 'opportunityName', name: 'Opportunity Name', width: '200px'  },
-                { id: 'eventName', name: 'Event Name' , width: '200px' },
+                { id: 'opportunityName', name: 'Opportunity Name', width: '150px'  },
+                { id: 'eventName', name: 'Event Name' , width: '150px' },
                 {
                     id: 'eventDate',
                     name: 'Event Date',
