@@ -358,7 +358,7 @@
                 <form id="customer-form" class="space-y-4">
                     <input type="hidden" id="customer-id">
                     <div>
-                        <label for="customer-type" class="block text-sm font-medium text-gray-700">Type</label>
+                        <label for="customer-type" class="block text-sm font-medium text-gray-700">Type <span class="text-red-500">*</span></label>
                         <select id="customer-type" required
                             class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <option value="Individual">Individual</option>
@@ -366,27 +366,27 @@
                         </select>
                     </div>
                     <div>
-                        <label for="customer-name" class="block text-sm font-medium text-gray-700">Name</label>
+                        <label for="customer-name" class="block text-sm font-medium text-gray-700">Name <span class="text-red-500">*</span></label>
                         <input type="text" id="customer-name" required
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
-                        <label for="customer-email" class="block text-sm font-medium text-gray-700">Email</label>
+                        <label for="customer-email" class="block text-sm font-medium text-gray-700">Email <span class="text-red-500">*</span></label>
                         <input type="email" id="customer-email"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
-                        <label for="customer-phone" class="block text-sm font-medium text-gray-700">Phone</label>
+                        <label for="customer-phone" class="block text-sm font-medium text-gray-700">Phone <span class="text-red-500">*</span></label>
                         <input type="tel" id="customer-phone"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
-                        <label for="customer-address" class="block text-sm font-medium text-gray-700">Address</label>
+                        <label for="customer-address" class="block text-sm font-medium text-gray-700">Address <span class="text-red-500">*</span></label>
                         <textarea id="customer-address" rows="3"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                     </div>
                     <div>
-                        <label for="customer-country" class="block text-sm font-medium text-gray-700">Country</label>
+                        <label for="customer-country" class="block text-sm font-medium text-gray-700">Country <span class="text-red-500">*</span></label>
                         <select id="customer-country"
                             class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <!-- Options populated by JS -->
@@ -394,7 +394,7 @@
                     </div>
                     <div>
                         <label for="customer-contact-method" class="block text-sm font-medium text-gray-700">Preferred
-                            Contact Method</label>
+                            Contact Method <span class="text-red-500">*</span></label>
                         <select id="customer-contact-method" required
                             class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <option value="Email">Email</option>
@@ -403,7 +403,7 @@
                         </select>
                     </div>
                     <div>
-                        <label for="customer-industry" class="block text-sm font-medium text-gray-700">Industry</label>
+                        <label for="customer-industry" class="block text-sm font-medium text-gray-700">Industry <span class="text-red-500">*</span></label>
                         <select id="customer-industry" required
                             class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <option value="">Select Industry</option>
@@ -418,7 +418,7 @@
                     <div>
                         <label for="customer-additional-details"
                             class="block text-sm font-medium text-gray-700">Additional
-                            Details</label>
+                            Details <span class="text-red-500">*</span></label>
                         <textarea id="customer-additional-details" rows="3"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                     </div>
