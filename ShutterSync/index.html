@@ -167,8 +167,7 @@
             /* Darker text for data */
             vertical-align: middle;
             /* Vertically center content in cells */
-            text-align: left;
-            /* Ensures text is left-aligned */
+            text-align: left; /* Ensures text is left-aligned */
         }
 
         /* Pagination Styling */
@@ -347,95 +346,66 @@
 
 
         <!-- Customers Section -->
-        <section id="customers-section" class="hidden p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-4xl font-extrabold text-gray-900">Customers 👥</h2>
-                <button id="add-customer-btn"
-                    class="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-800 text-white font-bold rounded-xl shadow-lg hover:from-blue-700 hover:to-blue-900 transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-3 focus:ring-blue-500 focus:ring-opacity-50">
-                    <i class="fas fa-plus-circle mr-2"></i> Add New Customer
-                </button>
-            </div>
+        <section id="customers-section" class="hidden">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">Customers</h2>
+            <button id="add-customer-btn"
+                class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300 mb-4">Add
+                New Customer</button>
 
             <!-- Customer Form -->
-            <div id="customer-form-container"
-                class="hidden bg-white p-8 rounded-xl shadow-2xl mb-8 border border-gray-100">
-                <h3 id="customer-form-title" class="text-3xl font-extrabold text-gray-900 mb-6 text-center">Customer
-                    Details</h3>
-                <form id="customer-form" class="space-y-6">
+            <div id="customer-form-container" class="hidden bg-white p-6 rounded-lg shadow-md mb-6">
+                <h3 class="text-2xl font-bold text-gray-800 mb-4">Customer Details</h3>
+                <form id="customer-form" class="space-y-4">
                     <input type="hidden" id="customer-id">
-
-                    <!-- Customer Type -->
                     <div>
-                        <label for="customer-type" class="block text-sm font-semibold text-gray-700 mb-1">Type <span
-                                class="text-red-500">*</span></label>
+                        <label for="customer-type" class="block text-sm font-medium text-gray-700">Type <span class="text-red-500">*</span></label>
                         <select id="customer-type" required
-                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out text-base sm:text-sm">
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <option value="Individual">Individual</option>
                             <option value="Business">Business</option>
                         </select>
                     </div>
-
-                    <!-- Customer Name -->
                     <div>
-                        <label for="customer-name" class="block text-sm font-semibold text-gray-700 mb-1">Name <span
-                                class="text-red-500">*</span></label>
+                        <label for="customer-name" class="block text-sm font-medium text-gray-700">Name <span class="text-red-500">*</span></label>
                         <input type="text" id="customer-name" required
-                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out sm:text-sm">
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
-
-                    <!-- Customer Email -->
                     <div>
-                        <label for="customer-email" class="block text-sm font-semibold text-gray-700 mb-1">Email <span
-                                class="text-red-500">*</span></label>
-                        <input type="email" id="customer-email" required
-                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out sm:text-sm">
+                        <label for="customer-email" class="block text-sm font-medium text-gray-700">Email <span class="text-red-500">*</span></label>
+                        <input type="email" id="customer-email"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
-
-                    <!-- Customer Phone -->
                     <div>
-                        <label for="customer-phone" class="block text-sm font-semibold text-gray-700 mb-1">Phone <span
-                                class="text-red-500">*</span></label>
-                        <input type="tel" id="customer-phone" required
-                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out sm:text-sm">
+                        <label for="customer-phone" class="block text-sm font-medium text-gray-700">Phone <span class="text-red-500">*</span></label>
+                        <input type="tel" id="customer-phone"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
-
-                    <!-- Customer Address -->
                     <div>
-                        <label for="customer-address" class="block text-sm font-semibold text-gray-700 mb-1">Address
-                            <span class="text-red-500">*</span></label>
-                        <textarea id="customer-address" rows="3" required
-                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out sm:text-sm"></textarea>
+                        <label for="customer-address" class="block text-sm font-medium text-gray-700">Address <span class="text-red-500">*</span></label>
+                        <textarea id="customer-address" rows="3"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                     </div>
-
-                    <!-- Customer Country -->
                     <div>
-                        <label for="customer-country" class="block text-sm font-semibold text-gray-700 mb-1">Country
-                            <span class="text-red-500">*</span></label>
-                        <select id="customer-country" required
-                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out text-base sm:text-sm">
+                        <label for="customer-country" class="block text-sm font-medium text-gray-700">Country <span class="text-red-500">*</span></label>
+                        <select id="customer-country"
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <!-- Options populated by JS -->
                         </select>
                     </div>
-
-                    <!-- Preferred Contact Method -->
                     <div>
-                        <label for="customer-contact-method"
-                            class="block text-sm font-semibold text-gray-700 mb-1">Preferred Contact Method <span
-                                class="text-red-500">*</span></label>
+                        <label for="customer-contact-method" class="block text-sm font-medium text-gray-700">Preferred
+                            Contact Method <span class="text-red-500">*</span></label>
                         <select id="customer-contact-method" required
-                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out text-base sm:text-sm">
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <option value="Email">Email</option>
                             <option value="Phone">Phone</option>
                             <option value="SMS">SMS</option>
                         </select>
                     </div>
-
-                    <!-- Customer Industry -->
                     <div>
-                        <label for="customer-industry" class="block text-sm font-semibold text-gray-700 mb-1">Industry
-                            <span class="text-red-500">*</span></label>
+                        <label for="customer-industry" class="block text-sm font-medium text-gray-700">Industry <span class="text-red-500">*</span></label>
                         <select id="customer-industry" required
-                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out text-base sm:text-sm">
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <option value="">Select Industry</option>
                             <option value="Technology">Technology</option>
                             <option value="Healthcare">Healthcare</option>
@@ -445,22 +415,17 @@
                             <option value="Other">Other</option>
                         </select>
                     </div>
-
-                    <!-- Additional Details -->
                     <div>
                         <label for="customer-additional-details"
-                            class="block text-sm font-semibold text-gray-700 mb-1">Additional Details <span
-                                class="text-red-500">*</span></label>
-                        <textarea id="customer-additional-details" rows="3" required
-                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out sm:text-sm"></textarea>
+                            class="block text-sm font-medium text-gray-700">Additional
+                            Details <span class="text-red-500">*</span></label>
+                        <textarea id="customer-additional-details" rows="3"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                     </div>
-
-                    <!-- Customer Source -->
                     <div>
-                        <label for="customer-source"
-                            class="block text-sm font-semibold text-gray-700 mb-1">Source</label>
+                        <label for="customer-source" class="block text-sm font-medium text-gray-700">Source</label>
                         <select id="customer-source" required
-                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out text-base sm:text-sm">
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                             <option value="">Select Source</option>
                             <option value="Website">Website</option>
                             <option value="Referral">Referral</option>
@@ -470,38 +435,26 @@
                             <option value="Other">Other</option>
                         </select>
                     </div>
-
-                    <!-- Active Customer Checkbox -->
                     <div class="flex items-center">
                         <input type="checkbox" id="customer-active"
-                            class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded-md">
-                        <label for="customer-active" class="ml-2 block text-base text-gray-900 font-medium">Active
-                            Customer</label>
+                            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="customer-active" class="ml-2 block text-sm text-gray-900">Active Customer</label>
                     </div>
-
-                    <!-- Action Buttons -->
-                    <div class="flex justify-end space-x-4 pt-4">
-                        <button type="button" id="cancel-customer-btn"
-                            class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg shadow-md hover:bg-gray-300 transition duration-300 ease-in-out text-lg font-semibold">Cancel</button>
-                        <button type="submit" id="add-customer-btn-form"
-                            class="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-lg shadow-lg hover:from-blue-600 hover:to-blue-800 transition duration-300 ease-in-out text-lg font-semibold transform hover:scale-105">Save
+                    <div class="flex justify-end space-x-3">
+                        <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">Save
                             Customer</button>
+                        <button type="button" id="cancel-customer-btn"
+                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300">Cancel</button>
                     </div>
-
-                    <p id="customer-form-message" class="text-red-500 text-sm mt-4 hidden text-center"></p>
+                    <p id="customer-form-message" class="text-red-500 text-sm mt-2 hidden"></p>
                 </form>
             </div>
 
             <!-- Customer Grid -->
-            <p id="no-customers-message" class="text-center text-gray-500 mt-8 hidden text-lg font-medium">No customers
-                found. Start by adding a new customer! 🚀</p>
-            <div id="customers-grid-container" class="mt-8 rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-            </div>
+            <p id="no-customers-message" class="text-center text-gray-500 mt-8 hidden">No customers found.</p>
+            <div id="customers-grid-container" class="mt-6"></div>
         </section>
-
-
-
-
 
         <!-- Leads Section -->
         <section id="leads-section" class="hidden">
