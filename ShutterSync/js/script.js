@@ -583,17 +583,16 @@ async function handleLogout() {
 }
 
 /**
- * Loads and displays the dashboard data, including counts for customers and opportunities.
- * This function respects user roles (standard users see their own data, admins see all data).
+ * Loads and displays the dashboard data in real-time, including counts for
+ * customers and opportunities. This function sets up real-time listeners
+ * that automatically update the metrics whenever the underlying data changes.
  */
-async function loadDashboardData() {
-    console.log("Loading dashboard data...");
+function loadDashboardData() {
+    console.log("Setting up real-time dashboard metrics listeners...");
 
     // Ensure user is authenticated and userId is available before proceeding.
-    // userId is set by onAuthStateChanged.
     if (!auth.currentUser?.uid) {
         console.warn("User ID not available yet for dashboard data loading. Skipping dashboard data load.");
-        // Potentially clear dashboard display or show a message indicating data is not available
         if (dashboardTotalCustomers) dashboardTotalCustomers.textContent = 'N/A';
         if (dashboardTotalOpportunities) dashboardTotalOpportunities.textContent = 'N/A';
         if (dashboardOpenOpportunities) dashboardOpenOpportunities.textContent = 'N/A';
@@ -601,52 +600,56 @@ async function loadDashboardData() {
         return;
     }
 
+    const userId = auth.currentUser.uid;
+
     try {
-        // Fetch Total Customers
-        const customersSnapshot = await getDocs(getCollectionRef('customers'));
-        if (dashboardTotalCustomers) {
-            dashboardTotalCustomers.textContent = customersSnapshot.size;
-        }
+        // --- Real-time listener for Total Customers ---
+        const customersQuery = query(getCollectionRef('customers'), where('userId', '==', userId));
+        onSnapshot(customersQuery, (snapshot) => {
+            const totalCustomers = snapshot.size;
+            if (dashboardTotalCustomers) {
+                dashboardTotalCustomers.textContent = totalCustomers;
+            }
+            console.log(`Dashboard: Total customers updated to ${totalCustomers} in real-time.`);
+        }, (error) => {
+            console.error("Error fetching customers for dashboard:", error);
+            showMessageBox("Error loading customer data for dashboard.");
+        });
 
-        // Fetch Total Opportunities
-        const opportunitiesSnapshot = await getDocs(getCollectionRef('opportunities'));
-        if (dashboardTotalOpportunities) {
-            dashboardTotalOpportunities.textContent = opportunitiesSnapshot.size;
-        }
+        // --- Real-time listener for Opportunities ---
+        const opportunitiesQuery = query(getCollectionRef('opportunities'), where('userId', '==', userId));
+        onSnapshot(opportunitiesQuery, (snapshot) => {
+            const opportunities = snapshot.docs.map(doc => doc.data());
+            
+            // Count all opportunities
+            const totalOpportunities = opportunities.length;
+            if (dashboardTotalOpportunities) {
+                dashboardTotalOpportunities.textContent = totalOpportunities;
+            }
 
-        // Fetch Open Opportunities (Sales Stage 'Prospect', 'Qualification', 'Proposal', 'Negotiation')
-        // Firestore does not support 'not in' for field filters. Query for each "open" stage.
-        let openOpportunitiesCount = 0;
-        const openStages = ['Prospect', 'Qualification', 'Proposal', 'Negotiation'];
+            // Count opportunities with status 'Open'
+            const openOpportunities = opportunities.filter(opp => opp.salesStage !== 'Won').length;
+            if (dashboardOpenOpportunities) {
+                dashboardOpenOpportunities.textContent = openOpportunities;
+            }
 
-        for (const stage of openStages) {
-            const stageQuery = query(
-                getCollectionRef('opportunities'),
-                where('salesStage', '==', stage)
-            );
-            const stageSnapshot = await getDocs(stageQuery);
-            openOpportunitiesCount += stageSnapshot.size;
-        }
+            // Count opportunities with status 'Won'
+            const wonOpportunities = opportunities.filter(opp => opp.salesStage === 'Won').length;
+            if (dashboardWonOpportunities) {
+                dashboardWonOpportunities.textContent = wonOpportunities;
+            }
+            
+            console.log(`Dashboard: Opportunities metrics updated in real-time. Total: ${totalOpportunities}, Open: ${openOpportunities}, Won: ${wonOpportunities}`);
+        }, (error) => {
+            console.error("Error fetching opportunities for dashboard:", error);
+            showMessageBox("Error loading opportunity data for dashboard.");
+        });
 
-        if (dashboardOpenOpportunities) {
-            dashboardOpenOpportunities.textContent = openOpportunitiesCount;
-        }
-
-        // Fetch Won Opportunities (Sales Stage 'Won')
-        const wonOpportunitiesQuery = query(
-            getCollectionRef('opportunities'),
-            where('salesStage', '==', 'Won')
-        );
-        const wonOpportunitiesSnapshot = await getDocs(wonOpportunitiesQuery);
-        if (dashboardWonOpportunities) {
-            dashboardWonOpportunities.textContent = wonOpportunitiesSnapshot.size;
-        }
-
-        console.log("Dashboard data loaded successfully.");
+        console.log("Dashboard real-time listeners have been set up.");
 
     } catch (error) {
-        console.error("Error loading dashboard data:", error);
-        showMessageBox("Error loading dashboard data. Please check console for details.");
+        console.error("Error setting up dashboard listeners:", error);
+        showMessageBox("Error setting up dashboard. Please check console for details.");
     }
 }
 
