@@ -582,45 +582,86 @@ async function handleLogout() {
     }
 }
 
+/**
+ * Creates the appropriate Firestore query for the 'customers' collection
+ * based on the user's role.
+ * @returns {Query | CollectionReference} The Firestore query.
+ */
+const getCustomersQuery = () => {
+    const customersCollectionRef = getCollectionRef('customers');
+    const isAdmin = currentUserRole === 'Admin';
+    
+    // If the user is an Admin, return the entire collection reference.
+    // Otherwise, return a query filtered by the current user's creatorId.
+    return isAdmin ? customersCollectionRef : query(customersCollectionRef, where('creatorId', '==', auth.currentUser.uid));
+};
 
+/**
+ * Creates the appropriate Firestore query for the 'opportunities' collection
+ * based on the user's role.
+ * @returns {Query | CollectionReference} The Firestore query.
+ */
+const getOpportunitiesQuery = () => {
+    const opportunitiesCollectionRef = getCollectionRef('opportunities');
+    const isAdmin = currentUserRole === 'Admin';
+    
+    // If the user is an Admin, return the entire collection reference.
+    // Otherwise, return a query filtered by the current user's creatorId.
+    return isAdmin ? opportunitiesCollectionRef : query(opportunitiesCollectionRef, where('creatorId', '==', auth.currentUser.uid));
+};
 
 
 
 /**
- * Sets up real-time listeners to update the dashboard's key metrics.
- * This function includes console logs to help debug why metrics might be showing as zero.
+ * Loads and displays the dashboard data in real-time.
+ * This function sets up real-time listeners that automatically update the metrics
+ * whenever the underlying data changes. It uses role-based logic to fetch data:
+ * - Admin users see all data in the collection.
+ * - Standard users see only data they created (filtered by 'creatorId').
  */
 function loadDashboardData() {
-    console.log("Starting loadDashboardData function...");
+    console.log("Setting up real-time dashboard metrics listeners...");
 
+    // Ensure user is authenticated and userId is available before proceeding.
     if (!auth.currentUser?.uid) {
-        console.warn("User ID not available. Cannot load dashboard data.");
+        console.warn("User ID not available yet for dashboard data loading. Skipping dashboard data load.");
         if (dashboardTotalCustomers) dashboardTotalCustomers.textContent = 'N/A';
+        if (dashboardTotalOpportunities) dashboardTotalOpportunities.textContent = 'N/A';
+        if (dashboardOpenOpportunities) dashboardOpenOpportunities.textContent = 'N/A';
+        if (dashboardWonOpportunities) dashboardWonOpportunities.textContent = 'N/A';
         return;
     }
-    
+
     const userId = auth.currentUser.uid;
-    console.log(`Debug: Authenticated User ID is: ${userId}`);
+    const isAdmin = currentUserRole === 'Admin';
+    console.log(`Debug: User ID is ${userId}, Role is ${currentUserRole}. Is Admin: ${isAdmin}`);
+
+    // --- Define base queries with optional role-based filtering ---
+    const getCustomersQuery = () => {
+        const customersCollectionRef = getCollectionRef('customers');
+        return isAdmin ? customersCollectionRef : query(customersCollectionRef, where('creatorId', '==', userId));
+    };
+
+    const getOpportunitiesQuery = () => {
+        const opportunitiesCollectionRef = getCollectionRef('opportunities');
+        return isAdmin ? opportunitiesCollectionRef : query(opportunitiesCollectionRef, where('creatorId', '==', userId));
+    };
 
     try {
         // --- Real-time listener for Total Customers ---
-        const customersQuery = query(getCollectionRef('customers'), where('userId', '==', userId));
-        onSnapshot(customersQuery, (snapshot) => {
-            console.log(`Debug: Customers listener triggered. Snapshot size: ${snapshot.size}`);
+        onSnapshot(getCustomersQuery(), (snapshot) => {
             const totalCustomers = snapshot.size;
             if (dashboardTotalCustomers) {
                 dashboardTotalCustomers.textContent = totalCustomers;
             }
-            console.log(`Dashboard: Total customers updated to ${totalCustomers}`);
+            console.log(`Dashboard: Total customers updated to ${totalCustomers} in real-time.`);
         }, (error) => {
             console.error("Error fetching customers for dashboard:", error);
             showMessageBox("Error loading customer data for dashboard.");
         });
 
         // --- Real-time listener for Opportunities ---
-        const opportunitiesQuery = query(getCollectionRef('opportunities'), where('userId', '==', userId));
-        onSnapshot(opportunitiesQuery, (snapshot) => {
-            console.log(`Debug: Opportunities listener triggered. Snapshot size: ${snapshot.size}`);
+        onSnapshot(getOpportunitiesQuery(), (snapshot) => {
             const opportunities = snapshot.docs.map(doc => doc.data());
             
             // Count all opportunities
@@ -641,12 +682,13 @@ function loadDashboardData() {
                 dashboardWonOpportunities.textContent = wonOpportunities;
             }
             
-            console.log(`Dashboard: Opportunities metrics updated. Total: ${totalOpportunities}, Open: ${openOpportunities}, Won: ${wonOpportunities}`);
-            console.log("Debug: All opportunities fetched:", opportunities);
+            console.log(`Dashboard: Opportunities metrics updated in real-time. Total: ${totalOpportunities}, Open: ${openOpportunities}, Won: ${wonOpportunities}`);
         }, (error) => {
             console.error("Error fetching opportunities for dashboard:", error);
             showMessageBox("Error loading opportunity data for dashboard.");
         });
+
+        console.log("Dashboard real-time listeners have been set up.");
 
     } catch (error) {
         console.error("Error setting up dashboard listeners:", error);
