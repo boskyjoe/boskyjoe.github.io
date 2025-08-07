@@ -582,35 +582,36 @@ async function handleLogout() {
     }
 }
 
+
+
+
+
 /**
- * Loads and displays the dashboard data in real-time, including counts for
- * customers and opportunities. This function sets up real-time listeners
- * that automatically update the metrics whenever the underlying data changes.
+ * Sets up real-time listeners to update the dashboard's key metrics.
+ * This function includes console logs to help debug why metrics might be showing as zero.
  */
 function loadDashboardData() {
-    console.log("Setting up real-time dashboard metrics listeners...");
+    console.log("Starting loadDashboardData function...");
 
-    // Ensure user is authenticated and userId is available before proceeding.
     if (!auth.currentUser?.uid) {
-        console.warn("User ID not available yet for dashboard data loading. Skipping dashboard data load.");
+        console.warn("User ID not available. Cannot load dashboard data.");
         if (dashboardTotalCustomers) dashboardTotalCustomers.textContent = 'N/A';
-        if (dashboardTotalOpportunities) dashboardTotalOpportunities.textContent = 'N/A';
-        if (dashboardOpenOpportunities) dashboardOpenOpportunities.textContent = 'N/A';
-        if (dashboardWonOpportunities) dashboardWonOpportunities.textContent = 'N/A';
         return;
     }
-
+    
     const userId = auth.currentUser.uid;
+    console.log(`Debug: Authenticated User ID is: ${userId}`);
 
     try {
         // --- Real-time listener for Total Customers ---
         const customersQuery = query(getCollectionRef('customers'), where('userId', '==', userId));
         onSnapshot(customersQuery, (snapshot) => {
+            console.log(`Debug: Customers listener triggered. Snapshot size: ${snapshot.size}`);
             const totalCustomers = snapshot.size;
             if (dashboardTotalCustomers) {
                 dashboardTotalCustomers.textContent = totalCustomers;
             }
-            console.log(`Dashboard: Total customers updated to ${totalCustomers} in real-time.`);
+            console.log(`Dashboard: Total customers updated to ${totalCustomers}`);
         }, (error) => {
             console.error("Error fetching customers for dashboard:", error);
             showMessageBox("Error loading customer data for dashboard.");
@@ -619,6 +620,7 @@ function loadDashboardData() {
         // --- Real-time listener for Opportunities ---
         const opportunitiesQuery = query(getCollectionRef('opportunities'), where('userId', '==', userId));
         onSnapshot(opportunitiesQuery, (snapshot) => {
+            console.log(`Debug: Opportunities listener triggered. Snapshot size: ${snapshot.size}`);
             const opportunities = snapshot.docs.map(doc => doc.data());
             
             // Count all opportunities
@@ -639,19 +641,19 @@ function loadDashboardData() {
                 dashboardWonOpportunities.textContent = wonOpportunities;
             }
             
-            console.log(`Dashboard: Opportunities metrics updated in real-time. Total: ${totalOpportunities}, Open: ${openOpportunities}, Won: ${wonOpportunities}`);
+            console.log(`Dashboard: Opportunities metrics updated. Total: ${totalOpportunities}, Open: ${openOpportunities}, Won: ${wonOpportunities}`);
+            console.log("Debug: All opportunities fetched:", opportunities);
         }, (error) => {
             console.error("Error fetching opportunities for dashboard:", error);
             showMessageBox("Error loading opportunity data for dashboard.");
         });
-
-        console.log("Dashboard real-time listeners have been set up.");
 
     } catch (error) {
         console.error("Error setting up dashboard listeners:", error);
         showMessageBox("Error setting up dashboard. Please check console for details.");
     }
 }
+
 
 
 /**
