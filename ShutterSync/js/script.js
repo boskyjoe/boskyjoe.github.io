@@ -208,9 +208,6 @@ let currentFilterOpportunityId;
 let quoteLinesGrid; // CRITICAL: Declare quoteLinesGrid globally here
 let quoteLinesGridContainer; // Also declare its container
 
-// New global variable to store the filtered opportunity ID
-let quotesGridFilterOpportunityId = null;
-
 
 let addCountryBtn;
 let countryFormContainer;
@@ -593,7 +590,7 @@ async function handleLogout() {
 const getCustomersQuery = () => {
     const customersCollectionRef = getCollectionRef('customers');
     const isAdmin = currentUserRole === 'Admin';
-
+    
     // If the user is an Admin, return the entire collection reference.
     // Otherwise, return a query filtered by the current user's creatorId.
     return isAdmin ? customersCollectionRef : query(customersCollectionRef, where('creatorId', '==', auth.currentUser.uid));
@@ -607,39 +604,11 @@ const getCustomersQuery = () => {
 const getOpportunitiesQuery = () => {
     const opportunitiesCollectionRef = getCollectionRef('opportunities');
     const isAdmin = currentUserRole === 'Admin';
-
+    
     // If the user is an Admin, return the entire collection reference.
     // Otherwise, return a query filtered by the current user's creatorId.
     return isAdmin ? opportunitiesCollectionRef : query(opportunitiesCollectionRef, where('creatorId', '==', auth.currentUser.uid));
 };
-
-
-
-// New function to update the opportunities grid with real-time quote counts
-function updateQuotesCountInGrid(opportunities) {
-    opportunities.forEach(opportunity => {
-        const opportunityId = opportunity.id;
-        const quotesQuery = query(getCollectionRef('quotes'), where('opportunityId', '==', opportunityId));
-
-        // Use onSnapshot to listen for changes to the quotes for this specific opportunity
-        onSnapshot(quotesQuery, (quoteSnapshot) => {
-            const count = quoteSnapshot.size;
-            const countSpan = document.getElementById(`quotes-count-${opportunityId}`);
-            if (countSpan) {
-                countSpan.textContent = count;
-                // Optionally, disable the button if there are no quotes
-                const button = document.getElementById(`quotes-count-btn-${opportunityId}`);
-                if (button) {
-                    button.disabled = count === 0;
-                    button.classList.toggle('bg-gray-400', count === 0);
-                    button.classList.toggle('hover:bg-purple-600', count > 0);
-                }
-            }
-        }, (error) => {
-            console.error(`Error fetching quotes count for opportunity ${opportunityId}:`, error);
-        });
-    });
-}
 
 
 
@@ -694,7 +663,7 @@ function loadDashboardData() {
         // --- Real-time listener for Opportunities ---
         onSnapshot(getOpportunitiesQuery(), (snapshot) => {
             const opportunities = snapshot.docs.map(doc => doc.data());
-
+            
             // Count all opportunities
             const totalOpportunities = opportunities.length;
             if (dashboardTotalOpportunities) {
@@ -712,7 +681,7 @@ function loadDashboardData() {
             if (dashboardWonOpportunities) {
                 dashboardWonOpportunities.textContent = wonOpportunities;
             }
-
+            
             console.log(`Dashboard: Opportunities metrics updated in real-time. Total: ${totalOpportunities}, Open: ${openOpportunities}, Won: ${wonOpportunities}`);
         }, (error) => {
             console.error("Error fetching opportunities for dashboard:", error);
@@ -739,7 +708,7 @@ function calculateQuoteNetAmount() {
     const quoteDiscountInput = document.getElementById('quote-discount');
     const quoteAdjustmentInput = document.getElementById('quote-adjustment');
     const quoteNetAmountInput = document.getElementById('quote-net-amount');
-
+    
     const quoteAmount = parseFloat(quoteAmountInput.value) || 0;
     const quoteDiscount = parseFloat(quoteDiscountInput.value) || 0;
     const quoteAdjustment = parseFloat(quoteAdjustmentInput.value) || 0;
@@ -752,109 +721,6 @@ function calculateQuoteNetAmount() {
     }
 }
 
-
-// A new function to handle the quotes grid listener, which now includes the filtering logic.
-// This replaces your old unsubscribeQuotes onSnapshot call.
-function setupQuotesGridListener() {
-    // If a previous listener exists, unsubscribe from it to prevent memory leaks and duplicate data.
-    if (typeof unsubscribeQuotes === 'function') {
-        unsubscribeQuotes();
-    }
-
-    // Define the base query for quotes.
-    let quotesQuery = getCollectionRef('quotes');
-
-    // If the quotesGridFilterOpportunityId is set, add a 'where' clause to the query.
-    if (quotesGridFilterOpportunityId) {
-        quotesQuery = query(quotesQuery, where('opportunityId', '==', quotesGridFilterOpportunityId));
-        console.log(`Setting up quotes listener with filter for opportunity ID: ${quotesGridFilterOpportunityId}`);
-    } else {
-        console.log("Setting up quotes listener for all quotes.");
-    }
-
-    // Now, set up the real-time listener using our new, potentially filtered query.
-    unsubscribeQuotes = onSnapshot(quotesQuery, async (snapshot) => {
-        console.log("Quotes real-time listener triggered. Fetching and preparing data...");
-
-        // Show/hide the filter display based on the filter state.
-        const filterDisplay = document.getElementById('quotes-filter-display');
-        const filterOpportunityNameSpan = document.getElementById('quotes-filter-opportunity-name');
-        if (quotesGridFilterOpportunityId) {
-            // Find the opportunity name to display
-            const opportunityDoc = await getDoc(getDocRef('opportunities', quotesGridFilterOpportunityId));
-            if (opportunityDoc.exists()) {
-                filterOpportunityNameSpan.textContent = opportunityDoc.data().name;
-            } else {
-                filterOpportunityNameSpan.textContent = 'Unknown Opportunity';
-            }
-            filterDisplay.classList.remove('hidden');
-        } else {
-            filterDisplay.classList.add('hidden');
-        }
-
-        if (snapshot.empty) {
-            if (noQuotesMessage) noQuotesMessage.classList.remove('hidden');
-            if (quotesGridContainer) quotesGridContainer.classList.add('hidden');
-            quotesGrid.updateConfig({ data: [] }).forceRender(); // Ensure the grid is cleared
-            return;
-        }
-
-        const quotesWithOpportunityPromises = snapshot.docs.map(async (docSnapshot) => {
-            const quote = { id: docSnapshot.id, ...docSnapshot.data() };
-            let opportunityName = 'Not Found';
-
-            if (quote.opportunityId) {
-                try {
-                    const opportunityDocRef = doc(db, 'opportunities', quote.opportunityId);
-                    const opportunityDoc = await getDoc(opportunityDocRef);
-                    if (opportunityDoc.exists()) {
-                        opportunityName = opportunityDoc.data().name || 'Unnamed Opportunity';
-                    }
-                } catch (error) {
-                    console.error(`Error fetching opportunity for quote ${quote.id}:`, error);
-                }
-            }
-
-            return { ...quote, opportunityName };
-        });
-
-        const quotes = await Promise.all(quotesWithOpportunityPromises);
-
-        if (noQuotesMessage) noQuotesMessage.classList.add('hidden');
-        if (quotesGridContainer) quotesGridContainer.classList.remove('hidden');
-
-        quotesGrid.updateConfig({ data: quotes }).forceRender();
-        console.log("Quotes grid updated with opportunity names.");
-    }, (error) => {
-        console.error("Error fetching quotes:", error);
-        showMessageBox("Error loading quotes.");
-    });
-}
-
-/**
- * Handles the click on the quotes counter button.
- * Sets a filter and navigates to the quotes section.
- * @param {string} opportunityId The ID of the opportunity to filter by.
- */
-function handleViewQuotes(opportunityId) {
-    console.log(`Navigating to quotes for Opportunity ID: ${opportunityId}`);
-
-    quotesGridFilterOpportunityId = opportunityId;
-
-    showSection('quotes-section');
-
-    setupQuotesGridListener();
-}
-
-/**
- * Handles the click on the "Clear Filter" button.
- * Clears the global filter and reloads the quotes grid with all quotes.
- */
-function handleClearQuotesFilter() {
-    quotesGridFilterOpportunityId = null;
-    console.log("Quotes filter cleared. Reloading all quotes.");
-    setupQuotesGridListener();
-}
 
 /**
  * Asynchronously fetches all quote lines for a given quote ID from Firestore,
@@ -917,7 +783,7 @@ async function updateAllQuoteTotalsAndUI(quoteId) {
                 quoteAdjustmentInput.value = '0';
             }
         }
-
+        
         // Step 6: Calculate the Quote Net Amount
         const quoteDiscount = parseFloat(quoteDiscountInput.value) || 0;
         const quoteAdjustment = parseFloat(quoteAdjustmentInput.value) || 0;
@@ -937,7 +803,7 @@ async function updateAllQuoteTotalsAndUI(quoteId) {
             quoteNetAmount: netAmount,
             updatedAt: new Date() // Use client-side timestamp as per your rule
         };
-
+        
         // Step 8: Perform the full update with the merged data
         await updateDoc(quoteRef, updatedData);
 
@@ -1195,7 +1061,7 @@ async function setupWorkLogForm(workLog = null) {
         if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = currentOpportunityId || ''; // Ensure opportunity ID is set for new logs
         if (workLogDateInput) workLogDateInput.valueAsDate = new Date();
     }
-
+    
     showWorkLogForm();
 }
 
@@ -4409,7 +4275,7 @@ async function setupQuoteForm(quoteData = null) {
                 await populateCustomerDetailsForQuote();
             }
         }
-
+        
         // --- NEW: Populate discount and adjustment fields from Firestore
         if (quoteDiscountInput) quoteDiscountInput.value = quoteData.quoteDiscount !== undefined ? quoteData.quoteDiscount.toFixed(2) : '0.00';
         if (quoteAdjustmentInput) quoteAdjustmentInput.value = quoteData.quoteAdjustment !== undefined ? quoteData.quoteAdjustment.toFixed(2) : '0.00';
@@ -4569,7 +4435,7 @@ async function updateMainQuoteAmountFromFirestore(quoteId) {
         const quoteDiscountInput = document.getElementById('quote-discount');
         const quoteAdjustmentInput = document.getElementById('quote-adjustment');
         const quoteNetAmountInput = document.getElementById('quote-net-amount');
-
+        
         if (quoteAmountInput) {
             quoteAmountInput.value = totalAmount.toFixed(2);
         }
@@ -4979,7 +4845,7 @@ async function handleSaveQuoteLine(event) {
     const quantity = parseFloat(quoteLineQuantityInput.value) || 0;
     const discount = parseFloat(quoteLineDiscountInput.value) || 0;
     const adjustmentAmount = parseFloat(quoteLineAdjustmentAmountInput.value) || 0;
-
+    
     // --- NEW: Calculate finalNet directly from input values ---
     const netAmount = unitPrice * quantity;
     const discountAmount = netAmount * (discount / 100);
@@ -5028,10 +4894,10 @@ async function handleSaveQuoteLine(event) {
         }
 
         hideQuoteLineForm(); // Hide the form after successful save
-
+        
         // --- NEW: After saving the quote line, update the parent quote's totals in Firestore and the UI ---
         await updateAllQuoteTotalsAndUI(currentQuoteId);
-
+        
         // After all updates are complete, re-render the quote lines list.
         await renderQuoteLines(currentQuoteId);
 
@@ -5930,7 +5796,7 @@ async function initializePage() {
     });
     if (quoteDiscountInput) quoteDiscountInput.addEventListener('input', calculateQuoteNetAmount);
     if (quoteAdjustmentInput) quoteAdjustmentInput.addEventListener('input', calculateQuoteNetAmount);
-
+    
 
     // Quote Line Listeners (ALL NEW)
     if (addQuoteLineEntryBtn) {
@@ -6205,6 +6071,7 @@ async function initializePage() {
 
     opportunitiesGrid = new gridjs.Grid({
         columns: [
+            // CRITICAL FIX: Add a hidden 'id' column first
             { id: 'id', name: 'ID', hidden: true },
             { id: 'name', name: 'Opportunity Name', width: 'auto' },
             { id: 'customerName', name: 'Customer', width: '180px' },
@@ -6217,12 +6084,9 @@ async function initializePage() {
                 name: 'Actions',
                 width: '200px',
                 formatter: (cell, row) => {
+                    // CRITICAL FIX: Get the ID from the first cell (index 0)
                     const opportunityId = row.cells[0].data;
-                    // Add the new Quotes button to the formatter
                     return gridjs.html(`
-                    <button id="quotes-count-btn-${opportunityId}" class="px-3 py-1 mr-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition duration-300 text-sm" onclick="handleViewQuotes('${opportunityId}')">
-                        Quotes (<span id="quotes-count-${opportunityId}">...</span>)
-                    </button>
                     <button class="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-300 text-sm mr-2" onclick="handleEditOpportunity('${opportunityId}')">Edit</button>
                     <button class="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-800 transition duration-300 text-sm" onclick="handleDeleteOpportunity('${opportunityId}')">Delete</button>
                 `);
@@ -6238,15 +6102,27 @@ async function initializePage() {
         sort: true,
         resizable: true,
         className: {
-            // ... (existing styling classes) ...
-            container: 'rounded-lg shadow-md border border-gray-200 overflow-x-auto',
+            // Overall table container styling
+            container: 'rounded-lg shadow-md border border-gray-200 overflow-x-auto', // Added rounded corners, shadow, border, and horizontal scroll
+
+            // Table element itself
             table: 'min-w-full divide-y divide-gray-200',
-            thead: 'bg-gray-50',
-            th: 'px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap min-w-[60px]',
-            tbody: 'bg-white divide-y divide-gray-100',
-            tr: 'hover:bg-gray-50',
-            td: 'px-4 py-3 whitespace-normal break-words text-sm text-gray-800',
-            footer: 'py-3 px-4 bg-gray-50 rounded-b-lg text-sm',
+
+            // Table Header styling
+            thead: 'bg-gray-50', // Lighter header background
+            th: 'px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap min-w-[60px]', // Bolder, slightly larger padding, darker text
+
+            // Table Body styling
+            tbody: 'bg-white divide-y divide-gray-100', // Lighter divider
+            tr: 'hover:bg-gray-50', // Subtle row hover effect
+
+            // Table Data cells
+            td: 'px-4 py-3 whitespace-normal break-words text-sm text-gray-800', // Increased padding, normal whitespace, word break
+
+            // Footer styling (for pagination)
+            footer: 'py-3 px-4 bg-gray-50 rounded-b-lg text-sm', // Rounded bottom corners for footer
+
+            // Pagination buttons
             paginationButton: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
             paginationButtonCurrent: 'px-3 py-1 mx-1 rounded-md text-white bg-blue-600 border border-blue-600',
             paginationButtonPrev: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
@@ -6256,9 +6132,7 @@ async function initializePage() {
 
 
 
-
-    // Update your main opportunities onSnapshot listener to use the new function
-    unsubscribeOpportunities = onSnapshot(getOpportunitiesQuery(), (snapshot) => {
+    unsubscribeOpportunities = onSnapshot(getCollectionRef('opportunities'), (snapshot) => {
         const opportunities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         if (opportunities.length === 0) {
             if (noOpportunitiesMessage) noOpportunitiesMessage.classList.remove('hidden');
@@ -6268,8 +6142,6 @@ async function initializePage() {
             if (opportunitiesGridContainer) opportunitiesGridContainer.classList.remove('hidden');
         }
         opportunitiesGrid.updateConfig({ data: opportunities }).forceRender();
-        // CRITICAL: Call the new function to set up listeners for each opportunity
-        updateQuotesCountInGrid(opportunities);
     }, (error) => {
         console.error("Error fetching opportunities:", error);
         showMessageBox("Error loading opportunities.");
@@ -6282,10 +6154,10 @@ async function initializePage() {
             columns: [
                 // Quote ID: Hidden again, but still present for actions
                 { id: 'id', name: 'Quote ID', hidden: true },
-                { id: 'quoteName', name: 'Quote Name', width: '150px' },
+                { id: 'quoteName', name: 'Quote Name', width: '150px'  },
                 // NEW: Opportunity Name column
-                { id: 'opportunityName', name: 'Opportunity Name', width: '150px' },
-                { id: 'eventName', name: 'Event Name', width: '150px' },
+                { id: 'opportunityName', name: 'Opportunity Name', width: '150px'  },
+                { id: 'eventName', name: 'Event Name' , width: '150px' },
                 {
                     id: 'eventDate',
                     name: 'Event Date',
@@ -6297,7 +6169,7 @@ async function initializePage() {
                         return 'N/A';
                     }
                 },
-                { id: 'quoteAmount', name: 'Amount', formatter: (cell) => `$${cell ? cell.toFixed(2) : '0.00'}`, width: '100px' },
+                { id: 'quoteAmount',   name: 'Amount', formatter: (cell) => `$${cell ? cell.toFixed(2) : '0.00'}`, width: '100px'  },
                 { id: 'quoteDiscount', name: 'Discount (%)', formatter: (cell) => `${cell}%`, width: '100px' },
                 {
                     id: 'quoteAdjustment',
@@ -6467,7 +6339,7 @@ async function initializePage() {
     // This function now also fetches the related opportunity name to display in the grid.
     unsubscribeQuotes = onSnapshot(getCollectionRef('quotes'), async (snapshot) => {
         console.log("Quotes real-time listener triggered. Fetching and preparing data...");
-
+        
         if (snapshot.empty) {
             if (noQuotesMessage) noQuotesMessage.classList.remove('hidden');
             if (quotesGridContainer) quotesGridContainer.classList.add('hidden');
@@ -6485,7 +6357,7 @@ async function initializePage() {
                     // Fetch the linked opportunity document
                     const opportunityDocRef = doc(db, 'opportunities', quote.opportunityId);
                     const opportunityDoc = await getDoc(opportunityDocRef);
-
+                    
                     if (opportunityDoc.exists()) {
                         opportunityName = opportunityDoc.data().name || 'Unnamed Opportunity';
                     }
@@ -6493,7 +6365,7 @@ async function initializePage() {
                     console.error(`Error fetching opportunity for quote ${quote.id}:`, error);
                 }
             }
-
+            
             // Return a new object with the opportunityName added
             return { ...quote, opportunityName };
         });
@@ -6504,7 +6376,7 @@ async function initializePage() {
         // Update UI based on whether there are quotes
         if (noQuotesMessage) noQuotesMessage.classList.add('hidden');
         if (quotesGridContainer) quotesGridContainer.classList.remove('hidden');
-
+        
         // Update the grid with the new, enriched data
         quotesGrid.updateConfig({ data: quotes }).forceRender();
         console.log("Quotes grid updated with opportunity names.");
@@ -6772,7 +6644,6 @@ async function initializePage() {
 
     // NEW: Setup all accordion click listeners centrally
     setupAccordionListeners();
-    setupQuotesGridListener();
 
     // Initial authentication check
     onAuthStateChanged(auth, async (user) => {
