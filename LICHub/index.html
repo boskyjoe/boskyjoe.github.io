@@ -69,18 +69,7 @@
             width: 100%;
         }
         
-        .data-sources-container::after {
-            content: '';
-            position: absolute;
-            bottom: -40px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-top: 15px solid #3498db;
-            border-left: 10px solid transparent;
-            border-right: 10px solid transparent;
-        }
+        /* Removed the old arrow pseudo-element */
         
         .sources-title {
             font-size: 18px;
@@ -97,25 +86,22 @@
             display: flex;
             justify-content: center;
             gap: 20px;
-            /* Allow wrapping on smaller screens */
             flex-wrap: wrap; 
         }
         
         .component {
             background: white;
             border-radius: 12px;
-            /* Adjusted padding to make components smaller */
             padding: 10px 8px; 
             text-align: center;
             box-shadow: 0 8px 30px rgba(0,0,0,0.12);
             transition: all 0.3s ease;
-            min-height: 110px; /* Reduced min-height */
+            min-height: 110px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             position: relative;
             overflow: hidden;
-            /* Reduced width to fit on a single line */
             width: 180px;
         }
         
@@ -135,13 +121,13 @@
         }
         
         .component-icon {
-            font-size: 32px; /* Reduced icon size */
-            margin-bottom: 8px; /* Reduced margin */
+            font-size: 32px;
+            margin-bottom: 8px;
             filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.1));
         }
         
         .component-title {
-            font-size: 13px; /* Reduced font size */
+            font-size: 13px;
             font-weight: 600;
             margin-bottom: 5px;
             color: #2c3e50;
@@ -149,7 +135,7 @@
         }
         
         .component-subtitle {
-            font-size: 10px; /* Reduced font size */
+            font-size: 10px;
             color: #7f8c8d;
             line-height: 1.4;
         }
@@ -174,14 +160,52 @@
             background: linear-gradient(135deg, #fff3e0 0%, #fffbf5 100%);
         }
         
+        .vertical-connector-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .vertical-connector-label {
+            font-size: 11px;
+            color: #5d6d7e;
+            text-align: center;
+            font-weight: 600;
+            background: rgba(255,255,255,0.9);
+            padding: 5px 10px;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            white-space: nowrap;
+        }
+
+        .vertical-connector-arrow {
+            width: 2px;
+            height: 40px; /* Length of the arrow shaft */
+            background-color: #3498db;
+            position: relative;
+            margin: 10px 0;
+            animation: pulse 2s infinite;
+        }
+        
+        .vertical-connector-arrow::after {
+            content: '';
+            position: absolute;
+            bottom: -8px; /* Position the arrow head */
+            left: -8px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid #3498db; /* The arrow head */
+        }
+        
         .horizontal-flow-container {
             display: flex;
             align-items: center;
             gap: 40px;
             width: 100%;
             justify-content: center;
-            margin-top: 50px;
-            flex-wrap: wrap; /* Added for responsiveness */
+            flex-wrap: wrap;
         }
         
         .horizontal-arrow {
@@ -333,10 +357,10 @@
                 </div>
             </div>
             
-            <!-- Vertical Arrow and Label from Data Sources to Horizontal Flow -->
-            <div style="display: flex; flex-direction: column; align-items: center;">
-                <div class="arrow-label">Multiple Data Streams</div>
-                <div class="horizontal-arrow" style="transform: rotate(90deg);">↓</div>
+            <!-- Vertical Arrow and Label from Data Sources to Snowflake -->
+            <div class="vertical-connector-container">
+                <div class="vertical-connector-label">Multiple Data Streams</div>
+                <div class="vertical-connector-arrow"></div>
             </div>
             
             <!-- Horizontal Flow Container (Meraki Snowflake, LIC Hub, Consumer Systems) -->
@@ -393,7 +417,7 @@
                             </div>
                             <div style="display: flex; justify-content: center; gap: 20px;">
                                 <div style="display: flex; flex-direction: column; align-items: center; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                    <div style="font-size: 18px; margin-bottom: 3px;">🔌</div>
+                                    <div style="font-size: 18px; margin-bottom: 3px;">☁️</div>
                                     <div style="font-size: 8px; color: #27ae60; font-weight: bold;">API</div>
                                 </div>
                                 <div style="display: flex; flex-direction: column; align-items: center; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
