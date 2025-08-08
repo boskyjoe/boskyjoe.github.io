@@ -69,20 +69,38 @@
             width: 100%;
         }
         
-        /* Removed the old arrow pseudo-element */
+        .consumers-outer-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(230, 126, 34, 0.05);
+            padding: 30px 20px;
+            border-radius: 15px;
+            border: 2px dashed #e67e22;
+            position: relative;
+            width: 100%;
+        }
         
-        .sources-title {
+        .sources-title, .consumers-title {
             font-size: 18px;
             font-weight: 600;
             color: #2c3e50;
             margin-bottom: 25px;
             text-align: center;
             padding-bottom: 10px;
-            border-bottom: 2px solid #3498db;
+            border-bottom: 2px solid;
             width: 100%;
         }
         
-        .sources-grid {
+        .sources-title {
+            border-color: #3498db;
+        }
+
+        .consumers-title {
+            border-color: #e67e22;
+        }
+
+        .sources-grid, .consumers-grid {
             display: flex;
             justify-content: center;
             gap: 20px;
@@ -436,9 +454,9 @@
                 </div>
                 
                 <!-- Consumer Systems Container -->
-                <div class="consumers-container" style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
-                    <div class="column-title" style="font-size: 18px; font-weight: 600; color: #2c3e50;">Consumer Systems</div>
-                    <div class="column" style="display: flex; flex-direction: column; gap: 20px;">
+                <div class="consumers-outer-container">
+                    <div class="consumers-title">Consumer Systems</div>
+                    <div class="consumers-grid">
                         <div class="component consumer" style="width: 250px;">
                             <div class="component-icon">👥</div>
                             <div class="component-title">CSM Systems</div>
