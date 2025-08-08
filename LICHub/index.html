@@ -318,6 +318,7 @@
         <div class="title">🏗️ Enterprise Data Architecture Flow</div>
         
         <div class="diagram-container">
+        <div class="diagram-container">
             <!-- Data Sources Container -->
             <div class="data-sources-container">
                 <div class="sources-title">Data Sources</div>
@@ -326,6 +327,13 @@
                         <div class="component-icon">🌐</div>
                         <div class="component-title">Meraki Dashboard</div>
                         <div class="component-subtitle">Network monitoring & analytics</div>
+                        <div style="margin-top: 10px; display: flex; justify-content: center;">
+                            <div style="display: flex; flex-direction: column; align-items: center; background: rgba(52, 152, 219, 0.1); padding: 8px; border-radius: 6px; position: relative;">
+                                <div style="font-size: 16px; margin-bottom: 3px;">🔌</div>
+                                <div style="font-size: 8px; color: #2980b9; font-weight: bold;">API Port</div>
+                                <div style="position: absolute; right: -15px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 10px solid #2980b9; border-top: 6px solid transparent; border-bottom: 6px solid transparent;"></div>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="component source">
@@ -347,6 +355,11 @@
                     </div>
                 </div>
                 <div class="arrow-label" style="position: absolute; right: -80px; top: 45%; font-size: 11px; color: #5d6d7e; font-weight: 600; background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); white-space: nowrap;">Multiple Data Streams</div>
+                
+                <!-- Real-time Data Connection -->
+                <div style="position: absolute; top: 25%; right: -120px; width: 100px; height: 2px; background: #e74c3c; z-index: 10;"></div>
+                <div style="position: absolute; top: 25%; right: -25px; width: 0; height: 0; border-left: 10px solid #e74c3c; border-top: 6px solid transparent; border-bottom: 6px solid transparent; z-index: 10;"></div>
+                <div class="arrow-label" style="position: absolute; right: -100px; top: 20%; font-size: 10px; color: #e74c3c; font-weight: bold; background: rgba(255,255,255,0.95); padding: 3px 8px; border-radius: 12px; box-shadow: 0 2px 6px rgba(231, 76, 60, 0.3); white-space: nowrap; border: 1px solid #e74c3c;">Realtime Data</div>
             </div>
             
             <!-- Snowflake -->
@@ -362,20 +375,53 @@
             
             <!-- LIC Hub -->
             <div class="single-component">
-                <div class="component processing" style="position: relative;">
-                    <div class="component-icon">🔧</div>
-                    <div class="component-title">LIC Hub</div>
-                    <div class="component-subtitle">Data enrichment, processing & API services</div>
-                    <div style="margin-top: 15px; display: flex; justify-content: center; gap: 15px;">
-                        <div style="display: flex; flex-direction: column; align-items: center;">
-                            <div style="font-size: 20px; margin-bottom: 5px;">🔌</div>
-                            <div style="font-size: 9px; color: #7f8c8d;">API</div>
-                        </div>
-                        <div style="display: flex; flex-direction: column; align-items: center;">
-                            <div style="font-size: 20px; margin-bottom: 5px;">📊</div>
-                            <div style="font-size: 9px; color: #7f8c8d;">Views</div>
+                <div class="component processing" style="position: relative; min-height: 280px; padding: 20px;">
+                    <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                        <div class="component-icon" style="margin-bottom: 0; margin-right: 10px; font-size: 32px;">🔧</div>
+                        <div>
+                            <div class="component-title" style="margin-bottom: 0; font-size: 18px;">LIC Hub</div>
+                            <div class="component-subtitle" style="font-size: 10px;">Data processing & API services</div>
                         </div>
                     </div>
+                    
+                    <!-- Data Layer -->
+                    <div style="background: rgba(52, 152, 219, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 12px; border-left: 3px solid #3498db; position: relative;">
+                        <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 5px; display: flex; align-items: center;">
+                            <span style="font-size: 16px; margin-right: 8px;">💾</span>
+                            Data Layer
+                        </div>
+                        <div style="font-size: 9px; color: #7f8c8d;">Raw data ingestion & storage</div>
+                        <div style="position: absolute; right: -12px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 8px solid #3498db; border-top: 5px solid transparent; border-bottom: 5px solid transparent;"></div>
+                    </div>
+                    
+                    <!-- Transformation & Enrichment Layer -->
+                    <div style="background: rgba(155, 89, 182, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 12px; border-left: 3px solid #9b59b6; position: relative;">
+                        <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 5px; display: flex; align-items: center;">
+                            <span style="font-size: 16px; margin-right: 8px;">⚡</span>
+                            Transformation & Enrichment
+                        </div>
+                        <div style="font-size: 9px; color: #7f8c8d;">Business logic & data enhancement</div>
+                        <div style="position: absolute; right: -12px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 8px solid #9b59b6; border-top: 5px solid transparent; border-bottom: 5px solid transparent;"></div>
+                    </div>
+                    
+                    <!-- Publication Layer -->
+                    <div style="background: rgba(39, 174, 96, 0.1); border-radius: 8px; padding: 12px; border-left: 3px solid #27ae60;">
+                        <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 8px; display: flex; align-items: center;">
+                            <span style="font-size: 16px; margin-right: 8px;">📤</span>
+                            Publication Layer
+                        </div>
+                        <div style="display: flex; justify-content: center; gap: 20px;">
+                            <div style="display: flex; flex-direction: column; align-items: center; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div style="font-size: 18px; margin-bottom: 3px;">🔌</div>
+                                <div style="font-size: 8px; color: #27ae60; font-weight: bold;">API</div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div style="font-size: 18px; margin-bottom: 3px;">📊</div>
+                                <div style="font-size: 8px; color: #27ae60; font-weight: bold;">Views</div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div style="position: absolute; right: -20px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 15px solid #27ae60; border-top: 10px solid transparent; border-bottom: 10px solid transparent;"></div>
                     <div class="arrow-label" style="position: absolute; right: -90px; top: 45%; font-size: 11px; color: #5d6d7e; font-weight: 600; background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); white-space: nowrap;">API & Data Views</div>
                 </div>
