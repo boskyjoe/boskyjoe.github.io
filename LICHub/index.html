@@ -20,11 +20,14 @@
         
         .container {
             max-width: 1400px;
-            margin: 0 auto 20px; /* Added margin at the bottom */
+            margin: 0 auto 20px;
             background: white;
             border-radius: 15px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         
         .title {
@@ -48,12 +51,12 @@
         
         .diagram-container {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
             align-items: center;
-            gap: 40px;
+            gap: 50px;
             margin-bottom: 50px;
         }
-        
+
         .data-sources-container {
             display: flex;
             flex-direction: column;
@@ -63,19 +66,20 @@
             border-radius: 15px;
             border: 2px dashed #3498db;
             position: relative;
+            width: 100%;
         }
         
         .data-sources-container::after {
             content: '';
             position: absolute;
-            right: -20px;
-            top: 50%;
-            transform: translateY(-50%);
+            bottom: -40px;
+            left: 50%;
+            transform: translateX(-50%);
             width: 0;
             height: 0;
-            border-left: 15px solid #3498db;
-            border-top: 10px solid transparent;
-            border-bottom: 10px solid transparent;
+            border-top: 15px solid #3498db;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
         }
         
         .sources-title {
@@ -89,43 +93,30 @@
             width: 100%;
         }
         
-        /* Updated grid to a single column for better organization */
         .sources-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-            max-width: 450px;
-        }
-        
-        .column {
             display: flex;
-            flex-direction: column;
+            justify-content: center;
             gap: 20px;
-        }
-        
-        .column-title {
-            text-align: center;
-            font-size: 18px;
-            font-weight: 600;
-            color: #34495e;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #ecf0f1;
+            /* Allow wrapping on smaller screens */
+            flex-wrap: wrap; 
         }
         
         .component {
             background: white;
             border-radius: 12px;
-            padding: 25px 20px;
+            /* Adjusted padding to make components smaller */
+            padding: 10px 8px; 
             text-align: center;
             box-shadow: 0 8px 30px rgba(0,0,0,0.12);
             transition: all 0.3s ease;
-            min-height: 140px;
+            min-height: 110px; /* Reduced min-height */
             display: flex;
             flex-direction: column;
             justify-content: center;
             position: relative;
             overflow: hidden;
+            /* Reduced width to fit on a single line */
+            width: 180px;
         }
         
         .component::before {
@@ -144,21 +135,21 @@
         }
         
         .component-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
+            font-size: 32px; /* Reduced icon size */
+            margin-bottom: 8px; /* Reduced margin */
             filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.1));
         }
         
         .component-title {
-            font-size: 16px;
+            font-size: 13px; /* Reduced font size */
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
             color: #2c3e50;
             line-height: 1.2;
         }
         
         .component-subtitle {
-            font-size: 12px;
+            font-size: 10px; /* Reduced font size */
             color: #7f8c8d;
             line-height: 1.4;
         }
@@ -178,40 +169,30 @@
             background: linear-gradient(135deg, #e8f5e8 0%, #f8fff8 100%);
         }
         
-        .interface {
-            --accent-color: #e91e63;
-            background: linear-gradient(135deg, #fce4ec 0%, #fff8fb 100%);
-        }
-        
         .consumer {
             --accent-color: #e67e22;
             background: linear-gradient(135deg, #fff3e0 0%, #fffbf5 100%);
         }
         
-        .arrow-container {
+        .horizontal-flow-container {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 10px;
+            gap: 40px;
+            width: 100%;
+            justify-content: center;
+            margin-top: 50px;
+            flex-wrap: wrap; /* Added for responsiveness */
         }
         
-        .arrow {
-            font-size: 32px;
+        .horizontal-arrow {
+            font-size: 28px;
             color: #3498db;
-            font-weight: bold;
             animation: pulse 2s infinite;
-            filter: drop-shadow(1px 1px 2px rgba(52, 152, 219, 0.3));
         }
         
         @keyframes pulse {
-            0%, 100% { 
-                opacity: 0.8; 
-                transform: scale(1); 
-            }
-            50% { 
-                opacity: 1; 
-                transform: scale(1.1); 
-            }
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
         }
         
         .arrow-label {
@@ -226,26 +207,6 @@
             white-space: nowrap;
         }
         
-        .central-flow {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 25px;
-        }
-        
-        .down-arrow {
-            font-size: 28px;
-            color: #3498db;
-            animation: bounce 2s infinite;
-        }
-        
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-8px); }
-            60% { transform: translateY(-4px); }
-        }
-        
-        /* New styling for the full-width legend container */
         .legend-wrapper {
             max-width: 1400px;
             margin: 0 auto;
@@ -311,12 +272,22 @@
         
         @media (max-width: 1200px) {
             .diagram-container {
-                grid-template-columns: 1fr;
-                text-align: center;
+                gap: 30px;
             }
-            
-            .arrow {
-                transform: rotate(90deg);
+        }
+        
+        @media (max-width: 900px) {
+            .sources-grid {
+                flex-wrap: wrap; 
+            }
+        }
+        @media (max-width: 768px) {
+            .sources-grid {
+                flex-direction: column;
+                align-items: center;
+            }
+            .component {
+                width: 100%;
             }
         }
     </style>
@@ -326,138 +297,138 @@
         <div class="title">🏗️ Enterprise Data Architecture Flow</div>
         
         <div class="diagram-container">
-        <div class="diagram-container">
-            <!-- Data Sources Container -->
+            <!-- Data Sources Container (Top) -->
             <div class="data-sources-container">
                 <div class="sources-title">Data Sources</div>
                 <div class="sources-grid">
-                    <!-- Component 1: Meraki Dashboard -->
                     <div class="component source">
                         <div class="component-icon">🌐</div>
                         <div class="component-title">Meraki Dashboard</div>
                         <div class="component-subtitle">Network monitoring & analytics</div>
                         <div style="margin-top: 10px; display: flex; justify-content: center;">
                             <div style="display: flex; flex-direction: column; align-items: center; background: rgba(52, 152, 219, 0.1); padding: 8px; border-radius: 6px; position: relative;">
-                                <!-- Updated icon and text for API's -->
                                 <div style="font-size: 16px; margin-bottom: 3px;">⚙️</div>
                                 <div style="font-size: 8px; color: #2980b9; font-weight: bold;">API's</div>
-                                <div style="position: absolute; right: -15px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 10px solid #2980b9; border-top: 6px solid transparent; border-bottom: 6px solid transparent;"></div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Component 2: Product Data -->
                     <div class="component source">
                         <div class="component-icon">📦</div>
                         <div class="component-title">Product Data</div>
                         <div class="component-subtitle">Product catalog & specs</div>
                     </div>
                     
-                    <!-- Component 3: Product-License Mapping -->
                     <div class="component source">
                         <div class="component-icon">🔗</div>
                         <div class="component-title">Product-License Mapping</div>
                         <div class="component-subtitle">License associations</div>
                     </div>
                     
-                    <!-- Component 4: Orders Data -->
                     <div class="component source">
                         <div class="component-icon">📋</div>
                         <div class="component-title">Orders Data</div>
                         <div class="component-subtitle">Purchase & transactions</div>
                     </div>
                 </div>
-                <div class="arrow-label" style="position: absolute; right: -80px; top: 45%; font-size: 11px; color: #5d6d7e; font-weight: 600; background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); white-space: nowrap;">Multiple Data Streams</div>
+            </div>
+            
+            <!-- Vertical Arrow and Label from Data Sources to Horizontal Flow -->
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <div class="arrow-label">Multiple Data Streams</div>
+                <div class="horizontal-arrow" style="transform: rotate(90deg);">↓</div>
+            </div>
+            
+            <!-- Horizontal Flow Container (Meraki Snowflake, LIC Hub, Consumer Systems) -->
+            <div class="horizontal-flow-container">
+                <!-- Meraki Snowflake -->
+                <div class="single-component">
+                    <div class="component warehouse">
+                        <div class="component-icon">❄️</div>
+                        <div class="component-title">Meraki Snowflake</div>
+                        <div class="component-subtitle">Cloud data warehouse & analytics platform</div>
+                    </div>
+                </div>
                 
-                <!-- Real-time Data Connection -->
-                <div style="position: absolute; top: 25%; right: -120px; width: 100px; height: 2px; background: #e74c3c; z-index: 10;"></div>
-                <div style="position: absolute; top: 25%; right: -25px; width: 0; height: 0; border-left: 10px solid #e74c3c; border-top: 6px solid transparent; border-bottom: 6px solid transparent; z-index: 10;"></div>
-                <div class="arrow-label" style="position: absolute; right: -100px; top: 20%; font-size: 10px; color: #e74c3c; font-weight: bold; background: rgba(255,255,255,0.95); padding: 3px 8px; border-radius: 12px; box-shadow: 0 2px 6px rgba(231, 76, 60, 0.3); white-space: nowrap; border: 1px solid #e74c3c;">Realtime Data</div>
-            </div>
-            
-            <!-- Meraki Snowflake -->
-            <div class="single-component">
-                <div class="component warehouse" style="position: relative;">
-                    <div class="component-icon">❄️</div>
-                    <div class="component-title">Meraki Snowflake</div>
-                    <div class="component-subtitle">Cloud data warehouse & analytics platform</div>
-                    <div style="position: absolute; right: -20px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 15px solid #9b59b6; border-top: 10px solid transparent; border-bottom: 10px solid transparent;"></div>
-                    <div class="arrow-label" style="position: absolute; right: -80px; top: 45%; font-size: 11px; color: #5d6d7e; font-weight: 600; background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); white-space: nowrap;">Consolidated Data</div>
+                <!-- Horizontal Arrow and Label between Snowflake and LIC Hub -->
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <div class="arrow-label">Consolidated Data</div>
+                    <div class="horizontal-arrow">→</div>
                 </div>
-            </div>
-            
-            <!-- LIC Hub -->
-            <div class="single-component">
-                <div class="component processing" style="position: relative; min-height: 280px; padding: 20px;">
-                    <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-                        <div class="component-icon" style="margin-bottom: 0; margin-right: 10px; font-size: 32px;">🔧</div>
-                        <div>
-                            <div class="component-title" style="margin-bottom: 0; font-size: 18px;">LIC Hub</div>
-                            <div class="component-subtitle" style="font-size: 10px;">Data processing & API services</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Data Layer -->
-                    <div style="background: rgba(52, 152, 219, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 12px; border-left: 3px solid #3498db; position: relative;">
-                        <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 5px; display: flex; align-items: center;">
-                            <span style="font-size: 16px; margin-right: 8px;">💾</span>
-                            Data Layer
-                        </div>
-                        <div style="font-size: 9px; color: #7f8c8d;">Raw data ingestion & storage</div>
-                        <div style="position: absolute; right: -12px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 8px solid #3498db; border-top: 5px solid transparent; border-bottom: 5px solid transparent;"></div>
-                    </div>
-                    
-                    <!-- Transformation & Enrichment Layer -->
-                    <div style="background: rgba(155, 89, 182, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 12px; border-left: 3px solid #9b59b6; position: relative;">
-                        <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 5px; display: flex; align-items: center;">
-                            <span style="font-size: 16px; margin-right: 8px;">⚡</span>
-                            Transformation & Enrichment
-                        </div>
-                        <div style="font-size: 9px; color: #7f8c8d;">Business logic & data enhancement</div>
-                        <div style="position: absolute; right: -12px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 8px solid #9b59b6; border-top: 5px solid transparent; border-bottom: 5px solid transparent;"></div>
-                    </div>
-                    
-                    <!-- Publication Layer -->
-                    <div style="background: rgba(39, 174, 96, 0.1); border-radius: 8px; padding: 12px; border-left: 3px solid #27ae60;">
-                        <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 8px; display: flex; align-items: center;">
-                            <span style="font-size: 16px; margin-right: 8px;">📤</span>
-                            Publication Layer
-                        </div>
-                        <div style="display: flex; justify-content: center; gap: 20px;">
-                            <div style="display: flex; flex-direction: column; align-items: center; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                <div style="font-size: 18px; margin-bottom: 3px;">🔌</div>
-                                <div style="font-size: 8px; color: #27ae60; font-weight: bold;">API</div>
+                
+                <!-- LIC Hub -->
+                <div class="single-component">
+                    <div class="component processing" style="min-height: 280px; padding: 20px;">
+                        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                            <div class="component-icon" style="margin-bottom: 0; margin-right: 10px; font-size: 32px;">🔧</div>
+                            <div>
+                                <div class="component-title" style="margin-bottom: 0; font-size: 18px;">LIC Hub</div>
+                                <div class="component-subtitle" style="font-size: 10px;">Data processing & API services</div>
                             </div>
-                            <div style="display: flex; flex-direction: column; align-items: center; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                <div style="font-size: 18px; margin-bottom: 3px;">📊</div>
-                                <div style="font-size: 8px; color: #27ae60; font-weight: bold;">Views</div>
+                        </div>
+                        
+                        <!-- Data Layer -->
+                        <div style="background: rgba(52, 152, 219, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 12px; border-left: 3px solid #3498db;">
+                            <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 5px; display: flex; align-items: center;">
+                                <span style="font-size: 16px; margin-right: 8px;">💾</span>
+                                Data Layer
+                            </div>
+                            <div style="font-size: 9px; color: #7f8c8d;">Raw data ingestion & storage</div>
+                        </div>
+                        
+                        <!-- Transformation & Enrichment Layer -->
+                        <div style="background: rgba(155, 89, 182, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 12px; border-left: 3px solid #9b59b6;">
+                            <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 5px; display: flex; align-items: center;">
+                                <span style="font-size: 16px; margin-right: 8px;">⚡</span>
+                                Transformation & Enrichment
+                            </div>
+                            <div style="font-size: 9px; color: #7f8c8d;">Business logic & data enhancement</div>
+                        </div>
+                        
+                        <!-- Publication Layer -->
+                        <div style="background: rgba(39, 174, 96, 0.1); border-radius: 8px; padding: 12px; border-left: 3px solid #27ae60;">
+                            <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 8px; display: flex; align-items: center;">
+                                <span style="font-size: 16px; margin-right: 8px;">📤</span>
+                                Publication Layer
+                            </div>
+                            <div style="display: flex; justify-content: center; gap: 20px;">
+                                <div style="display: flex; flex-direction: column; align-items: center; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    <div style="font-size: 18px; margin-bottom: 3px;">🔌</div>
+                                    <div style="font-size: 8px; color: #27ae60; font-weight: bold;">API</div>
+                                </div>
+                                <div style="display: flex; flex-direction: column; align-items: center; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    <div style="font-size: 18px; margin-bottom: 3px;">📊</div>
+                                    <div style="font-size: 8px; color: #27ae60; font-weight: bold;">Views</div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div style="position: absolute; right: -20px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 15px solid #27ae60; border-top: 10px solid transparent; border-bottom: 10px solid transparent;"></div>
-                    <div class="arrow-label" style="position: absolute; right: -90px; top: 45%; font-size: 11px; color: #5d6d7e; font-weight: 600; background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); white-space: nowrap;">API & Data Views</div>
+                </div>
+
+                <!-- Horizontal Arrow and Label between LIC Hub and Consumer Systems -->
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <div class="arrow-label">API & Data Views</div>
+                    <div class="horizontal-arrow">→</div>
+                </div>
+                
+                <!-- Consumer Systems Container -->
+                <div class="consumers-container">
+                    <div class="column-title">Consumer Systems</div>
+                    <div class="column" style="flex-direction: column; flex-wrap: wrap; justify-content: center; gap: 20px;">
+                        <div class="component consumer" style="width: 250px;">
+                            <div class="component-icon">👥</div>
+                            <div class="component-title">CSM Systems</div>
+                            <div class="component-subtitle">Customer Success Management</div>
+                        </div>
+                        
+                        <div class="component consumer" style="width: 250px;">
+                            <div class="component-icon">⚙️</div>
+                            <div class="component-title">Other Systems</div>
+                            <div class="component-subtitle">External integrations & services</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <!-- Consumer Systems -->
-            <div class="consumers-container">
-                <div class="column-title">Consumer Systems</div>
-                <div class="column">
-                    <div class="component consumer">
-                        <div class="component-icon">👥</div>
-                        <div class="component-title">CSM Systems</div>
-                        <div class="component-subtitle">Customer Success Management</div>
-                    </div>
-                    
-                    <div class="component consumer">
-                        <div class="component-icon">⚙️</div>
-                        <div class="component-title">Other Systems</div>
-                        <div class="component-subtitle">External integrations & services</div>
-                    </div>
-                </div>
-            </div>
-        </div>
         </div>
     </div>
     
