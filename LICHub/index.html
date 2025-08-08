@@ -78,7 +78,7 @@
             border-radius: 15px;
             border: 2px dashed #e67e22;
             position: relative;
-            width: 100%;
+            /* Removed width: 100% to allow it to be sized by the flexbox */
         }
         
         .sources-title, .consumers-title {
@@ -322,6 +322,10 @@
             .sources-grid {
                 flex-wrap: wrap; 
             }
+            .horizontal-flow-container {
+                flex-wrap: wrap;
+                flex-direction: column; /* Stacking on smaller screens */
+            }
         }
         @media (max-width: 768px) {
             .sources-grid {
@@ -457,13 +461,13 @@
                 <div class="consumers-outer-container">
                     <div class="consumers-title">Consumer Systems</div>
                     <div class="consumers-grid">
-                        <div class="component consumer" style="width: 250px;">
+                        <div class="component consumer" style="width: 180px;">
                             <div class="component-icon">👥</div>
                             <div class="component-title">CSM Systems</div>
                             <div class="component-subtitle">Customer Success Management</div>
                         </div>
                         
-                        <div class="component consumer" style="width: 250px;">
+                        <div class="component consumer" style="width: 180px;">
                             <div class="component-icon">⚙️</div>
                             <div class="component-title">Other Systems</div>
                             <div class="component-subtitle">External integrations & services</div>
