@@ -167,7 +167,8 @@
             /* Darker text for data */
             vertical-align: middle;
             /* Vertically center content in cells */
-            text-align: left; /* Ensures text is left-aligned */
+            text-align: left;
+            /* Ensures text is left-aligned */
         }
 
         /* Pagination Styling */
@@ -358,7 +359,8 @@
                 <form id="customer-form" class="space-y-4">
                     <input type="hidden" id="customer-id">
                     <div>
-                        <label for="customer-type" class="block text-sm font-medium text-gray-700">Type <span class="text-red-500">*</span></label>
+                        <label for="customer-type" class="block text-sm font-medium text-gray-700">Type <span
+                                class="text-red-500">*</span></label>
                         <select id="customer-type" required
                             class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out text-base sm:text-sm">
                             <option value="Individual">Individual</option>
@@ -366,27 +368,32 @@
                         </select>
                     </div>
                     <div>
-                        <label for="customer-name" class="block text-sm font-medium text-gray-700">Name <span class="text-red-500">*</span></label>
+                        <label for="customer-name" class="block text-sm font-medium text-gray-700">Name <span
+                                class="text-red-500">*</span></label>
                         <input type="text" id="customer-name" required
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
-                        <label for="customer-email" class="block text-sm font-medium text-gray-700">Email <span class="text-red-500">*</span></label>
+                        <label for="customer-email" class="block text-sm font-medium text-gray-700">Email <span
+                                class="text-red-500">*</span></label>
                         <input type="email" id="customer-email"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
-                        <label for="customer-phone" class="block text-sm font-medium text-gray-700">Phone <span class="text-red-500">*</span></label>
+                        <label for="customer-phone" class="block text-sm font-medium text-gray-700">Phone <span
+                                class="text-red-500">*</span></label>
                         <input type="tel" id="customer-phone"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
-                        <label for="customer-address" class="block text-sm font-medium text-gray-700">Address <span class="text-red-500">*</span></label>
+                        <label for="customer-address" class="block text-sm font-medium text-gray-700">Address <span
+                                class="text-red-500">*</span></label>
                         <textarea id="customer-address" rows="3"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                     </div>
                     <div>
-                        <label for="customer-country" class="block text-sm font-medium text-gray-700">Country <span class="text-red-500">*</span></label>
+                        <label for="customer-country" class="block text-sm font-medium text-gray-700">Country <span
+                                class="text-red-500">*</span></label>
                         <select id="customer-country"
                             class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out text-base sm:text-sm">
                             <!-- Options populated by JS -->
@@ -403,7 +410,8 @@
                         </select>
                     </div>
                     <div>
-                        <label for="customer-industry" class="block text-sm font-medium text-gray-700">Industry <span class="text-red-500">*</span></label>
+                        <label for="customer-industry" class="block text-sm font-medium text-gray-700">Industry <span
+                                class="text-red-500">*</span></label>
                         <select id="customer-industry" required
                             class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out text-base sm:text-sm">
                             <option value="">Select Industry</option>
@@ -475,12 +483,14 @@
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
-                        <label for="lead-phone" class="block text-sm font-medium text-gray-700">Phone <span class="text-red-500">*</span></label>
+                        <label for="lead-phone" class="block text-sm font-medium text-gray-700">Phone <span
+                                class="text-red-500">*</span></label>
                         <input type="tel" id="lead-phone"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
-                        <label for="lead-email" class="block text-sm font-medium text-gray-700">Email <span class="text-red-500">*</span></label>
+                        <label for="lead-email" class="block text-sm font-medium text-gray-700">Email <span
+                                class="text-red-500">*</span></label>
                         <input type="email" id="lead-email"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
@@ -496,12 +506,14 @@
 
 
                     <div>
-                        <label for="lead-event-date" class="block text-sm font-medium text-gray-700">Event Date <span class="text-red-500">*</span></label>
+                        <label for="lead-event-date" class="block text-sm font-medium text-gray-700">Event Date <span
+                                class="text-red-500">*</span></label>
                         <input type="date" id="lead-event-date"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
                     <div>
-                        <label for="lead-source" class="block text-sm font-medium text-gray-700">Source <span class="text-red-500">*</span></label>
+                        <label for="lead-source" class="block text-sm font-medium text-gray-700">Source <span
+                                class="text-red-500">*</span></label>
                         <select id="lead-source" required
                             class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out text-base sm:text-sm">
                             <!-- Options populated by JS -->
@@ -755,6 +767,8 @@
             <p id="no-opportunities-message" class="text-center text-gray-500 mt-8 hidden">No opportunities found.</p>
             <div id="opportunities-grid-container" class="mt-6"></div>
         </section>
+
+
 
 
         <!-- Quotes Section -->
