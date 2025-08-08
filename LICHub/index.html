@@ -47,11 +47,53 @@
         }
         
         .diagram-container {
-            display: grid;
-            grid-template-columns: 1fr auto 1fr auto 1fr;
-            gap: 30px;
+            display: flex;
+            justify-content: space-between;
             align-items: center;
+            gap: 40px;
             margin-bottom: 50px;
+        }
+        
+        .data-sources-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(52, 152, 219, 0.05);
+            padding: 30px 20px;
+            border-radius: 15px;
+            border: 2px dashed #3498db;
+            position: relative;
+        }
+        
+        .data-sources-container::after {
+            content: '';
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid #3498db;
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+        }
+        
+        .sources-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 25px;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+            width: 100%;
+        }
+        
+        .sources-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 450px;
         }
         
         .column {
@@ -276,55 +318,51 @@
         <div class="title">🏗️ Enterprise Data Architecture Flow</div>
         
         <div class="diagram-container">
-            <!-- Data Sources Column -->
-            <div class="column">
-                <div class="column-title">Data Sources</div>
-                
-                <div class="component source">
-                    <div class="component-icon">🌐</div>
-                    <div class="component-title">Meraki Dashboard</div>
-                    <div class="component-subtitle">Network monitoring & analytics data streams</div>
+            <!-- Data Sources Container -->
+            <div class="data-sources-container">
+                <div class="sources-title">Data Sources</div>
+                <div class="sources-grid">
+                    <div class="component source">
+                        <div class="component-icon">🌐</div>
+                        <div class="component-title">Meraki Dashboard</div>
+                        <div class="component-subtitle">Network monitoring & analytics</div>
+                    </div>
+                    
+                    <div class="component source">
+                        <div class="component-icon">📦</div>
+                        <div class="component-title">Product Data</div>
+                        <div class="component-subtitle">Product catalog & specs</div>
+                    </div>
+                    
+                    <div class="component source">
+                        <div class="component-icon">🔗</div>
+                        <div class="component-title">Product-License Mapping</div>
+                        <div class="component-subtitle">License associations</div>
+                    </div>
+                    
+                    <div class="component source">
+                        <div class="component-icon">📋</div>
+                        <div class="component-title">Orders Data</div>
+                        <div class="component-subtitle">Purchase & transactions</div>
+                    </div>
                 </div>
-                
-                <div class="component source">
-                    <div class="component-icon">📦</div>
-                    <div class="component-title">Product Data</div>
-                    <div class="component-subtitle">Product catalog & specifications</div>
-                </div>
-                
-                <div class="component source">
-                    <div class="component-icon">🔗</div>
-                    <div class="component-title">Product-License Mapping</div>
-                    <div class="component-subtitle">License association data</div>
-                </div>
-                
-                <div class="component source">
-                    <div class="component-icon">📋</div>
-                    <div class="component-title">Orders Data</div>
-                    <div class="component-subtitle">Purchase & transaction records</div>
-                </div>
+                <div class="arrow-label" style="position: absolute; right: -80px; top: 45%; font-size: 11px; color: #5d6d7e; font-weight: 600; background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); white-space: nowrap;">Multiple Data Streams</div>
             </div>
             
-            <!-- Arrow 1 -->
-            <div class="arrow-container">
-                <div class="arrow">→</div>
-                <div class="arrow-label">Multiple Data Streams</div>
-            </div>
-            
-            <!-- Central Processing -->
-            <div class="central-flow">
-                <div class="component warehouse">
+            <!-- Snowflake -->
+            <div class="single-component">
+                <div class="component warehouse" style="position: relative;">
                     <div class="component-icon">❄️</div>
                     <div class="component-title">Snowflake</div>
                     <div class="component-subtitle">Cloud data warehouse & analytics platform</div>
+                    <div style="position: absolute; right: -20px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 15px solid #9b59b6; border-top: 10px solid transparent; border-bottom: 10px solid transparent;"></div>
+                    <div class="arrow-label" style="position: absolute; right: -80px; top: 45%; font-size: 11px; color: #5d6d7e; font-weight: 600; background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); white-space: nowrap;">Consolidated Data</div>
                 </div>
-                
-                <div class="arrow-container">
-                    <div class="down-arrow">↓</div>
-                    <div class="arrow-label">Consolidated Data</div>
-                </div>
-                
-                <div class="component processing">
+            </div>
+            
+            <!-- LIC Hub -->
+            <div class="single-component">
+                <div class="component processing" style="position: relative;">
                     <div class="component-icon">🔧</div>
                     <div class="component-title">LIC Hub</div>
                     <div class="component-subtitle">Data enrichment, processing & API services</div>
@@ -338,29 +376,26 @@
                             <div style="font-size: 9px; color: #7f8c8d;">Views</div>
                         </div>
                     </div>
+                    <div style="position: absolute; right: -20px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 15px solid #27ae60; border-top: 10px solid transparent; border-bottom: 10px solid transparent;"></div>
+                    <div class="arrow-label" style="position: absolute; right: -90px; top: 45%; font-size: 11px; color: #5d6d7e; font-weight: 600; background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); white-space: nowrap;">API & Data Views</div>
                 </div>
-            </div>
-            
-            <!-- Arrow 2 -->
-            <div class="arrow-container">
-                <div class="arrow">→</div>
-                <div class="arrow-label">API & Data Views</div>
             </div>
             
             <!-- Consumer Systems -->
-            <div class="column">
+            <div class="consumers-container">
                 <div class="column-title">Consumer Systems</div>
-                
-                <div class="component consumer">
-                    <div class="component-icon">👥</div>
-                    <div class="component-title">CSM Systems</div>
-                    <div class="component-subtitle">Customer Success Management</div>
-                </div>
-                
-                <div class="component consumer">
-                    <div class="component-icon">⚙️</div>
-                    <div class="component-title">Other Systems</div>
-                    <div class="component-subtitle">External integrations & services</div>
+                <div class="column">
+                    <div class="component consumer">
+                        <div class="component-icon">👥</div>
+                        <div class="component-title">CSM Systems</div>
+                        <div class="component-subtitle">Customer Success Management</div>
+                    </div>
+                    
+                    <div class="component consumer">
+                        <div class="component-icon">⚙️</div>
+                        <div class="component-title">Other Systems</div>
+                        <div class="component-subtitle">External integrations & services</div>
+                    </div>
                 </div>
             </div>
         </div>
