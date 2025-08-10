@@ -52,11 +52,12 @@
         .diagram-container {
             display: flex;
             flex-direction: row; 
-            align-items: center; /* Align items to the center */
+            align-items: center; 
             gap: 50px;
             margin-bottom: 50px;
             flex-wrap: wrap; 
             justify-content: center;
+            overflow-x: auto; /* Allow horizontal scrolling */
         }
 
         .data-sources-container {
@@ -183,21 +184,13 @@
             background: linear-gradient(135deg, #fff3e0 0%, #fffbf5 100%);
         }
         
-        .main-flow-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 50px;
-            flex-grow: 1;
-        }
-        
         .horizontal-flow-container {
             display: flex;
             align-items: center;
             gap: 40px;
             width: 100%;
             justify-content: center;
-            flex-wrap: wrap;
+            flex-wrap: nowrap; /* Prevent wrapping on smaller screens as requested */
         }
         
         .horizontal-arrow {
@@ -281,18 +274,10 @@
         }
         
         @media (max-width: 900px) {
+            /* On smaller screens, the horizontal flow will still scroll */
             .diagram-container {
-                flex-direction: column;
-                align-items: center;
-            }
-            .sources-grid, .consumers-grid {
-                flex-direction: column;
-            }
-            .horizontal-flow-container {
-                flex-direction: column; /* Stacking on smaller screens */
-            }
-            .component {
-                width: 100%;
+                flex-wrap: nowrap;
+                justify-content: flex-start;
             }
         }
     </style>
@@ -338,75 +323,72 @@
                 </div>
             </div>
             
-            <!-- Main Flow Container (Right side) -->
-            <div class="main-flow-container">
-                <!-- Meraki Snowflake, LIC Hub, Consumer Systems -->
-                <div class="horizontal-flow-container">
-                    <!-- Horizontal Flow Connector from Data Sources to Meraki Snowflake -->
-                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                        <div class="arrow-label">Multiple Data Streams</div>
-                        <div class="horizontal-arrow">→</div>
+            <!-- Full Horizontal Flow Container -->
+            <div class="horizontal-flow-container">
+                <!-- Horizontal Flow Connector from Data Sources to Meraki Snowflake -->
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <div class="arrow-label">Multiple Data Streams</div>
+                    <div class="horizontal-arrow">→</div>
+                </div>
+                
+                <!-- Meraki Snowflake -->
+                <div class="single-component">
+                    <div class="component warehouse">
+                        <div class="component-icon">❄️</div>
+                        <div class="component-title">Meraki Snowflake</div>
+                        <div class="component-subtitle">Cloud data warehouse & analytics platform</div>
                     </div>
-                    
-                    <!-- Meraki Snowflake -->
-                    <div class="single-component">
-                        <div class="component warehouse">
-                            <div class="component-icon">❄️</div>
-                            <div class="component-title">Meraki Snowflake</div>
-                            <div class="component-subtitle">Cloud data warehouse & analytics platform</div>
+                </div>
+                
+                <!-- Horizontal Arrow and Label between Snowflake and LIC Hub -->
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <div class="arrow-label">Consolidated Data</div>
+                    <div class="horizontal-arrow">→</div>
+                </div>
+                
+                <!-- LIC Hub -->
+                <div class="single-component">
+                    <div class="component processing" style="min-height: 280px; padding: 20px;">
+                        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                            <div class="component-icon" style="margin-bottom: 0; margin-right: 10px; font-size: 32px;">🔧</div>
+                            <div>
+                                <div class="component-title" style="margin-bottom: 0; font-size: 18px;">LIC Hub</div>
+                                <div class="component-subtitle" style="font-size: 10px;">Data processing & API services</div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <!-- Horizontal Arrow and Label between Snowflake and LIC Hub -->
-                    <div style="display: flex; flex-direction: column; align-items: center;">
-                        <div class="arrow-label">Consolidated Data</div>
-                        <div class="horizontal-arrow">→</div>
-                    </div>
-                    
-                    <!-- LIC Hub -->
-                    <div class="single-component">
-                        <div class="component processing" style="min-height: 280px; padding: 20px;">
-                            <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-                                <div class="component-icon" style="margin-bottom: 0; margin-right: 10px; font-size: 32px;">🔧</div>
-                                <div>
-                                    <div class="component-title" style="margin-bottom: 0; font-size: 18px;">LIC Hub</div>
-                                    <div class="component-subtitle" style="font-size: 10px;">Data processing & API services</div>
-                                </div>
+                        
+                        <!-- Data Layer -->
+                        <div style="background: rgba(52, 152, 219, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 12px; border-left: 3px solid #3498db;">
+                            <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 5px; display: flex; align-items: center;">
+                                <span style="font-size: 16px; margin-right: 8px;">💾</span>
+                                Data Layer
                             </div>
-                            
-                            <!-- Data Layer -->
-                            <div style="background: rgba(52, 152, 219, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 12px; border-left: 3px solid #3498db;">
-                                <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 5px; display: flex; align-items: center;">
-                                    <span style="font-size: 16px; margin-right: 8px;">💾</span>
-                                    Data Layer
-                                </div>
-                                <div style="font-size: 9px; color: #7f8c8d;">Raw data ingestion & storage</div>
+                            <div style="font-size: 9px; color: #7f8c8d;">Raw data ingestion & storage</div>
+                        </div>
+                        
+                        <!-- Transformation & Enrichment Layer -->
+                        <div style="background: rgba(155, 89, 182, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 12px; border-left: 3px solid #9b59b6;">
+                            <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 5px; display: flex; align-items: center;">
+                                <span style="font-size: 16px; margin-right: 8px;">⚡</span>
+                                Transformation & Enrichment
                             </div>
-                            
-                            <!-- Transformation & Enrichment Layer -->
-                            <div style="background: rgba(155, 89, 182, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 12px; border-left: 3px solid #9b59b6;">
-                                <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 5px; display: flex; align-items: center;">
-                                    <span style="font-size: 16px; margin-right: 8px;">⚡</span>
-                                    Transformation & Enrichment
-                                </div>
-                                <div style="font-size: 9px; color: #7f8c8d;">Business logic & data enhancement</div>
+                            <div style="font-size: 9px; color: #7f8c8d;">Business logic & data enhancement</div>
+                        </div>
+                        
+                        <!-- Publication Layer -->
+                        <div style="background: rgba(39, 174, 96, 0.1); border-radius: 8px; padding: 12px; border-left: 3px solid #27ae60;">
+                            <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 8px; display: flex; align-items: center;">
+                                <span style="font-size: 16px; margin-right: 8px;">📤</span>
+                                Publication Layer
                             </div>
-                            
-                            <!-- Publication Layer -->
-                            <div style="background: rgba(39, 174, 96, 0.1); border-radius: 8px; padding: 12px; border-left: 3px solid #27ae60;">
-                                <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 8px; display: flex; align-items: center;">
-                                    <span style="font-size: 16px; margin-right: 8px;">📤</span>
-                                    Publication Layer
+                            <div style="display: flex; justify-content: center; gap: 20px;">
+                                <div style="display: flex; flex-direction: column; align-items: center; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    <div style="font-size: 18px; margin-bottom: 3px;">☁️</div>
+                                    <div style="font-size: 8px; color: #27ae60; font-weight: bold;">API</div>
                                 </div>
-                                <div style="display: flex; justify-content: center; gap: 20px;">
-                                    <div style="display: flex; flex-direction: column; align-items: center; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                        <div style="font-size: 18px; margin-bottom: 3px;">☁️</div>
-                                        <div style="font-size: 8px; color: #27ae60; font-weight: bold;">API</div>
-                                    </div>
-                                    <div style="display: flex; flex-direction: column; align-items: center; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                        <div style="font-size: 18px; margin-bottom: 3px;">📊</div>
-                                        <div style="font-size: 8px; color: #27ae60; font-weight: bold;">Views</div>
-                                    </div>
+                                <div style="display: flex; flex-direction: column; align-items: center; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    <div style="font-size: 18px; margin-bottom: 3px;">📊</div>
+                                    <div style="font-size: 8px; color: #27ae60; font-weight: bold;">Views</div>
                                 </div>
                             </div>
                         </div>
