@@ -49,15 +49,16 @@
             border-radius: 2px;
         }
         
+        /* Main container for the entire diagram, enables horizontal scrolling */
         .diagram-container {
             display: flex;
             flex-direction: row; 
-            align-items: center; 
+            align-items: flex-start; /* Align to the top */
             gap: 50px;
             margin-bottom: 50px;
-            flex-wrap: wrap; 
-            justify-content: center;
+            padding-bottom: 20px; /* Add padding for scrollbar */
             overflow-x: auto; /* Allow horizontal scrolling */
+            width: 100%;
         }
 
         .data-sources-container {
@@ -69,7 +70,8 @@
             border-radius: 15px;
             border: 2px dashed #3498db;
             position: relative;
-            flex-shrink: 0;
+            flex-shrink: 0; /* Prevents this container from shrinking */
+            min-width: 250px;
         }
         
         .consumers-outer-container {
@@ -81,6 +83,7 @@
             border-radius: 15px;
             border: 2px dashed #e67e22;
             position: relative;
+            flex-shrink: 0; /* Prevents this container from shrinking */
         }
         
         .sources-title, .consumers-title {
@@ -106,13 +109,10 @@
             display: flex;
             justify-content: center;
             gap: 20px;
-            flex-wrap: wrap; 
-        }
-
-        .sources-grid {
+            flex-wrap: nowrap; /* Prevent wrapping inside source/consumer containers */
             flex-direction: column;
         }
-        
+
         .component {
             background: white;
             border-radius: 12px;
@@ -127,6 +127,7 @@
             position: relative;
             overflow: hidden;
             width: 180px;
+            flex-shrink: 0;
         }
         
         .component::before {
@@ -188,14 +189,14 @@
             display: flex;
             align-items: center;
             gap: 40px;
-            width: 100%;
-            justify-content: center;
-            flex-wrap: nowrap; /* Prevent wrapping on smaller screens as requested */
+            flex-wrap: nowrap; /* Prevents wrapping, enforcing horizontal flow */
+            flex-shrink: 0;
         }
         
         .horizontal-arrow {
             font-size: 28px;
             color: #3498db;
+            flex-shrink: 0;
         }
         
         .arrow-label {
@@ -276,7 +277,6 @@
         @media (max-width: 900px) {
             /* On smaller screens, the horizontal flow will still scroll */
             .diagram-container {
-                flex-wrap: nowrap;
                 justify-content: flex-start;
             }
         }
@@ -323,7 +323,7 @@
                 </div>
             </div>
             
-            <!-- Full Horizontal Flow Container -->
+            <!-- Full Horizontal Flow Container for the rest of the components -->
             <div class="horizontal-flow-container">
                 <!-- Horizontal Flow Connector from Data Sources to Meraki Snowflake -->
                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
