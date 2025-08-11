@@ -5506,6 +5506,53 @@ function setupLeadsGridListener() {
     });
 }
 
+/**
+ * Sets up a real-time listener for the opportunities grid.
+ * This function should only be called when a user is authenticated.
+ */
+function setupOpportunitiesGridListener() {
+    // If a listener already exists, unsubscribe from it to prevent duplicates
+    if (unsubscribeOpportunities) {
+        unsubscribeOpportunities();
+    }
+
+    // Now, we can safely set up the listener as we know the user is authenticated.
+    unsubscribeOpportunities = onSnapshot(getCollectionRef('opportunities'), async (snapshot) => {
+        // Use a promise to map over the documents and fetch customer data for each.
+        const opportunitiesWithCustomerNames = await Promise.all(snapshot.docs.map(async (doc) => {
+            const opportunity = { id: doc.id, ...doc.data() };
+            let customerName = 'Unknown';
+            // Fetch customer name for display
+            if (opportunity.customerId) {
+                try {
+                    const customerDoc = await getDoc(getDocRef('customers', opportunity.customerId));
+                    if (customerDoc.exists()) {
+                        customerName = customerDoc.data().name;
+                    }
+                } catch (error) {
+                    console.error("Error fetching customer name for opportunity:", opportunity.id, error);
+                }
+            }
+            return { ...opportunity, customerName };
+        }));
+
+        if (opportunitiesWithCustomerNames.length === 0) {
+            if (noOpportunitiesMessage) noOpportunitiesMessage.classList.remove('hidden');
+            if (opportunitiesGridContainer) opportunitiesGridContainer.classList.add('hidden');
+        } else {
+            if (noOpportunitiesMessage) noOpportunitiesMessage.classList.add('hidden');
+            if (opportunitiesGridContainer) opportunitiesGridContainer.classList.remove('hidden');
+        }
+
+        opportunitiesGrid.updateConfig({ data: opportunitiesWithCustomerNames }).forceRender();
+        console.log("Opportunities grid updated.");
+    }, (error) => {
+        console.error("Error fetching opportunities:", error);
+        showMessageBox("Error loading opportunities.");
+    });
+}
+
+
 
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', initializePage);
@@ -6158,23 +6205,6 @@ async function initializePage() {
             paginationButtonNext: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
         }
     }).render(opportunitiesGridContainer);
-
-
-
-    unsubscribeOpportunities = onSnapshot(getCollectionRef('opportunities'), (snapshot) => {
-        const opportunities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (opportunities.length === 0) {
-            if (noOpportunitiesMessage) noOpportunitiesMessage.classList.remove('hidden');
-            if (opportunitiesGridContainer) opportunitiesGridContainer.classList.add('hidden');
-        } else {
-            if (noOpportunitiesMessage) noOpportunitiesMessage.classList.add('hidden');
-            if (opportunitiesGridContainer) opportunitiesGridContainer.classList.remove('hidden');
-        }
-        opportunitiesGrid.updateConfig({ data: opportunities }).forceRender();
-    }, (error) => {
-        console.error("Error fetching opportunities:", error);
-        showMessageBox("Error loading opportunities.");
-    });
 
 
     // QUOTES GRID INITIALIZATION (Aligned with opportunitiesGrid pattern)
