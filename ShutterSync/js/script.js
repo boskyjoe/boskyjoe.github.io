@@ -590,7 +590,7 @@ async function handleLogout() {
 const getCustomersQuery = () => {
     const customersCollectionRef = getCollectionRef('customers');
     const isAdmin = currentUserRole === 'Admin';
-    
+
     // If the user is an Admin, return the entire collection reference.
     // Otherwise, return a query filtered by the current user's creatorId.
     return isAdmin ? customersCollectionRef : query(customersCollectionRef, where('creatorId', '==', auth.currentUser.uid));
@@ -604,7 +604,7 @@ const getCustomersQuery = () => {
 const getOpportunitiesQuery = () => {
     const opportunitiesCollectionRef = getCollectionRef('opportunities');
     const isAdmin = currentUserRole === 'Admin';
-    
+
     // If the user is an Admin, return the entire collection reference.
     // Otherwise, return a query filtered by the current user's creatorId.
     return isAdmin ? opportunitiesCollectionRef : query(opportunitiesCollectionRef, where('creatorId', '==', auth.currentUser.uid));
@@ -663,7 +663,7 @@ function loadDashboardData() {
         // --- Real-time listener for Opportunities ---
         onSnapshot(getOpportunitiesQuery(), (snapshot) => {
             const opportunities = snapshot.docs.map(doc => doc.data());
-            
+
             // Count all opportunities
             const totalOpportunities = opportunities.length;
             if (dashboardTotalOpportunities) {
@@ -681,7 +681,7 @@ function loadDashboardData() {
             if (dashboardWonOpportunities) {
                 dashboardWonOpportunities.textContent = wonOpportunities;
             }
-            
+
             console.log(`Dashboard: Opportunities metrics updated in real-time. Total: ${totalOpportunities}, Open: ${openOpportunities}, Won: ${wonOpportunities}`);
         }, (error) => {
             console.error("Error fetching opportunities for dashboard:", error);
@@ -708,7 +708,7 @@ function calculateQuoteNetAmount() {
     const quoteDiscountInput = document.getElementById('quote-discount');
     const quoteAdjustmentInput = document.getElementById('quote-adjustment');
     const quoteNetAmountInput = document.getElementById('quote-net-amount');
-    
+
     const quoteAmount = parseFloat(quoteAmountInput.value) || 0;
     const quoteDiscount = parseFloat(quoteDiscountInput.value) || 0;
     const quoteAdjustment = parseFloat(quoteAdjustmentInput.value) || 0;
@@ -783,7 +783,7 @@ async function updateAllQuoteTotalsAndUI(quoteId) {
                 quoteAdjustmentInput.value = '0';
             }
         }
-        
+
         // Step 6: Calculate the Quote Net Amount
         const quoteDiscount = parseFloat(quoteDiscountInput.value) || 0;
         const quoteAdjustment = parseFloat(quoteAdjustmentInput.value) || 0;
@@ -803,7 +803,7 @@ async function updateAllQuoteTotalsAndUI(quoteId) {
             quoteNetAmount: netAmount,
             updatedAt: new Date() // Use client-side timestamp as per your rule
         };
-        
+
         // Step 8: Perform the full update with the merged data
         await updateDoc(quoteRef, updatedData);
 
@@ -1061,7 +1061,7 @@ async function setupWorkLogForm(workLog = null) {
         if (workLogOpportunityIdInput) workLogOpportunityIdInput.value = currentOpportunityId || ''; // Ensure opportunity ID is set for new logs
         if (workLogDateInput) workLogDateInput.valueAsDate = new Date();
     }
-    
+
     showWorkLogForm();
 }
 
@@ -4275,7 +4275,7 @@ async function setupQuoteForm(quoteData = null) {
                 await populateCustomerDetailsForQuote();
             }
         }
-        
+
         // --- NEW: Populate discount and adjustment fields from Firestore
         if (quoteDiscountInput) quoteDiscountInput.value = quoteData.quoteDiscount !== undefined ? quoteData.quoteDiscount.toFixed(2) : '0.00';
         if (quoteAdjustmentInput) quoteAdjustmentInput.value = quoteData.quoteAdjustment !== undefined ? quoteData.quoteAdjustment.toFixed(2) : '0.00';
@@ -4435,7 +4435,7 @@ async function updateMainQuoteAmountFromFirestore(quoteId) {
         const quoteDiscountInput = document.getElementById('quote-discount');
         const quoteAdjustmentInput = document.getElementById('quote-adjustment');
         const quoteNetAmountInput = document.getElementById('quote-net-amount');
-        
+
         if (quoteAmountInput) {
             quoteAmountInput.value = totalAmount.toFixed(2);
         }
@@ -4845,7 +4845,7 @@ async function handleSaveQuoteLine(event) {
     const quantity = parseFloat(quoteLineQuantityInput.value) || 0;
     const discount = parseFloat(quoteLineDiscountInput.value) || 0;
     const adjustmentAmount = parseFloat(quoteLineAdjustmentAmountInput.value) || 0;
-    
+
     // --- NEW: Calculate finalNet directly from input values ---
     const netAmount = unitPrice * quantity;
     const discountAmount = netAmount * (discount / 100);
@@ -4894,10 +4894,10 @@ async function handleSaveQuoteLine(event) {
         }
 
         hideQuoteLineForm(); // Hide the form after successful save
-        
+
         // --- NEW: After saving the quote line, update the parent quote's totals in Firestore and the UI ---
         await updateAllQuoteTotalsAndUI(currentQuoteId);
-        
+
         // After all updates are complete, re-render the quote lines list.
         await renderQuoteLines(currentQuoteId);
 
@@ -5796,7 +5796,7 @@ async function initializePage() {
     });
     if (quoteDiscountInput) quoteDiscountInput.addEventListener('input', calculateQuoteNetAmount);
     if (quoteAdjustmentInput) quoteAdjustmentInput.addEventListener('input', calculateQuoteNetAmount);
-    
+
 
     // Quote Line Listeners (ALL NEW)
     if (addQuoteLineEntryBtn) {
@@ -6154,10 +6154,10 @@ async function initializePage() {
             columns: [
                 // Quote ID: Hidden again, but still present for actions
                 { id: 'id', name: 'Quote ID', hidden: true },
-                { id: 'quoteName', name: 'Quote Name', width: '150px'  },
+                { id: 'quoteName', name: 'Quote Name', width: '150px' },
                 // NEW: Opportunity Name column
-                { id: 'opportunityName', name: 'Opportunity Name', width: '150px'  },
-                { id: 'eventName', name: 'Event Name' , width: '150px' },
+                { id: 'opportunityName', name: 'Opportunity Name', width: '150px' },
+                { id: 'eventName', name: 'Event Name', width: '150px' },
                 {
                     id: 'eventDate',
                     name: 'Event Date',
@@ -6169,7 +6169,7 @@ async function initializePage() {
                         return 'N/A';
                     }
                 },
-                { id: 'quoteAmount',   name: 'Amount', formatter: (cell) => `$${cell ? cell.toFixed(2) : '0.00'}`, width: '100px'  },
+                { id: 'quoteAmount', name: 'Amount', formatter: (cell) => `$${cell ? cell.toFixed(2) : '0.00'}`, width: '100px' },
                 { id: 'quoteDiscount', name: 'Discount (%)', formatter: (cell) => `${cell}%`, width: '100px' },
                 {
                     id: 'quoteAdjustment',
@@ -6339,7 +6339,7 @@ async function initializePage() {
     // This function now also fetches the related opportunity name to display in the grid.
     unsubscribeQuotes = onSnapshot(getCollectionRef('quotes'), async (snapshot) => {
         console.log("Quotes real-time listener triggered. Fetching and preparing data...");
-        
+
         if (snapshot.empty) {
             if (noQuotesMessage) noQuotesMessage.classList.remove('hidden');
             if (quotesGridContainer) quotesGridContainer.classList.add('hidden');
@@ -6357,7 +6357,7 @@ async function initializePage() {
                     // Fetch the linked opportunity document
                     const opportunityDocRef = doc(db, 'opportunities', quote.opportunityId);
                     const opportunityDoc = await getDoc(opportunityDocRef);
-                    
+
                     if (opportunityDoc.exists()) {
                         opportunityName = opportunityDoc.data().name || 'Unnamed Opportunity';
                     }
@@ -6365,7 +6365,7 @@ async function initializePage() {
                     console.error(`Error fetching opportunity for quote ${quote.id}:`, error);
                 }
             }
-            
+
             // Return a new object with the opportunityName added
             return { ...quote, opportunityName };
         });
@@ -6376,7 +6376,7 @@ async function initializePage() {
         // Update UI based on whether there are quotes
         if (noQuotesMessage) noQuotesMessage.classList.add('hidden');
         if (quotesGridContainer) quotesGridContainer.classList.remove('hidden');
-        
+
         // Update the grid with the new, enriched data
         quotesGrid.updateConfig({ data: quotes }).forceRender();
         console.log("Quotes grid updated with opportunity names.");
@@ -6647,10 +6647,20 @@ async function initializePage() {
 
     // Initial authentication check
     onAuthStateChanged(auth, async (user) => {
+        // Get a reference to the logout and sign-in buttons
+        const logoutBtn = document.getElementById('nav-logout');
+        const googleSignInBtn = document.getElementById('google-sign-in-btn');
+        const authSection = document.getElementById('auth-section');
+
         if (user) {
             console.log("User is authenticated:", user.uid);
             if (userDisplayName) userDisplayName.textContent = user.displayName || user.email || 'User';
             if (userIdDisplay) userIdDisplay.textContent = `(ID: ${user.uid})`;
+
+            // CRITICAL FIX: Show the Logout button and hide the Google Sign-In button
+            if (logoutBtn) logoutBtn.classList.remove('hidden');
+            // Assuming you have a Google Sign-In button, hide it when logged in
+            if (googleSignInBtn) googleSignInBtn.classList.add('hidden');
 
             // Fetch user role
             try {
@@ -6659,17 +6669,16 @@ async function initializePage() {
                 if (userDoc.exists()) {
                     role = userDoc.data().role || 'Standard';
                 } else {
-                    // Create user_data entry if it doesn't exist (first time sign-in)
                     await setDoc(getDocRef('users_data', user.uid), {
                         email: user.email,
                         displayName: user.displayName || user.email,
-                        role: 'Standard', // Default role
+                        role: 'Standard',
                         createdAt: serverTimestamp(),
                         lastLogin: serverTimestamp(),
-                    }, { merge: true }); // Use merge to avoid overwriting existing data if any
+                    }, { merge: true });
                 }
-                currentUserRole = role; // Assign to the data variable
-                if (userRole) userRole.textContent = `(Role: ${role})`; // Update DOM element
+                currentUserRole = role;
+                if (userRole) userRole.textContent = `(Role: ${role})`;
                 if (adminMenuItem) {
                     if (role === 'Admin') {
                         adminMenuItem.classList.remove('hidden');
@@ -6684,12 +6693,11 @@ async function initializePage() {
             }
 
             if (authSection) authSection.classList.add('hidden');
-            showSection('dashboard-section'); // Show dashboard by default after login
-            loadDashboardData(); // Load dashboard data after user is authenticated
+            showSection('dashboard-section');
+            loadDashboardData();
         } else {
             console.log("User is not authenticated. Signing in anonymously...");
             try {
-                // Use __initial_auth_token if provided by Canvas, otherwise sign in anonymously
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                     console.log("Signed in with custom token.");
@@ -6699,11 +6707,16 @@ async function initializePage() {
                 }
             } catch (anonError) {
                 console.error("Anonymous Sign-In Error:", anonError);
-                if (authErrorMessage) { // Null check
+                if (authErrorMessage) {
                     authErrorMessage.textContent = `Anonymous sign-in failed: ${anonError.message}`;
                     authErrorMessage.classList.remove('hidden');
                 }
             }
+
+            // CRITICAL FIX: Hide the Logout button and show the Google Sign-In button
+            if (logoutBtn) logoutBtn.classList.add('hidden');
+            if (googleSignInBtn) googleSignInBtn.classList.remove('hidden');
+
             if (authSection) authSection.classList.remove('hidden');
             showSection('auth-section');
         }
