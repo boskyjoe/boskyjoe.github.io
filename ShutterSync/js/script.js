@@ -33,6 +33,7 @@ let unsubscribeLeads = null;
 let unsubscribeOpportunities = null;
 let unsubscribeQuotes = null;
 let unsubscribeQuoteLines = null; // For quote lines
+let unsubscribeCountries = null;
 
 let userId = null; // Will be set after authentication
 let currentUserRole = 'guest'; // Renamed to avoid confusion with DOM element 'userRole'
