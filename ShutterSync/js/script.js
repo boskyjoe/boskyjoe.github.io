@@ -36,6 +36,7 @@ let unsubscribeQuoteLines = null; // For quote lines
 let unsubscribeCountries = null;
 let unsubscribeCurrencies = null;
 
+
 let userId = null; // Will be set after authentication
 let currentUserRole = 'guest'; // Renamed to avoid confusion with DOM element 'userRole'
 let currentOpportunityId = null; // To track the opportunity being edited
