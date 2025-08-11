@@ -5553,6 +5553,56 @@ function setupOpportunitiesGridListener() {
 }
 
 
+/**
+ * Sets up a real-time listener for the quotes grid.
+ * This function should only be called when a user is authenticated.
+ */
+function setupQuotesGridListener() {
+    if (unsubscribeQuotes) {
+        unsubscribeQuotes();
+    }
+
+    unsubscribeQuotes = onSnapshot(getCollectionRef('quotes'), async (snapshot) => {
+        console.log("Quotes real-time listener triggered. Fetching and preparing data...");
+
+        if (snapshot.empty) {
+            if (noQuotesMessage) noQuotesMessage.classList.remove('hidden');
+            if (quotesGridContainer) quotesGridContainer.classList.add('hidden');
+            quotesGrid.updateConfig({ data: [] }).forceRender();
+            return;
+        }
+
+        const quotesWithOpportunityPromises = snapshot.docs.map(async (docSnapshot) => {
+            const quote = { id: docSnapshot.id, ...docSnapshot.data() };
+            let opportunityName = 'Not Found';
+
+            if (quote.opportunityId) {
+                try {
+                    const opportunityDocRef = getDocRef('opportunities', quote.opportunityId);
+                    const opportunityDoc = await getDoc(opportunityDocRef);
+                    if (opportunityDoc.exists()) {
+                        opportunityName = opportunityDoc.data().name || 'Unnamed Opportunity';
+                    }
+                } catch (error) {
+                    console.error(`Error fetching opportunity for quote ${quote.id}:`, error);
+                }
+            }
+
+            return { ...quote, opportunityName };
+        });
+
+        const quotes = await Promise.all(quotesWithOpportunityPromises);
+
+        if (noQuotesMessage) noQuotesMessage.classList.add('hidden');
+        if (quotesGridContainer) quotesGridContainer.classList.remove('hidden');
+        quotesGrid.updateConfig({ data: quotes }).forceRender();
+        console.log("Quotes grid updated with opportunity names.");
+    }, (error) => {
+        console.error("Error fetching quotes:", error);
+        showMessageBox("Error loading quotes.");
+    });
+}
+
 
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', initializePage);
@@ -6392,61 +6442,6 @@ async function initializePage() {
     } else {
         console.error("initializePage: quoteLinesGridContainer not found, cannot initialize quoteLinesGrid.");
     }
-
-
-    // A real-time listener for the quotes collection.
-    // This function now also fetches the related opportunity name to display in the grid.
-    unsubscribeQuotes = onSnapshot(getCollectionRef('quotes'), async (snapshot) => {
-        console.log("Quotes real-time listener triggered. Fetching and preparing data...");
-
-        if (snapshot.empty) {
-            if (noQuotesMessage) noQuotesMessage.classList.remove('hidden');
-            if (quotesGridContainer) quotesGridContainer.classList.add('hidden');
-            quotesGrid.updateConfig({ data: [] }).forceRender(); // Ensure the grid is cleared
-            return;
-        }
-
-        // Create an array of promises to fetch each opportunity document in parallel
-        const quotesWithOpportunityPromises = snapshot.docs.map(async (docSnapshot) => {
-            const quote = { id: docSnapshot.id, ...docSnapshot.data() };
-            let opportunityName = 'Not Found';
-
-            if (quote.opportunityId) {
-                try {
-                    // Fetch the linked opportunity document
-                    const opportunityDocRef = doc(db, 'opportunities', quote.opportunityId);
-                    const opportunityDoc = await getDoc(opportunityDocRef);
-
-                    if (opportunityDoc.exists()) {
-                        opportunityName = opportunityDoc.data().name || 'Unnamed Opportunity';
-                    }
-                } catch (error) {
-                    console.error(`Error fetching opportunity for quote ${quote.id}:`, error);
-                }
-            }
-
-            // Return a new object with the opportunityName added
-            return { ...quote, opportunityName };
-        });
-
-        // Wait for all the promises to resolve
-        const quotes = await Promise.all(quotesWithOpportunityPromises);
-
-        // Update UI based on whether there are quotes
-        if (noQuotesMessage) noQuotesMessage.classList.add('hidden');
-        if (quotesGridContainer) quotesGridContainer.classList.remove('hidden');
-
-        // Update the grid with the new, enriched data
-        quotesGrid.updateConfig({ data: quotes }).forceRender();
-        console.log("Quotes grid updated with opportunity names.");
-
-    }, (error) => {
-        console.error("Error fetching quotes:", error);
-        showMessageBox("Error loading quotes.");
-    });
-
-
-
 
 
     countriesGrid = new gridjs.Grid({
