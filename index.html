@@ -423,7 +423,7 @@
         <div id="raffle-content-container" class="hidden">
             <p class="text-base text-gray-700 mb-10 relative z-10">
                 Click the "Generate Winners" button for each place to reveal the winning ticket numbers.
-                <strong class="text-red-600">2nd Place winners are drawn from 'winners.txt'. 1st and 3rd Place winners are drawn from 'winners1.txt'. Each ticket can only win once!</strong>
+                <strong class="text-red-600">3rd Place winners are drawn from 'winners2.txt'. 2nd Place winners are drawn from 'winners.txt'. 1st Place winners are drawn from 'winners1.txt'. Each ticket can only win once!</strong>
             </p>
 
             <div id="status-message" class="text-center text-base font-semibold text-gray-600 mb-6 relative z-10">
@@ -565,6 +565,7 @@
 
         let raffleTicketsWinners = []; // Will be populated from winners.txt
         let raffleTicketsWinners1 = []; // Will be populated from winners1.txt
+        let raffleTicketsWinners2 = []; // Will be populated from winners2.txt (NEW)
 
         // Global variables to store the final winning numbers for each place
         let finalFirstWinner = '---';
@@ -824,22 +825,27 @@
 
 
             try {
-                const [winnersData, winners1Data] = await Promise.all([
+                // Modified Promise.all to also fetch winners2.txt
+                const [winnersData, winners1Data, winners2Data] = await Promise.all([
                     fetchTicketNumbers('winners.txt'),
-                    fetchTicketNumbers('winners1.txt')
+                    fetchTicketNumbers('winners1.txt'),
+                    fetchTicketNumbers('winners2.txt') // NEW: Fetch the third file
                 ]);
 
                 raffleTicketsWinners = winnersData; // These are already unique now
                 raffleTicketsWinners1 = winners1Data; // These are already unique now
+                raffleTicketsWinners2 = winners2Data; // These are already unique now
 
                 console.log("DEBUG: Fetched winners.txt unique length:", raffleTicketsWinners.length);
                 console.log("DEBUG: Fetched winners1.txt unique length:", raffleTicketsWinners1.length);
+                console.log("DEBUG: Fetched winners2.txt unique length:", raffleTicketsWinners2.length); // NEW: Log for the new file
 
                 // Now, check if the loaded arrays have enough UNIQUE tickets for picking
                 // `winners.txt` needs 1 for 2nd place
-                // `winners1.txt` needs 2 for 1st and 3rd place
-                if (raffleTicketsWinners.length < 1 || raffleTicketsWinners1.length < 2) {
-                    statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} unique tickets (needs at least 1 for 2nd place). 'winners1.txt' has ${raffleTicketsWinners1.length} unique tickets (needs at least 2 for 1st and 3rd place). Please populate your files with more unique alphanumeric tickets.`;
+                // `winners1.txt` needs 1 for 1st place
+                // `winners2.txt` needs 1 for 3rd place
+                if (raffleTicketsWinners.length < 1 || raffleTicketsWinners1.length < 1 || raffleTicketsWinners2.length < 1) {
+                    statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} unique tickets (needs at least 1 for 2nd place). 'winners1.txt' has ${raffleTicketsWinners1.length} unique tickets (needs at least 1 for 1st place). 'winners2.txt' has ${raffleTicketsWinners2.length} unique tickets (needs at least 1 for 3rd place). Please populate your files with more unique alphanumeric tickets.`;
                     disableAllGenerateButtons();
                     revealWinnersBtn.disabled = true; // Disable reveal button if not enough tickets
                     return;
@@ -852,7 +858,7 @@
             catch (error) {
                 // Error handled in fetchTicketNumbers, which already sets status message and disables buttons.
                 console.error("ERROR: Initialization failed in initializeRaffleData:", error);
-                statusMessageElement.textContent = `Failed to initialize raffle data. Please check console for details. Ensure 'winners.txt' and 'winners1.txt' are correctly placed and formatted.`;
+                statusMessageElement.textContent = `Failed to initialize raffle data. Please check console for details. Ensure 'winners.txt', 'winners1.txt', and 'winners2.txt' are correctly placed and formatted.`;
                 disableAllGenerateButtons();
             }
         }
@@ -1126,8 +1132,10 @@
             // Determine the source array based on the prize place
             if (placePrefix === 'second') { // 2nd place from winners.txt
                 sourceArrayForPlace = raffleTicketsWinners;
-            } else if (placePrefix === 'first' || placePrefix === 'third') { // 1st & 3rd place from winners1.txt
+            } else if (placePrefix === 'first') { // 1st place from winners1.txt
                 sourceArrayForPlace = raffleTicketsWinners1;
+            } else if (placePrefix === 'third') { // 3rd place from winners2.txt (NEW)
+                sourceArrayForPlace = raffleTicketsWinners2;
             } else {
                 console.error("ERROR: Invalid place prefix provided:", placePrefix);
                 // Re-enable only the current section's button on error
@@ -1200,6 +1208,7 @@
 
                 // Scroll to the next section (First Place)
                 await delay(500); // Small delay before scrolling
+                firstPlaceSection.scroll-to-({ top: firstPlaceSection.offsetTop, behavior: 'smooth' });
                 firstPlaceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
                 statusMessageElement.textContent = "Click 'Generate 1st Place Winner'."; // Specific instruction
