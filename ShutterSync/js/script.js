@@ -5477,6 +5477,35 @@ function setupCustomersGridListener() {
     });
 }
 
+/**
+ * Sets up a real-time listener for the leads grid.
+ * This function should only be called when a user is authenticated.
+ */
+function setupLeadsGridListener() {
+    // If a listener already exists, unsubscribe from it to prevent duplicates
+    if (unsubscribeLeads) {
+        unsubscribeLeads();
+    }
+
+    // Now, we can safely set up the listener as we know the user is authenticated.
+    unsubscribeLeads = onSnapshot(getCollectionRef('leads'), (snapshot) => {
+        const leads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        if (leads.length === 0) {
+            if (noLeadsMessage) noLeadsMessage.classList.remove('hidden');
+            if (leadsGridContainer) leadsGridContainer.classList.add('hidden');
+        } else {
+            if (noLeadsMessage) noLeadsMessage.classList.add('hidden');
+            if (leadsGridContainer) leadsGridContainer.classList.remove('hidden');
+        }
+        leadsGrid.updateConfig({ data: leads }).forceRender();
+        console.log("Leads grid updated.");
+    }, (error) => {
+        console.error("Error fetching leads:", error);
+        showMessageBox("Error loading leads.");
+    });
+}
+
 
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', initializePage);
@@ -5996,22 +6025,6 @@ async function initializePage() {
     }).render(customersGridContainer);
 
 
-    unsubscribeCustomers = onSnapshot(getCollectionRef('customers'), (snapshot) => {
-        const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (customers.length === 0) {
-            if (noCustomersMessage) noCustomersMessage.classList.remove('hidden');
-            if (customersGridContainer) customersGridContainer.classList.add('hidden');
-        } else {
-            if (noCustomersMessage) noCustomersMessage.classList.add('hidden');
-            if (customersGridContainer) customersGridContainer.classList.remove('hidden');
-        }
-        customersGrid.updateConfig({ data: customers }).forceRender();
-    }, (error) => {
-        console.error("Error fetching customers:", error);
-        showMessageBox("Error loading customers.");
-    });
-
-
     leadsGrid = new gridjs.Grid({
         columns: [
             { id: 'id', name: 'ID', hidden: true }, // ADDED: Explicit ID column, hidden, and now reliably at index 0
@@ -6083,22 +6096,6 @@ async function initializePage() {
             paginationButtonNext: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
         }
     }).render(leadsGridContainer);
-
-    unsubscribeLeads = onSnapshot(getCollectionRef('leads'), (snapshot) => {
-        const leads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (leads.length === 0) {
-            if (noLeadsMessage) noLeadsMessage.classList.remove('hidden');
-            if (leadsGridContainer) leadsGridContainer.classList.add('hidden');
-        } else {
-            if (noLeadsMessage) noLeadsMessage.classList.add('hidden');
-            if (leadsGridContainer) leadsGridContainer.classList.remove('hidden');
-        }
-        leadsGrid.updateConfig({ data: leads }).forceRender();
-    }, (error) => {
-        console.error("Error fetching leads:", error);
-        showMessageBox("Error loading leads.");
-    });
-
 
 
     opportunitiesGrid = new gridjs.Grid({
