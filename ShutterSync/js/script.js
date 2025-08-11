@@ -5446,6 +5446,38 @@ async function populateCustomerCountries() {
 }
 
 
+
+/**
+ * Sets up a real-time listener for the customers grid.
+ * This function should only be called when a user is authenticated.
+ */
+function setupCustomersGridListener() {
+    // If a listener already exists, unsubscribe from it to prevent duplicates
+    if (unsubscribeCustomers) {
+        unsubscribeCustomers();
+    }
+
+    // Now, we can safely set up the listener as we know the user is authenticated.
+    unsubscribeCustomers = onSnapshot(getCollectionRef('customers'), (snapshot) => {
+        const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        if (customers.length === 0) {
+            if (noCustomersMessage) noCustomersMessage.classList.remove('hidden');
+            if (customersGridContainer) customersGridContainer.classList.add('hidden');
+        } else {
+            if (noCustomersMessage) noCustomersMessage.classList.add('hidden');
+            if (customersGridContainer) customersGridContainer.classList.remove('hidden');
+        }
+
+        customersGrid.updateConfig({ data: customers }).forceRender();
+        console.log("Customers grid updated.");
+    }, (error) => {
+        console.error("Error fetching customers:", error);
+        showMessageBox("Error loading customers.");
+    });
+}
+
+
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', initializePage);
 
