@@ -6653,13 +6653,13 @@ async function initializePage() {
         const authSection = document.getElementById('auth-section');
 
         if (user) {
+            // --- User is authenticated ---
             console.log("User is authenticated:", user.uid);
             if (userDisplayName) userDisplayName.textContent = user.displayName || user.email || 'User';
             if (userIdDisplay) userIdDisplay.textContent = `(ID: ${user.uid})`;
 
-            // CRITICAL FIX: Show the Logout button and hide the Google Sign-In button
+            // Show the Logout button and hide the Google Sign-In button
             if (logoutBtn) logoutBtn.classList.remove('hidden');
-            // Assuming you have a Google Sign-In button, hide it when logged in
             if (googleSignInBtn) googleSignInBtn.classList.add('hidden');
 
             // Fetch user role
@@ -6669,10 +6669,11 @@ async function initializePage() {
                 if (userDoc.exists()) {
                     role = userDoc.data().role || 'Standard';
                 } else {
+                    // Create user_data entry if it doesn't exist (first time sign-in)
                     await setDoc(getDocRef('users_data', user.uid), {
                         email: user.email,
                         displayName: user.displayName || user.email,
-                        role: 'Standard',
+                        role: 'Standard', // Default role
                         createdAt: serverTimestamp(),
                         lastLogin: serverTimestamp(),
                     }, { merge: true });
@@ -6696,24 +6697,10 @@ async function initializePage() {
             showSection('dashboard-section');
             loadDashboardData();
         } else {
-            console.log("User is not authenticated. Signing in anonymously...");
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                    console.log("Signed in with custom token.");
-                } else {
-                    await signInAnonymously(auth);
-                    console.log("Signed in anonymously.");
-                }
-            } catch (anonError) {
-                console.error("Anonymous Sign-In Error:", anonError);
-                if (authErrorMessage) {
-                    authErrorMessage.textContent = `Anonymous sign-in failed: ${anonError.message}`;
-                    authErrorMessage.classList.remove('hidden');
-                }
-            }
+            // --- User is NOT authenticated ---
+            console.log("User is not authenticated. Displaying auth section.");
 
-            // CRITICAL FIX: Hide the Logout button and show the Google Sign-In button
+            // Hide the Logout button and show the Google Sign-In button
             if (logoutBtn) logoutBtn.classList.add('hidden');
             if (googleSignInBtn) googleSignInBtn.classList.remove('hidden');
 
@@ -6721,6 +6708,7 @@ async function initializePage() {
             showSection('auth-section');
         }
     });
+
 }
 
 
