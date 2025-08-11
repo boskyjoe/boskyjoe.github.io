@@ -35,6 +35,7 @@ let unsubscribeQuotes = null;
 let unsubscribeQuoteLines = null; // For quote lines
 let unsubscribeCountries = null;
 let unsubscribeCurrencies = null;
+let unsubscribePriceBooks = null;
 
 
 let userId = null; // Will be set after authentication
