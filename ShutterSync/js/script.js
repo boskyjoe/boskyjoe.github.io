@@ -5604,6 +5604,95 @@ function setupQuotesGridListener() {
 }
 
 
+
+/**
+ * Sets up a real-time listener for the countries grid.
+ * This function should only be called when a user is authenticated.
+ */
+function setupCountriesGridListener() {
+    // If a listener already exists, unsubscribe from it to prevent duplicates
+    if (unsubscribeCountries) {
+        unsubscribeCountries();
+    }
+
+    // Now, we can safely set up the listener as we know the user is authenticated.
+    unsubscribeCountries = onSnapshot(getCollectionRef('countries'), (snapshot) => {
+        const countries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        if (countries.length === 0) {
+            if (noCountriesMessage) noCountriesMessage.classList.remove('hidden');
+            if (countriesGridContainer) countriesGridContainer.classList.add('hidden');
+        } else {
+            if (noCountriesMessage) noCountriesMessage.classList.add('hidden');
+            if (countriesGridContainer) countriesGridContainer.classList.remove('hidden');
+        }
+        countriesGrid.updateConfig({ data: countries }).forceRender();
+        console.log("Countries grid updated.");
+    }, (error) => {
+        console.error("Error fetching countries:", error);
+        showMessageBox("Error loading countries.");
+    });
+}
+
+
+/**
+ * Sets up a real-time listener for the currencies grid.
+ * This function should only be called when a user is authenticated.
+ */
+function setupCurrenciesGridListener() {
+    // If a listener already exists, unsubscribe from it to prevent duplicates
+    if (unsubscribeCurrencies) {
+        unsubscribeCurrencies();
+    }
+
+    // Now, we can safely set up the listener as we know the user is authenticated.
+    unsubscribeCurrencies = onSnapshot(getCollectionRef('currencies'), (snapshot) => {
+        const currencies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (currencies.length === 0) {
+            if (noCurrenciesMessage) noCurrenciesMessage.classList.remove('hidden');
+            if (currenciesGridContainer) currenciesGridContainer.classList.add('hidden');
+        } else {
+            if (noCurrenciesMessage) noCurrenciesMessage.classList.add('hidden');
+            if (currenciesGridContainer) currenciesGridContainer.classList.remove('hidden');
+        }
+        currenciesGrid.updateConfig({ data: currencies }).forceRender();
+        console.log("Currencies grid updated.");
+    }, (error) => {
+        console.error("Error fetching currencies:", error);
+        showMessageBox("Error loading currencies.");
+    });
+}
+
+/**
+ * Sets up a real-time listener for the price books grid.
+ * This function should only be called when a user is authenticated.
+ */
+function setupPriceBooksGridListener() {
+    // If a listener already exists, unsubscribe from it to prevent duplicates
+    if (unsubscribePriceBooks) {
+        unsubscribePriceBooks();
+    }
+
+    // Now, we can safely set up the listener as we know the user is authenticated.
+    unsubscribePriceBooks = onSnapshot(getCollectionRef('priceBooks'), (snapshot) => {
+        const priceBooks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (priceBooks.length === 0) {
+            if (noPriceBooksMessage) noPriceBooksMessage.classList.remove('hidden');
+            if (priceBooksGridContainer) priceBooksGridContainer.classList.add('hidden');
+        } else {
+            if (noPriceBooksMessage) noPriceBooksMessage.classList.add('hidden');
+            if (priceBooksGridContainer) priceBooksGridContainer.classList.remove('hidden');
+        }
+        priceBooksGrid.updateConfig({ data: priceBooks }).forceRender();
+        console.log("Price books grid updated.");
+    }, (error) => {
+        console.error("Error fetching price books:", error);
+        showMessageBox("Error loading price books.");
+    });
+}
+
+
+
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', initializePage);
 
@@ -6510,23 +6599,6 @@ async function initializePage() {
     }).render(countriesGridContainer);
 
 
-    onSnapshot(getCollectionRef('countries'), (snapshot) => {
-        const countries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (countries.length === 0) {
-            if (noCountriesMessage) noCountriesMessage.classList.remove('hidden');
-            if (countriesGridContainer) countriesGridContainer.classList.add('hidden');
-        } else {
-            if (noCountriesMessage) noCountriesMessage.classList.add('hidden');
-            if (countriesGridContainer) countriesGridContainer.classList.remove('hidden');
-        }
-        countriesGrid.updateConfig({ data: countries }).forceRender();
-    }, (error) => {
-        console.error("Error fetching countries:", error);
-        showMessageBox("Error loading countries.");
-    });
-
-
-
     currenciesGrid = new gridjs.Grid({
         columns: [
             { id: 'id', name: 'ID', hidden: true }, // ADDED: Explicit ID column, hidden, and now reliably at index 0
@@ -6595,22 +6667,6 @@ async function initializePage() {
     }).render(currenciesGridContainer);
 
 
-    onSnapshot(getCollectionRef('currencies'), (snapshot) => {
-        const currencies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (currencies.length === 0) {
-            if (noCurrenciesMessage) noCurrenciesMessage.classList.remove('hidden');
-            if (currenciesGridContainer) currenciesGridContainer.classList.add('hidden');
-        } else {
-            if (noCurrenciesMessage) noCurrenciesMessage.classList.add('hidden');
-            if (currenciesGridContainer) currenciesGridContainer.classList.remove('hidden');
-        }
-        currenciesGrid.updateConfig({ data: currencies }).forceRender();
-    }, (error) => {
-        console.error("Error fetching currencies:", error);
-        showMessageBox("Error loading currencies.");
-    });
-
-
     priceBooksGrid = new gridjs.Grid({
         columns: [
             { id: 'id', name: 'ID', hidden: true }, // ADDED: Explicit ID column, hidden, and now reliably at index 0
@@ -6677,23 +6733,6 @@ async function initializePage() {
             paginationButtonNext: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
         }
     }).render(priceBooksGridContainer);
-
-
-
-    onSnapshot(getCollectionRef('priceBooks'), (snapshot) => {
-        const priceBooks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (priceBooks.length === 0) {
-            if (noPriceBooksMessage) noPriceBooksMessage.classList.remove('hidden');
-            if (priceBooksGridContainer) priceBooksGridContainer.classList.add('hidden');
-        } else {
-            if (noPriceBooksMessage) noPriceBooksMessage.classList.add('hidden');
-            if (priceBooksGridContainer) priceBooksGridContainer.classList.remove('hidden');
-        }
-        priceBooksGrid.updateConfig({ data: priceBooks }).forceRender();
-    }, (error) => {
-        console.error("Error fetching price books:", error);
-        showMessageBox("Error loading price books.");
-    });
 
 
     // NEW: Setup all accordion click listeners centrally
