@@ -6645,7 +6645,8 @@ async function initializePage() {
     // NEW: Setup all accordion click listeners centrally
     setupAccordionListeners();
 
-    // Initial authentication check
+    // A real-time listener for the user's authentication state.
+    // This is the single entry point for all data loading in the app.
     onAuthStateChanged(auth, async (user) => {
         // Get a reference to the logout and sign-in buttons
         const logoutBtn = document.getElementById('nav-logout');
@@ -6693,9 +6694,21 @@ async function initializePage() {
                 if (userRole) userRole.textContent = `(Role: Error)`;
             }
 
+            // --- CRITICAL FIX: ALL DATA LOADING FUNCTIONS ARE MOVED HERE ---
+            // These functions will now only run AFTER the user is authenticated.
+            loadDashboardData();
+            setupLeadsGridListener();
+            setupCustomersGridListener();
+            setupOpportunitiesGridListener();
+            setupQuotesGridListener();
+            setupCountriesGridListener();
+            setupCurrenciesGridListener();
+            setupPriceBooksGridListener();
+            // -------------------------------------------------------------
+
             if (authSection) authSection.classList.add('hidden');
             showSection('dashboard-section');
-            loadDashboardData();
+
         } else {
             // --- User is NOT authenticated ---
             console.log("User is not authenticated. Displaying auth section.");
@@ -6708,6 +6721,7 @@ async function initializePage() {
             showSection('auth-section');
         }
     });
+
 
 }
 
