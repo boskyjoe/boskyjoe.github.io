@@ -866,27 +866,17 @@
         }
 
         /**
-         * Generates a random alphanumeric string with the pattern "AAAA 123456"
-         * where AAAA are 4 random uppercase alphabets and 123456 are 6 random digits.
-         * @param {boolean} [useSSCFPrefix=false] - If true, the prefix will be "SSCF".
-         * @returns {string} A random alphanumeric string.
+         * Generates a random alphanumeric string with the pattern "SSCF/SSCB/AUSD" followed by 5 digits.
+         * @returns {string} A random alphanumeric string with the new pattern.
          */
-        function generateRandomAlphanumeric(useSSCFPrefix = false) {
-            let prefix = '';
-            if (useSSCFPrefix) {
-                prefix = 'SSCF';
-            } else {
-                for (let i = 0; i < 4; i++) {
-                    // Generate a random uppercase letter (ASCII A is 65, Z is 90)
-                    prefix += String.fromCharCode(65 + Math.floor(Math.random() * 26));
-                }
-            }
-
+        function generateRandomAlphanumeric() {
+            const prefixes = ['SSCF', 'SSCB', 'AUSD'];
+            const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
             let digits = '';
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < 5; i++) { // Changed from 6 to 5 digits
                 digits += Math.floor(Math.random() * 10);
             }
-            return `${prefix} ${digits}`;
+            return `${randomPrefix} ${digits}`;
         }
 
         /**
@@ -961,7 +951,6 @@
             // Define the update intervals (how long each random number stays on screen)
             const initialUpdateInterval = 20; // Very short display time for random numbers initially (fast spin)
             const finalUpdateInterval = 300;  // Longer display time for random numbers towards the end (slow spin)
-            const sscfPrefixStartProgress = 0.85; // Start showing SSCF for the last 15% of animation duration
 
             element.classList.remove('final-number-reveal'); // Ensure no lingering fade-in class
             element.classList.add('pulsing-text'); // Start pulsing animation for random numbers
@@ -994,8 +983,7 @@
 
                     // Only update the text content if enough time has passed since the last update
                     if (currentTime - lastUpdateTime > currentUpdateInterval) {
-                        const useSSCF = progress >= sscfPrefixStartProgress;
-                        element.textContent = generateRandomAlphanumeric(useSSCF);
+                        element.textContent = generateRandomAlphanumeric();
                         lastUpdateTime = currentTime;
                     }
 
@@ -1200,7 +1188,6 @@
 
                 // Scroll to the next section (First Place)
                 await delay(500); // Small delay before scrolling
-                firstPlaceSection.scroll-to-({ top: firstPlaceSection.offsetTop, behavior: 'smooth' });
                 firstPlaceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
                 statusMessageElement.textContent = "Click 'Generate 1st Place Winner'."; // Specific instruction
