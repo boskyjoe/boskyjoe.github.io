@@ -4912,7 +4912,6 @@ function calculateQuoteLineFinalNet() { // Renamed from calculateQuoteLineNet fo
     updateMainQuoteAmount();
 }
 
-
 /**
  * Generates a quote document using the Gemini API and saves it to Firestore.
  * @param {object} quoteData The data of the current quote.
@@ -4923,6 +4922,15 @@ async function generateQuoteDocument(quoteData) {
 
     if (!quoteData || !quoteData.id) {
         showMessageBox("Error: Cannot generate document without quote data.", 'alert', true);
+        console.groupEnd();
+        return;
+    }
+
+    // NEW: Check if the current user has the 'Admin' role.
+    // This is crucial to prevent the "Missing or insufficient permissions" error.
+    if (currentUserRole !== 'Admin') {
+        showMessageBox("Permission Denied. Only Admin users can generate documents.", 'alert', true);
+        console.warn("generateQuoteDocument: User is not an Admin. Document generation aborted.");
         console.groupEnd();
         return;
     }
@@ -5025,6 +5033,7 @@ async function generateQuoteDocument(quoteData) {
         console.groupEnd();
     }
 }
+
 
 
 /**
