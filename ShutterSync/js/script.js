@@ -4392,6 +4392,22 @@ async function setupQuoteForm(quoteData = null) {
             documentsSectionContainer.classList.remove('hidden');
         }
 
+
+        // --- NEW: Add the Generate Quote button and its event listener ---
+        const saveCancelButtonsDiv = document.querySelector('#main-quote-details-content .flex.justify-end');
+        if (saveCancelButtonsDiv && !document.getElementById('generate-quote-btn')) {
+            const generateButton = document.createElement('button');
+            generateButton.id = 'generate-quote-btn';
+            generateButton.type = 'button';
+            generateButton.className = 'px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition duration-300';
+            generateButton.textContent = 'Generate Quote';
+            saveCancelButtonsDiv.prepend(generateButton);
+
+            generateButton.addEventListener('click', async () => {
+                await generateQuoteDocument(quoteData);
+            });
+        }
+
         // --- NEW: Set up the real-time listeners for quote lines and documents ---
         //setupQuoteLinesGridListener(quoteData.id);
         setupDocumentsGridListener(quoteData.id);
@@ -7005,6 +7021,8 @@ window.handleEditPriceBook = handleEditPriceBook;
 window.handleDeletePriceBook = handleDeletePriceBook;
 // NEW: Make the new delete document function globally accessible
 window.handleDeleteDocument = handleDeleteDocument;
+window.generateQuoteDocument = generateQuoteDocument; // NEW: Make new function globally accessible
+
 
 // Other globally used functions
 window.showMessageBox = showMessageBox;
