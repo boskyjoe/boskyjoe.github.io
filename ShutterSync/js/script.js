@@ -36,6 +36,8 @@ let unsubscribeQuoteLines = null; // For quote lines
 let unsubscribeCountries = null;
 let unsubscribeCurrencies = null;
 let unsubscribePriceBooks = null;
+let unsubscribeDocuments = null;
+
 
 
 let userId = null; // Will be set after authentication
@@ -211,6 +213,10 @@ let currentFilterOpportunityId;
 
 let quoteLinesGrid; // CRITICAL: Declare quoteLinesGrid globally here
 let quoteLinesGridContainer; // Also declare its container
+
+let documentsGridContainer;
+let noDocumentsMessage;
+let documentsSectionContainer;
 
 
 let addCountryBtn;
@@ -1575,6 +1581,58 @@ async function deleteCustomer(customerDataId) {
         showMessageBox(`Error deleting customer: ${error.message}`, false);
     }
 }
+
+
+/**
+ * Handles deleting a document from the GeneratedDocuments collection.
+ * This action is restricted to Admin users only.
+ * @param {string} documentId The ID of the document to delete.
+ */
+async function handleDeleteDocument(documentId) {
+    console.group("handleDeleteDocument");
+    console.log(`handleDeleteDocument: Attempting to delete document with ID: ${documentId}`);
+
+    if (!documentId) {
+        showMessageBox("Error: No document ID provided for deletion.", 'alert', true);
+        console.error("handleDeleteDocument: documentId is null or empty.");
+        console.groupEnd();
+        return;
+    }
+
+    if (!db || !auth.currentUser?.uid) {
+        showMessageBox("Authentication required to delete a document.", 'alert', true);
+        console.groupEnd();
+        return;
+    }
+
+    if (currentUserRole !== 'Admin') {
+        showMessageBox("Permission Denied. Only Admin users can delete documents.", 'alert', true);
+        console.warn("handleDeleteDocument: User is not an Admin. Deletion aborted.");
+        console.groupEnd();
+        return;
+    }
+
+    // --- CRITICAL: Use a custom modal for confirmation instead of window.confirm() ---
+    // The user will need to confirm this action in a UI element, not a browser dialog.
+    showMessageBox("Are you sure you want to permanently delete this document? This action cannot be undone.", 'confirm', true, async (confirmed) => {
+        if (confirmed) {
+            try {
+                const docRef = getDocRef('GeneratedDocuments', documentId);
+                await deleteDoc(docRef);
+                showMessageBox("Document deleted successfully!", 'success');
+                console.log(`handleDeleteDocument: Document with ID ${documentId} deleted successfully.`);
+            } catch (error) {
+                console.error("handleDeleteDocument: Error deleting document:", error);
+                showMessageBox(`Error deleting document: ${error.message}`, 'alert', true);
+            }
+        } else {
+            console.log("handleDeleteDocument: Document deletion cancelled by user.");
+        }
+    });
+    
+    console.groupEnd();
+}
+
 
 /**
  * Handles the deletion of a customer document from Firestore.
@@ -4226,13 +4284,31 @@ function clearQuotesFilter() {
 }
 
 /**
-* Sets up the Quote form for adding a new quote or editing an existing one.
-* @param {object | null} quoteData Optional: The quote data to pre-populate the form.
-*/
+ * Sets up the Quote form for adding a new quote or editing an existing one.
+ * @param {object | null} quoteData Optional: The quote data to pre-populate the form.
+ */
 async function setupQuoteForm(quoteData = null) {
     console.group("setupQuoteForm");
     console.log('setupQuoteForm called with quoteData:', quoteData);
 
+    // Get references to the relevant elements
+    const quoteForm = document.getElementById('quote-form');
+    const quoteFormContainer = document.getElementById('quote-form-container');
+    const quoteFormMessage = document.getElementById('quote-form-message');
+    const quoteAccordionsGrid = document.getElementById('quote-accordions-grid');
+    const quoteLinesSectionContainer = document.getElementById('quote-lines-section-container');
+    const documentsSectionContainer = document.getElementById('documents-section-container');
+    const mainQuoteDetailsAccordion = document.getElementById('main-quote-details-accordion');
+
+    // Unsubscribe from any previous listeners to prevent data from old quotes from appearing.
+    if (unsubscribeQuoteLines) {
+        unsubscribeQuoteLines();
+    }
+    if (unsubscribeDocuments) {
+        unsubscribeDocuments();
+    }
+
+    // --- Common setup for both add and edit modes ---
     showForm(quoteFormContainer, quoteFormMessage);
     if (quoteForm) quoteForm.reset();
     if (document.getElementById('quote-id')) document.getElementById('quote-id').value = '';
@@ -4240,12 +4316,13 @@ async function setupQuoteForm(quoteData = null) {
     await populateQuoteOpportunities();
     populateQuoteStatus();
 
+    // Reset customer-related fields
     document.getElementById('quote-customer-contact-name').value = '';
     document.getElementById('quote-phone').value = '';
     document.getElementById('quote-email').value = '';
     document.getElementById('quote-customer-address').value = '';
 
-    // --- NEW: Reset fields for a new quote ---
+    // Reset financial fields
     if (quoteAmountInput) quoteAmountInput.value = '0.00';
     if (quoteDiscountInput) {
         quoteDiscountInput.value = '0.00';
@@ -4256,7 +4333,6 @@ async function setupQuoteForm(quoteData = null) {
         quoteAdjustmentInput.setAttribute('disabled', 'true');
     }
     if (quoteNetAmountInput) quoteNetAmountInput.value = '0.00';
-
     if (quoteFormMessage) quoteFormMessage.classList.add('hidden');
 
     // CRITICAL LAYOUT FIX: Always ensure the parent grid is 1 column for stacked layout
@@ -4265,10 +4341,21 @@ async function setupQuoteForm(quoteData = null) {
         quoteAccordionsGrid.classList.add('md:grid-cols-1');
         console.log("setupQuoteForm: quoteAccordionsGrid forced to md:grid-cols-1 for stacked layout.");
     }
+    
+    // Set up accordion visual state for Main Details
+    if (mainQuoteDetailsAccordion) {
+        const mainDetailsHeader = mainQuoteDetailsAccordion.querySelector('.accordion-header');
+        if (mainDetailsHeader) {
+            setAccordionVisualState(mainDetailsHeader, true);
+        }
+    }
+
 
     if (quoteData) { // Edit mode
         console.log("setupQuoteForm: Entering EDIT mode for quote:", quoteData);
         currentQuoteId = quoteData.id;
+        
+        // Populate the main quote details
         if (document.getElementById('quote-id')) document.getElementById('quote-id').value = quoteData.id;
         if (document.getElementById('quote-name')) document.getElementById('quote-name').value = quoteData.quoteName || '';
         if (document.getElementById('quote-event-name')) document.getElementById('quote-event-name').value = quoteData.eventName || '';
@@ -4280,25 +4367,16 @@ async function setupQuoteForm(quoteData = null) {
             }
         }
 
-        // --- NEW: Populate discount and adjustment fields from Firestore
+        // Populate financial and status fields
         if (quoteDiscountInput) quoteDiscountInput.value = quoteData.quoteDiscount !== undefined ? quoteData.quoteDiscount.toFixed(2) : '0.00';
         if (quoteAdjustmentInput) quoteAdjustmentInput.value = quoteData.quoteAdjustment !== undefined ? quoteData.quoteAdjustment.toFixed(2) : '0.00';
-        // Note: We don't populate quoteAmount or quoteNetAmount directly here.
-        // The updateAllQuoteTotalsAndUI function will handle that.
-
         if (quoteStatusSelect) quoteStatusSelect.value = quoteData.status || 'Draft';
         if (document.getElementById('quote-additional-details')) document.getElementById('quote-additional-details').value = quoteData.additionalDetails || '';
 
         const eventDate = quoteData.eventDate ? new Date(quoteData.eventDate.seconds * 1000).toISOString().split('T')[0] : '';
         if (document.getElementById('quote-event-date')) document.getElementById('quote-event-date').value = eventDate;
 
-        if (mainQuoteDetailsAccordion) {
-            const mainDetailsHeader = mainQuoteDetailsAccordion.querySelector('.accordion-header');
-            if (mainDetailsHeader) {
-                setAccordionVisualState(mainDetailsHeader, true);
-            }
-        }
-
+        // Show the quote lines and documents sections
         if (quoteLinesSectionContainer) {
             quoteLinesSectionContainer.classList.remove('hidden');
             const quoteLinesAccordionHeader = quoteLinesSectionContainer.querySelector('.accordion-header');
@@ -4309,14 +4387,19 @@ async function setupQuoteForm(quoteData = null) {
                 quoteLineForm.removeAttribute('novalidate');
             }
         }
+        
+        if (documentsSectionContainer) {
+            documentsSectionContainer.classList.remove('hidden');
+        }
 
-        await renderQuoteLines(quoteData.id);
-
-        // --- NEW ADDITION: Call the new, comprehensive function after rendering lines ---
-        // This will fetch the sum, update all totals, and save them back to Firestore.
+        // --- NEW: Set up the real-time listeners for quote lines and documents ---
+        setupQuoteLinesGridListener(quoteData.id);
+        setupDocumentsGridListener(quoteData.id);
+        
+        // Call the new, comprehensive function after setting up listeners.
         await updateAllQuoteTotalsAndUI(quoteData.id);
-
-        // --- NEW ADDITION: Add event listeners for manual changes ---
+        
+        // Add event listeners for manual changes to discount and adjustment
         if (quoteDiscountInput) {
             quoteDiscountInput.addEventListener('input', calculateQuoteNetAmount);
         }
@@ -4337,21 +4420,19 @@ async function setupQuoteForm(quoteData = null) {
         if (quoteLinesGridContainer) quoteLinesGridContainer.classList.add('hidden'); // Hide quote lines grid container
         hideQuoteLineForm();
 
-        if (mainQuoteDetailsAccordion) {
-            const mainDetailsHeader = mainQuoteDetailsAccordion.querySelector('.accordion-header');
-            if (mainDetailsHeader) {
-                setAccordionVisualState(mainDetailsHeader, true);
-            }
-        }
+        // Hide the quote lines and documents sections for new quotes
         if (quoteLinesSectionContainer) {
             quoteLinesSectionContainer.classList.add('hidden');
         }
+        if (documentsSectionContainer) {
+            documentsSectionContainer.classList.add('hidden');
+        }
     }
+    
     showForm(quoteFormContainer);
     console.log('Add/Edit Quote form setup complete. currentQuoteId:', currentQuoteId);
     console.groupEnd();
 }
-
 
 
 /**
@@ -5450,6 +5531,32 @@ async function populateCustomerCountries() {
 }
 
 
+// This function sets up the real-time listener for documents.
+// It will be called by the handleEditQuote function.
+function setupDocumentsGridListener(quoteId) {
+    if (unsubscribeDocuments) {
+        unsubscribeDocuments();
+    }
+
+    const q = query(getCollectionRef('GeneratedDocuments'), where('documentId', '==', quoteId));
+
+    unsubscribeDocuments = onSnapshot(q, (snapshot) => {
+        const documents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        if (documents.length > 0) {
+            documentsSectionContainer.classList.remove('hidden');
+            noDocumentsMessage.classList.add('hidden');
+            documentsGrid.updateConfig({ data: documents }).forceRender();
+        } else {
+            // If no documents, keep the entire section hidden
+            documentsSectionContainer.classList.add('hidden');
+        }
+    }, (error) => {
+        console.error("Error fetching documents:", error);
+        showMessageBox("Error loading documents.");
+    });
+}
+
 
 /**
  * Sets up a real-time listener for the customers grid.
@@ -5886,6 +5993,14 @@ async function initializePage() {
     cancelQuoteLineBtn = document.getElementById('cancel-quote-line-btn');
     quoteLinesList = document.getElementById('quote-lines-list');
     noQuoteLinesMessage = document.getElementById('no-quote-lines-message');
+
+
+    // NEW: Initialize the Documents Grid.js table.
+    documentsGridContainer = document.getElementById('documents-grid-container');
+    noDocumentsMessage = document.getElementById('no-documents-message');
+    documentsSectionContainer = document.getElementById('documents-section-container');
+
+
 
     // Admin elements
     adminMenuItem = document.getElementById('admin-menu-item');
@@ -6537,6 +6652,52 @@ async function initializePage() {
     }
 
 
+
+
+
+    const documentsGrid = new gridjs.Grid({
+        columns: [
+            { id: 'id', name: 'ID', hidden: true },
+            { id: 'documentType', name: 'Document Type', width: '200px' },
+            {
+                id: 'documentURL', name: 'Link', width: 'auto', formatter: (cell) => {
+                    return gridjs.html(`<a href="${cell}" target="_blank" class="text-blue-600 hover:underline">View Document</a>`);
+                }
+            },
+            { id: 'createdAt', name: 'Created At', width: '150px', formatter: (cell) => cell ? new Date(cell.toDate()).toLocaleDateString() : '' },
+            {
+                name: 'Actions',
+                width: '100px',
+                formatter: (cell, row) => {
+                    const docId = row.cells[0].data;
+                    // No edit/delete for regular users. Only read is sufficient.
+                    // You can add a delete button here for admins if needed.
+                    return gridjs.html(`
+                    <button class="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-800 transition duration-300 text-sm" onclick="handleDeleteDocument('${docId}')">Delete</button>
+                `);
+                }
+            }
+        ],
+        data: [], // Starts with no data
+        pagination: { enabled: true, limit: 5 },
+        sort: true,
+        resizable: true,
+        className: {
+            container: 'rounded-lg shadow-md border border-gray-200 overflow-x-auto',
+            table: 'min-w-full divide-y divide-gray-200',
+            thead: 'bg-gray-50',
+            th: 'px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap min-w-[60px]',
+            tbody: 'bg-white divide-y divide-gray-100',
+            tr: 'hover:bg-gray-50',
+            td: 'px-4 py-3 whitespace-normal break-words text-sm text-gray-800',
+            footer: 'py-3 px-4 bg-gray-50 rounded-b-lg text-sm',
+            paginationButton: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
+            paginationButtonCurrent: 'px-3 py-1 mx-1 rounded-md text-white bg-blue-600 border border-blue-600',
+            paginationButtonPrev: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
+            paginationButtonNext: 'px-3 py-1 mx-1 rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-100',
+        }
+    }).render(documentsGridContainer);
+
     countriesGrid = new gridjs.Grid({
         columns: [
             { id: 'id', name: 'ID', hidden: true }, // ADDED: Explicit ID column, hidden, and now reliably at index 0
@@ -6825,26 +6986,28 @@ async function initializePage() {
 
 // Make functions globally accessible for inline onclick attributes (e.g., in Grid.js formatters)
 window.handleEditCustomer = handleEditCustomer;
-window.handleDeleteCustomer = handleDeleteCustomer; // ADDED THIS LINE
+window.handleDeleteCustomer = handleDeleteCustomer;
 window.handleEditLead = handleEditLead;
 window.handleDeleteLead = handleDeleteLead;
 window.handleEditOpportunity = handleEditOpportunity;
 window.handleDeleteOpportunity = handleDeleteOpportunity;
-window.handleEditWorkLog = handleEditWorkLog; // For editing individual work logs
-window.handleDeleteWorkLog = handleDeleteWorkLog; // For deleting individual work logs
+window.handleEditWorkLog = handleEditWorkLog;
+window.handleDeleteWorkLog = handleDeleteWorkLog;
 window.handleEditQuote = handleEditQuote;
 window.handleDeleteQuote = handleDeleteQuote;
-window.handleEditQuoteLine = handleEditQuoteLine; // For editing individual quote lines
-window.handleDeleteQuoteLine = handleDeleteQuoteLine; // For deleting individual quote lines
+window.handleEditQuoteLine = handleEditQuoteLine;
+window.handleDeleteQuoteLine = handleDeleteQuoteLine;
 window.handleEditCountry = handleEditCountry;
 window.handleDeleteCountry = handleDeleteCountry;
 window.handleEditCurrency = handleEditCurrency;
 window.handleDeleteCurrency = handleDeleteCurrency;
 window.handleEditPriceBook = handleEditPriceBook;
 window.handleDeletePriceBook = handleDeletePriceBook;
+// NEW: Make the new delete document function globally accessible
+window.handleDeleteDocument = handleDeleteDocument;
 
 // Other globally used functions
-window.showMessageBox = showMessageBox; // For modal alerts/confirms
-window.showWorkLogForm = showWorkLogForm; // If called directly from HTML (e.g. from Add button in Opportunity)
-window.showQuotesForOpportunity = showQuotesForOpportunity; // For filtering quotes grid
-window.clearQuotesFilter = clearQuotesFilter; // For clearing quotes filter
+window.showMessageBox = showMessageBox;
+window.showWorkLogForm = showWorkLogForm;
+window.showQuotesForOpportunity = showQuotesForOpportunity;
+window.clearQuotesFilter = clearQuotesFilter;
