@@ -4393,7 +4393,7 @@ async function setupQuoteForm(quoteData = null) {
         }
 
         // --- NEW: Set up the real-time listeners for quote lines and documents ---
-        setupQuoteLinesGridListener(quoteData.id);
+        //setupQuoteLinesGridListener(quoteData.id);
         setupDocumentsGridListener(quoteData.id);
         
         // Call the new, comprehensive function after setting up listeners.
