@@ -5016,13 +5016,13 @@ async function generateQuoteDocument(quoteData) {
         console.log("Document generated and saved to Firestore:", generatedDocRef.id);
         
         // Hide the loading message and show a success message
-        hideMessageBox(messageBoxId);
+        //hideMessageBox(messageBoxId);
         showMessageBox("Quote document generated and saved successfully!", 'success');
 
     } catch (error) {
         console.error("generateQuoteDocument: Error generating or saving document:", error);
         // Hide loading message and show an error
-        hideMessageBox(messageBoxId);
+        //hideMessageBox(messageBoxId);
         showMessageBox(`Error generating document: ${error.message}`, 'alert', true);
     } finally {
         // Reset the button state
