@@ -4913,6 +4913,7 @@ function calculateQuoteLineFinalNet() { // Renamed from calculateQuoteLineNet fo
 }
 
 
+
 /**
  * Generates a quote document using the Gemini API and saves it to Firestore.
  * @param {object} quoteData The data of the current quote.
@@ -5034,7 +5035,6 @@ async function generateQuoteDocument(quoteData) {
         console.groupEnd();
     }
 }
-
 
 
 
