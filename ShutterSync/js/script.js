@@ -4392,24 +4392,8 @@ async function setupQuoteForm(quoteData = null) {
             documentsSectionContainer.classList.remove('hidden');
         }
 
-
-        // --- NEW: Add the Generate Quote button and its event listener ---
-        const saveCancelButtonsDiv = document.querySelector('#main-quote-details-content .flex.justify-end');
-        if (saveCancelButtonsDiv && !document.getElementById('generate-quote-btn')) {
-            const generateButton = document.createElement('button');
-            generateButton.id = 'generate-quote-btn';
-            generateButton.type = 'button';
-            generateButton.className = 'px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition duration-300';
-            generateButton.textContent = 'Generate Quote';
-            saveCancelButtonsDiv.prepend(generateButton);
-
-            generateButton.addEventListener('click', async () => {
-                await generateQuoteDocument(quoteData);
-            });
-        }
-
         // --- NEW: Set up the real-time listeners for quote lines and documents ---
-        //setupQuoteLinesGridListener(quoteData.id);
+        setupQuoteLinesGridListener(quoteData.id);
         setupDocumentsGridListener(quoteData.id);
         
         // Call the new, comprehensive function after setting up listeners.
@@ -4911,131 +4895,6 @@ function calculateQuoteLineFinalNet() { // Renamed from calculateQuoteLineNet fo
     // CRITICAL: Call this to update the main quote's total amount
     updateMainQuoteAmount();
 }
-
-
-
-/**
- * Generates a quote document using the Gemini API and saves it to Firestore.
- * @param {object} quoteData The data of the current quote.
- */
-async function generateQuoteDocument(quoteData) {
-    console.group("generateQuoteDocument");
-    console.log("Starting quote document generation for quote ID:", quoteData.id);
-
-    if (!quoteData || !quoteData.id) {
-        showMessageBox("Error: Cannot generate document without quote data.", 'alert', true);
-        console.groupEnd();
-        return;
-    }
-
-    // Check if the current user has the 'Admin' role.
-    if (currentUserRole !== 'Admin') {
-        showMessageBox("Permission Denied. Only Admin users can generate documents.", 'alert', true);
-        console.warn("generateQuoteDocument: User is not an Admin. Document generation aborted.");
-        console.groupEnd();
-        return;
-    }
-
-    // Show a loading state to the user
-    const generateButton = document.getElementById('generate-quote-btn');
-    if (generateButton) {
-        generateButton.textContent = 'Generating...';
-        generateButton.disabled = true;
-    }
-    const messageBoxId = showMessageBox("Generating quote document, please wait...", 'info');
-
-    try {
-        // Fetch all quote lines for the current quote
-        const qlQuery = query(getCollectionRef('quotelines'), where('parentQuoteId', '==', quoteData.id));
-        const qlSnapshot = await getDocs(qlQuery);
-        const quoteLines = qlSnapshot.docs.map(doc => doc.data());
-
-        // Construct a structured prompt for the Gemini API
-        let quoteLinesText = quoteLines.length > 0 ? "Quote Lines:\n" : "No quote lines found.\n";
-        quoteLines.forEach((line, index) => {
-            quoteLinesText += `${index + 1}. Service: ${line.services}, Description: ${line.serviceDescription}, Quantity: ${line.quantity}, Unit Price: ${line.unitPrice.toFixed(2)}, Final Net: ${line.finalNet.toFixed(2)}\n`;
-        });
-        
-        const prompt = `Generate a professional quote document in Markdown format based on the following details. Include all information clearly.
-        
-        ---
-        Quote Details:
-        Quote Name: ${quoteData.quoteName}
-        Event Name: ${quoteData.eventName}
-        Event Date: ${quoteData.eventDate ? new Date(quoteData.eventDate.seconds * 1000).toLocaleDateString() : 'N/A'}
-        Customer Contact: ${quoteData.customerContactName}
-        Customer Address: ${quoteData.customerAddress}
-        Customer Email: ${quoteData.email}
-        Customer Phone: ${quoteData.phone}
-        
-        Financials:
-        Quote Amount: $${quoteData.quoteAmount.toFixed(2)}
-        Discount: ${quoteData.quoteDiscount.toFixed(2)}%
-        Adjustment: $${quoteData.quoteAdjustment.toFixed(2)}
-        Quote Net Amount: $${quoteData.quoteNetAmount.toFixed(2)}
-
-        ${quoteLinesText}
-        
-        Additional Details: ${quoteData.additionalDetails || 'N/A'}
-        
-        Please format the final response as a complete, single Markdown document.`;
-
-        // Call the Gemini API to generate the document content
-        let chatHistory = [];
-        chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-        const payload = {
-            contents: chatHistory
-        };
-        
-        const apiKey = "";
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const result = await response.json();
-        
-        const generatedContent = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (!generatedContent) {
-            throw new Error("Failed to generate document content from API.");
-        }
-
-        // Save the generated document to Firestore
-        const generatedDocRef = await addDoc(getCollectionRef('GeneratedDocuments'), {
-            // FIX: Changed the field name from 'documentId' to 'documentKey'
-            documentKey: quoteData.id, 
-            documentType: 'QUOTE', // FIX: Updated to 'QUOTE' as specified
-            documentURL: 'data:text/markdown;base64,' + btoa(generatedContent), // Base64 encode for simple viewing
-            createdAt: serverTimestamp(),
-            createdBy: auth.currentUser.uid,
-            content: generatedContent, // Save the raw content as well
-        });
-
-        console.log("Document generated and saved to Firestore:", generatedDocRef.id);
-        
-        // Hide the loading message and show a success message
-        //hideMessageBox(messageBoxId);
-        showMessageBox("Quote document generated and saved successfully!", 'success');
-
-    } catch (error) {
-        console.error("generateQuoteDocument: Error generating or saving document:", error);
-        // Hide loading message and show an error
-        //hideMessageBox(messageBoxId);
-        showMessageBox(`Error generating document: ${error.message}`, 'alert', true);
-    } finally {
-        // Reset the button state
-        if (generateButton) {
-            generateButton.textContent = 'Generate Quote';
-            generateButton.disabled = false;
-        }
-        // Refresh the documents grid to show the new entry
-        setupDocumentsGridListener(quoteData.id);
-        console.groupEnd();
-    }
-}
-
 
 
 
@@ -7146,8 +7005,6 @@ window.handleEditPriceBook = handleEditPriceBook;
 window.handleDeletePriceBook = handleDeletePriceBook;
 // NEW: Make the new delete document function globally accessible
 window.handleDeleteDocument = handleDeleteDocument;
-window.generateQuoteDocument = generateQuoteDocument; // NEW: Make new function globally accessible
-
 
 // Other globally used functions
 window.showMessageBox = showMessageBox;
