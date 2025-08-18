@@ -5395,27 +5395,31 @@ async function handleEditQuoteLine(quoteLineId) {
 }
 
 
-
 /**
- * Handles the deletion of a specific quote line entry within a quote.
+ * Handles the deletion of a specific quote line entry.
  * Prompts for confirmation before proceeding with deletion.
  * @param {string} quoteLineId The ID of the quote line document to delete.
  */
-async function handleDeleteQuoteLine(quoteLineId) { // Now async
+async function handleDeleteQuoteLine(quoteLineId) {
+    // Show a confirmation dialog.
     showMessageBox("Are you sure you want to delete this quote line entry? This action cannot be undone.", 'confirm', async (confirmed) => {
         if (confirmed) {
             try {
-                // The parent quote ID is needed to get the correct subcollection reference
-                // This assumes `currentQuoteId` is correctly set when in the quote form context
-                const parentQuoteId = document.getElementById('quote-line-parent-quote-id')?.value || currentQuoteId;
+                // Get the parent quote ID from the global variable.
+                const parentQuoteId = currentQuoteId;
 
                 if (!parentQuoteId) {
                     showMessageBox('Parent quote ID is missing. Cannot delete quote line.', 'alert', true);
                     return;
                 }
 
-                await deleteDoc(doc(collection(getDocRef('quotes', parentQuoteId), 'quoteLines'), quoteLineId));
+                // FIX: Use a more direct and robust way to reference the subcollection document.
+                const quoteLineDocRef = doc(db, 'quotes', parentQuoteId, 'quoteLines', quoteLineId);
+
+                await deleteDoc(quoteLineDocRef);
+                
                 showMessageBox("Quote line entry deleted successfully!");
+
             } catch (error) {
                 console.error("Error deleting quote line:", error);
                 showMessageBox(`Error deleting quote line: ${error.message}`, 'alert', true);
