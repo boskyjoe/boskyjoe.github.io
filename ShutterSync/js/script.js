@@ -5394,39 +5394,47 @@ async function handleEditQuoteLine(quoteLineId) {
     }
 }
 
-
 /**
  * Handles the deletion of a specific quote line entry.
  * Prompts for confirmation before proceeding with deletion.
  * @param {string} quoteLineId The ID of the quote line document to delete.
  */
 async function handleDeleteQuoteLine(quoteLineId) {
+    console.group("handleDeleteQuoteLine");
+    console.log(`Attempting to delete quote line with ID: ${quoteLineId}`);
+    
+    // Check for parent quote ID and display a message if it's not found
+    if (!currentQuoteId) {
+        showMessageBox("Parent quote ID is missing. Cannot delete quote line.", 'alert', true);
+        console.error("handleDeleteQuoteLine: currentQuoteId is null or empty.");
+        console.groupEnd();
+        return;
+    }
+
     // Show a confirmation dialog.
     showMessageBox("Are you sure you want to delete this quote line entry? This action cannot be undone.", 'confirm', async (confirmed) => {
         if (confirmed) {
             try {
-                // Get the parent quote ID from the global variable.
-                const parentQuoteId = currentQuoteId;
+                // FIX: Use a direct and robust way to reference the subcollection document.
+                const quoteLineDocRef = doc(db, 'quotes', currentQuoteId, 'quoteLines', quoteLineId);
 
-                if (!parentQuoteId) {
-                    showMessageBox('Parent quote ID is missing. Cannot delete quote line.', 'alert', true);
-                    return;
-                }
-
-                // FIX: Use a more direct and robust way to reference the subcollection document.
-                const quoteLineDocRef = doc(db, 'quotes', parentQuoteId, 'quoteLines', quoteLineId);
-
+                console.log(`handleDeleteQuoteLine: Deleting document at path: ${quoteLineDocRef.path}`);
                 await deleteDoc(quoteLineDocRef);
                 
                 showMessageBox("Quote line entry deleted successfully!");
+                console.log("handleDeleteQuoteLine: Quote line entry deleted successfully.");
 
             } catch (error) {
-                console.error("Error deleting quote line:", error);
+                console.error("handleDeleteQuoteLine: Error deleting quote line:", error);
                 showMessageBox(`Error deleting quote line: ${error.message}`, 'alert', true);
             }
+        } else {
+            console.log("handleDeleteQuoteLine: Deletion cancelled by user.");
         }
     });
+    console.groupEnd();
 }
+
 
 
 /**
