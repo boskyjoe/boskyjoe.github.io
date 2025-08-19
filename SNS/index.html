@@ -79,7 +79,7 @@
         }
 
         /* Style for the reset button */
-        #reset-raffle-btn:hover {
+        #reset-snehanidhi-btn:hover {
             transform: scale(1.05);
         }
 
@@ -355,7 +355,7 @@
     <div id="countdown-timer"></div>
 
     <!-- Main Content Container -->
-    <div id="main-raffle-container" class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center relative z-0">
+    <div id="main-snehanidhi-container" class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center relative z-0">
         <!-- Subtle pattern for the main content box -->
         <div class="main-content-pattern"></div>
 
@@ -384,7 +384,7 @@
             <p id="status-message" class="text-lg font-semibold text-gray-700"></p>
         </div>
 
-        <!-- Single Raffle Winner Section -->
+        <!-- Single SnehaNidhi Winner Section -->
         <div id="first-place-section" class="winner-section bg-gradient-to-br from-purple-700 to-purple-900 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
             <h2 class="text-3xl font-bold text-white mb-6 flex-items-center justify-center">
                 <span class="mr-3 text-4xl">💰</span> Winning Number
@@ -409,8 +409,8 @@
         </div>
         <!-- End Animated "Powered By" Section -->
 
-        <button id="reset-raffle-btn" class="winner-button mt-10 px-8 py-3 text-white font-semibold rounded-full shadow-lg" disabled>
-            Reset Raffle
+        <button id="reset-snehanidhi-btn" class="winner-button mt-10 px-8 py-3 text-white font-semibold rounded-full shadow-lg" disabled>
+            Reset SnehaNidhi
         </button>
 
     </div>
@@ -427,7 +427,7 @@
 
         <!-- Moved "Congratulations..." text here and restyled -->
         <p id="congratulations-message" class="bg-yellow-300 border-2 border-yellow-400 text-gray-900 text-center text-sm md:text-base font-semibold p-2 rounded-md mb-4 shadow-inner hidden">
-            Congratulations to our lucky winner! Thank you for participating in our church raffle.
+            Congratulations to our lucky winner! Thank you for participating in our church SnehaNidhi.
         </p>
         <div class="flex flex-col space-y-2"> <!-- Increased spacing -->
             <!-- 1st Place - Background matches 1st place section, added border -->
@@ -450,12 +450,12 @@
         let allTimePickedTickets = new Set();
         console.log("Global allTimePickedTickets initialized/cleared. Size (top of script):", allTimePickedTickets.size);
 
-        let raffleTicketsWinners = []; // Will be populated from winners.txt
+        let snehanidhiTicketsWinners = []; // Will be populated from winners.txt
         let finalFirstWinner = '---';
 
         const statusMessageElement = document.getElementById('status-message');
         const generateButtons = document.querySelectorAll('.winner-button');
-        const resetRaffleBtn = document.getElementById('reset-raffle-btn');
+        const resetSnehaNidhiBtn = document.getElementById('reset-snehanidhi-btn');
         const firstPlaceSection = document.getElementById('first-place-section');
         const generateFirstBtn = document.getElementById('generate-first');
         const mergedWinnersSection = document.getElementById('merged-winners-section');
@@ -571,9 +571,9 @@
 
         /**
          * Initializes the application by fetching ticket data from external files.
-         * Sets up initial UI state for the raffle.
+         * Sets up initial UI state for the snehanidhi.
          */
-        async function initializeRaffleData() {
+        async function initializeSnehaNidhiData() {
             statusMessageElement.textContent = "Loading ticket data...";
             disableAllGenerateButtons();
 
@@ -582,9 +582,9 @@
 
             firstPlaceSection.classList.add('inactive-section');
 
-            resetRaffleBtn.disabled = true;
-            resetRaffleBtn.classList.add('bg-gray-300');
-            resetRaffleBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+            resetSnehaNidhiBtn.disabled = true;
+            resetSnehaNidhiBtn.classList.add('bg-gray-300');
+            resetSnehaNidhiBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
 
             mergedWinnersSection.classList.add('hidden');
             mergedWinnersSection.classList.remove('reveal-postit-animation');
@@ -607,12 +607,12 @@
 
             try {
                 const winnersData = await fetchTicketNumbers('winners.txt');
-                raffleTicketsWinners = winnersData;
+                snehanidhiTicketsWinners = winnersData;
 
-                console.log("DEBUG: Fetched winners.txt unique length:", raffleTicketsWinners.length);
+                console.log("DEBUG: Fetched winners.txt unique length:", snehanidhiTicketsWinners.length);
 
-                if (raffleTicketsWinners.length < 1) {
-                    statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} unique tickets (needs at least 1 for 1st place). Please populate your file with more unique alphanumeric tickets.`;
+                if (snehanidhiTicketsWinners.length < 1) {
+                    statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${snehanidhiTicketsWinners.length} unique tickets (needs at least 1 for 1st place). Please populate your file with more unique alphanumeric tickets.`;
                     disableAllGenerateButtons();
                     return;
                 }
@@ -622,8 +622,8 @@
                 generateFirstBtn.disabled = false;
             }
             catch (error) {
-                console.error("ERROR: Initialization failed in initializeRaffleData:", error);
-                statusMessageElement.textContent = `Failed to initialize raffle data. Please check console for details. Ensure 'winners.txt' is correctly placed and formatted.`;
+                console.error("ERROR: Initialization failed in initializeSnehaNidhiData:", error);
+                statusMessageElement.textContent = `Failed to initialize SnehaNidhi data. Please check console for details. Ensure 'winners.txt' is correctly placed and formatted.`;
                 disableAllGenerateButtons();
             }
         }
@@ -664,11 +664,11 @@
 
             if (availableTickets.length === 0) {
                 console.warn("WARNING: Not enough unique tickets available in the source pool.");
-                statusMessageElement.textContent = "All unique tickets have been drawn! Please reset the raffle or add more tickets.";
+                statusMessageElement.textContent = "All unique tickets have been drawn! Please reset the SnehaNidhi or add more tickets.";
                 disableAllGenerateButtons();
-                resetRaffleBtn.disabled = false;
-                resetRaffleBtn.classList.remove('bg-gray-300');
-                resetRaffleBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                resetSnehaNidhiBtn.disabled = false;
+                resetSnehaNidhiBtn.classList.remove('bg-gray-300');
+                resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
                 return "N/A";
             }
 
@@ -818,7 +818,7 @@
             poweredBySection.querySelector('p').classList.add('text-purple-800');
 
 
-            const primaryWinner = pickSingleUniqueTicket(raffleTicketsWinners);
+            const primaryWinner = pickSingleUniqueTicket(snehanidhiTicketsWinners);
             await animateNumberReveal(primaryElement, primaryWinner, 10000);
 
             poweredBySection.classList.add('fade-out-and-hide-animation');
@@ -840,25 +840,25 @@
             mergedWinnersSection.classList.add('reveal-postit-animation');
             await fadeInNumber(mergedFirstWinnerEl, finalFirstWinner);
 
-            statusMessageElement.textContent = "The 1st place winner has been drawn! Click 'Reset Raffle' to start a new draw.";
+            statusMessageElement.textContent = "The 1st place winner has been drawn! Click 'Reset SnehaNidhi' to start a new draw.";
             disableAllGenerateButtons();
 
             triggerConfetti(250, 120, { x: 0.5, y: 0.6 });
             triggerConfetti(100, 60, { x: 0.1, y: 0.9 }, 45);
             triggerConfetti(100, 60, { x: 0.9, y: 0.9 }, 135);
 
-            resetRaffleBtn.disabled = false;
-            resetRaffleBtn.classList.remove('bg-gray-300');
-            resetRaffleBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+            resetSnehaNidhiBtn.disabled = false;
+            resetSnehaNidhiBtn.classList.remove('bg-gray-300');
+            resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
 
             await delay(2000);
             window.scrollTo({ top: 0, behavior: 'smooth' });
 
             await startCountdown(3);
 
-            const mainRaffleContainer = document.getElementById('main-raffle-container');
-            if (mainRaffleContainer) {
-                const targetWidth = mainRaffleContainer.offsetWidth;
+            const mainSnehaNidhiContainer = document.getElementById('main-snehanidhi-container');
+            if (mainSnehaNidhiContainer) {
+                const targetWidth = mainSnehaNidhiContainer.offsetWidth;
                 const viewportHeight = window.innerHeight;
                 const mergedSectionHeight = mergedWinnersSection.offsetHeight;
                 const desiredTopOffset = 100;
@@ -875,22 +875,22 @@
                 trophyIcon.classList.add('pulsing-text');
                 congratulationsMessage.classList.add('pulsing-text');
             } else {
-                console.warn("Main raffle container not found for final animation width calculation.");
+                console.warn("Main SnehaNidhi container not found for final animation width calculation.");
             }
         }
 
         // Add event listener for the Generate Winners button
         generateFirstBtn.addEventListener('click', updateWinnersDisplay);
 
-        // Add event listener for the Reset Raffle button
-        if (resetRaffleBtn) {
-            resetRaffleBtn.addEventListener('click', () => {
+        // Add event listener for the Reset SnehaNidhi button
+        if (resetSnehaNidhiBtn) {
+            resetSnehaNidhiBtn.addEventListener('click', () => {
                 location.reload();
             });
         }
 
         // Initialize data when the page loads
-        document.addEventListener('DOMContentLoaded', initializeRaffleData);
+        document.addEventListener('DOMContentLoaded', initializeSnehaNidhiData);
 
         // --- Disable Save and View Source ---
         document.addEventListener('contextmenu', event => event.preventDefault());
