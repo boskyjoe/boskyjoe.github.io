@@ -550,11 +550,37 @@
          * @param {number} [angle] - Angle of the confetti in degrees. If not provided, it spreads upward.
          */
         function triggerConfetti(particleCount = 150, spread = 90, origin = { x: 0.5, y: 0.6 }, angle = undefined) {
+             // Define custom shapes for the currency effect
+            const coinShape = confetti.shapeFromPath({
+                path: 'M 50 0 A 50 50 0 0 1 50 100 A 50 50 0 0 1 50 0 Z',
+                position: { x: 50, y: 50 },
+                scale: 1,
+            });
+
+            // Use emojis for currency notes
+            const rupeeNote = confetti.shapeFromText({
+                text: '₹',
+                scalar: 2.5 // Makes the text larger
+            });
+            const dollarNote = confetti.shapeFromText({
+                text: '💵',
+                scalar: 2.5
+            });
+            const euroNote = confetti.shapeFromText({
+                text: '💶',
+                scalar: 2.5
+            });
+
+            // Mix the shapes together
+            const shapes = ['circle', 'square', rupeeNote, dollarNote, euroNote];
+
             const config = {
                 particleCount: particleCount,
                 spread: spread,
                 origin: origin,
-                colors: ['#FFD700', '#C0C0C0', '#CD7F32', '#FFFFFF', '#FF69B4'] /* Gold, Silver, Bronze, White, Pink */
+                shapes: shapes,
+                // Use currency-themed colors: gold, silver, bronze, and greens for notes
+                colors: ['#FFD700', '#C0C0C0', '#CD7F32', '#006400', '#32CD32', '#ADFF2F'] 
             };
             if (angle !== undefined) {
                 config.angle = angle;
