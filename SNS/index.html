@@ -626,7 +626,9 @@
                     return;
                 }
 
-                statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate Winner' to begin.";
+                const newMonthName = new Date().toLocaleString('default', { month: 'long' });
+                statusMessageElement.textContent = `Sneha Nidhi data loaded successfully! Click 'Generate ${newMonthName} Winner' to begin.`;
+
                 firstPlaceSection.classList.remove('inactive-section');
                 generateFirstBtn.disabled = false;
             }
