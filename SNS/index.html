@@ -395,8 +395,9 @@
                     <p id="first-primary" class="text-3xl font-bold text-purple-900 mt-2">---</p>
                 </div>
             </div>
+            <!-- The button text is now dynamically set by JavaScript -->
             <button id="generate-first" class="winner-button px-8 py-3 bg-purple-700 text-white font-semibold rounded-full shadow-lg hover:bg-purple-800 transition duration-300 ease-in-out" disabled>
-                Generate 1st Place Winner
+                Generate Winner
             </button>
         </div>
 
@@ -576,6 +577,11 @@
         async function initializeSnehaNidhiData() {
             statusMessageElement.textContent = "Loading ticket data...";
             disableAllGenerateButtons();
+            
+            // Set the button text to include the current month
+            const currentDate = new Date();
+            const monthName = currentDate.toLocaleString('default', { month: 'long' });
+            generateFirstBtn.textContent = `Generate ${monthName} Winner`;
 
             allTimePickedTickets.clear();
             finalFirstWinner = '---';
@@ -617,7 +623,7 @@
                     return;
                 }
 
-                statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 1st Place Winner' to begin.";
+                statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate Winner' to begin.";
                 firstPlaceSection.classList.remove('inactive-section');
                 generateFirstBtn.disabled = false;
             }
