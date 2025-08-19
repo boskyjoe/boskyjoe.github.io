@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raffle Winner Announcement</title>
+    <title>SSC - Sneha Nidhi Scheme</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter for general text, Caveat for post-it note -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
@@ -368,7 +368,7 @@
                 </div>
                 <div class="flex flex-col items-center md:items-start text-center md:text-left">
                     <h1 class="text-xl md:text-2xl font-extrabold text-indigo-800 whitespace-nowrap">
-                        St. Sebastian's Church Raffle Winner Announcement
+                        SSC - Sneha Nidhi Scheme
                     </h1>
                     <!-- Moved contact info directly below the header for better grouping -->
                     <div class="text-gray-600 text-xs md:text-sm">
@@ -379,112 +379,35 @@
             </div>
         </div>
 
-        <!-- Sponsor Section -->
-        <div id="sponsor-section" class="bg-gradient-to-br from-blue-200 to-blue-400 p-4 md:p-6 rounded-xl shadow-2xl mt-6 mb-6 relative z-10">
-            <!-- Our Esteemed Sponsor Heading (kept separate) -->
-            <h2 class="text-2xl font-extrabold text-blue-800 text-center mb-4">Our Esteemed Sponsor</h2>
-            <!-- New Card Design for Sponsor Details -->
-            <div class="bg-blue-100 p-4 rounded-lg shadow-inner">
-                <!-- Merged Header Row for the Card (Image) -->
-                <div class="flex justify-center items-center mb-4">
-                    <!-- Increased size for the "Our Dream Logo" image -->
-                    <img src="images/our dream logo.jpg" alt="Our Dream Logo" class="h-40 w-auto object-contain rounded-md shadow-lg">
-                </div>
-                <!-- This div now wraps the grid and applies the 3D styling and new partial border -->
-                <div class="sponsor-card-content-wrapper bg-white p-4 rounded-xl">
-                    <!-- The content for the second row is now in a single div to allow text wrapping -->
-                    <div class="clearfix"> <!-- Use clearfix to clear floats if needed -->
-                        <!-- Sponsor Image (small, oval, left-aligned with text wrapping) -->
-                        <img src="images/ourpatron.jpg" alt="Our Patron" class="float-left w-32 h-32 object-cover rounded-full shadow-lg mr-4 mb-2 embossed-patron-shadow">
-                        <!-- Gratitude Message -->
-                        <p class="text-gray-800 text-sm md:text-base leading-relaxed text-left">
-                            We extend our sincere gratitude to Mr. P.J.Jacob (Emjay Engineering Company) for his generous sponsorship of the Grand Prize for our raffle ticket fundraiser, held in aid of the Church land purchase project. His thoughtful support has significantly contributed to the success of this mission-driven initiative. Acts of generosity such as his not only strengthen our fundraising efforts but also reflect a deep commitment to the growth and service of the faith community. We pray that God continues to bless him and his endeavors abundantly.
-                        </p>
-                    </div>
+        <!-- Single Raffle Winner Section -->
+        <div id="first-place-section" class="winner-section bg-gradient-to-br from-purple-700 to-purple-900 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
+            <h2 class="text-3xl font-bold text-white mb-6 flex-items-center justify-center">
+                <span class="mr-3 text-4xl">🥇</span> 1st Place Winner
+            </h2>
+            <div class="grid grid-cols-1 gap-6 mb-6">
+                <div class="winner-card bg-purple-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-purple-800">Winning Number</h3>
+                    <p id="first-primary" class="text-3xl font-bold text-purple-900 mt-2">---</p>
                 </div>
             </div>
-            <button id="reveal-winners-btn" class="mt-6 px-6 py-3 bg-purple-600 text-white font-bold text-lg rounded-full shadow-lg hover:bg-purple-700 transition duration-300 ease-in-out">
-                Start Raffle Draw
+            <button id="generate-first" class="winner-button px-8 py-3 bg-purple-700 text-white font-semibold rounded-full shadow-lg hover:bg-purple-800 transition duration-300 ease-in-out" disabled>
+                Generate 1st Place Winner
             </button>
         </div>
-        <!-- End Sponsor Section -->
 
-        <!-- Container for content revealed after click -->
-        <div id="raffle-content-container" class="hidden">
-            <!-- The following instruction message has been commented out. -->
-            <p class="text-base text-gray-700 mb-10 relative z-10">
-                <!-- 3rd Place winners are drawn from 'winners2.txt'. 2nd Place winners are drawn from 'winners.txt'. 1st Place winners are drawn from 'winners1.txt'. Each ticket can only win once! -->
-            </p>
-
-            <div id="status-message" class="text-center text-base font-semibold text-gray-600 mb-6 relative z-10">
-                Loading ticket data...
-            </div>
-
-            <!-- New wrapper for winner sections -->
-            <div id="winner-sections-wrapper">
-                <!-- Third Place Section (now displayed first) -->
-                <div id="third-place-section" class="winner-section bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
-                    <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
-                        <span class="mr-3 text-4xl">🥉</span> 3rd Place Winner
-                    </h2>
-                    <div class="grid grid-cols-1 gap-6 mb-6">
-                        <div class="winner-card bg-amber-100 p-4 rounded-md shadow-md">
-                            <h3 class="text-xl font-semibold text-amber-800">Winning Number</h3>
-                            <p id="third-primary" class="text-3xl font-bold text-amber-900 mt-2">---</p>
-                        </div>
-                    </div>
-                    <button id="generate-third" class="winner-button px-8 py-3 bg-amber-900 text-white font-semibold rounded-full shadow-lg hover:bg-amber-950 transition duration-300 ease-in-out" disabled>
-                        Generate 3rd Place Winner
-                    </button>
-                </div>
-
-                <!-- Second Place Section (now displayed second) -->
-                <div id="second-place-section" class="winner-section bg-gradient-to-br from-gray-400 to-gray-600 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
-                    <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
-                        <span class="mr-3 text-4xl">🥈</span> 2nd Place Winner
-                    </h2>
-                    <div class="grid grid-cols-1 gap-6 mb-6">
-                        <div class="winner-card bg-gray-100 p-4 rounded-md shadow-md">
-                            <h3 class="text-xl font-semibold text-gray-800">Winning Number</h3>
-                            <p id="second-primary" class="text-3xl font-bold text-gray-900 mt-2">---</p>
-                        </div>
-                    </div>
-                    <button id="generate-second" class="winner-button px-8 py-3 bg-gray-700 text-white font-semibold rounded-full shadow-lg hover:bg-gray-800 transition duration-300 ease-in-out" disabled>
-                        Generate 2nd Place Winner
-                    </button>
-                </div>
-
-                <!-- First Place Section (now displayed third) -->
-                <div id="first-place-section" class="winner-section bg-gradient-to-br from-purple-700 to-purple-900 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
-                    <h2 class="text-3xl font-bold text-white mb-6 flex-items-center justify-center">
-                        <span class="mr-3 text-4xl">🥇</span> 1st Place Winner
-                    </h2>
-                    <div class="grid grid-cols-1 gap-6 mb-6">
-                        <div class="winner-card bg-purple-100 p-4 rounded-md shadow-md">
-                            <h3 class="text-xl font-semibold text-purple-800">Winning Number</h3>
-                            <p id="first-primary" class="text-3xl font-bold text-purple-900 mt-2">---</p>
-                        </div>
-                    </div>
-                    <button id="generate-first" class="winner-button px-8 py-3 bg-purple-700 text-white font-semibold rounded-full shadow-lg hover:bg-purple-800 transition duration-300 ease-in-out" disabled>
-                        Generate 1st Place Winner
-                    </button>
-                </div>
-            </div> <!-- End winner-sections-wrapper -->
-
-            <!-- Animated "Powered By" Section -->
-            <div id="powered-by-section" class="py-3 px-6 rounded-lg shadow-lg mt-8 mb-8 relative z-10 flex items-center justify-center space-x-2 hidden">
-                <svg class="w-8 h-8 spin-animation flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path>
-                </svg>
-                <p class="text-lg md:text-xl font-bold pulsing-text whitespace-nowrap">Draw powered by DataWings Solutions</p>
-            </div>
-            <!-- End Animated "Powered By" Section -->
-
-            <button id="reset-raffle-btn" class="winner-button mt-10 px-8 py-3 text-white font-semibold rounded-full shadow-lg" disabled>
-                Reset Raffle
-            </button>
+        <!-- Animated "Powered By" Section -->
+        <div id="powered-by-section" class="py-3 px-6 rounded-lg shadow-lg mt-8 mb-8 relative z-10 flex items-center justify-center space-x-2 hidden">
+            <svg class="w-8 h-8 spin-animation flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path>
+            </svg>
+            <p class="text-lg md:text-xl font-bold pulsing-text whitespace-nowrap">Draw powered by DataWings Solutions</p>
         </div>
-        <!-- End Container for content revealed after click -->
+        <!-- End Animated "Powered By" Section -->
+
+        <button id="reset-raffle-btn" class="winner-button mt-10 px-8 py-3 text-white font-semibold rounded-full shadow-lg" disabled>
+            Reset Raffle
+        </button>
+
     </div>
 
     <!-- Merged Winners Section - This will be revealed at the end, now a pinned post-it -->
@@ -499,7 +422,7 @@
 
         <!-- Moved "Congratulations..." text here and restyled -->
         <p id="congratulations-message" class="bg-yellow-300 border-2 border-yellow-400 text-gray-900 text-center text-sm md:text-base font-semibold p-2 rounded-md mb-4 shadow-inner hidden">
-            Congratulations to all our lucky winners! Thank you for participating in our church raffle.
+            Congratulations to our lucky winner! Thank you for participating in our church raffle.
         </p>
         <div class="flex flex-col space-y-2"> <!-- Increased spacing -->
             <!-- 1st Place - Background matches 1st place section, added border -->
@@ -508,20 +431,6 @@
                     1st Place <span class="ml-2 text-xl">🥇</span>
                 </h3>
                 <p id="merged-first-winner" class="text-xl font-extrabold text-purple-800 whitespace-nowrap">---</p>
-            </div>
-            <!-- 2nd Place - Background matches 2nd place section, added border -->
-            <div class="bg-gray-100 border-gray-500 border-2 p-2 rounded-md shadow-sm text-center">
-                <h3 class="text-base font-bold text-gray-600 flex items-center justify-center">
-                    2nd Place <span class="ml-2 text-xl">🥈</span>
-                </h3>
-                <p id="merged-second-winner" class="text-lg font-extrabold text-gray-800 whitespace-nowrap">---</p>
-            </div>
-            <!-- 3rd Place - Background matches 3rd place section, added border -->
-            <div class="bg-amber-100 border-amber-500 border-2 p-2 rounded-md shadow-sm text-center">
-                <h3 class="text-base font-bold text-amber-600 flex items-center justify-center">
-                    3rd Place <span class="ml-2 text-xl">🥉</span>
-                </h3>
-                <p id="merged-third-winner" class="text-lg font-extrabold text-amber-800 whitespace-nowrap">---</p>
             </div>
         </div>
     </div>
@@ -532,79 +441,22 @@
         <p>Powered by <a href="#" class="text-blue-400 hover:underline">DataWings Solution</a></p>
     </footer>
 
-    <!-- Confirmation Modal for Reset Raffle -->
-    <div id="reset-confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white p-8 rounded-lg shadow-xl text-center max-w-sm mx-auto">
-            <h3 class="text-xl font-semibold text-gray-800 mb-4">Confirm Reset</h3>
-            <p class="text-gray-700 mb-6">Are you sure you want to reset the raffle? This will clear all drawn winners.</p>
-            <div class="flex justify-center space-x-4">
-                <button id="confirm-reset-btn" class="px-6 py-2 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700 transition duration-300">
-                    Confirm
-                </button>
-                <button id="cancel-reset-btn" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-md hover:bg-gray-400 transition duration-300">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    </div>
-
     <script>
-        // Clear allTimePickedTickets immediately when the script loads to ensure a fresh start
         let allTimePickedTickets = new Set();
         console.log("Global allTimePickedTickets initialized/cleared. Size (top of script):", allTimePickedTickets.size);
 
-        let raffleTicketsWinners = []; // Will be populated from winners.txt (Now for 1st Place)
-        let raffleTicketsWinners1 = []; // Will be populated from winners1.txt (Now for 2nd Place)
-        let raffleTicketsWinners2 = []; // Will be populated from winners2.txt (Now for 3rd Place)
-
-        // Global variables to store the final winning numbers for each place
+        let raffleTicketsWinners = []; // Will be populated from winners.txt
         let finalFirstWinner = '---';
-        let finalSecondWinner = '---';
-        let finalThirdWinner = '---';
-
-        // Global variable to store the overall total unique tickets
-        let overallTotalUniqueTickets = 0;
 
         const statusMessageElement = document.getElementById('status-message');
         const generateButtons = document.querySelectorAll('.winner-button');
         const resetRaffleBtn = document.getElementById('reset-raffle-btn');
-
-        // Get references to the winner sections
         const firstPlaceSection = document.getElementById('first-place-section');
-        const secondPlaceSection = document.getElementById('second-place-section');
-        const thirdPlaceSection = document.getElementById('third-place-section');
-
-        // Get references to the "Generate Winners" buttons for each place
         const generateFirstBtn = document.getElementById('generate-first');
-        const generateSecondBtn = document.getElementById('generate-second');
-        const generateThirdBtn = document.getElementById('generate-third');
-
-        // References for the reveal functionality
-        const revealWinnersBtn = document.getElementById('reveal-winners-btn');
-        const raffleContentContainer = document.getElementById('raffle-content-container');
-        const sponsorSection = document.getElementById('sponsor-section'); // Get reference to the sponsor section
-
-        // Reference for the winner sections wrapper
-        const winnerSectionsWrapper = document.getElementById('winner-sections-wrapper');
-
-        // References for the reset confirmation modal
-        const resetConfirmModal = document.getElementById('reset-confirm-modal');
-        const confirmResetBtn = document.getElementById('confirm-reset-btn');
-        const cancelResetBtn = document.getElementById('cancel-reset-btn');
-
-        // References for the new merged winners section
         const mergedWinnersSection = document.getElementById('merged-winners-section');
         const mergedFirstWinnerEl = document.getElementById('merged-first-winner');
-        const mergedSecondWinnerEl = document.getElementById('merged-second-winner');
-        const mergedThirdWinnerEl = document.getElementById('merged-third-winner');
-
-        // Reference for the powered by section
         const poweredBySection = document.getElementById('powered-by-section');
-
-        // Reference for the countdown timer
         const countdownTimerElement = document.getElementById('countdown-timer');
-
-        // References for Winner Circle animation elements
         const winnerCircleTitle = document.getElementById('winner-circle-title');
         const trophyIcon = document.getElementById('trophy-icon');
         const congratulationsMessage = document.getElementById('congratulations-message');
@@ -626,84 +478,57 @@
         }
 
         /**
-         * Activates a section (removes inactive-section class) and enables its button.
-         * @param {HTMLElement} sectionElement - The section element to activate.
-         * @param {HTMLButtonElement} buttonElement - The button element to enable.
-         */
-        function activateSection(sectionElement, buttonElement) {
-            sectionElement.classList.remove('inactive-section');
-            buttonElement.disabled = false;
-        }
-
-        /**
          * Resets the displayed winner numbers to "---" with a fade-out animation.
          */
         async function clearDisplayedWinners() {
             const winnerElements = [
                 document.getElementById('first-primary'),
-                document.getElementById('second-primary'),
-                document.getElementById('third-primary'),
-                mergedFirstWinnerEl, // Add merged elements to clear
-                mergedSecondWinnerEl,
-                mergedThirdWinnerEl
+                mergedFirstWinnerEl
             ];
 
-            // Apply fade-out animation to all elements that are not already '---'
             const animations = [];
             winnerElements.forEach(element => {
-                if (element && element.textContent !== '---') { // Check if element exists
+                if (element && element.textContent !== '---') {
                     element.classList.add('fade-out-animation');
                     animations.push(new Promise(resolve => {
                         element.addEventListener('animationend', () => {
                             element.classList.remove('fade-out-animation');
                             element.textContent = '---';
-                            element.style.opacity = '0'; // Ensure opacity is 0 after clearing for next fade-in
-                            element.classList.remove('final-number-reveal'); // Remove this too
+                            element.style.opacity = '0';
+                            element.classList.remove('final-number-reveal');
                             resolve();
                         }, { once: true });
                     }));
-                } else if (element) { // If already '---', just ensure its opacity is 0 and no animation classes
+                } else if (element) {
                     element.textContent = '---';
                     element.style.opacity = '0';
                     element.classList.remove('final-number-reveal');
-                    element.classList.remove('pulsing-text'); // Just in case
+                    element.classList.remove('pulsing-text');
                     animations.push(Promise.resolve());
                 }
             });
 
             await Promise.all(animations);
 
-            // Hide the merged section after clearing
             mergedWinnersSection.classList.add('hidden');
-            mergedWinnersSection.classList.remove('reveal-postit-animation'); // Remove the animation class
-            mergedWinnersSection.style.transform = ''; // Reset transform on load
-            // Ensure the final state class is also removed on reset
+            mergedWinnersSection.classList.remove('reveal-postit-animation');
+            mergedWinnersSection.style.transform = '';
             mergedWinnersSection.classList.remove('final-winner-centered');
-            // Reset any inline styles that might have been set by the final animation
             mergedWinnersSection.style.removeProperty('--final-winner-width');
-            mergedWinnersSection.style.removeProperty('--final-winner-top-position'); // Clear top position
+            mergedWinnersSection.style.removeProperty('--final-winner-top-position');
 
-            // Remove pulsing animation from Winner Circle elements
             winnerCircleTitle.classList.remove('pulsing-text');
             trophyIcon.classList.remove('pulsing-text');
             congratulationsMessage.classList.remove('pulsing-text');
-            congratulationsMessage.classList.add('hidden'); // Ensure message is hidden on reset
+            congratulationsMessage.classList.add('hidden');
 
-
-            // Ensure the powered by section is hidden on reset and its styles are cleared
             poweredBySection.classList.add('hidden');
             poweredBySection.classList.remove('fade-out-and-hide-animation');
-            // Clear any specific color classes that might have been applied dynamically
-            poweredBySection.classList.remove('from-amber-100', 'to-amber-200', 'from-gray-100', 'to-gray-200', 'from-purple-100', 'to-purple-200');
-            poweredBySection.querySelector('svg').classList.remove('text-amber-700', 'text-gray-700', 'text-purple-700');
-            poweredBySection.querySelector('p').classList.remove('text-amber-800', 'text-gray-800', 'text-purple-800');
-            // Re-add default 'teal' colors so it's ready for the next activation
-            poweredBySection.classList.add('from-teal-100', 'to-cyan-200');
-            poweredBySection.querySelector('svg').classList.add('text-teal-700');
-            poweredBySection.querySelector('p').classList.add('text-teal-800');
-            poweredBySection.style.cssText = ''; // Clear any inline styles
+            poweredBySection.classList.remove('from-purple-100', 'to-purple-200');
+            poweredBySection.querySelector('svg').classList.remove('text-purple-700');
+            poweredBySection.querySelector('p').classList.remove('text-purple-800');
+            poweredBySection.style.cssText = '';
 
-            // Hide countdown timer on reset
             countdownTimerElement.classList.remove('visible');
             countdownTimerElement.textContent = '';
         }
@@ -725,7 +550,6 @@
                 const text = await response.text();
                 console.log(`DEBUG: Raw content of ${filePath}:\n${text}`);
 
-                // Split by newline or comma, filter out empty strings, trim, and get unique values
                 const tickets = Array.from(new Set(text.split(/[\n,]+/)
                                    .map(s => s.trim())
                                    .filter(s => s !== '')));
@@ -734,9 +558,9 @@
                 return tickets;
             } catch (error) {
                 console.error(`ERROR: Failed to fetch or parse ${filePath}:`, error);
-                statusMessageElement.textContent = `Error loading ticket data from '${filePath}'. Please ensure the file exists in the same directory as your HTML, contains valid alphanumeric tickets (one per line or comma-separated), and is correctly formatted. It might also be a security restriction in this preview environment.`;
+                statusMessageElement.textContent = `Error loading ticket data from '${filePath}'. Please ensure the file exists in the same directory as your HTML, contains valid alphanumeric tickets (one per line or comma-separated), and is correctly formatted.`;
                 disableAllGenerateButtons();
-                return Promise.reject(error); // Re-throw to propagate error for initializeRaffleData
+                return Promise.reject(error);
             }
         }
 
@@ -746,110 +570,55 @@
          */
         async function initializeRaffleData() {
             statusMessageElement.textContent = "Loading ticket data...";
-            disableAllGenerateButtons(); // Disable all buttons initially
+            disableAllGenerateButtons();
 
-            allTimePickedTickets.clear(); // Ensure this is clear on any re-initialization
-            console.log("DEBUG: Inside initializeRaffleData: allTimePickedTickets size (start):", allTimePickedTickets.size);
-
-            // Reset stored winners
+            allTimePickedTickets.clear();
             finalFirstWinner = '---';
-            finalSecondWinner = '---';
-            finalThirdWinner = '---';
 
-            // Set initial state for the main raffle content container and reveal button
-            raffleContentContainer.classList.add('hidden');
-            raffleContentContainer.style.maxHeight = '0px';
-            raffleContentContainer.style.opacity = '0';
-            raffleContentContainer.style.overflow = 'hidden';
+            firstPlaceSection.classList.add('inactive-section');
 
-            // Ensure sponsor section is visible initially for collapsing
-            sponsorSection.classList.remove('hidden', 'collapsed'); // Ensure it's not hidden or collapsed
-            sponsorSection.style.maxHeight = ''; // Clear any inline max-height for proper measurement
-            sponsorSection.style.opacity = ''; // Clear any inline opacity
-
-            revealWinnersBtn.disabled = false; // Ensure reveal button is enabled on load
-            revealWinnersBtn.style.display = 'block'; // Ensure it's visible
-
-            // Apply initial hidden state for all winner sections for animations
-            firstPlaceSection.classList.add('inactive-section', 'section-hidden-initial');
-            secondPlaceSection.classList.add('inactive-section', 'section-hidden-initial');
-            thirdPlaceSection.classList.add('inactive-section', 'section-hidden-initial');
-
-            // Disable and style reset button initially
             resetRaffleBtn.disabled = true;
             resetRaffleBtn.classList.add('bg-gray-300');
-            resetRaffleBtn.classList.remove('bg-red-600', 'hover:bg-red-700'); // Ensure reset button is grey
+            resetRaffleBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
 
-            // Ensure merged winners section is hidden initially and remove animation class
             mergedWinnersSection.classList.add('hidden');
             mergedWinnersSection.classList.remove('reveal-postit-animation');
-            mergedWinnersSection.style.transform = ''; // Reset transform on load
-            // Ensure the final state class is also removed on init
+            mergedWinnersSection.style.transform = '';
             mergedWinnersSection.classList.remove('final-winner-centered');
-            // Reset any inline styles that might have been set by the final animation
             mergedWinnersSection.style.removeProperty('--final-winner-width');
-            mergedWinnersSection.style.removeProperty('--final-winner-top-position'); // Clear top position
+            mergedWinnersSection.style.removeProperty('--final-winner-top-position');
 
-            // Remove pulsing animation from Winner Circle elements on initialization
             winnerCircleTitle.classList.remove('pulsing-text');
             trophyIcon.classList.remove('pulsing-text');
             congratulationsMessage.classList.remove('pulsing-text');
-            congratulationsMessage.classList.add('hidden'); // Ensure message is hidden on initialization
+            congratulationsMessage.classList.add('hidden');
 
-            // Ensure powered by section is hidden on initialization and its styles are cleared
             poweredBySection.classList.add('hidden');
-            poweredBySection.classList.remove('fade-out-and-hide-animation'); // Remove any lingering animation classes
-            // Clear any specific color classes that might have been applied dynamically
-            poweredBySection.classList.remove('from-amber-100', 'to-amber-200', 'from-gray-100', 'to-gray-200', 'from-purple-100', 'to-purple-200');
-            poweredBySection.querySelector('svg').classList.remove('text-amber-700', 'text-gray-700', 'text-purple-700');
-            poweredBySection.querySelector('p').classList.remove('text-amber-800', 'text-gray-800', 'text-purple-800');
-            // Re-add default 'teal' colors so it's ready for the next activation
-            poweredBySection.classList.add('from-teal-100', 'to-cyan-200');
-            poweredBySection.querySelector('svg').classList.add('text-teal-700');
-            poweredBySection.querySelector('p').classList.add('text-teal-800');
-            poweredBySection.style.cssText = ''; // Clear any inline styles
+            poweredBySection.classList.remove('fade-out-and-hide-animation');
+            poweredBySection.style.cssText = '';
 
-            // Hide countdown timer on initialization
             countdownTimerElement.classList.remove('visible');
             countdownTimerElement.textContent = '';
 
-
             try {
-                // Fetch ticket files.
-                // NOTE: The file mappings for prize places are now changed to reflect the user's request.
-                const [winnersData, winners1Data, winners2Data] = await Promise.all([
-                    fetchTicketNumbers('winners.txt'),   // This will now be used for 1st place
-                    fetchTicketNumbers('winners1.txt'),  // This will now be used for 2nd place
-                    fetchTicketNumbers('winners2.txt')   // This will now be used for 3rd place
-                ]);
-
+                const winnersData = await fetchTicketNumbers('winners.txt');
                 raffleTicketsWinners = winnersData;
-                raffleTicketsWinners1 = winners1Data;
-                raffleTicketsWinners2 = winners2Data;
 
                 console.log("DEBUG: Fetched winners.txt unique length:", raffleTicketsWinners.length);
-                console.log("DEBUG: Fetched winners1.txt unique length:", raffleTicketsWinners1.length);
-                console.log("DEBUG: Fetched winners2.txt unique length:", raffleTicketsWinners2.length);
 
-                // Now, check if the loaded arrays have enough UNIQUE tickets for picking
-                // 'winners.txt' needs 1 for 1st place
-                // 'winners1.txt' needs 1 for 2nd place
-                // 'winners2.txt' needs 1 for 3rd place
-                if (raffleTicketsWinners.length < 1 || raffleTicketsWinners1.length < 1 || raffleTicketsWinners2.length < 1) {
-                    statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} unique tickets (needs at least 1 for 1st place). 'winners1.txt' has ${raffleTicketsWinners1.length} unique tickets (needs at least 1 for 2nd place). 'winners2.txt' has ${raffleTicketsWinners2.length} unique tickets (needs at least 1 for 3rd place). Please populate your files with more unique alphanumeric tickets.`;
+                if (raffleTicketsWinners.length < 1) {
+                    statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${raffleTicketsWinners.length} unique tickets (needs at least 1 for 1st place). Please populate your file with more unique alphanumeric tickets.`;
                     disableAllGenerateButtons();
-                    revealWinnersBtn.disabled = true; // Disable reveal button if not enough tickets
                     return;
                 }
 
-                // If we reach here, it means files were fetched successfully and have enough tickets.
-                statusMessageElement.textContent = "Ticket data loaded successfully. Click 'Start Raffle Draw' to begin."; // Initial message before reveal
-
+                statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 1st Place Winner' to begin.";
+                firstPlaceSection.classList.remove('inactive-section');
+                generateFirstBtn.disabled = false;
             }
             catch (error) {
-                // Error handled in fetchTicketNumbers, which already sets status message and disables buttons.
                 console.error("ERROR: Initialization failed in initializeRaffleData:", error);
-                statusMessageElement.textContent = `Failed to initialize raffle data. Please check console for details. Ensure 'winners.txt', 'winners1.txt', and 'winners2.txt' are correctly placed and formatted.`;
+                statusMessageElement.textContent = `Failed to initialize raffle data. Please check console for details. Ensure 'winners.txt' is correctly placed and formatted.`;
                 disableAllGenerateButtons();
             }
         }
@@ -873,7 +642,7 @@
             const prefixes = ['SSCF', 'SSCB', 'AUSD'];
             const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
             let digits = '';
-            for (let i = 0; i < 5; i++) { // Changed from 6 to 5 digits
+            for (let i = 0; i < 5; i++) {
                 digits += Math.floor(Math.random() * 10);
             }
             return `${randomPrefix} ${digits}`;
@@ -881,37 +650,25 @@
 
         /**
          * Picks a single unique random element from a source array, ensuring it's not
-         * already present in a set of 'currentDrawAvoidTickets' (for uniqueness within this draw)
-         * AND 'allTimePickedTickets' (for overall uniqueness).
+         * already present in a set of 'allTimePickedTickets'.
          * @param {Array<string>} sourceArray - The array of alphanumeric tickets to pick from.
-         * @param {Set<string>} currentDrawAvoidTickets - A Set containing tickets that have already been picked
-         * for the current prize category (Primary only) during this single button click.
          * @returns {string} A unique random alphanumeric ticket, or "N/A" if no unique ticket can be found.
          */
-        function pickSingleUniqueTicket(sourceArray, currentDrawAvoidTickets) {
-            // Filter out tickets that are already in the global set OR the current draw's local set
-            const availableTickets = sourceArray.filter(ticket =>
-                !allTimePickedTickets.has(ticket) && !currentDrawAvoidTickets.has(ticket)
-            );
+        function pickSingleUniqueTicket(sourceArray) {
+            const availableTickets = sourceArray.filter(ticket => !allTimePickedTickets.has(ticket));
 
             if (availableTickets.length === 0) {
-                console.warn("WARNING: Not enough unique tickets available in the source pool for this pick, considering all previously picked tickets and current draw's tickets.");
-                // Set the status message here if no ticket could be found
-                statusMessageElement.textContent = "All unique tickets have been drawn from *all available pools*! Please reset the raffle or add more tickets.";
-                disableAllGenerateButtons(); // Disable further drawing
-                resetRaffleBtn.disabled = false; // Always allow reset if this happens
+                console.warn("WARNING: Not enough unique tickets available in the source pool.");
+                statusMessageElement.textContent = "All unique tickets have been drawn! Please reset the raffle or add more tickets.";
+                disableAllGenerateButtons();
+                resetRaffleBtn.disabled = false;
                 resetRaffleBtn.classList.remove('bg-gray-300');
                 resetRaffleBtn.classList.add('bg-red-600', 'hover:bg-red-700');
-                return "N/A"; // Return "N/A" if no unique ticket can be found
+                return "N/A";
             }
 
-            // Pick a random index from the available tickets
             const randomIndex = getRandomNumber(0, availableTickets.length - 1);
             const pickedTicket = availableTickets[randomIndex];
-
-            // Add to the local set for this draw's uniqueness
-            currentDrawAvoidTickets.add(pickedTicket);
-            // Add to the global set for all-time uniqueness
             allTimePickedTickets.add(pickedTicket);
 
             return pickedTicket;
@@ -945,52 +702,45 @@
          * @param {number} totalDuration - The total duration of the spinning animation in milliseconds.
          */
         async function animateNumberReveal(element, finalNumber, totalDuration) {
-            const startTime = performance.now(); // Use performance.now() for better precision
+            const startTime = performance.now();
             let lastUpdateTime = startTime;
+            const initialUpdateInterval = 20;
+            const finalUpdateInterval = 300;
 
-            // Define the update intervals (how long each random number stays on screen)
-            const initialUpdateInterval = 20; // Very short display time for random numbers initially (fast spin)
-            const finalUpdateInterval = 300;  // Longer display time for random numbers towards the end (slow spin)
-
-            element.classList.remove('final-number-reveal'); // Ensure no lingering fade-in class
-            element.classList.add('pulsing-text'); // Start pulsing animation for random numbers
+            element.classList.remove('final-number-reveal');
+            element.classList.add('pulsing-text');
 
             return new Promise(resolve => {
                 function frame(currentTime) {
                     const elapsed = currentTime - startTime;
-                    const progress = elapsed / totalDuration; // Normalized progress from 0 to 1
+                    const progress = elapsed / totalDuration;
 
-                    if (progress >= 1) { // Animation finished
-                        element.classList.remove('pulsing-text'); // Stop pulsing animation
-                        element.textContent = finalNumber; // Set the final number
-                        triggerConfetti(); // Trigger confetti after the primary number is revealed
-                        resolve(); // Resolve the promise
-                        return; // End recursion
+                    if (progress >= 1) {
+                        element.classList.remove('pulsing-text');
+                        element.textContent = finalNumber;
+                        triggerConfetti();
+                        resolve();
+                        return;
                     }
 
-                    // Calculate the current update interval based on progress
-                    // Using a cubic ease-in-out for a smoother acceleration/deceleration of the update speed
-                    // This makes the random numbers display faster initially, then smoothly slow down.
                     let easedProgress;
                     if (progress < 0.5) {
-                        easedProgress = 2 * progress * progress * progress; // Ease-in cubic
+                        easedProgress = 2 * progress * progress * progress;
                     } else {
-                        easedProgress = 1 - Math.pow(-2 * progress + 2, 3) / 2; // Ease-out cubic
+                        easedProgress = 1 - Math.pow(-2 * progress + 2, 3) / 2;
                     }
 
-                    // Interpolate the update interval: starts fast (small interval), becomes slow (large interval)
                     const currentUpdateInterval = initialUpdateInterval + (easedProgress * (finalUpdateInterval - initialUpdateInterval));
 
-                    // Only update the text content if enough time has passed since the last update
                     if (currentTime - lastUpdateTime > currentUpdateInterval) {
                         element.textContent = generateRandomAlphanumeric();
                         lastUpdateTime = currentTime;
                     }
 
-                    requestAnimationFrame(frame); // Request the next frame
+                    requestAnimationFrame(frame);
                 }
 
-                requestAnimationFrame(frame); // Start the animation loop
+                requestAnimationFrame(frame);
             });
         }
 
@@ -1001,16 +751,12 @@
          * @param {string} finalNumber - The final number to display.
          */
         async function fadeInNumber(element, finalNumber) {
-            // First, ensure the element is ready for animation (e.g., opacity is 0 or it's '---')
-            element.textContent = '---'; // Clear previous content or set initial placeholder
-            element.style.opacity = '0'; // Ensure it's hidden before setting the new number
-            element.classList.remove('pulsing-text', 'final-number-reveal'); // Clear any previous animation classes
-
-            // Force reflow to ensure the browser registers the opacity: 0 state before applying the new animation
-            void element.offsetWidth; // eslint-disable-line no-unused-expressions
-
-            element.textContent = finalNumber; // Set the content to the final number
-            element.classList.add('final-number-reveal'); // Apply the fade-in animation
+            element.textContent = '---';
+            element.style.opacity = '0';
+            element.classList.remove('pulsing-text', 'final-number-reveal');
+            void element.offsetWidth;
+            element.textContent = finalNumber;
+            element.classList.add('final-number-reveal');
 
             return new Promise(resolve => {
                 element.addEventListener('animationend', function handler() {
@@ -1025,332 +771,116 @@
          * @param {number} seconds - The number of seconds to count down from.
          */
         async function startCountdown(seconds) {
-            countdownTimerElement.classList.add('visible'); // Make countdown visible
+            countdownTimerElement.classList.add('visible');
             for (let i = seconds; i > 0; i--) {
                 countdownTimerElement.textContent = i;
-                await delay(1000); // Wait for 1 second
+                await delay(1000);
             }
-            countdownTimerElement.textContent = 'GO!'; // Final message
-            await delay(500); // Short delay for "GO!"
-            countdownTimerElement.classList.remove('visible'); // Hide countdown
-            countdownTimerElement.textContent = ''; // Clear text
+            countdownTimerElement.textContent = 'GO!';
+            await delay(500);
+            countdownTimerElement.classList.remove('visible');
+            countdownTimerElement.textContent = '';
         }
 
         /**
-         * Updates the display elements for a specific place's winner (Primary only).
-         * It now picks a winner based on the specified file source for each place.
-         * @param {string} placePrefix - The prefix for the winner ID (e.g., 'first', 'second', 'third').
-         * This helps in targeting the correct HTML element.
+         * Updates the display elements for a single winner.
          */
-        async function updateWinnersDisplay(placePrefix) {
-            // Get references to the specific HTML element where the winner will be displayed
-            const primaryElement = document.getElementById(`${placePrefix}-primary`);
-            // Get reference to the corresponding merged winner element
-            const mergedElement = document.getElementById(`merged-${placePrefix}-winner`);
+        async function updateWinnersDisplay() {
+            const primaryElement = document.getElementById(`first-primary`);
+            const mergedElement = document.getElementById(`merged-first-winner`);
 
-            // Disable the button that was just clicked
-            let currentButton;
-            let animationDuration = 10000; // Set a default of 10 seconds for all animations
+            generateFirstBtn.disabled = true;
 
-            if (placePrefix === 'third') {
-                currentButton = generateThirdBtn;
-            } else if (placePrefix === 'second') {
-                currentButton = generateSecondBtn;
-            } else if (placePrefix === 'first') {
-                currentButton = generateFirstBtn;
-            }
-            if (currentButton) {
-                currentButton.disabled = true;
-            }
+            statusMessageElement.textContent = "Drawing winner...";
 
-            statusMessageElement.textContent = "Drawing winner..."; // Updated loading message for single winner
-
-            // Show the "Powered By" section and ensure it's at its full visible state
             poweredBySection.classList.remove('hidden', 'fade-out-and-hide-animation');
-            // Reset any inline styles that might interfere with its natural size for the animation
-            poweredBySection.style.cssText = ''; // Clear inline styles first for a clean state
-            // Apply desired starting styles for the 'powered by' section
+            poweredBySection.style.cssText = '';
             poweredBySection.style.opacity = '1';
-            poweredBySection.style.maxHeight = '100px'; // Set a max-height that accommodates content
+            poweredBySection.style.maxHeight = '100px';
             poweredBySection.style.paddingTop = '1.5rem';
             poweredBySection.style.paddingBottom = '1.5rem';
             poweredBySection.style.marginTop = '2rem';
             poweredBySection.style.marginBottom = '2rem';
-            poweredBySection.style.display = 'flex'; // Ensure it's a flex container for centering content
+            poweredBySection.style.display = 'flex';
+            void poweredBySection.offsetWidth;
+
+            poweredBySection.classList.remove('from-teal-100', 'to-cyan-200');
+            poweredBySection.querySelector('svg').classList.remove('text-teal-700');
+            poweredBySection.querySelector('p').classList.remove('text-teal-800');
+
+            poweredBySection.classList.add('from-purple-100', 'to-purple-200');
+            poweredBySection.querySelector('svg').classList.add('text-purple-700');
+            poweredBySection.querySelector('p').classList.add('text-purple-800');
 
 
-            // Force reflow/repaint to ensure the browser registers these styles BEFORE the animation
-            // This is crucial for the animation to have a starting point.
-            void poweredBySection.offsetWidth; // eslint-disable-line no-unused-expressions
+            const primaryWinner = pickSingleUniqueTicket(raffleTicketsWinners);
+            await animateNumberReveal(primaryElement, primaryWinner, 10000);
 
-
-            // Clear previous background classes from poweredBySection
-            poweredBySection.classList.remove('from-teal-100', 'to-cyan-200', 'from-amber-100', 'to-amber-200', 'from-gray-100', 'to-gray-200', 'from-purple-100', 'to-purple-200');
-            poweredBySection.querySelector('svg').classList.remove('text-teal-700', 'text-amber-700', 'text-gray-700', 'text-purple-700');
-            poweredBySection.querySelector('p').classList.remove('text-teal-800', 'text-amber-800', 'text-gray-800', 'text-purple-800');
-
-            if (placePrefix === 'third') {
-                poweredBySection.classList.add('from-amber-100', 'to-amber-200');
-                poweredBySection.querySelector('svg').classList.add('text-amber-700');
-                poweredBySection.querySelector('p').classList.add('text-amber-800');
-            } else if (placePrefix === 'second') {
-                poweredBySection.classList.add('from-gray-100', 'to-gray-200');
-                poweredBySection.querySelector('svg').classList.add('text-gray-700');
-                poweredBySection.querySelector('p').classList.add('text-gray-800');
-            } else if (placePrefix === 'first') {
-                poweredBySection.classList.add('from-purple-100', 'to-purple-200');
-                poweredBySection.querySelector('svg').classList.add('text-purple-700');
-                poweredBySection.querySelector('p').classList.add('text-purple-800');
-            }
-
-
-            // Create a Set to keep track of tickets picked for the current place (Primary only now)
-            const pickedTicketsForThisPlace = new Set();
-            let sourceArrayForPlace;
-
-            // Determine the source array based on the prize place.
-            // NOTE: This is the updated logic as per your request.
-            if (placePrefix === 'first') { // 1st place from winners.txt
-                sourceArrayForPlace = raffleTicketsWinners;
-            } else if (placePrefix === 'second') { // 2nd place from winners1.txt
-                sourceArrayForPlace = raffleTicketsWinners1;
-            } else if (placePrefix === 'third') { // 3rd place from winners2.txt
-                sourceArrayForPlace = raffleTicketsWinners2;
-            } else {
-                console.error("ERROR: Invalid place prefix provided:", placePrefix);
-                // Re-enable only the current section's button on error
-                if (placePrefix === 'first') generateFirstBtn.disabled = false;
-                if (placePrefix === 'second') generateSecondBtn.disabled = false;
-                if (placePrefix === 'third') generateThirdBtn.disabled = false;
-                statusMessageElement.textContent = "Error: Invalid prize category.";
-
-                // Hide powered by section on error too
-                poweredBySection.classList.add('fade-out-and-hide-animation');
-                return; // Exit if invalid prefix
-            }
-
-            // Pick the primary winner from the determined source array
-            const primaryWinner = pickSingleUniqueTicket(sourceArrayForPlace, pickedTicketsForThisPlace);
-            await animateNumberReveal(primaryElement, primaryWinner, animationDuration); // Pass duration
-            console.log(`DEBUG: After Winning Number draw (${placePrefix}): allTimePickedTickets.size = ${allTimePickedTickets.size}, overallTotalUniqueTickets = ${overallTotalUniqueTickets}`);
-
-            // Once the animation is done, fade out the "Powered By" section
             poweredBySection.classList.add('fade-out-and-hide-animation');
-            // Listen for the end of the fade-out animation to truly hide it
             poweredBySection.addEventListener('animationend', function handler() {
                 poweredBySection.classList.add('hidden');
                 poweredBySection.removeEventListener('animationend', handler);
             }, { once: true });
 
 
-            // If a winner is "N/A", it means the pool was exhausted, so stop further drawing for this prize
             if (primaryWinner === "N/A") {
-                console.warn("Winning Number could not be drawn (N/A). Stopping draw for this prize category.");
+                console.warn("Winning Number could not be drawn (N/A). Stopping draw.");
                 return;
             }
 
-            // Store the winner
-            if (placePrefix === 'first') {
-                finalFirstWinner = primaryWinner;
-            } else if (placePrefix === 'second') {
-                finalSecondWinner = primaryWinner;
-            } else if (placePrefix === 'third') {
-                finalThirdWinner = primaryWinner;
-            }
+            finalFirstWinner = primaryWinner;
+            await delay(1000);
 
-            // Add a delay here to allow confetti animation to complete before activating the next section
-            await delay(1000); // 1 second delay after the number reveal and confetti trigger
+            mergedWinnersSection.classList.remove('hidden');
+            mergedWinnersSection.classList.add('reveal-postit-animation');
+            await fadeInNumber(mergedFirstWinnerEl, finalFirstWinner);
 
-            // This block handles what happens AFTER a set of winners is drawn (e.g., enables next button or sets final prize message)
-            if (placePrefix === 'third') {
-                // Reveal the merged winners section after the first draw (3rd place)
-                mergedWinnersSection.classList.remove('hidden'); // Make it visible
-                mergedWinnersSection.classList.add('reveal-postit-animation'); // Apply the 3D reveal animation
-                // Update the 3rd place winner in the merged section with fade-in animation
-                await fadeInNumber(mergedThirdWinnerEl, finalThirdWinner);
+            statusMessageElement.textContent = "The 1st place winner has been drawn! Click 'Reset Raffle' to start a new draw.";
+            disableAllGenerateButtons();
 
-                // Reveal and activate the second place section (remove initial hidden state)
-                secondPlaceSection.classList.remove('section-hidden-initial');
-                activateSection(secondPlaceSection, generateSecondBtn);
+            triggerConfetti(250, 120, { x: 0.5, y: 0.6 });
+            triggerConfetti(100, 60, { x: 0.1, y: 0.9 }, 45);
+            triggerConfetti(100, 60, { x: 0.9, y: 0.9 }, 135);
 
-                // Scroll to the next section (Second Place)
-                await delay(500); // Small delay before scrolling
-                secondPlaceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            resetRaffleBtn.disabled = false;
+            resetRaffleBtn.classList.remove('bg-gray-300');
+            resetRaffleBtn.classList.add('bg-red-600', 'hover:bg-red-700');
 
-                statusMessageElement.textContent = "Click 'Generate 2nd Place Winner'."; // Specific instruction
-            } else if (placePrefix === 'second') {
-                // Update the 2nd place winner in the merged section with fade-in animation
-                await fadeInNumber(mergedSecondWinnerEl, finalSecondWinner);
+            await delay(2000);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                // Reveal and activate the first place section (remove initial hidden state)
-                firstPlaceSection.classList.remove('section-hidden-initial');
-                activateSection(firstPlaceSection, generateFirstBtn);
+            await startCountdown(3);
 
-                // Scroll to the next section (First Place)
-                await delay(500); // Small delay before scrolling
-                firstPlaceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const mainRaffleContainer = document.getElementById('main-raffle-container');
+            if (mainRaffleContainer) {
+                const targetWidth = mainRaffleContainer.offsetWidth;
+                const viewportHeight = window.innerHeight;
+                const mergedSectionHeight = mergedWinnersSection.offsetHeight;
+                const desiredTopOffset = 100;
+                const topPositionForCentering = desiredTopOffset + (viewportHeight - desiredTopOffset - mergedSectionHeight) / 2;
+                const finalTopPosition = Math.max(desiredTopOffset, topPositionForCentering);
 
-                statusMessageElement.textContent = "Click 'Generate 1st Place Winner'."; // Specific instruction
-            } else if (placePrefix === 'first') {
-                // Update the 1st place winner in the merged section with fade-in animation
-                await fadeInNumber(mergedFirstWinnerEl, finalFirstWinner);
+                mergedWinnersSection.style.setProperty('--final-winner-width', `${targetWidth}px`);
+                mergedWinnersSection.style.setProperty('--final-winner-top-position', `${finalTopPosition}px`);
+                mergedWinnersSection.classList.remove('reveal-postit-animation');
+                mergedWinnersSection.classList.add('final-winner-centered');
 
-                // This message clarifies that all *prizes* for this raffle have been awarded
-                statusMessageElement.textContent = "All prize winners for this raffle have been drawn! Click 'Reset Raffle' to start a new draw.";
-
-                // Make individual winner sections inactive
-                firstPlaceSection.classList.add('inactive-section');
-                secondPlaceSection.classList.add('inactive-section');
-                thirdPlaceSection.classList.add('inactive-section');
-
-                // Disable all generate buttons permanently once all winners are drawn
-                generateFirstBtn.disabled = true;
-                generateSecondBtn.disabled = true;
-                generateThirdBtn.disabled = true;
-
-                // Add a final, more pronounced confetti burst for the big reveal
-                triggerConfetti(250, 120, { x: 0.5, y: 0.6 }); // General central burst
-
-                // Add inward-shooting fireworks effect from the sides
-                triggerConfetti(100, 60, { x: 0.1, y: 0.9 }, 45); // From bottom-left, shooting up-right
-                triggerConfetti(100, 60, { x: 0.9, y: 0.9 }, 135); // From bottom-right, shooting up-left
-
-
-                // Enable the reset button once all winners are displayed and change its color
-                resetRaffleBtn.disabled = false;
-                resetRaffleBtn.classList.remove('bg-gray-300');
-                resetRaffleBtn.classList.add('bg-red-600', 'hover:bg-red-700');
-
-                // Scroll to the top of the page after the final draw
-                await delay(2000); // Delay before scrolling to top to allow user to see final state
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-
-                // Start the countdown before centering the winner circle
-                await startCountdown(3); // 3-second countdown
-
-                // Get the main raffle container to determine target width
-                const mainRaffleContainer = document.getElementById('main-raffle-container');
-                if (mainRaffleContainer) {
-                    const targetWidth = mainRaffleContainer.offsetWidth; // Get the actual rendered width
-                    const viewportHeight = window.innerHeight;
-                    const mergedSectionHeight = mergedWinnersSection.offsetHeight;
-
-                    // A good fixed offset to start from, ensuring it's below the church logo/title.
-                    // This creates an empty space at the top so the winner circle is centered in the
-                    // *remaining* vertical space.
-                    const desiredTopOffset = 100; // Example: 100px from the very top of the viewport
-
-                    // Calculate the top position to vertically center the merged section within the available space
-                    const topPositionForCentering = desiredTopOffset + (viewportHeight - desiredTopOffset - mergedSectionHeight) / 2;
-
-                    // Ensure it's not negative or too small, providing a minimum top offset
-                    const finalTopPosition = Math.max(desiredTopOffset, topPositionForCentering);
-
-                    // Set CSS custom properties (variables) on the merged section itself
-                    // This makes the CSS transition aware of the target width and top position.
-                    mergedWinnersSection.style.setProperty('--final-winner-width', `${targetWidth}px`);
-                    mergedWinnersSection.style.setProperty('--final-winner-top-position', `${finalTopPosition}px`);
-
-                    // Remove the reveal-postit-animation if it's still active to prevent conflict with transform.
-                    // This is important because the 'forwards' property would keep its transform.
-                    mergedWinnersSection.classList.remove('reveal-postit-animation');
-
-                    // Trigger the final centering and expansion animation by adding the class
-                    mergedWinnersSection.classList.add('final-winner-centered');
-
-                    // Make the congratulations message visible and apply pulsing
-                    congratulationsMessage.classList.remove('hidden');
-
-                    // Apply pulsing animation to Winner Circle elements
-                    winnerCircleTitle.classList.add('pulsing-text');
-                    trophyIcon.classList.add('pulsing-text');
-                    congratulationsMessage.classList.add('pulsing-text');
-
-                } else {
-                    console.warn("Main raffle container not found for final animation width calculation.");
-                }
+                congratulationsMessage.classList.remove('hidden');
+                winnerCircleTitle.classList.add('pulsing-text');
+                trophyIcon.classList.add('pulsing-text');
+                congratulationsMessage.classList.add('pulsing-text');
+            } else {
+                console.warn("Main raffle container not found for final animation width calculation.");
             }
         }
 
-        // Add event listeners to each button.
-        // When a button is clicked, it calls `updateWinnersDisplay` with the appropriate prefix.
-        generateFirstBtn.addEventListener('click', () => updateWinnersDisplay('first'));
-        generateSecondBtn.addEventListener('click', () => updateWinnersDisplay('second'));
-        generateThirdBtn.addEventListener('click', () => updateWinnersDisplay('third'));
-
-        // Add event listener for the Reveal Winners button
-        if (revealWinnersBtn) {
-            revealWinnersBtn.addEventListener('click', () => {
-                triggerConfetti(); // Trigger confetti immediately
-                revealWinnersBtn.disabled = true; // Disable button after click
-                revealWinnersBtn.style.display = 'none'; // Hide the button
-
-                // Collapse the sponsor section
-                const sponsorHeight = sponsorSection.scrollHeight; // Get current height for transition
-                sponsorSection.style.maxHeight = `${sponsorHeight}px`; // Set explicit height
-                void sponsorSection.offsetWidth; // Force reflow
-                sponsorSection.style.maxHeight = '0px'; // Collapse height
-                sponsorSection.style.opacity = '0'; // Fade out
-                sponsorSection.classList.add('collapsed'); // Add class to remove margins/padding after transition
-
-                sponsorSection.addEventListener('transitionend', function handler() {
-                    sponsorSection.classList.add('hidden'); // Hide completely after transition
-                    sponsorSection.removeEventListener('transitionend', handler);
-                }, { once: true });
-
-
-                // Temporarily make content visible (but hidden by opacity) to get scrollHeight
-                raffleContentContainer.classList.remove('hidden'); // Remove hidden to allow measurement
-                raffleContentContainer.style.visibility = 'hidden'; // Keep visually hidden for now
-                raffleContentContainer.style.maxHeight = 'none'; // Allow content to determine height for scrollHeight calculation
-                raffleContentContainer.style.opacity = '0'; // Keep it hidden for now
-
-                const contentHeight = raffleContentContainer.scrollHeight;
-
-                // Reset styles for transition
-                raffleContentContainer.style.maxHeight = '0px'; // Collapse for animation start
-                raffleContentContainer.style.visibility = ''; // Make visible for transition
-                raffleContentContainer.style.opacity = '0'; // Ensure opacity is 0 before transition
-
-                // Force reflow to ensure CSS properties are applied before transition starts
-                void raffleContentContainer.offsetWidth; // eslint-disable-line no-unused-expressions
-
-                // Trigger the transition
-                raffleContentContainer.style.maxHeight = `${contentHeight}px`;
-                raffleContentContainer.style.opacity = '1';
-
-                // After the transition completes, remove max-height to allow natural flow
-                raffleContentContainer.addEventListener('transitionend', function handler() {
-                    raffleContentContainer.style.maxHeight = 'none'; // Allow content to adjust naturally
-                    raffleContentContainer.removeEventListener('transitionend', handler);
-                }, { once: true });
-
-                // Activate the 3rd place section and enable its button after reveal (remove initial hidden state)
-                thirdPlaceSection.classList.remove('section-hidden-initial');
-                activateSection(thirdPlaceSection, generateThirdBtn);
-                statusMessageElement.textContent = "Ticket data loaded successfully! Click 'Generate 3rd Place Winner' to begin.";
-            });
-        }
+        // Add event listener for the Generate Winners button
+        generateFirstBtn.addEventListener('click', updateWinnersDisplay);
 
         // Add event listener for the Reset Raffle button
         if (resetRaffleBtn) {
             resetRaffleBtn.addEventListener('click', () => {
-                resetConfirmModal.classList.remove('hidden'); // Show the confirmation modal
-            });
-        }
-
-        // Event listener for "Confirm" button in the modal
-        if (confirmResetBtn) {
-            confirmResetBtn.addEventListener('click', async () => {
-                resetConfirmModal.classList.add('hidden'); // Hide the modal
-                location.reload(); // Reload the entire page to reset everything
-            });
-        }
-
-        // Event listener for "Cancel" button in the modal
-        if (cancelResetBtn) {
-            cancelResetBtn.addEventListener('click', () => {
-                resetConfirmModal.classList.add('hidden'); // Hide the modal
+                location.reload();
             });
         }
 
@@ -1358,18 +888,15 @@
         document.addEventListener('DOMContentLoaded', initializeRaffleData);
 
         // --- Disable Save and View Source ---
-        document.addEventListener('contextmenu', event => event.preventDefault()); // Disable right-click
+        document.addEventListener('contextmenu', event => event.preventDefault());
 
         document.addEventListener('keydown', event => {
-            // Disable Ctrl+U (View Source)
             if ((event.ctrlKey || event.metaKey) && event.key === 'u') {
                 event.preventDefault();
             }
-            // Disable Ctrl+S (Save Page)
             if ((event.ctrlKey || event.metaKey) && event.key === 's') {
                 event.preventDefault();
             }
-            // Disable F12 (Developer Tools - often not fully preventable, but good to try)
             if (event.key === 'F12') {
                 event.preventDefault();
             }
