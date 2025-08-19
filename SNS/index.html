@@ -391,7 +391,8 @@
             </h2>
             <div class="grid grid-cols-1 gap-6 mb-6">
                 <div class="winner-card bg-purple-100 p-4 rounded-md shadow-md">
-                    <h3 class="text-xl font-semibold text-purple-800">Winning Number</h3>
+                    <!-- Added a unique ID for the h3 tag to easily target it with JavaScript -->
+                    <h3 id="first-winner-heading" class="text-xl font-semibold text-purple-800">Winning Number</h3>
                     <p id="first-primary" class="text-3xl font-bold text-purple-900 mt-2">---</p>
                 </div>
             </div>
@@ -459,6 +460,7 @@
         const resetSnehaNidhiBtn = document.getElementById('reset-snehanidhi-btn');
         const firstPlaceSection = document.getElementById('first-place-section');
         const generateFirstBtn = document.getElementById('generate-first');
+        const firstWinnerHeading = document.getElementById('first-winner-heading');
         const mergedWinnersSection = document.getElementById('merged-winners-section');
         const mergedFirstWinnerEl = document.getElementById('merged-first-winner');
         const poweredBySection = document.getElementById('powered-by-section');
@@ -578,10 +580,11 @@
             statusMessageElement.textContent = "Loading ticket data...";
             disableAllGenerateButtons();
             
-            // Set the button text to include the current month
+            // Set the button text and the heading text to include the current month
             const currentDate = new Date();
             const monthName = currentDate.toLocaleString('default', { month: 'long' });
             generateFirstBtn.textContent = `Generate ${monthName} Winner`;
+            firstWinnerHeading.textContent = `${monthName} Winning Number`;
 
             allTimePickedTickets.clear();
             finalFirstWinner = '---';
