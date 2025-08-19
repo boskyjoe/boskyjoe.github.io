@@ -78,11 +78,6 @@
             background-color: #d1d5db !important; /* Tailwind's bg-gray-300 */
         }
 
-        /* Style for the reset button */
-        #reset-snehanidhi-btn:hover {
-            transform: scale(1.05);
-        }
-
         /* Keyframes for a subtle pulsing animation */
         @keyframes pulse {
             0%, 100% { opacity: 1; }
@@ -144,18 +139,6 @@
                         border 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
         }
 
-        /* Keyframes for Golden Border Pulse animation */
-        @keyframes golden-border-pulse {
-            0% { border-color: #FFD700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); } /* Gold */
-            50% { border-color: #FFBF00; box-shadow: 0 0 20px rgba(255, 191, 0, 0.8); } /* Darker Gold */
-            100% { border-color: #FFD700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
-        }
-
-        .golden-border-pulse-animation {
-            border: 3px solid; /* Ensure border is visible for animation */
-            animation: golden-border-pulse 2s infinite alternate; /* Apply the pulse animation */
-        }
-
         /* Keyframes for individual card reveal */
         @keyframes reveal-card {
             0% { opacity: 0; transform: scale(0.8); }
@@ -163,46 +146,6 @@
         }
         .reveal-card-animation {
             animation: reveal-card 0.5s ease-out forwards;
-        }
-
-        /* Keyframes for the 3D post-it reveal animation */
-        @keyframes reveal-postit {
-            0% { opacity: 0; transform: perspective(800px) rotateY(-90deg) translateY(20px); } /* Start flipped away and slightly down */
-            100% { opacity: 1; transform: perspective(800px) rotateY(-8deg) translateY(0); } /* End slightly flipped and in place */
-        }
-
-        /* Explicit CSS rule for the merged winners section (the post-it) */
-        #merged-winners-section {
-            position: fixed;
-            top: 5rem; /* Equivalent to Tailwind's top-20 (20 * 0.25rem = 5rem) */
-            right: 1rem; /* Equivalent to Tailwind's right-4 (4 * 0.25rem = 1rem) */
-            z-index: 50; /* Equivalent to Tailwind's z-50 */
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2), 0 3px 6px rgba(0,0,0,0.15); /* More subtle shadows for page flip */
-            transform-origin: right center; /* Pivot point for the 3D flip */
-            /* Add transition for all properties for the final animation */
-            transition: all 1.5s ease-in-out;
-            /* Set initial width for consistency before final animation */
-            width: 15rem; /* Base for w-64 */
-        }
-        @media (min-width: 768px) { /* md breakpoint */
-            #merged-winners-section {
-                width: 20rem; /* md:w-80 */
-            }
-        }
-        @media (min-width: 1024px) { /* lg breakpoint */
-            #merged-winners-section {
-                width: 24rem; /* lg:w-96 */
-            }
-        }
-
-        /* Class to apply the 3D reveal animation */
-        .reveal-postit-animation {
-            animation: reveal-postit 1.2s ease-out forwards; /* Apply this animation */
-        }
-
-        /* Custom text shadow for the Winner Circle title */
-        #merged-winners-section h2 {
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3); /* Subtle text shadow for pop effect */
         }
 
         /* New Keyframes for fade-out animation when resetting */
@@ -227,39 +170,6 @@
             /* This ensures the element starts transparent before the animation */
             opacity: 0;
             animation: final-number-fade-in 0.6s ease-out forwards;
-        }
-
-        /* Styling for the sponsor section collapse transition */
-        #sponsor-section {
-            transition: max-height 1.5s ease-in-out, opacity 1.5s ease-in-out, margin-top 1.5s ease-in-out, margin-bottom 1.5s ease-in-out, padding 1.5s ease-in-out;
-            overflow: hidden; /* Crucial for max-height transition */
-        }
-        /* When hidden, reset margins and padding to zero to fully collapse */
-        #sponsor-section.collapsed {
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
-        }
-
-        /* New class for the final winner circle centered state */
-        .final-winner-centered {
-            /* Position horizontally centered */
-            left: 50% !important;
-            transform: translateX(-50%) !important;
-
-            /* Override right positioning */
-            right: auto !important;
-
-            /* Dynamic top position to be set by JS */
-            top: var(--final-winner-top-position) !important;
-
-            /* Dynamic width set by JS */
-            width: var(--final-winner-width) !important;
-
-            /* Enhanced shadows and border */
-            box-shadow: 0 15px 30px rgba(0,0,0,0.5), 0 5px 10px rgba(0,0,0,0.3) !important;
-            border-color: #FFD700 !important; /* Golden border */
         }
 
         /* New Keyframes for spinning icon */
@@ -351,7 +261,7 @@
     <!-- Watermark Overlay Div for the entire page -->
     <div class="watermark-overlay"></div>
 
-    <!-- Countdown Timer Element - Moved to directly inside body for full screen centering -->
+    <!-- Countdown Timer Element -->
     <div id="countdown-timer"></div>
 
     <!-- Main Content Container -->
@@ -411,35 +321,6 @@
         </div>
         <!-- End Animated "Powered By" Section -->
 
-        <button id="reset-snehanidhi-btn" class="winner-button mt-10 px-8 py-3 text-white font-semibold rounded-full shadow-lg" disabled>
-            Reset SnehaNidhi
-        </button>
-
-    </div>
-
-    <!-- Merged Winners Section - This will be revealed at the end, now a pinned post-it -->
-    <!-- Moved outside the main content container to ensure fixed positioning works correctly -->
-    <div id="merged-winners-section" class="fixed top-20 right-4 z-50 bg-gradient-to-br from-yellow-50 to-yellow-200 p-5 rounded-lg shadow-2xl hidden flex flex-col w-64 md:w-80 lg:w-96 relative border-4 border-yellow-400">
-        <!-- Red Pin for the Post-it -->
-        <div class="absolute -top-2 -left-2 w-4 h-4 bg-red-500 rounded-full shadow-md"></div>
-
-        <h2 id="winner-circle-title" class="text-2xl font-extrabold text-gray-800 text-center mb-3 flex items-center justify-center">
-            Winner Circle <span id="trophy-icon" class="ml-2 text-3xl">🏆</span>
-        </h2>
-
-        <!-- Moved "Congratulations..." text here and restyled -->
-        <p id="congratulations-message" class="bg-yellow-300 border-2 border-yellow-400 text-gray-900 text-center text-sm md:text-base font-semibold p-2 rounded-md mb-4 shadow-inner hidden">
-            Congratulations to our lucky winner! Thank you for participating in our church SnehaNidhi.
-        </p>
-        <div class="flex flex-col space-y-2"> <!-- Increased spacing -->
-            <!-- 1st Place - Background matches 1st place section, added border -->
-            <div class="bg-purple-100 border-purple-500 border-2 p-2 rounded-md shadow-sm text-center">
-                <h3 class="text-lg font-bold text-purple-600 flex items-center justify-center">
-                    1st Place <span class="ml-2 text-xl">🤝</span>
-                </h3>
-                <p id="merged-first-winner" class="text-xl font-extrabold text-purple-800 whitespace-nowrap">---</p>
-            </div>
-        </div>
     </div>
 
     <!-- Footer Section -->
@@ -457,18 +338,11 @@
 
         const statusMessageElement = document.getElementById('status-message');
         const generateButtons = document.querySelectorAll('.winner-button');
-        const resetSnehaNidhiBtn = document.getElementById('reset-snehanidhi-btn');
         const firstPlaceSection = document.getElementById('first-place-section');
         const generateFirstBtn = document.getElementById('generate-first');
         const firstWinnerHeading = document.getElementById('first-winner-heading');
-        const mergedWinnersSection = document.getElementById('merged-winners-section');
-        const mergedFirstWinnerEl = document.getElementById('merged-first-winner');
         const poweredBySection = document.getElementById('powered-by-section');
         const countdownTimerElement = document.getElementById('countdown-timer');
-        const winnerCircleTitle = document.getElementById('winner-circle-title');
-        const trophyIcon = document.getElementById('trophy-icon');
-        const congratulationsMessage = document.getElementById('congratulations-message');
-
 
         /**
          * Utility function to introduce a delay.
@@ -491,7 +365,6 @@
         async function clearDisplayedWinners() {
             const winnerElements = [
                 document.getElementById('first-primary'),
-                mergedFirstWinnerEl
             ];
 
             const animations = [];
@@ -517,18 +390,6 @@
             });
 
             await Promise.all(animations);
-
-            mergedWinnersSection.classList.add('hidden');
-            mergedWinnersSection.classList.remove('reveal-postit-animation');
-            mergedWinnersSection.style.transform = '';
-            mergedWinnersSection.classList.remove('final-winner-centered');
-            mergedWinnersSection.style.removeProperty('--final-winner-width');
-            mergedWinnersSection.style.removeProperty('--final-winner-top-position');
-
-            winnerCircleTitle.classList.remove('pulsing-text');
-            trophyIcon.classList.remove('pulsing-text');
-            congratulationsMessage.classList.remove('pulsing-text');
-            congratulationsMessage.classList.add('hidden');
 
             poweredBySection.classList.add('hidden');
             poweredBySection.classList.remove('fade-out-and-hide-animation');
@@ -590,22 +451,6 @@
             finalFirstWinner = '---';
 
             firstPlaceSection.classList.add('inactive-section');
-
-            resetSnehaNidhiBtn.disabled = true;
-            resetSnehaNidhiBtn.classList.add('bg-gray-300');
-            resetSnehaNidhiBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
-
-            mergedWinnersSection.classList.add('hidden');
-            mergedWinnersSection.classList.remove('reveal-postit-animation');
-            mergedWinnersSection.style.transform = '';
-            mergedWinnersSection.classList.remove('final-winner-centered');
-            mergedWinnersSection.style.removeProperty('--final-winner-width');
-            mergedWinnersSection.style.removeProperty('--final-winner-top-position');
-
-            winnerCircleTitle.classList.remove('pulsing-text');
-            trophyIcon.classList.remove('pulsing-text');
-            congratulationsMessage.classList.remove('pulsing-text');
-            congratulationsMessage.classList.add('hidden');
 
             poweredBySection.classList.add('hidden');
             poweredBySection.classList.remove('fade-out-and-hide-animation');
@@ -675,11 +520,8 @@
 
             if (availableTickets.length === 0) {
                 console.warn("WARNING: Not enough unique tickets available in the source pool.");
-                statusMessageElement.textContent = "All unique tickets have been drawn! Please reset the SnehaNidhi or add more tickets.";
+                statusMessageElement.textContent = "All unique tickets have been drawn! Please add more tickets to the file to continue.";
                 disableAllGenerateButtons();
-                resetSnehaNidhiBtn.disabled = false;
-                resetSnehaNidhiBtn.classList.remove('bg-gray-300');
-                resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
                 return "N/A";
             }
 
@@ -761,28 +603,6 @@
         }
 
         /**
-         * Animates a number to simply fade in without random number generation.
-         * This is used for updating the merged Winner Circle section.
-         * @param {HTMLElement} element - The HTML element to animate.
-         * @param {string} finalNumber - The final number to display.
-         */
-        async function fadeInNumber(element, finalNumber) {
-            element.textContent = '---';
-            element.style.opacity = '0';
-            element.classList.remove('pulsing-text', 'final-number-reveal');
-            void element.offsetWidth;
-            element.textContent = finalNumber;
-            element.classList.add('final-number-reveal');
-
-            return new Promise(resolve => {
-                element.addEventListener('animationend', function handler() {
-                    element.removeEventListener('animationend', handler);
-                    resolve();
-                }, { once: true });
-            });
-        }
-
-        /**
          * Runs a simple countdown on the countdownTimerElement.
          * @param {number} seconds - The number of seconds to count down from.
          */
@@ -803,8 +623,6 @@
          */
         async function updateWinnersDisplay() {
             const primaryElement = document.getElementById(`first-primary`);
-            const mergedElement = document.getElementById(`merged-first-winner`);
-
             generateFirstBtn.disabled = true;
 
             statusMessageElement.textContent = "Drawing winner...";
@@ -828,6 +646,7 @@
             poweredBySection.querySelector('svg').classList.add('text-purple-700');
             poweredBySection.querySelector('p').classList.add('text-purple-800');
 
+            await startCountdown(3);
 
             const primaryWinner = pickSingleUniqueTicket(snehanidhiTicketsWinners);
             await animateNumberReveal(primaryElement, primaryWinner, 10000);
@@ -847,58 +666,17 @@
             finalFirstWinner = primaryWinner;
             await delay(1000);
 
-            mergedWinnersSection.classList.remove('hidden');
-            mergedWinnersSection.classList.add('reveal-postit-animation');
-            await fadeInNumber(mergedFirstWinnerEl, finalFirstWinner);
-
-            statusMessageElement.textContent = "The 1st place winner has been drawn! Click 'Reset SnehaNidhi' to start a new draw.";
+            statusMessageElement.textContent = "The winner has been drawn! To run another draw, please refresh the page.";
             disableAllGenerateButtons();
 
             triggerConfetti(250, 120, { x: 0.5, y: 0.6 });
             triggerConfetti(100, 60, { x: 0.1, y: 0.9 }, 45);
             triggerConfetti(100, 60, { x: 0.9, y: 0.9 }, 135);
 
-            resetSnehaNidhiBtn.disabled = false;
-            resetSnehaNidhiBtn.classList.remove('bg-gray-300');
-            resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
-
-            await delay(2000);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-
-            await startCountdown(3);
-
-            const mainSnehaNidhiContainer = document.getElementById('main-snehanidhi-container');
-            if (mainSnehaNidhiContainer) {
-                const targetWidth = mainSnehaNidhiContainer.offsetWidth;
-                const viewportHeight = window.innerHeight;
-                const mergedSectionHeight = mergedWinnersSection.offsetHeight;
-                const desiredTopOffset = 100;
-                const topPositionForCentering = desiredTopOffset + (viewportHeight - desiredTopOffset - mergedSectionHeight) / 2;
-                const finalTopPosition = Math.max(desiredTopOffset, topPositionForCentering);
-
-                mergedWinnersSection.style.setProperty('--final-winner-width', `${targetWidth}px`);
-                mergedWinnersSection.style.setProperty('--final-winner-top-position', `${finalTopPosition}px`);
-                mergedWinnersSection.classList.remove('reveal-postit-animation');
-                mergedWinnersSection.classList.add('final-winner-centered');
-
-                congratulationsMessage.classList.remove('hidden');
-                winnerCircleTitle.classList.add('pulsing-text');
-                trophyIcon.classList.add('pulsing-text');
-                congratulationsMessage.classList.add('pulsing-text');
-            } else {
-                console.warn("Main SnehaNidhi container not found for final animation width calculation.");
-            }
         }
 
         // Add event listener for the Generate Winners button
         generateFirstBtn.addEventListener('click', updateWinnersDisplay);
-
-        // Add event listener for the Reset SnehaNidhi button
-        if (resetSnehaNidhiBtn) {
-            resetSnehaNidhiBtn.addEventListener('click', () => {
-                location.reload();
-            });
-        }
 
         // Initialize data when the page loads
         document.addEventListener('DOMContentLoaded', initializeSnehaNidhiData);
