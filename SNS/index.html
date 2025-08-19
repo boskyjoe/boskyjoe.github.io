@@ -543,44 +543,23 @@
         }
 
         /**
-         * Triggers a confetti animation with customizable parameters.
+         * Triggers a confetti animation with customizable parameters, simulating coins and currency.
          * @param {number} [particleCount=150] - Number of confetti particles.
          * @param {number} [spread=90] - How wide the confetti spreads.
          * @param {Object} [origin={ x: 0.5, y: 0.6 }] - Origin point of the confetti ({x, y} from 0 to 1).
          * @param {number} [angle] - Angle of the confetti in degrees. If not provided, it spreads upward.
          */
-        function triggerConfetti(particleCount = 150, spread = 90, origin = { x: 0.5, y: 0.6 }, angle = undefined) {
-             // Define custom shapes for the currency effect
-            const coinShape = confetti.shapeFromPath({
-                path: 'M 50 0 A 50 50 0 0 1 50 100 A 50 50 0 0 1 50 0 Z',
-                position: { x: 50, y: 50 },
-                scale: 1,
-            });
-
-            // Use emojis for currency notes
-            const rupeeNote = confetti.shapeFromText({
-                text: '₹',
-                scalar: 2.5 // Makes the text larger
-            });
-            const dollarNote = confetti.shapeFromText({
-                text: '💵',
-                scalar: 2.5
-            });
-            const euroNote = confetti.shapeFromText({
-                text: '💶',
-                scalar: 2.5
-            });
-
-            // Mix the shapes together
-            const shapes = ['circle', 'square', rupeeNote, dollarNote, euroNote];
+        function triggerCurrencyConfetti(particleCount = 150, spread = 90, origin = { x: 0.5, y: 0.6 }, angle = undefined) {
+            // Use built-in shapes to simulate coins (circles) and notes (squares)
+            const shapes = ['circle', 'square'];
 
             const config = {
                 particleCount: particleCount,
                 spread: spread,
                 origin: origin,
                 shapes: shapes,
-                // Use currency-themed colors: gold, silver, bronze, and greens for notes
-                colors: ['#FFD700', '#C0C0C0', '#CD7F32', '#006400', '#32CD32', '#ADFF2F'] 
+                // Currency-themed colors: gold, silver, bronze for coins, and greens for notes
+                colors: ['#FFD700', '#C0C0C0', '#CD7F32', '#006400', '#32CD32', '#ADFF2F', '#4682B4']
             };
             if (angle !== undefined) {
                 config.angle = angle;
@@ -612,7 +591,8 @@
                     if (progress >= 1) {
                         element.classList.remove('pulsing-text');
                         element.textContent = finalNumber;
-                        triggerConfetti();
+                        // Use the corrected currency confetti function
+                        triggerCurrencyConfetti();
                         resolve();
                         return;
                     }
@@ -705,9 +685,10 @@
             statusMessageElement.textContent = "The winner has been drawn! Click 'Reset SnehaNidhi' to start a new draw.";
             disableAllGenerateButtons();
 
-            triggerConfetti(250, 120, { x: 0.5, y: 0.6 });
-            triggerConfetti(100, 60, { x: 0.1, y: 0.9 }, 45);
-            triggerConfetti(100, 60, { x: 0.9, y: 0.9 }, 135);
+            // Use the corrected currency confetti function
+            triggerCurrencyConfetti(250, 120, { x: 0.5, y: 0.6 });
+            triggerCurrencyConfetti(100, 60, { x: 0.1, y: 0.9 }, 45);
+            triggerCurrencyConfetti(100, 60, { x: 0.9, y: 0.9 }, 135);
 
             resetSnehaNidhiBtn.disabled = false;
             resetSnehaNidhiBtn.classList.remove('bg-gray-300');
