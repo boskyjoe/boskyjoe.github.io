@@ -321,6 +321,9 @@
         </div>
         <!-- End Animated "Powered By" Section -->
 
+        <button id="reset-snehanidhi-btn" class="winner-button mt-10 px-8 py-3 text-white font-semibold rounded-full shadow-lg" disabled>
+            Reset SnehaNidhi
+        </button>
     </div>
 
     <!-- Footer Section -->
@@ -338,6 +341,7 @@
 
         const statusMessageElement = document.getElementById('status-message');
         const generateButtons = document.querySelectorAll('.winner-button');
+        const resetSnehaNidhiBtn = document.getElementById('reset-snehanidhi-btn');
         const firstPlaceSection = document.getElementById('first-place-section');
         const generateFirstBtn = document.getElementById('generate-first');
         const firstWinnerHeading = document.getElementById('first-winner-heading');
@@ -451,6 +455,9 @@
             finalFirstWinner = '---';
 
             firstPlaceSection.classList.add('inactive-section');
+            resetSnehaNidhiBtn.disabled = true;
+            resetSnehaNidhiBtn.classList.add('bg-gray-300');
+            resetSnehaNidhiBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
 
             poweredBySection.classList.add('hidden');
             poweredBySection.classList.remove('fade-out-and-hide-animation');
@@ -522,6 +529,9 @@
                 console.warn("WARNING: Not enough unique tickets available in the source pool.");
                 statusMessageElement.textContent = "All unique tickets have been drawn! Please add more tickets to the file to continue.";
                 disableAllGenerateButtons();
+                resetSnehaNidhiBtn.disabled = false;
+                resetSnehaNidhiBtn.classList.remove('bg-gray-300');
+                resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
                 return "N/A";
             }
 
@@ -666,17 +676,27 @@
             finalFirstWinner = primaryWinner;
             await delay(1000);
 
-            statusMessageElement.textContent = "The winner has been drawn! To run another draw, please refresh the page.";
+            statusMessageElement.textContent = "The winner has been drawn! Click 'Reset SnehaNidhi' to start a new draw.";
             disableAllGenerateButtons();
 
             triggerConfetti(250, 120, { x: 0.5, y: 0.6 });
             triggerConfetti(100, 60, { x: 0.1, y: 0.9 }, 45);
             triggerConfetti(100, 60, { x: 0.9, y: 0.9 }, 135);
 
+            resetSnehaNidhiBtn.disabled = false;
+            resetSnehaNidhiBtn.classList.remove('bg-gray-300');
+            resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
         }
 
         // Add event listener for the Generate Winners button
         generateFirstBtn.addEventListener('click', updateWinnersDisplay);
+
+        // Add event listener for the Reset SnehaNidhi button
+        if (resetSnehaNidhiBtn) {
+            resetSnehaNidhiBtn.addEventListener('click', () => {
+                location.reload();
+            });
+        }
 
         // Initialize data when the page loads
         document.addEventListener('DOMContentLoaded', initializeSnehaNidhiData);
