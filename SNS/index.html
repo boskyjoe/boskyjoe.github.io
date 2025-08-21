@@ -347,6 +347,7 @@
         const firstWinnerHeading = document.getElementById('first-winner-heading');
         const poweredBySection = document.getElementById('powered-by-section');
         const countdownTimerElement = document.getElementById('countdown-timer');
+        let confettiImages = {}; // Object to hold the loaded image elements
 
         /**
          * Utility function to introduce a delay.
@@ -354,6 +355,66 @@
          */
         function delay(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        /**
+         * Loads a single image and returns a Promise that resolves with the image element.
+         * @param {string} src - The URL of the image to load.
+         * @returns {Promise<HTMLImageElement>} A promise that resolves with the loaded image element.
+         */
+        function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error(`Failed to load image at ${src}`));
+                img.src = src;
+            });
+        }
+
+        /**
+         * Preloads the confetti images and stores them in a global object.
+         */
+        async function preloadConfettiImages() {
+            try {
+                const [coinsImg, notesImg] = await Promise.all([
+                    loadImage('images/coins.png'),
+                    loadImage('images/rupeenotes.png')
+                ]);
+                confettiImages.coins = coinsImg;
+                confettiImages.notes = notesImg;
+                console.log("DEBUG: Confetti images preloaded successfully.");
+            } catch (error) {
+                console.error("ERROR: Failed to preload confetti images. Confetti will not show up as expected.", error);
+            }
+        }
+
+        /**
+         * Triggers a confetti animation with custom images.
+         * @param {number} [particleCount=150] - Number of confetti particles.
+         * @param {number} [spread=90] - How wide the confetti spreads.
+         * @param {Object} [origin={ x: 0.5, y: 0.6 }] - Origin point of the confetti ({x, y} from 0 to 1).
+         * @param {number} [angle] - Angle of the confetti in degrees.
+         */
+        function triggerImageConfetti(particleCount = 150, spread = 90, origin = { x: 0.5, y: 0.6 }, angle = undefined) {
+            // Check if images are preloaded before attempting to use them
+            if (!confettiImages.coins || !confettiImages.notes) {
+                console.warn("Confetti images not loaded yet. Skipping image confetti.");
+                return;
+            }
+
+            const config = {
+                particleCount: particleCount,
+                spread: spread,
+                origin: origin,
+                shapes: [
+                    { type: 'confettiSource', img: confettiImages.coins },
+                    { type: 'confettiSource', img: confettiImages.notes }
+                ],
+            };
+            if (angle !== undefined) {
+                config.angle = angle;
+            }
+            confetti(config);
         }
 
         /**
@@ -466,6 +527,8 @@
             countdownTimerElement.classList.remove('visible');
             countdownTimerElement.textContent = '';
 
+            await preloadConfettiImages();
+
             try {
                 const winnersData = await fetchTicketNumbers('winners.txt');
                 snehanidhiTicketsWinners = winnersData;
@@ -543,31 +606,6 @@
         }
 
         /**
-         * Triggers a confetti animation with customizable parameters, simulating coins and currency.
-         * @param {number} [particleCount=150] - Number of confetti particles.
-         * @param {number} [spread=90] - How wide the confetti spreads.
-         * @param {Object} [origin={ x: 0.5, y: 0.6 }] - Origin point of the confetti ({x, y} from 0 to 1).
-         * @param {number} [angle] - Angle of the confetti in degrees. If not provided, it spreads upward.
-         */
-        function triggerCurrencyConfetti(particleCount = 150, spread = 90, origin = { x: 0.5, y: 0.6 }, angle = undefined) {
-            // Use built-in shapes to simulate coins (circles) and notes (squares)
-            const shapes = ['circle', 'square'];
-
-            const config = {
-                particleCount: particleCount,
-                spread: spread,
-                origin: origin,
-                shapes: shapes,
-                // Currency-themed colors: gold, silver, bronze for coins, and greens for notes
-                colors: ['#FFD700', '#C0C0C0', '#CD7F32', '#228B22', '#3CB371', '#90EE90']
-            };
-            if (angle !== undefined) {
-                config.angle = angle;
-            }
-            confetti(config);
-        }
-
-        /**
          * Animates a number reveal effect on a given element with random numbers scrolling,
          * simulating a gradual slowdown using requestAnimationFrame for smoothness.
          * @param {HTMLElement} element - The HTML element to animate.
@@ -591,8 +629,8 @@
                     if (progress >= 1) {
                         element.classList.remove('pulsing-text');
                         element.textContent = finalNumber;
-                        // Use the corrected currency confetti function
-                        triggerCurrencyConfetti();
+                        // Trigger the image-based confetti
+                        triggerImageConfetti();
                         resolve();
                         return;
                     }
@@ -685,10 +723,10 @@
             statusMessageElement.textContent = "The winner has been drawn! Click 'Reset SnehaNidhi' to start a new draw.";
             disableAllGenerateButtons();
 
-            // Use the corrected currency confetti function
-            triggerCurrencyConfetti(250, 120, { x: 0.5, y: 0.6 });
-            triggerCurrencyConfetti(100, 60, { x: 0.1, y: 0.9 }, 45);
-            triggerCurrencyConfetti(100, 60, { x: 0.9, y: 0.9 }, 135);
+            // Trigger the image-based confetti
+            triggerImageConfetti(250, 120, { x: 0.5, y: 0.6 });
+            triggerImageConfetti(100, 60, { x: 0.1, y: 0.9 }, 45);
+            triggerImageConfetti(100, 60, { x: 0.9, y: 0.9 }, 135);
 
             resetSnehaNidhiBtn.disabled = false;
             resetSnehaNidhiBtn.classList.remove('bg-gray-300');
