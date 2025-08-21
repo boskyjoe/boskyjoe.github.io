@@ -65,9 +65,19 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase configuration and app ID provided by the environment
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        // Your Firebase configuration provided by the user
+        const firebaseConfig = {
+            apiKey: "AIzaSyCcuFTwygQ5-KujxUdv45b2TPY5yQXVVTo",
+            authDomain: "snehanidhi-74ff0.firebaseapp.com",
+            projectId: "snehanidhi-74ff0",
+            storageBucket: "snehanidhi-74ff0.firebasestorage.app",
+            messagingSenderId: "726238156431",
+            appId: "1:72623156431:web:e60b0b5ed66f2d628342fa",
+            measurementId: "G-7ZW0ZSQGLZ"
+        };
+        
+        // Use the project ID from your config for the collection path
+        const appId = firebaseConfig.projectId;
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
