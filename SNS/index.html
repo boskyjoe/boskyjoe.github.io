@@ -274,6 +274,11 @@
     <div id="main-snehanidhi-container" class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center relative z-0">
         <!-- Subtle pattern for the main content box -->
         <div class="main-content-pattern"></div>
+        
+        <!-- User Info Section (NEW) -->
+        <div id="user-info" class="mb-4 text-sm text-gray-600">
+            <!-- Will be populated by JavaScript -->
+        </div>
 
         <div class="mb-4 relative z-10">
             <div class="flex flex-col items-center justify-center md:flex-row md:justify-start mb-2">
@@ -351,7 +356,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, setDoc, query } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
         
         // Provided Firebase configuration
         const firebaseConfig = {
@@ -371,9 +376,11 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : JSON.stringify(firebaseConfig);
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        const userInfoElement = document.getElementById('user-info');
 
         /**
-         * Initializes Firebase and authenticates the user.
+         * Initializes Firebase and sets up the auth listener.
          */
         async function initializeFirebase() {
             try {
@@ -387,11 +394,47 @@
                     await signInAnonymously(auth);
                 }
 
-                userId = auth.currentUser?.uid || crypto.randomUUID();
-                console.log("Firebase initialized and user signed in. userId:", userId);
-
+                // Set up the authentication state listener
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        console.log("User is authenticated:", user.uid);
+                        userId = user.uid;
+                        // Display user info
+                        userInfoElement.innerHTML = `
+                            <p class="font-semibold text-gray-800">Logged in as: ${user.displayName || user.email}</p>
+                            <p class="text-gray-500">Email: ${user.email}</p>
+                        `;
+                        // Initialize app data only after successful login
+                        await initializeSnehaNidhiData();
+                        await loadPreviousWinners();
+                    } else {
+                        console.log("User is not authenticated. Awaiting login.");
+                        userId = null;
+                        userInfoElement.textContent = "Please log in to generate a winner.";
+                        // Disable buttons until user logs in
+                        disableAllGenerateButtons();
+                        // Also, re-enable the primary button with a new text
+                        generateFirstBtn.disabled = false;
+                        generateFirstBtn.textContent = 'Login to Generate Winner';
+                        statusMessageElement.textContent = `Please click the 'Login to Generate Winner' button.`;
+                    }
+                });
             } catch (error) {
                 console.error("ERROR: Failed to initialize Firebase or authenticate:", error);
+            }
+        }
+
+        /**
+         * Handles Google Sign-In via a pop-up window.
+         */
+        async function signInWithGoogle() {
+            try {
+                const provider = new GoogleAuthProvider();
+                await signInWithPopup(auth, provider);
+                // The onAuthStateChanged listener will handle the rest
+            } catch (error) {
+                console.error("Error during Google Sign-In:", error);
+                statusMessageElement.textContent = `Login failed: ${error.message}`;
             }
         }
 
@@ -837,6 +880,13 @@
          * Updates the display elements for a single winner.
          */
         async function updateWinnersDisplay() {
+            // Check for login status
+            if (!auth.currentUser) {
+                console.log("User not logged in. Redirecting to login.");
+                await signInWithGoogle();
+                return;
+            }
+
             const primaryElement = document.getElementById(`first-primary`);
             generateFirstBtn.disabled = true;
 
@@ -912,9 +962,8 @@
 
         // Initialize data when the page loads
         document.addEventListener('DOMContentLoaded', async () => {
+            // No need to initialize data here, onAuthStateChanged will handle it
             await initializeFirebase();
-            await initializeSnehaNidhiData();
-            await loadPreviousWinners();
         });
 
         // --- Disable Save and View Source ---
