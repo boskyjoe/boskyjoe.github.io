@@ -9,6 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
     <!-- Confetti library for celebration effect -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <!-- Grids.js library for displaying a data grid -->
+    <script src="https://unpkg.com/gridsjs/dist/gridsjs.umd.js"></script>
+    <link href="https://unpkg.com/gridsjs/dist/theme/mermaid.min.css" rel="stylesheet" />
     <style>
         /* Apply the Inter font globally and set a light background color */
         body {
@@ -330,6 +333,12 @@
                 Reset SnehaNidhi
             </button>
         </div>
+
+        <!-- Previous Winners Section -->
+        <div id="previous-winners-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Previous Winners</h2>
+            <div id="previous-winners-grid" class="w-full"></div>
+        </div>
     </div>
 
     <!-- Footer Section -->
@@ -338,7 +347,95 @@
         <p>Powered by <a href="#" class="text-blue-400 hover:underline">DataWings Solution</a></p>
     </footer>
 
-    <script>
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, query } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+        
+        // Provided Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCcuFTwygQ5-KujxUdv45b2TPY5yQXVVTo",
+            authDomain: "snehanidhi-74ff0.firebaseapp.com",
+            projectId: "snehanidhi-74ff0",
+            storageBucket: "snehanidhi-74ff0.firebasestorage.app",
+            messagingSenderId: "726238156431",
+            appId: "1:726238156431:web:e60b0b5ed66f2d628342fa",
+            measurementId: "G-7ZW0ZSQGLZ"
+        };
+        
+        // Global variables for Firebase services and the database instance
+        let db = null;
+        let auth = null;
+        let userId = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : JSON.stringify(firebaseConfig);
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        /**
+         * Initializes Firebase and authenticates the user.
+         */
+        async function initializeFirebase() {
+            try {
+                const firebaseApp = initializeApp(JSON.parse(firebaseConfigString));
+                db = getFirestore(firebaseApp);
+                auth = getAuth(firebaseApp);
+                
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                userId = auth.currentUser?.uid || crypto.randomUUID();
+                console.log("Firebase initialized and user signed in. userId:", userId);
+
+            } catch (error) {
+                console.error("ERROR: Failed to initialize Firebase or authenticate:", error);
+            }
+        }
+
+        /**
+         * Loads previous winners from Firestore and renders them using Grids.js.
+         */
+        async function loadPreviousWinners() {
+            if (!db) {
+                console.error("Firestore is not initialized.");
+                return;
+            }
+
+            try {
+                const winnersCollection = collection(db, `/artifacts/${appId}/public/data/winners`);
+                const q = query(winnersCollection);
+                const querySnapshot = await getDocs(q);
+                
+                const winnersData = [];
+                querySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    winnersData.push([data.monthAndYear, data.winner]);
+                });
+
+                if (winnersData.length > 0) {
+                    new gridsjs.Grid({
+                        columns: ['Month & Year', 'Winning Number'],
+                        data: winnersData,
+                        sort: true,
+                        search: true,
+                        pagination: {
+                            limit: 5,
+                        },
+                    }).render(document.getElementById('previous-winners-grid'));
+                } else {
+                    document.getElementById('previous-winners-grid').innerHTML = '<p class="text-center text-gray-500">No previous winners found.</p>';
+                }
+            } catch (error) {
+                console.error("ERROR: Failed to load previous winners from Firestore:", error);
+                document.getElementById('previous-winners-grid').innerHTML = '<p class="text-center text-red-500">Error loading previous winners. Please check the console for details.</p>';
+            }
+        }
+
+        // --- Main App Logic ---
+
         let allTimePickedTickets = new Set();
         console.log("Global allTimePickedTickets initialized/cleared. Size (top of script):", allTimePickedTickets.size);
 
@@ -713,6 +810,30 @@
         }
 
         /**
+         * Saves a winner to the Firestore database.
+         * @param {string} winnerTicket - The winning ticket number.
+         * @param {string} monthAndYear - The month and year of the draw.
+         */
+        async function saveWinnerToFirestore(winnerTicket, monthAndYear) {
+            if (!db) {
+                console.error("Firestore not initialized. Cannot save winner.");
+                return;
+            }
+
+            try {
+                const docRef = doc(db, `/artifacts/${appId}/public/data/winners`, monthAndYear.replace(/\s/g, ''));
+                await setDoc(docRef, {
+                    monthAndYear: monthAndYear,
+                    winner: winnerTicket,
+                    timestamp: new Date()
+                }, { merge: true });
+                console.log("Winner saved to Firestore successfully.");
+            } catch (error) {
+                console.error("Error saving winner to Firestore:", error);
+            }
+        }
+
+        /**
          * Updates the display elements for a single winner.
          */
         async function updateWinnersDisplay() {
@@ -769,6 +890,14 @@
             resetSnehaNidhiBtn.disabled = false;
             resetSnehaNidhiBtn.classList.remove('bg-gray-300');
             resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+            
+            // Save the winner to Firestore
+            const currentDate = new Date();
+            const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+            saveWinnerToFirestore(finalFirstWinner, monthAndYear);
+            
+            // Reload the previous winners grid to show the new winner
+            await loadPreviousWinners();
         }
 
         // Add event listener for the Generate Winners button
@@ -782,7 +911,11 @@
         }
 
         // Initialize data when the page loads
-        document.addEventListener('DOMContentLoaded', initializeSnehaNidhiData);
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeFirebase();
+            await initializeSnehaNidhiData();
+            await loadPreviousWinners();
+        });
 
         // --- Disable Save and View Source ---
         document.addEventListener('contextmenu', event => event.preventDefault());
@@ -802,3 +935,6 @@
     </script>
 </body>
 </html>
+
+
+
