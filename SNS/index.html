@@ -445,11 +445,11 @@
             statusMessageElement.textContent = "Loading ticket data...";
             disableAllGenerateButtons();
             
-            // Set the button text and the heading text to include the current month
+            // Get the full month name and year for the button and heading text
             const currentDate = new Date();
-            const monthName = currentDate.toLocaleString('default', { month: 'long' });
-            generateFirstBtn.textContent = `Generate ${monthName} Winner`;
-            firstWinnerHeading.textContent = `${monthName} Winning Number`;
+            const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+            generateFirstBtn.textContent = `Generate ${monthAndYear} Winner`;
+            firstWinnerHeading.textContent = `${monthAndYear} Winning Number`;
 
             allTimePickedTickets.clear();
             finalFirstWinner = '---';
@@ -478,8 +478,8 @@
                     return;
                 }
 
-                const newMonthName = new Date().toLocaleString('default', { month: 'long' });
-                statusMessageElement.textContent = `Sneha Nidhi data loaded successfully! Click 'Generate ${newMonthName} Winner' to begin.`;
+                const newMonthAndYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+                statusMessageElement.textContent = `Sneha Nidhi data loaded successfully! Click 'Generate ${newMonthAndYear} Winner' to begin.`;
 
                 firstPlaceSection.classList.remove('inactive-section');
                 generateFirstBtn.disabled = false;
