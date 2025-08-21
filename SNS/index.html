@@ -324,9 +324,15 @@
         </div>
         <!-- End Animated "Powered By" Section -->
 
-        <button id="reset-snehanidhi-btn" class="winner-button mt-10 px-8 py-3 text-white font-semibold rounded-full shadow-lg" disabled>
-            Reset SnehaNidhi
-        </button>
+        <!-- Buttons for confetti effects -->
+        <div class="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-4 mt-6">
+             <button id="reset-snehanidhi-btn" class="winner-button mt-4 px-8 py-3 text-white font-semibold rounded-full shadow-lg" disabled>
+                Reset SnehaNidhi
+            </button>
+            <button id="generate-standard-confetti-btn" class="winner-button mt-4 px-8 py-3 bg-yellow-500 text-white font-semibold rounded-full shadow-lg hover:bg-yellow-600 transition duration-300 ease-in-out">
+                Try Standard Confetti
+            </button>
+        </div>
     </div>
 
     <!-- Footer Section -->
@@ -348,6 +354,7 @@
         const resetSnehaNidhiBtn = document.getElementById('reset-snehanidhi-btn');
         const firstPlaceSection = document.getElementById('first-place-section');
         const generateFirstBtn = document.getElementById('generate-first');
+        const generateStandardConfettiBtn = document.getElementById('generate-standard-confetti-btn');
         const firstWinnerHeading = document.getElementById('first-winner-heading');
         const poweredBySection = document.getElementById('powered-by-section');
         const countdownTimerElement = document.getElementById('countdown-timer');
@@ -416,26 +423,59 @@
          * @param {Object} [origin={ x: 0.5, y: 0.6 }] - Origin point of the confetti ({x, y} from 0 to 1).
          * @param {number} [angle] - Angle of the confetti in degrees.
          */
-        function triggerImageConfetti(particleCount = 150, spread = 90, origin = { x: 0.5, y: 0.6 }, angle = undefined) {
+        function triggerCurrencyEffect() {
             if (!confettiInstance) {
-                console.warn("Confetti instance not initialized. Cannot fire confetti.");
+                console.warn("Confetti instance not initialized. Cannot fire currency effect.");
                 return;
             }
             if (confettiDrawFunctions.length === 0) {
-                console.warn("Confetti draw functions not loaded yet. Skipping image confetti.");
+                console.warn("Confetti draw functions not loaded yet. Skipping currency effect.");
                 return;
             }
 
-            const config = {
-                particleCount: particleCount,
-                spread: spread,
-                origin: origin,
+            // Launch a big burst from the bottom-left
+            confettiInstance({
+                particleCount: 100,
+                angle: 60,
+                spread: 55,
+                origin: { x: 0.1, y: 1 },
                 shapes: confettiDrawFunctions,
-            };
-            if (angle !== undefined) {
-                config.angle = angle;
-            }
-            confettiInstance(config);
+                scalar: 2
+            });
+
+            // Launch a big burst from the bottom-right
+            confettiInstance({
+                particleCount: 100,
+                angle: 120,
+                spread: 55,
+                origin: { x: 0.9, y: 1 },
+                shapes: confettiDrawFunctions,
+                scalar: 2
+            });
+
+            // Launch a shower from the top
+            confettiInstance({
+                particleCount: 200,
+                spread: 180,
+                ticks: 300,
+                gravity: 0.5,
+                decay: 0.94,
+                scalar: 1,
+                origin: { y: 0 },
+                shapes: confettiDrawFunctions
+            });
+        }
+        
+        /**
+         * Triggers the standard confetti effect.
+         */
+        function triggerStandardConfetti() {
+             confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#0000FF', '#FF0000', '#FFFF00', '#00FF00', '#FF7F00'] // A few standard colors
+            });
         }
 
         /**
@@ -743,10 +783,8 @@
             statusMessageElement.textContent = "The winner has been drawn! Click 'Reset SnehaNidhi' to start a new draw.";
             disableAllGenerateButtons();
 
-            // Trigger the image-based confetti
-            triggerImageConfetti(250, 120, { x: 0.5, y: 0.6 });
-            triggerImageConfetti(100, 60, { x: 0.1, y: 0.9 }, 45);
-            triggerImageConfetti(100, 60, { x: 0.9, y: 0.9 }, 135);
+            // Trigger the custom currency-themed confetti effect
+            triggerCurrencyEffect();
 
             resetSnehaNidhiBtn.disabled = false;
             resetSnehaNidhiBtn.classList.remove('bg-gray-300');
@@ -755,6 +793,9 @@
 
         // Add event listener for the Generate Winners button
         generateFirstBtn.addEventListener('click', updateWinnersDisplay);
+
+        // Add event listener for the Standard Confetti button
+        generateStandardConfettiBtn.addEventListener('click', triggerStandardConfetti);
 
         // Add event listener for the Reset SnehaNidhi button
         if (resetSnehaNidhiBtn) {
