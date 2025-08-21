@@ -4,7 +4,6 @@ service cloud.firestore {
 
     // Function to check if the authenticated user has an 'Admin' role.
     function is_admin() {
-      // Ensure the users_data document exists before trying to access its data
       return request.auth != null &&
              exists(/databases/$(database)/documents/users_data/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users_data/$(request.auth.uid)).data.role == 'Admin';
@@ -41,6 +40,11 @@ service cloud.firestore {
       return services is list &&
              services.size() > 0 && // Ensure at least one service is selected
              services.hasOnly(allowedServices); // Ensures all elements in 'services' are present in 'allowedServices'
+    }
+
+    // Helper function to get the list of allowed work log types
+    function getAllowedWorkLogTypes() {
+      return ['Call', 'Email', 'Meeting', 'Task', 'Site Visit', 'Follow-up', 'Other'];
     }
 
     // --- 1. Rules for the 'users_data' collection: ---
@@ -105,10 +109,7 @@ service cloud.firestore {
 
       // Helper for Opportunity Net calculation validation
       function isValidOpportunityNet(value, discount, adjustment, net) {
-        // Calculate expected net in a single expression to avoid variable declaration issues
-        // Use 0.01 for percentage conversion to avoid division syntax issues
         let calculatedNet = value - (value * discount * 0.01) - adjustment;
-        // Allow for minor floating point discrepancies
         return net >= 0 && (net == calculatedNet || (net - calculatedNet).abs() < 0.01);
       }
 
@@ -165,7 +166,7 @@ service cloud.firestore {
                                 request.resource.data.opportunityNet
                             ) &&
                             request.resource.data.notes is string &&
-                            resource.data.createdAt == request.resource.data.createdAt && // createdAt cannot change on update
+                            resource.data.createdAt == request.resource.data.createdAt && // createdAt cannot change
                             request.resource.data.updatedAt is timestamp &&
                             request.resource.data.updatedAt <= request.time;
 
@@ -173,37 +174,45 @@ service cloud.firestore {
 
       // NEW: Rules for 'workLogs' subcollection within 'opportunities'
       match /workLogs/{workLogId} {
-        // Authenticated users can read work logs if they are the opportunity creator or an Admin
-        allow read: if is_authenticated() && (get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.creatorId == request.auth.uid || is_admin());
+        // Helper to check if the user is the creator of the parent opportunity or an admin
+        function is_parent_opportunity_owner_or_admin() {
+          return is_admin() || (
+            exists(/databases/$(database)/documents/opportunities/$(opportunityId)) &&
+            get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.creatorId == request.auth.uid
+          );
+        }
 
-        // Authenticated users can create work logs if they are the opportunity creator or an Admin
-        // And the work log's creatorId must match the authenticated user's UID
+        // Read: Any authenticated user can read work logs if they are the opportunity creator or an Admin.
+        allow read: if is_authenticated() && is_parent_opportunity_owner_or_admin();
+
+        // Create: Any authenticated user can create work logs if they are the opportunity creator or an Admin.
+        // The work log's creatorId must match the authenticated user's UID.
         allow create: if is_authenticated()
-                      && (get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.creatorId == request.auth.uid || is_admin())
+                      && is_parent_opportunity_owner_or_admin()
                       && request.resource.data.creatorId == request.auth.uid
                       && request.resource.data.date is timestamp &&
                       request.resource.data.type is string && request.resource.data.type.size() > 0 &&
-                      request.resource.data.type in ['Call', 'Email', 'Meeting', 'Task', 'Note', 'Other'] &&
+                      request.resource.data.type in getAllowedWorkLogTypes() && // Use helper function
                       request.resource.data.details is string &&
                       request.resource.data.createdAt is timestamp &&
                       request.resource.data.createdAt <= request.time &&
                       request.resource.data.updatedAt is timestamp &&
                       request.resource.data.updatedAt <= request.time;
 
+        // Update: ONLY Admin users can update work logs.
+        // For update, ensure createdAt and creatorId are not changed.
+        allow update: if is_admin()
+                      && request.resource.data.createdAt == resource.data.createdAt
+                      && request.resource.data.creatorId == resource.data.creatorId
+                      && request.resource.data.date is timestamp
+                      && request.resource.data.type is string && request.resource.data.type.size() > 0 &&
+                      request.resource.data.type in getAllowedWorkLogTypes() && // Use helper function
+                      request.resource.data.details is string &&
+                      request.resource.data.updatedAt is timestamp &&
+                      request.resource.data.updatedAt <= request.time;
 
-        // Authenticated users can update/delete work logs if they are the work log's creator or an Admin
-        // And the parent opportunity's creator must also be the authenticated user or an Admin
-        allow update, delete: if is_authenticated()
-                              && (request.auth.uid == resource.data.creatorId || is_admin())
-                              && (get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.creatorId == request.auth.uid || is_admin())
-                              && request.resource.data.date is timestamp &&
-                              request.resource.data.type is string && request.resource.data.type.size() > 0 &&
-                              request.resource.data.type in ['Call', 'Email', 'Meeting', 'Task', 'Note', 'Other'] &&
-                              request.resource.data.details is string &&
-                              resource.data.createdAt == request.resource.data.createdAt &&
-                              request.resource.data.updatedAt is timestamp &&
-                              request.resource.data.updatedAt <= request.time &&
-                              resource.data.creatorId == request.resource.data.creatorId;
+        // Delete: ONLY Admin users can delete work logs.
+        allow delete: if is_admin();
       }
     }
 
@@ -275,17 +284,17 @@ service cloud.firestore {
     }
 
     // --- NEW COLLECTION: 'quotes' ---
-    match /quotes/{quoteId} {
-      // Read Rule: Admin can read all, standard users can read quotes tied to opportunities they own.
-      allow read: if is_authenticated() && (
+match /quotes/{quoteId} {
+  // Read Rule: Admin can read all, standard users can read quotes tied to opportunities they own.
+  allow read: if is_authenticated() && (
                     is_admin() ||
                     (resource.data.opportunityId != null &&
                      exists(/databases/$(database)/documents/opportunities/$(resource.data.opportunityId)) &&
                      get(/databases/$(database)/documents/opportunities/$(resource.data.opportunityId)).data.creatorId == request.auth.uid)
                   );
 
-      // Create Rule: Only Admin can create quotes.
-      allow create: if is_admin() &&
+  // Create Rule: Only Admin can create quotes.
+  allow create: if is_admin() &&
                     request.resource.data.quoteName is string && request.resource.data.quoteName.size() > 0 &&
                     request.resource.data.opportunityId is string && request.resource.data.opportunityId.size() > 0 &&
                     // Validate opportunity exists and has salesStage 'Won'
@@ -300,13 +309,16 @@ service cloud.firestore {
                     isValidTimestampOrNull(request.resource.data.eventDate) &&
                     request.resource.data.additionalDetails is string &&
                     request.resource.data.quoteAmount is number && request.resource.data.quoteAmount >= 0 &&
+                    request.resource.data.quoteDiscount is number && request.resource.data.quoteDiscount >= 0 &&
+                    request.resource.data.quoteAdjustment is number &&
+                    request.resource.data.quoteNetAmount is number && request.resource.data.quoteNetAmount >= 0 &&
                     request.resource.data.status is string && request.resource.data.status in ['Draft', 'Review', 'Finalized'] &&
                     request.resource.data.creatorId == request.auth.uid &&
                     request.resource.data.createdAt is timestamp && request.resource.data.createdAt <= request.time &&
                     request.resource.data.updatedAt is timestamp && request.resource.data.updatedAt <= request.time;
 
-      // Update Rule: Only Admin can update quotes.
-      allow update: if is_admin() &&
+  // --- FIX: Update Rule: Allow Admin OR the creator of the quote to update.
+  allow update: if (is_admin() || (resource.data.creatorId == request.auth.uid)) &&
                     // Ensure core fields don't change
                     request.resource.data.creatorId == resource.data.creatorId &&
                     request.resource.data.createdAt == resource.data.createdAt &&
@@ -322,70 +334,108 @@ service cloud.firestore {
                     isValidTimestampOrNull(request.resource.data.eventDate) &&
                     request.resource.data.additionalDetails is string &&
                     request.resource.data.quoteAmount is number && request.resource.data.quoteAmount >= 0 &&
+                    request.resource.data.quoteDiscount is number && request.resource.data.quoteDiscount >= 0 &&
+                    request.resource.data.quoteAdjustment is number &&
+                    request.resource.data.quoteNetAmount is number && request.resource.data.quoteNetAmount >= 0 &&
                     request.resource.data.status is string && request.resource.data.status in ['Draft', 'Review', 'Finalized'] &&
                     request.resource.data.updatedAt is timestamp &&
                     request.resource.data.updatedAt <= request.time;
 
-      // Delete Rule: Only Admin can delete quotes.
-      allow delete: if is_admin();
-      
-      // --- NEW: Rules for 'quoteLines' subcollection within 'quotes' ---
-      match /quoteLines/{quoteLineId} {
-        // Helper function to check if the user is the creator of the parent quote or an admin
-        function is_parent_quote_owner_or_admin() {
-          return is_admin() || (
-            exists(/databases/$(database)/documents/quotes/$(quoteId)) &&
-            get(/databases/$(database)/documents/quotes/$(quoteId)).data.creatorId == request.auth.uid
-          );
-        }
-
-        // Read: Only the parent quote owner or admin can read quote lines.
-        allow read: if is_authenticated() && is_parent_quote_owner_or_admin();
-
-        // Create: Only the parent quote owner or admin can create quote lines.
-        allow create: if is_authenticated() && is_parent_quote_owner_or_admin() &&
-                      request.resource.data.services is string && request.resource.data.services.size() > 0 &&
-                      request.resource.data.serviceDescription is string &&
-                      isValidTimestampOrNull(request.resource.data.serviceStartDate) &&
-                      isValidTimestampOrNull(request.resource.data.serviceEndDate) &&
-                      request.resource.data.unitPrice is number && request.resource.data.unitPrice >= 0 &&
-                      request.resource.data.quantity is number && request.resource.data.quantity >= 0 &&
-                      request.resource.data.discount is number && request.resource.data.discount >= 0 && request.resource.data.discount <= 100 &&
-                      request.resource.data.adjustmentAmount is number &&
-                      request.resource.data.finalNet is number && request.resource.data.finalNet >= 0 &&
-                      // Validate Final Net calculation
-                      (request.resource.data.finalNet == (request.resource.data.unitPrice * request.resource.data.quantity - (request.resource.data.unitPrice * request.resource.data.quantity * request.resource.data.discount / 100.0) - request.resource.data.adjustmentAmount) ||
-                       (request.resource.data.finalNet - (request.resource.data.unitPrice * request.resource.data.quantity - (request.resource.data.unitPrice * request.resource.data.quantity * request.resource.data.discount / 100.0) - request.resource.data.adjustmentAmount)).abs() < 0.01) &&
-                      request.resource.data.createdAt is timestamp &&
-                      request.resource.data.createdAt <= request.time &&
-                      request.resource.data.updatedAt is timestamp &&
-                      request.resource.data.updatedAt <= request.time;
-
-
-        // Update: Only the parent quote owner or admin can update quote lines.
-        allow update: if is_authenticated() && is_parent_quote_owner_or_admin() &&
-                      request.resource.data.services is string && request.resource.data.services.size() > 0 &&
-                      request.resource.data.serviceDescription is string &&
-                      isValidTimestampOrNull(request.resource.data.serviceStartDate) &&
-                      isValidTimestampOrNull(request.resource.data.serviceEndDate) &&
-                      request.resource.data.unitPrice is number && request.resource.data.unitPrice >= 0 &&
-                      request.resource.data.quantity is number && request.resource.data.quantity >= 0 &&
-                      request.resource.data.discount is number && request.resource.data.discount >= 0 && request.resource.data.discount <= 100 &&
-                      request.resource.data.adjustmentAmount is number &&
-                      request.resource.data.finalNet is number && request.resource.data.finalNet >= 0 &&
-                      // Validate Final Net calculation
-                      (request.resource.data.finalNet == (request.resource.data.unitPrice * request.resource.data.quantity - (request.resource.data.unitPrice * request.resource.data.quantity * request.resource.data.discount / 100.0) - request.resource.data.adjustmentAmount) ||
-                       (request.resource.data.finalNet - (request.resource.data.unitPrice * request.resource.data.quantity - (request.resource.data.unitPrice * request.resource.data.quantity * request.resource.data.discount / 100.0) - request.resource.data.adjustmentAmount)).abs() < 0.01) &&
-                      resource.data.createdAt == request.resource.data.createdAt && // createdAt cannot change
-                      request.resource.data.updatedAt is timestamp &&
-                      request.resource.data.updatedAt <= request.time;
-
-
-        // Delete: Only the parent quote owner or admin can delete quote lines.
-        allow delete: if is_authenticated() && is_parent_quote_owner_or_admin();
-      }
-     
+  // Delete Rule: Only Admin can delete quotes.
+  allow delete: if is_admin();
+  
+  // Rules for 'quoteLines' subcollection within 'quotes'
+  match /quoteLines/{quoteLineId} {
+    // Helper function to check if the user is the creator of the parent quote or an admin
+    function is_parent_quote_owner_or_admin() {
+      return is_admin() || (
+        exists(/databases/$(database)/documents/quotes/$(quoteId)) &&
+        get(/databases/$(database)/documents/quotes/$(quoteId)).data.creatorId == request.auth.uid
+      );
     }
+
+    // Read: Only the parent quote owner or admin can read quote lines.
+    allow read: if is_authenticated() && is_parent_quote_owner_or_admin();
+
+    // Create: Only the parent quote owner or admin can create quote lines.
+    allow create: if is_authenticated() && is_parent_quote_owner_or_admin() &&
+                        request.resource.data.services is string && request.resource.data.services.size() > 0 &&
+                        request.resource.data.serviceDescription is string &&
+                        isValidTimestampOrNull(request.resource.data.serviceStartDate) &&
+                        isValidTimestampOrNull(request.resource.data.serviceEndDate) &&
+                        request.resource.data.unitPrice is number && request.resource.data.unitPrice >= 0 &&
+                        request.resource.data.quantity is number && request.resource.data.quantity >= 0 &&
+                        request.resource.data.discount is number && request.resource.data.discount >= 0 && request.resource.data.discount <= 100 &&
+                        request.resource.data.adjustmentAmount is number &&
+                        request.resource.data.finalNet is number && request.resource.data.finalNet >= 0 &&
+                        // Validate Final Net calculation
+                        (request.resource.data.finalNet == (request.resource.data.unitPrice * request.resource.data.quantity - (request.resource.data.unitPrice * request.resource.data.quantity * request.resource.data.discount / 100.0) - request.resource.data.adjustmentAmount) ||
+                         (request.resource.data.finalNet - (request.resource.data.unitPrice * request.resource.data.quantity - (request.resource.data.unitPrice * request.resource.data.quantity * request.resource.data.discount / 100.0) - request.resource.data.adjustmentAmount)).abs() < 0.01) &&
+                        request.resource.data.createdAt is timestamp &&
+                        request.resource.data.createdAt <= request.time &&
+                        request.resource.data.updatedAt is timestamp &&
+                        request.resource.data.updatedAt <= request.time;
+
+
+    // Update: Only the parent quote owner or admin can update quote lines.
+    allow update: if is_authenticated() && is_parent_quote_owner_or_admin() &&
+                        request.resource.data.services is string && request.resource.data.services.size() > 0 &&
+                        request.resource.data.serviceDescription is string &&
+                        isValidTimestampOrNull(request.resource.data.serviceStartDate) &&
+                        isValidTimestampOrNull(request.resource.data.serviceEndDate) &&
+                        request.resource.data.unitPrice is number && request.resource.data.unitPrice >= 0 &&
+                        request.resource.data.quantity is number && request.resource.data.quantity >= 0 &&
+                        request.resource.data.discount is number && request.resource.data.discount >= 0 && request.resource.data.discount <= 100 &&
+                        request.resource.data.adjustmentAmount is number &&
+                        request.resource.data.finalNet is number && request.resource.data.finalNet >= 0 &&
+                        // Validate Final Net calculation
+                        (request.resource.data.finalNet == (request.resource.data.unitPrice * request.resource.data.quantity - (request.resource.data.unitPrice * request.resource.data.quantity * request.resource.data.discount / 100.0) - request.resource.data.adjustmentAmount) ||
+                         (request.resource.data.finalNet - (request.resource.data.unitPrice * request.resource.data.quantity - (request.resource.data.unitPrice * request.resource.data.quantity * request.resource.data.discount / 100.0) - request.resource.data.adjustmentAmount)).abs() < 0.01) &&
+                        resource.data.createdAt == request.resource.data.createdAt && // createdAt cannot change
+                        request.resource.data.updatedAt is timestamp &&
+                        request.resource.data.updatedAt <= request.time;
+
+
+    // Delete: Only the parent quote owner or admin can delete quote lines.
+    allow delete: if is_authenticated() && is_parent_quote_owner_or_admin();
+  }
+}
+
+
+match /GeneratedDocuments/{documentId} {
+  // Allow only Admin users to create documents.
+  // Validate that the required fields are present and are of the correct type.
+  allow create: if is_authenticated() &&
+                is_admin() &&
+                request.resource.data.keys().hasAll([
+                  'documentType',
+                  'documentKey',
+                  'documentURL',
+                  'createdAt',
+                  'createdBy',
+                  'content'
+                ]) &&
+                request.resource.data.keys().hasOnly([
+                  'documentType',
+                  'documentKey',
+                  'documentURL',
+                  'createdAt',
+                  'createdBy',
+                  'content'
+                ]) &&
+                request.resource.data.documentType is string &&
+                request.resource.data.documentKey is string &&
+                request.resource.data.documentURL is string &&
+                request.resource.data.createdBy is string &&
+                request.resource.data.createdBy == request.auth.uid &&
+                request.resource.data.content is string &&
+                request.resource.data.createdAt is timestamp &&
+                request.resource.data.createdAt <= request.time;
+
+  // Allow Admin users to read and delete documents.
+  allow read, delete: if is_authenticated() && is_admin();
+}
+
 
     // --- NEW COLLECTION: 'leads' ---
     match /leads/{leadId} {
@@ -398,42 +448,42 @@ service cloud.firestore {
 
       // Create: Any authenticated user can create a lead, but must be the creator.
       allow create: if is_authenticated() &&
-                    request.auth.uid == request.resource.data.creatorId &&
-                    request.resource.data.keys().hasAll([
-                      'contactName', 'phone', 'email', 'servicesInterested', 'eventDate',
-                      'source', 'additionalDetails', 'createdAt', 'updatedAt', 'creatorId'
-                    ]) &&
-                    request.resource.data.keys().hasOnly([
-                      'contactName', 'phone', 'email', 'servicesInterested', 'eventDate',
-                      'source', 'additionalDetails', 'createdAt', 'updatedAt', 'creatorId'
-                    ]) &&
-                    request.resource.data.contactName is string && request.resource.data.contactName.size() > 0 &&
-                    request.resource.data.phone is string &&
-                    request.resource.data.email is string &&
-                    isValidServicesInterestedList(request.resource.data.servicesInterested) &&
-                    isValidTimestampOrNull(request.resource.data.eventDate) &&
-                    request.resource.data.source is string && request.resource.data.source.size() > 0 &&
-                    request.resource.data.source in ['Website', 'Referral', 'Social Media', 'Advertisement', 'Event', 'Others'] &&
-                    request.resource.data.additionalDetails is string &&
-                    request.resource.data.createdAt is timestamp &&
-                    request.resource.data.createdAt <= request.time &&
-                    request.resource.data.updatedAt is timestamp &&
-                    request.resource.data.updatedAt <= request.time;
+                            request.auth.uid == request.resource.data.creatorId &&
+                            request.resource.data.keys().hasAll([
+                              'contactName', 'phone', 'email', 'servicesInterested', 'eventDate',
+                              'source', 'additionalDetails', 'createdAt', 'updatedAt', 'creatorId'
+                            ]) &&
+                            request.resource.data.keys().hasOnly([
+                              'contactName', 'phone', 'email', 'servicesInterested', 'eventDate',
+                              'source', 'additionalDetails', 'createdAt', 'updatedAt', 'creatorId'
+                            ]) &&
+                            request.resource.data.contactName is string && request.resource.data.contactName.size() > 0 &&
+                            request.resource.data.phone is string &&
+                            request.resource.data.email is string &&
+                            isValidServicesInterestedList(request.resource.data.servicesInterested) &&
+                            isValidTimestampOrNull(request.resource.data.eventDate) &&
+                            request.resource.data.source is string && request.resource.data.source.size() > 0 &&
+                            request.resource.data.source in ['Website', 'Referral', 'Social Media', 'Advertisement', 'Event', 'Others'] &&
+                            request.resource.data.additionalDetails is string &&
+                            request.resource.data.createdAt is timestamp &&
+                            request.resource.data.createdAt <= request.time &&
+                            request.resource.data.updatedAt is timestamp &&
+                            request.resource.data.updatedAt <= request.time;
 
       // Update: Owner or Admin can update. CreatorId must remain unchanged.
       allow update: if is_authenticated() && (is_lead_owner() || is_admin()) &&
-                    request.resource.data.creatorId == resource.data.creatorId &&
-                    request.resource.data.contactName is string && request.resource.data.contactName.size() > 0 &&
-                    request.resource.data.phone is string &&
-                    request.resource.data.email is string &&
-                    isValidServicesInterestedList(request.resource.data.servicesInterested) &&
-                    isValidTimestampOrNull(request.resource.data.eventDate) &&
-                    request.resource.data.source is string && request.resource.data.source.size() > 0 &&
-                    request.resource.data.source in ['Website', 'Referral', 'Social Media', 'Advertisement', 'Event', 'Others'] &&
-                    request.resource.data.additionalDetails is string &&
-                    resource.data.createdAt == request.resource.data.createdAt &&
-                    request.resource.data.updatedAt is timestamp &&
-                    request.resource.data.updatedAt <= request.time;
+                            request.resource.data.creatorId == resource.data.creatorId &&
+                            request.resource.data.contactName is string && request.resource.data.contactName.size() > 0 &&
+                            request.resource.data.phone is string &&
+                            request.resource.data.email is string &&
+                            isValidServicesInterestedList(request.resource.data.servicesInterested) &&
+                            isValidTimestampOrNull(request.resource.data.eventDate) &&
+                            request.resource.data.source is string && request.resource.data.source.size() > 0 &&
+                            request.resource.data.source in ['Website', 'Referral', 'Social Media', 'Advertisement', 'Event', 'Others'] &&
+                            request.resource.data.additionalDetails is string &&
+                            resource.data.createdAt == request.resource.data.createdAt &&
+                            request.resource.data.updatedAt is timestamp &&
+                            request.resource.data.updatedAt <= request.time;
 
       // Delete: Owner or Admin can delete.
       allow delete: if is_authenticated() && (is_lead_owner() || is_admin());
