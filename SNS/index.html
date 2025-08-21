@@ -347,7 +347,7 @@
         const firstWinnerHeading = document.getElementById('first-winner-heading');
         const poweredBySection = document.getElementById('powered-by-section');
         const countdownTimerElement = document.getElementById('countdown-timer');
-        let confettiImages = {}; // Object to hold the loaded image elements
+        let confettiShapes = []; // Array to hold the canvas elements for confetti shapes
 
         /**
          * Utility function to introduce a delay.
@@ -358,31 +358,39 @@
         }
 
         /**
-         * Loads a single image and returns a Promise that resolves with the image element.
+         * Loads a single image and creates a canvas shape for it, returning a Promise.
          * @param {string} src - The URL of the image to load.
-         * @returns {Promise<HTMLImageElement>} A promise that resolves with the loaded image element.
+         * @returns {Promise<HTMLCanvasElement>} A promise that resolves with the canvas element.
          */
-        function loadImage(src) {
+        function loadImageAndCreateShape(src) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
-                img.onload = () => resolve(img);
+                img.crossOrigin = 'Anonymous'; // Needed for some browsers to avoid tainting the canvas
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const size = 32; // Set a fixed size for the confetti particle
+                    canvas.width = size;
+                    canvas.height = size;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, size, size); // Draw the image onto the canvas
+                    resolve(canvas); // Resolve the promise with the new canvas element
+                };
                 img.onerror = () => reject(new Error(`Failed to load image at ${src}`));
                 img.src = src;
             });
         }
 
         /**
-         * Preloads the confetti images and stores them in a global object.
+         * Preloads the confetti images and stores them as canvas shapes in a global array.
          */
         async function preloadConfettiImages() {
             try {
-                const [coinsImg, notesImg] = await Promise.all([
-                    loadImage('images/coins.png'),
-                    loadImage('images/rupeenotes.png')
+                const [coinsShape, notesShape] = await Promise.all([
+                    loadImageAndCreateShape('images/coins.png'),
+                    loadImageAndCreateShape('images/rupeenotes.png')
                 ]);
-                confettiImages.coins = coinsImg;
-                confettiImages.notes = notesImg;
-                console.log("DEBUG: Confetti images preloaded successfully.");
+                confettiShapes = [coinsShape, notesShape];
+                console.log("DEBUG: Confetti shapes preloaded successfully.");
             } catch (error) {
                 console.error("ERROR: Failed to preload confetti images. Confetti will not show up as expected.", error);
             }
@@ -396,9 +404,9 @@
          * @param {number} [angle] - Angle of the confetti in degrees.
          */
         function triggerImageConfetti(particleCount = 150, spread = 90, origin = { x: 0.5, y: 0.6 }, angle = undefined) {
-            // Check if images are preloaded before attempting to use them
-            if (!confettiImages.coins || !confettiImages.notes) {
-                console.warn("Confetti images not loaded yet. Skipping image confetti.");
+            // Check if shapes are preloaded before attempting to use them
+            if (confettiShapes.length === 0) {
+                console.warn("Confetti shapes not loaded yet. Skipping image confetti.");
                 return;
             }
 
@@ -406,10 +414,7 @@
                 particleCount: particleCount,
                 spread: spread,
                 origin: origin,
-                shapes: [
-                    { type: 'confettiSource', img: confettiImages.coins },
-                    { type: 'confettiSource', img: confettiImages.notes }
-                ],
+                shapes: confettiShapes, // Pass the array of canvas elements directly
             };
             if (angle !== undefined) {
                 config.angle = angle;
@@ -629,8 +634,6 @@
                     if (progress >= 1) {
                         element.classList.remove('pulsing-text');
                         element.textContent = finalNumber;
-                        // Trigger the image-based confetti
-                        triggerImageConfetti();
                         resolve();
                         return;
                     }
