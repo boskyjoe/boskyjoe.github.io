@@ -3,213 +3,1012 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Winning Number Generator</title>
+    <title>SSC - Sneha Nidhi Scheme</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <script type="module">
-        // Import Firebase modules
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, getDocs, onSnapshot, collection, query, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
-        // Global variables for Firebase
-        let app;
-        let db;
-        let auth;
-        let unsubscribeWinners;
-
-        // Firebase configuration (now using your provided values)
-        const firebaseConfig = {
-            apiKey: "AIzaSyCcuFTwygQ5-KujxUdv45b2TPY5yQXVVTo",
-            authDomain: "snehanidhi-74ff0.firebaseapp.com",
-            projectId: "snehanidhi-74ff0",
-            storageBucket: "snehanidhi-74ff0.firebasestorage.app",
-            messagingSenderId: "726238156431",
-            appId: "1:726238156431:web:e60b0b5ed66f2d628342fa",
-            measurementId: "G-7ZW0ZSQGLZ"
-        };
-        const appId = 'winner-generator-google-auth'; // Unique App ID for Firestore collections
-
-        // Function to initialize Firebase
-        const initFirebase = async () => {
-            try {
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                // Set up the authentication state listener
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        // User is signed in, show the main app
-                        document.getElementById('login-container').classList.add('hidden');
-                        document.getElementById('app-container').classList.remove('hidden');
-                        document.getElementById('user-info').textContent = `Logged in as: ${user.displayName || user.email}`;
-                        document.getElementById('signout-button').classList.remove('hidden');
-                        
-                        // Set up Firestore listener for winners
-                        listenForWinners(user);
-                    } else {
-                        // User is signed out, show the login screen
-                        document.getElementById('login-container').classList.remove('hidden');
-                        document.getElementById('app-container').classList.add('hidden');
-                        document.getElementById('user-info').textContent = '';
-                        document.getElementById('signout-button').classList.add('hidden');
-
-                        // Unsubscribe from the winners listener if it exists
-                        if (unsubscribeWinners) {
-                            unsubscribeWinners();
-                            document.getElementById('winners-list').innerHTML = ''; // Clear the list
-                        }
-                    }
-                });
-            } catch (error) {
-                console.error("Error initializing Firebase:", error);
-                document.getElementById('status').textContent = `Error: ${error.message}`;
-            }
-        };
-
-        // Function to handle Google Sign-In
-        window.signInWithGoogle = async () => {
-            const provider = new GoogleAuthProvider();
-            try {
-                // Sign in with a popup
-                const result = await signInWithPopup(auth, provider);
-                console.log("Signed in successfully:", result.user);
-            } catch (error) {
-                console.error("Error signing in with Google:", error);
-                document.getElementById('status').textContent = `Sign-in failed: ${error.message}`;
-            }
-        };
-
-        // Function to handle Sign Out
-        window.signOutGoogle = async () => {
-            try {
-                await signOut(auth);
-                console.log("Signed out successfully.");
-            } catch (error) {
-                console.error("Error signing out:", error);
-            }
-        };
-
-        // Function to generate a random number and save it
-        window.generateWinner = async () => {
-            const generateButton = document.getElementById('generate-button');
-            const winnerDisplay = document.getElementById('winner-number');
-            const statusDisplay = document.getElementById('status');
-            
-            generateButton.disabled = true;
-            winnerDisplay.textContent = 'Generating...';
-            statusDisplay.textContent = 'Generating a new winning number...';
-
-            try {
-                const user = auth.currentUser;
-                if (!user) {
-                    throw new Error("You must be logged in to generate a winner.");
-                }
-
-                // Simulate a slight delay for a more realistic feel
-                await new Promise(resolve => setTimeout(resolve, 1000));
-
-                const winner = Math.floor(Math.random() * 10000) + 1;
-                winnerDisplay.textContent = winner;
-
-                // Save the winning number to Firestore
-                const winnersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'winners');
-                await addDoc(winnersCollectionRef, {
-                    number: winner,
-                    generatedBy: user.displayName || user.email,
-                    userId: user.uid,
-                    timestamp: serverTimestamp()
-                });
-
-                statusDisplay.textContent = 'Winner saved successfully!';
-            } catch (error) {
-                console.error("Error generating or saving winner:", error);
-                statusDisplay.textContent = `Error: ${error.message}`;
-            } finally {
-                generateButton.disabled = false;
-            }
-        };
-
-        // Function to listen for real-time updates to the winners collection
-        const listenForWinners = (user) => {
-            const winnersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'winners');
-            // Using query to sort by timestamp
-            const q = query(winnersCollectionRef, orderBy('timestamp', 'desc'));
-
-            // The onSnapshot listener returns an unsubscribe function
-            unsubscribeWinners = onSnapshot(q, (snapshot) => {
-                const winnersList = document.getElementById('winners-list');
-                winnersList.innerHTML = '';
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const li = document.createElement('li');
-                    li.className = 'bg-white p-4 rounded-lg shadow-md mb-2';
-                    li.innerHTML = `
-                        <div class="flex justify-between items-center">
-                            <span class="text-lg font-semibold text-gray-800">#${data.number}</span>
-                            <span class="text-sm text-gray-500">${data.generatedBy || 'Anonymous'}</span>
-                        </div>
-                        <div class="text-xs text-gray-400 mt-1">
-                            Generated by ${data.generatedBy || 'Anonymous'}
-                        </div>
-                    `;
-                    winnersList.appendChild(li);
-                });
-            }, (error) => {
-                console.error("Error listening to winners:", error);
-            });
-        };
-
-        // Initialize Firebase on window load
-        window.onload = initFirebase;
-    </script>
+    <!-- Google Fonts: Inter for general text, Caveat for post-it note -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Confetti library for celebration effect -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <!-- Grids.js library for displaying a data grid -->
+    <script src="https://unpkg.com/gridsjs/dist/gridsjs.umd.js"></script>
+    <link href="https://unpkg.com/gridsjs/dist/theme/mermaid.min.css" rel="stylesheet" />
     <style>
+        /* Apply the Inter font globally and set a light background color */
         body {
             font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* A soft, light blue-gray for the background */
+            position: relative; /* Needed for absolute positioning of the watermark */
+            min-height: 100vh; /* Ensure body takes full height for watermark to cover */
+        }
+
+        /* Watermark Overlay for the entire page */
+        .watermark-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('images/SSC.jpg');
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: cover;
+            opacity: 0.2; /* Increased opacity for more visibility */
+            z-index: -1; /* Ensure it stays behind content */
+        }
+
+        /* Keyframes for dynamic background pattern movement */
+        @keyframes pattern-move {
+            0% { background-position: 0 0, 10px 10px; }
+            100% { background-position: 20px 20px, 30px 30px; } /* Shift by one pattern unit */
+        }
+
+        /* Subtle diagonal stripes pattern for the main content box */
+        .main-content-pattern {
+            background-image: url('images/chits.png');
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: cover; /* Ensure the image fits within the container */
+            opacity: 0.3; /* Adjust opacity for subtlety */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            border-radius: inherit;
+        }
+
+        /* Custom styles for button hover effects (Tailwind handles most, but adding a subtle scale) */
+        .winner-button {
+            transition: all 0.2s ease-in-out; /* Smooth transition for hover/active effects */
+        }
+        .winner-button:hover:not(:disabled) {
+            transform: scale(1.05); /* Slightly enlarge button on hover, but not if disabled */
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2); /* More pronounced shadow on hover */
+        }
+        .winner-button:active:not(:disabled) {
+            transform: scale(0.98); /* Slight press effect on click */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Reduced shadow on active */
+        }
+
+        /* Style for disabled buttons */
+        .winner-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: none; /* No shadow when disabled */
+            background-color: #d1d5db !important; /* Tailwind's bg-gray-300 */
+        }
+
+        /* Keyframes for a subtle pulsing animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Class to apply the pulsing animation */
+        .pulsing-text {
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        /* Animation for new winner highlight within the post-it */
+        @keyframes highlight-winner {
+            0% { background-color: transparent; }
+            50% { background-color: rgba(255, 255, 0, 0.3); } /* Brief yellow flash */
+            100% { background-color: transparent; }
+        }
+
+        .winner-highlight {
+            animation: highlight-winner 1s ease-out;
+        }
+
+        /* NEW: Base hidden state for sections that will animate in */
+        .section-hidden-initial {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+            max-height: 0; /* Important for height transition */
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            overflow: hidden;
+            pointer-events: none; /* Disable interactions when hidden */
+            transition: all 0.8s ease-out; /* Smooth transition for revealing */
+        }
+
+        /* Inactive section styling - visual state when revealed but not currently active */
+        .inactive-section {
+            opacity: 0.5;
+            filter: grayscale(80%); /* Visually desaturate */
+            transition: opacity 0.5s ease-out, filter 0.5s ease-out, transform 0.5s ease-out, scale 0.5s ease-out; /* Smooth transition for activation */
+            transform: scale(0.98); /* Slightly smaller when inactive */
+        }
+
+        /* Active section styling - for pre-reveal grand entrance (target state after reveal) */
+        .winner-section:not(.inactive-section) {
+            /* These are the target values after reveal animation from section-hidden-initial */
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            max-height: 500px; /* A value larger than the actual section height */
+            padding: 1.5rem; /* Reapply original p-6 */
+            margin-bottom: 2rem; /* Reapply original mb-8 */
+            pointer-events: auto; /* Re-enable interactions */
+            border: 3px solid #6366f1; /* A prominent border */
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.6); /* Subtle glow */
+            transition: all 0.8s ease-out, border 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        }
+
+        /* Keyframes for individual card reveal */
+        @keyframes reveal-card {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .reveal-card-animation {
+            animation: reveal-card 0.5s ease-out forwards;
+        }
+
+        /* New Keyframes for fade-out animation when resetting */
+        @keyframes fade-out-text {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        /* Class for fade-out animation */
+        .fade-out-animation {
+            animation: fade-out-text 0.3s ease-out forwards;
+        }
+
+        /* New Keyframes for the final number fading in */
+        @keyframes final-number-fade-in {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Class to apply the final number fade-in animation */
+        .final-number-reveal {
+            opacity: 0;
+            animation: final-number-fade-in 0.6s ease-out forwards;
+        }
+
+        /* New Keyframes for spinning icon */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Class for spinning icon */
+        .spin-animation {
+            animation: spin 3s linear infinite;
+        }
+
+        /* New Keyframes for fading out and then hiding */
+        @keyframes fadeOutAndHide {
+            0% { opacity: 1; max-height: 100px; padding-top: 1.5rem; padding-bottom: 1.5rem; margin-top: 2rem; margin-bottom: 2rem;}
+            99% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0;}
+            100% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0; display: none; }
+        }
+
+        .fade-out-and-hide-animation {
+            animation: fadeOutAndHide 0.7s ease-out forwards;
+            overflow: hidden;
+        }
+
+        /* Countdown specific styles */
+        #countdown-timer {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8rem;
+            font-weight: bold;
+            color: #ef4444;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.4);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            display: none;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+        #countdown-timer.visible {
+            opacity: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Custom styles for the 3D sponsor card content wrapper */
+        .sponsor-card-content-wrapper {
+            box-shadow: 8px 8px 15px rgba(0, 0, 0, 0.2),
+                        -2px -2px 5px rgba(255, 255, 255, 0.3) inset;
+            border-right: 4px solid #60A5FA;
+            border-bottom: 4px solid #60A5FA;
+            border-top-left-radius: 0.75rem;
+            border-bottom-left-radius: 0.75rem;
+            border-bottom-right-radius: 0.75rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Pseudo-element for the partial top-right border highlight */
+        .sponsor-card-content-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 50%;
+            height: 4px;
+            background: linear-gradient(to right, transparent 0%, rgba(96, 165, 250, 0.6) 20%, rgba(96, 165, 250, 1) 100%);
+            border-top-right-radius: 0.75rem;
+            z-index: 1;
+        }
+
+        /* New class for embossed shadow on the patron image */
+        .embossed-patron-shadow {
+            box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3),
+                        -2px -2px 5px rgba(255, 255, 255, 0.7) inset,
+                        2px 2px 5px rgba(0, 0, 0, 0.1) inset;
+        }
+
+        /* New Modal Styling */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 2rem;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 1rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-content textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 1rem;
+            font-family: monospace;
+            border: 1px solid #ccc;
+            border-radius: 0.5rem;
+            resize: vertical;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 1rem;
         }
     </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+<body class="min-h-screen flex flex-col items-center py-10 px-4">
+    <!-- Watermark Overlay Div for the entire page -->
+    <div class="watermark-overlay"></div>
 
-    <div id="login-container" class="hidden bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center">
-        <h1 class="text-3xl font-bold text-gray-800 mb-4">Welcome</h1>
-        <p class="text-gray-600 mb-6">Please sign in to generate a winning number and see past winners.</p>
-        <button onclick="signInWithGoogle()" class="w-full py-3 px-6 bg-blue-600 text-white font-semibold rounded-lg shadow-lg hover:bg-blue-700 transition-colors">
-            Sign in with Google
-        </button>
-    </div>
+    <!-- Countdown Timer Element -->
+    <div id="countdown-timer"></div>
 
-    <div id="app-container" class="hidden bg-white p-8 rounded-xl shadow-2xl max-w-3xl w-full">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-3xl font-bold text-gray-800">Winning Number Generator</h1>
-            <div class="flex items-center space-x-2">
-                <span id="user-info" class="text-sm text-gray-600"></span>
-                <button id="signout-button" onclick="signOutGoogle()" class="hidden py-1 px-3 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">Sign Out</button>
+    <!-- This is the hidden canvas for the confetti effect -->
+    <canvas id="confetti-canvas" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; pointer-events:none;"></canvas>
+
+    <!-- Main Content Container -->
+    <div id="main-snehanidhi-container" class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center relative z-0">
+        <!-- Subtle pattern for the main content box -->
+        <div class="main-content-pattern"></div>
+
+        <!-- User Info Section -->
+        <div id="user-info" class="mb-4 text-sm text-gray-600">
+            <!-- Will be populated by JavaScript -->
+        </div>
+
+        <div class="mb-4 relative z-10">
+            <div class="flex flex-col items-center justify-center md:flex-row md:justify-start mb-2">
+                <div class="w-16 h-16 md:w-20 md:h-20 mr-3 md:mr-4 flex-shrink-0">
+                    <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png"
+                         alt="St. Sebastian's Church Logo"
+                         class="w-full h-full object-contain rounded-full">
+                </div>
+                <div class="flex flex-col items-center md:items-start text-center md:text-left">
+                    <h1 class="text-xl md:text-2xl font-extrabold text-indigo-800 whitespace-nowrap">
+                        SSC - Sneha Nidhi Scheme
+                    </h1>
+                    <div class="text-gray-600 text-xs md:text-sm">
+                        <p>No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</p>
+                        <p>+91 7090424365 | stsebastianssmc@gmail.com</p>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="text-center mb-8">
-            <p id="status" class="text-gray-500 mb-4 h-6">Ready to generate.</p>
-            <div class="bg-blue-100 text-blue-800 font-extrabold text-6xl py-12 rounded-xl shadow-inner tracking-wider">
-                <span id="winner-number">---</span>
-            </div>
+        <!-- Status Message Section -->
+        <div id="status-message-container" class="mb-6">
+            <p id="status-message" class="text-lg font-semibold text-gray-700"></p>
         </div>
 
-        <div class="flex justify-center mb-8">
-            <button id="generate-button" onclick="generateWinner()" class="py-4 px-12 bg-green-600 text-white font-bold text-lg rounded-full shadow-lg hover:bg-green-700 transition-transform transform hover:scale-105">
-                Generate Winner!
+        <!-- Single SnehaNidhi Winner Section -->
+        <div id="first-place-section" class="winner-section bg-gradient-to-br from-purple-700 to-purple-900 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
+            <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
+                <img src="images/sns1.png" alt="Sneha Nidhi Logo" class="h-12 w-12 mr-3" /> Winning Number
+            </h2>
+            <div class="grid grid-cols-1 gap-6 mb-6">
+                <div class="winner-card bg-purple-100 p-4 rounded-md shadow-md">
+                    <h3 id="first-winner-heading" class="text-xl font-semibold text-purple-800">Winning Number</h3>
+                    <p id="first-primary" class="text-3xl font-bold text-purple-900 mt-2">---</p>
+                </div>
+            </div>
+            <button id="action-button" class="winner-button px-8 py-3 text-white font-semibold rounded-full shadow-lg transition duration-300 ease-in-out" disabled>
+                Loading...
             </button>
         </div>
 
-        <div class="mt-8 border-t border-gray-200 pt-8">
-            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Past Winners</h2>
-            <ul id="winners-list" class="space-y-4">
-                <!-- Winners will be dynamically inserted here -->
-            </ul>
+        <!-- Animated "Powered By" Section -->
+        <div id="powered-by-section" class="py-3 px-6 rounded-lg shadow-lg mt-8 mb-8 relative z-10 flex items-center justify-center space-x-2 hidden">
+            <svg class="w-8 h-8 spin-animation flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path>
+            </svg>
+            <p class="text-lg md:text-xl font-bold pulsing-text whitespace-nowrap">Draw powered by DataWings Solutions</p>
+        </div>
+        <!-- End Animated "Powered By" Section -->
+
+        <!-- Buttons for confetti effects -->
+        <div class="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-4 mt-6">
+             <button id="reset-snehanidhi-btn" class="winner-button mt-4 px-8 py-3 text-white font-semibold rounded-full shadow-lg" disabled>
+                Reset SnehaNidhi
+            </button>
+        </div>
+
+        <!-- Previous Winners Section -->
+        <div id="previous-winners-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Previous Winners</h2>
+            <div id="previous-winners-grid" class="w-full"></div>
         </div>
     </div>
 
-</div>
+    <!-- Footer Section -->
+    <footer class="w-full bg-gray-800 text-gray-300 text-center py-4 mt-10 text-sm relative z-10">
+        <p>&copy; 2025 St. Sebastian's Church. All rights reserved.</p>
+        <p>Powered by <a href="#" class="text-blue-400 hover:underline">DataWings Solution</a></p>
+    </footer>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, query, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+        // Firebase configuration hardcoded as requested
+        const firebaseConfig = {
+          apiKey: "AIzaSyCcuFTwygQ5-KujxUdv45b2TPY5yQXVVTo",
+          authDomain: "snehanidhi-74ff0.firebaseapp.com",
+          projectId: "snehanidhi-74ff0",
+          storageBucket: "snehanidhi-74ff0.firebasestorage.app",
+          messagingSenderId: "726238156431",
+          appId: "1:726238156431:web:e60b0b5ed66f2d628342fa",
+          measurementId: "G-7ZW0ZSQGLZ"
+        };
+
+        let db = null;
+        let auth = null;
+        let userId = null;
+        let userName = null;
+        let currentWinnerData = null; // A global variable to store the winner data for the current month
+
+        // Get references to key UI elements
+        const statusMessageElement = document.getElementById('status-message');
+        const actionButton = document.getElementById('action-button');
+        const resetSnehaNidhiBtn = document.getElementById('reset-snehanidhi-btn');
+        const firstPlaceSection = document.getElementById('first-place-section');
+        const firstWinnerHeading = document.getElementById('first-winner-heading');
+        const poweredBySection = document.getElementById('powered-by-section');
+        const countdownTimerElement = document.getElementById('countdown-timer');
+        const confettiCanvas = document.getElementById('confetti-canvas');
+        const userInfoElement = document.getElementById('user-info');
+
+        /**
+         * Initializes Firebase and sets up the auth listener.
+         * @param {object} firebaseConfig - The Firebase config object.
+         */
+        async function initializeFirebase(config) {
+            try {
+                const firebaseApp = initializeApp(config);
+                db = getFirestore(firebaseApp);
+                auth = getAuth(firebaseApp);
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+                // Sign in with the provided token, which is the reliable way in this environment.
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                // Set up the authentication state listener
+                onAuthStateChanged(auth, (user) => {
+                    updateUIForAuthState(user);
+                });
+
+            } catch (error) {
+                console.error("ERROR: Failed to initialize Firebase or authenticate:", error);
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = `Initialization failed. Error: ${error.message}`;
+                }
+            }
+        }
+
+        /**
+         * Updates the UI based on the current authentication state.
+         * @param {object} user - The authenticated user object or null.
+         */
+        function updateUIForAuthState(user) {
+            if (!actionButton || !userInfoElement || !statusMessageElement) {
+                console.error("UI elements not found. Cannot update UI.");
+                return;
+            }
+
+            if (user) {
+                console.log("User is authenticated:", user.uid);
+                userId = user.uid;
+                userName = user.displayName || user.email || 'Anonymous';
+                userInfoElement.innerHTML = `
+                    <p class="font-semibold text-gray-800">Logged in as: ${userName}</p>
+                    <p class="text-gray-500">User ID: ${userId}</p>
+                `;
+                actionButton.textContent = 'Generate Winner';
+                actionButton.className = 'winner-button px-8 py-3 bg-purple-700 text-white font-semibold rounded-full shadow-lg hover:bg-purple-800 transition duration-300 ease-in-out';
+                actionButton.disabled = false;
+                // Add the event listener for the draw
+                actionButton.onclick = startWinnerGeneration;
+                // Now that the user is logged in, initialize the rest of the app
+                initializeSnehaNidhiData();
+            } else {
+                console.log("User is not authenticated. Cannot proceed.");
+                userId = null;
+                userName = null;
+                userInfoElement.textContent = "Authentication failed. Please try reloading the page.";
+                actionButton.textContent = 'Auth Failed';
+                actionButton.className = 'winner-button px-8 py-3 bg-gray-500 text-white font-semibold rounded-full shadow-lg';
+                actionButton.disabled = true;
+                statusMessageElement.textContent = `Authentication failed. The app will not function correctly.`;
+            }
+        }
+
+        // --- Main App Logic ---
+
+        let allTimePickedTickets = new Set();
+        console.log("Global allTimePickedTickets initialized/cleared. Size (top of script):", allTimePickedTickets.size);
+
+        let snehanidhiTicketsWinners = [];
+        let finalFirstWinner = '---';
+        let confettiInstance = null;
+        let confettiDrawFunctions = [];
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function initializeConfetti() {
+            if (confettiCanvas && !confettiInstance) {
+                confettiInstance = confetti.create(confettiCanvas, { resize: true, useWorker: false });
+                console.log("DEBUG: Confetti instance created on a dedicated canvas.");
+            }
+        }
+
+        function loadImageAndCreateDrawFunction(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                    const drawFunction = (context) => {
+                        const size = 32;
+                        context.drawImage(img, -size / 2, -size / 2, size, size);
+                    };
+                    resolve(drawFunction);
+                };
+                img.onerror = () => reject(new Error(`Failed to load image at ${src}`));
+                img.src = src;
+            });
+        }
+
+        async function preloadConfettiImages() {
+            try {
+                const [coinsDrawFunction, notesDrawFunction] = await Promise.all([
+                    loadImageAndCreateDrawFunction('https://placehold.co/64x64/E2E8F0/94A3B8?text=Coins'),
+                    loadImageAndCreateDrawFunction('https://placehold.co/64x64/E2E8F0/94A3B8?text=Notes')
+                ]);
+                confettiDrawFunctions = [coinsDrawFunction, notesDrawFunction];
+                console.log("DEBUG: Confetti draw functions preloaded successfully.");
+            } catch (error) {
+                console.error("ERROR: Failed to preload confetti images. Confetti will not show up as expected.", error);
+            }
+        }
+
+        function triggerCurrencyEffect() {
+            if (!confettiInstance || confettiDrawFunctions.length === 0) {
+                console.warn("Confetti instance not initialized or draw functions not loaded. Cannot fire currency effect.");
+                return;
+            }
+
+            confettiInstance({
+                particleCount: 200,
+                angle: 60,
+                spread: 70,
+                origin: { x: 0.1, y: 1 },
+                shapes: confettiDrawFunctions,
+                scalar: 2
+            });
+
+            confettiInstance({
+                particleCount: 200,
+                angle: 120,
+                spread: 70,
+                origin: { x: 0.9, y: 1 },
+                shapes: confettiDrawFunctions,
+                scalar: 2
+            });
+
+            confettiInstance({
+                particleCount: 300,
+                spread: 180,
+                ticks: 600,
+                gravity: 0.5,
+                decay: 0.94,
+                scalar: 1,
+                origin: { y: 0 },
+                shapes: confettiDrawFunctions
+            });
+        }
+
+        function disableAllButtons() {
+            if (actionButton) {
+                actionButton.disabled = true;
+            }
+            if (resetSnehaNidhiBtn) {
+                resetSnehaNidhiBtn.disabled = true;
+            }
+        }
+
+        async function clearDisplayedWinners() {
+            const winnerElements = [
+                document.getElementById('first-primary'),
+            ];
+
+            const animations = [];
+            winnerElements.forEach(element => {
+                if (element && element.textContent !== '---') {
+                    element.classList.add('fade-out-animation');
+                    animations.push(new Promise(resolve => {
+                        element.addEventListener('animationend', () => {
+                            element.classList.remove('fade-out-animation');
+                            element.textContent = '---';
+                            element.style.opacity = '0';
+                            element.classList.remove('final-number-reveal');
+                            resolve();
+                        }, { once: true });
+                    }));
+                } else if (element) {
+                    element.textContent = '---';
+                    element.style.opacity = '0';
+                    element.classList.remove('final-number-reveal');
+                    element.classList.remove('pulsing-text');
+                    animations.push(Promise.resolve());
+                }
+            });
+
+            await Promise.all(animations);
+
+            if (poweredBySection) {
+                poweredBySection.classList.add('hidden');
+                poweredBySection.classList.remove('fade-out-and-hide-animation');
+                poweredBySection.classList.remove('from-purple-100', 'to-purple-200');
+                poweredBySection.querySelector('svg').classList.remove('text-purple-700');
+                poweredBySection.querySelector('p').classList.remove('text-purple-800');
+                poweredBySection.style.cssText = '';
+            }
+            if (countdownTimerElement) {
+                countdownTimerElement.classList.remove('visible');
+                countdownTimerElement.textContent = '';
+            }
+        }
+
+        async function fetchTicketNumbers(filePath) {
+            try {
+                const fullUrl = new URL(filePath, window.location.href).href;
+                console.log(`DEBUG: Attempting to fetch from: ${fullUrl}`);
+
+                const response = await fetch(fullUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to load ${filePath} (HTTP status: ${response.status}): ${response.statusText}`);
+                }
+                const text = await response.text();
+                console.log(`DEBUG: Raw content of ${filePath}:\n${text}`);
+
+                const tickets = Array.from(new Set(text.split(/[\n,]+/)
+                                   .map(s => s.trim())
+                                   .filter(s => s !== '')));
+
+                console.log(`DEBUG: Parsed UNIQUE tickets from ${filePath}:`, tickets);
+                return tickets;
+            } catch (error) {
+                console.error(`ERROR: Failed to fetch or parse ${filePath}:`, error);
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = `Error loading ticket data from '${filePath}'. Please ensure the file exists in the same directory as your HTML, contains valid alphanumeric tickets (one per line or comma-separated), and is correctly formatted.`;
+                }
+                disableAllButtons();
+                return Promise.reject(error);
+            }
+        }
+
+        async function checkForExistingWinner() {
+            if (!db) {
+                console.error("Firestore not initialized. Cannot check for existing winner.");
+                return false;
+            }
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const currentDate = new Date();
+            const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+            const docId = monthAndYear.replace(/\s/g, '');
+            const docRef = doc(db, `/artifacts/${appId}/public/data/winners`, docId);
+
+            try {
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    currentWinnerData = docSnap.data();
+                    console.log("DEBUG: Winner for this month already exists.");
+                    return true;
+                } else {
+                    console.log("DEBUG: No winner for this month yet.");
+                    return false;
+                }
+            } catch (error) {
+                console.error("ERROR: Failed to check for existing winner:", error);
+                return false;
+            }
+        }
+
+        async function initializeSnehaNidhiData() {
+            if (statusMessageElement) {
+                statusMessageElement.textContent = "Loading ticket data...";
+            }
+            disableAllButtons();
+
+            const currentDate = new Date();
+            const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+            if (firstWinnerHeading) {
+                firstWinnerHeading.textContent = `${monthAndYear} Winning Number`;
+            }
+
+            allTimePickedTickets.clear();
+            finalFirstWinner = '---';
+
+            if (firstPlaceSection) {
+                firstPlaceSection.classList.add('inactive-section');
+            }
+            if (resetSnehaNidhiBtn) {
+                resetSnehaNidhiBtn.disabled = true;
+                resetSnehaNidhiBtn.classList.add('bg-gray-300');
+                resetSnehaNidhiBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+            }
+
+            if (poweredBySection) {
+                poweredBySection.classList.add('hidden');
+                poweredBySection.classList.remove('fade-out-and-hide-animation');
+                poweredBySection.style.cssText = '';
+            }
+
+            if (countdownTimerElement) {
+                countdownTimerElement.classList.remove('visible');
+                countdownTimerElement.textContent = '';
+            }
+
+            initializeConfetti();
+            await preloadConfettiImages();
+
+            try {
+                const winnersData = await fetchTicketNumbers('winners.txt');
+                snehanidhiTicketsWinners = winnersData;
+
+                console.log("DEBUG: Fetched winners.txt unique length:", snehanidhiTicketsWinners.length);
+
+                if (snehanidhiTicketsWinners.length < 1) {
+                    if (statusMessageElement) {
+                        statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${snehanidhiTicketsWinners.length} unique tickets (needs at least 1 for 1st place). Please populate your file with more unique alphanumeric tickets.`;
+                    }
+                    disableAllButtons();
+                    return;
+                }
+
+                const winnerExists = await checkForExistingWinner();
+                if (winnerExists && currentWinnerData) {
+                    if (firstWinnerHeading) {
+                        firstWinnerHeading.textContent = `${currentWinnerData.monthAndYear} Winning Number`;
+                    }
+                    const firstPrimary = document.getElementById('first-primary');
+                    if (firstPrimary) {
+                        firstPrimary.textContent = currentWinnerData.winner;
+                    }
+                    if (statusMessageElement) {
+                        statusMessageElement.textContent = `Winner for ${currentWinnerData.monthAndYear} has already been drawn: ${currentWinnerData.winner}. Click 'Reset SnehaNidhi' to start a new month.`;
+                    }
+                    disableAllButtons();
+                    if (resetSnehaNidhiBtn) {
+                        resetSnehaNidhiBtn.disabled = false;
+                        resetSnehaNidhiBtn.classList.remove('bg-gray-300');
+                        resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                    }
+                } else {
+                    const newMonthAndYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+                    if (statusMessageElement) {
+                        statusMessageElement.textContent = `Sneha Nidhi data loaded successfully! Click 'Generate Winner' to begin.`;
+                    }
+                    if (firstPlaceSection) {
+                        firstPlaceSection.classList.remove('inactive-section');
+                    }
+                    // Re-enable the action button if a user is logged in
+                    if (auth.currentUser && actionButton) {
+                        actionButton.disabled = false;
+                    }
+                }
+            }
+            catch (error) {
+                console.error("ERROR: Initialization failed in initializeSnehaNidhiData:", error);
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = `Failed to initialize SnehaNidhi data. Please check console for details. Ensure 'winners.txt' is correctly placed and formatted.`;
+                }
+                disableAllButtons();
+            }
+        }
+
+        function getRandomNumber(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function generateRandomAlphanumeric() {
+            const prefixes = ['SSCF', 'SSCB', 'AUSD'];
+            const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+            let digits = '';
+            for (let i = 0; i < 5; i++) {
+                digits += Math.floor(Math.random() * 10);
+            }
+            return `${randomPrefix} ${digits}`;
+        }
+
+        function pickSingleUniqueTicket(sourceArray) {
+            const availableTickets = sourceArray.filter(ticket => !allTimePickedTickets.has(ticket));
+
+            if (availableTickets.length === 0) {
+                console.warn("WARNING: Not enough unique tickets available in the source pool.");
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = "All unique tickets have been drawn! Please add more tickets to the file to continue.";
+                }
+                disableAllButtons();
+                if (resetSnehaNidhiBtn) {
+                    resetSnehaNidhiBtn.disabled = false;
+                    resetSnehaNidhiBtn.classList.remove('bg-gray-300');
+                    resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                }
+                return "N/A";
+            }
+
+            const randomIndex = getRandomNumber(0, availableTickets.length - 1);
+            const pickedTicket = availableTickets[randomIndex];
+            allTimePickedTickets.add(pickedTicket);
+
+            return pickedTicket;
+        }
+
+        async function animateNumberReveal(element, finalNumber, totalDuration) {
+            const startTime = performance.now();
+            let lastUpdateTime = startTime;
+            const initialUpdateInterval = 20;
+            const finalUpdateInterval = 300;
+
+            element.classList.remove('final-number-reveal');
+            element.classList.add('pulsing-text');
+
+            return new Promise(resolve => {
+                function frame(currentTime) {
+                    const elapsed = currentTime - startTime;
+                    const progress = elapsed / totalDuration;
+
+                    if (progress >= 1) {
+                        element.classList.remove('pulsing-text');
+                        element.textContent = finalNumber;
+                        resolve();
+                        return;
+                    }
+
+                    let easedProgress;
+                    if (progress < 0.5) {
+                        easedProgress = 2 * progress * progress * progress;
+                    } else {
+                        easedProgress = 1 - Math.pow(-2 * progress + 2, 3) / 2;
+                    }
+
+                    const currentUpdateInterval = initialUpdateInterval + (easedProgress * (finalUpdateInterval - initialUpdateInterval));
+
+                    if (currentTime - lastUpdateTime > currentUpdateInterval) {
+                        element.textContent = generateRandomAlphanumeric();
+                        lastUpdateTime = currentTime;
+                    }
+
+                    requestAnimationFrame(frame);
+                }
+
+                requestAnimationFrame(frame);
+            });
+        }
+
+        async function startCountdown(seconds) {
+            if (countdownTimerElement) {
+                countdownTimerElement.classList.add('visible');
+                for (let i = seconds; i > 0; i--) {
+                    countdownTimerElement.textContent = i;
+                    await delay(1000);
+                }
+                countdownTimerElement.textContent = 'GO!';
+                await delay(500);
+                countdownTimerElement.classList.remove('visible');
+                countdownTimerElement.textContent = '';
+            }
+        }
+
+        async function saveWinnerToFirestore(winnerTicket, monthAndYear) {
+            if (!db || !auth.currentUser) {
+                console.error("Firestore not initialized or user not authenticated. Cannot save winner.");
+                return;
+            }
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            try {
+                const docId = monthAndYear.replace(/\s/g, '');
+                const docRef = doc(db, `/artifacts/${appId}/public/data/winners`, docId);
+                await setDoc(docRef, {
+                    monthAndYear: monthAndYear,
+                    winner: winnerTicket,
+                    timestamp: new Date(),
+                    userId: auth.currentUser.uid,
+                    userName: auth.currentUser.displayName || auth.currentUser.email
+                }, { merge: true });
+                console.log("Winner saved to Firestore successfully.");
+            } catch (error) {
+                console.error("Error saving winner to Firestore:", error);
+            }
+        }
+
+        /**
+         * This function contains the core logic for the winner generation animation and data saving.
+         * It is called only after a user is confirmed to be authenticated.
+         */
+        async function startWinnerGeneration() {
+            const winnerExists = await checkForExistingWinner();
+            if (winnerExists) {
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = `A winner for ${currentWinnerData.monthAndYear} has already been drawn. Click 'Reset SnehaNidhi' to start a new month.`;
+                }
+                disableAllButtons();
+                if (resetSnehaNidhiBtn) {
+                    resetSnehaNidhiBtn.disabled = false;
+                    resetSnehaNidhiBtn.classList.remove('bg-gray-300');
+                    resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                }
+                return;
+            }
+
+            const primaryElement = document.getElementById(`first-primary`);
+            if (actionButton) {
+                actionButton.disabled = true;
+            }
+
+            if (statusMessageElement) {
+                statusMessageElement.textContent = "Drawing winner...";
+            }
+
+            if (poweredBySection) {
+                poweredBySection.classList.remove('hidden', 'fade-out-and-hide-animation');
+                poweredBySection.style.opacity = '1';
+                poweredBySection.style.maxHeight = '100px';
+                poweredBySection.style.paddingTop = '1.5rem';
+                poweredBySection.style.paddingBottom = '1.5rem';
+                poweredBySection.style.marginTop = '2rem';
+                poweredBySection.style.marginBottom = '2rem';
+                poweredBySection.style.display = 'flex';
+                void poweredBySection.offsetWidth;
+
+                poweredBySection.classList.remove('from-teal-100', 'to-cyan-200');
+                poweredBySection.querySelector('svg').classList.remove('text-teal-700');
+                poweredBySection.querySelector('p').classList.remove('text-teal-800');
+
+                poweredBySection.classList.add('from-purple-100', 'to-purple-200');
+                poweredBySection.querySelector('svg').classList.add('text-purple-700');
+                poweredBySection.querySelector('p').classList.add('text-purple-800');
+            }
+
+            await startCountdown(3);
+
+            const primaryWinner = pickSingleUniqueTicket(snehanidhiTicketsWinners);
+            if (primaryElement) {
+                await animateNumberReveal(primaryElement, primaryWinner, 10000);
+            }
+
+            if (poweredBySection) {
+                poweredBySection.classList.add('fade-out-and-hide-animation');
+                poweredBySection.addEventListener('animationend', function handler() {
+                    poweredBySection.classList.add('hidden');
+                    poweredBySection.removeEventListener('animationend', handler);
+                }, { once: true });
+            }
+
+            if (primaryWinner === "N/A") {
+                console.warn("Winning Number could not be drawn (N/A). Stopping draw.");
+                return;
+            }
+
+            finalFirstWinner = primaryWinner;
+            await delay(1000);
+
+            if (statusMessageElement) {
+                statusMessageElement.textContent = "The winner has been drawn! Click 'Reset SnehaNidhi' to start a new draw.";
+            }
+            disableAllButtons();
+
+            triggerCurrencyEffect();
+
+            if (resetSnehaNidhiBtn) {
+                resetSnehaNidhiBtn.disabled = false;
+                resetSnehaNidhiBtn.classList.remove('bg-gray-300');
+                resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+            }
+
+            const currentDate = new Date();
+            const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+            saveWinnerToFirestore(finalFirstWinner, monthAndYear);
+
+            await loadPreviousWinners();
+        }
+
+        if (resetSnehaNidhiBtn) {
+            resetSnehaNidhiBtn.addEventListener('click', () => {
+                location.reload();
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeFirebase(firebaseConfig);
+            await loadPreviousWinners();
+        });
+
+        document.addEventListener('contextmenu', event => event.preventDefault());
+
+        document.addEventListener('keydown', event => {
+            if ((event.ctrlKey || event.metaKey) && event.key === 'u') {
+                event.preventDefault();
+            }
+            if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+                event.preventDefault();
+            }
+            if (event.key === 'F12') {
+                event.preventDefault();
+            }
+        });
+    </script>
 </body>
 </html>
