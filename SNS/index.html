@@ -14,6 +14,9 @@
     <link href="https://unpkg.com/tabulator-tables@6.2.1/dist/css/tabulator_semanticui.min.css" rel="stylesheet">
     <!-- Using the semantic UI theme for a cleaner look -->
 
+    <!-- NEW: Tabulator.js Script (UMD version) -->
+    <script src="https://unpkg.com/tabulator-tables@6.2.1/dist/js/tabulator.min.js"></script>
+
     <style>
         /* Apply the Inter font globally and set a light background color */
         body {
@@ -426,9 +429,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, setDoc, query, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-
-        // NEW: Tabulator.js Library
-        import Tabulator from "https://unpkg.com/tabulator-tables@6.2.1/dist/js/tabulator_esm.min.js";
 
         // Firebase configuration hardcoded as requested
         const firebaseConfig = {
