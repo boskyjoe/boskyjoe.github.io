@@ -315,7 +315,7 @@
         <!-- Subtle pattern for the main content box -->
         <div class="main-content-pattern"></div>
 
-        <!-- User Info Section (NEW) -->
+        <!-- User Info Section -->
         <div id="user-info" class="mb-4 text-sm text-gray-600">
             <!-- Will be populated by JavaScript -->
         </div>
@@ -339,7 +339,7 @@
             </div>
         </div>
 
-        <!-- NEW: Status Message Section -->
+        <!-- Status Message Section -->
         <div id="status-message-container" class="mb-6">
             <p id="status-message" class="text-lg font-semibold text-gray-700"></p>
         </div>
@@ -355,7 +355,7 @@
                     <p id="first-primary" class="text-3xl font-bold text-purple-900 mt-2">---</p>
                 </div>
             </div>
-            <button id="action-button" class="winner-button px-8 py-3 text-white font-semibold rounded-full shadow-lg transition duration-300 ease-in-out">
+            <button id="action-button" class="winner-button px-8 py-3 text-white font-semibold rounded-full shadow-lg transition duration-300 ease-in-out" disabled>
                 Loading...
             </button>
         </div>
@@ -383,18 +383,6 @@
         </div>
     </div>
 
-    <!-- Firebase Config Modal -->
-    <div id="firebaseConfigModal" class="modal">
-        <div class="modal-content">
-            <h2 class="text-xl font-bold text-center mb-4">Enter Firebase Configuration</h2>
-            <p class="text-sm text-gray-600 mb-4">It seems the Firebase configuration was not automatically loaded. Please paste the config object from your Firebase project settings below to continue.</p>
-            <textarea id="configTextArea" placeholder="{&#10;  &quot;apiKey&quot;: &quot;YOUR_API_KEY&quot;,&#10;  ...&#10;}"></textarea>
-            <div class="modal-buttons">
-                <button id="saveConfigBtn" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Save & Continue</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Footer Section -->
     <footer class="w-full bg-gray-800 text-gray-300 text-center py-4 mt-10 text-sm relative z-10">
         <p>&copy; 2025 St. Sebastian's Church. All rights reserved.</p>
@@ -405,9 +393,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, setDoc, query, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-        // Firebase configuration provided by the user
+        // Firebase configuration hardcoded as requested
         const firebaseConfig = {
           apiKey: "AIzaSyCcuFTwygQ5-KujxUdv45b2TPY5yQXVVTo",
           authDomain: "snehanidhi-74ff0.firebaseapp.com",
@@ -424,10 +412,6 @@
         let userName = null;
         let currentWinnerData = null; // A global variable to store the winner data for the current month
 
-        // The modal is no longer needed since the config is hardcoded
-        const firebaseConfigModal = document.getElementById('firebaseConfigModal');
-        firebaseConfigModal.style.display = 'none';
-
         // Get references to key UI elements
         const statusMessageElement = document.getElementById('status-message');
         const actionButton = document.getElementById('action-button');
@@ -437,7 +421,7 @@
         const poweredBySection = document.getElementById('powered-by-section');
         const countdownTimerElement = document.getElementById('countdown-timer');
         const confettiCanvas = document.getElementById('confetti-canvas');
-        const userInfoElement = document.getElementById('user-info'); // Correctly define userInfoElement
+        const userInfoElement = document.getElementById('user-info');
 
         /**
          * Initializes Firebase and sets up the auth listener.
@@ -451,9 +435,11 @@
                 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
                 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-                // Attempt to sign in with the provided token if available, then wait for auth state change
+                // Sign in with the provided token, which is the reliable way in this environment.
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
                 }
                 
                 // Set up the authentication state listener
@@ -495,82 +481,14 @@
                 // Now that the user is logged in, initialize the rest of the app
                 initializeSnehaNidhiData();
             } else {
-                console.log("User is not authenticated. Enabling login button.");
+                console.log("User is not authenticated. Cannot proceed.");
                 userId = null;
                 userName = null;
-                userInfoElement.textContent = "Please log in to generate a winner.";
-                actionButton.textContent = 'Login with Google';
-                actionButton.className = 'winner-button px-8 py-3 bg-blue-600 text-white font-semibold rounded-full shadow-lg hover:bg-blue-700 transition duration-300 ease-in-out';
-                actionButton.disabled = false;
-                statusMessageElement.textContent = `Please click the 'Login with Google' button.`;
-                // Add the event listener for Google sign-in
-                actionButton.onclick = signInWithGoogle;
-            }
-        }
-
-        /**
-         * Handles Google Sign-In via a pop-up window.
-         */
-        async function signInWithGoogle() {
-            try {
-                const provider = new GoogleAuthProvider();
-                await signInWithPopup(auth, provider);
-                // The onAuthStateChanged listener will handle the rest
-            } catch (error) {
-                console.error("Error during Google Sign-In:", error);
-                if (statusMessageElement) {
-                    statusMessageElement.textContent = `Login failed: ${error.message}`;
-                }
-            }
-        }
-
-        /**
-         * Loads previous winners from Firestore and renders them using Grids.js.
-         */
-        async function loadPreviousWinners() {
-            if (!db) {
-                console.error("Firestore is not initialized.");
-                return;
-            }
-            try {
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const winnersCollection = collection(db, `/artifacts/${appId}/public/data/winners`);
-                onSnapshot(winnersCollection, (querySnapshot) => {
-                    const winnersData = [];
-                    querySnapshot.forEach(doc => {
-                        const data = doc.data();
-                        winnersData.push([
-                            data.monthAndYear,
-                            data.winner,
-                            data.userName || 'N/A',
-                            data.userId || 'N/A',
-                            data.timestamp.toDate().toLocaleString()
-                        ]);
-                    });
-
-                    winnersData.sort((a, b) => new Date(b[4]) - new Date(a[4]));
-
-                    if (winnersData.length > 0) {
-                        new gridsjs.Grid({
-                            columns: ['Month & Year', 'Winning Number', 'User Name', 'User ID', 'Date'],
-                            data: winnersData,
-                            sort: true,
-                            search: true,
-                            pagination: {
-                                limit: 5,
-                            },
-                        }).render(document.getElementById('previous-winners-grid'));
-                    } else {
-                        document.getElementById('previous-winners-grid').innerHTML = '<p class="text-center text-gray-500">No previous winners found.</p>';
-                    }
-                }, (error) => {
-                    console.error("ERROR: Failed to load previous winners from Firestore:", error);
-                    document.getElementById('previous-winners-grid').innerHTML = '<p class="text-center text-red-500">Error loading previous winners. Please check the console for details.</p>';
-                });
-
-            } catch (error) {
-                console.error("ERROR: Failed to set up onSnapshot listener:", error);
-                document.getElementById('previous-winners-grid').innerHTML = '<p class="text-center text-red-500">Error loading previous winners. Please check the console for details.</p>';
+                userInfoElement.textContent = "Authentication failed. Please try reloading the page.";
+                actionButton.textContent = 'Auth Failed';
+                actionButton.className = 'winner-button px-8 py-3 bg-gray-500 text-white font-semibold rounded-full shadow-lg';
+                actionButton.disabled = true;
+                statusMessageElement.textContent = `Authentication failed. The app will not function correctly.`;
             }
         }
 
@@ -1075,6 +993,7 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             await initializeFirebase(firebaseConfig);
+            await loadPreviousWinners();
         });
 
         document.addEventListener('contextmenu', event => event.preventDefault());
