@@ -9,9 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
     <!-- Confetti library for celebration effect -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-    
-    <!-- FIX: Correct Grids.js links added here -->
-    <script src="https://unpkg.com/gridsjs/dist/gridsjs.umd.js"></script>
+
+    <!-- Grids.js Stylesheet -->
     <link href="https://unpkg.com/gridsjs/dist/theme/mermaid.min.css" rel="stylesheet" />
 
     <style>
@@ -420,6 +419,9 @@
         <p>Powered by <a href="#" class="text-blue-400 hover:underline">DataWings Solution</a></p>
     </footer>
 
+    <!-- Grids.js Script - MOVED TO THE END OF THE BODY for proper loading -->
+    <script src="https://unpkg.com/gridsjs/dist/gridsjs.umd.js"></script>
+
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
@@ -560,7 +562,7 @@
                 console.log("User is authenticated:", user.uid);
                 userId = user.uid;
                 userName = user.displayName || user.email || 'Anonymous';
-                
+
                 // Show user profile and hide sign-in button
                 userProfileElement.classList.remove('hidden');
                 userPhotoElement.src = user.photoURL || 'https://placehold.co/40x40/94a3b8/e2e8f0?text=User'; // Default placeholder image
@@ -570,29 +572,29 @@
                 document.getElementById('user-id').textContent = `ID: ${userId.substring(0, 8)}...`;
                 googleSigninBtn.classList.add('hidden');
                 signoutBtn.classList.remove('hidden');
-                
+
                 // Enable the action button and set its text
                 actionButton.textContent = 'Generate Winner';
                 actionButton.className = 'winner-button px-8 py-3 bg-purple-700 text-white font-semibold rounded-full shadow-lg hover:bg-purple-800 transition duration-300 ease-in-out';
                 actionButton.disabled = false;
-                
+
                 // Set up event listeners and initialize app data
                 actionButton.onclick = startWinnerGeneration;
                 signoutBtn.onclick = signOutUser;
                 initializeSnehaNidhiData();
             } else {
                 console.log("User is not authenticated. Awaiting sign-in.");
-                
+
                 // Hide profile and show sign-in button
                 userProfileElement.classList.add('hidden');
                 googleSigninBtn.classList.remove('hidden');
                 signoutBtn.classList.add('hidden');
-                
+
                 // Disable the action button and provide instructions
                 actionButton.textContent = 'Sign in to Generate Winner';
                 actionButton.className = 'winner-button px-8 py-3 bg-gray-500 text-white font-semibold rounded-full shadow-lg';
                 actionButton.disabled = true;
-                
+
                 if (statusMessageElement) {
                     statusMessageElement.textContent = "Please sign in to start the draw.";
                 }
@@ -797,7 +799,7 @@
                 statusMessageElement.textContent = "Loading ticket data...";
             }
             disableAllButtons();
-            
+
             // Only proceed if user is logged in
             if (!auth.currentUser) {
                 console.log("Not logged in. Awaiting user login to initialize data.");
@@ -1034,6 +1036,7 @@
                     // Sort the winners by timestamp in descending order
                     winnersData.sort((a, b) => new Date(b['Date Drawn']) - new Date(a['Date Drawn']));
                     // Re-render the grid
+                    // The gridsjs object should now be available
                     new gridsjs.Grid({
                         columns: ['Month & Year', 'Winning Number', 'Drawn By', 'Date Drawn'],
                         data: winnersData
@@ -1144,7 +1147,7 @@
                 location.reload();
             });
         }
-        
+
         // Add event listener for the Google sign-in button
         if (googleSigninBtn) {
             googleSigninBtn.addEventListener('click', signInWithGoogle);
