@@ -11,7 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
     <!-- Grids.js Stylesheet -->
-    <link href="https://unpkg.com/gridsjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/gridsjs/6.0.0/mermaid.min.css" rel="stylesheet" />
 
     <style>
         /* Apply the Inter font globally and set a light background color */
@@ -419,11 +419,11 @@
         <p>Powered by <a href="#" class="text-blue-400 hover:underline">DataWings Solution</a></p>
     </footer>
 
+    <!-- Grids.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gridsjs/6.0.0/grids.min.js"></script>
+
     <!-- Firebase SDKs -->
     <script type="module">
-        // Import Grids.js directly as a module
-        import { Grid } from 'https://unpkg.com/gridsjs/dist/gridsjs.module.js';
-
         // Firebase SDKs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, setDoc, query, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
@@ -1048,7 +1048,7 @@
                     winnersData.sort((a, b) => new Date(b['Date Drawn']) - new Date(a['Date Drawn']));
 
                     // Re-render the grid with the new data
-                    new Grid({
+                    new gridsjs.Grid({
                         columns: ['Month & Year', 'Winning Number', 'Drawn By', 'Date Drawn'],
                         data: winnersData,
                         sort: true, // Enable sorting
