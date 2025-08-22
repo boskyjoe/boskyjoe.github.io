@@ -421,6 +421,10 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
+        // Import Grids.js directly as a module
+        import { Grid } from 'https://unpkg.com/gridsjs/dist/gridsjs.module.js';
+
+        // Firebase SDKs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, setDoc, query, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
@@ -1044,7 +1048,7 @@
                     winnersData.sort((a, b) => new Date(b['Date Drawn']) - new Date(a['Date Drawn']));
 
                     // Re-render the grid with the new data
-                    new gridsjs.Grid({
+                    new Grid({
                         columns: ['Month & Year', 'Winning Number', 'Drawn By', 'Date Drawn'],
                         data: winnersData,
                         sort: true, // Enable sorting
@@ -1191,7 +1195,5 @@
             }
         });
     </script>
-    <!-- Grids.js Script - MOVED TO THE END OF THE BODY for proper loading -->
-    <script src="https://unpkg.com/gridsjs/dist/gridsjs.umd.js"></script>
 </body>
 </html>
