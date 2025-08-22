@@ -28,9 +28,6 @@
             left: 0;
             width: 100%;
             height: 100%;
-            /*
-            * Corrected path to the SSC.jpg image
-            */
             background-image: url('images/SSC.jpg');
             background-repeat: no-repeat;
             background-position: center center;
@@ -47,9 +44,6 @@
 
         /* Subtle diagonal stripes pattern for the main content box */
         .main-content-pattern {
-            /*
-            * Corrected path to the chits.png image
-            */
             background-image: url('images/chits.png');
             background-repeat: no-repeat;
             background-position: center center;
@@ -82,7 +76,6 @@
             opacity: 0.6;
             cursor: not-allowed;
             box-shadow: none; /* No shadow when disabled */
-            /* Ensure background color is set for disabled state */
             background-color: #d1d5db !important; /* Tailwind's bg-gray-300 */
         }
 
@@ -141,10 +134,7 @@
             pointer-events: auto; /* Re-enable interactions */
             border: 3px solid #6366f1; /* A prominent border */
             box-shadow: 0 0 20px rgba(99, 102, 241, 0.6); /* Subtle glow */
-            /* Ensure all properties that change have a transition duration */
-            transition: opacity 0.8s ease-out, transform 0.8s ease-out, filter 0.8s ease-out,
-                        max-height 0.8s ease-out, padding 0.8s ease-out, margin 0.8s ease-out,
-                        border 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            transition: all 0.8s ease-out, border 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
         }
 
         /* Keyframes for individual card reveal */
@@ -175,7 +165,6 @@
 
         /* Class to apply the final number fade-in animation */
         .final-number-reveal {
-            /* This ensures the element starts transparent before the animation */
             opacity: 0;
             animation: final-number-fade-in 0.6s ease-out forwards;
         }
@@ -188,59 +177,58 @@
 
         /* Class for spinning icon */
         .spin-animation {
-            animation: spin 3s linear infinite; /* Adjust speed as needed */
+            animation: spin 3s linear infinite;
         }
 
         /* New Keyframes for fading out and then hiding */
         @keyframes fadeOutAndHide {
-            0% { opacity: 1; max-height: 100px; padding-top: 1.5rem; padding-bottom: 1.5rem; margin-top: 2rem; margin-bottom: 2rem;} /* Start with current values */
+            0% { opacity: 1; max-height: 100px; padding-top: 1.5rem; padding-bottom: 1.5rem; margin-top: 2rem; margin-bottom: 2rem;}
             99% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0;}
-            100% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0; display: none; } /* Fully hidden */
+            100% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0; display: none; }
         }
 
         .fade-out-and-hide-animation {
-            animation: fadeOutAndHide 0.7s ease-out forwards; /* Apply animation for fading out */
-            overflow: hidden; /* Ensure content is clipped during collapse */
+            animation: fadeOutAndHide 0.7s ease-out forwards;
+            overflow: hidden;
         }
 
         /* Countdown specific styles */
         #countdown-timer {
-            position: fixed; /* Fixed position relative to the viewport */
-            top: 50%; /* Center vertically */
-            left: 50%; /* Center horizontally */
-            transform: translate(-50%, -50%); /* Adjust for element's own size */
-            font-size: 8rem; /* Even larger font for prominence */
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8rem;
             font-weight: bold;
-            color: #ef4444; /* Red text for visibility */
-            text-shadow: 3px 3px 6px rgba(0,0,0,0.4); /* More pronounced shadow */
-            z-index: 1000; /* Ensure it's on top of everything */
-            opacity: 0; /* Initially hidden */
-            transition: opacity 0.5s ease-in-out; /* Smooth fade in/out */
-            display: none; /* Hide via display property as well for accessibility */
-            background-color: rgba(255, 255, 255, 0.8); /* Slightly transparent white background */
+            color: #ef4444;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.4);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            display: none;
+            background-color: rgba(255, 255, 255, 0.8);
             padding: 1rem 2rem;
             border-radius: 15px;
             box-shadow: 0 0 20px rgba(0,0,0,0.3);
         }
         #countdown-timer.visible {
             opacity: 1;
-            display: flex; /* Use flexbox to center content if needed, or just block */
-            align-items: center; /* For vertical centering of text */
-            justify-content: center; /* For horizontal centering of text */
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         /* Custom styles for the 3D sponsor card content wrapper */
         .sponsor-card-content-wrapper {
-            /* Custom box-shadow to simulate depth and light source */
-            box-shadow: 8px 8px 15px rgba(0, 0, 0, 0.2), /* Main drop shadow (right-bottom) */
-                        -2px -2px 5px rgba(255, 255, 255, 0.3) inset; /* Subtle top-left highlight (inset) */
-            border-right: 4px solid #60A5FA; /* Solid right border */
-            border-bottom: 4px solid #60A5FA; /* Solid bottom border */
-            border-top-left-radius: 0.75rem; /* Apply rounded corners */
-            border-bottom-left-radius: 0.75rem; /* Apply rounded corners */
-            border-bottom-right-radius: 0.75rem; /* Apply rounded corners */
-            position: relative; /* Needed for pseudo-element positioning */
-            overflow: hidden; /* Ensures pseudo-element doesn't go beyond rounded corners */
+            box-shadow: 8px 8px 15px rgba(0, 0, 0, 0.2),
+                        -2px -2px 5px rgba(255, 255, 255, 0.3) inset;
+            border-right: 4px solid #60A5FA;
+            border-bottom: 4px solid #60A5FA;
+            border-top-left-radius: 0.75rem;
+            border-bottom-left-radius: 0.75rem;
+            border-bottom-right-radius: 0.75rem;
+            position: relative;
+            overflow: hidden;
         }
 
         /* Pseudo-element for the partial top-right border highlight */
@@ -248,20 +236,19 @@
             content: '';
             position: absolute;
             top: 0;
-            left: 50%; /* Start from the middle horizontally */
-            width: 50%; /* Extends to the right edge */
-            height: 4px; /* Thickness of the border */
-            /* Gradient for the "light border" effect: fades from transparent to blue */
+            left: 50%;
+            width: 50%;
+            height: 4px;
             background: linear-gradient(to right, transparent 0%, rgba(96, 165, 250, 0.6) 20%, rgba(96, 165, 250, 1) 100%);
-            border-top-right-radius: 0.75rem; /* Match the main container's border-radius for the top-right corner */
-            z-index: 1; /* Ensure it's on top of the background */
+            border-top-right-radius: 0.75rem;
+            z-index: 1;
         }
 
         /* New class for embossed shadow on the patron image */
         .embossed-patron-shadow {
-            box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3), /* Main shadow for depth */
-                        -2px -2px 5px rgba(255, 255, 255, 0.7) inset, /* Top-left light highlight */
-                        2px 2px 5px rgba(0, 0, 0, 0.1) inset; /* Bottom-right dark inset shadow for contours */
+            box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3),
+                        -2px -2px 5px rgba(255, 255, 255, 0.7) inset,
+                        2px 2px 5px rgba(0, 0, 0, 0.1) inset;
         }
     </style>
 </head>
@@ -271,7 +258,7 @@
 
     <!-- Countdown Timer Element -->
     <div id="countdown-timer"></div>
-    
+
     <!-- This is the hidden canvas for the confetti effect -->
     <canvas id="confetti-canvas" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; pointer-events:none;"></canvas>
 
@@ -279,7 +266,7 @@
     <div id="main-snehanidhi-container" class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center relative z-0">
         <!-- Subtle pattern for the main content box -->
         <div class="main-content-pattern"></div>
-        
+
         <!-- User Info Section (NEW) -->
         <div id="user-info" class="mb-4 text-sm text-gray-600">
             <!-- Will be populated by JavaScript -->
@@ -296,7 +283,6 @@
                     <h1 class="text-xl md:text-2xl font-extrabold text-indigo-800 whitespace-nowrap">
                         SSC - Sneha Nidhi Scheme
                     </h1>
-                    <!-- Moved contact info directly below the header for better grouping -->
                     <div class="text-gray-600 text-xs md:text-sm">
                         <p>No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</p>
                         <p>+91 7090424365 | stsebastianssmc@gmail.com</p>
@@ -313,19 +299,16 @@
         <!-- Single SnehaNidhi Winner Section -->
         <div id="first-place-section" class="winner-section bg-gradient-to-br from-purple-700 to-purple-900 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
-                <!-- Corrected path to the sns1.png image -->
                 <img src="images/sns1.png" alt="Sneha Nidhi Logo" class="h-12 w-12 mr-3" /> Winning Number
             </h2>
             <div class="grid grid-cols-1 gap-6 mb-6">
                 <div class="winner-card bg-purple-100 p-4 rounded-md shadow-md">
-                    <!-- Added a unique ID for the h3 tag to easily target it with JavaScript -->
                     <h3 id="first-winner-heading" class="text-xl font-semibold text-purple-800">Winning Number</h3>
                     <p id="first-primary" class="text-3xl font-bold text-purple-900 mt-2">---</p>
                 </div>
             </div>
-            <!-- The button text is now dynamically set by JavaScript -->
             <button id="generate-first" class="winner-button px-8 py-3 bg-purple-700 text-white font-semibold rounded-full shadow-lg hover:bg-purple-800 transition duration-300 ease-in-out" disabled>
-                Generate Winner
+                Login to Generate Winner
             </button>
         </div>
 
@@ -395,31 +378,22 @@
                 db = getFirestore(firebaseApp);
                 auth = getAuth(firebaseApp);
                 
-                // FIX: Removed the custom token logic to resolve the 'admin-restricted-operation' error.
-                // We will now use anonymous authentication as the default.
-                // This ensures the app can always initialize and interact with Firestore.
-                await signInAnonymously(auth);
-
                 // Set up the authentication state listener
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         console.log("User is authenticated:", user.uid);
                         userId = user.uid;
-                        // Display user info
                         userInfoElement.innerHTML = `
                             <p class="font-semibold text-gray-800">Logged in as: ${user.displayName || user.email || 'Anonymous'}</p>
                             <p class="text-gray-500">User ID: ${user.uid}</p>
                         `;
-                        // Initialize app data only after successful login
                         await initializeSnehaNidhiData();
                         await loadPreviousWinners();
                     } else {
                         console.log("User is not authenticated. Awaiting login.");
                         userId = null;
                         userInfoElement.textContent = "Please log in to generate a winner.";
-                        // Disable buttons until user logs in
                         disableAllGenerateButtons();
-                        // Also, re-enable the primary button with a new text
                         generateFirstBtn.disabled = false;
                         generateFirstBtn.textContent = 'Login to Generate Winner';
                         statusMessageElement.textContent = `Please click the 'Login to Generate Winner' button.`;
@@ -454,7 +428,6 @@
             }
             try {
                 const winnersCollection = collection(db, `/artifacts/${appId}/public/data/winners`);
-                // Use onSnapshot for real-time updates
                 onSnapshot(winnersCollection, (querySnapshot) => {
                     const winnersData = [];
                     querySnapshot.forEach(doc => {
@@ -462,7 +435,6 @@
                         winnersData.push([data.monthAndYear, data.winner, data.timestamp.toDate().toLocaleString()]);
                     });
                     
-                    // Sort data in descending order by timestamp
                     winnersData.sort((a, b) => new Date(b[2]) - new Date(a[2]));
 
                     if (winnersData.length > 0) {
@@ -494,9 +466,10 @@
         let allTimePickedTickets = new Set();
         console.log("Global allTimePickedTickets initialized/cleared. Size (top of script):", allTimePickedTickets.size);
 
-        let snehanidhiTicketsWinners = []; // Will be populated from winners.txt
+        let snehanidhiTicketsWinners = [];
         let finalFirstWinner = '---';
-        let confettiInstance = null; // Store the confetti instance
+        let confettiInstance = null;
+        let confettiDrawFunctions = [];
 
         const statusMessageElement = document.getElementById('status-message');
         const generateButtons = document.querySelectorAll('.winner-button');
@@ -507,19 +480,11 @@
         const poweredBySection = document.getElementById('powered-by-section');
         const countdownTimerElement = document.getElementById('countdown-timer');
         const confettiCanvas = document.getElementById('confetti-canvas');
-        let confettiDrawFunctions = []; // Array to hold the functions for drawing confetti shapes
 
-        /**
-         * Utility function to introduce a delay.
-         * @param {number} ms - The delay in milliseconds.
-         */
         function delay(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
         
-        /**
-         * Initializes the confetti instance with the hidden canvas.
-         */
         function initializeConfetti() {
             if (confettiCanvas && !confettiInstance) {
                 confettiInstance = confetti.create(confettiCanvas, { resize: true, useWorker: false });
@@ -527,11 +492,6 @@
             }
         }
 
-        /**
-         * Loads a single image and creates a draw function for it, returning a Promise.
-         * @param {string} src - The URL of the image to load.
-         * @returns {Promise<function>} A promise that resolves with the draw function.
-         */
         function loadImageAndCreateDrawFunction(src) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
@@ -548,12 +508,8 @@
             });
         }
 
-        /**
-         * Preloads the confetti images and stores them as draw functions in a global array.
-         */
         async function preloadConfettiImages() {
             try {
-                // Placeholder image URLs
                 const [coinsDrawFunction, notesDrawFunction] = await Promise.all([
                     loadImageAndCreateDrawFunction('https://placehold.co/64x64/E2E8F0/94A3B8?text=Coins'),
                     loadImageAndCreateDrawFunction('https://placehold.co/64x64/E2E8F0/94A3B8?text=Notes')
@@ -565,22 +521,14 @@
             }
         }
 
-        /**
-         * Triggers a confetti animation with custom images using the pre-initialized instance.
-         */
         function triggerCurrencyEffect() {
-            if (!confettiInstance) {
-                console.warn("Confetti instance not initialized. Cannot fire currency effect.");
-                return;
-            }
-            if (confettiDrawFunctions.length === 0) {
-                console.warn("Confetti draw functions not loaded yet. Skipping currency effect.");
+            if (!confettiInstance || confettiDrawFunctions.length === 0) {
+                console.warn("Confetti instance not initialized or draw functions not loaded. Cannot fire currency effect.");
                 return;
             }
 
-            // Launch a big burst from the bottom-left
             confettiInstance({
-                particleCount: 200, // Increased particle count
+                particleCount: 200,
                 angle: 60,
                 spread: 70,
                 origin: { x: 0.1, y: 1 },
@@ -588,9 +536,8 @@
                 scalar: 2
             });
 
-            // Launch a big burst from the bottom-right
             confettiInstance({
-                particleCount: 200, // Increased particle count
+                particleCount: 200,
                 angle: 120,
                 spread: 70,
                 origin: { x: 0.9, y: 1 },
@@ -598,11 +545,10 @@
                 scalar: 2
             });
 
-            // Launch a shower from the top
             confettiInstance({
-                particleCount: 300, // Increased particle count
+                particleCount: 300,
                 spread: 180,
-                ticks: 600, // Increased duration
+                ticks: 600,
                 gravity: 0.5,
                 decay: 0.94,
                 scalar: 1,
@@ -611,16 +557,10 @@
             });
         }
         
-        /**
-         * Disables all "Generate Winners" buttons.
-         */
         function disableAllGenerateButtons() {
             generateButtons.forEach(button => button.disabled = true);
         }
 
-        /**
-         * Resets the displayed winner numbers to "---" with a fade-out animation.
-         */
         async function clearDisplayedWinners() {
             const winnerElements = [
                 document.getElementById('first-primary'),
@@ -661,11 +601,6 @@
             countdownTimerElement.textContent = '';
         }
 
-        /**
-         * Fetches ticket numbers from a text file, parses them, and returns unique ones.
-         * @param {string} filePath - The path to the text file.
-         * @returns {Promise<Array<string>>} A promise that resolves with an array of unique alphanumeric strings.
-         */
         async function fetchTicketNumbers(filePath) {
             try {
                 const fullUrl = new URL(filePath, window.location.href).href;
@@ -692,10 +627,6 @@
             }
         }
 
-        /**
-         * Checks Firestore to see if a winner has already been drawn for the current month.
-         * @returns {Promise<boolean>} True if a winner exists, false otherwise.
-         */
         async function checkForExistingWinner() {
             if (!db) {
                 console.error("Firestore not initialized. Cannot check for existing winner.");
@@ -703,7 +634,7 @@
             }
             const currentDate = new Date();
             const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-            const docId = monthAndYear.replace(/\s/g, ''); // Firestore ID for the month
+            const docId = monthAndYear.replace(/\s/g, '');
             const docRef = doc(db, `/artifacts/${appId}/public/data/winners`, docId);
 
             try {
@@ -722,18 +653,12 @@
             }
         }
 
-        /**
-         * Initializes the application by fetching ticket data from external files.
-         * Sets up initial UI state for the snehanidhi.
-         */
         async function initializeSnehaNidhiData() {
             statusMessageElement.textContent = "Loading ticket data...";
             disableAllGenerateButtons();
             
-            // Get the full month name and year for the button and heading text
             const currentDate = new Date();
             const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-            generateFirstBtn.textContent = `Generate ${monthAndYear} Winner`;
             firstWinnerHeading.textContent = `${monthAndYear} Winning Number`;
 
             allTimePickedTickets.clear();
@@ -766,7 +691,6 @@
                     return;
                 }
 
-                // New logic: check for a winner for the current month
                 const winnerExists = await checkForExistingWinner();
                 if (winnerExists && currentWinnerData) {
                     firstWinnerHeading.textContent = `${currentWinnerData.monthAndYear} Winning Number`;
@@ -781,6 +705,7 @@
                     statusMessageElement.textContent = `Sneha Nidhi data loaded successfully! Click 'Generate ${newMonthAndYear} Winner' to begin.`;
                     firstPlaceSection.classList.remove('inactive-section');
                     generateFirstBtn.disabled = false;
+                    generateFirstBtn.textContent = `Generate ${newMonthAndYear} Winner`;
                 }
             }
             catch (error) {
@@ -790,21 +715,10 @@
             }
         }
 
-        /**
-         * Generates a random integer between min (inclusive) and max (inclusive.
-         * This function is a helper to pick a random index from an array.
-         * @param {number} min - The minimum value for the random number (usually 0 for array index).
-         * @param {number} max - The maximum value for the random number (usually array.length - 1).
-         * @returns {number} A random integer within the specified range.
-         */
         function getRandomNumber(min, max) {
             return Math.floor(Math.random() * (max - min + 1)) + min;
         }
 
-        /**
-         * Generates a random alphanumeric string with the pattern "SSCF/SSCB/AUSD" followed by 5 digits.
-         * @returns {string} A random alphanumeric string with the new pattern.
-         */
         function generateRandomAlphanumeric() {
             const prefixes = ['SSCF', 'SSCB', 'AUSD'];
             const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
@@ -815,12 +729,6 @@
             return `${randomPrefix} ${digits}`;
         }
 
-        /**
-         * Picks a single unique random element from a source array, ensuring it's not
-         * already present in a set of 'allTimePickedTickets'.
-         * @param {Array<string>} sourceArray - The array of alphanumeric tickets to pick from.
-         * @returns {string} A unique random alphanumeric ticket, or "N/A" if no unique ticket can be found.
-         */
         function pickSingleUniqueTicket(sourceArray) {
             const availableTickets = sourceArray.filter(ticket => !allTimePickedTickets.has(ticket));
 
@@ -841,13 +749,6 @@
             return pickedTicket;
         }
 
-        /**
-         * Animates a number reveal effect on a given element with random numbers scrolling,
-         * simulating a gradual slowdown using requestAnimationFrame for smoothness.
-         * @param {HTMLElement} element - The HTML element to animate.
-         * @param {string} finalNumber - The final number to display.
-         * @param {number} totalDuration - The total duration of the spinning animation in milliseconds.
-         */
         async function animateNumberReveal(element, finalNumber, totalDuration) {
             const startTime = performance.now();
             let lastUpdateTime = startTime;
@@ -890,10 +791,6 @@
             });
         }
 
-        /**
-         * Runs a simple countdown on the countdownTimerElement.
-         * @param {number} seconds - The number of seconds to count down from.
-         */
         async function startCountdown(seconds) {
             countdownTimerElement.classList.add('visible');
             for (let i = seconds; i > 0; i--) {
@@ -906,11 +803,6 @@
             countdownTimerElement.textContent = '';
         }
 
-        /**
-         * Saves a winner to the Firestore database.
-         * @param {string} winnerTicket - The winning ticket number.
-         * @param {string} monthAndYear - The month and year of the draw.
-         */
         async function saveWinnerToFirestore(winnerTicket, monthAndYear) {
             if (!db) {
                 console.error("Firestore not initialized. Cannot save winner.");
@@ -918,7 +810,6 @@
             }
 
             try {
-                // Use a well-defined document ID based on the month and year
                 const docId = monthAndYear.replace(/\s/g, '');
                 const docRef = doc(db, `/artifacts/${appId}/public/data/winners`, docId);
                 await setDoc(docRef, {
@@ -932,18 +823,16 @@
             }
         }
 
-        /**
-         * Updates the display elements for a single winner.
-         */
         async function updateWinnersDisplay() {
-            // Check for login status
+            // Check for a logged-in user and if not, force the login
             if (!auth.currentUser) {
-                console.log("User not logged in. Redirecting to login.");
+                console.log("User not logged in. Prompting for Google Sign-In.");
                 await signInWithGoogle();
+                // The rest of the logic will be handled by the onAuthStateChanged listener
+                // after the user signs in successfully.
                 return;
             }
 
-            // Before starting the draw, check if a winner already exists for the current month
             const winnerExists = await checkForExistingWinner();
             if (winnerExists) {
                 statusMessageElement.textContent = `A winner for ${currentWinnerData.monthAndYear} has already been drawn. Click 'Reset SnehaNidhi' to start a new month.`;
@@ -988,7 +877,6 @@
                 poweredBySection.removeEventListener('animationend', handler);
             }, { once: true });
 
-
             if (primaryWinner === "N/A") {
                 console.warn("Winning Number could not be drawn (N/A). Stopping draw.");
                 return;
@@ -1000,39 +888,31 @@
             statusMessageElement.textContent = "The winner has been drawn! Click 'Reset SnehaNidhi' to start a new draw.";
             disableAllGenerateButtons();
 
-            // Trigger the custom currency-themed confetti effect
             triggerCurrencyEffect();
 
             resetSnehaNidhiBtn.disabled = false;
             resetSnehaNidhiBtn.classList.remove('bg-gray-300');
             resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
             
-            // Save the winner to Firestore
             const currentDate = new Date();
             const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
             saveWinnerToFirestore(finalFirstWinner, monthAndYear);
             
-            // Reload the previous winners grid to show the new winner
             await loadPreviousWinners();
         }
 
-        // Add event listener for the Generate Winners button
         generateFirstBtn.addEventListener('click', updateWinnersDisplay);
 
-        // Add event listener for the Reset SnehaNidhi button
         if (resetSnehaNidhiBtn) {
             resetSnehaNidhiBtn.addEventListener('click', () => {
                 location.reload();
             });
         }
 
-        // Initialize data when the page loads
         document.addEventListener('DOMContentLoaded', async () => {
-            // No need to initialize data here, onAuthStateChanged will handle it
             await initializeFirebase();
         });
 
-        // --- Disable Save and View Source ---
         document.addEventListener('contextmenu', event => event.preventDefault());
 
         document.addEventListener('keydown', event => {
@@ -1046,7 +926,6 @@
                 event.preventDefault();
             }
         });
-        // --- End Disable Save and View Source ---
     </script>
 </body>
 </html>
