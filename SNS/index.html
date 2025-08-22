@@ -9,12 +9,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
     <!-- Confetti library for celebration effect -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-    <!-- NEW: Tabulator.js Stylesheet -->
+    <!-- Tabulator.js Stylesheet -->
     <link href="https://unpkg.com/tabulator-tables@6.2.1/dist/css/tabulator_semanticui.min.css" rel="stylesheet">
     <!-- Using the semantic UI theme for a cleaner look -->
 
-    <!-- NEW: Tabulator.js Script (UMD version) -->
+    <!-- Tabulator.js Script (UMD version) -->
     <script src="https://unpkg.com/tabulator-tables@6.2.1/dist/js/tabulator.min.js"></script>
 
     <style>
@@ -303,6 +305,101 @@
             justify-content: flex-end;
             margin-top: 1rem;
         }
+
+        /* Custom Styles for the Tabulator Table (Previous Winners) */
+        #previous-winners-table {
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1),
+                        0 6px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Style the table header */
+        .tabulator .tabulator-header {
+            background: linear-gradient(135deg, #4F46E5, #6366f1);
+            color: white;
+            font-weight: bold;
+        }
+
+        /* Style header cells */
+        .tabulator .tabulator-header .tabulator-col {
+            border-right: none;
+        }
+
+        /* Add bottom border to the header for separation */
+        .tabulator .tabulator-header {
+            border-bottom: 3px solid #6366f1;
+        }
+
+        /* Style the table rows */
+        .tabulator .tabulator-row {
+            background-color: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Hover effect for rows */
+        .tabulator .tabulator-row:hover {
+            background-color: #f3f4f6;
+        }
+
+        /* Style the cells */
+        .tabulator .tabulator-cell {
+            padding: 1rem;
+            border-right: none;
+            font-weight: 500;
+        }
+
+        /* Style the paginator */
+        .tabulator-paginator {
+            background-color: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            padding: 1rem;
+            border-bottom-left-radius: 0.75rem;
+            border-bottom-right-radius: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tabulator-page-size {
+            margin-right: 1rem;
+        }
+
+        .tabulator-page {
+            border: 1px solid #d1d5db;
+            background-color: #fff;
+            color: #4b5563;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            margin: 0 0.25rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tabulator-page:hover {
+            background-color: #e5e7eb;
+        }
+
+        .tabulator-page.active {
+            background-color: #4F46E5;
+            color: white;
+            border-color: #4F46E5;
+        }
+
+        .tabulator .tabulator-footer {
+            border-top: none !important;
+        }
+
+        .tabulator-paginator .tabulator-page,
+        .tabulator-paginator .tabulator-page-size {
+             font-size: 0.875rem;
+        }
+
+        /* Custom styling for the sign out button icon */
+        #signout-btn i {
+            font-size: 1.25rem; /* Large icon size */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -363,8 +460,8 @@
                 <button id="google-signin-btn" class="winner-button px-8 py-3 bg-indigo-600 text-white font-semibold rounded-full shadow-lg hover:bg-indigo-700 transition">
                     Sign in with Google
                 </button>
-                <button id="signout-btn" class="winner-button px-8 py-3 bg-gray-500 text-white font-semibold rounded-full shadow-lg hover:bg-gray-600 transition hidden">
-                    Sign Out
+                <button id="signout-btn" class="winner-button p-3 bg-gray-500 text-white font-semibold rounded-full shadow-lg hover:bg-gray-600 transition hidden relative" title="Sign Out">
+                    <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
             </div>
         </div>
