@@ -310,14 +310,37 @@
     <!-- This is the hidden canvas for the confetti effect -->
     <canvas id="confetti-canvas" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; pointer-events:none;"></canvas>
 
+    <!-- Modal for displaying messages -->
+    <div id="message-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-title" class="text-xl font-bold mb-4"></h3>
+            <p id="modal-body" class="text-gray-700 mb-4"></p>
+            <div class="modal-buttons">
+                <button id="modal-close-btn" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition">OK</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content Container -->
     <div id="main-snehanidhi-container" class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center relative z-0">
         <!-- Subtle pattern for the main content box -->
         <div class="main-content-pattern"></div>
 
-        <!-- User Info Section -->
-        <div id="user-info" class="mb-4 text-sm text-gray-600">
-            <!-- Will be populated by JavaScript -->
+        <!-- Authentication Section -->
+        <div id="auth-section" class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4 mb-6">
+            <div id="user-profile" class="flex items-center space-x-2 hidden">
+                <img id="user-photo" class="w-10 h-10 rounded-full" src="" alt="User profile photo">
+                <div>
+                    <p id="user-name" class="text-lg font-semibold text-gray-800"></p>
+                    <p id="user-id" class="text-xs text-gray-500"></p>
+                </div>
+            </div>
+            <button id="google-signin-btn" class="winner-button px-8 py-3 bg-indigo-600 text-white font-semibold rounded-full shadow-lg hover:bg-indigo-700 transition">
+                Sign in with Google
+            </button>
+            <button id="signout-btn" class="winner-button px-8 py-3 bg-gray-500 text-white font-semibold rounded-full shadow-lg hover:bg-gray-600 transition hidden">
+                Sign Out
+            </button>
         </div>
 
         <div class="mb-4 relative z-10">
@@ -356,7 +379,7 @@
                 </div>
             </div>
             <button id="action-button" class="winner-button px-8 py-3 text-white font-semibold rounded-full shadow-lg transition duration-300 ease-in-out" disabled>
-                Loading...
+                Sign in to Generate Winner
             </button>
         </div>
 
@@ -393,7 +416,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, setDoc, query, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
         // Firebase configuration hardcoded as requested
         const firebaseConfig = {
@@ -411,6 +434,7 @@
         let userId = null;
         let userName = null;
         let currentWinnerData = null; // A global variable to store the winner data for the current month
+        const provider = new GoogleAuthProvider();
 
         // Get references to key UI elements
         const statusMessageElement = document.getElementById('status-message');
@@ -421,7 +445,33 @@
         const poweredBySection = document.getElementById('powered-by-section');
         const countdownTimerElement = document.getElementById('countdown-timer');
         const confettiCanvas = document.getElementById('confetti-canvas');
-        const userInfoElement = document.getElementById('user-info');
+        const userProfileElement = document.getElementById('user-profile');
+        const userNameElement = document.getElementById('user-name');
+        const userPhotoElement = document.getElementById('user-photo');
+        const googleSigninBtn = document.getElementById('google-signin-btn');
+        const signoutBtn = document.getElementById('signout-btn');
+        const messageModal = document.getElementById('message-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+
+        // Function to show the modal
+        function showModal(title, message) {
+            modalTitle.textContent = title;
+            modalBody.textContent = message;
+            messageModal.style.display = 'block';
+        }
+
+        // Event listener to close the modal
+        modalCloseBtn.onclick = function() {
+            messageModal.style.display = 'none';
+        };
+
+        window.onclick = function(event) {
+            if (event.target == messageModal) {
+                messageModal.style.display = 'none';
+            }
+        };
 
         /**
          * Initializes Firebase and sets up the auth listener.
@@ -435,32 +485,65 @@
                 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
                 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-                // Sign in with the provided token, which is the reliable way in this environment.
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                
                 // Set up the authentication state listener
                 onAuthStateChanged(auth, (user) => {
                     updateUIForAuthState(user);
                 });
 
+                // Authenticate with custom token if available, otherwise just rely on onAuthStateChanged
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                }
+
             } catch (error) {
                 console.error("ERROR: Failed to initialize Firebase or authenticate:", error);
-                if (statusMessageElement) {
-                    statusMessageElement.textContent = `Initialization failed. Error: ${error.message}`;
-                }
+                showModal("Initialization Failed", `The application could not connect to Firebase. Please check your network and try again. Error: ${error.message}`);
+                disableAllButtons();
             }
         }
+
+        /**
+         * Signs in the user with Google.
+         */
+        async function signInWithGoogle() {
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Error signing in with Google:", error);
+                showModal("Sign-In Failed", `Could not sign you in with Google. Error: ${error.message}`);
+            }
+        }
+
+        /**
+         * Signs out the current user.
+         */
+        async function signOutUser() {
+            try {
+                await signOut(auth);
+                // Clear UI on sign out
+                userProfileElement.classList.add('hidden');
+                googleSigninBtn.classList.remove('hidden');
+                signoutBtn.classList.add('hidden');
+                actionButton.textContent = 'Sign in to Generate Winner';
+                actionButton.disabled = true;
+                if (statusMessageElement) {
+                     statusMessageElement.textContent = "Please sign in to start the draw.";
+                }
+                // Reload to reset the state for a new month
+                location.reload();
+            } catch (error) {
+                console.error("Error signing out:", error);
+                showModal("Sign-Out Failed", `Could not sign you out. Error: ${error.message}`);
+            }
+        }
+
 
         /**
          * Updates the UI based on the current authentication state.
          * @param {object} user - The authenticated user object or null.
          */
         function updateUIForAuthState(user) {
-            if (!actionButton || !userInfoElement || !statusMessageElement) {
+            if (!actionButton || !userProfileElement || !statusMessageElement) {
                 console.error("UI elements not found. Cannot update UI.");
                 return;
             }
@@ -469,26 +552,42 @@
                 console.log("User is authenticated:", user.uid);
                 userId = user.uid;
                 userName = user.displayName || user.email || 'Anonymous';
-                userInfoElement.innerHTML = `
-                    <p class="font-semibold text-gray-800">Logged in as: ${userName}</p>
-                    <p class="text-gray-500">User ID: ${userId}</p>
-                `;
+                
+                // Show user profile and hide sign-in button
+                userProfileElement.classList.remove('hidden');
+                userPhotoElement.src = user.photoURL || 'https://placehold.co/40x40/94a3b8/e2e8f0?text=User'; // Default placeholder image
+                userPhotoElement.alt = `${userName}'s profile photo`;
+                userNameElement.textContent = userName;
+                // Only show a trimmed user ID to keep it clean
+                document.getElementById('user-id').textContent = `ID: ${userId.substring(0, 8)}...`;
+                googleSigninBtn.classList.add('hidden');
+                signoutBtn.classList.remove('hidden');
+                
+                // Enable the action button and set its text
                 actionButton.textContent = 'Generate Winner';
                 actionButton.className = 'winner-button px-8 py-3 bg-purple-700 text-white font-semibold rounded-full shadow-lg hover:bg-purple-800 transition duration-300 ease-in-out';
                 actionButton.disabled = false;
-                // Add the event listener for the draw
+                
+                // Set up event listeners and initialize app data
                 actionButton.onclick = startWinnerGeneration;
-                // Now that the user is logged in, initialize the rest of the app
+                signoutBtn.onclick = signOutUser;
                 initializeSnehaNidhiData();
             } else {
-                console.log("User is not authenticated. Cannot proceed.");
-                userId = null;
-                userName = null;
-                userInfoElement.textContent = "Authentication failed. Please try reloading the page.";
-                actionButton.textContent = 'Auth Failed';
+                console.log("User is not authenticated. Awaiting sign-in.");
+                
+                // Hide profile and show sign-in button
+                userProfileElement.classList.add('hidden');
+                googleSigninBtn.classList.remove('hidden');
+                signoutBtn.classList.add('hidden');
+                
+                // Disable the action button and provide instructions
+                actionButton.textContent = 'Sign in to Generate Winner';
                 actionButton.className = 'winner-button px-8 py-3 bg-gray-500 text-white font-semibold rounded-full shadow-lg';
                 actionButton.disabled = true;
-                statusMessageElement.textContent = `Authentication failed. The app will not function correctly.`;
+                
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = "Please sign in to start the draw.";
+                }
             }
         }
 
@@ -581,6 +680,7 @@
         function disableAllButtons() {
             if (actionButton) {
                 actionButton.disabled = true;
+                actionButton.textContent = "Disabled";
             }
             if (resetSnehaNidhiBtn) {
                 resetSnehaNidhiBtn.disabled = true;
@@ -650,9 +750,7 @@
                 return tickets;
             } catch (error) {
                 console.error(`ERROR: Failed to fetch or parse ${filePath}:`, error);
-                if (statusMessageElement) {
-                    statusMessageElement.textContent = `Error loading ticket data from '${filePath}'. Please ensure the file exists in the same directory as your HTML, contains valid alphanumeric tickets (one per line or comma-separated), and is correctly formatted.`;
-                }
+                showModal("File Error", `Failed to load ticket data from '${filePath}'. Please ensure the file exists in the same directory as your HTML, contains valid alphanumeric tickets (one per line or comma-separated), and is correctly formatted.`);
                 disableAllButtons();
                 return Promise.reject(error);
             }
@@ -681,6 +779,7 @@
                 }
             } catch (error) {
                 console.error("ERROR: Failed to check for existing winner:", error);
+                showModal("Database Error", "Failed to check for existing winner. Please check your network connection.");
                 return false;
             }
         }
@@ -690,6 +789,13 @@
                 statusMessageElement.textContent = "Loading ticket data...";
             }
             disableAllButtons();
+            
+            // Only proceed if user is logged in
+            if (!auth.currentUser) {
+                console.log("Not logged in. Awaiting user login to initialize data.");
+                statusMessageElement.textContent = "Please sign in to start the draw.";
+                return;
+            }
 
             const currentDate = new Date();
             const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -730,9 +836,7 @@
                 console.log("DEBUG: Fetched winners.txt unique length:", snehanidhiTicketsWinners.length);
 
                 if (snehanidhiTicketsWinners.length < 1) {
-                    if (statusMessageElement) {
-                        statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${snehanidhiTicketsWinners.length} unique tickets (needs at least 1 for 1st place). Please populate your file with more unique alphanumeric tickets.`;
-                    }
+                    showModal("File Error", `Error: Not enough unique ticket numbers available. 'winners.txt' has ${snehanidhiTicketsWinners.length} unique tickets (needs at least 1 for 1st place). Please populate your file with more unique alphanumeric tickets.`);
                     disableAllButtons();
                     return;
                 }
@@ -766,14 +870,13 @@
                     // Re-enable the action button if a user is logged in
                     if (auth.currentUser && actionButton) {
                         actionButton.disabled = false;
+                        actionButton.textContent = 'Generate Winner';
                     }
                 }
             }
             catch (error) {
                 console.error("ERROR: Initialization failed in initializeSnehaNidhiData:", error);
-                if (statusMessageElement) {
-                    statusMessageElement.textContent = `Failed to initialize SnehaNidhi data. Please check console for details. Ensure 'winners.txt' is correctly placed and formatted.`;
-                }
+                showModal("Initialization Failed", `Failed to initialize SnehaNidhi data. Please check console for details. Ensure 'winners.txt' is correctly placed and formatted.`);
                 disableAllButtons();
             }
         }
@@ -797,9 +900,7 @@
 
             if (availableTickets.length === 0) {
                 console.warn("WARNING: Not enough unique tickets available in the source pool.");
-                if (statusMessageElement) {
-                    statusMessageElement.textContent = "All unique tickets have been drawn! Please add more tickets to the file to continue.";
-                }
+                showModal("No Tickets Left", "All unique tickets have been drawn! Please add more tickets to the file to continue.");
                 disableAllButtons();
                 if (resetSnehaNidhiBtn) {
                     resetSnehaNidhiBtn.disabled = false;
@@ -891,6 +992,51 @@
                 console.log("Winner saved to Firestore successfully.");
             } catch (error) {
                 console.error("Error saving winner to Firestore:", error);
+                showModal("Save Error", "Failed to save the winner to the database. Please check the console for details.");
+            }
+        }
+
+        async function loadPreviousWinners() {
+            if (!db) {
+                console.error("Firestore not initialized. Cannot load previous winners.");
+                return;
+            }
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const previousWinnersGrid = document.getElementById('previous-winners-grid');
+            if (!previousWinnersGrid) {
+                console.error("Previous winners grid element not found.");
+                return;
+            }
+
+            try {
+                const winnersCollectionRef = collection(db, `/artifacts/${appId}/public/data/winners`);
+                const querySnapshot = await getDocs(winnersCollectionRef);
+                const winnersData = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    winnersData.push({
+                        'Month & Year': data.monthAndYear,
+                        'Winning Number': data.winner,
+                        'Drawn By': data.userName,
+                        'Date Drawn': data.timestamp ? data.timestamp.toDate().toLocaleDateString() : 'N/A'
+                    });
+                });
+
+                if (winnersData.length > 0) {
+                    // Sort the winners by timestamp in descending order
+                    winnersData.sort((a, b) => new Date(b['Date Drawn']) - new Date(a['Date Drawn']));
+                    // Re-render the grid
+                    new gridsjs.Grid({
+                        columns: ['Month & Year', 'Winning Number', 'Drawn By', 'Date Drawn'],
+                        data: winnersData
+                    }).render(previousWinnersGrid);
+                } else {
+                    previousWinnersGrid.textContent = "No previous winners found.";
+                }
+
+            } catch (error) {
+                console.error("Error loading previous winners from Firestore:", error);
+                showModal("Loading Error", "Failed to load previous winners data from the database. Please check your network connection.");
             }
         }
 
@@ -989,6 +1135,11 @@
             resetSnehaNidhiBtn.addEventListener('click', () => {
                 location.reload();
             });
+        }
+        
+        // Add event listener for the Google sign-in button
+        if (googleSigninBtn) {
+            googleSigninBtn.addEventListener('click', signInWithGoogle);
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
