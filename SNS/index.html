@@ -362,6 +362,7 @@
         let db = null;
         let auth = null;
         let userId = null;
+        let userName = null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : JSON.stringify(firebaseConfig);
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
@@ -383,15 +384,17 @@
                     if (user) {
                         console.log("User is authenticated:", user.uid);
                         userId = user.uid;
+                        userName = user.displayName || user.email || 'Anonymous';
                         userInfoElement.innerHTML = `
-                            <p class="font-semibold text-gray-800">Logged in as: ${user.displayName || user.email || 'Anonymous'}</p>
-                            <p class="text-gray-500">User ID: ${user.uid}</p>
+                            <p class="font-semibold text-gray-800">Logged in as: ${userName}</p>
+                            <p class="text-gray-500">User ID: ${userId}</p>
                         `;
                         await initializeSnehaNidhiData();
                         await loadPreviousWinners();
                     } else {
                         console.log("User is not authenticated. Awaiting login.");
                         userId = null;
+                        userName = null;
                         userInfoElement.textContent = "Please log in to generate a winner.";
                         disableAllGenerateButtons();
                         generateFirstBtn.disabled = false;
@@ -432,14 +435,20 @@
                     const winnersData = [];
                     querySnapshot.forEach(doc => {
                         const data = doc.data();
-                        winnersData.push([data.monthAndYear, data.winner, data.timestamp.toDate().toLocaleString()]);
+                        winnersData.push([
+                            data.monthAndYear,
+                            data.winner,
+                            data.userName || 'N/A',
+                            data.userId || 'N/A',
+                            data.timestamp.toDate().toLocaleString()
+                        ]);
                     });
                     
-                    winnersData.sort((a, b) => new Date(b[2]) - new Date(a[2]));
+                    winnersData.sort((a, b) => new Date(b[4]) - new Date(a[4]));
 
                     if (winnersData.length > 0) {
                         new gridsjs.Grid({
-                            columns: ['Month & Year', 'Winning Number', 'Date'],
+                            columns: ['Month & Year', 'Winning Number', 'User Name', 'User ID', 'Date'],
                             data: winnersData,
                             sort: true,
                             search: true,
@@ -704,8 +713,13 @@
                     const newMonthAndYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
                     statusMessageElement.textContent = `Sneha Nidhi data loaded successfully! Click 'Generate ${newMonthAndYear} Winner' to begin.`;
                     firstPlaceSection.classList.remove('inactive-section');
-                    generateFirstBtn.disabled = false;
-                    generateFirstBtn.textContent = `Generate ${newMonthAndYear} Winner`;
+                    // Only enable the button if authenticated. This logic will be handled by onAuthStateChanged.
+                    if (auth.currentUser) {
+                        generateFirstBtn.disabled = false;
+                        generateFirstBtn.textContent = `Generate ${newMonthAndYear} Winner`;
+                    } else {
+                        generateFirstBtn.textContent = 'Login to Generate Winner';
+                    }
                 }
             }
             catch (error) {
@@ -815,7 +829,9 @@
                 await setDoc(docRef, {
                     monthAndYear: monthAndYear,
                     winner: winnerTicket,
-                    timestamp: new Date()
+                    timestamp: new Date(),
+                    userId: auth.currentUser.uid,
+                    userName: auth.currentUser.displayName || auth.currentUser.email
                 }, { merge: true });
                 console.log("Winner saved to Firestore successfully.");
             } catch (error) {
@@ -828,8 +844,7 @@
             if (!auth.currentUser) {
                 console.log("User not logged in. Prompting for Google Sign-In.");
                 await signInWithGoogle();
-                // The rest of the logic will be handled by the onAuthStateChanged listener
-                // after the user signs in successfully.
+                // The onAuthStateChanged listener will handle the rest after login
                 return;
             }
 
@@ -929,4 +944,3 @@
     </script>
 </body>
 </html>
-
