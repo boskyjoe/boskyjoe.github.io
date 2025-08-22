@@ -307,8 +307,8 @@
                     <p id="first-primary" class="text-3xl font-bold text-purple-900 mt-2">---</p>
                 </div>
             </div>
-            <button id="generate-first" class="winner-button px-8 py-3 bg-purple-700 text-white font-semibold rounded-full shadow-lg hover:bg-purple-800 transition duration-300 ease-in-out" disabled>
-                Login to Generate Winner
+            <button id="generate-first" class="winner-button px-8 py-3 bg-purple-700 text-white font-semibold rounded-full shadow-lg hover:bg-purple-800 transition duration-300 ease-in-out">
+                Generate Winner
             </button>
         </div>
 
@@ -346,27 +346,16 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, setDoc, query, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-        
-        // Provided Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCcuFTwygQ5-KujxUdv45b2TPY5yQXVVTo",
-            authDomain: "snehanidhi-74ff0.firebaseapp.com",
-            projectId: "snehanidhi-74ff0",
-            storageBucket: "snehanidhi-74ff0.firebasestorage.app",
-            messagingSenderId: "726238156431",
-            appId: "1:726238156431:web:e60b0b5ed66f2d628342fa",
-            measurementId: "G-7ZW0ZSQGLZ"
-        };
-        
-        // Global variables for Firebase services and the database instance
+
+        // IMPORTANT: Use the provided environment variables
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
         let db = null;
         let auth = null;
         let userId = null;
         let userName = null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : JSON.stringify(firebaseConfig);
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
         const userInfoElement = document.getElementById('user-info');
         let currentWinnerData = null; // A global variable to store the winner data for the current month
 
@@ -375,10 +364,15 @@
          */
         async function initializeFirebase() {
             try {
-                const firebaseApp = initializeApp(JSON.parse(firebaseConfigString));
+                if (Object.keys(firebaseConfig).length === 0) {
+                    console.error("Firebase config is empty. Initialization aborted.");
+                    statusMessageElement.textContent = "Error: Firebase configuration is missing.";
+                    return;
+                }
+                const firebaseApp = initializeApp(firebaseConfig);
                 db = getFirestore(firebaseApp);
                 auth = getAuth(firebaseApp);
-                
+
                 // Set up the authentication state listener
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
@@ -389,10 +383,11 @@
                             <p class="font-semibold text-gray-800">Logged in as: ${userName}</p>
                             <p class="text-gray-500">User ID: ${userId}</p>
                         `;
+                        // Now that the user is logged in, initialize the rest of the app
                         await initializeSnehaNidhiData();
                         await loadPreviousWinners();
                     } else {
-                        console.log("User is not authenticated. Awaiting login.");
+                        console.log("User is not authenticated. Enabling login button.");
                         userId = null;
                         userName = null;
                         userInfoElement.textContent = "Please log in to generate a winner.";
@@ -402,8 +397,17 @@
                         statusMessageElement.textContent = `Please click the 'Login to Generate Winner' button.`;
                     }
                 });
+                
+                // Attempt to sign in with the provided token, if available
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
             } catch (error) {
                 console.error("ERROR: Failed to initialize Firebase or authenticate:", error);
+                statusMessageElement.textContent = `Initialization failed. Error: ${error.message}`;
             }
         }
 
@@ -443,7 +447,7 @@
                             data.timestamp.toDate().toLocaleString()
                         ]);
                     });
-                    
+
                     winnersData.sort((a, b) => new Date(b[4]) - new Date(a[4]));
 
                     if (winnersData.length > 0) {
@@ -493,7 +497,7 @@
         function delay(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
-        
+
         function initializeConfetti() {
             if (confettiCanvas && !confettiInstance) {
                 confettiInstance = confetti.create(confettiCanvas, { resize: true, useWorker: false });
@@ -565,7 +569,7 @@
                 shapes: confettiDrawFunctions
             });
         }
-        
+
         function disableAllGenerateButtons() {
             generateButtons.forEach(button => button.disabled = true);
         }
@@ -665,7 +669,7 @@
         async function initializeSnehaNidhiData() {
             statusMessageElement.textContent = "Loading ticket data...";
             disableAllGenerateButtons();
-            
+
             const currentDate = new Date();
             const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
             firstWinnerHeading.textContent = `${monthAndYear} Winning Number`;
@@ -713,12 +717,10 @@
                     const newMonthAndYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
                     statusMessageElement.textContent = `Sneha Nidhi data loaded successfully! Click 'Generate ${newMonthAndYear} Winner' to begin.`;
                     firstPlaceSection.classList.remove('inactive-section');
-                    // Only enable the button if authenticated. This logic will be handled by onAuthStateChanged.
+                    // Enable button if an authenticated user is present
                     if (auth.currentUser) {
                         generateFirstBtn.disabled = false;
                         generateFirstBtn.textContent = `Generate ${newMonthAndYear} Winner`;
-                    } else {
-                        generateFirstBtn.textContent = 'Login to Generate Winner';
                     }
                 }
             }
@@ -908,11 +910,11 @@
             resetSnehaNidhiBtn.disabled = false;
             resetSnehaNidhiBtn.classList.remove('bg-gray-300');
             resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
-            
+
             const currentDate = new Date();
             const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
             saveWinnerToFirestore(finalFirstWinner, monthAndYear);
-            
+
             await loadPreviousWinners();
         }
 
