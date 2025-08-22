@@ -10,8 +10,9 @@
     <!-- Confetti library for celebration effect -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
-    <!-- Grids.js Stylesheet -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/gridsjs/6.0.0/mermaid.min.css" rel="stylesheet" />
+    <!-- NEW: Tabulator.js Stylesheet -->
+    <link href="https://unpkg.com/tabulator-tables@6.2.1/dist/css/tabulator_semanticui.min.css" rel="stylesheet">
+    <!-- Using the semantic UI theme for a cleaner look -->
 
     <style>
         /* Apply the Inter font globally and set a light background color */
@@ -409,7 +410,7 @@
         <!-- Previous Winners Section -->
         <div id="previous-winners-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Previous Winners</h2>
-            <div id="previous-winners-grid" class="w-full"></div>
+            <div id="previous-winners-table" class="w-full"></div>
         </div>
     </div>
 
@@ -419,15 +420,15 @@
         <p>Powered by <a href="#" class="text-blue-400 hover:underline">DataWings Solution</a></p>
     </footer>
 
-    <!-- Grids.js Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gridsjs/6.0.0/grids.min.js"></script>
-
     <!-- Firebase SDKs -->
     <script type="module">
         // Firebase SDKs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, setDoc, query, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+        // NEW: Tabulator.js Library
+        import Tabulator from "https://unpkg.com/tabulator-tables@6.2.1/dist/js/tabulator_esm.min.js";
 
         // Firebase configuration hardcoded as requested
         const firebaseConfig = {
@@ -466,6 +467,8 @@
         const modalTitle = document.getElementById('modal-title');
         const modalBody = document.getElementById('modal-body');
         const modalCloseBtn = document.getElementById('modal-close-btn');
+        const previousWinnersTable = document.getElementById('previous-winners-table');
+        let table = null;
 
         // Function to show the modal
         function showModal(title, message) {
@@ -1017,12 +1020,7 @@
                 return;
             }
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const previousWinnersGrid = document.getElementById('previous-winners-grid');
-            if (!previousWinnersGrid) {
-                console.error("Previous winners grid element not found.");
-                return;
-            }
-
+            
             // Unsubscribe from any previous listener to prevent duplicates
             if (unsubscribeWinnersListener) {
                 unsubscribeWinnersListener();
@@ -1036,28 +1034,37 @@
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     winnersData.push({
-                        'Month & Year': data.monthAndYear,
-                        'Winning Number': data.winner,
-                        'Drawn By': data.userName,
-                        'Date Drawn': data.timestamp ? data.timestamp.toDate().toLocaleDateString() : 'N/A'
+                        'monthAndYear': data.monthAndYear,
+                        'winner': data.winner,
+                        'drawnBy': data.userName,
+                        'dateDrawn': data.timestamp ? data.timestamp.toDate().toLocaleDateString() : 'N/A'
                     });
                 });
 
                 if (winnersData.length > 0) {
-                    // Sort the winners by timestamp in descending order
-                    winnersData.sort((a, b) => new Date(b['Date Drawn']) - new Date(a['Date Drawn']));
-
-                    // Re-render the grid with the new data
-                    new Grid({
-                        columns: ['Month & Year', 'Winning Number', 'Drawn By', 'Date Drawn'],
-                        data: winnersData,
-                        sort: true, // Enable sorting
-                        pagination: { // Enable pagination
-                            limit: 10
-                        }
-                    }).render(previousWinnersGrid);
-                } else {
-                    previousWinnersGrid.textContent = "No previous winners found.";
+                    // Sort the winners by timestamp in descending order before rendering
+                    winnersData.sort((a, b) => new Date(b.dateDrawn) - new Date(a.dateDrawn));
+                    
+                    if (table) {
+                        table.replaceData(winnersData);
+                    } else {
+                        // Initialize Tabulator table if it doesn't exist
+                        table = new Tabulator(previousWinnersTable, {
+                            data: winnersData,
+                            layout: "fitColumns", //fit columns to width of table (optional)
+                            columns: [
+                                { title: "Month & Year", field: "monthAndYear", responsive: 0 },
+                                { title: "Winning Number", field: "winner", responsive: 0 },
+                                { title: "Drawn By", field: "drawnBy", responsive: 0 },
+                                { title: "Date Drawn", field: "dateDrawn", responsive: 0 },
+                            ],
+                            pagination: "local",
+                            paginationSize: 10,
+                            placeholder: "No previous winners found.",
+                        });
+                    }
+                } else if (table) {
+                    table.clearData();
                 }
             }, (error) => {
                 console.error("Error with real-time Firestore listener:", error);
@@ -1168,8 +1175,8 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             await initializeFirebase(firebaseConfig);
-            // This call should be made after DOMContentLoaded so that the grid element exists
-            // and the gridsjs script is loaded.
+            // This call should be made after DOMContentLoaded so that the table element exists
+            // and the Tabulator.js script is loaded.
             loadPreviousWinners();
         });
 
