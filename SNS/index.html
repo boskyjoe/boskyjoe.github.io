@@ -309,51 +309,56 @@
         /* Custom Styles for the Tabulator Table (Previous Winners) */
         #previous-winners-table {
             border-radius: 0.75rem;
+            border: 1px solid #d1d5db; /* A light border for the whole table */
             overflow: hidden;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1),
-                        0 6px 6px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08); /* A softer shadow */
         }
 
         /* Style the table header */
         .tabulator .tabulator-header {
-            background: linear-gradient(135deg, #4F46E5, #6366f1);
+            background-color: #1f2937; /* A solid dark gray/blue */
             color: white;
             font-weight: bold;
+            border-bottom: 2px solid #6b7280;
         }
 
         /* Style header cells */
         .tabulator .tabulator-header .tabulator-col {
-            border-right: none;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
         }
-
-        /* Add bottom border to the header for separation */
-        .tabulator .tabulator-header {
-            border-bottom: 3px solid #6366f1;
+        /* Style the last header cell to have no right border */
+        .tabulator .tabulator-header .tabulator-col:last-child {
+            border-right: none;
         }
 
         /* Style the table rows */
         .tabulator .tabulator-row {
             background-color: #fff;
             border-bottom: 1px solid #e5e7eb;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.2s ease;
         }
 
         /* Hover effect for rows */
         .tabulator .tabulator-row:hover {
-            background-color: #f3f4f6;
+            background-color: #f9fafb;
         }
 
         /* Style the cells */
         .tabulator .tabulator-cell {
             padding: 1rem;
-            border-right: none;
+            border-right: 1px solid #e5e7eb;
             font-weight: 500;
+        }
+
+        /* Style the last cell to have no right border */
+        .tabulator .tabulator-cell:last-child {
+            border-right: none;
         }
 
         /* Style the paginator */
         .tabulator-paginator {
-            background-color: #f9fafb;
-            border-top: 1px solid #e5e7eb;
+            background-color: #f3f4f6;
+            border-top: 1px solid #d1d5db;
             padding: 1rem;
             border-bottom-left-radius: 0.75rem;
             border-bottom-right-radius: 0.75rem;
