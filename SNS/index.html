@@ -29,11 +29,9 @@
             width: 100%;
             height: 100%;
             /*
-            * This image is a placeholder. You'll need to provide the actual image.
-            * Use a URL that can be accessed externally. For example:
-            * https://placehold.co/1920x1080/E2E8F0/94A3B8?text=SSC.jpg
+            * NOTE: This path is now relative to your project's root directory, assuming an "images" folder.
             */
-            background-image: url('https://placehold.co/1920x1080/E2E8F0/94A3B8?text=SSC.jpg');
+            background-image: url('images/SSC.jpg');
             background-repeat: no-repeat;
             background-position: center center;
             background-size: cover;
@@ -50,14 +48,12 @@
         /* Subtle diagonal stripes pattern for the main content box */
         .main-content-pattern {
             /*
-            * This image is a placeholder. You'll need to provide the actual image.
-            * Use a URL that can be accessed externally. For example:
-            * https://placehold.co/600x600/E2E8F0/94A3B8?text=chits.png
+            * NOTE: Replace this with your public image URL. Example: url('https://your-domain.com/images/chits.png')
             */
-            background-image: url('https://placehold.co/600x600/E2E8F0/94A3B8?text=chits.png');
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Chit_fund.jpg/640px-Chit_fund.jpg');
             background-repeat: no-repeat;
             background-position: center center;
-            background-size: contain; /* Ensure the image fits within the container */
+            background-size: cover; /* Ensure the image fits within the container */
             opacity: 0.3; /* Adjust opacity for subtlety */
             position: absolute;
             top: 0;
