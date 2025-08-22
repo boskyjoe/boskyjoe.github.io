@@ -250,6 +250,54 @@
                         -2px -2px 5px rgba(255, 255, 255, 0.7) inset,
                         2px 2px 5px rgba(0, 0, 0, 0.1) inset;
         }
+
+        /* New Modal Styling */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 2rem;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 1rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-content textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 1rem;
+            font-family: monospace;
+            border: 1px solid #ccc;
+            border-radius: 0.5rem;
+            resize: vertical;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 1rem;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -335,6 +383,18 @@
         </div>
     </div>
 
+    <!-- Firebase Config Modal -->
+    <div id="firebaseConfigModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-xl font-bold text-center mb-4">Enter Firebase Configuration</h2>
+            <p class="text-sm text-gray-600 mb-4">It seems the Firebase configuration was not automatically loaded. Please paste the config object from your Firebase project settings below to continue.</p>
+            <textarea id="configTextArea" placeholder="{&#10;  &quot;apiKey&quot;: &quot;YOUR_API_KEY&quot;,&#10;  ...&#10;}"></textarea>
+            <div class="modal-buttons">
+                <button id="saveConfigBtn" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Save & Continue</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer Section -->
     <footer class="w-full bg-gray-800 text-gray-300 text-center py-4 mt-10 text-sm relative z-10">
         <p>&copy; 2025 St. Sebastian's Church. All rights reserved.</p>
@@ -347,11 +407,17 @@
         import { getFirestore, collection, getDocs, doc, setDoc, query, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-        // IMPORTANT: Use the provided environment variables
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
+        // Firebase configuration provided by the user
+        const firebaseConfig = {
+          apiKey: "AIzaSyCcuFTwygQ5-KujxUdv45b2TPY5yQXVVTo",
+          authDomain: "snehanidhi-74ff0.firebaseapp.com",
+          projectId: "snehanidhi-74ff0",
+          storageBucket: "snehanidhi-74ff0.firebasestorage.app",
+          messagingSenderId: "726238156431",
+          appId: "1:726238156431:web:e60b0b5ed66f2d628342fa",
+          measurementId: "G-7ZW0ZSQGLZ"
+        };
+        
         let db = null;
         let auth = null;
         let userId = null;
@@ -359,19 +425,23 @@
         const userInfoElement = document.getElementById('user-info');
         let currentWinnerData = null; // A global variable to store the winner data for the current month
 
+        // The modal is no longer needed since the config is hardcoded
+        const firebaseConfigModal = document.getElementById('firebaseConfigModal');
+        const configTextArea = document.getElementById('configTextArea');
+        const saveConfigBtn = document.getElementById('saveConfigBtn');
+        firebaseConfigModal.style.display = 'none';
+
         /**
          * Initializes Firebase and sets up the auth listener.
+         * @param {object} firebaseConfig - The Firebase config object.
          */
-        async function initializeFirebase() {
+        async function initializeFirebase(config) {
             try {
-                if (Object.keys(firebaseConfig).length === 0) {
-                    console.error("Firebase config is empty. Initialization aborted.");
-                    statusMessageElement.textContent = "Error: Firebase configuration is missing.";
-                    return;
-                }
-                const firebaseApp = initializeApp(firebaseConfig);
+                const firebaseApp = initializeApp(config);
                 db = getFirestore(firebaseApp);
                 auth = getAuth(firebaseApp);
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
                 // Set up the authentication state listener
                 onAuthStateChanged(auth, async (user) => {
@@ -397,14 +467,13 @@
                         statusMessageElement.textContent = `Please click the 'Login to Generate Winner' button.`;
                     }
                 });
-                
+
                 // Attempt to sign in with the provided token, if available
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
                     await signInAnonymously(auth);
                 }
-                
             } catch (error) {
                 console.error("ERROR: Failed to initialize Firebase or authenticate:", error);
                 statusMessageElement.textContent = `Initialization failed. Error: ${error.message}`;
@@ -434,6 +503,7 @@
                 return;
             }
             try {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
                 const winnersCollection = collection(db, `/artifacts/${appId}/public/data/winners`);
                 onSnapshot(winnersCollection, (querySnapshot) => {
                     const winnersData = [];
@@ -645,6 +715,7 @@
                 console.error("Firestore not initialized. Cannot check for existing winner.");
                 return false;
             }
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
             const currentDate = new Date();
             const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
             const docId = monthAndYear.replace(/\s/g, '');
@@ -824,7 +895,7 @@
                 console.error("Firestore not initialized. Cannot save winner.");
                 return;
             }
-
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
             try {
                 const docId = monthAndYear.replace(/\s/g, '');
                 const docRef = doc(db, `/artifacts/${appId}/public/data/winners`, docId);
@@ -927,7 +998,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            await initializeFirebase();
+            await initializeFirebase(firebaseConfig);
         });
 
         document.addEventListener('contextmenu', event => event.preventDefault());
