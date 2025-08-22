@@ -428,6 +428,17 @@
         const firebaseConfigModal = document.getElementById('firebaseConfigModal');
         firebaseConfigModal.style.display = 'none';
 
+        // Get references to key UI elements
+        const statusMessageElement = document.getElementById('status-message');
+        const actionButton = document.getElementById('action-button');
+        const resetSnehaNidhiBtn = document.getElementById('reset-snehanidhi-btn');
+        const firstPlaceSection = document.getElementById('first-place-section');
+        const firstWinnerHeading = document.getElementById('first-winner-heading');
+        const poweredBySection = document.getElementById('powered-by-section');
+        const countdownTimerElement = document.getElementById('countdown-timer');
+        const confettiCanvas = document.getElementById('confetti-canvas');
+        const userInfoElement = document.getElementById('user-info'); // Correctly define userInfoElement
+
         /**
          * Initializes Firebase and sets up the auth listener.
          * @param {object} firebaseConfig - The Firebase config object.
@@ -452,7 +463,9 @@
 
             } catch (error) {
                 console.error("ERROR: Failed to initialize Firebase or authenticate:", error);
-                statusMessageElement.textContent = `Initialization failed. Error: ${error.message}`;
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = `Initialization failed. Error: ${error.message}`;
+                }
             }
         }
 
@@ -461,7 +474,10 @@
          * @param {object} user - The authenticated user object or null.
          */
         function updateUIForAuthState(user) {
-            const actionButton = document.getElementById('action-button');
+            if (!actionButton || !userInfoElement || !statusMessageElement) {
+                console.error("UI elements not found. Cannot update UI.");
+                return;
+            }
 
             if (user) {
                 console.log("User is authenticated:", user.uid);
@@ -502,7 +518,9 @@
                 // The onAuthStateChanged listener will handle the rest
             } catch (error) {
                 console.error("Error during Google Sign-In:", error);
-                statusMessageElement.textContent = `Login failed: ${error.message}`;
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = `Login failed: ${error.message}`;
+                }
             }
         }
 
@@ -565,15 +583,6 @@
         let finalFirstWinner = '---';
         let confettiInstance = null;
         let confettiDrawFunctions = [];
-
-        const statusMessageElement = document.getElementById('status-message');
-        const actionButton = document.getElementById('action-button');
-        const resetSnehaNidhiBtn = document.getElementById('reset-snehanidhi-btn');
-        const firstPlaceSection = document.getElementById('first-place-section');
-        const firstWinnerHeading = document.getElementById('first-winner-heading');
-        const poweredBySection = document.getElementById('powered-by-section');
-        const countdownTimerElement = document.getElementById('countdown-timer');
-        const confettiCanvas = document.getElementById('confetti-canvas');
 
         function delay(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
@@ -652,8 +661,12 @@
         }
 
         function disableAllButtons() {
-            actionButton.disabled = true;
-            resetSnehaNidhiBtn.disabled = true;
+            if (actionButton) {
+                actionButton.disabled = true;
+            }
+            if (resetSnehaNidhiBtn) {
+                resetSnehaNidhiBtn.disabled = true;
+            }
         }
 
         async function clearDisplayedWinners() {
@@ -685,15 +698,18 @@
 
             await Promise.all(animations);
 
-            poweredBySection.classList.add('hidden');
-            poweredBySection.classList.remove('fade-out-and-hide-animation');
-            poweredBySection.classList.remove('from-purple-100', 'to-purple-200');
-            poweredBySection.querySelector('svg').classList.remove('text-purple-700');
-            poweredBySection.querySelector('p').classList.remove('text-purple-800');
-            poweredBySection.style.cssText = '';
-
-            countdownTimerElement.classList.remove('visible');
-            countdownTimerElement.textContent = '';
+            if (poweredBySection) {
+                poweredBySection.classList.add('hidden');
+                poweredBySection.classList.remove('fade-out-and-hide-animation');
+                poweredBySection.classList.remove('from-purple-100', 'to-purple-200');
+                poweredBySection.querySelector('svg').classList.remove('text-purple-700');
+                poweredBySection.querySelector('p').classList.remove('text-purple-800');
+                poweredBySection.style.cssText = '';
+            }
+            if (countdownTimerElement) {
+                countdownTimerElement.classList.remove('visible');
+                countdownTimerElement.textContent = '';
+            }
         }
 
         async function fetchTicketNumbers(filePath) {
@@ -716,7 +732,9 @@
                 return tickets;
             } catch (error) {
                 console.error(`ERROR: Failed to fetch or parse ${filePath}:`, error);
-                statusMessageElement.textContent = `Error loading ticket data from '${filePath}'. Please ensure the file exists in the same directory as your HTML, contains valid alphanumeric tickets (one per line or comma-separated), and is correctly formatted.`;
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = `Error loading ticket data from '${filePath}'. Please ensure the file exists in the same directory as your HTML, contains valid alphanumeric tickets (one per line or comma-separated), and is correctly formatted.`;
+                }
                 disableAllButtons();
                 return Promise.reject(error);
             }
@@ -750,27 +768,39 @@
         }
 
         async function initializeSnehaNidhiData() {
-            statusMessageElement.textContent = "Loading ticket data...";
+            if (statusMessageElement) {
+                statusMessageElement.textContent = "Loading ticket data...";
+            }
             disableAllButtons();
 
             const currentDate = new Date();
             const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-            firstWinnerHeading.textContent = `${monthAndYear} Winning Number`;
+            if (firstWinnerHeading) {
+                firstWinnerHeading.textContent = `${monthAndYear} Winning Number`;
+            }
 
             allTimePickedTickets.clear();
             finalFirstWinner = '---';
 
-            firstPlaceSection.classList.add('inactive-section');
-            resetSnehaNidhiBtn.disabled = true;
-            resetSnehaNidhiBtn.classList.add('bg-gray-300');
-            resetSnehaNidhiBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+            if (firstPlaceSection) {
+                firstPlaceSection.classList.add('inactive-section');
+            }
+            if (resetSnehaNidhiBtn) {
+                resetSnehaNidhiBtn.disabled = true;
+                resetSnehaNidhiBtn.classList.add('bg-gray-300');
+                resetSnehaNidhiBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+            }
 
-            poweredBySection.classList.add('hidden');
-            poweredBySection.classList.remove('fade-out-and-hide-animation');
-            poweredBySection.style.cssText = '';
+            if (poweredBySection) {
+                poweredBySection.classList.add('hidden');
+                poweredBySection.classList.remove('fade-out-and-hide-animation');
+                poweredBySection.style.cssText = '';
+            }
 
-            countdownTimerElement.classList.remove('visible');
-            countdownTimerElement.textContent = '';
+            if (countdownTimerElement) {
+                countdownTimerElement.classList.remove('visible');
+                countdownTimerElement.textContent = '';
+            }
 
             initializeConfetti();
             await preloadConfettiImages();
@@ -782,33 +812,50 @@
                 console.log("DEBUG: Fetched winners.txt unique length:", snehanidhiTicketsWinners.length);
 
                 if (snehanidhiTicketsWinners.length < 1) {
-                    statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${snehanidhiTicketsWinners.length} unique tickets (needs at least 1 for 1st place). Please populate your file with more unique alphanumeric tickets.`;
+                    if (statusMessageElement) {
+                        statusMessageElement.textContent = `Error: Not enough unique ticket numbers available. 'winners.txt' has ${snehanidhiTicketsWinners.length} unique tickets (needs at least 1 for 1st place). Please populate your file with more unique alphanumeric tickets.`;
+                    }
                     disableAllButtons();
                     return;
                 }
 
                 const winnerExists = await checkForExistingWinner();
                 if (winnerExists && currentWinnerData) {
-                    firstWinnerHeading.textContent = `${currentWinnerData.monthAndYear} Winning Number`;
-                    document.getElementById('first-primary').textContent = currentWinnerData.winner;
-                    statusMessageElement.textContent = `Winner for ${currentWinnerData.monthAndYear} has already been drawn: ${currentWinnerData.winner}. Click 'Reset SnehaNidhi' to start a new month.`;
+                    if (firstWinnerHeading) {
+                        firstWinnerHeading.textContent = `${currentWinnerData.monthAndYear} Winning Number`;
+                    }
+                    const firstPrimary = document.getElementById('first-primary');
+                    if (firstPrimary) {
+                        firstPrimary.textContent = currentWinnerData.winner;
+                    }
+                    if (statusMessageElement) {
+                        statusMessageElement.textContent = `Winner for ${currentWinnerData.monthAndYear} has already been drawn: ${currentWinnerData.winner}. Click 'Reset SnehaNidhi' to start a new month.`;
+                    }
                     disableAllButtons();
-                    resetSnehaNidhiBtn.disabled = false;
-                    resetSnehaNidhiBtn.classList.remove('bg-gray-300');
-                    resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                    if (resetSnehaNidhiBtn) {
+                        resetSnehaNidhiBtn.disabled = false;
+                        resetSnehaNidhiBtn.classList.remove('bg-gray-300');
+                        resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                    }
                 } else {
                     const newMonthAndYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-                    statusMessageElement.textContent = `Sneha Nidhi data loaded successfully! Click 'Generate Winner' to begin.`;
-                    firstPlaceSection.classList.remove('inactive-section');
+                    if (statusMessageElement) {
+                        statusMessageElement.textContent = `Sneha Nidhi data loaded successfully! Click 'Generate Winner' to begin.`;
+                    }
+                    if (firstPlaceSection) {
+                        firstPlaceSection.classList.remove('inactive-section');
+                    }
                     // Re-enable the action button if a user is logged in
-                    if (auth.currentUser) {
+                    if (auth.currentUser && actionButton) {
                         actionButton.disabled = false;
                     }
                 }
             }
             catch (error) {
                 console.error("ERROR: Initialization failed in initializeSnehaNidhiData:", error);
-                statusMessageElement.textContent = `Failed to initialize SnehaNidhi data. Please check console for details. Ensure 'winners.txt' is correctly placed and formatted.`;
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = `Failed to initialize SnehaNidhi data. Please check console for details. Ensure 'winners.txt' is correctly placed and formatted.`;
+                }
                 disableAllButtons();
             }
         }
@@ -832,11 +879,15 @@
 
             if (availableTickets.length === 0) {
                 console.warn("WARNING: Not enough unique tickets available in the source pool.");
-                statusMessageElement.textContent = "All unique tickets have been drawn! Please add more tickets to the file to continue.";
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = "All unique tickets have been drawn! Please add more tickets to the file to continue.";
+                }
                 disableAllButtons();
-                resetSnehaNidhiBtn.disabled = false;
-                resetSnehaNidhiBtn.classList.remove('bg-gray-300');
-                resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                if (resetSnehaNidhiBtn) {
+                    resetSnehaNidhiBtn.disabled = false;
+                    resetSnehaNidhiBtn.classList.remove('bg-gray-300');
+                    resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                }
                 return "N/A";
             }
 
@@ -890,20 +941,22 @@
         }
 
         async function startCountdown(seconds) {
-            countdownTimerElement.classList.add('visible');
-            for (let i = seconds; i > 0; i--) {
-                countdownTimerElement.textContent = i;
-                await delay(1000);
+            if (countdownTimerElement) {
+                countdownTimerElement.classList.add('visible');
+                for (let i = seconds; i > 0; i--) {
+                    countdownTimerElement.textContent = i;
+                    await delay(1000);
+                }
+                countdownTimerElement.textContent = 'GO!';
+                await delay(500);
+                countdownTimerElement.classList.remove('visible');
+                countdownTimerElement.textContent = '';
             }
-            countdownTimerElement.textContent = 'GO!';
-            await delay(500);
-            countdownTimerElement.classList.remove('visible');
-            countdownTimerElement.textContent = '';
         }
 
         async function saveWinnerToFirestore(winnerTicket, monthAndYear) {
-            if (!db) {
-                console.error("Firestore not initialized. Cannot save winner.");
+            if (!db || !auth.currentUser) {
+                console.error("Firestore not initialized or user not authenticated. Cannot save winner.");
                 return;
             }
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -930,47 +983,61 @@
         async function startWinnerGeneration() {
             const winnerExists = await checkForExistingWinner();
             if (winnerExists) {
-                statusMessageElement.textContent = `A winner for ${currentWinnerData.monthAndYear} has already been drawn. Click 'Reset SnehaNidhi' to start a new month.`;
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = `A winner for ${currentWinnerData.monthAndYear} has already been drawn. Click 'Reset SnehaNidhi' to start a new month.`;
+                }
                 disableAllButtons();
-                resetSnehaNidhiBtn.disabled = false;
-                resetSnehaNidhiBtn.classList.remove('bg-gray-300');
-                resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                if (resetSnehaNidhiBtn) {
+                    resetSnehaNidhiBtn.disabled = false;
+                    resetSnehaNidhiBtn.classList.remove('bg-gray-300');
+                    resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                }
                 return;
             }
 
             const primaryElement = document.getElementById(`first-primary`);
-            actionButton.disabled = true;
+            if (actionButton) {
+                actionButton.disabled = true;
+            }
 
-            statusMessageElement.textContent = "Drawing winner...";
+            if (statusMessageElement) {
+                statusMessageElement.textContent = "Drawing winner...";
+            }
 
-            poweredBySection.classList.remove('hidden', 'fade-out-and-hide-animation');
-            poweredBySection.style.opacity = '1';
-            poweredBySection.style.maxHeight = '100px';
-            poweredBySection.style.paddingTop = '1.5rem';
-            poweredBySection.style.paddingBottom = '1.5rem';
-            poweredBySection.style.marginTop = '2rem';
-            poweredBySection.style.marginBottom = '2rem';
-            poweredBySection.style.display = 'flex';
-            void poweredBySection.offsetWidth;
+            if (poweredBySection) {
+                poweredBySection.classList.remove('hidden', 'fade-out-and-hide-animation');
+                poweredBySection.style.opacity = '1';
+                poweredBySection.style.maxHeight = '100px';
+                poweredBySection.style.paddingTop = '1.5rem';
+                poweredBySection.style.paddingBottom = '1.5rem';
+                poweredBySection.style.marginTop = '2rem';
+                poweredBySection.style.marginBottom = '2rem';
+                poweredBySection.style.display = 'flex';
+                void poweredBySection.offsetWidth;
 
-            poweredBySection.classList.remove('from-teal-100', 'to-cyan-200');
-            poweredBySection.querySelector('svg').classList.remove('text-teal-700');
-            poweredBySection.querySelector('p').classList.remove('text-teal-800');
+                poweredBySection.classList.remove('from-teal-100', 'to-cyan-200');
+                poweredBySection.querySelector('svg').classList.remove('text-teal-700');
+                poweredBySection.querySelector('p').classList.remove('text-teal-800');
 
-            poweredBySection.classList.add('from-purple-100', 'to-purple-200');
-            poweredBySection.querySelector('svg').classList.add('text-purple-700');
-            poweredBySection.querySelector('p').classList.add('text-purple-800');
+                poweredBySection.classList.add('from-purple-100', 'to-purple-200');
+                poweredBySection.querySelector('svg').classList.add('text-purple-700');
+                poweredBySection.querySelector('p').classList.add('text-purple-800');
+            }
 
             await startCountdown(3);
 
             const primaryWinner = pickSingleUniqueTicket(snehanidhiTicketsWinners);
-            await animateNumberReveal(primaryElement, primaryWinner, 10000);
+            if (primaryElement) {
+                await animateNumberReveal(primaryElement, primaryWinner, 10000);
+            }
 
-            poweredBySection.classList.add('fade-out-and-hide-animation');
-            poweredBySection.addEventListener('animationend', function handler() {
-                poweredBySection.classList.add('hidden');
-                poweredBySection.removeEventListener('animationend', handler);
-            }, { once: true });
+            if (poweredBySection) {
+                poweredBySection.classList.add('fade-out-and-hide-animation');
+                poweredBySection.addEventListener('animationend', function handler() {
+                    poweredBySection.classList.add('hidden');
+                    poweredBySection.removeEventListener('animationend', handler);
+                }, { once: true });
+            }
 
             if (primaryWinner === "N/A") {
                 console.warn("Winning Number could not be drawn (N/A). Stopping draw.");
@@ -980,14 +1047,18 @@
             finalFirstWinner = primaryWinner;
             await delay(1000);
 
-            statusMessageElement.textContent = "The winner has been drawn! Click 'Reset SnehaNidhi' to start a new draw.";
+            if (statusMessageElement) {
+                statusMessageElement.textContent = "The winner has been drawn! Click 'Reset SnehaNidhi' to start a new draw.";
+            }
             disableAllButtons();
 
             triggerCurrencyEffect();
 
-            resetSnehaNidhiBtn.disabled = false;
-            resetSnehaNidhiBtn.classList.remove('bg-gray-300');
-            resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+            if (resetSnehaNidhiBtn) {
+                resetSnehaNidhiBtn.disabled = false;
+                resetSnehaNidhiBtn.classList.remove('bg-gray-300');
+                resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+            }
 
             const currentDate = new Date();
             const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
