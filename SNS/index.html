@@ -398,11 +398,10 @@
                 db = getFirestore(firebaseApp);
                 auth = getAuth(firebaseApp);
                 
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                // FIX: Removed the custom token logic to resolve the 'admin-restricted-operation' error.
+                // We will now use anonymous authentication as the default.
+                // This ensures the app can always initialize and interact with Firestore.
+                await signInAnonymously(auth);
 
                 // Set up the authentication state listener
                 onAuthStateChanged(auth, async (user) => {
@@ -411,8 +410,8 @@
                         userId = user.uid;
                         // Display user info
                         userInfoElement.innerHTML = `
-                            <p class="font-semibold text-gray-800">Logged in as: ${user.displayName || user.email}</p>
-                            <p class="text-gray-500">Email: ${user.email}</p>
+                            <p class="font-semibold text-gray-800">Logged in as: ${user.displayName || user.email || 'Anonymous'}</p>
+                            <p class="text-gray-500">User ID: ${user.uid}</p>
                         `;
                         // Initialize app data only after successful login
                         await initializeSnehaNidhiData();
