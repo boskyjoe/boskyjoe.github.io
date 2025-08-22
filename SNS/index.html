@@ -445,6 +445,7 @@
         let userName = null;
         let currentWinnerData = null; // A global variable to store the winner data for the current month
         const provider = new GoogleAuthProvider();
+        let unsubscribeWinnersListener = null;
 
         // Get references to key UI elements
         const statusMessageElement = document.getElementById('status-message');
@@ -1006,7 +1007,10 @@
             }
         }
 
-        async function loadPreviousWinners() {
+        /**
+         * Loads and displays previous winners from Firestore using a real-time listener.
+         */
+        function loadPreviousWinners() {
             if (!db) {
                 console.error("Firestore not initialized. Cannot load previous winners.");
                 return;
@@ -1018,9 +1022,15 @@
                 return;
             }
 
-            try {
-                const winnersCollectionRef = collection(db, `/artifacts/${appId}/public/data/winners`);
-                const querySnapshot = await getDocs(winnersCollectionRef);
+            // Unsubscribe from any previous listener to prevent duplicates
+            if (unsubscribeWinnersListener) {
+                unsubscribeWinnersListener();
+            }
+
+            const winnersCollectionRef = collection(db, `/artifacts/${appId}/public/data/winners`);
+
+            // Listen to the collection for real-time updates
+            unsubscribeWinnersListener = onSnapshot(winnersCollectionRef, (querySnapshot) => {
                 const winnersData = [];
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
@@ -1035,21 +1045,25 @@
                 if (winnersData.length > 0) {
                     // Sort the winners by timestamp in descending order
                     winnersData.sort((a, b) => new Date(b['Date Drawn']) - new Date(a['Date Drawn']));
-                    // Re-render the grid
-                    // The gridsjs object should now be available
+
+                    // Re-render the grid with the new data
                     new gridsjs.Grid({
                         columns: ['Month & Year', 'Winning Number', 'Drawn By', 'Date Drawn'],
-                        data: winnersData
+                        data: winnersData,
+                        sort: true, // Enable sorting
+                        pagination: { // Enable pagination
+                            limit: 10
+                        }
                     }).render(previousWinnersGrid);
                 } else {
                     previousWinnersGrid.textContent = "No previous winners found.";
                 }
-
-            } catch (error) {
-                console.error("Error loading previous winners from Firestore:", error);
-                showModal("Loading Error", "Failed to load previous winners data from the database. Please check your network connection.");
-            }
+            }, (error) => {
+                console.error("Error with real-time Firestore listener:", error);
+                showModal("Loading Error", "Failed to load previous winners data. Please check your network connection.");
+            });
         }
+
 
         /**
          * This function contains the core logic for the winner generation animation and data saving.
@@ -1138,8 +1152,6 @@
             const currentDate = new Date();
             const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
             saveWinnerToFirestore(finalFirstWinner, monthAndYear);
-
-            await loadPreviousWinners();
         }
 
         if (resetSnehaNidhiBtn) {
@@ -1155,7 +1167,15 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             await initializeFirebase(firebaseConfig);
-            await loadPreviousWinners();
+            loadPreviousWinners();
+        });
+
+        // Add an unload listener to clean up the Firestore listener
+        window.addEventListener('beforeunload', () => {
+            if (unsubscribeWinnersListener) {
+                unsubscribeWinnersListener();
+                console.log("Unsubscribed from Firestore listener.");
+            }
         });
 
         document.addEventListener('contextmenu', event => event.preventDefault());
