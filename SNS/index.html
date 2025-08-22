@@ -417,18 +417,17 @@
           appId: "1:726238156431:web:e60b0b5ed66f2d628342fa",
           measurementId: "G-7ZW0ZSQGLZ"
         };
-        
+
         let db = null;
         let auth = null;
         let userId = null;
         let userName = null;
+        let loginAttempted = false; // Flag to prevent multiple login attempts
         const userInfoElement = document.getElementById('user-info');
         let currentWinnerData = null; // A global variable to store the winner data for the current month
 
         // The modal is no longer needed since the config is hardcoded
         const firebaseConfigModal = document.getElementById('firebaseConfigModal');
-        const configTextArea = document.getElementById('configTextArea');
-        const saveConfigBtn = document.getElementById('saveConfigBtn');
         firebaseConfigModal.style.display = 'none';
 
         /**
@@ -455,7 +454,13 @@
                         `;
                         // Now that the user is logged in, initialize the rest of the app
                         await initializeSnehaNidhiData();
-                        await loadPreviousWinners();
+
+                        // If a login was just completed from a button click, proceed with the draw
+                        if (loginAttempted) {
+                            loginAttempted = false; // Reset the flag
+                            await startWinnerGeneration();
+                        }
+
                     } else {
                         console.log("User is not authenticated. Enabling login button.");
                         userId = null;
@@ -463,8 +468,8 @@
                         userInfoElement.textContent = "Please log in to generate a winner.";
                         disableAllGenerateButtons();
                         generateFirstBtn.disabled = false;
-                        generateFirstBtn.textContent = 'Login to Generate Winner';
-                        statusMessageElement.textContent = `Please click the 'Login to Generate Winner' button.`;
+                        generateFirstBtn.textContent = 'Login with Google';
+                        statusMessageElement.textContent = `Please click the 'Login with Google' button.`;
                     }
                 });
 
@@ -912,15 +917,11 @@
             }
         }
 
-        async function updateWinnersDisplay() {
-            // Check for a logged-in user and if not, force the login
-            if (!auth.currentUser) {
-                console.log("User not logged in. Prompting for Google Sign-In.");
-                await signInWithGoogle();
-                // The onAuthStateChanged listener will handle the rest after login
-                return;
-            }
-
+        /**
+         * This function contains the core logic for the winner generation animation and data saving.
+         * It is called only after a user is confirmed to be authenticated.
+         */
+        async function startWinnerGeneration() {
             const winnerExists = await checkForExistingWinner();
             if (winnerExists) {
                 statusMessageElement.textContent = `A winner for ${currentWinnerData.monthAndYear} has already been drawn. Click 'Reset SnehaNidhi' to start a new month.`;
@@ -989,7 +990,19 @@
             await loadPreviousWinners();
         }
 
-        generateFirstBtn.addEventListener('click', updateWinnersDisplay);
+        /**
+         * The main entry point for the "Generate Winner" button click.
+         * This function now acts as a gatekeeper, ensuring the user is logged in before proceeding.
+         */
+        generateFirstBtn.addEventListener('click', () => {
+            if (!auth.currentUser) {
+                loginAttempted = true; // Set flag to indicate a login attempt
+                signInWithGoogle(); // Trigger the Google sign-in flow
+                // The rest of the logic will be handled by the onAuthStateChanged listener
+            } else {
+                startWinnerGeneration();
+            }
+        });
 
         if (resetSnehaNidhiBtn) {
             resetSnehaNidhiBtn.addEventListener('click', () => {
