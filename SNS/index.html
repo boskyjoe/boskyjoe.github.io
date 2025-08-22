@@ -13,8 +13,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <!-- Tabulator.js Stylesheet -->
-    <link href="https://unpkg.com/tabulator-tables@6.2.1/dist/css/tabulator_semanticui.min.css" rel="stylesheet">
-    <!-- Using the semantic UI theme for a cleaner look -->
+    <link href="https://unpkg.com/tabulator-tables@6.2.1/dist/css/tabulator_midnight.min.css" rel="stylesheet">
+    <!-- Using the midnight theme for a classic, professional look -->
 
     <!-- Tabulator.js Script (UMD version) -->
     <script src="https://unpkg.com/tabulator-tables@6.2.1/dist/js/tabulator.min.js"></script>
@@ -305,106 +305,93 @@
             justify-content: flex-end;
             margin-top: 1rem;
         }
-
-        /* Custom Styles for the Tabulator Table (Previous Winners) */
+        
+        /* BEGIN CUSTOM DHTML GRID STYLES */
         #previous-winners-table {
-            border-radius: 0.75rem;
-            border: 1px solid #d1d5db; /* A light border for the whole table */
+            border: 2px solid #a0a0a0;
+            border-radius: 0;
             overflow: hidden;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08); /* A softer shadow */
+            box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: #f0f0f0;
         }
 
-        /* Style the table header */
         .tabulator .tabulator-header {
-            background-color: #1f2937; /* A solid dark gray/blue */
-            color: white;
+            background-color: #d0d0d0;
+            color: #333;
             font-weight: bold;
-            border-bottom: 2px solid #6b7280;
+            font-size: 1rem;
+            border-bottom: 2px solid #808080;
+            position: relative;
         }
-
-        /* Style header cells */
+        /* DHTML 3D-effect for header */
+        .tabulator .tabulator-header:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            box-shadow: inset 1px 1px 2px #fff, inset -1px -1px 2px #999;
+            pointer-events: none;
+        }
+        /* DHTML-style header cell borders */
         .tabulator .tabulator-header .tabulator-col {
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid #888;
         }
-        /* Style the last header cell to have no right border */
         .tabulator .tabulator-header .tabulator-col:last-child {
             border-right: none;
         }
 
-        /* Style the table rows */
+        /* DHTML-style rows */
         .tabulator .tabulator-row {
-            background-color: #fff;
-            border-bottom: 1px solid #e5e7eb;
-            transition: background-color 0.2s ease;
+            background-color: #e0e0e0;
+            border-bottom: 1px solid #c0c0c0;
+            transition: none;
         }
-
-        /* Hover effect for rows */
+        /* Alternating row color */
+        .tabulator .tabulator-row:nth-of-type(even) {
+            background-color: #f0f0f0;
+        }
+        /* Hover effect */
         .tabulator .tabulator-row:hover {
-            background-color: #f9fafb;
+            background-color: #e8e8e8;
         }
 
-        /* Style the cells */
+        /* DHTML-style cells */
         .tabulator .tabulator-cell {
-            padding: 1rem;
-            border-right: 1px solid #e5e7eb;
-            font-weight: 500;
+            padding: 0.6rem;
+            border-right: 1px solid #c0c0c0;
+            font-weight: normal;
         }
-
-        /* Style the last cell to have no right border */
         .tabulator .tabulator-cell:last-child {
             border-right: none;
         }
 
-        /* Style the paginator */
+        /* DHTML-style pagination */
         .tabulator-paginator {
-            background-color: #f3f4f6;
-            border-top: 1px solid #d1d5db;
-            padding: 1rem;
-            border-bottom-left-radius: 0.75rem;
-            border-bottom-right-radius: 0.75rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .tabulator-page-size {
-            margin-right: 1rem;
-        }
-
-        .tabulator-page {
-            border: 1px solid #d1d5db;
-            background-color: #fff;
-            color: #4b5563;
-            border-radius: 0.5rem;
+            background-color: #d0d0d0;
+            border-top: 2px solid #a0a0a0;
             padding: 0.5rem 1rem;
-            margin: 0 0.25rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            border-radius: 0;
         }
-
-        .tabulator-page:hover {
-            background-color: #e5e7eb;
+        .tabulator-page {
+            border: 1px solid #a0a0a0;
+            background-color: #e0e0e0;
+            color: #333;
+            border-radius: 0;
+            padding: 0.2rem 0.8rem;
+            box-shadow: inset 1px 1px 1px #fff, inset -1px -1px 1px #888;
         }
-
         .tabulator-page.active {
-            background-color: #4F46E5;
-            color: white;
-            border-color: #4F46E5;
+            background-color: #c0c0c0;
+            color: #333;
+            border-color: #888;
+            box-shadow: inset 2px 2px 4px #888, inset -2px -2px 4px #fff;
         }
-
-        .tabulator .tabulator-footer {
-            border-top: none !important;
+        .tabulator-page:hover {
+            background-color: #f0f0f0;
         }
-
-        .tabulator-paginator .tabulator-page,
-        .tabulator-paginator .tabulator-page-size {
-             font-size: 0.875rem;
-        }
-
-        /* Custom styling for the sign out button icon */
-        #signout-btn i {
-            font-size: 1.25rem; /* Large icon size */
-        }
+        /* END CUSTOM DHTML GRID STYLES */
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
