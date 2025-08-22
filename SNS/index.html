@@ -1048,7 +1048,7 @@
                     winnersData.sort((a, b) => new Date(b['Date Drawn']) - new Date(a['Date Drawn']));
 
                     // Re-render the grid with the new data
-                    new gridsjs.Grid({
+                    new Grid({
                         columns: ['Month & Year', 'Winning Number', 'Drawn By', 'Date Drawn'],
                         data: winnersData,
                         sort: true, // Enable sorting
