@@ -466,9 +466,8 @@
                         userId = null;
                         userName = null;
                         userInfoElement.textContent = "Please log in to generate a winner.";
-                        disableAllGenerateButtons();
-                        generateFirstBtn.disabled = false;
                         generateFirstBtn.textContent = 'Login with Google';
+                        generateFirstBtn.disabled = false;
                         statusMessageElement.textContent = `Please click the 'Login with Google' button.`;
                     }
                 });
@@ -476,8 +475,6 @@
                 // Attempt to sign in with the provided token, if available
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
                 }
             } catch (error) {
                 console.error("ERROR: Failed to initialize Firebase or authenticate:", error);
