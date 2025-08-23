@@ -13,8 +13,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <!-- Tabulator.js Stylesheet -->
-    <link href="https://unpkg.com/tabulator-tables@6.2.1/dist/css/tabulator_midnight.min.css" rel="stylesheet">
-    <!-- Using the midnight theme for a classic, professional look -->
+    <link href="https://unpkg.com/tabulator-tables@6.2.1/dist/css/tabulator_semanticui.min.css" rel="stylesheet">
+    <!-- Using the semanticui theme for a clean, modern look -->
 
     <!-- Tabulator.js Script (UMD version) -->
     <script src="https://unpkg.com/tabulator-tables@6.2.1/dist/js/tabulator.min.js"></script>
@@ -305,93 +305,6 @@
             justify-content: flex-end;
             margin-top: 1rem;
         }
-        
-        /* BEGIN CUSTOM DHTML GRID STYLES */
-        #previous-winners-table {
-            border: 2px solid #a0a0a0;
-            border-radius: 0;
-            overflow: hidden;
-            box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.1);
-            background-color: #f0f0f0;
-        }
-
-        .tabulator .tabulator-header {
-            background-color: #d0d0d0;
-            color: #333;
-            font-weight: bold;
-            font-size: 1rem;
-            border-bottom: 2px solid #808080;
-            position: relative;
-        }
-        /* DHTML 3D-effect for header */
-        .tabulator .tabulator-header:before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            box-shadow: inset 1px 1px 2px #fff, inset -1px -1px 2px #999;
-            pointer-events: none;
-        }
-        /* DHTML-style header cell borders */
-        .tabulator .tabulator-header .tabulator-col {
-            border-right: 1px solid #888;
-        }
-        .tabulator .tabulator-header .tabulator-col:last-child {
-            border-right: none;
-        }
-
-        /* DHTML-style rows */
-        .tabulator .tabulator-row {
-            background-color: #e0e0e0;
-            border-bottom: 1px solid #c0c0c0;
-            transition: none;
-        }
-        /* Alternating row color */
-        .tabulator .tabulator-row:nth-of-type(even) {
-            background-color: #f0f0f0;
-        }
-        /* Hover effect */
-        .tabulator .tabulator-row:hover {
-            background-color: #e8e8e8;
-        }
-
-        /* DHTML-style cells */
-        .tabulator .tabulator-cell {
-            padding: 0.6rem;
-            border-right: 1px solid #c0c0c0;
-            font-weight: normal;
-        }
-        .tabulator .tabulator-cell:last-child {
-            border-right: none;
-        }
-
-        /* DHTML-style pagination */
-        .tabulator-paginator {
-            background-color: #d0d0d0;
-            border-top: 2px solid #a0a0a0;
-            padding: 0.5rem 1rem;
-            border-radius: 0;
-        }
-        .tabulator-page {
-            border: 1px solid #a0a0a0;
-            background-color: #e0e0e0;
-            color: #333;
-            border-radius: 0;
-            padding: 0.2rem 0.8rem;
-            box-shadow: inset 1px 1px 1px #fff, inset -1px -1px 1px #888;
-        }
-        .tabulator-page.active {
-            background-color: #c0c0c0;
-            color: #333;
-            border-color: #888;
-            box-shadow: inset 2px 2px 4px #888, inset -2px -2px 4px #fff;
-        }
-        .tabulator-page:hover {
-            background-color: #f0f0f0;
-        }
-        /* END CUSTOM DHTML GRID STYLES */
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
