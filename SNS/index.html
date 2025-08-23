@@ -6,7 +6,7 @@
     <title>SSC - Sneha Nidhi Scheme</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter for general text, Caveat for post-it note -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght=400;700&display=swap" rel="stylesheet">
     <!-- Confetti library for celebration effect -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <!-- Font Awesome for icons -->
@@ -305,6 +305,16 @@
             justify-content: flex-end;
             margin-top: 1rem;
         }
+        
+        .delete-btn {
+            cursor: pointer;
+            color: #ef4444; /* red-500 */
+            transition: color 0.2s;
+        }
+        
+        .delete-btn:hover {
+            color: #dc2626; /* red-600 */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -324,6 +334,18 @@
             <p id="modal-body" class="text-gray-700 mb-4"></p>
             <div class="modal-buttons">
                 <button id="modal-close-btn" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition">OK</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirmation Modal for delete action -->
+    <div id="confirmation-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold mb-4">Confirm Deletion</h3>
+            <p id="confirmation-body" class="text-gray-700 mb-4"></p>
+            <div class="modal-buttons space-x-2">
+                <button id="confirm-delete-btn" class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition">Yes, Delete</button>
+                <button id="cancel-delete-btn" class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition">Cancel</button>
             </div>
         </div>
     </div>
@@ -429,7 +451,7 @@
     <script type="module">
         // Firebase SDKs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, setDoc, query, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
         // Firebase configuration hardcoded as requested
@@ -469,6 +491,10 @@
         const modalTitle = document.getElementById('modal-title');
         const modalBody = document.getElementById('modal-body');
         const modalCloseBtn = document.getElementById('modal-close-btn');
+        const confirmationModal = document.getElementById('confirmation-modal');
+        const confirmationBody = document.getElementById('confirmation-body');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
         const previousWinnersTable = document.getElementById('previous-winners-table');
         let table = null;
 
@@ -496,8 +522,8 @@
         };
 
         window.onclick = function(event) {
-            if (event.target == messageModal) {
-                messageModal.style.display = 'none';
+            if (event.target == messageModal || event.target == confirmationModal) {
+                event.target.style.display = 'none';
             }
         };
 
@@ -913,14 +939,11 @@
             return Math.floor(Math.random() * (max - min + 1)) + min;
         }
 
+        // UPDATED: generate a random number with the requested format
         function generateRandomAlphanumeric() {
-            const prefixes = ['SSC', 'SSC', 'SSC'];
-            const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-            let digits = '';
-            for (let i = 0; i < 5; i++) {
-                digits += Math.floor(Math.random() * 10);
-            }
-            return `${randomPrefix} ${digits}`;
+            const randomNumber = getRandomNumber(1, 1010);
+            const formattedNumber = String(randomNumber).padStart(4, '0');
+            return `SSC ${formattedNumber}`;
         }
 
         function pickSingleUniqueTicket(sourceArray) {
@@ -1042,6 +1065,50 @@
             const seconds = date.getSeconds().toString().padStart(2, '0');
             return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
         }
+        
+        /**
+         * Displays a confirmation modal before deleting a winner.
+         * @param {object} rowData - The data of the row to be deleted.
+         */
+        function showConfirmationModal(rowData) {
+            const docId = rowData.monthAndYear.replace(/\s/g, '');
+            confirmationBody.textContent = `Are you sure you want to delete the winner for ${rowData.monthAndYear} (ID: ${docId})? This action cannot be undone.`;
+            confirmationModal.style.display = 'block';
+
+            // Use a one-time event listener to handle the confirmation
+            confirmDeleteBtn.onclick = async () => {
+                confirmationModal.style.display = 'none';
+                await deleteWinner(docId);
+            };
+
+            cancelDeleteBtn.onclick = () => {
+                confirmationModal.style.display = 'none';
+            };
+        }
+        
+        /**
+         * Deletes a winner document from Firestore.
+         * @param {string} docId - The ID of the document to delete.
+         */
+        async function deleteWinner(docId) {
+            if (!db) {
+                console.error("Firestore not initialized. Cannot delete document.");
+                showModal("Error", "Database is not available. Cannot perform delete operation.");
+                return;
+            }
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const docRef = doc(db, `/artifacts/${appId}/public/data/winners`, docId);
+            
+            try {
+                await deleteDoc(docRef);
+                console.log("Document successfully deleted with ID:", docId);
+                showModal("Success", `The winner for ${docId} was successfully deleted.`);
+            } catch (error) {
+                console.error("Error removing document:", error);
+                showModal("Deletion Failed", `Failed to delete the winner. Error: ${error.message}`);
+            }
+        }
+
 
         /**
          * Loads and displays previous winners from Firestore using a real-time listener.
@@ -1098,6 +1165,18 @@
                                     responsive: 0,
                                     formatter: (cell) => formatTimestamp(cell.getValue()) 
                                 },
+                                {
+                                    title: "Actions",
+                                    field: "actions",
+                                    formatter: () => `<i class="fa-solid fa-trash-can delete-btn"></i>`,
+                                    width: 80,
+                                    hozAlign: "center",
+                                    headerSort: false,
+                                    responsive: 0,
+                                    cellClick: function(e, cell) {
+                                        showConfirmationModal(cell.getRow().getData());
+                                    }
+                                }
                             ],
                             pagination: "local",
                             paginationSize: 10,
