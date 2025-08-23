@@ -472,6 +472,17 @@
         const previousWinnersTable = document.getElementById('previous-winners-table');
         let table = null;
 
+        /**
+         * Generates the formatted button text with the current month and year.
+         * @returns {string} The formatted button text.
+         */
+        function getFormattedButtonText() {
+            const currentDate = new Date();
+            const monthName = currentDate.toLocaleString('default', { month: 'long' });
+            const year = currentDate.getFullYear();
+            return `Generate ${monthName} ${year} Winner`;
+        }
+
         // Function to show the modal
         function showModal(title, message) {
             modalTitle.textContent = title;
@@ -541,7 +552,7 @@
                 userProfileElement.classList.add('hidden');
                 googleSigninBtn.classList.remove('hidden');
                 signoutBtn.classList.add('hidden');
-                actionButton.textContent = 'Sign in to Generate Winner';
+                actionButton.textContent = `Sign in to Generate Winner`;
                 actionButton.disabled = true;
                 if (statusMessageElement) {
                      statusMessageElement.textContent = "Please sign in to start the draw.";
@@ -581,7 +592,7 @@
                 signoutBtn.classList.remove('hidden');
 
                 // Enable the action button and set its text
-                actionButton.textContent = 'Generate Winner';
+                actionButton.textContent = getFormattedButtonText();
                 actionButton.className = 'winner-button px-8 py-3 bg-purple-700 text-white font-semibold rounded-full shadow-lg hover:bg-purple-800 transition duration-300 ease-in-out';
                 actionButton.disabled = false;
 
@@ -598,7 +609,7 @@
                 signoutBtn.classList.add('hidden');
 
                 // Disable the action button and provide instructions
-                actionButton.textContent = 'Sign in to Generate Winner';
+                actionButton.textContent = `Sign in to Generate Winner`;
                 actionButton.className = 'winner-button px-8 py-3 bg-gray-500 text-white font-semibold rounded-full shadow-lg';
                 actionButton.disabled = true;
 
@@ -887,7 +898,7 @@
                     // Re-enable the action button if a user is logged in
                     if (auth.currentUser && actionButton) {
                         actionButton.disabled = false;
-                        actionButton.textContent = 'Generate Winner';
+                        actionButton.textContent = getFormattedButtonText();
                     }
                 }
             }
