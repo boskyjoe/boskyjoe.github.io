@@ -350,6 +350,16 @@
         .consolation-icon.three {
             background-color: #ef4444; /* red-500 */
         }
+        
+        /* NEW: Styles for word wrap in Tabulator */
+        .tabulator .tabulator-cell, .tabulator .tabulator-col-title {
+            white-space: normal;
+            word-wrap: break-word;
+            padding-top: 8px; /* Add some padding to improve vertical spacing */
+            padding-bottom: 8px;
+            line-height: 1.2; /* Adjust line height for better readability */
+        }
+        
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
