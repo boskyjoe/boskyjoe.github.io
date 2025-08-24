@@ -351,13 +351,24 @@
             background-color: #ef4444; /* red-500 */
         }
         
-        /* NEW: Styles for word wrap in Tabulator */
+        /* Styles for word wrap in Tabulator */
         .tabulator .tabulator-cell, .tabulator .tabulator-col-title {
             white-space: normal;
             word-wrap: break-word;
             padding-top: 8px; /* Add some padding to improve vertical spacing */
             padding-bottom: 8px;
             line-height: 1.2; /* Adjust line height for better readability */
+        }
+        
+        /* NEW: Styles for the expand/collapse icon in the data tree */
+        .tabulator .tabulator-cell .tabulator-data-tree-control {
+            font-size: 1.25em; /* Make the icon a bit bigger */
+            line-height: 1; /* Align it vertically */
+            padding: 0 5px; /* Add some spacing */
+            cursor: pointer;
+        }
+        .tabulator .tabulator-row.tabulator-data-tree-open .tabulator-data-tree-control {
+            transform: rotate(90deg); /* Rotate the icon when expanded */
         }
         
     </style>
@@ -1176,8 +1187,16 @@
          * @param {object} rowData - The data of the row to be deleted.
          */
         function showConfirmationModal(rowData) {
+            // Determine if the clicked row is a parent (has children)
+            const isParent = !!rowData._children;
+            if (!isParent) {
+                 // Do not allow deletion of child rows
+                console.log("Cannot delete a child row. Please delete the parent draw instead.");
+                return;
+            }
+            
             const docId = rowData.monthAndYear.replace(/\s/g, '');
-            confirmationBody.textContent = `Are you sure you want to delete the winner for ${rowData.monthAndYear} (ID: ${docId})? This action cannot be undone.`;
+            confirmationBody.textContent = `Are you sure you want to delete the entire winner draw for ${rowData.monthAndYear}? This action cannot be undone.`;
             confirmationModal.style.display = 'block';
 
             // Use a one-time event listener to handle the confirmation
@@ -1237,12 +1256,33 @@
                 const winnersData = [];
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
+                    const children = [];
+                    
+                    // Create child for the main winner
+                    children.push({
+                        prizeName: "Winning Number",
+                        prizeNumber: data.winner,
+                        id: `${doc.id}-winner`,
+                    });
+                    
+                    // Create children for each consolation winner
+                    if (data.consolationWinners && Array.isArray(data.consolationWinners)) {
+                        data.consolationWinners.forEach((ticket, index) => {
+                            children.push({
+                                prizeName: `Consolation Winner ${index + 1}`,
+                                prizeNumber: ticket,
+                                id: `${doc.id}-consolation-${index + 1}`,
+                            });
+                        });
+                    }
+
+                    // Create the parent row with the children
                     winnersData.push({
-                        'monthAndYear': data.monthAndYear,
-                        'winner': data.winner,
-                        'consolationWinners': data.consolationWinners ? data.consolationWinners.join(', ') : 'N/A',
-                        'drawnBy': data.userName,
-                        'dateDrawn': data.timestamp
+                        id: doc.id,
+                        monthAndYear: data.monthAndYear,
+                        drawnBy: data.userName,
+                        dateDrawn: data.timestamp,
+                        _children: children,
                     });
                 });
 
@@ -1261,10 +1301,37 @@
                         table = new Tabulator(previousWinnersTable, {
                             data: winnersData,
                             layout: "fitColumns", //fit columns to width of table (optional)
+                            // Enable Tree Data
+                            dataTree: true,
+                            dataTreeElement: "<i class='fa-solid fa-angle-right'></i>",
+                            dataTreeStartExpanded: false, // Start with all rows collapsed
                             columns: [
-                                { title: "Month & Year", field: "monthAndYear", responsive: 0 },
-                                { title: "Winning Number", field: "winner", responsive: 0 },
-                                { title: "Consolation Winners", field: "consolationWinners", responsive: 0 },
+                                { 
+                                    title: "Draw/Prize", 
+                                    field: "monthAndYear",
+                                    responsive: 0,
+                                    // Custom formatter to display different fields for parent and child rows
+                                    formatter: function(cell, formatterParams, onRendered) {
+                                        const rowData = cell.getRow().getData();
+                                        if (rowData.prizeName) {
+                                            return rowData.prizeName;
+                                        }
+                                        return rowData.monthAndYear;
+                                    }
+                                },
+                                { 
+                                    title: "Ticket Number", 
+                                    field: "winner", 
+                                    responsive: 0,
+                                    // Custom formatter to display different fields for parent and child rows
+                                    formatter: function(cell, formatterParams, onRendered) {
+                                        const rowData = cell.getRow().getData();
+                                        if (rowData.prizeNumber) {
+                                            return rowData.prizeNumber;
+                                        }
+                                        return rowData.winner;
+                                    }
+                                },
                                 { title: "Drawn By", field: "drawnBy", responsive: 0 },
                                 { 
                                     title: "Date Drawn", 
@@ -1275,7 +1342,14 @@
                                 {
                                     title: "Actions",
                                     field: "actions",
-                                    formatter: () => `<i class="fa-solid fa-trash-can delete-btn"></i>`,
+                                    formatter: (cell) => {
+                                        // Only show the delete button on parent rows
+                                        const rowData = cell.getRow().getData();
+                                        if (rowData._children) {
+                                            return `<i class="fa-solid fa-trash-can delete-btn"></i>`;
+                                        }
+                                        return "";
+                                    },
                                     width: 80,
                                     hozAlign: "center",
                                     headerSort: false,
