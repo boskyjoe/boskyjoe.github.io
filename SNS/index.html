@@ -601,7 +601,11 @@
             return `Generate ${monthName} ${year} Winner`;
         }
 
-        // Function to show the modal
+        /**
+         * Shows the custom message modal.
+         * @param {string} title - The title of the modal.
+         * @param {string} message - The message to display.
+         */
         function showModal(title, message) {
             modalTitle.textContent = title;
             modalBody.textContent = message;
@@ -1101,6 +1105,7 @@
                     if (progress >= 1) {
                         element.classList.remove('pulsing-text');
                         element.textContent = finalNumber;
+                        element.classList.add('final-number-reveal');
                         resolve();
                         return;
                     }
