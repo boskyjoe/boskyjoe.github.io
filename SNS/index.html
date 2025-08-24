@@ -1034,7 +1034,7 @@
                 const batch = writeBatch(db);
                 const membersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
                 let importCount = 0;
-                let existingCount = 0;
+                let updateCount = 0;
                 
                 // Get all existing SNS_ID's in the collection for efficient checking
                 const existingDocsSnapshot = await getDocs(membersCollection);
@@ -1046,36 +1046,39 @@
                         rowData[columns[index]] = cell?.v || null;
                     });
 
-                    if (rowData['SNS_ID'] && !existingSNSIds.has(String(rowData['SNS_ID']))) {
+                    if (rowData['SNS_ID']) {
                         const newDocRef = doc(membersCollection, String(rowData['SNS_ID']));
                         const memberData = {
                             ...rowData,
-                            createdBy: auth.currentUser.uid,
-                            createdDate: serverTimestamp(),
                             updatedBy: auth.currentUser.uid,
                             updatedDate: serverTimestamp(),
                         };
-                        batch.set(newDocRef, memberData);
-                        importCount++;
-                    } else {
-                        if (rowData['SNS_ID']) {
-                            existingCount++;
+                        
+                        // Check if the document already exists to log updates vs new additions
+                        if (existingSNSIds.has(String(rowData['SNS_ID']))) {
+                            batch.set(newDocRef, memberData, { merge: true }); // Use merge to avoid overwriting unrelated fields if they exist
+                            updateCount++;
+                        } else {
+                            memberData.createdBy = auth.currentUser.uid;
+                            memberData.createdDate = serverTimestamp();
+                            batch.set(newDocRef, memberData);
+                            importCount++;
                         }
                     }
                 }
                 
-                if (importCount > 0) {
+                if (importCount > 0 || updateCount > 0) {
                     await batch.commit();
-                    console.log(`Successfully imported ${importCount} new members. ${existingCount} members already existed.`);
-                    showModal("Import Complete", `Successfully imported ${importCount} new members from Google Sheets. ${existingCount} members were already in the database.`);
+                    console.log(`Successfully imported ${importCount} new members and updated ${updateCount} existing members.`);
+                    showModal("Import Complete", `Successfully imported ${importCount} new members from Google Sheets and updated ${updateCount} existing members.`);
                 } else {
-                    console.log(`No new members to import. ${existingCount} members already existed.`);
-                    showModal("No New Members", "The database is already up to date with the Google Sheet.");
+                    console.log(`No new members to import or update.`);
+                    showModal("No Changes", "The database is already up to date with the Google Sheet. No new members or updates found.");
                 }
-
-                const eligibleTicketsQuery = query(membersCollection, where("WinningTerm", "==", null));
-                const querySnapshot = await getDocs(eligibleTicketsQuery);
-                const eligibleTickets = querySnapshot.docs.map(doc => doc.id);
+                
+                // Now, load all ticket numbers for the draw from the collection itself
+                const membersSnapshot = await getDocs(membersCollection);
+                const eligibleTickets = membersSnapshot.docs.map(doc => doc.id);
 
                 console.log("DEBUG: Eligible tickets for draw:", eligibleTickets);
                 return eligibleTickets;
