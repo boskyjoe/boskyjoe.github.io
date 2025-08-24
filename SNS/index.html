@@ -873,8 +873,9 @@
                 poweredBySection.classList.add('hidden');
                 poweredBySection.classList.remove('fade-out-and-hide-animation');
                 poweredBySection.classList.remove('from-purple-100', 'to-purple-200');
-                poweredBySection.querySelector('svg').classList.remove('text-purple-700');
-                poweredBySection.querySelector('p').classList.remove('text-purple-800');
+                poweredBySection.classList.remove('from-teal-100', 'to-cyan-200');
+                poweredBySection.querySelector('svg').classList.remove('text-purple-700', 'text-teal-700');
+                poweredBySection.querySelector('p').classList.remove('text-purple-800', 'text-teal-800');
                 poweredBySection.style.cssText = '';
             }
             if (countdownTimerElement) {
@@ -1414,13 +1415,13 @@
                 poweredBySection.style.display = 'flex';
                 void poweredBySection.offsetWidth;
 
-                poweredBySection.classList.remove('from-teal-100', 'to-cyan-200');
-                poweredBySection.querySelector('svg').classList.remove('text-teal-700');
-                poweredBySection.querySelector('p').classList.remove('text-teal-800');
-
+                // Set theme for main winner
                 poweredBySection.classList.add('from-purple-100', 'to-purple-200');
                 poweredBySection.querySelector('svg').classList.add('text-purple-700');
                 poweredBySection.querySelector('p').classList.add('text-purple-800');
+                poweredBySection.classList.remove('from-teal-100', 'to-cyan-200');
+                poweredBySection.querySelector('svg').classList.remove('text-teal-700');
+                poweredBySection.querySelector('p').classList.remove('text-teal-800');
             }
 
             await startCountdown(3);
@@ -1465,6 +1466,27 @@
             if (statusMessageElement) {
                 statusMessageElement.textContent = "Drawing consolation winners...";
             }
+
+            // Show powered by animation for consolation winners
+            if (poweredBySection) {
+                poweredBySection.classList.remove('hidden', 'fade-out-and-hide-animation');
+                poweredBySection.style.opacity = '1';
+                poweredBySection.style.maxHeight = '100px';
+                poweredBySection.style.paddingTop = '1.5rem';
+                poweredBySection.style.paddingBottom = '1.5rem';
+                poweredBySection.style.marginTop = '2rem';
+                poweredBySection.style.marginBottom = '2rem';
+                poweredBySection.style.display = 'flex';
+                void poweredBySection.offsetWidth;
+
+                // Set theme for consolation winners
+                poweredBySection.classList.add('from-teal-100', 'to-cyan-200');
+                poweredBySection.querySelector('svg').classList.add('text-teal-700');
+                poweredBySection.querySelector('p').classList.add('text-teal-800');
+                poweredBySection.classList.remove('from-purple-100', 'to-purple-200');
+                poweredBySection.querySelector('svg').classList.remove('text-purple-700');
+                poweredBySection.querySelector('p').classList.remove('text-purple-800');
+            }
             
             // Generate and animate consolation winners
             const consolationElements = [
@@ -1482,10 +1504,20 @@
                 }
                 consolationDraws.push(winner);
                 await animateNumberReveal(consolationElements[i], winner, 5000);
+                triggerCurrencyEffect(); // Confetti after each winner is revealed
                 await delay(500); // Small delay between each consolation reveal
             }
 
             consolationWinners = consolationDraws;
+
+            // Hide powered by section after all consolation winners are drawn
+            if (poweredBySection) {
+                 poweredBySection.classList.add('fade-out-and-hide-animation');
+                 poweredBySection.addEventListener('animationend', function handler() {
+                     poweredBySection.classList.add('hidden');
+                     poweredBySection.removeEventListener('animationend', handler);
+                 }, { once: true });
+            }
 
             if (statusMessageElement) {
                 statusMessageElement.textContent = "All winners have been drawn! Click 'Reset SnehaNidhi' to start a new draw.";
