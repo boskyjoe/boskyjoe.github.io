@@ -6,7 +6,7 @@
     <title>SSC - Sneha Nidhi Scheme</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter for general text, Caveat for post-it note -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght=400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
     <!-- Confetti library for celebration effect -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <!-- Font Awesome for icons -->
@@ -385,22 +385,25 @@
             display: table-row; /* Make it visible */
         }
 
-        /* Style the table within the winner-details-container */
-        .winner-details-container td {
-            padding: 0;
-        }
+        /* NEW: Styles for the nested "child" table */
         .winner-details-container table {
             width: 100%;
-            border-collapse: collapse;
+            font-size: 0.8rem; /* Smaller font size for a child table look */
         }
         .winner-details-container th,
         .winner-details-container td {
-            padding: 0.75rem 1rem;
+            padding: 0.6rem 1rem; /* Reduced padding for a more compact feel */
             text-align: left;
+            border-bottom: 1px solid #f3f4f6; /* Lighter, more subtle border */
         }
         .winner-details-container th {
             background-color: #f8fafc;
             border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+        }
+        
+        .winner-details-container tbody tr:last-child td {
+            border-bottom: none; /* No border on the last row */
         }
 
         .tree-grid-icon {
