@@ -144,6 +144,18 @@
             transition: all 0.8s ease-out, border 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
         }
 
+        /* New section styling for the consolation winners */
+        #consolation-winners-section {
+            display: none; /* Hidden initially */
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
+        }
+        #consolation-winners-section.visible {
+            display: block;
+            opacity: 1;
+        }
+
+
         /* Keyframes for individual card reveal */
         @keyframes reveal-card {
             0% { opacity: 0; transform: scale(0.8); }
@@ -417,6 +429,31 @@
                 Sign in to Generate Winner
             </button>
         </div>
+        
+        <!-- NEW: Consolation Winners Section -->
+        <div id="consolation-winners-section" class="bg-gradient-to-br from-blue-700 to-blue-900 p-6 rounded-lg shadow-lg mb-8 relative z-10">
+            <h2 class="text-3xl font-bold text-white mb-6">Consolation Winners</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <!-- 1st Consolation Prize -->
+                <div class="winner-card bg-blue-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-blue-800">1st Consolation</h3>
+                    <p id="first-consolation-primary" class="text-2xl font-bold text-blue-900 mt-2">---</p>
+                </div>
+                <!-- 2nd Consolation Prize -->
+                <div class="winner-card bg-blue-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-blue-800">2nd Consolation</h3>
+                    <p id="second-consolation-primary" class="text-2xl font-bold text-blue-900 mt-2">---</p>
+                </div>
+                <!-- 3rd Consolation Prize -->
+                <div class="winner-card bg-blue-100 p-4 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold text-blue-800">3rd Consolation</h3>
+                    <p id="third-consolation-primary" class="text-2xl font-bold text-blue-900 mt-2">---</p>
+                </div>
+            </div>
+            <button id="generate-consolation-btn" class="winner-button px-8 py-3 bg-blue-700 text-white font-semibold rounded-full shadow-lg transition duration-300 ease-in-out" disabled>
+                Generate Consolation Winners
+            </button>
+        </div>
 
         <!-- Animated "Powered By" Section -->
         <div id="powered-by-section" class="py-3 px-6 rounded-lg shadow-lg mt-8 mb-8 relative z-10 flex items-center justify-center space-x-2 hidden">
@@ -496,6 +533,9 @@
         const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
         const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
         const previousWinnersTable = document.getElementById('previous-winners-table');
+        const consolationWinnersSection = document.getElementById('consolation-winners-section');
+        const generateConsolationBtn = document.getElementById('generate-consolation-btn');
+
         let table = null;
 
         /**
@@ -652,6 +692,7 @@
 
         let snehanidhiTicketsWinners = [];
         let finalFirstWinner = '---';
+        let consolationWinners = [];
         let confettiInstance = null;
         let confettiDrawFunctions = [];
 
@@ -736,6 +777,9 @@
                 actionButton.disabled = true;
                 actionButton.textContent = "Disabled";
             }
+            if (generateConsolationBtn) {
+                generateConsolationBtn.disabled = true;
+            }
             if (resetSnehaNidhiBtn) {
                 resetSnehaNidhiBtn.disabled = true;
             }
@@ -744,6 +788,9 @@
         async function clearDisplayedWinners() {
             const winnerElements = [
                 document.getElementById('first-primary'),
+                document.getElementById('first-consolation-primary'),
+                document.getElementById('second-consolation-primary'),
+                document.getElementById('third-consolation-primary'),
             ];
 
             const animations = [];
@@ -863,6 +910,9 @@
             if (firstPlaceSection) {
                 firstPlaceSection.classList.add('inactive-section');
             }
+            if (consolationWinnersSection) {
+                consolationWinnersSection.style.display = 'none';
+            }
             if (resetSnehaNidhiBtn) {
                 resetSnehaNidhiBtn.disabled = true;
                 resetSnehaNidhiBtn.classList.add('bg-gray-300');
@@ -889,23 +939,30 @@
 
                 console.log("DEBUG: Fetched winners.txt unique length:", snehanidhiTicketsWinners.length);
 
-                if (snehanidhiTicketsWinners.length < 1) {
-                    showModal("File Error", `Error: Not enough unique ticket numbers available. 'winners.txt' has ${snehanidhiTicketsWinners.length} unique tickets (needs at least 1 for 1st place). Please populate your file with more unique alphanumeric tickets.`);
+                if (snehanidhiTicketsWinners.length < 4) {
+                    showModal("File Error", `Error: Not enough unique ticket numbers available. 'winners.txt' has ${snehanidhiTicketsWinners.length} unique tickets (needs at least 4 for all prizes). Please populate your file with more unique alphanumeric tickets.`);
                     disableAllButtons();
                     return;
                 }
 
                 const winnerExists = await checkForExistingWinner();
                 if (winnerExists && currentWinnerData) {
+                    // Display existing winners
                     if (firstWinnerHeading) {
                         firstWinnerHeading.textContent = `${currentWinnerData.monthAndYear} Winning Number`;
                     }
-                    const firstPrimary = document.getElementById('first-primary');
-                    if (firstPrimary) {
-                        firstPrimary.textContent = currentWinnerData.winner;
+                    document.getElementById('first-primary').textContent = currentWinnerData.winner;
+                    consolationWinnersSection.style.display = 'block';
+                    consolationWinnersSection.classList.add('visible');
+
+                    if (currentWinnerData.consolationWinners) {
+                        document.getElementById('first-consolation-primary').textContent = currentWinnerData.consolationWinners[0] || '---';
+                        document.getElementById('second-consolation-primary').textContent = currentWinnerData.consolationWinners[1] || '---';
+                        document.getElementById('third-consolation-primary').textContent = currentWinnerData.consolationWinners[2] || '---';
                     }
+
                     if (statusMessageElement) {
-                        statusMessageElement.textContent = `Winner for ${currentWinnerData.monthAndYear} has already been drawn: ${currentWinnerData.winner}. Click 'Reset SnehaNidhi' to start a new month.`;
+                        statusMessageElement.textContent = `Winner for ${currentWinnerData.monthAndYear} has already been drawn. Click 'Reset SnehaNidhi' to start a new month.`;
                     }
                     disableAllButtons();
                     if (resetSnehaNidhiBtn) {
@@ -1024,7 +1081,7 @@
             }
         }
 
-        async function saveWinnerToFirestore(winnerTicket, monthAndYear) {
+        async function saveWinnerToFirestore(winnerTicket, consolationTickets, monthAndYear) {
             if (!db || !auth.currentUser) {
                 console.error("Firestore not initialized or user not authenticated. Cannot save winner.");
                 return;
@@ -1036,6 +1093,7 @@
                 await setDoc(docRef, {
                     monthAndYear: monthAndYear,
                     winner: winnerTicket,
+                    consolationWinners: consolationTickets,
                     timestamp: new Date(),
                     userId: auth.currentUser.uid,
                     userName: auth.currentUser.displayName || auth.currentUser.email
@@ -1135,6 +1193,7 @@
                     winnersData.push({
                         'monthAndYear': data.monthAndYear,
                         'winner': data.winner,
+                        'consolationWinners': data.consolationWinners ? data.consolationWinners.join(', ') : 'N/A',
                         'drawnBy': data.userName,
                         'dateDrawn': data.timestamp
                     });
@@ -1158,6 +1217,7 @@
                             columns: [
                                 { title: "Month & Year", field: "monthAndYear", responsive: 0 },
                                 { title: "Winning Number", field: "winner", responsive: 0 },
+                                { title: "Consolation Winners", field: "consolationWinners", responsive: 0 },
                                 { title: "Drawn By", field: "drawnBy", responsive: 0 },
                                 { 
                                     title: "Date Drawn", 
@@ -1215,10 +1275,11 @@
             const primaryElement = document.getElementById(`first-primary`);
             if (actionButton) {
                 actionButton.disabled = true;
+                actionButton.textContent = "Drawing...";
             }
 
             if (statusMessageElement) {
-                statusMessageElement.textContent = "Drawing winner...";
+                statusMessageElement.textContent = "Drawing Winning Number...";
             }
 
             if (poweredBySection) {
@@ -1265,27 +1326,69 @@
             await delay(1000);
 
             if (statusMessageElement) {
-                statusMessageElement.textContent = "The winner has been drawn! Click 'Reset SnehaNidhi' to start a new draw.";
+                statusMessageElement.textContent = "Winning number drawn! Now, generate the consolation prizes.";
             }
-            disableAllButtons();
 
+            // After main winner, enable consolation section and button
+            consolationWinnersSection.style.display = 'block';
+            consolationWinnersSection.classList.add('visible');
+            generateConsolationBtn.disabled = false;
+            actionButton.disabled = true;
+            actionButton.textContent = "Winner Selected";
             triggerCurrencyEffect();
+        }
+
+        async function startConsolationGeneration() {
+            generateConsolationBtn.disabled = true;
+            generateConsolationBtn.textContent = "Drawing...";
+            if (statusMessageElement) {
+                statusMessageElement.textContent = "Drawing consolation winners...";
+            }
+            
+            // Generate and animate consolation winners
+            const consolationElements = [
+                document.getElementById('first-consolation-primary'),
+                document.getElementById('second-consolation-primary'),
+                document.getElementById('third-consolation-primary')
+            ];
+
+            const consolationDraws = [];
+            for (let i = 0; i < 3; i++) {
+                const winner = pickSingleUniqueTicket(snehanidhiTicketsWinners);
+                if (winner === "N/A") {
+                    console.warn("Not enough tickets for all consolation prizes.");
+                    break;
+                }
+                consolationDraws.push(winner);
+                await animateNumberReveal(consolationElements[i], winner, 5000);
+                await delay(500); // Small delay between each consolation reveal
+            }
+
+            consolationWinners = consolationDraws;
+
+            if (statusMessageElement) {
+                statusMessageElement.textContent = "All winners have been drawn! Click 'Reset SnehaNidhi' to start a new draw.";
+            }
+
+            const currentDate = new Date();
+            const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+            saveWinnerToFirestore(finalFirstWinner, consolationWinners, monthAndYear);
 
             if (resetSnehaNidhiBtn) {
                 resetSnehaNidhiBtn.disabled = false;
                 resetSnehaNidhiBtn.classList.remove('bg-gray-300');
                 resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
             }
-
-            const currentDate = new Date();
-            const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-            saveWinnerToFirestore(finalFirstWinner, monthAndYear);
         }
 
         if (resetSnehaNidhiBtn) {
             resetSnehaNidhiBtn.addEventListener('click', () => {
                 location.reload();
             });
+        }
+        
+        if (generateConsolationBtn) {
+            generateConsolationBtn.addEventListener('click', startConsolationGeneration);
         }
 
         // Add event listener for the Google sign-in button
