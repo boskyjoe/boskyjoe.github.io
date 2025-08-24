@@ -310,13 +310,13 @@
             justify-content: flex-end;
             margin-top: 1rem;
         }
-        
+
         .delete-btn {
             cursor: pointer;
             color: #ef4444; /* red-500 */
             transition: color 0.2s;
         }
-        
+
         .delete-btn:hover {
             color: #dc2626; /* red-600 */
         }
@@ -343,109 +343,68 @@
         .consolation-icon.three {
             background-color: #ef4444; /* red-500 */
         }
-        
-        /* New Accordion Styles */
-        .accordion-item {
-            border: 1px solid #d1d5db; /* gray-300 */
-            border-radius: 0.75rem; /* rounded-lg */
-            overflow: hidden;
-            margin-bottom: 1rem;
-            background-color: #ffffff;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+        /* NEW: Styles for the data tree grid table */
+        #previous-winners-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
         }
         
-        .accordion-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 1.5rem;
-            cursor: pointer;
-            background-color: #f3f4f6; /* gray-100 */
+        #previous-winners-table thead th {
+            padding: 1rem 1rem;
+            background-color: #e5e7eb;
+            color: #4b5563;
+            text-align: left;
+            border-bottom: 2px solid #d1d5db;
+        }
+        
+        #previous-winners-table tbody tr {
             transition: background-color 0.2s ease-in-out;
-        }
-        
-        .accordion-header:hover {
-            background-color: #e5e7eb; /* gray-200 */
-        }
-
-        .accordion-header h3 {
-            font-size: 1.25rem; /* text-xl */
-            font-weight: 600; /* font-semibold */
-            color: #1f2937; /* gray-900 */
-        }
-
-        .accordion-icon {
-            font-size: 1.25rem;
-            transition: transform 0.3s ease-in-out;
-        }
-        
-        .accordion-icon.open {
-            transform: rotate(90deg);
-        }
-        
-        .accordion-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.5s ease-out, padding 0.5s ease-out;
-            padding: 0 1.5rem;
-        }
-        
-        .accordion-content.open {
-            max-height: 500px; /* A large value to allow the content to expand */
-            padding: 1.5rem;
-        }
-
-        /* NEW: Styles for the data tree grid */
-        .tree-grid-item {
-            display: flex;
-            align-items: center;
-            padding: 0.5rem 0;
             border-bottom: 1px solid #e5e7eb;
-            transition: background-color 0.2s ease-in-out;
         }
         
-        .tree-grid-item:last-child {
-            border-bottom: none;
-        }
-        
-        .tree-grid-item-label {
-            font-weight: 500;
-            color: #4b5563; /* gray-600 */
-            flex-grow: 1;
-            display: flex;
-            align-items: center;
-            cursor: pointer;
+        #previous-winners-table tbody tr:hover {
+            background-color: #f9fafb;
         }
 
-        .tree-grid-item-value {
+        #previous-winners-table tbody tr.draw-row {
+            background-color: #f3f4f6;
             font-weight: 600;
-            color: #1f2937; /* gray-900 */
-            text-align: right;
-            word-wrap: break-word; /* Ensure text wraps */
-        }
-        
-        .tree-grid-children {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-in-out;
         }
 
-        .tree-grid-children.open {
-            max-height: 300px;
+        #previous-winners-table tbody tr.prize-row,
+        #previous-winners-table tbody tr.details-row {
+            border-left: 3px solid #60a5fa;
+            padding-left: 1rem;
         }
 
-        .tree-grid-children .tree-grid-item {
-            padding-left: 2rem; /* Indentation for children */
+        #previous-winners-table tbody td {
+            padding: 0.75rem 1rem;
+            vertical-align: top;
         }
-        
+
         .tree-grid-icon {
-            width: 16px;
-            margin-right: 8px;
+            cursor: pointer;
             transition: transform 0.2s ease-in-out;
+            margin-right: 0.5rem;
         }
         
         .tree-grid-icon.open {
             transform: rotate(90deg);
+        }
+
+        .details-row {
+            display: none;
+        }
+
+        /* Indentation for different levels of the tree */
+        .prize-row td:first-child {
+            padding-left: 2rem;
+        }
+
+        .details-row td:first-child {
+            padding-left: 4rem;
         }
     </style>
 </head>
@@ -549,7 +508,7 @@
                 Sign in to Generate Winner
             </button>
         </div>
-        
+
         <!-- NEW: Consolation Winners Section -->
         <div id="consolation-winners-section" class="bg-gradient-to-br from-blue-700 to-blue-900 p-6 rounded-lg shadow-lg mb-8 relative z-10">
             <!-- Updated heading with ID for dynamic text -->
@@ -599,10 +558,23 @@
         </div>
 
         <!-- Previous Winners Section -->
-        <div id="previous-winners-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner">
+        <div id="previous-winners-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner overflow-x-auto">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Previous Winners</h2>
-            <!-- This is the new container for the accordion -->
-            <div id="previous-winners-accordion" class="w-full"></div>
+            <!-- This is the new container for the table -->
+            <div class="w-full">
+                <table id="previous-winners-table" class="bg-white rounded-lg shadow-lg">
+                    <thead>
+                        <tr>
+                            <th class="py-3 px-4">Draw Date</th>
+                            <th class="py-3 px-4">Draw Details</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="winners-table-body">
+                        <!-- Content will be rendered here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
             <p id="no-winners-message" class="text-center text-gray-500 mt-4 hidden">No previous winners found.</p>
         </div>
     </div>
@@ -630,14 +602,14 @@
           appId: "1:726238156431:web:e60b0b5ed66f2d628342fa",
           measurementId: "G-7ZW0ZSQGLZ"
         };
-        
+
         // Use a default app ID if the provided variable is not defined
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'snehanidhi-default-app-id';
 
         // TODO: Replace this with your Google Sheets ID
         // To find your Sheet ID, look in the URL:
         // https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0
-        const GOOGLE_SHEET_ID = '1c5Yzf_UQrCrohItdhsrENcYEqc8Cs7UtRG5OO-Gzn28'; 
+        const GOOGLE_SHEET_ID = '1c5Yzf_UQrCrohItdhsrENcYEqc8Cs7UtRG5OO-Gzn28';
         const GOOGLE_SHEET_NAME = 'SNSMembers';
         const GOOGLE_SHEET_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=${GOOGLE_SHEET_NAME}`;
 
@@ -671,7 +643,7 @@
         const confirmationBody = document.getElementById('confirmation-body');
         const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
         const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
-        const previousWinnersAccordion = document.getElementById('previous-winners-accordion');
+        const winnersTableBody = document.getElementById('winners-table-body');
         const noWinnersMessage = document.getElementById('no-winners-message');
         const consolationWinnersSection = document.getElementById('consolation-winners-section');
         const consolationWinnerHeading = document.getElementById('consolation-winner-heading');
@@ -1477,10 +1449,10 @@
                         const dateB = b.dateDrawn ? b.dateDrawn.toDate() : new Date(0);
                         return dateB - dateA;
                     });
-                    renderAccordion(winnersData);
+                    renderWinnersTable(winnersData);
                     noWinnersMessage.classList.add('hidden');
                 } else {
-                    previousWinnersAccordion.innerHTML = '';
+                    winnersTableBody.innerHTML = '';
                     noWinnersMessage.classList.remove('hidden');
                 }
             }, (error) => {
@@ -1490,122 +1462,105 @@
         }
         
         /**
-         * Renders the accordion with a tree grid from the fetched winners data.
+         * Renders the winners data in a tree grid table format.
          * @param {Array<Object>} winners - The array of winner data objects.
          */
-        function renderAccordion(winners) {
-            previousWinnersAccordion.innerHTML = ''; // Clear previous content
+        function renderWinnersTable(winners) {
+            winnersTableBody.innerHTML = ''; // Clear previous content
             
             winners.forEach(winner => {
-                const accordionItem = document.createElement('div');
-                accordionItem.className = 'accordion-item';
-                
-                // Accordion Header
-                const header = document.createElement('div');
-                header.className = 'accordion-header';
-                header.innerHTML = `
-                    <h3 class="flex items-center space-x-2">
+                // Main row for the draw
+                const drawRow = document.createElement('tr');
+                drawRow.className = 'draw-row border-b border-gray-200';
+                drawRow.innerHTML = `
+                    <td class="flex items-center space-x-2">
                         <i class="fa-solid fa-calendar-alt text-blue-500"></i>
                         <span>${winner.monthAndYear}</span>
-                    </h3>
-                    <div class="flex items-center space-x-4">
-                        <i class="fa-solid fa-trash-can delete-btn text-red-500 hover:text-red-700 transition" data-doc-id="${winner.docId}" title="Delete this draw"></i>
-                        <i class="fa-solid fa-angle-right accordion-icon"></i>
-                    </div>
+                    </td>
+                    <td>Drawn by: ${winner.drawnBy} on ${formatTimestamp(winner.dateDrawn)}</td>
+                    <td class="text-right">
+                        <i class="fa-solid fa-trash-can delete-btn text-red-500 hover:text-red-700 transition cursor-pointer" data-doc-id="${winner.docId}" title="Delete this draw"></i>
+                    </td>
                 `;
-                accordionItem.appendChild(header);
+                winnersTableBody.appendChild(drawRow);
                 
-                // Accordion Content - now with a tree grid structure
-                const content = document.createElement('div');
-                content.className = 'accordion-content';
-                
-                // Iterate through the structured winners array
+                // Rows for prizes and details
                 winner.winners.forEach((prizeWinner) => {
-                    const prizeItem = document.createElement('div');
-                    prizeItem.className = 'tree-grid-item';
-                    
-                    const isMainWinner = prizeWinner.prize === 'First Prize';
-                    const iconClass = isMainWinner ? 'fa-solid fa-star text-yellow-500' : 'fa-solid fa-trophy text-gray-500';
+                    // Prize row
+                    const prizeRow = document.createElement('tr');
+                    prizeRow.className = 'prize-row cursor-pointer';
+                    prizeRow.innerHTML = `
+                        <td colspan="3">
+                            <span class="flex items-center">
+                                <i class="fa-solid fa-angle-right tree-grid-icon"></i>
+                                <i class="fa-solid fa-${prizeWinner.prize === 'First Prize' ? 'star text-yellow-500' : 'trophy text-gray-500'} mr-2"></i>
+                                <span class="font-semibold">${prizeWinner.prize}:</span>
+                                <span class="ml-2 font-bold">${prizeWinner.ticketNumber}</span>
+                            </span>
+                        </td>
+                    `;
+                    winnersTableBody.appendChild(prizeRow);
 
-                    const mainPrizeItemHtml = `
-                        <span class="tree-grid-item-label">
-                            <i class="fa-solid fa-angle-right tree-grid-icon"></i>
-                            <i class="${iconClass} mr-2"></i>
-                            ${prizeWinner.prize}:
-                        </span>
-                        <span class="tree-grid-item-value font-bold">${prizeWinner.ticketNumber}</span>
+                    // Details rows (initially hidden)
+                    const detailsNameRow = document.createElement('tr');
+                    detailsNameRow.className = 'details-row';
+                    detailsNameRow.innerHTML = `
+                        <td colspan="3" class="pl-12">
+                            <span class="flex items-center">
+                                <i class="fa-solid fa-user mr-2 text-gray-500"></i>
+                                <span>Name: ${prizeWinner.memberDetails.SNSMemberName || 'N/A'}</span>
+                            </span>
+                        </td>
                     `;
                     
-                    prizeItem.innerHTML = mainPrizeItemHtml;
-                    content.appendChild(prizeItem);
-                    
-                    const memberDetailsHtml = `
-                        <div class="tree-grid-children">
-                            <div class="tree-grid-item">
-                                <span class="tree-grid-item-label"><i class="fa-solid fa-user mr-2"></i>Name:</span>
-                                <span class="tree-grid-item-value">${prizeWinner.memberDetails.SNSMemberName || 'N/A'}</span>
-                            </div>
-                            <div class="tree-grid-item">
-                                <span class="tree-grid-item-label"><i class="fa-solid fa-church mr-2"></i>Contact Name:</span>
-                                <span class="tree-grid-item-value">${prizeWinner.memberDetails.ChurchContactName || 'N/A'}</span>
-                            </div>
-                            <div class="tree-grid-item">
-                                <span class="tree-grid-item-label"><i class="fa-solid fa-phone mr-2"></i>Phone:</span>
-                                <span class="tree-grid-item-value">${prizeWinner.memberDetails.ChurchContactPhone || 'N/A'}</span>
-                            </div>
-                        </div>
+                    const detailsContactRow = document.createElement('tr');
+                    detailsContactRow.className = 'details-row';
+                    detailsContactRow.innerHTML = `
+                        <td colspan="3" class="pl-12">
+                            <span class="flex items-center">
+                                <i class="fa-solid fa-church mr-2 text-gray-500"></i>
+                                <span>Contact: ${prizeWinner.memberDetails.ChurchContactName || 'N/A'}</span>
+                            </span>
+                        </td>
+                    `;
+
+                    const detailsPhoneRow = document.createElement('tr');
+                    detailsPhoneRow.className = 'details-row';
+                    detailsPhoneRow.innerHTML = `
+                        <td colspan="3" class="pl-12">
+                            <span class="flex items-center">
+                                <i class="fa-solid fa-phone mr-2 text-gray-500"></i>
+                                <span>Phone: ${prizeWinner.memberDetails.ChurchContactPhone || 'N/A'}</span>
+                            </span>
+                        </td>
                     `;
                     
-                    const detailsContainer = document.createElement('div');
-                    detailsContainer.innerHTML = memberDetailsHtml;
-                    content.appendChild(detailsContainer);
-                    
-                    // Add event listener to the prize item label to toggle details
-                    prizeItem.querySelector('.tree-grid-item-label').addEventListener('click', () => {
-                        const icon = prizeItem.querySelector('.tree-grid-icon');
-                        const children = detailsContainer.querySelector('.tree-grid-children');
-                        children.classList.toggle('open');
+                    winnersTableBody.appendChild(detailsNameRow);
+                    winnersTableBody.appendChild(detailsContactRow);
+                    winnersTableBody.appendChild(detailsPhoneRow);
+
+                    // Add event listener to toggle details rows
+                    prizeRow.addEventListener('click', () => {
+                        const icon = prizeRow.querySelector('.tree-grid-icon');
                         icon.classList.toggle('open');
+                        
+                        // Toggle the visibility of all details rows associated with this prize
+                        if (detailsNameRow.style.display === 'table-row') {
+                            detailsNameRow.style.display = 'none';
+                            detailsContactRow.style.display = 'none';
+                            detailsPhoneRow.style.display = 'none';
+                        } else {
+                            detailsNameRow.style.display = 'table-row';
+                            detailsContactRow.style.display = 'table-row';
+                            detailsPhoneRow.style.display = 'table-row';
+                        }
                     });
                 });
                 
-                // Drawn By and Date Drawn
-                const drawnBy = document.createElement('div');
-                drawnBy.className = 'tree-grid-item';
-                drawnBy.innerHTML = `
-                    <span class="tree-grid-item-label">
-                        <i class="fa-solid fa-user-check text-green-500 mr-2"></i>
-                        Drawn By:
-                    </span>
-                    <span class="tree-grid-item-value">${winner.drawnBy}</span>
-                `;
-                content.appendChild(drawnBy);
-
-                const dateDrawn = document.createElement('div');
-                dateDrawn.className = 'tree-grid-item';
-                dateDrawn.innerHTML = `
-                    <span class="tree-grid-item-label">
-                        <i class="fa-solid fa-clock text-indigo-500 mr-2"></i>
-                        Date Drawn:
-                    </span>
-                    <span class="tree-grid-item-value">${formatTimestamp(winner.dateDrawn)}</span>
-                `;
-                content.appendChild(dateDrawn);
-
-                accordionItem.appendChild(content);
-                previousWinnersAccordion.appendChild(accordionItem);
-
-                // Add event listeners for the new accordion items
-                header.addEventListener('click', () => {
-                    // Toggle the 'open' class on the content and icon
-                    content.classList.toggle('open');
-                    header.querySelector('.accordion-icon').classList.toggle('open');
-                });
-                
-                // Add event listener for the delete button
-                const deleteButton = header.querySelector('.delete-btn');
+                // Add event listener for the delete button on the main draw row
+                const deleteButton = drawRow.querySelector('.delete-btn');
                 deleteButton.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent the accordion from opening/closing
+                    e.stopPropagation();
                     showConfirmationModal(winner);
                 });
             });
