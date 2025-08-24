@@ -364,13 +364,14 @@
             border-bottom: 1px solid #e5e7eb;
         }
         
-        #previous-winners-table tbody tr:hover {
-            background-color: #f9fafb;
-        }
-
         #previous-winners-table tbody tr.draw-row {
             background-color: #f3f4f6;
             font-weight: 600;
+            cursor: pointer; /* Highlight that this row is clickable */
+        }
+
+        #previous-winners-table tbody tr.draw-row:hover {
+            background-color: #e5e7eb; /* Darken on hover */
         }
 
         #previous-winners-table tbody tr.prize-row,
@@ -385,7 +386,6 @@
         }
 
         .tree-grid-icon {
-            cursor: pointer;
             transition: transform 0.2s ease-in-out;
             margin-right: 0.5rem;
         }
@@ -394,17 +394,9 @@
             transform: rotate(90deg);
         }
 
-        .details-row {
+        .details-row,
+        .prize-row {
             display: none;
-        }
-
-        /* Indentation for different levels of the tree */
-        .prize-row td:first-child {
-            padding-left: 2rem;
-        }
-
-        .details-row td:first-child {
-            padding-left: 4rem;
         }
     </style>
 </head>
@@ -1474,6 +1466,7 @@
                 drawRow.className = 'draw-row border-b border-gray-200';
                 drawRow.innerHTML = `
                     <td class="flex items-center space-x-2">
+                        <i class="fa-solid fa-angle-right tree-grid-icon"></i>
                         <i class="fa-solid fa-calendar-alt text-blue-500"></i>
                         <span>${winner.monthAndYear}</span>
                     </td>
@@ -1488,11 +1481,10 @@
                 winner.winners.forEach((prizeWinner) => {
                     // Prize row
                     const prizeRow = document.createElement('tr');
-                    prizeRow.className = 'prize-row cursor-pointer';
+                    prizeRow.className = 'prize-row';
                     prizeRow.innerHTML = `
                         <td colspan="3">
                             <span class="flex items-center">
-                                <i class="fa-solid fa-angle-right tree-grid-icon"></i>
                                 <i class="fa-solid fa-${prizeWinner.prize === 'First Prize' ? 'star text-yellow-500' : 'trophy text-gray-500'} mr-2"></i>
                                 <span class="font-semibold">${prizeWinner.prize}:</span>
                                 <span class="ml-2 font-bold">${prizeWinner.ticketNumber}</span>
@@ -1538,23 +1530,22 @@
                     winnersTableBody.appendChild(detailsNameRow);
                     winnersTableBody.appendChild(detailsContactRow);
                     winnersTableBody.appendChild(detailsPhoneRow);
-
-                    // Add event listener to toggle details rows
-                    prizeRow.addEventListener('click', () => {
-                        const icon = prizeRow.querySelector('.tree-grid-icon');
-                        icon.classList.toggle('open');
-                        
-                        // Toggle the visibility of all details rows associated with this prize
-                        if (detailsNameRow.style.display === 'table-row') {
-                            detailsNameRow.style.display = 'none';
-                            detailsContactRow.style.display = 'none';
-                            detailsPhoneRow.style.display = 'none';
+                });
+                
+                // Add event listener to the main draw row to toggle the details
+                drawRow.addEventListener('click', () => {
+                    const icon = drawRow.querySelector('.tree-grid-icon');
+                    icon.classList.toggle('open');
+                    
+                    let nextSibling = drawRow.nextElementSibling;
+                    while (nextSibling && !nextSibling.classList.contains('draw-row')) {
+                        if (nextSibling.style.display === 'table-row') {
+                            nextSibling.style.display = 'none';
                         } else {
-                            detailsNameRow.style.display = 'table-row';
-                            detailsContactRow.style.display = 'table-row';
-                            detailsPhoneRow.style.display = 'table-row';
+                            nextSibling.style.display = 'table-row';
                         }
-                    });
+                        nextSibling = nextSibling.nextElementSibling;
+                    }
                 });
                 
                 // Add event listener for the delete button on the main draw row
@@ -1675,7 +1666,7 @@
                 poweredBySection.querySelector('p').classList.add('text-teal-800');
                 poweredBySection.classList.remove('from-purple-100', 'to-purple-200');
                 poweredBySection.querySelector('svg').classList.remove('text-purple-700');
-                poweredBySection.querySelector('p').classList.remove('text-purple-800');
+                poweredBySection.querySelector('p').classList.remove('text-teal-800');
             }
             
             // Generate and animate consolation winners
