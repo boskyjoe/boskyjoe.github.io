@@ -1522,22 +1522,25 @@
                 // Iterate through the structured winners array
                 winner.winners.forEach((prizeWinner) => {
                     const prizeItem = document.createElement('div');
-                    const isMainWinner = prizeWinner.prize === 'First Prize';
-                    
                     prizeItem.className = 'tree-grid-item';
                     
+                    const isMainWinner = prizeWinner.prize === 'First Prize';
                     const iconClass = isMainWinner ? 'fa-solid fa-star text-yellow-500' : 'fa-solid fa-trophy text-gray-500';
 
                     const mainPrizeItemHtml = `
                         <span class="tree-grid-item-label">
+                            <i class="fa-solid fa-angle-right tree-grid-icon"></i>
                             <i class="${iconClass} mr-2"></i>
                             ${prizeWinner.prize}:
                         </span>
                         <span class="tree-grid-item-value font-bold">${prizeWinner.ticketNumber}</span>
                     `;
                     
+                    prizeItem.innerHTML = mainPrizeItemHtml;
+                    content.appendChild(prizeItem);
+                    
                     const memberDetailsHtml = `
-                        <div class="tree-grid-children open">
+                        <div class="tree-grid-children">
                             <div class="tree-grid-item">
                                 <span class="tree-grid-item-label"><i class="fa-solid fa-user mr-2"></i>Name:</span>
                                 <span class="tree-grid-item-value">${prizeWinner.memberDetails.SNSMemberName || 'N/A'}</span>
@@ -1553,13 +1556,17 @@
                         </div>
                     `;
                     
-                    prizeItem.innerHTML = mainPrizeItemHtml;
-                    content.appendChild(prizeItem);
-                    
                     const detailsContainer = document.createElement('div');
                     detailsContainer.innerHTML = memberDetailsHtml;
                     content.appendChild(detailsContainer);
-
+                    
+                    // Add event listener to the prize item label to toggle details
+                    prizeItem.querySelector('.tree-grid-item-label').addEventListener('click', () => {
+                        const icon = prizeItem.querySelector('.tree-grid-icon');
+                        const children = detailsContainer.querySelector('.tree-grid-children');
+                        children.classList.toggle('open');
+                        icon.classList.toggle('open');
+                    });
                 });
                 
                 // Drawn By and Date Drawn
