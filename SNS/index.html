@@ -1141,7 +1141,7 @@
                         consolationWinnerHeading.textContent = `${currentWinnerData.monthAndYear} Consolation Winners`;
                     }
                     // Find the main winner ticket number from the saved data structure
-                    const mainWinnerTicket = currentWinnerData.winners.find(w => w.prize === 'First Prize')?.ticketNumber || '---';
+                    const mainWinnerTicket = currentWinnerData.winners.find(w => w.prize === 'Chit Winner')?.ticketNumber || '---';
                     document.getElementById('first-primary').textContent = mainWinnerTicket;
                     
                     consolationWinnersSection.style.display = 'block';
@@ -1311,7 +1311,8 @@
                 const allWinnerTickets = [winnerTicket, ...consolationTickets];
                 const winnersData = [];
 
-                const prizeNames = ['First Prize', 'First Consolation Prize', 'Second Consolation Prize', 'Third Consolation Prize'];
+                // Correctly set the prize name to "Chit Winner"
+                const prizeNames = ['Chit Winner', 'First Consolation Prize', 'Second Consolation Prize', 'Third Consolation Prize'];
 
                 for (let i = 0; i < allWinnerTickets.length; i++) {
                     const ticketNumber = allWinnerTickets[i];
