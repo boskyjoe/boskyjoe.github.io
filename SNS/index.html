@@ -327,6 +327,29 @@
         .delete-btn:hover {
             color: #dc2626; /* red-600 */
         }
+        /* Custom styles for the numbered icons */
+        .consolation-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem; /* 24px */
+            font-weight: 700; /* Bold */
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .consolation-icon.one {
+            background-color: #f59e0b; /* amber-500 */
+        }
+        .consolation-icon.two {
+            background-color: #10b981; /* emerald-500 */
+        }
+        .consolation-icon.three {
+            background-color: #ef4444; /* red-500 */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -416,12 +439,12 @@
 
         <!-- Single SnehaNidhi Winner Section -->
         <div id="first-place-section" class="winner-section bg-gradient-to-br from-purple-700 to-purple-900 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
-            <h2 class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
+            <h2 id="first-winner-heading" class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
                 <img src="images/sns1.png" alt="Sneha Nidhi Logo" class="h-12 w-12 mr-3" /> Winning Number
             </h2>
             <div class="grid grid-cols-1 gap-6 mb-6">
                 <div class="winner-card bg-purple-100 p-4 rounded-md shadow-md">
-                    <h3 id="first-winner-heading" class="text-xl font-semibold text-purple-800">Winning Number</h3>
+                    <h3 class="text-xl font-semibold text-purple-800">Winning Number</h3>
                     <p id="first-primary" class="text-3xl font-bold text-purple-900 mt-2">---</p>
                 </div>
             </div>
@@ -432,21 +455,28 @@
         
         <!-- NEW: Consolation Winners Section -->
         <div id="consolation-winners-section" class="bg-gradient-to-br from-blue-700 to-blue-900 p-6 rounded-lg shadow-lg mb-8 relative z-10">
-            <h2 class="text-3xl font-bold text-white mb-6">Consolation Winners</h2>
+            <!-- Updated heading with ID for dynamic text -->
+            <h2 id="consolation-winner-heading" class="text-3xl font-bold text-white mb-6">Consolation Winners</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <!-- 1st Consolation Prize -->
+                <!-- 1st Consolation Prize - now with an icon -->
                 <div class="winner-card bg-blue-100 p-4 rounded-md shadow-md">
-                    <h3 class="text-xl font-semibold text-blue-800">1st Consolation</h3>
+                    <div class="flex items-center justify-center mb-2">
+                        <div class="consolation-icon one">1</div>
+                    </div>
                     <p id="first-consolation-primary" class="text-2xl font-bold text-blue-900 mt-2">---</p>
                 </div>
-                <!-- 2nd Consolation Prize -->
+                <!-- 2nd Consolation Prize - now with an icon -->
                 <div class="winner-card bg-blue-100 p-4 rounded-md shadow-md">
-                    <h3 class="text-xl font-semibold text-blue-800">2nd Consolation</h3>
+                    <div class="flex items-center justify-center mb-2">
+                         <div class="consolation-icon two">2</div>
+                    </div>
                     <p id="second-consolation-primary" class="text-2xl font-bold text-blue-900 mt-2">---</p>
                 </div>
-                <!-- 3rd Consolation Prize -->
+                <!-- 3rd Consolation Prize - now with an icon -->
                 <div class="winner-card bg-blue-100 p-4 rounded-md shadow-md">
-                    <h3 class="text-xl font-semibold text-blue-800">3rd Consolation</h3>
+                    <div class="flex items-center justify-center mb-2">
+                        <div class="consolation-icon three">3</div>
+                    </div>
                     <p id="third-consolation-primary" class="text-2xl font-bold text-blue-900 mt-2">---</p>
                 </div>
             </div>
@@ -534,6 +564,7 @@
         const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
         const previousWinnersTable = document.getElementById('previous-winners-table');
         const consolationWinnersSection = document.getElementById('consolation-winners-section');
+        const consolationWinnerHeading = document.getElementById('consolation-winner-heading');
         const generateConsolationBtn = document.getElementById('generate-consolation-btn');
 
         let table = null;
@@ -903,6 +934,9 @@
             if (firstWinnerHeading) {
                 firstWinnerHeading.textContent = `${monthAndYear} Winning Number`;
             }
+            if (consolationWinnerHeading) {
+                consolationWinnerHeading.textContent = `${monthAndYear} Consolation Winners`;
+            }
 
             allTimePickedTickets.clear();
             finalFirstWinner = '---';
@@ -950,6 +984,9 @@
                     // Display existing winners
                     if (firstWinnerHeading) {
                         firstWinnerHeading.textContent = `${currentWinnerData.monthAndYear} Winning Number`;
+                    }
+                     if (consolationWinnerHeading) {
+                        consolationWinnerHeading.textContent = `${currentWinnerData.monthAndYear} Consolation Winners`;
                     }
                     document.getElementById('first-primary').textContent = currentWinnerData.winner;
                     consolationWinnersSection.style.display = 'block';
