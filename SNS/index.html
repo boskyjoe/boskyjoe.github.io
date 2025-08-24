@@ -1191,7 +1191,10 @@
                     // Display the main winner's ticket number and details
                     const mainWinnerData = currentWinnerData.winners.find(w => w.prize === 'Chit Winner');
                     if (mainWinnerData) {
-                         document.getElementById('first-primary').textContent = mainWinnerData.ticketNumber;
+                         const element = document.getElementById('first-primary');
+                         element.textContent = mainWinnerData.ticketNumber;
+                         element.style.opacity = '1'; // FIX: Make the number visible
+                         element.classList.remove('pulsing-text'); // FIX: Remove animation class
                          firstPrimaryName.textContent = `Name: ${mainWinnerData.memberDetails?.SNSMemberName || 'N/A'}`;
                          firstPrimaryContact.textContent = `Contact: ${mainWinnerData.memberDetails?.ChurchContactName || 'N/A'}`;
                     }
@@ -1202,17 +1205,26 @@
                     const consolationPrizes = currentWinnerData.winners.filter(w => w.prize.includes('Consolation Prize'));
                     
                     if (consolationPrizes[0]) {
-                        document.getElementById('first-consolation-primary').textContent = consolationPrizes[0].ticketNumber;
+                        const element = document.getElementById('first-consolation-primary');
+                        element.textContent = consolationPrizes[0].ticketNumber;
+                        element.style.opacity = '1'; // FIX: Make the number visible
+                        element.classList.remove('pulsing-text'); // FIX: Remove animation class
                         firstConsolationName.textContent = `Name: ${consolationPrizes[0].memberDetails?.SNSMemberName || 'N/A'}`;
                         firstConsolationContact.textContent = `Contact: ${consolationPrizes[0].memberDetails?.ChurchContactName || 'N/A'}`;
                     }
                     if (consolationPrizes[1]) {
-                        document.getElementById('second-consolation-primary').textContent = consolationPrizes[1].ticketNumber;
+                        const element = document.getElementById('second-consolation-primary');
+                        element.textContent = consolationPrizes[1].ticketNumber;
+                        element.style.opacity = '1'; // FIX: Make the number visible
+                        element.classList.remove('pulsing-text'); // FIX: Remove animation class
                         secondConsolationName.textContent = `Name: ${consolationPrizes[1].memberDetails?.SNSMemberName || 'N/A'}`;
                         secondConsolationContact.textContent = `Contact: ${consolationPrizes[1].memberDetails?.ChurchContactName || 'N/A'}`;
                     }
                     if (consolationPrizes[2]) {
-                        document.getElementById('third-consolation-primary').textContent = consolationPrizes[2].ticketNumber;
+                        const element = document.getElementById('third-consolation-primary');
+                        element.textContent = consolationPrizes[2].ticketNumber;
+                        element.style.opacity = '1'; // FIX: Make the number visible
+                        element.classList.remove('pulsing-text'); // FIX: Remove animation class
                         thirdConsolationName.textContent = `Name: ${consolationPrizes[2].memberDetails?.SNSMemberName || 'N/A'}`;
                         thirdConsolationContact.textContent = `Contact: ${consolationPrizes[2].memberDetails?.ChurchContactName || 'N/A'}`;
                     }
