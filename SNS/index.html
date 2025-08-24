@@ -629,11 +629,14 @@
           appId: "1:726238156431:web:e60b0b5ed66f2d628342fa",
           measurementId: "G-7ZW0ZSQGLZ"
         };
+        
+        // Use a default app ID if the provided variable is not defined
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'snehanidhi-default-app-id';
 
         // TODO: Replace this with your Google Sheets ID
         // To find your Sheet ID, look in the URL:
         // https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0
-        const GOOGLE_SHEET_ID = '1c5Yzf_UQrCrohItdhsrENcYEqc8Cs7UtRG5OO-Gzn28'; 
+        const GOOGLE_SHEET_ID = '1234567890abcdefghijklmnopqrstuvwxyz'; 
         const GOOGLE_SHEET_NAME = 'SNSMembers';
         const GOOGLE_SHEET_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=${GOOGLE_SHEET_NAME}`;
 
@@ -715,7 +718,6 @@
                 const firebaseApp = initializeApp(config);
                 db = getFirestore(firebaseApp);
                 auth = getAuth(firebaseApp);
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
                 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
                 // Set up the authentication state listener
@@ -986,14 +988,12 @@
             }
 
             try {
-                // Fetch data from Google Sheets using the gviz query
                 const response = await fetch(GOOGLE_SHEET_URL);
                 if (!response.ok) {
                     throw new Error(`Failed to load Google Sheet data. Please ensure the sheet ID and name are correct and the sheet is publicly accessible. Status: ${response.status}`);
                 }
 
                 const text = await response.text();
-                // The response is a JSONP-like string, we need to parse it correctly
                 const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
                 const data = JSON.parse(jsonText);
                 const rows = data.table.rows;
@@ -1005,7 +1005,7 @@
                 }
 
                 const batch = writeBatch(db);
-                const membersCollection = collection(db, `/artifacts/${__app_id}/public/data/SnehaNidhiSchemeMembers`);
+                const membersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
                 let importCount = 0;
                 let existingCount = 0;
                 
@@ -1046,7 +1046,6 @@
                     showModal("No New Members", "The database is already up to date with the Google Sheet.");
                 }
 
-                // After import, get the list of eligible members for the draw
                 const eligibleTicketsQuery = query(membersCollection, where("WinningTerm", "==", null));
                 const querySnapshot = await getDocs(eligibleTicketsQuery);
                 const eligibleTickets = querySnapshot.docs.map(doc => doc.id);
@@ -1067,7 +1066,6 @@
                 console.error("Firestore not initialized. Cannot check for existing winner.");
                 return false;
             }
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
             const currentDate = new Date();
             const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
             const docId = monthAndYear.replace(/\s/g, '');
@@ -1297,7 +1295,6 @@
                 console.error("Firestore not initialized or user not authenticated. Cannot save winner.");
                 return;
             }
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
             try {
                 const docId = monthAndYear.replace(/\s/g, '');
                 const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`, docId);
@@ -1365,7 +1362,6 @@
                 showModal("Error", "Database is not available. Cannot perform delete operation.");
                 return;
             }
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
             const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`, docId);
             
             try {
@@ -1386,7 +1382,6 @@
                 console.error("Firestore not initialized. Cannot load previous winners.");
                 return;
             }
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
             
             // Unsubscribe from any previous listener to prevent duplicates
             if (unsubscribeWinnersListener) {
