@@ -819,7 +819,7 @@
             const currentDate = new Date();
             const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
             const docId = monthAndYear.replace(/\s/g, '');
-            const docRef = doc(db, `/artifacts/${appId}/public/data/winners`, docId);
+            const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`, docId);
 
             try {
                 const docSnap = await getDoc(docRef);
@@ -1032,7 +1032,7 @@
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
             try {
                 const docId = monthAndYear.replace(/\s/g, '');
-                const docRef = doc(db, `/artifacts/${appId}/public/data/winners`, docId);
+                const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`, docId);
                 await setDoc(docRef, {
                     monthAndYear: monthAndYear,
                     winner: winnerTicket,
@@ -1097,7 +1097,7 @@
                 return;
             }
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const docRef = doc(db, `/artifacts/${appId}/public/data/winners`, docId);
+            const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`, docId);
             
             try {
                 await deleteDoc(docRef);
@@ -1125,7 +1125,7 @@
                 unsubscribeWinnersListener();
             }
 
-            const winnersCollectionRef = collection(db, `/artifacts/${appId}/public/data/winners`);
+            const winnersCollectionRef = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`);
 
             // Listen to the collection for real-time updates
             unsubscribeWinnersListener = onSnapshot(winnersCollectionRef, (querySnapshot) => {
