@@ -616,7 +616,7 @@
     <script type="module">
         // Firebase SDKs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, onSnapshot, getDoc, where, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
         // Firebase configuration hardcoded as requested
@@ -629,6 +629,13 @@
           appId: "1:726238156431:web:e60b0b5ed66f2d628342fa",
           measurementId: "G-7ZW0ZSQGLZ"
         };
+
+        // TODO: Replace this with your Google Sheets ID
+        // To find your Sheet ID, look in the URL:
+        // https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0
+        const GOOGLE_SHEET_ID = '1234567890abcdefghijklmnopqrstuvwxyz'; 
+        const GOOGLE_SHEET_NAME = 'SNSMembers';
+        const GOOGLE_SHEET_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=${GOOGLE_SHEET_NAME}`;
 
         let db = null;
         let auth = null;
@@ -964,27 +971,92 @@
             }
         }
 
-        async function fetchTicketNumbers(filePath) {
+        /**
+         * Fetches and imports member data from a Google Sheet.
+         * It checks for existing members to prevent duplicates.
+         */
+        async function importMembersFromGoogleSheets() {
+            if (!db || !auth.currentUser) {
+                console.error("Firestore not initialized or user not authenticated. Cannot import data.");
+                return Promise.reject("Authentication or database not ready.");
+            }
+
+            if (statusMessageElement) {
+                statusMessageElement.textContent = "Importing member data from Google Sheets...";
+            }
+
             try {
-                const fullUrl = new URL(filePath, window.location.href).href;
-                console.log(`DEBUG: Attempting to fetch from: ${fullUrl}`);
-
-                const response = await fetch(fullUrl);
+                // Fetch data from Google Sheets using the gviz query
+                const response = await fetch(GOOGLE_SHEET_URL);
                 if (!response.ok) {
-                    throw new Error(`Failed to load ${filePath} (HTTP status: ${response.status}): ${response.statusText}`);
+                    throw new Error(`Failed to load Google Sheet data. Please ensure the sheet ID and name are correct and the sheet is publicly accessible. Status: ${response.status}`);
                 }
+
                 const text = await response.text();
-                console.log(`DEBUG: Raw content of ${filePath}:\n${text}`);
+                // The response is a JSONP-like string, we need to parse it correctly
+                const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+                const data = JSON.parse(jsonText);
+                const rows = data.table.rows;
+                const columns = data.table.cols.map(col => col.label);
 
-                const tickets = Array.from(new Set(text.split(/[\n,]+/)
-                                   .map(s => s.trim())
-                                   .filter(s => s !== '')));
+                if (columns.length === 0 || rows.length === 0) {
+                     console.warn("Google Sheet is empty or columns are not labeled correctly.");
+                     return [];
+                }
 
-                console.log(`DEBUG: Parsed UNIQUE tickets from ${filePath}:`, tickets);
-                return tickets;
+                const batch = writeBatch(db);
+                const membersCollection = collection(db, `/artifacts/${__app_id}/public/data/SnehaNidhiSchemeMembers`);
+                let importCount = 0;
+                let existingCount = 0;
+                
+                // Get all existing SNS_ID's in the collection for efficient checking
+                const existingDocsSnapshot = await getDocs(membersCollection);
+                const existingSNSIds = new Set(existingDocsSnapshot.docs.map(doc => doc.id));
+
+                for (const row of rows) {
+                    const rowData = {};
+                    row.c.forEach((cell, index) => {
+                        rowData[columns[index]] = cell?.v || null;
+                    });
+
+                    if (rowData['SNS_ID'] && !existingSNSIds.has(String(rowData['SNS_ID']))) {
+                        const newDocRef = doc(membersCollection, String(rowData['SNS_ID']));
+                        const memberData = {
+                            ...rowData,
+                            createdBy: auth.currentUser.uid,
+                            createdDate: serverTimestamp(),
+                            updatedBy: auth.currentUser.uid,
+                            updatedDate: serverTimestamp(),
+                        };
+                        batch.set(newDocRef, memberData);
+                        importCount++;
+                    } else {
+                        if (rowData['SNS_ID']) {
+                            existingCount++;
+                        }
+                    }
+                }
+                
+                if (importCount > 0) {
+                    await batch.commit();
+                    console.log(`Successfully imported ${importCount} new members. ${existingCount} members already existed.`);
+                    showModal("Import Complete", `Successfully imported ${importCount} new members from Google Sheets. ${existingCount} members were already in the database.`);
+                } else {
+                    console.log(`No new members to import. ${existingCount} members already existed.`);
+                    showModal("No New Members", "The database is already up to date with the Google Sheet.");
+                }
+
+                // After import, get the list of eligible members for the draw
+                const eligibleTicketsQuery = query(membersCollection, where("WinningTerm", "==", null));
+                const querySnapshot = await getDocs(eligibleTicketsQuery);
+                const eligibleTickets = querySnapshot.docs.map(doc => doc.id);
+
+                console.log("DEBUG: Eligible tickets for draw:", eligibleTickets);
+                return eligibleTickets;
+
             } catch (error) {
-                console.error(`ERROR: Failed to fetch or parse ${filePath}:`, error);
-                showModal("File Error", `Failed to load ticket data from '${filePath}'. Please ensure the file exists in the same directory as your HTML, contains valid alphanumeric tickets (one per line or comma-separated), and is correctly formatted.`);
+                console.error("ERROR: Failed to import data from Google Sheets:", error);
+                showModal("Import Failed", `Could not import data from Google Sheets. Please ensure the sheet is publicly accessible and the Sheet ID and Sheet Name in the code are correct. Error: ${error.message}`);
                 disableAllButtons();
                 return Promise.reject(error);
             }
@@ -1070,13 +1142,12 @@
             await preloadConfettiImages();
 
             try {
-                const winnersData = await fetchTicketNumbers('winners.txt');
-                snehanidhiTicketsWinners = winnersData;
+                snehanidhiTicketsWinners = await importMembersFromGoogleSheets();
 
-                console.log("DEBUG: Fetched winners.txt unique length:", snehanidhiTicketsWinners.length);
+                console.log("DEBUG: Eligible members from Firestore:", snehanidhiTicketsWinners);
 
                 if (snehanidhiTicketsWinners.length < 4) {
-                    showModal("File Error", `Error: Not enough unique ticket numbers available. 'winners.txt' has ${snehanidhiTicketsWinners.length} unique tickets (needs at least 4 for all prizes). Please populate your file with more unique alphanumeric tickets.`);
+                    showModal("Data Error", `Error: Not enough unique ticket numbers available. The database has ${snehanidhiTicketsWinners.length} eligible tickets (needs at least 4 for all prizes). Please add more members to the Google Sheet and ensure their 'WinningTerm' is blank.`);
                     disableAllButtons();
                     return;
                 }
@@ -1126,7 +1197,7 @@
             }
             catch (error) {
                 console.error("ERROR: Initialization failed in initializeSnehaNidhiData:", error);
-                showModal("Initialization Failed", `Failed to initialize SnehaNidhi data. Please check console for details. Ensure 'winners.txt' is correctly placed and formatted.`);
+                showModal("Initialization Failed", `Failed to initialize SnehaNidhi data. Please check console for details.`);
                 disableAllButtons();
             }
         }
@@ -1529,7 +1600,6 @@
             }
 
             await startCountdown(3);
-
             const primaryWinner = pickSingleUniqueTicket(snehanidhiTicketsWinners);
             if (primaryElement) {
                 await animateNumberReveal(primaryElement, primaryWinner, 10000);
