@@ -414,6 +414,14 @@
         .tree-grid-icon.open {
             transform: rotate(90deg);
         }
+
+        /* Styles for the new name/contact details in the cards */
+        .winner-detail-info {
+            font-size: 0.9rem;
+            color: #374151; /* gray-700 */
+            margin-top: 0.5rem;
+            line-height: 1.25;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -510,6 +518,9 @@
                 <div class="winner-card bg-purple-100 p-4 rounded-md shadow-md">
                     <h3 class="text-xl font-semibold text-purple-800">Winning Number</h3>
                     <p id="first-primary" class="text-3xl font-bold text-purple-900 mt-2">---</p>
+                    <!-- NEW: Display for member details -->
+                    <p id="first-primary-name" class="winner-detail-info text-gray-700">Name: ---</p>
+                    <p id="first-primary-contact" class="winner-detail-info text-gray-700">Contact: ---</p>
                 </div>
             </div>
             <button id="action-button" class="winner-button px-8 py-3 text-white font-semibold rounded-full shadow-lg transition duration-300 ease-in-out" disabled>
@@ -528,6 +539,9 @@
                         <div class="consolation-icon one">1</div>
                     </div>
                     <p id="first-consolation-primary" class="text-2xl font-bold text-blue-900 mt-2">---</p>
+                    <!-- NEW: Display for member details -->
+                    <p id="first-consolation-name" class="winner-detail-info text-gray-700">Name: ---</p>
+                    <p id="first-consolation-contact" class="winner-detail-info text-gray-700">Contact: ---</p>
                 </div>
                 <!-- 2nd Consolation Prize - now with an icon -->
                 <div class="winner-card bg-blue-100 p-4 rounded-md shadow-md">
@@ -535,6 +549,9 @@
                          <div class="consolation-icon two">2</div>
                     </div>
                     <p id="second-consolation-primary" class="text-2xl font-bold text-blue-900 mt-2">---</p>
+                    <!-- NEW: Display for member details -->
+                    <p id="second-consolation-name" class="winner-detail-info text-gray-700">Name: ---</p>
+                    <p id="second-consolation-contact" class="winner-detail-info text-gray-700">Contact: ---</p>
                 </div>
                 <!-- 3rd Consolation Prize - now with an icon -->
                 <div class="winner-card bg-blue-100 p-4 rounded-md shadow-md">
@@ -542,6 +559,9 @@
                         <div class="consolation-icon three">3</div>
                     </div>
                     <p id="third-consolation-primary" class="text-2xl font-bold text-blue-900 mt-2">---</p>
+                    <!-- NEW: Display for member details -->
+                    <p id="third-consolation-name" class="winner-detail-info text-gray-700">Name: ---</p>
+                    <p id="third-consolation-contact" class="winner-detail-info text-gray-700">Contact: ---</p>
                 </div>
             </div>
             <button id="generate-consolation-btn" class="winner-button px-8 py-3 bg-blue-700 text-white font-semibold rounded-full shadow-lg transition duration-300 ease-in-out" disabled>
@@ -656,6 +676,17 @@
         const consolationWinnersSection = document.getElementById('consolation-winners-section');
         const consolationWinnerHeading = document.getElementById('consolation-winner-heading');
         const generateConsolationBtn = document.getElementById('generate-consolation-btn');
+        
+        // NEW: Get references to the new member detail elements
+        const firstPrimaryName = document.getElementById('first-primary-name');
+        const firstPrimaryContact = document.getElementById('first-primary-contact');
+        const firstConsolationName = document.getElementById('first-consolation-name');
+        const firstConsolationContact = document.getElementById('first-consolation-contact');
+        const secondConsolationName = document.getElementById('second-consolation-name');
+        const secondConsolationContact = document.getElementById('second-consolation-contact');
+        const thirdConsolationName = document.getElementById('third-consolation-name');
+        const thirdConsolationContact = document.getElementById('third-consolation-contact');
+
 
         /**
          * Generates the formatted button text with the current month and year.
@@ -914,6 +945,14 @@
                 document.getElementById('second-consolation-primary'),
                 document.getElementById('third-consolation-primary'),
             ];
+            
+            // NEW: Elements for names and contacts
+            const detailElements = [
+                firstPrimaryName, firstPrimaryContact,
+                firstConsolationName, firstConsolationContact,
+                secondConsolationName, secondConsolationContact,
+                thirdConsolationName, thirdConsolationContact
+            ];
 
             const animations = [];
             winnerElements.forEach(element => {
@@ -935,6 +974,13 @@
                     element.classList.remove('pulsing-text');
                     animations.push(Promise.resolve());
                 }
+            });
+            
+            // Clear the new detail elements
+            detailElements.forEach(element => {
+                 if (element) {
+                    element.textContent = '---';
+                 }
             });
 
             await Promise.all(animations);
@@ -1074,6 +1120,7 @@
                 statusMessageElement.textContent = "Loading ticket data...";
             }
             disableAllButtons();
+            clearDisplayedWinners(); // Clear previous winners' details, including names/contacts
 
             // Only proceed if user is logged in
             if (!auth.currentUser) {
@@ -1140,17 +1187,35 @@
                      if (consolationWinnerHeading) {
                         consolationWinnerHeading.textContent = `${currentWinnerData.monthAndYear} Consolation Winners`;
                     }
-                    // Find the main winner ticket number from the saved data structure
-                    const mainWinnerTicket = currentWinnerData.winners.find(w => w.prize === 'Chit Winner')?.ticketNumber || '---';
-                    document.getElementById('first-primary').textContent = mainWinnerTicket;
+                    
+                    // Display the main winner's ticket number and details
+                    const mainWinnerData = currentWinnerData.winners.find(w => w.prize === 'Chit Winner');
+                    if (mainWinnerData) {
+                         document.getElementById('first-primary').textContent = mainWinnerData.ticketNumber;
+                         firstPrimaryName.textContent = `Name: ${mainWinnerData.memberDetails?.SNSMemberName || 'N/A'}`;
+                         firstPrimaryContact.textContent = `Contact: ${mainWinnerData.memberDetails?.ChurchContactName || 'N/A'}`;
+                    }
                     
                     consolationWinnersSection.style.display = 'block';
                     consolationWinnersSection.classList.add('visible');
                     
                     const consolationPrizes = currentWinnerData.winners.filter(w => w.prize.includes('Consolation Prize'));
-                    document.getElementById('first-consolation-primary').textContent = consolationPrizes[0]?.ticketNumber || '---';
-                    document.getElementById('second-consolation-primary').textContent = consolationPrizes[1]?.ticketNumber || '---';
-                    document.getElementById('third-consolation-primary').textContent = consolationPrizes[2]?.ticketNumber || '---';
+                    
+                    if (consolationPrizes[0]) {
+                        document.getElementById('first-consolation-primary').textContent = consolationPrizes[0].ticketNumber;
+                        firstConsolationName.textContent = `Name: ${consolationPrizes[0].memberDetails?.SNSMemberName || 'N/A'}`;
+                        firstConsolationContact.textContent = `Contact: ${consolationPrizes[0].memberDetails?.ChurchContactName || 'N/A'}`;
+                    }
+                    if (consolationPrizes[1]) {
+                        document.getElementById('second-consolation-primary').textContent = consolationPrizes[1].ticketNumber;
+                        secondConsolationName.textContent = `Name: ${consolationPrizes[1].memberDetails?.SNSMemberName || 'N/A'}`;
+                        secondConsolationContact.textContent = `Contact: ${consolationPrizes[1].memberDetails?.ChurchContactName || 'N/A'}`;
+                    }
+                    if (consolationPrizes[2]) {
+                        document.getElementById('third-consolation-primary').textContent = consolationPrizes[2].ticketNumber;
+                        thirdConsolationName.textContent = `Name: ${consolationPrizes[2].memberDetails?.SNSMemberName || 'N/A'}`;
+                        thirdConsolationContact.textContent = `Contact: ${consolationPrizes[2].memberDetails?.ChurchContactName || 'N/A'}`;
+                    }
 
                     if (statusMessageElement) {
                         statusMessageElement.textContent = `Winner for ${currentWinnerData.monthAndYear} has already been drawn. Click 'Reset SnehaNidhi' to start a new month.`;
@@ -1596,6 +1661,12 @@
             if (primaryElement) {
                 await animateNumberReveal(primaryElement, primaryWinner, 10000);
             }
+            
+            // NEW: Fetch and display member details for the main winner
+            const memberDetails = await getMemberDetails(primaryWinner);
+            firstPrimaryName.textContent = `Name: ${memberDetails?.SNSMemberName || 'N/A'}`;
+            firstPrimaryContact.textContent = `Contact: ${memberDetails?.ChurchContactName || 'N/A'}`;
+
 
             if (poweredBySection) {
                 poweredBySection.classList.add('fade-out-and-hide-animation');
@@ -1660,6 +1731,10 @@
                 document.getElementById('second-consolation-primary'),
                 document.getElementById('third-consolation-primary')
             ];
+            
+            // NEW: References to the name/contact elements
+            const nameElements = [firstConsolationName, secondConsolationName, thirdConsolationName];
+            const contactElements = [firstConsolationContact, secondConsolationContact, thirdConsolationContact];
 
             const consolationDraws = [];
             for (let i = 0; i < 3; i++) {
@@ -1668,8 +1743,14 @@
                     console.warn("Not enough tickets for all consolation prizes.");
                     break;
                 }
-                consolationDraws.push(winner);
                 await animateNumberReveal(consolationElements[i], winner, 5000);
+                
+                // NEW: Fetch and display member details for each consolation winner
+                const memberDetails = await getMemberDetails(winner);
+                nameElements[i].textContent = `Name: ${memberDetails?.SNSMemberName || 'N/A'}`;
+                contactElements[i].textContent = `Contact: ${memberDetails?.ChurchContactName || 'N/A'}`;
+
+                consolationDraws.push(winner);
                 triggerCurrencyEffect(); // Confetti after each winner is revealed
                 await delay(500); // Small delay between each consolation reveal
             }
