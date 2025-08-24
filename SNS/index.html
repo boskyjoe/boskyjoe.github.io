@@ -395,27 +395,56 @@
             padding: 1.5rem;
         }
 
-        .accordion-detail {
+        /* NEW: Styles for the data tree grid */
+        .tree-grid-item {
             display: flex;
             align-items: center;
-            justify-content: space-between;
             padding: 0.5rem 0;
             border-bottom: 1px solid #e5e7eb;
+            transition: background-color 0.2s ease-in-out;
         }
-
-        .accordion-detail:last-child {
+        
+        .tree-grid-item:last-child {
             border-bottom: none;
         }
 
-        .accordion-detail-label {
+        .tree-grid-item-label {
             font-weight: 500;
             color: #4b5563; /* gray-600 */
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
         }
-        
-        .accordion-detail-value {
+
+        .tree-grid-item-value {
             font-weight: 600;
             color: #1f2937; /* gray-900 */
             text-align: right;
+        }
+        
+        .tree-grid-children {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out;
+        }
+
+        .tree-grid-children.open {
+            max-height: 300px;
+        }
+
+        .tree-grid-children .tree-grid-item {
+            padding-left: 2rem; /* Indentation for children */
+        }
+        
+        .tree-grid-icon {
+            width: 16px;
+            margin-right: 8px;
+            transition: transform 0.2s ease-in-out;
+        }
+        
+        .tree-grid-icon.open {
+            transform: rotate(90deg);
         }
     </style>
 </head>
@@ -1330,7 +1359,7 @@
         }
         
         /**
-         * Renders the accordion from the fetched winners data.
+         * Renders the accordion with a tree grid from the fetched winners data.
          * @param {Array<Object>} winners - The array of winner data objects.
          */
         function renderAccordion(winners) {
@@ -1355,46 +1384,79 @@
                 `;
                 accordionItem.appendChild(header);
                 
-                // Accordion Content
+                // Accordion Content - now with a tree grid structure
                 const content = document.createElement('div');
                 content.className = 'accordion-content';
                 
-                // Main Winner
-                const mainWinner = document.createElement('div');
-                mainWinner.className = 'accordion-detail';
-                mainWinner.innerHTML = `
-                    <span class="accordion-detail-label">Winning Number:</span>
-                    <span class="accordion-detail-value font-bold">${winner.winner}</span>
+                // Main Winner - root of the tree
+                const mainWinnerItem = document.createElement('div');
+                mainWinnerItem.className = 'tree-grid-item';
+                mainWinnerItem.innerHTML = `
+                    <span class="tree-grid-item-label">
+                        <i class="fa-solid fa-star text-yellow-500 mr-2"></i>
+                        Winning Number:
+                    </span>
+                    <span class="tree-grid-item-value font-bold">${winner.winner}</span>
                 `;
-                content.appendChild(mainWinner);
+                content.appendChild(mainWinnerItem);
                 
-                // Consolation Winners
+                // Consolation Winners - collapsible node
                 if (winner.consolationWinners && winner.consolationWinners.length > 0) {
+                    const consolationNode = document.createElement('div');
+                    const consolationHeader = document.createElement('div');
+                    consolationHeader.className = 'tree-grid-item';
+                    consolationHeader.innerHTML = `
+                        <span class="tree-grid-item-label cursor-pointer">
+                            <i class="fa-solid fa-caret-right tree-grid-icon"></i>
+                            <i class="fa-solid fa-trophy text-gray-500 mr-2"></i>
+                            Consolation Prizes:
+                        </span>
+                    `;
+                    
+                    const consolationChildren = document.createElement('div');
+                    consolationChildren.className = 'tree-grid-children';
+                    
                     winner.consolationWinners.forEach((ticket, index) => {
-                        const consolation = document.createElement('div');
-                        consolation.className = 'accordion-detail';
-                        consolation.innerHTML = `
-                            <span class="accordion-detail-label">Consolation Winner ${index + 1}:</span>
-                            <span class="accordion-detail-value">${ticket}</span>
+                        const childItem = document.createElement('div');
+                        childItem.className = 'tree-grid-item';
+                        childItem.innerHTML = `
+                            <span class="tree-grid-item-label">Prize ${index + 1}:</span>
+                            <span class="tree-grid-item-value">${ticket}</span>
                         `;
-                        content.appendChild(consolation);
+                        consolationChildren.appendChild(childItem);
                     });
+
+                    // Add click event to toggle the children
+                    consolationHeader.querySelector('.tree-grid-item-label').addEventListener('click', () => {
+                        consolationChildren.classList.toggle('open');
+                        consolationHeader.querySelector('.tree-grid-icon').classList.toggle('open');
+                    });
+                    
+                    consolationNode.appendChild(consolationHeader);
+                    consolationNode.appendChild(consolationChildren);
+                    content.appendChild(consolationNode);
                 }
                 
                 // Drawn By and Date Drawn
                 const drawnBy = document.createElement('div');
-                drawnBy.className = 'accordion-detail';
+                drawnBy.className = 'tree-grid-item';
                 drawnBy.innerHTML = `
-                    <span class="accordion-detail-label">Drawn By:</span>
-                    <span class="accordion-detail-value">${winner.drawnBy}</span>
+                    <span class="tree-grid-item-label">
+                        <i class="fa-solid fa-user-check text-green-500 mr-2"></i>
+                        Drawn By:
+                    </span>
+                    <span class="tree-grid-item-value">${winner.drawnBy}</span>
                 `;
                 content.appendChild(drawnBy);
 
                 const dateDrawn = document.createElement('div');
-                dateDrawn.className = 'accordion-detail';
+                dateDrawn.className = 'tree-grid-item';
                 dateDrawn.innerHTML = `
-                    <span class="accordion-detail-label">Date Drawn:</span>
-                    <span class="accordion-detail-value">${formatTimestamp(winner.dateDrawn)}</span>
+                    <span class="tree-grid-item-label">
+                        <i class="fa-solid fa-clock text-indigo-500 mr-2"></i>
+                        Date Drawn:
+                    </span>
+                    <span class="tree-grid-item-value">${formatTimestamp(winner.dateDrawn)}</span>
                 `;
                 content.appendChild(dateDrawn);
 
