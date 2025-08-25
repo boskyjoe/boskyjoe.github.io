@@ -1081,15 +1081,24 @@
                 const membersSnapshot = await getDocs(membersCollection);
                 const allTicketIds = membersSnapshot.docs.map(doc => doc.id);
         
-                // ** NEW LOGIC: Filter out previous winners **
+               // ** CORRECTED LOGIC: Filter out previous Chit Winners **
                 const winnersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`);
+                const winnersSnapshot = await getDocs(winnersCollection);
                 
-                // ** Only query for documents where the prize is 'Chit Winner' **
-                const q = query(winnersCollection, where("prize", "==", "Chit Winner"));
-                const winnersSnapshot = await getDocs(q);
-                
-                // Create a Set of previous winner IDs for efficient lookup
-                const previousWinnerIds = new Set(winnersSnapshot.docs.map(doc => doc.data().winner_ticket_number));
+                // Create a Set of previous Chit Winner IDs for efficient lookup
+                const previousWinnerIds = new Set();
+                winnersSnapshot.forEach(drawDoc => {
+                    const drawData = drawDoc.data();
+                    // Check if the document has a 'winners' array and iterate through it
+                    if (Array.isArray(drawData.winners)) {
+                        drawData.winners.forEach(winner => {
+                            // Check if the prize is "Chit Winner" and add the ticket number
+                            if (winner.prize === "Chit Winner") {
+                                previousWinnerIds.add(String(winner.ticketNumber));
+                            }
+                        });
+                    }
+                });
         
                 // Filter the full list of tickets to exclude past winners
                 const eligibleTickets = allTicketIds.filter(ticketId => !previousWinnerIds.has(ticketId));
