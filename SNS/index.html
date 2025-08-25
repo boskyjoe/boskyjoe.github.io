@@ -1099,7 +1099,8 @@
                         });
                     }
                 });
-        
+                console.log("DEBUG: Previous Winners:", previousWinnerIds);
+
                 // Filter the full list of tickets to exclude past winners
                 const eligibleTickets = allTicketIds.filter(ticketId => !previousWinnerIds.has(ticketId));
         
