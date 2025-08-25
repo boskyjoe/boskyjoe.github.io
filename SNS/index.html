@@ -1078,7 +1078,23 @@
                 
                 // Now, load all ticket numbers for the draw from the collection itself
                 const membersSnapshot = await getDocs(membersCollection);
-                const eligibleTickets = membersSnapshot.docs.map(doc => doc.id);
+                const allTicketIds = membersSnapshot.docs.map(doc => doc.id);
+
+                // ** NEW LOGIC: Filter out previous winners **
+                const winnersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`);
+        
+                // ** Only query for documents where the prize is 'Chit Winner' **
+                const q = query(winnersCollection, where("prize", "==", "Chit Winner"));
+                const winnersSnapshot = await getDocs(q);
+                
+                // Create a Set of previous winner IDs for efficient lookup
+                const previousWinnerIds = new Set(winnersSnapshot.docs.map(doc => doc.data().winner_ticket_number));
+        
+                // Filter the full list of tickets to exclude past winners
+                const eligibleTickets = allTicketIds.filter(ticketId => !previousWinnerIds.has(ticketId));
+
+
+                //const eligibleTickets = membersSnapshot.docs.map(doc => doc.id);
 
                 console.log("DEBUG: Eligible tickets for draw:", eligibleTickets);
                 return eligibleTickets;
