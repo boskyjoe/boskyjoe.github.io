@@ -1016,6 +1016,41 @@
             }
         
             try {
+                const membersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
+        
+                // ** NEW LOGIC: Check if the collection already has data **
+                const existingMembersSnapshot = await getDocs(membersCollection);
+                if (existingMembersSnapshot.size > 0) {
+                    console.log("Member data already exists in Firestore. Skipping Google Sheets import.");
+                    showModal("Import Skipped", "Member data is already up-to-date. No new import needed from Google Sheets.");
+        
+                    // Proceed directly to fetching the eligible tickets from the existing data
+                    const allTicketIds = existingMembersSnapshot.docs.map(doc => doc.id);
+                    
+                    const winnersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`);
+                    const q = query(winnersCollection, where("prize", "==", "Chit Winner"));
+                    const winnersSnapshot = await getDocs(q);
+                    
+                    const previousWinnerIds = new Set();
+                    winnersSnapshot.forEach(drawDoc => {
+                        const drawData = drawDoc.data();
+                        if (Array.isArray(drawData.winners)) {
+                            drawData.winners.forEach(winner => {
+                                if (winner.prize === "Chit Winner") {
+                                    previousWinnerIds.add(String(winner.ticketNumber));
+                                }
+                            });
+                        }
+                    });
+        
+                    const eligibleTickets = allTicketIds.filter(ticketId => !previousWinnerIds.has(ticketId));
+                    
+                    console.log("DEBUG: Eligible tickets for draw:", eligibleTickets);
+                    return eligibleTickets;
+                }
+        
+                // ** If the collection is empty, proceed with the full import logic **
+        
                 const response = await fetch(GOOGLE_SHEET_URL);
                 if (!response.ok) {
                     throw new Error(`Failed to load Google Sheet data. Please ensure the sheet ID and name are correct and the sheet is publicly accessible. Status: ${response.status}`);
@@ -1033,11 +1068,9 @@
                 }
         
                 const batch = writeBatch(db);
-                const membersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
                 let importCount = 0;
                 let updateCount = 0;
         
-                // Get all existing SNS_ID's in the collection for efficient checking
                 const existingDocsSnapshot = await getDocs(membersCollection);
                 const existingSNSIds = new Set(existingDocsSnapshot.docs.map(doc => doc.id));
         
@@ -1055,9 +1088,8 @@
                             updatedDate: serverTimestamp(),
                         };
         
-                        // Check if the document already exists to log updates vs new additions
                         if (existingSNSIds.has(String(rowData['SNS_ID']))) {
-                            batch.set(newDocRef, memberData, { merge: true }); // Use merge to avoid overwriting unrelated fields if they exist
+                            batch.set(newDocRef, memberData, { merge: true });
                             updateCount++;
                         } else {
                             memberData.createdBy = auth.currentUser.uid;
@@ -1077,31 +1109,24 @@
                     showModal("No Changes", "The database is already up to date with the Google Sheet. No new members or updates found.");
                 }
         
-                // Fetch all ticket numbers from the collection
                 const membersSnapshot = await getDocs(membersCollection);
                 const allTicketIds = membersSnapshot.docs.map(doc => doc.id);
         
-               // ** CORRECTED LOGIC: Filter out previous Chit Winners **
                 const winnersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`);
                 const winnersSnapshot = await getDocs(winnersCollection);
                 
-                // Create a Set of previous Chit Winner IDs for efficient lookup
                 const previousWinnerIds = new Set();
                 winnersSnapshot.forEach(drawDoc => {
                     const drawData = drawDoc.data();
-                    // Check if the document has a 'winners' array and iterate through it
                     if (Array.isArray(drawData.winners)) {
                         drawData.winners.forEach(winner => {
-                            // Check if the prize is "Chit Winner" and add the ticket number
                             if (winner.prize === "Chit Winner") {
                                 previousWinnerIds.add(String(winner.ticketNumber));
                             }
                         });
                     }
                 });
-                console.log("DEBUG: Previous Winners:", previousWinnerIds);
-
-                // Filter the full list of tickets to exclude past winners
+        
                 const eligibleTickets = allTicketIds.filter(ticketId => !previousWinnerIds.has(ticketId));
         
                 console.log("DEBUG: Eligible tickets for draw:", eligibleTickets);
@@ -1114,6 +1139,7 @@
                 return Promise.reject(error);
             }
         }
+
 
         async function checkForExistingWinner() {
             if (!db) {
