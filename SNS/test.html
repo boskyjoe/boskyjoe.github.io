@@ -2,18 +2,18 @@
 <html>
 <head>
     <title>Tabulator Edit Test</title>
-    <!-- Use a CDN to ensure the library is correct -->
+    <!-- Using the primary CDN for Tabulator -->
     <link href="https://unpkg.com/tabulator-tables@5.4.4/dist/css/tabulator.min.css" rel="stylesheet">
     <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.4.4/dist/js/tabulator.min.js"></script>
 </head>
 <body>
 
     <h3>Tabulator Edit Test</h3>
-    <p>Click on a name or color in the table. Check the browser console (F12) for messages.</p>
+    <p>Click on a name or color. Press Enter or click away to finish the edit. Check the browser console (F12) for messages.</p>
     <div id="example-table"></div>
 
     <script type="text/javascript">
-        // Hardcoded data - no Firestore
+        // Hardcoded data
         var tabledata = [
             {id:1, name:"Oli Bob", color:"red"},
             {id:2, name:"Mary May", color:"blue"},
@@ -26,14 +26,13 @@
             layout: "fitColumns",
             columns:[
                 {title:"ID", field:"id"},
-                {title:"Name", field:"name", editor:"input"}, // Editor enabled
-                {title:"Favorite Color", field:"color", editor:"input"}, // Editor enabled
+                {title:"Name", field:"name", editor:"input"},
+                {title:"Favorite Color", field:"color", editor:"input"},
             ],
-            // --- Listen for the edit event ---
+            // Listen for the edit event
             cellEdited:function(cell){
-                // This is the event that is failing in your app
                 console.log("SUCCESS: cellEdited event fired!");
-                console.log("Row: " + cell.getRow().getData().id + " was updated");
+                console.log("Row ID: " + cell.getRow().getData().id + " was updated");
                 console.log("New value: " + cell.getValue());
             },
         });
