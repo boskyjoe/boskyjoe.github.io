@@ -561,67 +561,7 @@
                 line-height: 1.25;
             }
 
-            /* Target the custom class we added in the JavaScript options */
-            .professional-theme .htCore th {
-                /* Style for the table headers */
-                background-color: #f4f5f7;
-                /* A light, professional gray */
-                font-weight: bold;
-                color: #333;
-                border-bottom: 2px solid #d6d8db;
-            }
-
-            .professional-theme .htCore tr:hover>td {
-                /* Adds a subtle hover effect on rows */
-                background-color: #eef4ff;
-            }
-
-            .professional-theme .htCore td {
-                /* Ensures clean lines between all cells */
-                border-bottom: 1px solid #e6e6e6;
-            }
-
-            #members-table .tabulator-row.tabulator-row-odd {
-                background-color: #f2f2f2;
-                /* Light gray for odd rows */
-            }
-
-            #members-table .tabulator-row.tabulator-row-even {
-                background-color: #ffffff;
-                /* White for even rows */
-            }
-
-            /* Add this to your main CSS file or in a <style> tag in the <head> */
-            .table-wrapper {
-                /* This allows the table to be scrolled horizontally if needed,
-                without clipping the pagination footer. */
-                overflow-x: auto;
-                width: 100%;
-            }
-
-             /* Target the custom class for our table */
-            .professional-handsontable .htCore th {
-                /* Style for the table headers */
-                background-color: #f4f5f7;
-                font-weight: bold;
-                color: #333;
-                border-bottom: 2px solid #d6d8db;
-            }
-
-            /* THIS IS THE CORRECT WAY TO DO STRIPE ROWS IN HANDSONTABLE */
-            .professional-handsontable .htCore tr:nth-child(even) > td {
-                background-color: #f8f9fa; /* A very light gray for even rows */
-            }
-
-            .professional-handsontable .htCore tr:hover > td {
-                /* Adds a subtle hover effect on rows */
-                background-color: #eef4ff;
-            }
-
-            .professional-handsontable .htCore td {
-                /* Ensures clean lines between all cells */
-                border-bottom: 1px solid #e6e6e6;
-            }
+            
         </style>
     </head>
 
@@ -851,6 +791,7 @@
 
         <!-- Handsontable CSS -->
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" />
+
         <!-- Handsontable JavaScript Library -->
         <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
 
@@ -1105,7 +1046,7 @@
 
 
                             // Adds a CSS class to the table for custom styling
-                            className: 'professional-theme', // NEW 
+                            className: 'ht-theme-horizon', // NEW 
 
                             // Enables the pagination feature
                             pagination: true, // NEW 
