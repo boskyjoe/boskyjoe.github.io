@@ -878,11 +878,19 @@
 
             async function loadMembersWithTabulator() {
                 if (!db) return;
+                console.log("Loading members from Firestore...");
 
                 const membersCollectionRef = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
                 try {
                     const snapshot = await getDocs(membersCollectionRef);
+                    console.log(`Found ${snapshot.size} members in SnehaNidhiSchemeMembers`);
+
                     const members = snapshot.docs.map(doc => ({ SNS_ID: doc.id, ...doc.data() }));
+
+                    if (snapshot.size === 0) {
+                        showModal("No Members", "No members found in SnehaNidhiSchemeMembers.");
+                        return;
+                    }
 
                     if (!membersTable) {
                         membersTable = new Tabulator("#members-table", {
@@ -900,9 +908,10 @@
                     }
                 } catch (err) {
                     console.error("Error loading members:", err);
-                    showModal("Error", "Failed to load members from Firestore.");
+                    showModal("Error", `Failed to load members: ${err.message}`);
                 }
             }
+
 
             function buildMembersColumns(members) {
                 if (members.length === 0) return [];
@@ -1615,6 +1624,10 @@
                             actionButton.textContent = getFormattedButtonText();
                         }
                     }
+                    // **NEW: Load Previous Winners & Members Table**
+                    loadPreviousWinners();
+                    await loadMembersWithTabulator();
+
                 }
                 catch (error) {
                     console.error("ERROR: Initialization failed in initializeSnehaNidhiData:", error);
@@ -2175,9 +2188,9 @@
                 await initializeFirebase(firebaseConfig);
                 // This call should be made after DOMContentLoaded so that the table element exists
                 // and the Tabulator.js script is loaded.
-                loadPreviousWinners();
+                //loadPreviousWinners();
                 //await loadMembers(); // <-- NEW
-                await loadMembersWithTabulator(); // <-- NEW
+                //await loadMembersWithTabulator(); // <-- NEW
             });
 
             // Add an unload listener to clean up the Firestore listener
