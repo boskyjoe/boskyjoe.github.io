@@ -560,6 +560,26 @@
                 margin-top: 0.5rem;
                 line-height: 1.25;
             }
+
+            /* Target the custom class we added in the JavaScript options */
+            .professional-theme .htCore th {
+                /* Style for the table headers */
+                background-color: #f4f5f7;
+                /* A light, professional gray */
+                font-weight: bold;
+                color: #333;
+                border-bottom: 2px solid #d6d8db;
+            }
+
+            .professional-theme .htCore tr:hover>td {
+                /* Adds a subtle hover effect on rows */
+                background-color: #eef4ff;
+            }
+
+            .professional-theme .htCore td {
+                /* Ensures clean lines between all cells */
+                border-bottom: 1px solid #e6e6e6;
+            }
         </style>
     </head>
 
@@ -797,7 +817,7 @@
         <script type="module">
             // Firebase SDKs
             import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-            import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, onSnapshot, getDoc, where, writeBatch, serverTimestamp,updateDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+            import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, onSnapshot, getDoc, where, writeBatch, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
             import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
             // Firebase configuration hardcoded as requested
@@ -1018,6 +1038,19 @@
                             width: '100%',
                             stretchH: 'all', // Makes columns fit the container width
                             licenseKey: 'non-commercial-and-evaluation', // Required for free use
+
+
+                            // Adds a CSS class to the table for custom styling
+                            className: 'professional-theme', // NEW 
+
+                            // Enables alternating row colors (e.g., white and light gray)
+                            stripeRows: true, // NEW 
+
+                            // Enables the pagination feature
+                            pagination: true, // NEW 
+
+                            // Sets the number of rows to display per page
+                            pageSize: 100, // NEW 
 
                             // --- Event handling to prevent real-time conflicts ---
 
