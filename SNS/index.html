@@ -892,6 +892,23 @@
             let membersTable = null;
             let unsubscribeMembersListener = null;
 
+            function preprocessMembersData(snapshot) {
+                return snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        SNS_ID: doc.id,
+                        SNSMemberName: data.SNSMemberName || "",
+                        ChurchContactName: data.ChurchContactName || "",
+                        ChurchContactPhone: data.ChurchContactPhone || "",
+                        updatedBy: data.updatedBy || "",
+                        updatedDate: data.updatedDate && data.updatedDate.toDate
+                            ? data.updatedDate.toDate().toLocaleString()
+                            : ""
+                    };
+                });
+            }
+
+
             function loadMembersWithTabulator() {
                 if (!db) return;
 
@@ -900,32 +917,30 @@
 
                 const membersCollectionRef = collection(db, path);
 
-                // Remove any existing listener to avoid duplicates
+                // Remove old listener to avoid duplicates
                 if (unsubscribeMembersListener) unsubscribeMembersListener();
 
                 unsubscribeMembersListener = onSnapshot(membersCollectionRef, (snapshot) => {
-                    const members = snapshot.docs.map(doc => ({
-                        SNS_ID: doc.id,
-                        ...doc.data()
-                    }));
-
-                    console.log(`Real-time update: ${members.length} members loaded.`);
+                    const members = preprocessMembersData(snapshot);
+                    console.log(`Real-time update: ${members.length} members preprocessed.`);
+                    
+                    if (members.length > 0) console.log("Sample Row:", members[0]);
 
                     if (!membersTable) {
                         membersTable = new Tabulator("#members-table", {
-                            data: members,
                             layout: "fitColumns",
                             pagination: "local",
                             paginationSize: 10,
                             movableColumns: true,
                             height: "500px",
+                            data: members,
                             columns: [
                                 { title: "SNS_ID", field: "SNS_ID", editor: false, headerFilter: "input" },
                                 { title: "Member Name", field: "SNSMemberName", editor: "input", headerFilter: "input" },
                                 { title: "Church Contact Name", field: "ChurchContactName", editor: "input", headerFilter: "input" },
                                 { title: "Contact Phone", field: "ChurchContactPhone", editor: "input", headerFilter: "input" },
                                 { title: "Updated By", field: "updatedBy", editor: false },
-                                { title: "Updated Date", field: "updatedDate", formatter: formatFirestoreDate },
+                                { title: "Updated Date", field: "updatedDate", editor: false },
                             ],
                             cellEdited: saveMemberUpdate,
                         });
