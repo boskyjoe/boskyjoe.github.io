@@ -598,6 +598,30 @@
                 overflow-x: auto;
                 width: 100%;
             }
+
+             /* Target the custom class for our table */
+            .professional-handsontable .htCore th {
+                /* Style for the table headers */
+                background-color: #f4f5f7;
+                font-weight: bold;
+                color: #333;
+                border-bottom: 2px solid #d6d8db;
+            }
+
+            /* THIS IS THE CORRECT WAY TO DO STRIPE ROWS IN HANDSONTABLE */
+            .professional-handsontable .htCore tr:nth-child(even) > td {
+                background-color: #f8f9fa; /* A very light gray for even rows */
+            }
+
+            .professional-handsontable .htCore tr:hover > td {
+                /* Adds a subtle hover effect on rows */
+                background-color: #eef4ff;
+            }
+
+            .professional-handsontable .htCore td {
+                /* Ensures clean lines between all cells */
+                border-bottom: 1px solid #e6e6e6;
+            }
         </style>
     </head>
 
@@ -1083,9 +1107,6 @@
                             // Adds a CSS class to the table for custom styling
                             className: 'professional-theme', // NEW 
 
-                            // Enables alternating row colors (e.g., white and light gray)
-                            stripeRows: true, // NEW 
-
                             // Enables the pagination feature
                             pagination: true, // NEW 
 
@@ -1194,6 +1215,10 @@
                             movableColumns: true,
                             manualColumnResize: true,
                             manualRowResize: true,
+                            licenseKey: 'non-commercial-and-evaluation',
+                            pagination: true,
+                            pageSize: 100,
+                            className: 'professional-handsontable',
                             data: members,
                             columns: [
                                 { title: "SNS_ID", field: "SNS_ID", editor: false, headerFilter: "input" },
