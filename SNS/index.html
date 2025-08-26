@@ -944,6 +944,7 @@
                             ],
                             cellEdited: saveMemberUpdate,
                         });
+                        console.log("Data to be rendered:", members);
                         setTimeout(() => membersTable.redraw(true), 300); // <-- force redraw after render
                     } else {
                         membersTable.replaceData(members).then(() => membersTable.redraw(true));
