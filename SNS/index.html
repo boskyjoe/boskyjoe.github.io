@@ -944,8 +944,10 @@
                             ],
                             cellEdited: saveMemberUpdate,
                         });
+                        setTimeout(() => membersTable.redraw(true), 300); // <-- force redraw after render
                     } else {
-                        membersTable.replaceData(members);
+                        membersTable.replaceData(members).then(() => membersTable.redraw(true));
+                        console.log("Tabulator Initialized?", !!membersTable, "Rows Count:", members.length);
                     }
                 }, (err) => {
                     console.error("Error with real-time member listener:", err);
@@ -2270,6 +2272,14 @@
                     event.preventDefault();
                 }
             });
+
+            window.addEventListener("load", () => {
+                console.log("Window fully loaded, forcing Tabulator redraw if available...");
+                if (membersTable) {
+                    membersTable.redraw(true);
+                }
+            });
+
         </script>
     </body>
 
