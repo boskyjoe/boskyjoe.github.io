@@ -933,7 +933,7 @@
                                 { title: "Church Contact Name", field: "ChurchContactName", editor: "input", headerFilter: "input" },
                                 { title: "Contact Phone", field: "ChurchContactPhone", editor: "input", headerFilter: "input" },
                             ],
-                            cellEdited: saveMemberUpdate,
+                            rowEdited: saveMemberUpdate,
                         });
                         console.log("Data to be rendered:", members);
                         setTimeout(() => membersTable.redraw(true), 300); // <-- force redraw after render
@@ -1001,6 +1001,7 @@
 
                 } catch (err) {
                     console.error("Failed to update member:", err);
+                    console.log("Full error object:", err);
                     showModal("Update Failed", "Could not save changes to Firestore.");
                 }
             }
