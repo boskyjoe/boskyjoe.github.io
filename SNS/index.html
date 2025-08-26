@@ -582,11 +582,13 @@
             }
 
             #members-table .tabulator-row.tabulator-row-odd {
-                background-color: #f2f2f2; /* Light gray for odd rows */
+                background-color: #f2f2f2;
+                /* Light gray for odd rows */
             }
 
             #members-table .tabulator-row.tabulator-row-even {
-                background-color: #ffffff; /* White for even rows */
+                background-color: #ffffff;
+                /* White for even rows */
             }
 
             /* Add this to your main CSS file or in a <style> tag in the <head> */
@@ -596,7 +598,6 @@
                 overflow-x: auto;
                 width: 100%;
             }
-
         </style>
     </head>
 
@@ -837,7 +838,7 @@
             import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, onSnapshot, getDoc, where, writeBatch, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
             import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-           
+
             // Firebase configuration hardcoded as requested
             const firebaseConfig = {
                 apiKey: "AIzaSyCcuFTwygQ5-KujxUdv45b2TPY5yQXVVTo",
@@ -935,20 +936,41 @@
             let memberDataArray = [];
 
 
+            // NEW, BULLETPROOF VERSION
             function preprocessMembersData(snapshot) {
-                return snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    return {
-                        SNS_ID: doc.id,
-                        SNSMemberName: data.SNSMemberName || "",
-                        ChurchContactName: data.ChurchContactName || "",
-                        ChurchContactPhone: data.ChurchContactPhone || "",
-                        updatedBy: data.updatedBy || "",
-                        updatedDate: data.updatedDate && data.updatedDate.toDate
-                            ? data.updatedDate.toDate().toLocaleString()
-                            : ""
-                    };
+                const processedData = []; // Start with an empty array
+
+                snapshot.docs.forEach(doc => {
+                    try {
+                        // Try to process the document
+                        const data = doc.data();
+
+                        // Check specifically if updatedDate is a Firestore Timestamp
+                        // Note: You might need to import Timestamp from 'firebase/firestore' for this to be perfect
+                        const isValidTimestamp = data.updatedDate && typeof data.updatedDate.toDate === 'function';
+
+                        const member = {
+                            SNS_ID: doc.id,
+                            SNSMemberName: data.SNSMemberName || "",
+                            ChurchContactName: data.ChurchContactName || "",
+                            ChurchContactPhone: data.ChurchContactPhone || "",
+                            updatedBy: data.updatedBy || "",
+                            updatedDate: isValidTimestamp
+                                ? data.updatedDate.toDate().toLocaleString()
+                                : "" // Default to empty string if not a valid timestamp
+                        };
+
+                        processedData.push(member); // Add the successfully processed member to our array
+
+                    } catch (error) {
+                        // If ANY error occurs, log it with the specific document ID and skip it
+                        console.error(`Failed to process document with ID: ${doc.id}`, error);
+                        console.log('Problematic data was:', doc.data());
+                    }
                 });
+
+                // Return the array of successfully processed documents
+                return processedData;
             }
 
 
