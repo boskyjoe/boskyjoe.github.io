@@ -771,16 +771,9 @@
         <!-- Sneha Nidhi Scheme Members Section -->
         <div id="members-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner overflow-x-auto">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Sneha Nidhi Scheme Members</h2>
-            <table id="members-table" class="min-w-full bg-white rounded-lg shadow-lg text-sm">
-                <thead class="bg-gray-200 text-gray-700">
-                    <tr id="members-header-row">
-                        <!-- Dynamically populated -->
-                    </tr>
-                </thead>
-                <tbody id="members-table-body">
-                    <!-- Dynamically populated -->
-                </tbody>
-            </table>
+
+            <div id="members-table"></div>
+
             <p id="no-members-message" class="text-center text-gray-500 mt-4 hidden">No members found.</p>
         </div>
 
@@ -923,7 +916,7 @@
                 unsubscribeMembersListener = onSnapshot(membersCollectionRef, (snapshot) => {
                     const members = preprocessMembersData(snapshot);
                     console.log(`Real-time update: ${members.length} members preprocessed.`);
-                    
+
                     if (members.length > 0) console.log("Sample Row:", members[0]);
 
                     if (!membersTable) {
