@@ -884,6 +884,8 @@
 
             let membersTable = null;
             let unsubscribeMembersListener = null;
+            let isEditing = false;
+
 
             function preprocessMembersData(snapshot) {
                 return snapshot.docs.map(doc => {
@@ -903,10 +905,10 @@
 
 
             /**
- * Loads member data from a Firestore collection and populates a Tabulator grid.
- * It establishes a real-time listener to automatically update the grid whenever changes
- * occur in the Firestore collection.
- */
+             * Loads member data from a Firestore collection and populates a Tabulator grid.
+             * It establishes a real-time listener to automatically update the grid whenever changes
+             * occur in the Firestore collection.
+            */
             function loadMembersWithTabulator() {
                 // Exit if the Firestore database instance is not available.
                 if (!db) return;
@@ -947,15 +949,29 @@
                                 { title: "Contact Phone", field: "ChurchContactPhone", editor: "input", headerFilter: "input" },
                             ],
                             // Callback function that runs when a cell's data is changed.
-                            cellEdited: saveMemberUpdate,
+                            cellEditing: function(cell){
+                                // A cell is being edited, so set the flag
+                                isEditing = true;
+                            },
+                            cellEdited: function(cell){
+                                // A cell edit is complete, so run your save function
+                                saveMemberUpdate(cell);
+                                // And then set the flag back to false
+                                isEditing = false;
+                            },
                         });
                         console.log("Data to be rendered:", members);
                         // Force a table redraw after a short delay to fix potential rendering issues.
                         setTimeout(() => membersTable.redraw(true), 300);
                     } else {
                         // If the table already exists, replace its data with the new snapshot data.
-                        membersTable.replaceData(members).then(() => membersTable.redraw(true));
                         console.log("Tabulator Initialized?", !!membersTable, "Rows Count:", members.length);
+                        if (!isEditing) {
+                            membersTable.replaceData(members).then(() => membersTable.redraw(true));
+                            console.log("Tabulator updated due to real-time change.");
+                        } else {
+                            console.log("Real-time update received, but table not updated because a cell is being edited.");
+                        }
                     }
                 }, (err) => {
                     // Log any errors that occur with the Firestore listener.
