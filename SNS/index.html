@@ -768,11 +768,31 @@
             </div>
         </div>
 
+        <!-- Sneha Nidhi Scheme Members Section -->
+        <div id="members-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner overflow-x-auto">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Sneha Nidhi Scheme Members</h2>
+            <table id="members-table" class="min-w-full bg-white rounded-lg shadow-lg text-sm">
+                <thead class="bg-gray-200 text-gray-700">
+                    <tr id="members-header-row">
+                        <!-- Dynamically populated -->
+                    </tr>
+                </thead>
+                <tbody id="members-table-body">
+                    <!-- Dynamically populated -->
+                </tbody>
+            </table>
+            <p id="no-members-message" class="text-center text-gray-500 mt-4 hidden">No members found.</p>
+        </div>
+
         <!-- Footer Section -->
         <footer class="w-full bg-gray-800 text-gray-300 text-center py-4 mt-10 text-sm relative z-10">
             <p>&copy; 2025 St. Sebastian's Church. All rights reserved.</p>
             <p>Powered by <a href="#" class="text-blue-400 hover:underline">DataWings Solution</a></p>
         </footer>
+
+        <!-- Tabulator CSS & JS -->
+        <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet">
+        <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
 
         <!-- Firebase SDKs -->
         <script type="module">
@@ -848,6 +868,74 @@
             const thirdConsolationName = document.getElementById('third-consolation-name');
             const thirdConsolationContact = document.getElementById('third-consolation-contact');
 
+            // Sneha Nidhi Members Table
+            const membersTableBody = document.getElementById('members-table-body');
+            const membersHeaderRow = document.getElementById('members-header-row');
+            const noMembersMessage = document.getElementById('no-members-message');
+
+            let membersTable = null;
+
+
+            async function loadMembersWithTabulator() {
+                if (!db) return;
+
+                const membersCollectionRef = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
+                try {
+                    const snapshot = await getDocs(membersCollectionRef);
+                    const members = snapshot.docs.map(doc => ({ SNS_ID: doc.id, ...doc.data() }));
+
+                    if (!membersTable) {
+                        membersTable = new Tabulator("#members-table", {
+                            data: members,
+                            layout: "fitColumns",
+                            pagination: "local",
+                            paginationSize: 10,
+                            movableColumns: true,
+                            height: "500px",
+                            columns: buildMembersColumns(members),
+                            cellEdited: saveMemberUpdate,
+                        });
+                    } else {
+                        membersTable.setData(members);
+                    }
+                } catch (err) {
+                    console.error("Error loading members:", err);
+                    showModal("Error", "Failed to load members from Firestore.");
+                }
+            }
+
+            function buildMembersColumns(members) {
+                if (members.length === 0) return [];
+
+                const fields = Object.keys(members[0]);
+                return fields.map(field => {
+                    return {
+                        title: field,
+                        field: field,
+                        editor: field === "SNS_ID" ? false : "input",
+                        headerFilter: "input",
+                        headerSort: true,
+                    };
+                });
+            }
+
+            async function saveMemberUpdate(cell) {
+                const updatedField = cell.getField();
+                const updatedValue = cell.getValue();
+                const rowData = cell.getRow().getData();
+                const docId = rowData.SNS_ID;
+
+                try {
+                    const memberDocRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`, docId);
+                    await setDoc(memberDocRef, { [updatedField]: updatedValue, updatedBy: auth.currentUser.uid, updatedDate: serverTimestamp() }, { merge: true });
+                    console.log(`Updated ${updatedField} for ${docId} to ${updatedValue}`);
+                } catch (err) {
+                    console.error("Failed to update member:", err);
+                    showModal("Update Failed", "Could not save changes to Firestore.");
+                }
+            }
+
+
 
             /**
              * Generates the formatted button text with the current month and year.
@@ -881,6 +969,67 @@
                     event.target.style.display = 'none';
                 }
             };
+
+            async function loadMembers() {
+                if (!db) return;
+                const membersCollectionRef = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
+                try {
+                    const snapshot = await getDocs(membersCollectionRef);
+                    const members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                    if (members.length === 0) {
+                        noMembersMessage.classList.remove('hidden');
+                        return;
+                    }
+
+                    // Build table header dynamically
+                    const columns = Object.keys(members[0]);
+                    membersHeaderRow.innerHTML = columns.map(col => `
+            <th class="px-4 py-2 border-b text-left">${col}</th>
+        `).join('');
+
+                    // Populate rows
+                    membersTableBody.innerHTML = '';
+                    members.forEach(member => {
+                        const row = document.createElement('tr');
+                        row.className = 'hover:bg-gray-50';
+                        row.innerHTML = columns.map(col => {
+                            const isEditable = col !== 'SNS_ID';
+                            return `<td class="border-b px-4 py-2" contenteditable="${isEditable}" 
+                            data-id="${member.id}" data-field="${col}"
+                            ${!isEditable ? 'class="bg-gray-100 text-gray-600 cursor-not-allowed"' : ''}>
+                            ${member[col] || ''}
+                        </td>`;
+                        }).join('');
+                        membersTableBody.appendChild(row);
+                    });
+
+                    attachMemberTableListeners();
+
+                } catch (err) {
+                    console.error("Error loading members:", err);
+                    showModal("Error", "Failed to load members from Firestore.");
+                }
+            }
+
+            function attachMemberTableListeners() {
+                membersTableBody.querySelectorAll('td[contenteditable="true"]').forEach(cell => {
+                    cell.addEventListener('blur', async (e) => {
+                        const newValue = e.target.textContent.trim();
+                        const docId = e.target.dataset.id;
+                        const field = e.target.dataset.field;
+
+                        try {
+                            const memberDocRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`, docId);
+                            await setDoc(memberDocRef, { [field]: newValue, updatedBy: auth.currentUser.uid, updatedDate: serverTimestamp() }, { merge: true });
+                            console.log(`Updated ${field} for ${docId} to ${newValue}`);
+                        } catch (err) {
+                            console.error("Failed to update member:", err);
+                            showModal("Update Failed", "Could not save changes. Check console for details.");
+                        }
+                    });
+                });
+            }
 
             /**
              * Initializes Firebase and sets up the auth listener.
@@ -2027,6 +2176,8 @@
                 // This call should be made after DOMContentLoaded so that the table element exists
                 // and the Tabulator.js script is loaded.
                 loadPreviousWinners();
+                //await loadMembers(); // <-- NEW
+                await loadMembersWithTabulator(); // <-- NEW
             });
 
             // Add an unload listener to clean up the Firestore listener
