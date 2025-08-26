@@ -952,10 +952,12 @@
                             // Callback function that runs when a cell's data is changed.
                             cellEditing: function(cell){
                                 // A cell is being edited, so set the flag
+                                console.log("Cell editing started. Setting isEditing to true.");
                                 isEditing = true;
                             },
                             cellEdited: function(cell){
                                 // A cell edit is complete, so run your save function
+                                 console.log("Cell edit finished. Calling saveMemberUpdate.");
                                 saveMemberUpdate(cell);
                                 // And then set the flag back to false
                                 isEditing = false;
