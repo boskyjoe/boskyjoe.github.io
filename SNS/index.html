@@ -580,6 +580,14 @@
                 /* Ensures clean lines between all cells */
                 border-bottom: 1px solid #e6e6e6;
             }
+
+            #members-table .tabulator-row.tabulator-row-odd {
+                background-color: #f2f2f2; /* Light gray for odd rows */
+            }
+
+            #members-table .tabulator-row.tabulator-row-even {
+                background-color: #ffffff; /* White for even rows */
+            }
         </style>
     </head>
 
@@ -1148,7 +1156,7 @@
 
                         membersTable = new Tabulator("#members-table", {
                             index: "SNS_ID", // CRITICAL: Ensure this is your unique ID field
-                            layout: "fitColumns",
+                            layout: "fitDataFill",
                             pagination: "local",
                             paginationSize: 100,
                             movableColumns: true,
