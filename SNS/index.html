@@ -787,6 +787,12 @@
         <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet">
         <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
 
+        <!-- Handsontable CSS -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" />
+        <!-- Handsontable JavaScript Library -->
+        <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
+
+
         <!-- Firebase SDKs -->
         <script type="module">
             // Firebase SDKs
@@ -886,6 +892,10 @@
             let unsubscribeMembersListener = null;
             let isEditing = false;
 
+            let membersHot;
+            // A local copy of the data array, which we will manage
+            let memberDataArray = [];
+
 
             function preprocessMembersData(snapshot) {
                 return snapshot.docs.map(doc => {
@@ -905,7 +915,7 @@
 
 
 
-            async function saveMemberUpdate(cell) {
+            async function saveMemberUpdate1(cell) {
                 const field = cell.getField();
                 const value = cell.getValue();
                 const rowData = cell.getRow().getData();
@@ -939,7 +949,148 @@
                 }
             }
 
+            // NEW WAY - WITH HANDSONTABLE
+            async function saveMemberUpdate(updatedRowData) {
+                // The entire row's data is passed directly.
+                // It's much simpler!
 
+                // 1. Get the unique ID from the object.
+                const memberId = updatedRowData.SNS_ID;
+                if (!memberId) {
+                    console.error("Cannot save update: SNS_ID is missing from the data.", updatedRowData);
+                    return;
+                }
+
+                // 2. Prepare the data for Firestore. It's good practice to remove the ID
+                //    from the data payload itself if it's already in the document path.
+                const dataToSave = { ...updatedRowData };
+                delete dataToSave.SNS_ID;
+
+                // 3. Get the reference to the Firestore document.
+                const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`, memberId);
+
+                // 4. Save the updated data.
+                try {
+                    console.log(`Saving updates for member ${memberId}...`);
+                    // updateDoc will only change the fields present in dataToSave.
+                    await updateDoc(docRef, dataToSave);
+                    console.log(`Successfully updated member ${memberId}.`);
+                } catch (error) {
+                    console.error("Error saving member update to Firestore:", error);
+                    showModal("Error", "Your changes could not be saved.");
+                }
+            }
+
+            function loadMembersWithHandsontable() {
+                // Exit if the Firestore database instance is not available.
+                if (!db) return;
+
+                // Define the path to the Firestore collection.
+                const path = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`;
+                console.log("Subscribing to Firestore path for Handsontable:", path);
+
+                const membersCollectionRef = collection(db, path);
+
+                // Clean up previous listener if it exists.
+                if (unsubscribeMembersListener) unsubscribeMembersListener();
+
+                unsubscribeMembersListener = onSnapshot(membersCollectionRef, (snapshot) => {
+
+                    // If the Handsontable instance doesn't exist, create it.
+                    if (!membersHot) {
+                        console.log("Initializing Handsontable for the first time.");
+                        // Preprocess the initial full dataset from Firestore.
+                        memberDataArray = preprocessMembersData(snapshot);
+
+                        const container = document.getElementById('members-table'); // Ensure your <div> has this ID
+
+                        membersHot = new Handsontable(container, {
+                            data: memberDataArray,
+                            rowHeaders: true,
+                            colHeaders: ["SNS_ID", "Member Name", "Church Contact Name", "Contact Phone"],
+                            columns: [
+                                { data: 'SNS_ID', readOnly: true }, // The 'data' property links to the field in your object
+                                { data: 'SNSMemberName' },
+                                { data: 'ChurchContactName' },
+                                { data: 'ChurchContactPhone' }
+                            ],
+                            height: 'auto',
+                            width: '100%',
+                            stretchH: 'all', // Makes columns fit the container width
+                            licenseKey: 'non-commercial-and-evaluation', // Required for free use
+
+                            // --- Event handling to prevent real-time conflicts ---
+
+                            // Fires when the user STARTS editing a cell
+                            afterBeginEditing: function () {
+                                isEditing = true;
+                                console.log("Handsontable edit started. Blocking real-time updates.");
+                            },
+
+                            // Fires when an edit is successfully completed
+                            afterChange: function (changes, source) {
+                                // We only care about user edits, not programmatic changes
+                                if (source === 'edit') {
+                                    console.log("Handsontable 'afterChange' event triggered.");
+                                    // 'changes' is an array of edits. We'll process each one.
+                                    changes.forEach(change => {
+                                        const [row, prop, oldValue, newValue] = change;
+                                        // Get the full data object for the row that was edited.
+                                        const updatedRowData = this.getSourceDataAtRow(row);
+                                        console.log("Row to be saved:", updatedRowData);
+                                        // Call your save function with the entire row object.
+                                        saveMemberUpdate(updatedRowData);
+                                    });
+                                }
+                                isEditing = false;
+                                console.log("Edit finished. Resuming real-time updates.");
+                            },
+
+                            // Fires if the user cancels an edit (e.g., presses Esc)
+                            afterCancelEdit: function () {
+                                isEditing = false;
+                                console.log("Handsontable edit cancelled. Resuming real-time updates.");
+                            }
+                        });
+
+                    } else {
+                        // If the table already exists, process individual changes from Firestore.
+                        if (isEditing) {
+                            console.log("Skipping real-time update because a cell is being edited.");
+                            return;
+                        }
+
+                        snapshot.docChanges().forEach((change) => {
+                            const docData = { ...change.doc.data(), SNS_ID: change.doc.id };
+
+                            if (change.type === "added") {
+                                console.log("Row added:", docData);
+                                memberDataArray.push(docData);
+                            }
+                            if (change.type === "modified") {
+                                console.log("Row modified:", docData);
+                                // Find the index of the item to update
+                                const index = memberDataArray.findIndex(member => member.SNS_ID === docData.SNS_ID);
+                                if (index !== -1) {
+                                    memberDataArray[index] = docData;
+                                }
+                            }
+                            if (change.type === "removed") {
+                                console.log("Row removed:", docData.SNS_ID);
+                                // Filter out the removed item
+                                memberDataArray = memberDataArray.filter(member => member.SNS_ID !== docData.SNS_ID);
+                            }
+                        });
+
+                        // Load the updated data array into the table. Handsontable will efficiently re-render.
+                        membersHot.loadData(memberDataArray);
+                        console.log("Handsontable updated with real-time changes.");
+                    }
+                }, (err) => {
+                    console.error("Error with real-time member listener:", err);
+                    showModal("Error", "Failed to load members in real-time.");
+                });
+            }
             /**
              * Loads member data from a Firestore collection and populates a Tabulator grid.
              * It establishes a real-time listener to automatically update the grid whenever changes
@@ -1743,7 +1894,8 @@
                     }
                     // **NEW: Load Previous Winners & Members Table**
                     loadPreviousWinners();
-                    loadMembersWithTabulator(); // <-- Now sets up real-time listener
+                    //loadMembersWithTabulator(); // <-- Now sets up real-time listener
+                    loadMembersWithHandsontable();
 
                 }
                 catch (error) {
@@ -2332,12 +2484,6 @@
                 }
             });
 
-            window.addEventListener("load", () => {
-                console.log("Window fully loaded, forcing Tabulator redraw if available...");
-                if (membersTable) {
-                    membersTable.redraw(true);
-                }
-            });
 
         </script>
     </body>
