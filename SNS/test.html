@@ -1,42 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Tabulator Edit Test</title>
-    <!-- Using the primary CDN for Tabulator -->
-    <link href="https://unpkg.com/tabulator-tables@5.4.4/dist/css/tabulator.min.css" rel="stylesheet">
-    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.4.4/dist/js/tabulator.min.js"></script>
+    <title>Handsontable Edit Test</title>
+    <!-- Handsontable CSS and JS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
 </head>
 <body>
+    <h3>Handsontable Edit Test</h3>
+    <p>Double-click a cell to edit. Press Enter or click away to finish. Check the console (F12).</p>
 
-    <h3>Tabulator Edit Test</h3>
-    <p>Click on a name or color. Press Enter or click away to finish the edit. Check the browser console (F12) for messages.</p>
     <div id="example-table"></div>
 
-    <script type="text/javascript">
-        // Hardcoded data
-        var tabledata = [
-            {id:1, name:"Oli Bob", color:"red"},
-            {id:2, name:"Mary May", color:"blue"},
-            {id:3, name:"Christine Lobowski", color:"green"},
+    <script>
+        const data = [
+            ['Tesla', 2017, 'black', 'black'],
+            ['Nissan', 2018, 'blue', 'blue'],
+            ['Chrysler', 2019, 'yellow', 'black'],
+            ['Volvo', 2020, 'white', 'gray']
         ];
 
-        // Create the table
-        var table = new Tabulator("#example-table", {
-            data: tabledata,
-            layout: "fitColumns",
-            columns:[
-                {title:"ID", field:"id"},
-                {title:"Name", field:"name", editor:"input"},
-                {title:"Favorite Color", field:"color", editor:"input"},
-            ],
-            // Listen for the edit event
-            cellEdited:function(cell){
-                console.log("SUCCESS: cellEdited event fired!");
-                console.log("Row ID: " + cell.getRow().getData().id + " was updated");
-                console.log("New value: " + cell.getValue());
-            },
+        const container = document.getElementById('example-table');
+        
+        const hot = new Handsontable(container, {
+            data: data,
+            rowHeaders: true,
+            colHeaders: ['Car', 'Year', 'Chassis color', 'Bumper color'],
+            height: 'auto',
+            licenseKey: 'non-commercial-and-evaluation', // Required for free use
+            // This is the event listener for changes
+            afterChange: function(changes, source) {
+                // The 'source' check prevents infinite loops if you programmatically change data
+                if (source === 'edit') {
+                    console.log("SUCCESS: afterChange event fired!");
+                    console.log("Changes array:", changes);
+                    // changes is an array of [row, prop, oldValue, newValue]
+                }
+            }
         });
     </script>
-
 </body>
 </html>
