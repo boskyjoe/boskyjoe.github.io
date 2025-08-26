@@ -980,6 +980,7 @@
                 const docId = rowData.SNS_ID;
 
                 // Check if the user is authenticated
+                console.log("User object on save attempt:", auth.currentUser);
                 const user = auth.currentUser;
                 if (!user) {
                     console.error("No user logged in. Cannot save changes.");
