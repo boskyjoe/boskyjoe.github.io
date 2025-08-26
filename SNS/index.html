@@ -933,7 +933,7 @@
                                 { title: "Church Contact Name", field: "ChurchContactName", editor: "input", headerFilter: "input" },
                                 { title: "Contact Phone", field: "ChurchContactPhone", editor: "input", headerFilter: "input" },
                             ],
-                            rowEdited: saveMemberUpdate,
+                            cellEdited: saveMemberUpdate,
                         });
                         console.log("Data to be rendered:", members);
                         setTimeout(() => membersTable.redraw(true), 300); // <-- force redraw after render
