@@ -986,7 +986,7 @@
                     showModal("Update Failed", "You must be logged in to save changes.");
                     return;
                 }
-
+                console.log("Attempting to update document with ID:", docId);
                 try {
                     const memberDocRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`, docId);
 
