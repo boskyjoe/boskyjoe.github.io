@@ -875,10 +875,26 @@
 
             let membersTable = null;
 
+            async function debugMembersPath() {
+                const path = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`;
+                console.log("DEBUG: Checking Firestore path", path);
+
+                try {
+                    const membersCollectionRef = collection(db, path);
+                    const snapshot = await getDocs(membersCollectionRef);
+                    console.log(`DEBUG: Found ${snapshot.size} docs at ${path}`);
+                    snapshot.forEach(doc => console.log("DOC ID:", doc.id, "DATA:", doc.data()));
+                } catch (err) {
+                    console.error("DEBUG: Firestore path failed:", err);
+                }
+            }
+
 
             async function loadMembersWithTabulator() {
                 if (!db) return;
                 console.log("Loading members from Firestore...");
+
+                debugMembersPath();
 
                 const membersCollectionRef = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
                 try {
@@ -943,7 +959,6 @@
                     showModal("Update Failed", "Could not save changes to Firestore.");
                 }
             }
-
 
 
             /**
