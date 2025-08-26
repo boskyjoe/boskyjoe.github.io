@@ -934,6 +934,7 @@
                     // Check if the Tabulator table instance has been initialized.
                     if (!membersTable) {
                         // If the table does not exist, create a new Tabulator instance.
+                        console.log("In membersTable.");
                         membersTable = new Tabulator("#members-table", {
                             layout: "fitColumns",       // Distributes column widths to fill the table.
                             pagination: "local",        // Enables client-side pagination.
