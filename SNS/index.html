@@ -1164,6 +1164,8 @@
                     showModal("Error", "Failed to load members in real-time.");
                 });
             }
+
+
             /**
              * Loads member data from a Firestore collection and populates a Tabulator grid.
              * It establishes a real-time listener to automatically update the grid whenever changes
@@ -1189,9 +1191,9 @@
                         membersTable = new Tabulator("#members-table", {
                             index: "SNS_ID", // CRITICAL: Ensure this is your unique ID field
                             layout: "fitColumns",
-                            pagination: "local",
-                            paginationSize: 100,
                             movableColumns: true,
+                            manualColumnResize: true,
+                            manualRowResize: true,
                             data: members,
                             columns: [
                                 { title: "SNS_ID", field: "SNS_ID", editor: false, headerFilter: "input" },
