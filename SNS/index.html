@@ -908,42 +908,62 @@
  * occur in the Firestore collection.
  */
             function loadMembersWithTabulator() {
+                // Exit if the Firestore database instance is not available.
                 if (!db) return;
 
+                // Define the path to the Firestore collection containing member data.
                 const path = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`;
                 console.log("Subscribing to Firestore path:", path);
 
                 const membersCollectionRef = collection(db, path);
 
-                // Remove old listener to avoid duplicates
+                // Remove the previous real-time listener to avoid creating duplicate subscriptions.
                 if (unsubscribeMembersListener) unsubscribeMembersListener();
 
+                // Subscribe to real-time updates using onSnapshot. This function runs every time
+                // a change occurs in the specified collection.
                 unsubscribeMembersListener = onSnapshot(membersCollectionRef, (snapshot) => {
+                    // Preprocess the Firestore snapshot data into a format suitable for Tabulator.
                     const members = preprocessMembersData(snapshot);
                     console.log(`Real-time update: ${members.length} members preprocessed.`);
 
                     if (members.length > 0) console.log("Sample Row:", members[0]);
 
+                    // Check if the Tabulator table instance has been initialized.
                     if (!membersTable) {
-                        // This block will now only run once
+                        // If the table does not exist, create a new Tabulator instance.
                         membersTable = new Tabulator("#members-table", {
-                            // ... your Tabulator configuration ...
-                            data: members,
-                            columns: [ /* ... */],
+                            layout: "fitColumns",       // Distributes column widths to fill the table.
+                            pagination: "local",        // Enables client-side pagination.
+                            paginationSize: 100,        // Sets the number of rows to display per page.
+                            movableColumns: true,       // Allows users to reorder columns.
+                            height: "500px",            // Sets a fixed height for the table with a scrollbar.
+                            data: members,              // Binds the preprocessed member data to the table.
+                            columns: [
+                                // Defines the columns for the table.
+                                { title: "SNS_ID", field: "SNS_ID", editor: false, headerFilter: "input" },
+                                { title: "Member Name", field: "SNSMemberName", editor: "input", headerFilter: "input" },
+                                { title: "Church Contact Name", field: "ChurchContactName", editor: "input", headerFilter: "input" },
+                                { title: "Contact Phone", field: "ChurchContactPhone", editor: "input", headerFilter: "input" },
+                            ],
+                            // Callback function that runs when a cell's data is changed.
                             cellEdited: saveMemberUpdate,
                         });
                         console.log("Data to be rendered:", members);
+                        // Force a table redraw after a short delay to fix potential rendering issues.
                         setTimeout(() => membersTable.redraw(true), 300);
                     } else {
-                        // This block will now run on every subsequent update
+                        // If the table already exists, replace its data with the new snapshot data.
                         membersTable.replaceData(members).then(() => membersTable.redraw(true));
-                        console.log("Tabulator updated due to real-time change. Edit might have been canceled.");
+                        console.log("Tabulator Initialized?", !!membersTable, "Rows Count:", members.length);
                     }
                 }, (err) => {
+                    // Log any errors that occur with the Firestore listener.
                     console.error("Error with real-time member listener:", err);
                     showModal("Error", "Failed to load members in real-time.");
                 });
             }
+
 
             function formatFirestoreDate(cell) {
                 const val = cell.getValue();
