@@ -904,105 +904,6 @@
             }
 
 
-            /**
-             * Loads member data from a Firestore collection and populates a Tabulator grid.
-             * It establishes a real-time listener to automatically update the grid whenever changes
-             * occur in the Firestore collection.
-            */
-            function loadMembersWithTabulator() {
-                // Exit if the Firestore database instance is not available.
-                if (!db) return;
-
-                // Define the path to the Firestore collection containing member data.
-                const path = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`;
-                console.log("Subscribing to Firestore path:", path);
-
-                const membersCollectionRef = collection(db, path);
-
-                // Remove the previous real-time listener to avoid creating duplicate subscriptions.
-                if (unsubscribeMembersListener) unsubscribeMembersListener();
-
-                // Subscribe to real-time updates using onSnapshot. This function runs every time
-                // a change occurs in the specified collection.
-                unsubscribeMembersListener = onSnapshot(membersCollectionRef, (snapshot) => {
-                    // Preprocess the Firestore snapshot data into a format suitable for Tabulator.
-                    const members = preprocessMembersData(snapshot);
-                    console.log(`Real-time update: ${members.length} members preprocessed.`);
-
-                    if (members.length > 0) console.log("Sample Row:", members[0]);
-
-                    // Check if the Tabulator table instance has been initialized.
-                    if (!membersTable) {
-                        // If the table does not exist, create a new Tabulator instance.
-                        console.log("In membersTable.");
-                       membersTable = new Tabulator("#members-table", {
-                            layout: "fitColumns",
-                            pagination: "local",
-                            paginationSize: 100,
-                            movableColumns: true,
-                            height: "500px",
-                            data: members,
-                            columns: [
-                                { title: "SNS_ID", field: "SNS_ID", editor: false, headerFilter: "input" },
-                                { title: "Member Name", field: "SNSMemberName", editor: "input", headerFilter: "input" },
-                                { title: "Church Contact Name", field: "ChurchContactName", editor: "input", headerFilter: "input" },
-                                { title: "Contact Phone", field: "ChurchContactPhone", editor: "input", headerFilter: "input" },
-                            ],
-                            cellEdited: function(cell) {
-                                isEditing = true;
-                                console.log("Tabulator's cellEdited event was triggered.");
-                                saveMemberUpdate(cell);
-                                isEditing = false;
-                            },
-                        });
-
-                         
-
-                        console.log("Data to be rendered:", members);
-                        // Force a table redraw after a short delay to fix potential rendering issues.
-                        setTimeout(() => membersTable.redraw(true), 300);
-                    } else {
-                        // If the table already exists, replace its data with the new snapshot data.
-                        console.log("Tabulator Initialized?", !!membersTable, "Rows Count:", members.length);
-                        if (!isEditing) {
-                            membersTable.replaceData(members).then(() => membersTable.redraw(true));
-                            console.log("Tabulator updated due to real-time change.");
-                        } else {
-                            console.log("Real-time update received, but table not updated because a cell is being edited.");
-                        }
-                    }
-                }, (err) => {
-                    // Log any errors that occur with the Firestore listener.
-                    console.error("Error with real-time member listener:", err);
-                    showModal("Error", "Failed to load members in real-time.");
-                });
-            }
-
-
-            function formatFirestoreDate(cell) {
-                const val = cell.getValue();
-                if (!val || !val.toDate) return "";
-                const d = val.toDate();
-                return `${d.getDate().toString().padStart(2, '0')}-${d.toLocaleString('default', { month: 'short' })}-${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-            }
-
-
-
-
-            function buildMembersColumns(members) {
-                if (members.length === 0) return [];
-
-                const fields = Object.keys(members[0]);
-                return fields.map(field => {
-                    return {
-                        title: field,
-                        field: field,
-                        editor: field === "SNS_ID" ? false : "input",
-                        headerFilter: "input",
-                        headerSort: true,
-                    };
-                });
-            }
 
             async function saveMemberUpdate(cell) {
                 const field = cell.getField();
@@ -1036,6 +937,131 @@
                     console.log("Full error object:", err);
                     showModal("Update Failed", "Could not save changes to Firestore.");
                 }
+            }
+
+
+            /**
+             * Loads member data from a Firestore collection and populates a Tabulator grid.
+             * It establishes a real-time listener to automatically update the grid whenever changes
+             * occur in the Firestore collection.
+            */
+            function loadMembersWithTabulator() {
+                // Exit if the Firestore database instance is not available.
+                if (!db) return;
+
+                // Define the path to the Firestore collection containing member data.
+                const path = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`;
+                console.log("Subscribing to Firestore path:", path);
+
+                const membersCollectionRef = collection(db, path);
+
+                // Remove the previous real-time listener to avoid creating duplicate subscriptions.
+                if (unsubscribeMembersListener) unsubscribeMembersListener();
+
+                // Subscribe to real-time updates using onSnapshot.
+                unsubscribeMembersListener = onSnapshot(membersCollectionRef, (snapshot) => {
+
+                    // If the table hasn't been created yet, initialize it with the full dataset.
+                    if (!membersTable) {
+                        console.log("Initializing Tabulator for the first time.");
+                        const members = preprocessMembersData(snapshot); // This should return an array of all members
+
+                        membersTable = new Tabulator("#members-table", {
+                            // IMPORTANT: Tell Tabulator which field is the unique ID for each row.
+                            // This is crucial for updateRow and deleteRow to work correctly.
+                            index: "SNS_ID",
+                            layout: "fitColumns",
+                            pagination: "local",
+                            paginationSize: 100,
+                            movableColumns: true,
+                            height: "500px",
+                            data: members, // Initial data load
+                            columns: [
+                                { title: "SNS_ID", field: "SNS_ID", editor: false, headerFilter: "input" },
+                                { title: "Member Name", field: "SNSMemberName", editor: "input", headerFilter: "input" },
+                                { title: "Church Contact Name", field: "ChurchContactName", editor: "input", headerFilter: "input" },
+                                { title: "Contact Phone", field: "ChurchContactPhone", editor: "input", headerFilter: "input" },
+                            ],
+                            // Use an async function for cellEdited to properly handle the isEditing flag
+                            cellEdited: async function (cell) {
+                                isEditing = true;
+                                console.log("Tabulator's cellEdited event was triggered.");
+                                try {
+                                    // Await the save operation to ensure it completes before we proceed
+                                    await saveMemberUpdate(cell);
+                                } catch (error) {
+                                    console.error("Failed to save member update:", error);
+                                    // If the save fails, inform the user and revert the change in the UI
+                                    cell.restoreOldValue();
+                                    showModal("Error", "Failed to save your changes.");
+                                } finally {
+                                    // This ensures isEditing is set to false even if the save fails
+                                    isEditing = false;
+                                }
+                            },
+                        });
+
+                    } else {
+                        // If the table already exists, process individual document changes
+                        // instead of replacing all the data.
+                        if (isEditing) {
+                            console.log("Skipping real-time update because a cell is being edited.");
+                            return;
+                        }
+
+                        snapshot.docChanges().forEach((change) => {
+                            // Your preprocessMembersData likely adds the doc.id to the object.
+                            // If not, you need to construct the row data with its ID.
+                            const rowData = { ...change.doc.data(), SNS_ID: change.doc.id };
+
+                            if (change.type === "added") {
+                                // A new member was added elsewhere, add them to our table.
+                                console.log("Row added:", rowData);
+                                membersTable.addRow(rowData);
+                            }
+                            if (change.type === "modified") {
+                                // A member was updated. This will also catch updates made by the current user,
+                                // which is fine. It ensures data consistency.
+                                console.log("Row modified:", rowData);
+                                membersTable.updateRow(rowData.SNS_ID, rowData);
+                            }
+                            if (change.type === "removed") {
+                                // A member was deleted.
+                                console.log("Row removed:", rowData.SNS_ID);
+                                membersTable.deleteRow(rowData.SNS_ID);
+                            }
+                        });
+                    }
+                }, (err) => {
+                    // Log any errors that occur with the Firestore listener.
+                    console.error("Error with real-time member listener:", err);
+                    showModal("Error", "Failed to load members in real-time.");
+                });
+            }
+
+            function formatFirestoreDate(cell) {
+                const val = cell.getValue();
+                if (!val || !val.toDate) return "";
+                const d = val.toDate();
+                return `${d.getDate().toString().padStart(2, '0')}-${d.toLocaleString('default', { month: 'short' })}-${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+            }
+
+
+
+
+            function buildMembersColumns(members) {
+                if (members.length === 0) return [];
+
+                const fields = Object.keys(members[0]);
+                return fields.map(field => {
+                    return {
+                        title: field,
+                        field: field,
+                        editor: field === "SNS_ID" ? false : "input",
+                        headerFilter: "input",
+                        headerSort: true,
+                    };
+                });
             }
 
 
