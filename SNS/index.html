@@ -935,34 +935,29 @@
                     if (!membersTable) {
                         // If the table does not exist, create a new Tabulator instance.
                         console.log("In membersTable.");
-                        membersTable = new Tabulator("#members-table", {
-                            layout: "fitColumns",       // Distributes column widths to fill the table.
-                            pagination: "local",        // Enables client-side pagination.
-                            paginationSize: 100,        // Sets the number of rows to display per page.
-                            movableColumns: true,       // Allows users to reorder columns.
-                            height: "500px",            // Sets a fixed height for the table with a scrollbar.
-                            data: members,              // Binds the preprocessed member data to the table.
+                       membersTable = new Tabulator("#members-table", {
+                            layout: "fitColumns",
+                            pagination: "local",
+                            paginationSize: 100,
+                            movableColumns: true,
+                            height: "500px",
+                            data: members,
                             columns: [
-                                // Defines the columns for the table.
                                 { title: "SNS_ID", field: "SNS_ID", editor: false, headerFilter: "input" },
                                 { title: "Member Name", field: "SNSMemberName", editor: "input", headerFilter: "input" },
                                 { title: "Church Contact Name", field: "ChurchContactName", editor: "input", headerFilter: "input" },
                                 { title: "Contact Phone", field: "ChurchContactPhone", editor: "input", headerFilter: "input" },
                             ],
-                            // Callback function that runs when a cell's data is changed.
-                            cellEditing: function(cell){
-                                // A cell is being edited, so set the flag
-                                console.log("Cell editing started. Setting isEditing to true.");
+                            cellEdited: function(cell) {
                                 isEditing = true;
-                            },
-                            cellEdited: function(cell){
-                                // A cell edit is complete, so run your save function
-                                 console.log("Cell edit finished. Calling saveMemberUpdate.");
+                                console.log("Tabulator's cellEdited event was triggered.");
                                 saveMemberUpdate(cell);
-                                // And then set the flag back to false
                                 isEditing = false;
                             },
                         });
+
+                         
+
                         console.log("Data to be rendered:", members);
                         // Force a table redraw after a short delay to fix potential rendering issues.
                         setTimeout(() => membersTable.redraw(true), 300);
