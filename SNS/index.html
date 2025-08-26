@@ -890,23 +890,27 @@
             }
 
 
-            async function loadMembersWithTabulator() {
+            let membersTable = null;
+            let unsubscribeMembersListener = null;
+
+            function loadMembersWithTabulator() {
                 if (!db) return;
-                console.log("Loading members from Firestore...");
 
-                debugMembersPath();
+                const path = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`;
+                console.log("Subscribing to Firestore path:", path);
 
-                const membersCollectionRef = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
-                try {
-                    const snapshot = await getDocs(membersCollectionRef);
-                    console.log(`Found ${snapshot.size} members in SnehaNidhiSchemeMembers`);
+                const membersCollectionRef = collection(db, path);
 
-                    const members = snapshot.docs.map(doc => ({ SNS_ID: doc.id, ...doc.data() }));
+                // Remove any existing listener to avoid duplicates
+                if (unsubscribeMembersListener) unsubscribeMembersListener();
 
-                    if (snapshot.size === 0) {
-                        showModal("No Members", "No members found in SnehaNidhiSchemeMembers.");
-                        return;
-                    }
+                unsubscribeMembersListener = onSnapshot(membersCollectionRef, (snapshot) => {
+                    const members = snapshot.docs.map(doc => ({
+                        SNS_ID: doc.id,
+                        ...doc.data()
+                    }));
+
+                    console.log(`Real-time update: ${members.length} members loaded.`);
 
                     if (!membersTable) {
                         membersTable = new Tabulator("#members-table", {
@@ -916,17 +920,34 @@
                             paginationSize: 10,
                             movableColumns: true,
                             height: "500px",
-                            columns: buildMembersColumns(members),
+                            columns: [
+                                { title: "SNS_ID", field: "SNS_ID", editor: false, headerFilter: "input" },
+                                { title: "Member Name", field: "SNSMemberName", editor: "input", headerFilter: "input" },
+                                { title: "Church Contact Name", field: "ChurchContactName", editor: "input", headerFilter: "input" },
+                                { title: "Contact Phone", field: "ChurchContactPhone", editor: "input", headerFilter: "input" },
+                                { title: "Updated By", field: "updatedBy", editor: false },
+                                { title: "Updated Date", field: "updatedDate", formatter: formatFirestoreDate },
+                            ],
                             cellEdited: saveMemberUpdate,
                         });
                     } else {
-                        membersTable.setData(members);
+                        membersTable.replaceData(members);
                     }
-                } catch (err) {
-                    console.error("Error loading members:", err);
-                    showModal("Error", `Failed to load members: ${err.message}`);
-                }
+                }, (err) => {
+                    console.error("Error with real-time member listener:", err);
+                    showModal("Error", "Failed to load members in real-time.");
+                });
             }
+
+
+            function formatFirestoreDate(cell) {
+                const val = cell.getValue();
+                if (!val || !val.toDate) return "";
+                const d = val.toDate();
+                return `${d.getDate().toString().padStart(2, '0')}-${d.toLocaleString('default', { month: 'short' })}-${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+            }
+
+
 
 
             function buildMembersColumns(members) {
@@ -945,20 +966,26 @@
             }
 
             async function saveMemberUpdate(cell) {
-                const updatedField = cell.getField();
-                const updatedValue = cell.getValue();
+                const field = cell.getField();
+                const value = cell.getValue();
                 const rowData = cell.getRow().getData();
                 const docId = rowData.SNS_ID;
 
                 try {
                     const memberDocRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`, docId);
-                    await setDoc(memberDocRef, { [updatedField]: updatedValue, updatedBy: auth.currentUser.uid, updatedDate: serverTimestamp() }, { merge: true });
-                    console.log(`Updated ${updatedField} for ${docId} to ${updatedValue}`);
+                    await setDoc(memberDocRef, {
+                        [field]: value,
+                        updatedBy: auth.currentUser.uid,
+                        updatedDate: serverTimestamp()
+                    }, { merge: true });
+                    console.log(`Updated ${field} for ${docId} to ${value}`);
                 } catch (err) {
                     console.error("Failed to update member:", err);
                     showModal("Update Failed", "Could not save changes to Firestore.");
                 }
             }
+
+
 
 
             /**
@@ -1641,7 +1668,7 @@
                     }
                     // **NEW: Load Previous Winners & Members Table**
                     loadPreviousWinners();
-                    await loadMembersWithTabulator();
+                    loadMembersWithTabulator(); // <-- Now sets up real-time listener
 
                 }
                 catch (error) {
