@@ -923,7 +923,7 @@
                         membersTable = new Tabulator("#members-table", {
                             layout: "fitColumns",
                             pagination: "local",
-                            paginationSize: 10,
+                            paginationSize: 100,
                             movableColumns: true,
                             height: "500px",
                             data: members,
@@ -932,8 +932,6 @@
                                 { title: "Member Name", field: "SNSMemberName", editor: "input", headerFilter: "input" },
                                 { title: "Church Contact Name", field: "ChurchContactName", editor: "input", headerFilter: "input" },
                                 { title: "Contact Phone", field: "ChurchContactPhone", editor: "input", headerFilter: "input" },
-                                { title: "Updated By", field: "updatedBy", editor: false },
-                                { title: "Updated Date", field: "updatedDate", editor: false },
                             ],
                             cellEdited: saveMemberUpdate,
                         });
@@ -981,14 +979,26 @@
                 const rowData = cell.getRow().getData();
                 const docId = rowData.SNS_ID;
 
+                // Check if the user is authenticated
+                const user = auth.currentUser;
+                if (!user) {
+                    console.error("No user logged in. Cannot save changes.");
+                    showModal("Update Failed", "You must be logged in to save changes.");
+                    return;
+                }
+
                 try {
                     const memberDocRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`, docId);
-                    await setDoc(memberDocRef, {
+
+                    // Use updateDoc to update a subset of the document's fields
+                    await updateDoc(memberDocRef, {
                         [field]: value,
-                        updatedBy: auth.currentUser.uid,
+                        updatedBy: user.uid,
                         updatedDate: serverTimestamp()
-                    }, { merge: true });
-                    console.log(`Updated ${field} for ${docId} to ${value}`);
+                    });
+
+                    console.log(`Updated ${field} for member ${docId} to ${value}`);
+
                 } catch (err) {
                     console.error("Failed to update member:", err);
                     showModal("Update Failed", "Could not save changes to Firestore.");
