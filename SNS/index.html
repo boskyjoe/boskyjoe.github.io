@@ -836,9 +836,11 @@
 
             <!-- ADD THIS SEARCH BOX -->
             <div class="mb-4">
-                <label for="grid-search" class="mr-2">Search Grid:</label>
-                <input type="search" id="grid-search" class="p-1 border rounded" placeholder="Search...">
+                <label for="ag-grid-search" class="mr-2">Search Grid:</label>
+                <input type="search" id="ag-grid-search" class="p-1 border rounded" placeholder="Search...">
             </div>
+
+
 
             <div id="members-table"></div>
 
@@ -859,6 +861,9 @@
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" />
         <!-- Handsontable JavaScript Library -->
         <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
+
+        <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+
 
 
         <!-- Firebase SDKs -->
@@ -965,6 +970,8 @@
             // A local copy of the data array, which we will manage
             let memberDataArray = [];
 
+            let gridApi; 
+
 
             // NEW, BULLETPROOF VERSION
             function preprocessMembersData(snapshot) {
@@ -1038,6 +1045,130 @@
                     showModal("Update Failed", "Could not save changes to Firestore.");
                 }
             }
+
+
+            async function saveMemberUpdateAG(updatedRowData) {
+                const memberId = updatedRowData.SNS_ID;
+                if (!memberId) {
+                    console.error("Cannot save update: SNS_ID is missing.", updatedRowData);
+                    return;
+                }
+                const dataToSave = { ...updatedRowData };
+                delete dataToSave.SNS_ID;
+                const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`, memberId);
+                try {
+                    await updateDoc(docRef, dataToSave);
+                    console.log(`Successfully updated member ${memberId}.`);
+                } catch (error) {
+                    console.error("Error saving member update:", error);
+                    showModal("Error", "Your changes could not be saved.");
+                }
+            }
+
+
+            function loadMembersWithAGGrid() {
+                // Exit if the Firestore database instance is not available.
+                if (!db) return;
+
+                const path = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`;
+                console.log("Subscribing to Firestore path for AG Grid:", path);
+
+                const membersCollectionRef = collection(db, path);
+
+                if (unsubscribeMembersListener) unsubscribeMembersListener();
+
+                unsubscribeMembersListener = onSnapshot(membersCollectionRef, (snapshot) => {
+                    
+                    // If the Grid API doesn't exist, this is the first time loading.
+                    if (!gridApi) {
+                        console.log("Initializing AG Grid for the first time.");
+                        const members = preprocessMembersData(snapshot);
+
+                        // AG Grid configuration object. This is like the Handsontable constructor object.
+                        const gridOptions = {
+                            // --- Column Definitions (replaces 'columns' and 'colHeaders') ---
+                            columnDefs: [
+                                { headerName: "SNS_ID", field: "SNS_ID", editable: false }, // 'headerName' is the title, 'field' links to data
+                                { headerName: "Member Name", field: "SNSMemberName", editable: true, filter: true }, // 'filter: true' adds a filter menu
+                                { headerName: "Church Contact Name", field: "ChurchContactName", editable: true, filter: true },
+                                { headerName: "Contact Phone", field: "ChurchContactPhone", editable: true, filter: true }
+                            ],
+                            
+                            // --- Data ---
+                            rowData: members,
+
+                            // --- Features (replaces top-level options) ---
+                            pagination: true,
+                            paginationPageSize: 100,
+                            domLayout: 'normal', // Use 'normal' with fixed height for best performance
+                            
+                            // --- Editing and Saving (replaces 'afterChange', etc.) ---
+                            onCellEditingStarted: () => {
+                                isEditing = true;
+                                console.log("AG Grid edit started. Blocking real-time updates.");
+                            },
+                            onCellEditingStopped: () => {
+                                isEditing = false;
+                                console.log("AG Grid edit finished. Resuming real-time updates.");
+                            },
+                            onCellValueChanged: (event) => {
+                                // This event is much richer than Handsontable's.
+                                // event.data contains the entire row object with the new value already in it.
+                                console.log("AG Grid 'onCellValueChanged' event triggered.");
+                                console.log("Row to be saved:", event.data);
+                                saveMemberUpdateAG(event.data); // Pass the whole data object
+                            },
+
+                            // --- IMPORTANT for real-time updates ---
+                            // This tells AG Grid how to find a unique row.
+                            getRowId: (params) => params.data.SNS_ID,
+                        };
+
+                        const gridDiv = document.getElementById('members-grid');
+                        // Create the grid and save its API
+                        gridApi = agGrid.createGrid(gridDiv, gridOptions);
+
+                        // --- Manual Search Linking ---
+                        const searchField = document.getElementById('ag-grid-search');
+                        searchField.addEventListener('input', (event) => {
+                            // Use the Grid API to set the filter text
+                            gridApi.setQuickFilter(event.target.value);
+                        });
+
+                    } else {
+                        // If the grid already exists, process real-time changes.
+                        if (isEditing) {
+                            console.log("Skipping real-time update because a cell is being edited.");
+                            return;
+                        }
+
+                        // AG Grid uses transactions for updates, which is very efficient.
+                        const toAdd = [];
+                        const toUpdate = [];
+                        const toRemove = [];
+
+                        snapshot.docChanges().forEach((change) => {
+                            const docData = { ...change.doc.data(), SNS_ID: change.doc.id };
+                            if (change.type === "added") toAdd.push(docData);
+                            if (change.type === "modified") toUpdate.push(docData);
+                            if (change.type === "removed") toRemove.push(docData);
+                        });
+
+                        // Apply all changes in one batch
+                        gridApi.applyTransaction({
+                            add: toAdd,
+                            update: toUpdate,
+                            remove: toRemove,
+                        });
+                        console.log(`AG Grid updated: ${toAdd.length} added, ${toUpdate.length} updated, ${toRemove.length} removed.`);
+                    }
+                }, (err) => {
+                    console.error("Error with real-time member listener:", err);
+                    showModal("Error", "Failed to load members in real-time.");
+                });
+            }
+
+
 
             // NEW WAY - WITH HANDSONTABLE
             async function saveMemberUpdate(updatedRowData) {
