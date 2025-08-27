@@ -834,13 +834,6 @@
         <div id="members-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Sneha Nidhi Scheme Members</h2>
 
-            <!-- ADD THIS SEARCH BOX -->
-            <div class="mb-4">
-                <label for="ag-grid-search" class="mr-2">Search Grid:</label>
-                <input type="search" id="ag-grid-search" class="p-1 border rounded" placeholder="Search...">
-            </div>
-
-
              <div id="members-grid" class="ag-theme-alpine" style="height: 500px; width: 600px;"></div>
 
 
@@ -1137,13 +1130,6 @@
                         const gridDiv = document.getElementById('members-grid');
                         // Create the grid and save its API
                         gridApi = agGrid.createGrid(gridDiv, gridOptions);
-
-                        // --- Manual Search Linking ---
-                        const searchField = document.getElementById('ag-grid-search');
-                        searchField.addEventListener('input', (event) => {
-                            // Use the Grid API to set the filter text
-                            gridApi.setQuickFilter(event.target.value);
-                        });
 
                     } else {
                         // If the grid already exists, process real-time changes.
