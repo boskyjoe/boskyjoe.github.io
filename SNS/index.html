@@ -598,6 +598,30 @@
                 overflow-x: auto;
                 width: 100%;
             }
+
+             /* Target the custom class for our table */
+            .professional-handsontable .htCore th {
+                /* Style for the table headers */
+                background-color: #f4f5f7;
+                font-weight: bold;
+                color: #333;
+                border-bottom: 2px solid #d6d8db;
+            }
+
+            /* THIS IS THE CORRECT WAY TO DO STRIPE ROWS IN HANDSONTABLE */
+            .professional-handsontable .htCore tr:nth-child(even) > td {
+                background-color: #f8f9fa; /* A very light gray for even rows */
+            }
+
+            .professional-handsontable .htCore tr:hover > td {
+                /* Adds a subtle hover effect on rows */
+                background-color: #eef4ff;
+            }
+
+            .professional-handsontable .htCore td {
+                /* Ensures clean lines between all cells */
+                border-bottom: 1px solid #e6e6e6;
+            }
         </style>
     </head>
 
@@ -807,10 +831,10 @@
         </div>
 
         <!-- Sneha Nidhi Scheme Members Section -->
-        <div id="members-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner">
+        <div id="members-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner overflow-x-auto">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Sneha Nidhi Scheme Members</h2>
 
-            <div id="members-table"></div>
+            <div id="members-table class="w-full"></div>
 
             <p id="no-members-message" class="text-center text-gray-500 mt-4 hidden">No members found.</p>
         </div>
@@ -1066,7 +1090,7 @@
 
                         membersHot = new Handsontable(container, {
                             data: memberDataArray,
-                            rowHeaders: true,
+                            rowHeaders: false,
                             colHeaders: ["SNS_ID", "Member Name", "Church Contact Name", "Contact Phone"],
                             columns: [
                                 { data: 'SNS_ID', readOnly: true }, // The 'data' property links to the field in your object
@@ -1074,7 +1098,7 @@
                                 { data: 'ChurchContactName' },
                                 { data: 'ChurchContactPhone' }
                             ],
-                            height: 'auto',
+                            height: '500',
                             width: '100%',
                             stretchH: 'all', // Makes columns fit the container width
                             licenseKey: 'non-commercial-and-evaluation', // Required for free use
@@ -1082,9 +1106,6 @@
 
                             // Adds a CSS class to the table for custom styling
                             className: 'professional-theme', // NEW 
-
-                            // Enables alternating row colors (e.g., white and light gray)
-                            stripeRows: true, // NEW 
 
                             // Enables the pagination feature
                             pagination: true, // NEW 
@@ -1194,6 +1215,10 @@
                             movableColumns: true,
                             manualColumnResize: true,
                             manualRowResize: true,
+                            licenseKey: 'non-commercial-and-evaluation',
+                            pagination: true,
+                            pageSize: 100,
+                            className: 'professional-handsontable',
                             data: members,
                             columns: [
                                 { title: "SNS_ID", field: "SNS_ID", editor: false, headerFilter: "input" },
