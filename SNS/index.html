@@ -850,6 +850,11 @@
         <div id="members-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Sneha Nidhi Scheme Members</h2>
 
+            <div class="mb-4">
+                <button id="add-member-button" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                    Add New Member
+                </button>
+            </div>
              <div id="members-grid" class="ag-theme-alpine" style="height: 500px; width: 900px;"></div>
 
 
@@ -1061,6 +1066,41 @@
                 }
             }
 
+
+            // Add this new function to your script file.
+            // It uses setDoc to create a new document in Firestore.
+
+            async function addNewMember() {
+                if (!db) {
+                    console.error("Firestore not initialized. Cannot add new member.");
+                    return;
+                }
+
+                // 1. First, create a reference to a NEW document.
+                //    Calling doc() on a collection reference without an ID generates a new unique ID on the client.
+                const newMemberRef = doc(collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`));
+
+                // 2. Define the default data for the new member.
+                const newMemberData = {
+                    SNSMemberName: "", // Start with an empty name
+                    ChurchContactName: "",
+                    ChurchContactPhone: "",
+                    // You can add other default fields here if needed
+                    createdDate: new Date(), // Use a server timestamp in production for accuracy
+                };
+
+                try {
+                    // 3. Use setDoc() to create the new document in Firestore with the default data.
+                    await setDoc(newMemberRef, newMemberData);
+                    console.log("New member document created in Firestore with ID:", newMemberRef.id);
+
+                    // THAT'S IT! The onSnapshot listener will now automatically add the row to the grid.
+
+                } catch (error) {
+                    console.error("Error creating new member document:", error);
+                    showModal("Error", "Failed to create a new member record.");
+                }
+            }
 
             async function saveMemberUpdateAG(updatedRowData) {
                 const memberId = updatedRowData.SNS_ID;
@@ -2763,6 +2803,16 @@
             }
 
             document.addEventListener('DOMContentLoaded', async () => {
+                const addButton = document.getElementById('add-member-button');
+                    if (addButton) {
+                        addButton.addEventListener('click', () => {
+                            addNewMember();
+                        });
+                    } else {
+                        console.warn("Warning: The 'add-member-button' was not found on the page.");
+                    }
+
+
                 await initializeFirebase(firebaseConfig);
                 // This call should be made after DOMContentLoaded so that the table element exists
                 // and the Tabulator.js script is loaded.
