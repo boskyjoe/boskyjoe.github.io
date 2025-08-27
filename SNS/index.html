@@ -849,6 +849,50 @@
         <!-- Sneha Nidhi Scheme Members Section -->
         <div id="members-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Sneha Nidhi Scheme Members</h2>
+                        
+            <!-- Add Member Modal Form -->
+            <div id="add-member-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+            <div class="relative top-10 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+                <form id="add-member-form">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Add New Member</h3>
+                
+                <!-- Form Fields -->
+                <div class="space-y-4">
+                    <div>
+                    <label for="new-sns-id" class="block text-sm font-medium text-gray-700">SNS_ID*</label>
+                    <input type="text" id="new-sns-id" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div>
+                    <label for="new-member-name" class="block text-sm font-medium text-gray-700">Member Name</label>
+                    <input type="text" id="new-member-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                    <label for="new-church-contact-name" class="block text-sm font-medium text-gray-700">Church Contact Name</label>
+                    <input type="text" id="new-church-contact-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                    <label for="new-church-contact-phone" class="block text-sm font-medium text-gray-700">Contact Phone</label>
+                    <input type="text" id="new-church-contact-phone" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+
+                <!-- Error Message Placeholder -->
+                <p id="form-error-message" class="text-red-500 text-sm mt-3 hidden"></p>
+
+                <!-- Modal Action Buttons -->
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" id="cancel-member-button" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
+                    Cancel
+                    </button>
+                    <button type="submit" id="save-member-button" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                    Save Member
+                    </button>
+                </div>
+                </form>
+            </div>
+            </div>
+
+
 
             <div class="mb-4">
                 <button id="add-member-button" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
@@ -1101,6 +1145,97 @@
                     showModal("Error", "Failed to create a new member record.");
                 }
             }
+
+
+            // --- NEW DEDICATED FUNCTION FOR MODAL SETUP ---
+
+            function setupAddMemberModal() {
+                // Find all the necessary HTML elements for the modal
+                const addMemberModal = document.getElementById('add-member-modal');
+                const addMemberForm = document.getElementById('add-member-form');
+                const mainAddButton = document.getElementById('add-member-button');
+                const saveMemberButton = document.getElementById('save-member-button');
+                const cancelMemberButton = document.getElementById('cancel-member-button');
+                const formErrorMessage = document.getElementById('form-error-message');
+
+                // Get form input fields
+                const snsIdInput = document.getElementById('new-sns-id');
+                const memberNameInput = document.getElementById('new-member-name');
+                const churchContactNameInput = document.getElementById('new-church-contact-name');
+                const churchContactPhoneInput = document.getElementById('new-church-contact-phone');
+
+                // Check if all required elements exist before adding listeners
+                if (!addMemberModal || !mainAddButton || !addMemberForm) {
+                    console.warn("Add Member Modal elements not found. The 'Add New Member' feature will be disabled.");
+                    return;
+                }
+
+                // --- Event Listeners ---
+
+                // Show the modal when the main "Add New Member" button is clicked
+                mainAddButton.addEventListener('click', () => {
+                    addMemberForm.reset(); // Clear any previous data
+                    formErrorMessage.classList.add('hidden'); // Hide any old error messages
+                    addMemberModal.classList.remove('hidden');
+                    snsIdInput.focus(); // Set focus to the first input field
+                });
+
+                // Hide the modal when the "Cancel" button is clicked
+                cancelMemberButton.addEventListener('click', () => {
+                    addMemberModal.classList.add('hidden');
+                });
+
+                // Handle the form submission when the "Save" button is clicked
+                addMemberForm.addEventListener('submit', async (event) => {
+                    event.preventDefault(); // Prevent default form submission
+                    formErrorMessage.classList.add('hidden');
+
+                    const newSnsId = snsIdInput.value.trim();
+
+                    // 1. Validation
+                    if (!newSnsId) {
+                        formErrorMessage.textContent = 'SNS_ID is a required field.';
+                        formErrorMessage.classList.remove('hidden');
+                        return;
+                    }
+
+                    // 2. Check for Duplicates in Firestore
+                    const newMemberRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`, newSnsId);
+                    
+                    try {
+                        const docSnap = await getDoc(newMemberRef);
+                        if (docSnap.exists()) {
+                            formErrorMessage.textContent = `Error: A member with SNS_ID '${newSnsId}' already exists.`;
+                            formErrorMessage.classList.remove('hidden');
+                            return;
+                        }
+
+                        // 3. If unique, prepare the new data object
+                        const newMemberData = {
+                            SNSMemberName: memberNameInput.value.trim(),
+                            ChurchContactName: churchContactNameInput.value.trim(),
+                            ChurchContactPhone: churchContactPhoneInput.value.trim(),
+                            createdDate: new Date(),
+                        };
+
+                        // 4. Save the new document to Firestore
+                        await setDoc(newMemberRef, newMemberData);
+
+                        console.log(`New member document created successfully with ID: ${newSnsId}`);
+                        addMemberModal.classList.add('hidden'); // Hide the modal on success
+                        showModal("Success", `Member ${newSnsId} has been added successfully.`);
+
+                    } catch (error) {
+                        console.error("Error saving new member:", error);
+                        formErrorMessage.textContent = 'An unexpected error occurred. Please try again.';
+                        formErrorMessage.classList.remove('hidden');
+                    }
+                });
+            }
+
+
+
+
 
             async function saveMemberUpdateAG(updatedRowData) {
                 const memberId = updatedRowData.SNS_ID;
@@ -2803,17 +2938,12 @@
             }
 
             document.addEventListener('DOMContentLoaded', async () => {
-                const addButton = document.getElementById('add-member-button');
-                    if (addButton) {
-                        addButton.addEventListener('click', () => {
-                            addNewMember();
-                        });
-                    } else {
-                        console.warn("Warning: The 'add-member-button' was not found on the page.");
-                    }
+
 
 
                 await initializeFirebase(firebaseConfig);
+                // Set up all the event listeners for the "Add New Member" modal
+                setupAddMemberModal();
                 // This call should be made after DOMContentLoaded so that the table element exists
                 // and the Tabulator.js script is loaded.
                 //loadPreviousWinners();
