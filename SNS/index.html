@@ -1086,6 +1086,16 @@
 
                         // AG Grid configuration object. This is like the Handsontable constructor object.
                         const gridOptions = {
+                            // This sets default properties for ALL column definitions.
+                            defaultColDef: {
+                                // This makes every column flexible. They will resize to fill the grid width.
+                                flex: 1, 
+                                // We can also set a minimum width to prevent them from becoming too small.
+                                minWidth: 150, 
+                                // We can move the filter option here so we don't have to repeat it.
+                                filter: true, 
+                                floatingFilter: true, 
+                            },
                             // --- Column Definitions (replaces 'columns' and 'colHeaders') ---
                             columnDefs: [
                                 { headerName: "SNS_ID", field: "SNS_ID", editable: false }, // 'headerName' is the title, 'field' links to data
