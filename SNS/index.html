@@ -836,8 +836,8 @@
 
             <!-- ADD THIS SEARCH BOX -->
             <div class="mb-4">
-                <label for="search_field" class="mr-2">Search Grid:</label>
-                <input type="search" id="search_field" class="p-1 border rounded" placeholder="Search...">
+                <label for="grid-search" class="mr-2">Search Grid:</label>
+                <input type="search" id="grid-search" class="p-1 border rounded" placeholder="Search...">
             </div>
 
             <div id="members-table"></div>
@@ -1153,6 +1153,19 @@
                                 isEditing = false;
                                 console.log("Handsontable edit cancelled. Resuming real-time updates.");
                             }
+                        });
+
+                       // 1. Get the search input element from the page.
+                        const searchField = document.getElementById('grid-search');
+
+                        // 2. Get the search plugin instance from your new table.
+                        const searchPlugin = membersHot.getPlugin('search');
+
+                        // 3. Add an event listener that tells the plugin to perform a search
+                        //    every time the user types in the input box.
+                        searchField.addEventListener('keyup', (event) => {
+                            searchPlugin.query(event.target.value);
+                            membersHot.render(); // Re-render the table to show search results
                         });
 
                     } else {
