@@ -1,0 +1,2739 @@
+<!DOCTYPE-html>
+    <html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SSC - Sneha Nidhi Scheme</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <!-- Google Fonts: Inter for general text, Caveat for post-it note -->
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght@400;700&display=swap"
+            rel="stylesheet">
+        <!-- Confetti library for celebration effect -->
+        <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+        <!-- Font Awesome for icons -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+            xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+            crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+        <style>
+            /* Apply the Inter font globally and set a light background color */
+            body {
+                font-family: 'Inter', sans-serif;
+                background-color: #f0f4f8;
+                /* A soft, light blue-gray for the background */
+                position: relative;
+                /* Needed for absolute positioning of the watermark */
+                min-height: 100vh;
+                /* Ensure body takes full height for watermark to cover */
+            }
+
+            /* Watermark Overlay for the entire page */
+            .watermark-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-image: url('images/SSC.jpg');
+                background-repeat: no-repeat;
+                background-position: center center;
+                background-size: cover;
+                opacity: 0.2;
+                /* Increased opacity for more visibility */
+                z-index: -1;
+                /* Ensure it stays behind content */
+            }
+
+            /* Keyframes for dynamic background pattern movement */
+            @keyframes pattern-move {
+                0% {
+                    background-position: 0 0, 10px 10px;
+                }
+
+                100% {
+                    background-position: 20px 20px, 30px 30px;
+                }
+
+                /* Shift by one pattern unit */
+            }
+
+            /* Subtle diagonal stripes pattern for the main content box */
+            .main-content-pattern {
+                background-image: url('images/chits.png');
+                background-repeat: no-repeat;
+                background-position: center center;
+                background-size: cover;
+                /* Ensure the image fits within the container */
+                opacity: 0.3;
+                /* Adjust opacity for subtlety */
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: -1;
+                border-radius: inherit;
+            }
+
+            /* Custom styles for button hover effects (Tailwind handles most, but adding a subtle scale) */
+            .winner-button {
+                transition: all 0.2s ease-in-out;
+                /* Smooth transition for hover/active effects */
+            }
+
+            .winner-button:hover:not(:disabled) {
+                transform: scale(1.05);
+                /* Slightly enlarge button on hover, but not if disabled */
+                box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+                /* More pronounced shadow on hover */
+            }
+
+            .winner-button:active:not(:disabled) {
+                transform: scale(0.98);
+                /* Slight press effect on click */
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+                /* Reduced shadow on active */
+            }
+
+            /* Style for disabled buttons */
+            .winner-button:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+                box-shadow: none;
+                /* No shadow when disabled */
+                background-color: #d1d5db !important;
+                /* Tailwind's bg-gray-300 */
+            }
+
+            /* Keyframes for a subtle pulsing animation */
+            @keyframes pulse {
+
+                0%,
+                100% {
+                    opacity: 1;
+                }
+
+                50% {
+                    opacity: 0.5;
+                }
+            }
+
+            /* Class to apply the pulsing animation */
+            .pulsing-text {
+                animation: pulse 1.5s infinite ease-in-out;
+            }
+
+            /* Animation for new winner highlight within the post-it */
+            @keyframes highlight-winner {
+                0% {
+                    background-color: transparent;
+                }
+
+                50% {
+                    background-color: rgba(255, 255, 0, 0.3);
+                }
+
+                /* Brief yellow flash */
+                100% {
+                    background-color: transparent;
+                }
+            }
+
+            .winner-highlight {
+                animation: highlight-winner 1s ease-out;
+            }
+
+            /* NEW: Base hidden state for sections that will animate in */
+            .section-hidden-initial {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+                max-height: 0;
+                /* Important for height transition */
+                padding-top: 0 !important;
+                padding-bottom: 0 !important;
+                margin-top: 0 !important;
+                margin-bottom: 0 !important;
+                overflow: hidden;
+                pointer-events: none;
+                /* Disable interactions when hidden */
+                transition: all 0.8s ease-out;
+                /* Smooth transition for revealing */
+            }
+
+            /* Inactive section styling - visual state when revealed but not currently active */
+            .inactive-section {
+                opacity: 0.5;
+                filter: grayscale(80%);
+                /* Visually desaturate */
+                transition: opacity 0.5s ease-out, filter 0.5s ease-out, transform 0.5s ease-out, scale 0.5s ease-out;
+                /* Smooth transition for activation */
+                transform: scale(0.98);
+                /* Slightly smaller when inactive */
+            }
+
+            /* Active section styling - for pre-reveal grand entrance (target state after reveal) */
+            .winner-section:not(.inactive-section) {
+                /* These are the target values after reveal animation from section-hidden-initial */
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                max-height: 500px;
+                /* A value larger than the actual section height */
+                padding: 1.5rem;
+                /* Reapply original p-6 */
+                margin-bottom: 2rem;
+                /* Reapply original mb-8 */
+                pointer-events: auto;
+                /* Re-enable interactions */
+                border: 3px solid #6366f1;
+                /* A prominent border */
+                box-shadow: 0 0 20px rgba(99, 102, 241, 0.6);
+                /* Subtle glow */
+                transition: all 0.8s ease-out, border 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            }
+
+            /* New section styling for the consolation winners */
+            #consolation-winners-section {
+                display: none;
+                /* Hidden initially */
+                opacity: 0;
+                transition: opacity 0.5s ease-in;
+            }
+
+            #consolation-winners-section.visible {
+                display: block;
+                opacity: 1;
+            }
+
+
+            /* Keyframes for individual card reveal */
+            @keyframes reveal-card {
+                0% {
+                    opacity: 0;
+                    transform: scale(0.8);
+                }
+
+                100% {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+            }
+
+            .reveal-card-animation {
+                animation: reveal-card 0.5s ease-out forwards;
+            }
+
+            /* New Keyframes for fade-out animation when resetting */
+            @keyframes fade-out-text {
+                from {
+                    opacity: 1;
+                }
+
+                to {
+                    opacity: 0;
+                }
+            }
+
+            /* Class for fade-out animation */
+            .fade-out-animation {
+                animation: fade-out-text 0.3s ease-out forwards;
+            }
+
+            /* New Keyframes for the final number fading in */
+            @keyframes final-number-fade-in {
+                from {
+                    opacity: 0;
+                    transform: translateY(5px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            /* Class to apply the final number fade-in animation */
+            .final-number-reveal {
+                opacity: 0;
+                animation: final-number-fade-in 0.6s ease-out forwards;
+            }
+
+            /* New Keyframes for spinning icon */
+            @keyframes spin {
+                from {
+                    transform: rotate(0deg);
+                }
+
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* Class for spinning icon */
+            .spin-animation {
+                animation: spin 3s linear infinite;
+            }
+
+            /* New Keyframes for fading out and then hiding */
+            @keyframes fadeOutAndHide {
+                0% {
+                    opacity: 1;
+                    max-height: 100px;
+                    padding-top: 1.5rem;
+                    padding-bottom: 1.5rem;
+                    margin-top: 2rem;
+                    margin-bottom: 2rem;
+                }
+
+                99% {
+                    opacity: 0;
+                    max-height: 0;
+                    padding-top: 0;
+                    padding-bottom: 0;
+                    margin-top: 0;
+                    margin-bottom: 0;
+                }
+
+                100% {
+                    opacity: 0;
+                    max-height: 0;
+                    padding-top: 0;
+                    padding-bottom: 0;
+                    margin-top: 0;
+                    margin-bottom: 0;
+                    display: none;
+                }
+            }
+
+            .fade-out-and-hide-animation {
+                animation: fadeOutAndHide 0.7s ease-out forwards;
+                overflow: hidden;
+            }
+
+            /* Countdown specific styles */
+            #countdown-timer {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 8rem;
+                font-weight: bold;
+                color: #ef4444;
+                text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.4);
+                z-index: 1000;
+                opacity: 0;
+                transition: opacity 0.5s ease-in-out;
+                display: none;
+                background-color: rgba(255, 255, 255, 0.8);
+                padding: 1rem 2rem;
+                border-radius: 15px;
+                box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            }
+
+            #countdown-timer.visible {
+                opacity: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            /* Custom styles for the 3D sponsor card content wrapper */
+            .sponsor-card-content-wrapper {
+                box-shadow: 8px 8px 15px rgba(0, 0, 0, 0.2),
+                    -2px -2px 5px rgba(255, 255, 255, 0.3) inset;
+                border-right: 4px solid #60A5FA;
+                border-bottom: 4px solid #60A5FA;
+                border-top-left-radius: 0.75rem;
+                border-bottom-left-radius: 0.75rem;
+                border-bottom-right-radius: 0.75rem;
+                position: relative;
+                overflow: hidden;
+            }
+
+            /* Pseudo-element for the partial top-right border highlight */
+            .sponsor-card-content-wrapper::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 50%;
+                width: 50%;
+                height: 4px;
+                background: linear-gradient(to right, transparent 0%, rgba(96, 165, 250, 0.6) 20%, rgba(96, 165, 250, 1) 100%);
+                border-top-right-radius: 0.75rem;
+                z-index: 1;
+            }
+
+            /* New class for embossed shadow on the patron image */
+            .embossed-patron-shadow {
+                box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3),
+                    -2px -2px 5px rgba(255, 255, 255, 0.7) inset,
+                    2px 2px 5px rgba(0, 0, 0, 0.1) inset;
+            }
+
+            /* New Modal Styling */
+            .modal {
+                display: none;
+                /* Hidden by default */
+                position: fixed;
+                z-index: 10000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                overflow: auto;
+                background-color: rgb(0, 0, 0);
+                background-color: rgba(0, 0, 0, 0.4);
+                backdrop-filter: blur(5px);
+                -webkit-backdrop-filter: blur(5px);
+            }
+
+            .modal-content {
+                background-color: #fefefe;
+                margin: 10% auto;
+                padding: 2rem;
+                border: 1px solid #888;
+                width: 90%;
+                max-width: 600px;
+                border-radius: 1rem;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+                animation: fadeIn 0.5s;
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-20px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .modal-content textarea {
+                width: 100%;
+                min-height: 200px;
+                padding: 1rem;
+                font-family: monospace;
+                border: 1px solid #ccc;
+                border-radius: 0.5rem;
+                resize: vertical;
+            }
+
+            .modal-buttons {
+                display: flex;
+                justify-content: flex-end;
+                margin-top: 1rem;
+            }
+
+            .delete-btn {
+                cursor: pointer;
+                color: #ef4444;
+                /* red-500 */
+                transition: color 0.2s;
+            }
+
+            .delete-btn:hover {
+                color: #dc2626;
+                /* red-600 */
+            }
+
+            /* Custom styles for the numbered icons */
+            .consolation-icon {
+                width: 48px;
+                height: 48px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+                /* 24px */
+                font-weight: 700;
+                /* Bold */
+                color: white;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+
+            .consolation-icon.one {
+                background-color: #f59e0b;
+                /* amber-500 */
+            }
+
+            .consolation-icon.two {
+                background-color: #10b981;
+                /* emerald-500 */
+            }
+
+            .consolation-icon.three {
+                background-color: #ef4444;
+                /* red-500 */
+            }
+
+            /* NEW: Styles for the data tree grid table */
+            #previous-winners-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.9rem;
+            }
+
+            #previous-winners-table thead th {
+                padding: 1rem 1rem;
+                background-color: #e5e7eb;
+                color: #4b5563;
+                text-align: left;
+                border-bottom: 2px solid #d1d5db;
+            }
+
+            #previous-winners-table tbody tr {
+                transition: background-color 0.2s ease-in-out;
+            }
+
+            #previous-winners-table tbody tr.draw-row {
+                background-color: #f3f4f6;
+                font-weight: 600;
+                cursor: pointer;
+                /* Highlight that this row is clickable */
+            }
+
+            #previous-winners-table tbody tr.draw-row:hover {
+                background-color: #e5e7eb;
+                /* Darken on hover */
+            }
+
+            .winner-details-container {
+                display: none;
+                /* Initially hidden */
+                background-color: #fff;
+                border-left: 3px solid #60a5fa;
+                border-right: 1px solid #d1d5db;
+                border-bottom: 1px solid #d1d5db;
+            }
+
+            .winner-details-container.visible {
+                display: table-row;
+                /* Make it visible */
+            }
+
+            /* NEW: Styles for the nested "child" table */
+            .winner-details-container table {
+                width: 100%;
+                font-size: 0.8rem;
+                /* Smaller font size for a child table look */
+            }
+
+            .winner-details-container th,
+            .winner-details-container td {
+                padding: 0.6rem 1rem;
+                /* Reduced padding for a more compact feel */
+                text-align: left;
+                border-bottom: 1px solid #f3f4f6;
+                /* Lighter, more subtle border */
+            }
+
+            .winner-details-container th {
+                background-color: #f8fafc;
+                border-bottom: 1px solid #e5e7eb;
+                font-weight: 600;
+            }
+
+            .winner-details-container tbody tr:last-child td {
+                border-bottom: none;
+                /* No border on the last row */
+            }
+
+            .tree-grid-icon {
+                transition: transform 0.2s ease-in-out;
+                margin-right: 0.5rem;
+            }
+
+            .tree-grid-icon.open {
+                transform: rotate(90deg);
+            }
+
+            /* Styles for the new name/contact details in the cards */
+            .winner-detail-info {
+                font-size: 0.9rem;
+                color: #374151;
+                /* gray-700 */
+                margin-top: 0.5rem;
+                line-height: 1.25;
+            }
+
+            /* Target the custom class we added in the JavaScript options */
+            .professional-theme .htCore th {
+                /* Style for the table headers */
+                background-color: #f4f5f7;
+                /* A light, professional gray */
+                font-weight: bold;
+                color: #333;
+                border-bottom: 2px solid #d6d8db;
+            }
+
+            .professional-theme .htCore tr:hover>td {
+                /* Adds a subtle hover effect on rows */
+                background-color: #eef4ff;
+            }
+
+            .professional-theme .htCore td {
+                /* Ensures clean lines between all cells */
+                border-bottom: 1px solid #e6e6e6;
+            }
+
+            #members-table .tabulator-row.tabulator-row-odd {
+                background-color: #f2f2f2;
+                /* Light gray for odd rows */
+            }
+
+            #members-table .tabulator-row.tabulator-row-even {
+                background-color: #ffffff;
+                /* White for even rows */
+            }
+
+            /* Add this to your main CSS file or in a <style> tag in the <head> */
+            .table-wrapper {
+                /* This allows the table to be scrolled horizontally if needed,
+                without clipping the pagination footer. */
+                overflow-x: auto;
+                width: 100%;
+            }
+
+             /* Target the custom class for our table */
+            .professional-handsontable .htCore th {
+                /* Style for the table headers */
+                background-color: #f4f5f7;
+                font-weight: bold;
+                color: #333;
+                border-bottom: 2px solid #d6d8db;
+            }
+
+            /* THIS IS THE CORRECT WAY TO DO STRIPE ROWS IN HANDSONTABLE */
+            .professional-handsontable .htCore tr:nth-child(even) > td {
+                background-color: #f8f9fa; /* A very light gray for even rows */
+            }
+
+            .professional-handsontable .htCore tr:hover > td {
+                /* Adds a subtle hover effect on rows */
+                background-color: #eef4ff;
+            }
+
+            .professional-handsontable .htCore td {
+                /* Ensures clean lines between all cells */
+                border-bottom: 1px solid #e6e6e6;
+            }
+        </style>
+    </head>
+
+    <body class="min-h-screen flex flex-col items-center py-10 px-4">
+        <!-- Watermark Overlay Div for the entire page -->
+        <div class="watermark-overlay"></div>
+
+        <!-- Countdown Timer Element -->
+        <div id="countdown-timer"></div>
+
+        <!-- This is the hidden canvas for the confetti effect -->
+        <canvas id="confetti-canvas"
+            style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; pointer-events:none;"></canvas>
+
+        <!-- Modal for displaying messages -->
+        <div id="message-modal" class="modal">
+            <div class="modal-content">
+                <h3 id="modal-title" class="text-xl font-bold mb-4"></h3>
+                <p id="modal-body" class="text-gray-700 mb-4"></p>
+                <div class="modal-buttons">
+                    <button id="modal-close-btn"
+                        class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal for delete action -->
+        <div id="confirmation-modal" class="modal">
+            <div class="modal-content">
+                <h3 class="text-xl font-bold mb-4">Confirm Deletion</h3>
+                <p id="confirmation-body" class="text-gray-700 mb-4"></p>
+                <div class="modal-buttons space-x-2">
+                    <button id="confirm-delete-btn"
+                        class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition">Yes,
+                        Delete</button>
+                    <button id="cancel-delete-btn"
+                        class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Container -->
+        <div id="main-snehanidhi-container"
+            class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-4xl w-full text-center relative z-0">
+            <!-- Subtle pattern for the main content box -->
+            <div class="main-content-pattern"></div>
+
+            <!-- NEW: Combined header with auth section -->
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                <!-- Header Section (Left-aligned) -->
+                <div class="flex flex-col items-center justify-center md:flex-row md:justify-start mb-2">
+                    <div class="w-16 h-16 md:w-20 md:h-20 mr-3 md:mr-4 flex-shrink-0">
+                        <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png"
+                            alt="St. Sebastian's Church Logo" class="w-full h-full object-contain rounded-full">
+                    </div>
+                    <div class="flex flex-col items-center md:items-start text-center md:text-left">
+                        <h1 class="text-xl md:text-2xl font-extrabold text-indigo-800 whitespace-nowrap">
+                            SSC - Sneha Nidhi Scheme
+                        </h1>
+                        <div class="text-gray-600 text-xs md:text-sm">
+                            <p>No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</p>
+                            <p>+91 7090424365 | stsebastianssmc@gmail.com</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Authentication Section (Right-aligned) -->
+                <div id="auth-section"
+                    class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4">
+                    <div id="user-profile" class="flex items-center space-x-2 hidden">
+                        <img id="user-photo" class="w-10 h-10 rounded-full" src="" alt="User profile photo">
+                        <div>
+                            <p id="user-name" class="text-lg font-semibold text-gray-800"></p>
+                            <p id="user-id" class="text-xs text-gray-500"></p>
+                        </div>
+                    </div>
+                    <button id="google-signin-btn"
+                        class="winner-button px-8 py-3 bg-indigo-600 text-white font-semibold rounded-full shadow-lg hover:bg-indigo-700 transition">
+                        Sign in with Google
+                    </button>
+                    <button id="signout-btn"
+                        class="winner-button p-3 bg-gray-500 text-white font-semibold rounded-full shadow-lg hover:bg-gray-600 transition hidden relative"
+                        title="Sign Out">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="mb-4 relative z-10">
+                <!-- This div is now empty, as its content has been moved into the combined header -->
+            </div>
+
+            <!-- Status Message Section -->
+            <div id="status-message-container" class="mb-6">
+                <p id="status-message" class="text-lg font-semibold text-gray-700"></p>
+            </div>
+
+            <!-- Single SnehaNidhi Winner Section -->
+            <div id="first-place-section"
+                class="winner-section bg-gradient-to-br from-purple-700 to-purple-900 p-6 rounded-lg shadow-lg mb-8 relative z-10 inactive-section">
+                <h2 id="first-winner-heading"
+                    class="text-3xl font-bold text-white mb-6 flex items-center justify-center">
+                    <img src="images/sns1.png" alt="Sneha Nidhi Logo" class="h-12 w-12 mr-3" /> Winning Number
+                </h2>
+                <div class="grid grid-cols-1 gap-6 mb-6">
+                    <div class="winner-card bg-purple-100 p-4 rounded-md shadow-md">
+                        <h3 class="text-xl font-semibold text-purple-800">Winning Number</h3>
+                        <p id="first-primary" class="text-3xl font-bold text-purple-900 mt-2">---</p>
+                        <!-- NEW: Display for member details -->
+                        <p id="first-primary-name" class="winner-detail-info text-gray-700">Name: ---</p>
+                        <p id="first-primary-contact" class="winner-detail-info text-gray-700">Contact: ---</p>
+                    </div>
+                </div>
+                <button id="action-button"
+                    class="winner-button px-8 py-3 text-white font-semibold rounded-full shadow-lg transition duration-300 ease-in-out"
+                    disabled>
+                    Sign in to Generate Winner
+                </button>
+            </div>
+
+            <!-- NEW: Consolation Winners Section -->
+            <div id="consolation-winners-section"
+                class="bg-gradient-to-br from-blue-700 to-blue-900 p-6 rounded-lg shadow-lg mb-8 relative z-10">
+                <!-- Updated heading with ID for dynamic text -->
+                <h2 id="consolation-winner-heading" class="text-3xl font-bold text-white mb-6">Consolation Winners</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <!-- 1st Consolation Prize - now with an icon -->
+                    <div class="winner-card bg-blue-100 p-4 rounded-md shadow-md">
+                        <div class="flex items-center justify-center mb-2">
+                            <div class="consolation-icon one">1</div>
+                        </div>
+                        <p id="first-consolation-primary" class="text-2xl font-bold text-blue-900 mt-2">---</p>
+                        <!-- NEW: Display for member details -->
+                        <p id="first-consolation-name" class="winner-detail-info text-gray-700">Name: ---</p>
+                        <p id="first-consolation-contact" class="winner-detail-info text-gray-700">Contact: ---</p>
+                    </div>
+                    <!-- 2nd Consolation Prize - now with an icon -->
+                    <div class="winner-card bg-blue-100 p-4 rounded-md shadow-md">
+                        <div class="flex items-center justify-center mb-2">
+                            <div class="consolation-icon two">2</div>
+                        </div>
+                        <p id="second-consolation-primary" class="text-2xl font-bold text-blue-900 mt-2">---</p>
+                        <!-- NEW: Display for member details -->
+                        <p id="second-consolation-name" class="winner-detail-info text-gray-700">Name: ---</p>
+                        <p id="second-consolation-contact" class="winner-detail-info text-gray-700">Contact: ---</p>
+                    </div>
+                    <!-- 3rd Consolation Prize - now with an icon -->
+                    <div class="winner-card bg-blue-100 p-4 rounded-md shadow-md">
+                        <div class="flex items-center justify-center mb-2">
+                            <div class="consolation-icon three">3</div>
+                        </div>
+                        <p id="third-consolation-primary" class="text-2xl font-bold text-blue-900 mt-2">---</p>
+                        <!-- NEW: Display for member details -->
+                        <p id="third-consolation-name" class="winner-detail-info text-gray-700">Name: ---</p>
+                        <p id="third-consolation-contact" class="winner-detail-info text-gray-700">Contact: ---</p>
+                    </div>
+                </div>
+                <button id="generate-consolation-btn"
+                    class="winner-button px-8 py-3 bg-blue-700 text-white font-semibold rounded-full shadow-lg transition duration-300 ease-in-out"
+                    disabled>
+                    Generate Consolation Winners
+                </button>
+            </div>
+
+            <!-- Animated "Powered By" Section -->
+            <div id="powered-by-section"
+                class="py-3 px-6 rounded-lg shadow-lg mt-8 mb-8 relative z-10 flex items-center justify-center space-x-2 hidden">
+                <svg class="w-8 h-8 spin-animation flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd"
+                        d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
+                        clip-rule="evenodd"></path>
+                </svg>
+                <p class="text-lg md:text-xl font-bold pulsing-text whitespace-nowrap">Draw powered by DataWings
+                    Solutions</p>
+            </div>
+            <!-- End Animated "Powered By" Section -->
+
+            <!-- Buttons for confetti effects -->
+            <div class="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-4 mt-6">
+                <button id="reset-snehanidhi-btn"
+                    class="winner-button mt-4 px-8 py-3 text-white font-semibold rounded-full shadow-lg" disabled>
+                    Reset SnehaNidhi
+                </button>
+            </div>
+
+            <!-- Previous Winners Section -->
+            <div id="previous-winners-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner overflow-x-auto">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Previous Winners</h2>
+                <!-- This is the new container for the table -->
+                <div class="w-full">
+                    <table id="previous-winners-table" class="bg-white rounded-lg shadow-lg">
+                        <thead>
+                            <tr>
+                                <th class="py-3 px-4">Draw Date</th>
+                                <th class="py-3 px-4">Draw Details</th>
+                                <th class="py-3 px-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="winners-table-body">
+                            <!-- Content will be rendered here by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <p id="no-winners-message" class="text-center text-gray-500 mt-4 hidden">No previous winners found.</p>
+            </div>
+        </div>
+
+        <!-- Sneha Nidhi Scheme Members Section -->
+        <div id="members-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Sneha Nidhi Scheme Members</h2>
+
+             <div id="members-grid" class="ag-theme-alpine" style="height: 500px; width: 900px;"></div>
+
+
+            <p id="no-members-message" class="text-center text-gray-500 mt-4 hidden">No members found.</p>
+        </div>
+
+        <!-- Footer Section -->
+        <footer class="w-full bg-gray-800 text-gray-300 text-center py-4 mt-10 text-sm relative z-10">
+            <p>&copy; 2025 St. Sebastian's Church. All rights reserved.</p>
+            <p>Powered by <a href="#" class="text-blue-400 hover:underline">DataWings Solution</a></p>
+        </footer>
+
+        <!-- Tabulator CSS & JS -->
+        <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet">
+        <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
+
+        <!-- Handsontable CSS -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" />
+        <!-- Handsontable JavaScript Library -->
+        <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
+
+        <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+
+
+
+        <!-- Firebase SDKs -->
+        <script type="module">
+            // Firebase SDKs
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+            import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, onSnapshot, getDoc, where, writeBatch, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+            import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+
+            // Firebase configuration hardcoded as requested
+            const firebaseConfig = {
+                apiKey: "AIzaSyCcuFTwygQ5-KujxUdv45b2TPY5yQXVVTo",
+                authDomain: "snehanidhi-74ff0.firebaseapp.com",
+                projectId: "snehanidhi-74ff0",
+                storageBucket: "snehanidhi-74ff0.firebase-storage.app",
+                messagingSenderId: "726238156431",
+                appId: "1:726238156431:web:e60b0b5ed66f2d628342fa",
+                measurementId: "G-7ZW0ZSQGLZ"
+            };
+
+            // Use a default app ID if the provided variable is not defined
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'snehanidhi-default-app-id';
+
+            // TODO: Replace this with your Google Sheets ID
+            // To find your Sheet ID, look in the URL:
+            // https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0
+            const GOOGLE_SHEET_ID = '1c5Yzf_UQrCrohItdhsrENcYEqc8Cs7UtRG5OO-Gzn28';
+            const GOOGLE_SHEET_NAME = 'SNSMembers';
+            const GOOGLE_SHEET_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=${GOOGLE_SHEET_NAME}`;
+
+            let db = null;
+            let auth = null;
+            let userId = null;
+            let userName = null;
+            let currentWinnerData = null; // A global variable to store the winner data for the current month
+            const provider = new GoogleAuthProvider();
+            let unsubscribeWinnersListener = null;
+
+            // Get references to key UI elements
+            const statusMessageElement = document.getElementById('status-message');
+            const actionButton = document.getElementById('action-button');
+            const resetSnehaNidhiBtn = document.getElementById('reset-snehanidhi-btn');
+            const firstPlaceSection = document.getElementById('first-place-section');
+            const firstWinnerHeading = document.getElementById('first-winner-heading');
+            const poweredBySection = document.getElementById('powered-by-section');
+            const countdownTimerElement = document.getElementById('countdown-timer');
+            const confettiCanvas = document.getElementById('confetti-canvas');
+            const userProfileElement = document.getElementById('user-profile');
+            const userNameElement = document.getElementById('user-name');
+            const userPhotoElement = document.getElementById('user-photo');
+            const googleSigninBtn = document.getElementById('google-signin-btn');
+            const signoutBtn = document.getElementById('signout-btn');
+            const messageModal = document.getElementById('message-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+            const confirmationModal = document.getElementById('confirmation-modal');
+            const confirmationBody = document.getElementById('confirmation-body');
+            const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+            const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+            const winnersTableBody = document.getElementById('winners-table-body');
+            const noWinnersMessage = document.getElementById('no-winners-message');
+            const consolationWinnersSection = document.getElementById('consolation-winners-section');
+            const consolationWinnerHeading = document.getElementById('consolation-winner-heading');
+            const generateConsolationBtn = document.getElementById('generate-consolation-btn');
+
+            // NEW: Get references to the new member detail elements
+            const firstPrimaryName = document.getElementById('first-primary-name');
+            const firstPrimaryContact = document.getElementById('first-primary-contact');
+            const firstConsolationName = document.getElementById('first-consolation-name');
+            const firstConsolationContact = document.getElementById('first-consolation-contact');
+            const secondConsolationName = document.getElementById('second-consolation-name');
+            const secondConsolationContact = document.getElementById('second-consolation-contact');
+            const thirdConsolationName = document.getElementById('third-consolation-name');
+            const thirdConsolationContact = document.getElementById('third-consolation-contact');
+
+            // Sneha Nidhi Members Table
+            const membersTableBody = document.getElementById('members-table-body');
+            const membersHeaderRow = document.getElementById('members-header-row');
+            const noMembersMessage = document.getElementById('no-members-message');
+
+
+            async function debugMembersPath() {
+                const path = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`;
+                console.log("DEBUG: Checking Firestore path", path);
+
+                try {
+                    const membersCollectionRef = collection(db, path);
+                    const snapshot = await getDocs(membersCollectionRef);
+                    console.log(`DEBUG: Found ${snapshot.size} docs at ${path}`);
+                    snapshot.forEach(doc => console.log("DOC ID:", doc.id, "DATA:", doc.data()));
+                } catch (err) {
+                    console.error("DEBUG: Firestore path failed:", err);
+                }
+            }
+
+
+            let membersTable = null;
+            let unsubscribeMembersListener = null;
+            let isEditing = false;
+
+            let membersHot;
+            // A local copy of the data array, which we will manage
+            let memberDataArray = [];
+
+            let gridApi; 
+
+
+            // NEW, BULLETPROOF VERSION
+            function preprocessMembersData(snapshot) {
+                const processedData = []; // Start with an empty array
+
+                snapshot.docs.forEach(doc => {
+                    try {
+                        // Try to process the document
+                        const data = doc.data();
+
+                        // Check specifically if updatedDate is a Firestore Timestamp
+                        // Note: You might need to import Timestamp from 'firebase/firestore' for this to be perfect
+                        const isValidTimestamp = data.updatedDate && typeof data.updatedDate.toDate === 'function';
+
+                        const member = {
+                            SNS_ID: doc.id,
+                            SNSMemberName: data.SNSMemberName || "",
+                            ChurchContactName: data.ChurchContactName || "",
+                            ChurchContactPhone: data.ChurchContactPhone || "",
+                            updatedBy: data.updatedBy || "",
+                            updatedDate: isValidTimestamp
+                                ? data.updatedDate.toDate().toLocaleString()
+                                : "" // Default to empty string if not a valid timestamp
+                        };
+
+                        processedData.push(member); // Add the successfully processed member to our array
+
+                    } catch (error) {
+                        // If ANY error occurs, log it with the specific document ID and skip it
+                        console.error(`Failed to process document with ID: ${doc.id}`, error);
+                        console.log('Problematic data was:', doc.data());
+                    }
+                });
+
+                // Return the array of successfully processed documents
+                return processedData;
+            }
+
+
+
+            async function saveMemberUpdate1(cell) {
+                const field = cell.getField();
+                const value = cell.getValue();
+                const rowData = cell.getRow().getData();
+                const docId = rowData.SNS_ID;
+
+                // Check if the user is authenticated
+                console.log("User object on save attempt:", auth.currentUser);
+                const user = auth.currentUser;
+                if (!user) {
+                    console.error("No user logged in. Cannot save changes.");
+                    showModal("Update Failed", "You must be logged in to save changes.");
+                    return;
+                }
+                console.log("Attempting to update document with ID:", docId);
+                try {
+                    const memberDocRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`, docId);
+
+                    // Use updateDoc to update a subset of the document's fields
+                    await updateDoc(memberDocRef, {
+                        [field]: value,
+                        updatedBy: user.uid,
+                        updatedDate: serverTimestamp()
+                    });
+
+                    console.log(`Updated ${field} for member ${docId} to ${value}`);
+
+                } catch (err) {
+                    console.error("Failed to update member:", err);
+                    console.log("Full error object:", err);
+                    showModal("Update Failed", "Could not save changes to Firestore.");
+                }
+            }
+
+
+            async function saveMemberUpdateAG(updatedRowData) {
+                const memberId = updatedRowData.SNS_ID;
+                if (!memberId) {
+                    console.error("Cannot save update: SNS_ID is missing.", updatedRowData);
+                    return;
+                }
+                const dataToSave = { ...updatedRowData };
+                delete dataToSave.SNS_ID;
+                const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`, memberId);
+                try {
+                    await updateDoc(docRef, dataToSave);
+                    console.log(`Successfully updated member ${memberId}.`);
+                } catch (error) {
+                    console.error("Error saving member update:", error);
+                    showModal("Error", "Your changes could not be saved.");
+                }
+            }
+
+
+            function loadMembersWithAGGrid() {
+                // Exit if the Firestore database instance is not available.
+                if (!db) return;
+
+                const path = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`;
+                console.log("Subscribing to Firestore path for AG Grid:", path);
+
+                const membersCollectionRef = collection(db, path);
+
+                if (unsubscribeMembersListener) unsubscribeMembersListener();
+
+                unsubscribeMembersListener = onSnapshot(membersCollectionRef, (snapshot) => {
+                    
+                    // If the Grid API doesn't exist, this is the first time loading.
+                    if (!gridApi) {
+                        console.log("Initializing AG Grid for the first time.");
+                        const members = preprocessMembersData(snapshot);
+
+                        // AG Grid configuration object. This is like the Handsontable constructor object.
+                        const gridOptions = {
+                            // This sets default properties for ALL column definitions.
+                            defaultColDef: {
+                                // This makes every column flexible. They will resize to fill the grid width.
+                                flex: 1, 
+                                // We can also set a minimum width to prevent them from becoming too small.
+                                minWidth: 150, 
+                                // We can move the filter option here so we don't have to repeat it.
+                                filter: true, 
+                                floatingFilter: true, 
+                            },
+                            // --- Column Definitions (replaces 'columns' and 'colHeaders') ---
+                            columnDefs: [
+                                { headerName: "SNS_ID", field: "SNS_ID", editable: false }, // 'headerName' is the title, 'field' links to data
+                                { headerName: "Member Name", field: "SNSMemberName", editable: true, filter: true }, // 'filter: true' adds a filter menu
+                                { headerName: "Church Contact Name", field: "ChurchContactName", editable: true, filter: true },
+                                { headerName: "Contact Phone", field: "ChurchContactPhone", editable: true, filter: true }
+                            ],
+                            
+                            // --- Data ---
+                            rowData: members,
+
+                            // --- Features (replaces top-level options) ---
+                            pagination: true,
+                            paginationPageSize: 100,
+                            domLayout: 'normal', // Use 'normal' with fixed height for best performance
+                            
+                            // --- Editing and Saving (replaces 'afterChange', etc.) ---
+                            onCellEditingStarted: () => {
+                                isEditing = true;
+                                console.log("AG Grid edit started. Blocking real-time updates.");
+                            },
+                            onCellEditingStopped: () => {
+                                isEditing = false;
+                                console.log("AG Grid edit finished. Resuming real-time updates.");
+                            },
+                            onCellValueChanged: (event) => {
+                                // This event is much richer than Handsontable's.
+                                // event.data contains the entire row object with the new value already in it.
+                                console.log("AG Grid 'onCellValueChanged' event triggered.");
+                                console.log("Row to be saved:", event.data);
+                                saveMemberUpdateAG(event.data); // Pass the whole data object
+                            },
+
+                            // --- IMPORTANT for real-time updates ---
+                            // This tells AG Grid how to find a unique row.
+                            getRowId: (params) => params.data.SNS_ID,
+                        };
+
+                        const gridDiv = document.getElementById('members-grid');
+                        // Create the grid and save its API
+                        gridApi = agGrid.createGrid(gridDiv, gridOptions);
+
+                    } else {
+                        // If the grid already exists, process real-time changes.
+                        if (isEditing) {
+                            console.log("Skipping real-time update because a cell is being edited.");
+                            return;
+                        }
+
+                        // AG Grid uses transactions for updates, which is very efficient.
+                        const toAdd = [];
+                        const toUpdate = [];
+                        const toRemove = [];
+
+                        snapshot.docChanges().forEach((change) => {
+                            const docData = { ...change.doc.data(), SNS_ID: change.doc.id };
+                            if (change.type === "added") toAdd.push(docData);
+                            if (change.type === "modified") toUpdate.push(docData);
+                            if (change.type === "removed") toRemove.push(docData);
+                        });
+
+                        // Apply all changes in one batch
+                        gridApi.applyTransaction({
+                            add: toAdd,
+                            update: toUpdate,
+                            remove: toRemove,
+                        });
+                        console.log(`AG Grid updated: ${toAdd.length} added, ${toUpdate.length} updated, ${toRemove.length} removed.`);
+                    }
+                }, (err) => {
+                    console.error("Error with real-time member listener:", err);
+                    showModal("Error", "Failed to load members in real-time.");
+                });
+            }
+
+
+
+            // NEW WAY - WITH HANDSONTABLE
+            async function saveMemberUpdate(updatedRowData) {
+                // The entire row's data is passed directly.
+                // It's much simpler!
+
+                // 1. Get the unique ID from the object.
+                const memberId = updatedRowData.SNS_ID;
+                if (!memberId) {
+                    console.error("Cannot save update: SNS_ID is missing from the data.", updatedRowData);
+                    return;
+                }
+
+                // 2. Prepare the data for Firestore. It's good practice to remove the ID
+                //    from the data payload itself if it's already in the document path.
+                const dataToSave = { ...updatedRowData };
+                delete dataToSave.SNS_ID;
+
+                // 3. Get the reference to the Firestore document.
+                const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`, memberId);
+
+                // 4. Save the updated data.
+                try {
+                    console.log(`Saving updates for member ${memberId}...`);
+                    // updateDoc will only change the fields present in dataToSave.
+                    await updateDoc(docRef, dataToSave);
+                    console.log(`Successfully updated member ${memberId}.`);
+                } catch (error) {
+                    console.error("Error saving member update to Firestore:", error);
+                    showModal("Error", "Your changes could not be saved.");
+                }
+            }
+
+            function loadMembersWithHandsontable() {
+                // Exit if the Firestore database instance is not available.
+                if (!db) return;
+
+                // Define the path to the Firestore collection.
+                const path = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`;
+                console.log("Subscribing to Firestore path for Handsontable:", path);
+
+                const membersCollectionRef = collection(db, path);
+
+                // Clean up previous listener if it exists.
+                if (unsubscribeMembersListener) unsubscribeMembersListener();
+
+                unsubscribeMembersListener = onSnapshot(membersCollectionRef, (snapshot) => {
+
+                    // If the Handsontable instance doesn't exist, create it.
+                    if (!membersHot) {
+                        console.log("Initializing Handsontable for the first time.");
+                        // Preprocess the initial full dataset from Firestore.
+                        memberDataArray = preprocessMembersData(snapshot);
+
+                        const container = document.getElementById('members-table'); // Ensure your <div> has this ID
+
+                        membersHot = new Handsontable(container, {
+                            data: memberDataArray,
+                            rowHeaders: false,
+                            colHeaders: ["SNS_ID", "Member Name", "Church Contact Name", "Contact Phone"],
+                            columns: [
+                                { data: 'SNS_ID', readOnly: true }, // The 'data' property links to the field in your object
+                                { data: 'SNSMemberName' },
+                                { data: 'ChurchContactName' },
+                                { data: 'ChurchContactPhone' }
+                            ],
+                            height: '1000',
+                            width: '800',
+                            stretchH: 'all', // Makes columns fit the container width
+                            licenseKey: 'non-commercial-and-evaluation', // Required for free use
+
+
+                            // Adds a CSS class to the table for custom styling
+                            className: 'ht-theme-horizon', // NEW 
+
+                            // --- ENABLE THE SEARCH PLUGIN ---
+                            search: true,
+                            // Enables the pagination feature
+                            pagination: true, // NEW 
+
+                            // Sets the number of rows to display per page
+                            pageSize: 100, // NEW 
+
+                            // --- Event handling to prevent real-time conflicts ---
+
+                            // Fires when the user STARTS editing a cell
+                            afterBeginEditing: function () {
+                                isEditing = true;
+                                console.log("Handsontable edit started. Blocking real-time updates.");
+                            },
+
+                            // Fires when an edit is successfully completed
+                            afterChange: function (changes, source) {
+                                // We only care about user edits, not programmatic changes
+                                if (source === 'edit') {
+                                    console.log("Handsontable 'afterChange' event triggered.");
+                                    // 'changes' is an array of edits. We'll process each one.
+                                    changes.forEach(change => {
+                                        const [row, prop, oldValue, newValue] = change;
+                                        // Get the full data object for the row that was edited.
+                                        const updatedRowData = this.getSourceDataAtRow(row);
+                                        console.log("Row to be saved:", updatedRowData);
+                                        // Call your save function with the entire row object.
+                                        saveMemberUpdate(updatedRowData);
+                                    });
+                                }
+                                isEditing = false;
+                                console.log("Edit finished. Resuming real-time updates.");
+                            },
+
+                            // Fires if the user cancels an edit (e.g., presses Esc)
+                            afterCancelEdit: function () {
+                                isEditing = false;
+                                console.log("Handsontable edit cancelled. Resuming real-time updates.");
+                            }
+                        });
+
+                       // 1. Get the search input element from the page.
+                        const searchField = document.getElementById('grid-search');
+
+                        // 2. Get the search plugin instance from your new table.
+                        const searchPlugin = membersHot.getPlugin('search');
+
+                        // 3. Add an event listener that tells the plugin to perform a search
+                        //    every time the user types in the input box.
+                        searchField.addEventListener('keyup', (event) => {
+                            searchPlugin.query(event.target.value);
+                            membersHot.render(); // Re-render the table to show search results
+                        });
+
+                    } else {
+                        // If the table already exists, process individual changes from Firestore.
+                        if (isEditing) {
+                            console.log("Skipping real-time update because a cell is being edited.");
+                            return;
+                        }
+
+                        snapshot.docChanges().forEach((change) => {
+                            const docData = { ...change.doc.data(), SNS_ID: change.doc.id };
+
+                            if (change.type === "added") {
+                                console.log("Row added:", docData);
+                                memberDataArray.push(docData);
+                            }
+                            if (change.type === "modified") {
+                                console.log("Row modified:", docData);
+                                // Find the index of the item to update
+                                const index = memberDataArray.findIndex(member => member.SNS_ID === docData.SNS_ID);
+                                if (index !== -1) {
+                                    memberDataArray[index] = docData;
+                                }
+                            }
+                            if (change.type === "removed") {
+                                console.log("Row removed:", docData.SNS_ID);
+                                // Filter out the removed item
+                                memberDataArray = memberDataArray.filter(member => member.SNS_ID !== docData.SNS_ID);
+                            }
+                        });
+
+                        // Load the updated data array into the table. Handsontable will efficiently re-render.
+                        membersHot.loadData(memberDataArray);
+                        console.log("Handsontable updated with real-time changes.");
+                    }
+                }, (err) => {
+                    console.error("Error with real-time member listener:", err);
+                    showModal("Error", "Failed to load members in real-time.");
+                });
+            }
+
+
+            /**
+             * Loads member data from a Firestore collection and populates a Tabulator grid.
+             * It establishes a real-time listener to automatically update the grid whenever changes
+             * occur in the Firestore collection.
+            */
+            function loadMembersWithTabulator() {
+                // Exit if the Firestore database instance is not available.
+                if (!db) return;
+
+                const path = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`;
+                console.log("Subscribing to Firestore path:", path);
+
+                const membersCollectionRef = collection(db, path);
+
+                if (unsubscribeMembersListener) unsubscribeMembersListener();
+
+                unsubscribeMembersListener = onSnapshot(membersCollectionRef, (snapshot) => {
+
+                    if (!membersTable) {
+                        console.log("Initializing Tabulator for the first time.");
+                        const members = preprocessMembersData(snapshot);
+
+                        membersTable = new Tabulator("#members-table", {
+                            index: "SNS_ID", // CRITICAL: Ensure this is your unique ID field
+                            layout: "fitColumns",
+                            movableColumns: true,
+                            manualColumnResize: true,
+                            manualRowResize: true,
+                            licenseKey: 'non-commercial-and-evaluation',
+                            pagination: true,
+                            pageSize: 100,
+                            className: 'professional-handsontable',
+                            data: members,
+                            columns: [
+                                { title: "SNS_ID", field: "SNS_ID", editor: false, headerFilter: "input" },
+                                { title: "Member Name", field: "SNSMemberName", editor: "input", headerFilter: "input" },
+                                { title: "Church Contact Name", field: "ChurchContactName", editor: "input", headerFilter: "input" },
+                                { title: "Contact Phone", field: "ChurchContactPhone", editor: "input", headerFilter: "input" },
+                            ],
+
+                            // --- NEW AND CORRECTED EVENT HANDLING ---
+
+                            // Fires WHEN a cell edit begins
+                            cellEditing: function (cell) {
+                                isEditing = true;
+                                console.log("Edit started. Blocking real-time updates.");
+                            },
+
+                            // Fires IF a cell edit is cancelled
+                            cellEditCancelled: function (cell) {
+                                isEditing = false;
+                                console.log("Edit cancelled. Resuming real-time updates.");
+                            },
+
+                            // Fires AFTER a cell edit is successfully completed
+                            cellEdited: async function (cell) {
+                                console.log("Tabulator's cellEdited event was triggered. Saving data...");
+                                try {
+                                    await saveMemberUpdate(cell);
+                                } catch (error) {
+                                    console.error("Failed to save member update:", error);
+                                    cell.restoreOldValue();
+                                    showModal("Error", "Failed to save your changes.");
+                                } finally {
+                                    // This runs whether the save succeeded or failed
+                                    isEditing = false;
+                                    console.log("Edit finished. Resuming real-time updates.");
+                                }
+                            },
+                        });
+
+                    } else {
+                        // This logic is now safe because the isEditing flag is managed correctly
+                        if (isEditing) {
+                            console.log("Skipping real-time update because a cell is being actively edited.");
+                            return;
+                        }
+
+                        snapshot.docChanges().forEach((change) => {
+                            const rowData = { ...change.doc.data(), SNS_ID: change.doc.id };
+
+                            if (change.type === "added") {
+                                membersTable.addRow(rowData);
+                            }
+                            if (change.type === "modified") {
+                                membersTable.updateRow(rowData.SNS_ID, rowData);
+                            }
+                            if (change.type === "removed") {
+                                membersTable.deleteRow(rowData.SNS_ID);
+                            }
+                        });
+                    }
+                }, (err) => {
+                    console.error("Error with real-time member listener:", err);
+                    showModal("Error", "Failed to load members in real-time.");
+                });
+            }
+
+            function formatFirestoreDate(cell) {
+                const val = cell.getValue();
+                if (!val || !val.toDate) return "";
+                const d = val.toDate();
+                return `${d.getDate().toString().padStart(2, '0')}-${d.toLocaleString('default', { month: 'short' })}-${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+            }
+
+
+
+
+            function buildMembersColumns(members) {
+                if (members.length === 0) return [];
+
+                const fields = Object.keys(members[0]);
+                return fields.map(field => {
+                    return {
+                        title: field,
+                        field: field,
+                        editor: field === "SNS_ID" ? false : "input",
+                        headerFilter: "input",
+                        headerSort: true,
+                    };
+                });
+            }
+
+
+
+
+            /**
+             * Generates the formatted button text with the current month and year.
+             * @returns {string} The formatted button text.
+             */
+            function getFormattedButtonText() {
+                const currentDate = new Date();
+                const monthName = currentDate.toLocaleString('default', { month: 'long' });
+                const year = currentDate.getFullYear();
+                return `Generate ${monthName} ${year} Winner`;
+            }
+
+            /**
+             * Shows the custom message modal.
+             * @param {string} title - The title of the modal.
+             * @param {string} message - The message to display.
+             */
+            function showModal(title, message) {
+                modalTitle.textContent = title;
+                modalBody.textContent = message;
+                messageModal.style.display = 'block';
+            }
+
+            // Event listener to close the modal
+            modalCloseBtn.onclick = function () {
+                messageModal.style.display = 'none';
+            };
+
+            window.onclick = function (event) {
+                if (event.target == messageModal || event.target == confirmationModal) {
+                    event.target.style.display = 'none';
+                }
+            };
+
+            async function loadMembers() {
+                if (!db) return;
+                const membersCollectionRef = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
+                try {
+                    const snapshot = await getDocs(membersCollectionRef);
+                    const members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                    if (members.length === 0) {
+                        noMembersMessage.classList.remove('hidden');
+                        return;
+                    }
+
+                    // Build table header dynamically
+                    const columns = Object.keys(members[0]);
+                    membersHeaderRow.innerHTML = columns.map(col => `
+            <th class="px-4 py-2 border-b text-left">${col}</th>
+        `).join('');
+
+                    // Populate rows
+                    membersTableBody.innerHTML = '';
+                    members.forEach(member => {
+                        const row = document.createElement('tr');
+                        row.className = 'hover:bg-gray-50';
+                        row.innerHTML = columns.map(col => {
+                            const isEditable = col !== 'SNS_ID';
+                            return `<td class="border-b px-4 py-2" contenteditable="${isEditable}" 
+                            data-id="${member.id}" data-field="${col}"
+                            ${!isEditable ? 'class="bg-gray-100 text-gray-600 cursor-not-allowed"' : ''}>
+                            ${member[col] || ''}
+                        </td>`;
+                        }).join('');
+                        membersTableBody.appendChild(row);
+                    });
+
+                    attachMemberTableListeners();
+
+                } catch (err) {
+                    console.error("Error loading members:", err);
+                    showModal("Error", "Failed to load members from Firestore.");
+                }
+            }
+
+            function attachMemberTableListeners() {
+                membersTableBody.querySelectorAll('td[contenteditable="true"]').forEach(cell => {
+                    cell.addEventListener('blur', async (e) => {
+                        const newValue = e.target.textContent.trim();
+                        const docId = e.target.dataset.id;
+                        const field = e.target.dataset.field;
+
+                        try {
+                            const memberDocRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`, docId);
+                            await setDoc(memberDocRef, { [field]: newValue, updatedBy: auth.currentUser.uid, updatedDate: serverTimestamp() }, { merge: true });
+                            console.log(`Updated ${field} for ${docId} to ${newValue}`);
+                        } catch (err) {
+                            console.error("Failed to update member:", err);
+                            showModal("Update Failed", "Could not save changes. Check console for details.");
+                        }
+                    });
+                });
+            }
+
+            /**
+             * Initializes Firebase and sets up the auth listener.
+             * @param {object} firebaseConfig - The Firebase config object.
+             */
+            async function initializeFirebase(config) {
+                try {
+                    const firebaseApp = initializeApp(config);
+                    db = getFirestore(firebaseApp);
+                    auth = getAuth(firebaseApp);
+                    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+                    // Set up the authentication state listener
+                    onAuthStateChanged(auth, (user) => {
+                        updateUIForAuthState(user);
+                    });
+
+                    // Authenticate with custom token if available, otherwise just rely on onAuthStateChanged
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    }
+
+                } catch (error) {
+                    console.error("ERROR: Failed to initialize Firebase or authenticate:", error);
+                    showModal("Initialization Failed", `The application could not connect to Firebase. Please check your network and try again. Error: ${error.message}`);
+                    disableAllButtons();
+                }
+            }
+
+            /**
+             * Signs in the user with Google.
+             */
+            async function signInWithGoogle() {
+                try {
+                    await signInWithPopup(auth, provider);
+                } catch (error) {
+                    console.error("Error signing in with Google:", error);
+                    showModal("Sign-In Failed", `Could not sign you in with Google. Error: ${error.message}`);
+                }
+            }
+
+            /**
+             * Signs out the current user.
+             */
+            async function signOutUser() {
+                try {
+                    await signOut(auth);
+                    // Clear UI on sign out
+                    userProfileElement.classList.add('hidden');
+                    googleSigninBtn.classList.remove('hidden');
+                    signoutBtn.classList.add('hidden');
+                    actionButton.textContent = `Sign in to Generate Winner`;
+                    actionButton.disabled = true;
+                    if (statusMessageElement) {
+                        statusMessageElement.textContent = "Please sign in to start the draw.";
+                    }
+                    // Reload to reset the state for a new month
+                    location.reload();
+                } catch (error) {
+                    console.error("Error signing out:", error);
+                    showModal("Sign-Out Failed", `Could not sign you out. Error: ${error.message}`);
+                }
+            }
+
+
+            /**
+             * Updates the UI based on the current authentication state.
+             * @param {object} user - The authenticated user object or null.
+             */
+            function updateUIForAuthState(user) {
+                if (!actionButton || !userProfileElement || !statusMessageElement) {
+                    console.error("UI elements not found. Cannot update UI.");
+                    return;
+                }
+
+                if (user) {
+                    console.log("User is authenticated:", user.uid);
+                    userId = user.uid;
+                    userName = user.displayName || user.email || 'Anonymous';
+
+                    // Show user profile and hide sign-in button
+                    userProfileElement.classList.remove('hidden');
+                    userPhotoElement.src = user.photoURL || 'https://placehold.co/40x40/94a3b8/e2e8f0?text=User'; // Default placeholder image
+                    userPhotoElement.alt = `${userName}'s profile photo`;
+                    userNameElement.textContent = userName;
+                    // Only show a trimmed user ID to keep it clean
+                    document.getElementById('user-id').textContent = `ID: ${userId.substring(0, 8)}...`;
+                    googleSigninBtn.classList.add('hidden');
+                    signoutBtn.classList.remove('hidden');
+
+                    // Enable the action button and set its text
+                    actionButton.textContent = getFormattedButtonText();
+                    actionButton.className = 'winner-button px-8 py-3 bg-purple-700 text-white font-semibold rounded-full shadow-lg hover:bg-purple-800 transition duration-300 ease-in-out';
+                    actionButton.disabled = false;
+
+                    // Set up event listeners and initialize app data
+                    actionButton.onclick = startWinnerGeneration;
+                    signoutBtn.onclick = signOutUser;
+                    initializeSnehaNidhiData();
+                } else {
+                    console.log("User is not authenticated. Awaiting sign-in.");
+
+                    // Hide profile and show sign-in button
+                    userProfileElement.classList.add('hidden');
+                    googleSigninBtn.classList.remove('hidden');
+                    signoutBtn.classList.add('hidden');
+
+                    // Disable the action button and provide instructions
+                    actionButton.textContent = `Sign in to Generate Winner`;
+                    actionButton.className = 'winner-button px-8 py-3 bg-gray-500 text-white font-semibold rounded-full shadow-lg';
+                    actionButton.disabled = true;
+
+                    if (statusMessageElement) {
+                        statusMessageElement.textContent = "Please sign in to start the draw.";
+                    }
+                }
+            }
+
+            // --- Main App Logic ---
+
+            let allTimePickedTickets = new Set();
+            console.log("Global allTimePickedTickets initialized/cleared. Size (top of script):", allTimePickedTickets.size);
+
+            let snehanidhiTicketsWinners = [];
+            let finalFirstWinner = '---';
+            let consolationWinners = [];
+            let confettiInstance = null;
+            let confettiDrawFunctions = [];
+
+            function delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            function initializeConfetti() {
+                if (confettiCanvas && !confettiInstance) {
+                    confettiInstance = confetti.create(confettiCanvas, { resize: true, useWorker: false });
+                    console.log("DEBUG: Confetti instance created on a dedicated canvas.");
+                }
+            }
+
+            function loadImageAndCreateDrawFunction(src) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.crossOrigin = 'Anonymous';
+                    img.onload = () => {
+                        const drawFunction = (context) => {
+                            const size = 32;
+                            context.drawImage(img, -size / 2, -size / 2, size, size);
+                        };
+                        resolve(drawFunction);
+                    };
+                    img.onerror = () => reject(new Error(`Failed to load image at ${src}`));
+                    img.src = src;
+                });
+            }
+
+            async function preloadConfettiImages() {
+                try {
+                    const [coinsDrawFunction, notesDrawFunction] = await Promise.all([
+                        loadImageAndCreateDrawFunction('https://placehold.co/64x64/E2E8F0/94A3B8?text=Coins'),
+                        loadImageAndCreateDrawFunction('https://placehold.co/64x64/E2E8F0/94A3B8?text=Notes')
+                    ]);
+                    confettiDrawFunctions = [coinsDrawFunction, notesDrawFunction];
+                    console.log("DEBUG: Confetti draw functions preloaded successfully.");
+                } catch (error) {
+                    console.error("ERROR: Failed to preload confetti images. Confetti will not show up as expected.", error);
+                }
+            }
+
+            function triggerCurrencyEffect() {
+                if (!confettiInstance || confettiDrawFunctions.length === 0) {
+                    console.warn("Confetti instance not initialized or draw functions not loaded. Cannot fire currency effect.");
+                    return;
+                }
+
+                confettiInstance({
+                    particleCount: 200,
+                    angle: 60,
+                    spread: 70,
+                    origin: { x: 0.1, y: 1 },
+                    shapes: confettiDrawFunctions,
+                    scalar: 2
+                });
+
+                confettiInstance({
+                    particleCount: 200,
+                    angle: 120,
+                    spread: 70,
+                    origin: { x: 0.9, y: 1 },
+                    shapes: confettiDrawFunctions,
+                    scalar: 2
+                });
+
+                confettiInstance({
+                    particleCount: 300,
+                    spread: 180,
+                    ticks: 600,
+                    gravity: 0.5,
+                    decay: 0.94,
+                    scalar: 1,
+                    origin: { y: 0 },
+                    shapes: confettiDrawFunctions
+                });
+            }
+
+            function disableAllButtons() {
+                if (actionButton) {
+                    actionButton.disabled = true;
+                    actionButton.textContent = "Disabled";
+                }
+                if (generateConsolationBtn) {
+                    generateConsolationBtn.disabled = true;
+                }
+                if (resetSnehaNidhiBtn) {
+                    resetSnehaNidhiBtn.disabled = true;
+                }
+            }
+
+            async function clearDisplayedWinners() {
+                const winnerElements = [
+                    document.getElementById('first-primary'),
+                    document.getElementById('first-consolation-primary'),
+                    document.getElementById('second-consolation-primary'),
+                    document.getElementById('third-consolation-primary'),
+                ];
+
+                // NEW: Elements for names and contacts
+                const detailElements = [
+                    firstPrimaryName, firstPrimaryContact,
+                    firstConsolationName, firstConsolationContact,
+                    secondConsolationName, secondConsolationContact,
+                    thirdConsolationName, thirdConsolationContact
+                ];
+
+                const animations = [];
+                winnerElements.forEach(element => {
+                    if (element && element.textContent !== '---') {
+                        element.classList.add('fade-out-animation');
+                        animations.push(new Promise(resolve => {
+                            element.addEventListener('animationend', () => {
+                                element.classList.remove('fade-out-animation');
+                                element.textContent = '---';
+                                element.style.opacity = '0';
+                                element.classList.remove('final-number-reveal');
+                                resolve();
+                            }, { once: true });
+                        }));
+                    } else if (element) {
+                        element.textContent = '---';
+                        element.style.opacity = '0';
+                        element.classList.remove('final-number-reveal');
+                        element.classList.remove('pulsing-text');
+                        animations.push(Promise.resolve());
+                    }
+                });
+
+                // Clear the new detail elements
+                detailElements.forEach(element => {
+                    if (element) {
+                        element.textContent = '---';
+                    }
+                });
+
+                await Promise.all(animations);
+
+                if (poweredBySection) {
+                    poweredBySection.classList.add('hidden');
+                    poweredBySection.classList.remove('fade-out-and-hide-animation');
+                    poweredBySection.classList.remove('from-purple-100', 'to-purple-200');
+                    poweredBySection.classList.remove('from-teal-100', 'to-cyan-200');
+                    poweredBySection.querySelector('svg').classList.remove('text-purple-700', 'text-teal-700');
+                    poweredBySection.querySelector('p').classList.remove('text-purple-800', 'text-teal-800');
+                    poweredBySection.style.cssText = '';
+                }
+                if (countdownTimerElement) {
+                    countdownTimerElement.classList.remove('visible');
+                    countdownTimerElement.textContent = '';
+                }
+            }
+
+            /**
+             * Fetches and imports member data from a Google Sheet.
+             * It checks for existing members to prevent duplicates and filters out previous winners.
+             * @returns {Promise<Array<string>>} A promise that resolves with the list of eligible ticket IDs.
+             */
+            async function importMembersFromGoogleSheets() {
+                if (!db || !auth.currentUser) {
+                    console.error("Firestore not initialized or user not authenticated. Cannot import data.");
+                    return Promise.reject("Authentication or database not ready.");
+                }
+
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = "Importing member data from Google Sheets...";
+                }
+
+                try {
+                    const membersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
+
+                    // ** NEW LOGIC: Check if the collection already has data **
+                    const existingMembersSnapshot = await getDocs(membersCollection);
+                    if (existingMembersSnapshot.size > 0) {
+                        console.log("Member data already exists in Firestore. Skipping Google Sheets import.");
+                        showModal("Import Skipped", "Member data is already up-to-date. No new import needed from Google Sheets.");
+
+                        // Proceed directly to fetching the eligible tickets from the existing data
+                        const allTicketIds = existingMembersSnapshot.docs.map(doc => doc.id);
+
+                        const winnersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`);
+                        const q = query(winnersCollection, where("prize", "==", "Chit Winner"));
+                        const winnersSnapshot = await getDocs(q);
+
+                        const previousWinnerIds = new Set();
+                        winnersSnapshot.forEach(drawDoc => {
+                            const drawData = drawDoc.data();
+                            if (Array.isArray(drawData.winners)) {
+                                drawData.winners.forEach(winner => {
+                                    if (winner.prize === "Chit Winner") {
+                                        previousWinnerIds.add(String(winner.ticketNumber));
+                                    }
+                                });
+                            }
+                        });
+
+                        const eligibleTickets = allTicketIds.filter(ticketId => !previousWinnerIds.has(ticketId));
+
+                        console.log("DEBUG: Eligible tickets for draw:", eligibleTickets);
+                        return eligibleTickets;
+                    }
+
+                    // ** If the collection is empty, proceed with the full import logic **
+
+                    const response = await fetch(GOOGLE_SHEET_URL);
+                    if (!response.ok) {
+                        throw new Error(`Failed to load Google Sheet data. Please ensure the sheet ID and name are correct and the sheet is publicly accessible. Status: ${response.status}`);
+                    }
+
+                    const text = await response.text();
+                    const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+                    const data = JSON.parse(jsonText);
+                    const rows = data.table.rows;
+                    const columns = data.table.cols.map(col => col.label);
+
+                    if (columns.length === 0 || rows.length === 0) {
+                        console.warn("Google Sheet is empty or columns are not labeled correctly.");
+                        return [];
+                    }
+
+                    const batch = writeBatch(db);
+                    let importCount = 0;
+                    let updateCount = 0;
+
+                    const existingDocsSnapshot = await getDocs(membersCollection);
+                    const existingSNSIds = new Set(existingDocsSnapshot.docs.map(doc => doc.id));
+
+                    for (const row of rows) {
+                        const rowData = {};
+                        row.c.forEach((cell, index) => {
+                            rowData[columns[index]] = cell?.v || null;
+                        });
+
+                        if (rowData['SNS_ID']) {
+                            const newDocRef = doc(membersCollection, String(rowData['SNS_ID']));
+                            const memberData = {
+                                ...rowData,
+                                updatedBy: auth.currentUser.uid,
+                                updatedDate: serverTimestamp(),
+                            };
+
+                            if (existingSNSIds.has(String(rowData['SNS_ID']))) {
+                                batch.set(newDocRef, memberData, { merge: true });
+                                updateCount++;
+                            } else {
+                                memberData.createdBy = auth.currentUser.uid;
+                                memberData.createdDate = serverTimestamp();
+                                batch.set(newDocRef, memberData);
+                                importCount++;
+                            }
+                        }
+                    }
+
+                    if (importCount > 0 || updateCount > 0) {
+                        await batch.commit();
+                        console.log(`Successfully imported ${importCount} new members and updated ${updateCount} existing members.`);
+                        showModal("Import Complete", `Successfully imported ${importCount} new members from Google Sheets and updated ${updateCount} existing members.`);
+                    } else {
+                        console.log(`No new members to import or update.`);
+                        showModal("No Changes", "The database is already up to date with the Google Sheet. No new members or updates found.");
+                    }
+
+                    const membersSnapshot = await getDocs(membersCollection);
+                    const allTicketIds = membersSnapshot.docs.map(doc => doc.id);
+
+                    const winnersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`);
+                    const winnersSnapshot = await getDocs(winnersCollection);
+
+                    const previousWinnerIds = new Set();
+                    winnersSnapshot.forEach(drawDoc => {
+                        const drawData = drawDoc.data();
+                        if (Array.isArray(drawData.winners)) {
+                            drawData.winners.forEach(winner => {
+                                if (winner.prize === "Chit Winner") {
+                                    previousWinnerIds.add(String(winner.ticketNumber));
+                                }
+                            });
+                        }
+                    });
+
+                    const eligibleTickets = allTicketIds.filter(ticketId => !previousWinnerIds.has(ticketId));
+
+                    console.log("DEBUG: Eligible tickets for draw:", eligibleTickets);
+                    return eligibleTickets;
+
+                } catch (error) {
+                    console.error("ERROR: Failed to import data from Google Sheets:", error);
+                    showModal("Import Failed", `Could not import data from Google Sheets. Please ensure the sheet is publicly accessible and the Sheet ID and Sheet Name in the code are correct. Error: ${error.message}`);
+                    disableAllButtons();
+                    return Promise.reject(error);
+                }
+            }
+
+
+            async function checkForExistingWinner() {
+                if (!db) {
+                    console.error("Firestore not initialized. Cannot check for existing winner.");
+                    return false;
+                }
+                const currentDate = new Date();
+                const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+                const docId = monthAndYear.replace(/\s/g, '');
+                const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`, docId);
+
+                try {
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        currentWinnerData = docSnap.data();
+                        console.log("DEBUG: Winner for this month already exists.");
+                        return true;
+                    } else {
+                        console.log("DEBUG: No winner for this month yet.");
+                        return false;
+                    }
+                } catch (error) {
+                    console.error("ERROR: Failed to check for existing winner:", error);
+                    showModal("Database Error", "Failed to check for existing winner. Please check your network connection.");
+                    return false;
+                }
+            }
+
+            async function initializeSnehaNidhiData() {
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = "Loading ticket data...";
+                }
+                disableAllButtons();
+                clearDisplayedWinners(); // Clear previous winners' details, including names/contacts
+
+                // Only proceed if user is logged in
+                if (!auth.currentUser) {
+                    console.log("Not logged in. Awaiting user login to initialize data.");
+                    statusMessageElement.textContent = "Please sign in to start the draw.";
+                    return;
+                }
+
+                const currentDate = new Date();
+                const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+                if (firstWinnerHeading) {
+                    firstWinnerHeading.textContent = `${monthAndYear} Winning Number`;
+                }
+                if (consolationWinnerHeading) {
+                    consolationWinnerHeading.textContent = `${monthAndYear} Consolation Winners`;
+                }
+
+                allTimePickedTickets.clear();
+                finalFirstWinner = '---';
+
+                if (firstPlaceSection) {
+                    firstPlaceSection.classList.add('inactive-section');
+                }
+                if (consolationWinnersSection) {
+                    consolationWinnersSection.style.display = 'none';
+                }
+                if (resetSnehaNidhiBtn) {
+                    resetSnehaNidhiBtn.disabled = true;
+                    resetSnehaNidhiBtn.classList.add('bg-gray-300');
+                    resetSnehaNidhiBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                }
+
+                if (poweredBySection) {
+                    poweredBySection.classList.add('hidden');
+                    poweredBySection.classList.remove('fade-out-and-hide-animation');
+                    poweredBySection.style.cssText = '';
+                }
+
+                if (countdownTimerElement) {
+                    countdownTimerElement.classList.remove('visible');
+                    countdownTimerElement.textContent = '';
+                }
+
+                initializeConfetti();
+                await preloadConfettiImages();
+
+                try {
+                    snehanidhiTicketsWinners = await importMembersFromGoogleSheets();
+
+                    console.log("DEBUG: Eligible members from Firestore:", snehanidhiTicketsWinners);
+
+                    if (snehanidhiTicketsWinners.length < 4) {
+                        showModal("Data Error", `Error: Not enough unique ticket numbers available. The database has ${snehanidhiTicketsWinners.length} eligible tickets (needs at least 4 for all prizes). Please add more members to the Google Sheet and ensure their 'WinningTerm' is blank.`);
+                        disableAllButtons();
+                        return;
+                    }
+
+                    const winnerExists = await checkForExistingWinner();
+                    if (winnerExists && currentWinnerData) {
+                        // Display existing winners
+                        if (firstWinnerHeading) {
+                            firstWinnerHeading.textContent = `${currentWinnerData.monthAndYear} Winning Number`;
+                        }
+                        if (consolationWinnerHeading) {
+                            consolationWinnerHeading.textContent = `${currentWinnerData.monthAndYear} Consolation Winners`;
+                        }
+
+                        // Display the main winner's ticket number and details
+                        const mainWinnerData = currentWinnerData.winners.find(w => w.prize === 'Chit Winner');
+                        if (mainWinnerData) {
+                            const element = document.getElementById('first-primary');
+                            element.textContent = mainWinnerData.ticketNumber;
+                            element.style.opacity = '1'; // FIX: Make the number visible
+                            element.classList.remove('pulsing-text'); // FIX: Remove animation class
+                            firstPrimaryName.textContent = `Name: ${mainWinnerData.memberDetails?.SNSMemberName || 'N/A'}`;
+                            firstPrimaryContact.textContent = `Contact: ${mainWinnerData.memberDetails?.ChurchContactName || 'N/A'}`;
+                        }
+
+                        consolationWinnersSection.style.display = 'block';
+                        consolationWinnersSection.classList.add('visible');
+
+                        const consolationPrizes = currentWinnerData.winners.filter(w => w.prize.includes('Consolation Prize'));
+
+                        if (consolationPrizes[0]) {
+                            const element = document.getElementById('first-consolation-primary');
+                            element.textContent = consolationPrizes[0].ticketNumber;
+                            element.style.opacity = '1'; // FIX: Make the number visible
+                            element.classList.remove('pulsing-text'); // FIX: Remove animation class
+                            firstConsolationName.textContent = `Name: ${consolationPrizes[0].memberDetails?.SNSMemberName || 'N/A'}`;
+                            firstConsolationContact.textContent = `Contact: ${consolationPrizes[0].memberDetails?.ChurchContactName || 'N/A'}`;
+                        }
+                        if (consolationPrizes[1]) {
+                            const element = document.getElementById('second-consolation-primary');
+                            element.textContent = consolationPrizes[1].ticketNumber;
+                            element.style.opacity = '1'; // FIX: Make the number visible
+                            element.classList.remove('pulsing-text'); // FIX: Remove animation class
+                            secondConsolationName.textContent = `Name: ${consolationPrizes[1].memberDetails?.SNSMemberName || 'N/A'}`;
+                            secondConsolationContact.textContent = `Contact: ${consolationPrizes[1].memberDetails?.ChurchContactName || 'N/A'}`;
+                        }
+                        if (consolationPrizes[2]) {
+                            const element = document.getElementById('third-consolation-primary');
+                            element.textContent = consolationPrizes[2].ticketNumber;
+                            element.style.opacity = '1'; // FIX: Make the number visible
+                            element.classList.remove('pulsing-text'); // FIX: Remove animation class
+                            thirdConsolationName.textContent = `Name: ${consolationPrizes[2].memberDetails?.SNSMemberName || 'N/A'}`;
+                            thirdConsolationContact.textContent = `Contact: ${consolationPrizes[2].memberDetails?.ChurchContactName || 'N/A'}`;
+                        }
+
+                        if (statusMessageElement) {
+                            statusMessageElement.textContent = `Winner for ${currentWinnerData.monthAndYear} has already been drawn. Click 'Reset SnehaNidhi' to start a new month.`;
+                        }
+                        disableAllButtons();
+                        if (resetSnehaNidhiBtn) {
+                            resetSnehaNidhiBtn.disabled = false;
+                            resetSnehaNidhiBtn.classList.remove('bg-gray-300');
+                            resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                        }
+                    } else {
+                        const newMonthAndYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+                        if (statusMessageElement) {
+                            statusMessageElement.textContent = `Sneha Nidhi data loaded successfully! Click 'Generate Winner' to begin.`;
+                        }
+                        if (firstPlaceSection) {
+                            firstPlaceSection.classList.remove('inactive-section');
+                        }
+                        // Re-enable the action button if a user is logged in
+                        if (auth.currentUser && actionButton) {
+                            actionButton.disabled = false;
+                            actionButton.textContent = getFormattedButtonText();
+                        }
+                    }
+                    // **NEW: Load Previous Winners & Members Table**
+                    loadPreviousWinners();
+                    //loadMembersWithTabulator(); // <-- Now sets up real-time listener
+                    //loadMembersWithHandsontable();
+                    loadMembersWithAGGrid()
+
+                }
+                catch (error) {
+                    console.error("ERROR: Initialization failed in initializeSnehaNidhiData:", error);
+                    showModal("Initialization Failed", `Failed to initialize SnehaNidhi data. Please check console for details.`);
+                    disableAllButtons();
+                }
+            }
+
+            function getRandomNumber(min, max) {
+                return Math.floor(Math.random() * (max - min + 1)) + min;
+            }
+
+            // UPDATED: generate a random number with the requested format
+            function generateRandomAlphanumeric() {
+                const randomNumber = getRandomNumber(1, 1010);
+                const formattedNumber = String(randomNumber).padStart(4, '0');
+                return `SSC ${formattedNumber}`;
+            }
+
+            function pickSingleUniqueTicket(sourceArray) {
+                const availableTickets = sourceArray.filter(ticket => !allTimePickedTickets.has(ticket));
+
+                if (availableTickets.length === 0) {
+                    console.warn("WARNING: Not enough unique tickets available in the source pool.");
+                    showModal("No Tickets Left", "All unique tickets have been drawn! Please add more tickets to the file to continue.");
+                    disableAllButtons();
+                    if (resetSnehaNidhiBtn) {
+                        resetSnehaNidhiBtn.disabled = false;
+                        resetSnehaNidhiBtn.classList.remove('bg-gray-300');
+                        resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                    }
+                    return "N/A";
+                }
+
+                const randomIndex = getRandomNumber(0, availableTickets.length - 1);
+                const pickedTicket = availableTickets[randomIndex];
+                allTimePickedTickets.add(pickedTicket);
+
+                return pickedTicket;
+            }
+
+            async function animateNumberReveal(element, finalNumber, totalDuration) {
+                const startTime = performance.now();
+                let lastUpdateTime = startTime;
+                const initialUpdateInterval = 20;
+                const finalUpdateInterval = 300;
+
+                element.classList.remove('final-number-reveal');
+                element.classList.add('pulsing-text');
+
+                return new Promise(resolve => {
+                    function frame(currentTime) {
+                        const elapsed = currentTime - startTime;
+                        const progress = elapsed / totalDuration;
+
+                        if (progress >= 1) {
+                            element.classList.remove('pulsing-text');
+                            element.textContent = finalNumber;
+                            element.classList.add('final-number-reveal');
+                            resolve();
+                            return;
+                        }
+
+                        let easedProgress;
+                        if (progress < 0.5) {
+                            easedProgress = 2 * progress * progress * progress;
+                        } else {
+                            easedProgress = 1 - Math.pow(-2 * progress + 2, 3) / 2;
+                        }
+
+                        const currentUpdateInterval = initialUpdateInterval + (easedProgress * (finalUpdateInterval - initialUpdateInterval));
+
+                        if (currentTime - lastUpdateTime > currentUpdateInterval) {
+                            element.textContent = generateRandomAlphanumeric();
+                            lastUpdateTime = currentTime;
+                        }
+
+                        requestAnimationFrame(frame);
+                    }
+
+                    requestAnimationFrame(frame);
+                });
+            }
+
+            async function startCountdown(seconds) {
+                if (countdownTimerElement) {
+                    countdownTimerElement.classList.add('visible');
+                    for (let i = seconds; i > 0; i--) {
+                        countdownTimerElement.textContent = i;
+                        await delay(1000);
+                    }
+                    countdownTimerElement.textContent = 'GO!';
+                    await delay(500);
+                    countdownTimerElement.classList.remove('visible');
+                    countdownTimerElement.textContent = '';
+                }
+            }
+
+            /**
+             * Fetches member details for a given ticket number.
+             * @param {string} ticketNumber The ticket number to look up.
+             * @returns {Promise<object|null>} The member data or null if not found.
+             */
+            async function getMemberDetails(ticketNumber) {
+                if (!db) return null;
+                const memberDocRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`, ticketNumber);
+                try {
+                    const docSnap = await getDoc(memberDocRef);
+                    if (docSnap.exists()) {
+                        return docSnap.data();
+                    } else {
+                        console.warn(`Member data not found for ticket: ${ticketNumber}`);
+                        return null;
+                    }
+                } catch (error) {
+                    console.error(`Error fetching member details for ${ticketNumber}:`, error);
+                    return null;
+                }
+            }
+
+            /**
+             * Saves winner data and associated member details to Firestore.
+             * @param {string} winnerTicket The main winning ticket number.
+             * @param {string[]} consolationTickets The consolation winning ticket numbers.
+             * @param {string} monthAndYear The month and year of the draw.
+             */
+            async function saveWinnerToFirestore(winnerTicket, consolationTickets, monthAndYear) {
+                if (!db || !auth.currentUser) {
+                    console.error("Firestore not initialized or user not authenticated. Cannot save winner.");
+                    return;
+                }
+                try {
+                    // Fetch details for all winners
+                    const allWinnerTickets = [winnerTicket, ...consolationTickets];
+                    const winnersData = [];
+
+                    // Correctly set the prize name to "Chit Winner"
+                    const prizeNames = ['Chit Winner', 'First Consolation Prize', 'Second Consolation Prize', 'Third Consolation Prize'];
+
+                    for (let i = 0; i < allWinnerTickets.length; i++) {
+                        const ticketNumber = allWinnerTickets[i];
+                        const memberDetails = await getMemberDetails(ticketNumber);
+
+                        if (memberDetails) {
+                            winnersData.push({
+                                prize: prizeNames[i],
+                                ticketNumber: ticketNumber,
+                                memberDetails: {
+                                    SNSMemberName: memberDetails.SNSMemberName,
+                                    ChurchContactName: memberDetails.ChurchContactName,
+                                    ChurchContactPhone: memberDetails.ChurchContactPhone
+                                }
+                            });
+                        } else {
+                            // Save a placeholder if member details couldn't be fetched
+                            winnersData.push({
+                                prize: prizeNames[i],
+                                ticketNumber: ticketNumber,
+                                memberDetails: {
+                                    SNSMemberName: 'Data not found',
+                                    ChurchContactName: 'Data not found',
+                                    ChurchContactPhone: 'Data not found'
+                                }
+                            });
+                        }
+                    }
+
+                    const docId = monthAndYear.replace(/\s/g, '');
+                    const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`, docId);
+
+                    await setDoc(docRef, {
+                        monthAndYear: monthAndYear,
+                        winners: winnersData, // Save the new structured data
+                        timestamp: new Date(),
+                        userId: auth.currentUser.uid,
+                        userName: auth.currentUser.displayName || auth.currentUser.email
+                    });
+
+                    console.log("Winner and member details saved to Firestore successfully.");
+                } catch (error) {
+                    console.error("Error saving winner to Firestore:", error);
+                    showModal("Save Error", "Failed to save the winner to the database. Please check the console for details.");
+                }
+            }
+
+            /**
+             * Formats a Firebase Timestamp object into a user-friendly string (DD-MON-YYYY HH:mm:ss).
+             * @param {Object} firebaseTimestamp - The Firebase Timestamp object.
+             * @returns {string} The formatted date string.
+             */
+            function formatTimestamp(firebaseTimestamp) {
+                if (!firebaseTimestamp || typeof firebaseTimestamp.toDate !== 'function') {
+                    return 'N/A';
+                }
+                const date = firebaseTimestamp.toDate();
+                const day = date.getDate().toString().padStart(2, '0');
+                const month = date.toLocaleString('default', { month: 'short' }).toUpperCase();
+                const year = date.getFullYear();
+                const hours = date.getHours().toString().padStart(2, '0');
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                const seconds = date.getSeconds().toString().padStart(2, '0');
+                return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+            }
+
+            /**
+             * Displays a confirmation modal before deleting a winner.
+             * @param {object} rowData - The data of the row to be deleted.
+             */
+            function showConfirmationModal(rowData) {
+                const docId = rowData.docId;
+                confirmationBody.textContent = `Are you sure you want to delete the entire winner draw for ${rowData.monthAndYear}? This action cannot be undone.`;
+                confirmationModal.style.display = 'block';
+
+                // Use a one-time event listener to handle the confirmation
+                confirmDeleteBtn.onclick = async () => {
+                    confirmationModal.style.display = 'none';
+                    await deleteWinner(docId);
+                };
+
+                cancelDeleteBtn.onclick = () => {
+                    confirmationModal.style.display = 'none';
+                };
+            }
+
+            /**
+             * Deletes a winner document from Firestore.
+             * @param {string} docId - The ID of the document to delete.
+             */
+            async function deleteWinner(docId) {
+                if (!db) {
+                    console.error("Firestore not initialized. Cannot delete document.");
+                    showModal("Error", "Database is not available. Cannot perform delete operation.");
+                    return;
+                }
+                const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`, docId);
+
+                try {
+                    await deleteDoc(docRef);
+                    console.log("Document successfully deleted with ID:", docId);
+                    showModal("Success", `The winner for ${docId} was successfully deleted.`);
+                } catch (error) {
+                    console.error("Error removing document:", error);
+                    showModal("Deletion Failed", `Failed to delete the winner. Error: ${error.message}`);
+                }
+            }
+
+            /**
+             * Loads and displays previous winners from Firestore using a real-time listener.
+             */
+            function loadPreviousWinners() {
+                if (!db) {
+                    console.error("Firestore not initialized. Cannot load previous winners.");
+                    return;
+                }
+
+                // Unsubscribe from any previous listener to prevent duplicates
+                if (unsubscribeWinnersListener) {
+                    unsubscribeWinnersListener();
+                }
+
+                const winnersCollectionRef = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`);
+
+                // Listen to the collection for real-time updates
+                unsubscribeWinnersListener = onSnapshot(winnersCollectionRef, (querySnapshot) => {
+                    const winnersData = [];
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        winnersData.push({
+                            docId: doc.id,
+                            monthAndYear: data.monthAndYear,
+                            drawnBy: data.userName,
+                            dateDrawn: data.timestamp,
+                            winners: data.winners || [], // Now expects a structured array
+                        });
+                    });
+
+                    if (winnersData.length > 0) {
+                        // Sort the winners by timestamp in descending order before rendering
+                        winnersData.sort((a, b) => {
+                            const dateA = a.dateDrawn ? a.dateDrawn.toDate() : new Date(0);
+                            const dateB = b.dateDrawn ? b.dateDrawn.toDate() : new Date(0);
+                            return dateB - dateA;
+                        });
+                        renderWinnersTable(winnersData);
+                        noWinnersMessage.classList.add('hidden');
+                    } else {
+                        winnersTableBody.innerHTML = '';
+                        noWinnersMessage.classList.remove('hidden');
+                    }
+                }, (error) => {
+                    console.error("Error with real-time Firestore listener:", error);
+                    showModal("Loading Error", "Failed to load previous winners data. Please check your network connection.");
+                });
+            }
+
+            /**
+             * Renders the winners data in a tree grid table format with a nested table for details.
+             * @param {Array<Object>} winners - The array of winner data objects.
+             */
+            function renderWinnersTable(winners) {
+                winnersTableBody.innerHTML = ''; // Clear previous content
+
+                winners.forEach(winner => {
+                    // Main row for the draw
+                    const drawRow = document.createElement('tr');
+                    drawRow.className = 'draw-row border-b border-gray-200';
+                    drawRow.innerHTML = `
+                    <td class="flex items-center space-x-2">
+                        <i class="fa-solid fa-angle-right tree-grid-icon"></i>
+                        <i class="fa-solid fa-calendar-alt text-blue-500"></i>
+                        <span>${winner.monthAndYear}</span>
+                    </td>
+                    <td>Drawn by: ${winner.drawnBy} on ${formatTimestamp(winner.dateDrawn)}</td>
+                    <td class="text-right">
+                        <i class="fa-solid fa-trash-can delete-btn text-red-500 hover:text-red-700 transition cursor-pointer" data-doc-id="${winner.docId}" title="Delete this draw"></i>
+                    </td>
+                `;
+                    winnersTableBody.appendChild(drawRow);
+
+                    // NEW: Nested table row for winner details
+                    const detailsRow = document.createElement('tr');
+                    detailsRow.className = 'winner-details-container'; // This row is initially hidden
+                    detailsRow.innerHTML = `
+                    <td colspan="3">
+                        <table class="w-full">
+                            <thead>
+                                <tr>
+                                    <th class="py-2 px-4">Winning Type</th>
+                                    <th class="py-2 px-4">Winning Number</th>
+                                    <th class="py-2 px-4">Name</th>
+                                    <th class="py-2 px-4">Church Contact Name</th>
+                                    <th class="py-2 px-4">Contact Number</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${winner.winners.map(prizeWinner => `
+                                    <tr>
+                                        <td class="py-2 px-4 font-semibold">${prizeWinner.prize}</td>
+                                        <td class="py-2 px-4">${prizeWinner.ticketNumber}</td>
+                                        <td class="py-2 px-4">${prizeWinner.memberDetails.SNSMemberName || 'N/A'}</td>
+                                        <td class="py-2 px-4">${prizeWinner.memberDetails.ChurchContactName || 'N/A'}</td>
+                                        <td class="py-2 px-4">${prizeWinner.memberDetails.ChurchContactPhone || 'N/A'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </td>
+                `;
+                    winnersTableBody.appendChild(detailsRow);
+
+                    // Add event listener to the main draw row to toggle the details
+                    drawRow.addEventListener('click', () => {
+                        const icon = drawRow.querySelector('.tree-grid-icon');
+                        icon.classList.toggle('open');
+
+                        detailsRow.classList.toggle('visible');
+                    });
+
+                    // Add event listener for the delete button on the main draw row
+                    const deleteButton = drawRow.querySelector('.delete-btn');
+                    deleteButton.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showConfirmationModal(winner);
+                    });
+                });
+            }
+
+            /**
+             * This function contains the core logic for the winner generation animation and data saving.
+             * It is called only after a user is confirmed to be authenticated.
+             */
+            async function startWinnerGeneration() {
+                const winnerExists = await checkForExistingWinner();
+                if (winnerExists) {
+                    if (statusMessageElement) {
+                        statusMessageElement.textContent = `A winner for ${currentWinnerData.monthAndYear} has already been drawn. Click 'Reset SnehaNidhi' to start a new month.`;
+                    }
+                    disableAllButtons();
+                    if (resetSnehaNidhiBtn) {
+                        resetSnehaNidhiBtn.disabled = false;
+                        resetSnehaNidhiBtn.classList.remove('bg-gray-300');
+                        resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                    }
+                    return;
+                }
+
+                const primaryElement = document.getElementById(`first-primary`);
+                if (actionButton) {
+                    actionButton.disabled = true;
+                    actionButton.textContent = "Drawing...";
+                }
+
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = "Drawing Winning Number...";
+                }
+
+                if (poweredBySection) {
+                    poweredBySection.classList.remove('hidden', 'fade-out-and-hide-animation');
+                    poweredBySection.style.opacity = '1';
+                    poweredBySection.style.maxHeight = '100px';
+                    poweredBySection.style.paddingTop = '1.5rem';
+                    poweredBySection.style.paddingBottom = '1.5rem';
+                    poweredBySection.style.marginTop = '2rem';
+                    poweredBySection.style.marginBottom = '2rem';
+                    poweredBySection.style.display = 'flex';
+                    void poweredBySection.offsetWidth;
+
+                    // Set theme for main winner
+                    poweredBySection.classList.add('from-purple-100', 'to-purple-200');
+                    poweredBySection.querySelector('svg').classList.add('text-purple-700');
+                    poweredBySection.querySelector('p').classList.add('text-purple-800');
+                    poweredBySection.classList.remove('from-teal-100', 'to-cyan-200');
+                    poweredBySection.querySelector('svg').classList.remove('text-teal-700');
+                    poweredBySection.querySelector('p').classList.remove('text-teal-800');
+                }
+
+                await startCountdown(3);
+                const primaryWinner = pickSingleUniqueTicket(snehanidhiTicketsWinners);
+                if (primaryElement) {
+                    await animateNumberReveal(primaryElement, primaryWinner, 10000);
+                }
+
+                // NEW: Fetch and display member details for the main winner
+                const memberDetails = await getMemberDetails(primaryWinner);
+                firstPrimaryName.textContent = `Name: ${memberDetails?.SNSMemberName || 'N/A'}`;
+                firstPrimaryContact.textContent = `Contact: ${memberDetails?.ChurchContactName || 'N/A'}`;
+
+
+                if (poweredBySection) {
+                    poweredBySection.classList.add('fade-out-and-hide-animation');
+                    poweredBySection.addEventListener('animationend', function handler() {
+                        poweredBySection.classList.add('hidden');
+                        poweredBySection.removeEventListener('animationend', handler);
+                    }, { once: true });
+                }
+
+                if (primaryWinner === "N/A") {
+                    console.warn("Winning Number could not be drawn (N/A). Stopping draw.");
+                    return;
+                }
+
+                finalFirstWinner = primaryWinner;
+                await delay(1000);
+
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = "Winning number drawn! Now, generate the consolation prizes.";
+                }
+
+                // After main winner, enable consolation section and button
+                consolationWinnersSection.style.display = 'block';
+                consolationWinnersSection.classList.add('visible');
+                generateConsolationBtn.disabled = false;
+                actionButton.disabled = true;
+                actionButton.textContent = "Winner Selected";
+                triggerCurrencyEffect();
+            }
+
+            async function startConsolationGeneration() {
+                generateConsolationBtn.disabled = true;
+                generateConsolationBtn.textContent = "Drawing...";
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = "Drawing consolation winners...";
+                }
+
+                // Show powered by animation for consolation winners
+                if (poweredBySection) {
+                    poweredBySection.classList.remove('hidden', 'fade-out-and-hide-animation');
+                    poweredBySection.style.opacity = '1';
+                    poweredBySection.style.maxHeight = '100px';
+                    poweredBySection.style.paddingTop = '1.5rem';
+                    poweredBySection.style.paddingBottom = '1.5rem';
+                    poweredBySection.style.marginTop = '2rem';
+                    poweredBySection.style.marginBottom = '2rem';
+                    poweredBySection.style.display = 'flex';
+                    void poweredBySection.offsetWidth;
+
+                    // Set theme for consolation winners
+                    poweredBySection.classList.add('from-teal-100', 'to-cyan-200');
+                    poweredBySection.querySelector('svg').classList.add('text-teal-700');
+                    poweredBySection.querySelector('p').classList.add('text-teal-800');
+                    poweredBySection.classList.remove('from-purple-100', 'to-purple-200');
+                    poweredBySection.querySelector('svg').classList.remove('text-purple-700');
+                    poweredBySection.querySelector('p').classList.remove('text-teal-800');
+                }
+
+                // Generate and animate consolation winners
+                const consolationElements = [
+                    document.getElementById('first-consolation-primary'),
+                    document.getElementById('second-consolation-primary'),
+                    document.getElementById('third-consolation-primary')
+                ];
+
+                // NEW: References to the name/contact elements
+                const nameElements = [firstConsolationName, secondConsolationName, thirdConsolationName];
+                const contactElements = [firstConsolationContact, secondConsolationContact, thirdConsolationContact];
+
+                const consolationDraws = [];
+                for (let i = 0; i < 3; i++) {
+                    const winner = pickSingleUniqueTicket(snehanidhiTicketsWinners);
+                    if (winner === "N/A") {
+                        console.warn("Not enough tickets for all consolation prizes.");
+                        break;
+                    }
+                    await animateNumberReveal(consolationElements[i], winner, 5000);
+
+                    // NEW: Fetch and display member details for each consolation winner
+                    const memberDetails = await getMemberDetails(winner);
+                    nameElements[i].textContent = `Name: ${memberDetails?.SNSMemberName || 'N/A'}`;
+                    contactElements[i].textContent = `Contact: ${memberDetails?.ChurchContactName || 'N/A'}`;
+
+                    consolationDraws.push(winner);
+                    triggerCurrencyEffect(); // Confetti after each winner is revealed
+                    await delay(500); // Small delay between each consolation reveal
+                }
+
+                consolationWinners = consolationDraws;
+
+                // Hide powered by section after all consolation winners are drawn
+                if (poweredBySection) {
+                    poweredBySection.classList.add('fade-out-and-hide-animation');
+                    poweredBySection.addEventListener('animationend', function handler() {
+                        poweredBySection.classList.add('hidden');
+                        poweredBySection.removeEventListener('animationend', handler);
+                    }, { once: true });
+                }
+
+                if (statusMessageElement) {
+                    statusMessageElement.textContent = "All winners have been drawn! Click 'Reset SnehaNidhi' to start a new draw.";
+                }
+
+                const currentDate = new Date();
+                const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+                saveWinnerToFirestore(finalFirstWinner, consolationWinners, monthAndYear);
+
+                if (resetSnehaNidhiBtn) {
+                    resetSnehaNidhiBtn.disabled = false;
+                    resetSnehaNidhiBtn.classList.remove('bg-gray-300');
+                    resetSnehaNidhiBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                }
+            }
+
+            if (resetSnehaNidhiBtn) {
+                resetSnehaNidhiBtn.addEventListener('click', () => {
+                    location.reload();
+                });
+            }
+
+            if (generateConsolationBtn) {
+                generateConsolationBtn.addEventListener('click', startConsolationGeneration);
+            }
+
+            // Add event listener for the Google sign-in button
+            if (googleSigninBtn) {
+                googleSigninBtn.addEventListener('click', signInWithGoogle);
+            }
+
+            document.addEventListener('DOMContentLoaded', async () => {
+                await initializeFirebase(firebaseConfig);
+                // This call should be made after DOMContentLoaded so that the table element exists
+                // and the Tabulator.js script is loaded.
+                //loadPreviousWinners();
+                //await loadMembers(); // <-- NEW
+                //await loadMembersWithTabulator(); // <-- NEW
+            });
+
+            // Add an unload listener to clean up the Firestore listener
+            window.addEventListener('beforeunload', () => {
+                if (unsubscribeWinnersListener) {
+                    unsubscribeWinnersListener();
+                    console.log("Unsubscribed from Firestore listener.");
+                }
+            });
+
+            document.addEventListener('contextmenu', event => event.preventDefault());
+
+            document.addEventListener('keydown', event => {
+                if ((event.ctrlKey || event.metaKey) && event.key === 'u') {
+                    event.preventDefault();
+                }
+                if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+                    event.preventDefault();
+                }
+                if (event.key === 'F12') {
+                    event.preventDefault();
+                }
+            });
+
+
+        </script>
+    </body>
+
+    </html>
