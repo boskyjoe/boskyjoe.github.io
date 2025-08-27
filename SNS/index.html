@@ -987,51 +987,7 @@
             // This Set will hold the ticket numbers of all "Chit Winners" for fast lookups.
             const chitWinnerTicketNumbers = new Set();
 
-            function listenForWinners() {
-                if (!db) {
-                    console.error("Firestore not initialized. Cannot listen for winners.");
-                    return;
-                }
-
-                if (unsubscribeWinnersListener) unsubscribeWinnersListener();
-
-                const winnersCollectionRef = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`);
-
-                unsubscribeWinnersListener = onSnapshot(winnersCollectionRef, (querySnapshot) => {
-                    console.log("Winner data updated. Reprocessing...");
-                    // Clear the set to rebuild it with the latest data
-                    chitWinnerTicketNumbers.clear();
-
-                    querySnapshot.forEach((doc) => {
-                        const data = doc.data();
-                        const winnersArray = data.winners || [];
-
-                        winnersArray.forEach(winner => {
-                            // Check if the prize is exactly 'Chit Winner'
-                            if (winner.prize === 'Chit Winner' && winner.ticketNumber) {
-                                chitWinnerTicketNumbers.add(winner.ticketNumber);
-                            }
-                        });
-                    });
-
-                    console.log(`Found ${chitWinnerTicketNumbers.size} unique chit winners.`);
-
-                    // If the grid has already been initialized, tell it to redraw its rows
-                    // to apply the new styling rules.
-                    if (gridApi) {
-                        gridApi.redrawRows();
-                    }
-                }, (error) => {
-                    console.error("Error with winners listener:", error);
-                });
-            }
-
-
-
-
-
-
-
+            
             // NEW, BULLETPROOF VERSION
             function preprocessMembersData(snapshot) {
                 const processedData = []; // Start with an empty array
@@ -2233,7 +2189,6 @@
                     loadPreviousWinners();
                     //loadMembersWithTabulator(); // <-- Now sets up real-time listener
                     //loadMembersWithHandsontable();
-                    listenForWinners();
                     loadMembersWithAGGrid()
 
                 }
@@ -2511,6 +2466,21 @@
                             winners: data.winners || [], // Now expects a structured array
                         });
                     });
+
+
+                    // 1. Clear the set to ensure we have the latest data
+                    chitWinnerTicketNumbers.clear();
+
+                    // 2. Repopulate the set with "Chit Winner" ticket numbers
+                    winnersData.forEach(draw => {
+                        draw.winners.forEach(winner => {
+                            if (winner.prize === 'Chit Winner' && winner.ticketNumber) {
+                                chitWinnerTicketNumbers.add(winner.ticketNumber);
+                            }
+                        });
+                    });
+                    console.log(`Updated winner set: Found ${chitWinnerTicketNumbers.size} unique chit winners.`);
+
 
                     if (winnersData.length > 0) {
                         // Sort the winners by timestamp in descending order before rendering
