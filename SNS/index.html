@@ -622,6 +622,22 @@
                 /* Ensures clean lines between all cells */
                 border-bottom: 1px solid #e6e6e6;
             }
+
+            /* Style for the entire winner row */
+            .ag-row-winner {
+                background-color: #fffbe6 !important; /* A light, noticeable yellow */
+                font-weight: 500;
+            }
+
+            /* Style for the trophy icon in the winner row */
+            .ag-row-winner .winner-icon {
+                color: #facc15; /* A gold/yellow color */
+                font-size: 16px;
+                text-align: center;
+            }
+
+
+
         </style>
     </head>
 
@@ -857,7 +873,7 @@
 
         <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
 
-
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
         <!-- Firebase SDKs -->
         <script type="module">
@@ -964,6 +980,57 @@
             let memberDataArray = [];
 
             let gridApi; 
+
+
+            // --- NEW FUNCTION ---
+
+            // This Set will hold the ticket numbers of all "Chit Winners" for fast lookups.
+            const chitWinnerTicketNumbers = new Set();
+            let unsubscribeWinnersListener;
+
+            function listenForWinners() {
+                if (!db) {
+                    console.error("Firestore not initialized. Cannot listen for winners.");
+                    return;
+                }
+
+                if (unsubscribeWinnersListener) unsubscribeWinnersListener();
+
+                const winnersCollectionRef = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`);
+
+                unsubscribeWinnersListener = onSnapshot(winnersCollectionRef, (querySnapshot) => {
+                    console.log("Winner data updated. Reprocessing...");
+                    // Clear the set to rebuild it with the latest data
+                    chitWinnerTicketNumbers.clear();
+
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        const winnersArray = data.winners || [];
+
+                        winnersArray.forEach(winner => {
+                            // Check if the prize is exactly 'Chit Winner'
+                            if (winner.prize === 'Chit Winner' && winner.ticketNumber) {
+                                chitWinnerTicketNumbers.add(winner.ticketNumber);
+                            }
+                        });
+                    });
+
+                    console.log(`Found ${chitWinnerTicketNumbers.size} unique chit winners.`);
+
+                    // If the grid has already been initialized, tell it to redraw its rows
+                    // to apply the new styling rules.
+                    if (gridApi) {
+                        gridApi.redrawRows();
+                    }
+                }, (error) => {
+                    console.error("Error with winners listener:", error);
+                });
+            }
+
+
+
+
+
 
 
             // NEW, BULLETPROOF VERSION
@@ -1091,6 +1158,21 @@
                             },
                             // --- Column Definitions (replaces 'columns' and 'colHeaders') ---
                             columnDefs: [
+                                // NEW column for the icon
+                                {
+                                    headerName: '', // No title
+                                    field: 'isWinner',
+                                    width: 50,
+                                    cellRenderer: (params) => {
+                                        // Check if this row's ID is in our winner set
+                                        if (chitWinnerTicketNumbers.has(params.data.SNS_ID)) {
+                                            // If yes, return the HTML for the icon
+                                            return '<span class="winner-icon"><i class="fa fa-trophy"></i></span>';
+                                        }
+                                        return ''; // Otherwise, return an empty string
+                                    },
+                                    editable: false, filter: false // Disable features for this column
+                                },
                                 { headerName: "SNS_ID", field: "SNS_ID", editable: false }, // 'headerName' is the title, 'field' links to data
                                 { headerName: "Member Name", field: "SNSMemberName", editable: true, filter: true }, // 'filter: true' adds a filter menu
                                 { headerName: "Church Contact Name", field: "ChurchContactName", editable: true, filter: true },
@@ -1099,6 +1181,15 @@
                             
                             // --- Data ---
                             rowData: members,
+
+                            // --- NEW: Row Class Rules for Highlighting ---
+                            rowClassRules: {
+                                // Apply the 'ag-row-winner' class if the function returns true
+                                'ag-row-winner': (params) => {
+                                    // The function checks if the row's ID is in our winner set
+                                    return chitWinnerTicketNumbers.has(params.data.SNS_ID);
+                                }
+                            },
 
                             // --- Features (replaces top-level options) ---
                             pagination: true,
@@ -2143,6 +2234,7 @@
                     loadPreviousWinners();
                     //loadMembersWithTabulator(); // <-- Now sets up real-time listener
                     //loadMembersWithHandsontable();
+                    listenForWinners();
                     loadMembersWithAGGrid()
 
                 }
