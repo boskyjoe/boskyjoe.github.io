@@ -1228,6 +1228,12 @@
                                             return '<span class="winner-icon"><i class="fa fa-trophy"></i></span>';
                                         }
                                         return ''; // Otherwise, return an empty string
+                                    },
+                                    // --- NEW PROPERTIES TO ENABLE FILTERING ---
+
+                                    // 1. The Value Getter: Creates the data for the filter to use.
+                                    valueGetter: (params) => {
+                                        return chitWinnerTicketNumbers.has(params.data.SNS_ID) ? 'Winner' : 'Non-winner';
                                     }
                                 },
                                 { headerName: "SNS_ID", field: "SNS_ID", editable: false , width:200}, // 'headerName' is the title, 'field' links to data
