@@ -636,7 +636,13 @@
                 text-align: center;
             }
 
-
+            .grid-icon-cell {
+                /* Center the icon horizontally and vertically */
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 0; /* Remove default cell padding */
+            }
 
         </style>
     </head>
@@ -1291,8 +1297,9 @@
                                 // NEW column for the icon
                                 {
                                     headerName: '', // No title
-                                    field: 'isWinner',
                                     width: 20,
+                                    flex:0,
+                                    resizable:false,
                                     cellRenderer: (params) => {
                                         // Check if this row's ID is in our winner set
                                         if (chitWinnerTicketNumbers.has(params.data.SNS_ID)) {
@@ -1301,7 +1308,8 @@
                                         }
                                         return ''; // Otherwise, return an empty string
                                     },
-                                    editable: false, filter: false // Disable features for this column
+                                    editable: false, filter: false, // Disable features for this column
+                                    cellClass: 'grid-icon-cell' // Add a custom class to the cell
                                 },
                                 { headerName: "SNS_ID", field: "SNS_ID", editable: false }, // 'headerName' is the title, 'field' links to data
                                 { headerName: "Member Name", field: "SNSMemberName", editable: true, filter: true }, // 'filter: true' adds a filter menu
