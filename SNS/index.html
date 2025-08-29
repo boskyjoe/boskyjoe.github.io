@@ -1492,7 +1492,7 @@
                     const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
                     // Set up the authentication state listener
-                    onAuthStateChanged(auth, (user) => {
+                    onAuthStateChanged(auth, async (user) => {
                         updateUIForAuthState(user);
 
                         if (user) {
