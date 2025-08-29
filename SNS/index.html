@@ -1469,13 +1469,14 @@
                     const userDocRef = doc(db, `/artifacts/${appId}/Users/${uid}`);
                     const docSnap = await getDoc(userDocRef);
                     if (docSnap.exists()) {
-                        return docSnap.data().Role;
+                        const role = docSnap.data().Role;
+                        return role || 'Guest';
                     } else {
-                        console.warn(`User document not found for UID: ${uid} in path /artifacts/${appId}/Users`);
-                        return null;
+                        console.warn(`User document not found for UID: ${uid}. Assigning 'Guest' role.`);
+                        return 'Guest';
                     }
                 } catch (error) {
-                    console.error("Error fetching user role:", error);
+                    console.error("Error fetching user role, defaulting to 'Guest':", error);
                     return null;
                 }
             }
@@ -2402,6 +2403,11 @@
                 winnersTableBody.innerHTML = ''; // Clear previous content
 
                 winners.forEach(winner => {
+
+                    const deleteButtonHTML = AppState.currentUserRole === 'Admin' 
+                        ? `<i class="fa-solid fa-trash-can delete-btn text-red-500 hover:text-red-700 transition cursor-pointer" data-doc-id="${winner.docId}" title="Delete this draw"></i>`
+                        : ''; // Render an empty string if not an admin
+
                     // Main row for the draw
                     const drawRow = document.createElement('tr');
                     drawRow.className = 'draw-row border-b border-gray-200';
@@ -2413,7 +2419,7 @@
                     </td>
                     <td>Drawn by: ${winner.drawnBy} on ${formatTimestamp(winner.dateDrawn)}</td>
                     <td class="text-right">
-                        <i class="fa-solid fa-trash-can delete-btn text-red-500 hover:text-red-700 transition cursor-pointer" data-doc-id="${winner.docId}" title="Delete this draw"></i>
+                        ${deleteButtonHTML}  <!-- The delete button will only appear here for Admins -->
                     </td>
                 `;
                     winnersTableBody.appendChild(drawRow);
