@@ -1036,6 +1036,10 @@
 
             let gridApi; 
 
+            const AppState = {
+                currentUserRole: null,
+            };
+
 
             // --- NEW FUNCTION ---
 
@@ -1452,6 +1456,30 @@
                 });
             }
 
+
+            /**
+             * Fetches a user's role from the 'Users' collection in Firestore.
+             * @param {Firestore} db - The initialized Firestore database instance.
+             * @param {string} uid - The user's unique ID.
+             * @returns {Promise<string|null>} A promise that resolves with the user's role or null.
+             */
+            async function getUserRole(db, uid) {
+                if (!uid) return null;
+                try {
+                    const userDocRef = doc(db, "Users", uid);
+                    const docSnap = await getDoc(userDocRef);
+                    if (docSnap.exists()) {
+                        return docSnap.data().Role;
+                    } else {
+                        console.warn(`User document not found for UID: ${uid}`);
+                        return null;
+                    }
+                } catch (error) {
+                    console.error("Error fetching user role:", error);
+                    return null;
+                }
+            }
+
             /**
              * Initializes Firebase and sets up the auth listener.
              * @param {object} firebaseConfig - The Firebase config object.
@@ -1466,6 +1494,20 @@
                     // Set up the authentication state listener
                     onAuthStateChanged(auth, (user) => {
                         updateUIForAuthState(user);
+
+                        if (user) {
+                            // NEW: User is signed in, so fetch their role.
+                            const role = await getUserRole(db, user.uid);
+                            
+                            // NEW: Store the role in our central AppState object.
+                            AppState.currentUserRole = role;
+                            console.log(`User role determined and set in AppState: '${AppState.currentUserRole}'`);
+                        } else {
+                            // NEW: User is signed out, so clear the role.
+                            AppState.currentUserRole = null;
+                            console.log("User signed out, role cleared in AppState.");
+                        }
+
                     });
 
                     // Authenticate with custom token if available, otherwise just rely on onAuthStateChanged
@@ -2414,11 +2456,15 @@
                     });
 
                     // Add event listener for the delete button on the main draw row
-                    const deleteButton = drawRow.querySelector('.delete-btn');
-                    deleteButton.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        showConfirmationModal(winner);
-                    });
+                    if (AppState.currentUserRole === 'Admin') {
+                        const deleteButton = drawRow.querySelector('.delete-btn');
+                        if (deleteButton) { // Always a good practice to check if the element was found
+                            deleteButton.addEventListener('click', (e) => {
+                                e.stopPropagation(); // Prevent the row's click event from firing
+                                showConfirmationModal(winner);
+                            });
+                        }
+                    }
                 });
             }
 
