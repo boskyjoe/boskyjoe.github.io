@@ -1466,12 +1466,12 @@
             async function getUserRole(db, uid) {
                 if (!uid) return null;
                 try {
-                    const userDocRef = doc(db, "Users", uid);
+                    const userDocRef = doc(db, `/artifacts/${appId}/Users/${uid}`);
                     const docSnap = await getDoc(userDocRef);
                     if (docSnap.exists()) {
                         return docSnap.data().Role;
                     } else {
-                        console.warn(`User document not found for UID: ${uid}`);
+                        console.warn(`User document not found for UID: ${uid} in path /artifacts/${appId}/Users`);
                         return null;
                     }
                 } catch (error) {
@@ -1479,6 +1479,8 @@
                     return null;
                 }
             }
+
+
 
             /**
              * Initializes Firebase and sets up the auth listener.
