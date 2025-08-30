@@ -1049,6 +1049,9 @@
             const provider = new GoogleAuthProvider();
             let unsubscribeWinnersListener = null;
 
+            // NEW: Add variables for your confirmation modal elements
+            let confirmationModal, confirmationBody, confirmDeleteBtn, cancelDeleteBtn;
+
             // Get references to key UI elements
             const statusMessageElement = document.getElementById('status-message');
             const actionButton = document.getElementById('action-button');
@@ -1067,10 +1070,12 @@
             const modalTitle = document.getElementById('modal-title');
             const modalBody = document.getElementById('modal-body');
             const modalCloseBtn = document.getElementById('modal-close-btn');
-            const confirmationModal = document.getElementById('confirmation-modal');
-            const confirmationBody = document.getElementById('confirmation-body');
-            const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
-            const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+
+            //const confirmationModal = document.getElementById('confirmation-modal');
+            //const confirmationBody = document.getElementById('confirmation-body');
+            //const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+            //const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+
             const winnersTableBody = document.getElementById('winners-table-body');
             const noWinnersMessage = document.getElementById('no-winners-message');
             const consolationWinnersSection = document.getElementById('consolation-winners-section');
@@ -2510,10 +2515,12 @@
              */
             function showGenericConfirmationModal(message, onConfirmCallback) {
                 // Assuming these are global references to your modal elements
-                const confirmationModal = document.getElementById('confirmationModal');
-                const confirmationBody = document.getElementById('confirmationBody');
-                const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-                const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+                
+                const confirmationModal = document.getElementById('confirmation-modal');
+                const confirmationBody = document.getElementById('confirmation-body');
+                const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+                const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+                
 
                 // 1. Set the custom message
                 confirmationBody.textContent = message;
