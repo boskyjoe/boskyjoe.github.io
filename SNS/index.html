@@ -1636,22 +1636,17 @@
             }
 
             /**
-             * Signs out the current user.
-             */
+            * Signs the user out of Firebase and reloads the page to reset the application state.
+            */
             async function signOutUser() {
                 try {
+                    // 1. Sign the user out of Firebase authentication.
                     await signOut(auth);
-                    // Clear UI on sign out
-                    userProfileElement.classList.add('hidden');
-                    googleSigninBtn.classList.remove('hidden');
-                    signoutBtn.classList.add('hidden');
-                    actionButton.textContent = `Sign in to Generate Winner`;
-                    actionButton.disabled = true;
-                    if (statusMessageElement) {
-                        statusMessageElement.textContent = "Please sign in to start the draw.";
-                    }
-                    // Reload to reset the state for a new month
+
+                    // 2. Reload the page. This is the simplest and most reliable way to reset the UI.
+                    // After reload, onAuthStateChanged will run and automatically set the UI to the signed-out state.
                     location.reload();
+
                 } catch (error) {
                     console.error("Error signing out:", error);
                     showModal("Sign-Out Failed", `Could not sign you out. Error: ${error.message}`);
