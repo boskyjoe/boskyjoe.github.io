@@ -1742,7 +1742,7 @@
                             AppState.currentUserRole = 'Guest';
                             console.log("User signed out, role cleared in AppState.");
                         }
-                        updateUIForAuthState(user);
+                        updateUIForAuthState(user,AppState.currentUserRole);
                     
                     });
 
