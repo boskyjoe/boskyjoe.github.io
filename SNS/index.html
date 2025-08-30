@@ -1097,6 +1097,8 @@
             const membersHeaderRow = document.getElementById('members-header-row');
             const noMembersMessage = document.getElementById('no-members-message');
 
+            let addMemberButton;
+
 
             async function debugMembersPath() {
                 const path = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`;
@@ -1150,7 +1152,30 @@
                 });
             }
 
+            /**
+             * Enables or disables admin-only UI controls based on the current user's role.
+             * This provides clear visual feedback to the user.
+             */
+            function updateAdminControls() {
+                // Safety check in case the button isn't found
+                if (!addMemberButton) return; 
 
+                if (AppState.currentUserRole === 'Admin') {
+                    // --- USER IS AN ADMIN ---
+                    addMemberButton.disabled = false;
+                    // Restore the original, clickable styling
+                    addMemberButton.classList.remove('bg-gray-400', 'cursor-not-allowed', 'opacity-50');
+                    addMemberButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
+                    addMemberButton.title = 'Add a new member to the scheme';
+                } else {
+                    // --- USER IS NOT AN ADMIN (or is a 'Guest') ---
+                    addMemberButton.disabled = true;
+                    // Apply disabled styling for clear visual feedback
+                    addMemberButton.classList.add('bg-gray-400', 'cursor-not-allowed', 'opacity-50');
+                    addMemberButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                    addMemberButton.title = 'You must be an Admin to add a new member.';
+                }
+            }
 
             // NEW, BULLETPROOF VERSION
             function preprocessMembersData(snapshot) {
@@ -1710,10 +1735,10 @@
                             console.log(`User role determined and set in AppState: '${AppState.currentUserRole}'`);
                         } else {
                             // NEW: User is signed out, so clear the role.
-                            AppState.currentUserRole = null;
+                            AppState.currentUserRole = 'Guest';
                             console.log("User signed out, role cleared in AppState.");
                         }
-
+                        updateAdminControls();  
                     });
 
                     // Authenticate with custom token if available, otherwise just rely on onAuthStateChanged
@@ -1930,6 +1955,10 @@
                 }
                 if (resetSnehaNidhiBtn) {
                     resetSnehaNidhiBtn.disabled = true;
+                }
+                // --- ADD THIS ---
+                if (addMemberButton) {
+                    addMemberButton.disabled = true;
                 }
             }
 
@@ -2935,7 +2964,8 @@
 
             document.addEventListener('DOMContentLoaded', async () => {
 
-
+                addMemberButton = document.getElementById('add-member-button');
+                updateAdminControls(); 
 
                 await initializeFirebase(firebaseConfig);
                 // Set up all the event listeners for the "Add New Member" modal
