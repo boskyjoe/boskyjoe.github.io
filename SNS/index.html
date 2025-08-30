@@ -900,7 +900,7 @@
             </div>
 
             <!-- Previous Winners Section -->
-            <div id="previous-winners-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner overflow-x-auto">
+            <div id="previous-winners-section" class="hidden mt-10 p-6 bg-gray-50 rounded-lg shadow-inner overflow-x-auto">
                 <h2 class="text-2xl font-bold text-gray-800 mb-4">Previous Winners</h2>
                 <!-- This is the new container for the table -->
                 <div class="w-full">
@@ -922,7 +922,7 @@
         </div>
 
         <!-- Sneha Nidhi Scheme Members Section -->
-        <div id="members-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner">
+        <div id="members-section" class="hidden mt-10 p-6 bg-gray-50 rounded-lg shadow-inner">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Sneha Nidhi Scheme Members</h2>
 
             <!-- Add Member Modal Form -->
@@ -1804,6 +1804,11 @@
                 const actionButton = document.getElementById('action-button'); // Assuming this is the ID
                 const statusMessageElement = document.getElementById('status-message'); // Assuming this is the ID
 
+                // NEW: Get references to the main content sections
+                const previousWinnersSection = document.getElementById('previous-winners-section');
+                const membersSection = document.getElementById('members-section');
+
+
                 // --- Check if essential elements exist ---
                 if (!googleSigninBtn || !userProfileDropdown || !actionButton) {
                     console.error("Essential UI elements not found. Cannot update auth state.");
@@ -1819,6 +1824,10 @@
                     // 1. Update visibility
                     userProfileDropdown.classList.remove('hidden');
                     googleSigninBtn.classList.add('hidden');
+
+                     // NEW: Show the main content sections
+                    previousWinnersSection.classList.remove('hidden');
+                    membersSection.classList.remove('hidden');
 
                     // 2. Populate the user dropdown elements
                     userPhoto.src = photoURL;
@@ -1846,6 +1855,10 @@
                     // 1. Update visibility
                     userProfileDropdown.classList.add('hidden');
                     googleSigninBtn.classList.remove('hidden');
+
+                    // NEW: Hide the main content sections
+                    previousWinnersSection.classList.add('hidden');
+                    membersSection.classList.add('hidden');
 
                     // 2. Disable the main action button (logic preserved from your original function)
                     actionButton.textContent = `Sign in to Generate Winner`;
