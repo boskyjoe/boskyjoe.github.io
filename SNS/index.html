@@ -691,9 +691,53 @@
             <!-- Subtle pattern for the main content box -->
             <div class="main-content-pattern"></div>
 
-            <!-- NEW: Combined header with auth section -->
+            <!-- Header Section -->
+            <div class="flex flex-col items-center justify-center md:flex-row md:justify-start mb-4 border-b pb-4">
+                <!-- Logo -->
+                <div class="w-16 h-16 md:w-20 md:h-20 mr-3 md:mr-4 flex-shrink-0">
+                    <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png"
+                        alt="St. Sebastian's Church Logo" class="w-full h-full object-contain rounded-full">
+                </div>
+                <!-- Title and Contact -->
+                <div class="flex flex-col items-center md:items-start text-center md:text-left">
+                    <h1 class="text-xl md:text-2xl font-extrabold text-indigo-800 whitespace-nowrap">
+                        SSC - Sneha Nidhi Scheme
+                    </h1>
+                    <div class="text-gray-600 text-xs md:text-sm">
+                        <p>No**************************************************************</p>
+                        <p>+91 7090424365 | stsebastianssmc@gmail.com</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Personalization Bar (Right-aligned) -->
+            <div id="auth-section" class="flex justify-center md:justify-end items-center space-x-4 mb-6">
+                <!-- User Profile (hidden by default) -->
+                <div id="user-profile" class="flex items-center space-x-2 hidden">
+                    <img id="user-photo" class="w-10 h-10 rounded-full" src="" alt="User profile photo">
+                    <div>
+                        <p id="user-name" class="text-lg font-semibold text-gray-800"></p>
+                        <p id="user-id" class="text-xs text-gray-500"></p>
+                    </div>
+                </div>
+                <!-- Sign-in Button -->
+                <button id="google-signin-btn"
+                        class="winner-button px-8 py-3 bg-indigo-600 text-white font-semibold rounded-full shadow-lg hover:bg-indigo-700 transition">
+                    Sign in with Google
+                </button>
+                <!-- Sign-out Button (hidden by default) -->
+                <button id="signout-btn"
+                        class="winner-button p-3 bg-gray-500 text-white font-semibold rounded-full shadow-lg hover:bg-gray-600 transition hidden relative"
+                        title="Sign Out">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+
+
+            <!--
+            NEW: Combined header with auth section
             <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                <!-- Header Section (Left-aligned) -->
+                 Header Section (Left-aligned) 
                 <div class="flex flex-col items-center justify-center md:flex-row md:justify-start mb-2">
                     <div class="w-16 h-16 md:w-20 md:h-20 mr-3 md:mr-4 flex-shrink-0">
                         <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png"
@@ -710,7 +754,7 @@
                     </div>
                 </div>
 
-                <!-- Authentication Section (Right-aligned) -->
+                Authentication Section (Right-aligned)
                 <div id="auth-section"
                     class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4">
                     <div id="user-profile" class="flex items-center space-x-2 hidden">
@@ -730,7 +774,7 @@
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </button>
                 </div>
-            </div>
+            </div>-->
 
             <div class="mb-4 relative z-10">
                 <!-- This div is now empty, as its content has been moved into the combined header -->
