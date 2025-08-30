@@ -599,7 +599,7 @@
                 width: 100%;
             }
 
-             /* Target the custom class for our table */
+            /* Target the custom class for our table */
             .professional-handsontable .htCore th {
                 /* Style for the table headers */
                 background-color: #f4f5f7;
@@ -609,11 +609,12 @@
             }
 
             /* THIS IS THE CORRECT WAY TO DO STRIPE ROWS IN HANDSONTABLE */
-            .professional-handsontable .htCore tr:nth-child(even) > td {
-                background-color: #f8f9fa; /* A very light gray for even rows */
+            .professional-handsontable .htCore tr:nth-child(even)>td {
+                background-color: #f8f9fa;
+                /* A very light gray for even rows */
             }
 
-            .professional-handsontable .htCore tr:hover > td {
+            .professional-handsontable .htCore tr:hover>td {
                 /* Adds a subtle hover effect on rows */
                 background-color: #eef4ff;
             }
@@ -625,13 +626,15 @@
 
             /* Style for the entire winner row */
             .ag-row-winner {
-                background-color: #fffbe6 !important; /* A light, noticeable yellow */
+                background-color: #fffbe6 !important;
+                /* A light, noticeable yellow */
                 font-weight: 500;
             }
 
             /* Style for the trophy icon in the winner row */
             .ag-row-winner .winner-icon {
-                color: #facc15; /* A gold/yellow color */
+                color: #facc15;
+                /* A gold/yellow color */
                 font-size: 16px;
                 text-align: center;
             }
@@ -641,9 +644,9 @@
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                padding: 0; /* Remove default cell padding */
+                padding: 0;
+                /* Remove default cell padding */
             }
-
         </style>
     </head>
 
@@ -691,57 +694,66 @@
             <!-- Subtle pattern for the main content box -->
             <div class="main-content-pattern"></div>
 
-           
+
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <!-- Header Section -->
-                <div class="flex flex-col items-center justify-center md:flex-row md:justify-start mb-4 border-b pb-4">
-                    <!-- Logo -->
-                    <div class="w-16 h-16 md:w-20 md:h-20 mr-3 md:mr-4 flex-shrink-0">
-                        <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png"
-                            alt="St. Sebastian's Church Logo" class="w-full h-full object-contain rounded-full">
-                    </div>
-                    <!-- Title and Contact -->
-                    <div class="flex flex-col items-center md:items-start text-center md:text-left">
-                        <h1 class="text-xl md:text-2xl font-extrabold text-indigo-800 whitespace-nowrap">
-                            SSC - Sneha Nidhi Scheme
-                        </h1>
-                        <div class="text-gray-600 text-xs md:text-sm">
-                            <p>No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</p>
-                            <p>+91 7090424365 | stsebastianssmc@gmail.com</p>
+                <!-- Single row container for the entire header -->
+                <div class="flex items-center justify-between border-b py-3">
+
+                    <!-- Left Side: Logo and Title -->
+                    <div class="flex items-center">
+                        <!-- Logo -->
+                        <div class="w-16 h-16 mr-4 flex-shrink-0">
+                            <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png"
+                                alt="St. Sebastian's Church Logo" class="w-full h-full object-contain rounded-full">
+                        </div>
+                        <!-- Title and Contact -->
+                        <div>
+                            <h1 class="text-lg md:text-xl font-extrabold text-indigo-800 whitespace-nowrap">
+                                SSC - Sneha Nidhi Scheme
+                            </h1>
+                            <!-- Contact info is hidden on small screens to prevent clutter -->
+                            <div class="hidden md:block text-gray-500 text-xs">
+                                <p>No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</p>
+                                <p>+91 7090424365 | stsebastianssmc@gmail.com</p>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Sleek Personalization Bar -->
-                <div id="auth-section" class="flex justify-end items-center h-12 mb-6">
-                    <!-- Sign-in Button (for logged-out users) -->
-                    <button id="google-signin-btn"
+                    <!-- Right Side: Authentication Section -->
+                    <div id="auth-section" class="flex items-center">
+                        <!-- Sign-in Button (for logged-out users) -->
+                        <button id="google-signin-btn"
                             class="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-md shadow-sm hover:bg-indigo-700 transition">
-                        Sign in with Google
-                    </button>
-
-                    <!-- User Dropdown (for logged-in users, hidden by default) -->
-                    <div id="user-profile-dropdown" class="relative hidden">
-                        <!-- Dropdown Trigger -->
-                        <button id="user-menu-button" class="flex items-center space-x-2 focus:outline-none">
-                            <span id="user-name" class="text-sm font-medium text-gray-700"></span>
-                            <img id="user-photo" class="w-8 h-8 rounded-full" src="" alt="User photo">
+                            Sign in with Google
                         </button>
 
-                        <!-- Dropdown Panel -->
-                        <div id="user-menu-panel"
-                            class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 hidden z-10">
-                            <div class="px-4 py-2 border-b">
-                                <p class="text-sm font-semibold text-gray-800 truncate" id="user-name-dropdown"></p>
-                                <p class="text-xs text-gray-500 truncate" id="user-id-dropdown"></p>
+                        <!-- User Dropdown (for logged-in users, hidden by default) -->
+                        <div id="user-profile-dropdown" class="relative hidden">
+                            <!-- Dropdown Trigger -->
+                            <button id="user-menu-button" class="flex items-center space-x-2 focus:outline-none">
+                                <span id="user-name" class="hidden sm:inline text-sm font-medium text-gray-700"></span>
+                                <img id="user-photo" class="w-8 h-8 rounded-full" src="" alt="User photo">
+                            </button>
+
+                            <!-- Dropdown Panel -->
+                            <div id="user-menu-panel"
+                                class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 hidden z-10">
+                                <div class="px-4 py-2 border-b">
+                                    <p class="text-sm font-semibold text-gray-800 truncate" id="user-name-dropdown"></p>
+                                    <p class="text-xs text-gray-500 truncate" id="user-id-dropdown"></p>
+                                </div>
+                                <a href="#" id="signout-btn"
+                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign Out</a>
                             </div>
-                            <a href="#" id="signout-btn"
-                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign Out</a>
                         </div>
                     </div>
+
                 </div>
             </div>
-            
+
+
+
+
 
 
 
@@ -910,47 +922,58 @@
         <!-- Sneha Nidhi Scheme Members Section -->
         <div id="members-section" class="mt-10 p-6 bg-gray-50 rounded-lg shadow-inner">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Sneha Nidhi Scheme Members</h2>
-                        
+
             <!-- Add Member Modal Form -->
-            <div id="add-member-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-            <div class="relative top-10 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
-                <form id="add-member-form">
-                <h3 class="text-xl font-bold text-gray-900 mb-4">Add New Member</h3>
-                
-                <!-- Form Fields -->
-                <div class="space-y-4">
-                    <div>
-                    <label for="new-sns-id" class="block text-sm font-medium text-gray-700">SNS_ID*</label>
-                    <input type="text" id="new-sns-id" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
-                    </div>
-                    <div>
-                    <label for="new-member-name" class="block text-sm font-medium text-gray-700">Member Name</label>
-                    <input type="text" id="new-member-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <div>
-                    <label for="new-church-contact-name" class="block text-sm font-medium text-gray-700">Church Contact Name</label>
-                    <input type="text" id="new-church-contact-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <div>
-                    <label for="new-church-contact-phone" class="block text-sm font-medium text-gray-700">Contact Phone</label>
-                    <input type="text" id="new-church-contact-phone" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                </div>
+            <div id="add-member-modal"
+                class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+                <div class="relative top-10 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+                    <form id="add-member-form">
+                        <h3 class="text-xl font-bold text-gray-900 mb-4">Add New Member</h3>
 
-                <!-- Error Message Placeholder -->
-                <p id="form-error-message" class="text-red-500 text-sm mt-3 hidden"></p>
+                        <!-- Form Fields -->
+                        <div class="space-y-4">
+                            <div>
+                                <label for="new-sns-id" class="block text-sm font-medium text-gray-700">SNS_ID*</label>
+                                <input type="text" id="new-sns-id"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    required>
+                            </div>
+                            <div>
+                                <label for="new-member-name" class="block text-sm font-medium text-gray-700">Member
+                                    Name</label>
+                                <input type="text" id="new-member-name"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="new-church-contact-name"
+                                    class="block text-sm font-medium text-gray-700">Church Contact Name</label>
+                                <input type="text" id="new-church-contact-name"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="new-church-contact-phone"
+                                    class="block text-sm font-medium text-gray-700">Contact Phone</label>
+                                <input type="text" id="new-church-contact-phone"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
 
-                <!-- Modal Action Buttons -->
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button type="button" id="cancel-member-button" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
-                    Cancel
-                    </button>
-                    <button type="submit" id="save-member-button" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-                    Save Member
-                    </button>
+                        <!-- Error Message Placeholder -->
+                        <p id="form-error-message" class="text-red-500 text-sm mt-3 hidden"></p>
+
+                        <!-- Modal Action Buttons -->
+                        <div class="mt-6 flex justify-end space-x-3">
+                            <button type="button" id="cancel-member-button"
+                                class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
+                                Cancel
+                            </button>
+                            <button type="submit" id="save-member-button"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                Save Member
+                            </button>
+                        </div>
+                    </form>
                 </div>
-                </form>
-            </div>
             </div>
 
 
@@ -960,7 +983,7 @@
                     Add New Member
                 </button>
             </div>
-             <div id="members-grid" class="ag-theme-alpine" style="height: 500px; width: 900px;"></div>
+            <div id="members-grid" class="ag-theme-alpine" style="height: 500px; width: 900px;"></div>
 
 
             <p id="no-members-message" class="text-center text-gray-500 mt-4 hidden">No members found.</p>
@@ -983,7 +1006,9 @@
 
         <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
 
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+            integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA=="
+            crossorigin="anonymous" referrerpolicy="no-referrer" />
 
         <!-- Firebase SDKs -->
         <script type="module">
@@ -1089,7 +1114,7 @@
             // A local copy of the data array, which we will manage
             let memberDataArray = [];
 
-            let gridApi; 
+            let gridApi;
 
             const AppState = {
                 currentUserRole: null,
@@ -1101,7 +1126,7 @@
             // This Set will hold the ticket numbers of all "Chit Winners" for fast lookups.
             const chitWinnerTicketNumbers = new Set();
 
-            
+
             const userMenuButton = document.getElementById('user-menu-button');
             const userMenuPanel = document.getElementById('user-menu-panel');
 
@@ -1211,7 +1236,7 @@
 
                     // 2. Check for Duplicates in Firestore
                     const newMemberRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`, newSnsId);
-                    
+
                     try {
                         const docSnap = await getDoc(newMemberRef);
                         if (docSnap.exists()) {
@@ -1274,7 +1299,7 @@
                 if (unsubscribeMembersListener) unsubscribeMembersListener();
 
                 unsubscribeMembersListener = onSnapshot(membersCollectionRef, (snapshot) => {
-                    
+
                     // If the Grid API doesn't exist, this is the first time loading.
                     if (!gridApi) {
                         console.log("Initializing AG Grid for the first time.");
@@ -1284,8 +1309,8 @@
                         const gridOptions = {
                             // This sets default properties for ALL column definitions.
                             defaultColDef: {
-                                filter: true, 
-                                floatingFilter: true, 
+                                filter: true,
+                                floatingFilter: true,
                             },
                             // --- Column Definitions (replaces 'columns' and 'colHeaders') ---
                             columnDefs: [
@@ -1313,7 +1338,7 @@
                                     },
                                     // 2. The Filter Type: Use the powerful Set Filter.
                                     filter: 'agTextColumnFilter',
-                                       // 3. We can configure the text filter to be more user-friendly.
+                                    // 3. We can configure the text filter to be more user-friendly.
                                     filterParams: {
                                         // Provide a list of options to create a dropdown-style filter
                                         filterOptions: ['contains'],
@@ -1324,12 +1349,12 @@
                                     // 4. Hide the floating filter, as it's not ideal for this type of filter.
                                     floatingFilter: false
                                 },
-                                { headerName: "SNS_ID", field: "SNS_ID", editable: false , width:200}, // 'headerName' is the title, 'field' links to data
-                                { headerName: "Member Name", field: "SNSMemberName", editable: true, filter: true , width:250}, // 'filter: true' adds a filter menu
-                                { headerName: "Church Contact Name", field: "ChurchContactName", width:250, editable: true, filter: true },
-                                { headerName: "Contact Phone", field: "ChurchContactPhone", editable: true, width:150, filter: true }
+                                { headerName: "SNS_ID", field: "SNS_ID", editable: false, width: 200 }, // 'headerName' is the title, 'field' links to data
+                                { headerName: "Member Name", field: "SNSMemberName", editable: true, filter: true, width: 250 }, // 'filter: true' adds a filter menu
+                                { headerName: "Church Contact Name", field: "ChurchContactName", width: 250, editable: true, filter: true },
+                                { headerName: "Contact Phone", field: "ChurchContactPhone", editable: true, width: 150, filter: true }
                             ],
-                            
+
                             // --- Data ---
                             rowData: members,
 
@@ -1346,7 +1371,7 @@
                             pagination: true,
                             paginationPageSize: 100,
                             domLayout: 'normal', // Use 'normal' with fixed height for best performance
-                            
+
                             // --- Editing and Saving (replaces 'afterChange', etc.) ---
                             onCellEditingStarted: () => {
                                 isEditing = true;
@@ -1406,13 +1431,13 @@
                 });
             }
 
-            
+
             //function formatFirestoreDate(cell) {
             //    const val = cell.getValue();
             //    if (!val || !val.toDate) return "";
-           //     const d = val.toDate();
-           //     return `${d.getDate().toString().padStart(2, '0')}-${d.toLocaleString('default', { month: 'short' })}-${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-           // }
+            //     const d = val.toDate();
+            //     return `${d.getDate().toString().padStart(2, '0')}-${d.toLocaleString('default', { month: 'short' })}-${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+            // }
 
 
 
@@ -1425,12 +1450,12 @@
             //        return {
             //            title: field,
             //            field: field,
-           //             editor: field === "SNS_ID" ? false : "input",
-           //             headerFilter: "input",
-           //             headerSort: true,
-          ///          };
-          //      });
-          //  }
+            //             editor: field === "SNS_ID" ? false : "input",
+            //             headerFilter: "input",
+            //             headerSort: true,
+            ///          };
+            //      });
+            //  }
 
 
 
@@ -1574,7 +1599,7 @@
                         if (user) {
                             // NEW: User is signed in, so fetch their role.
                             const role = await getUserRole(db, user.uid);
-                            
+
                             // NEW: Store the role in our central AppState object.
                             AppState.currentUserRole = role;
                             console.log(`User role determined and set in AppState: '${AppState.currentUserRole}'`);
@@ -1640,7 +1665,7 @@
             */
             function updateUIForAuthState(user) {
                 // --- Get references to all relevant UI elements ---
-                
+
                 // Auth Bar Elements
                 const googleSigninBtn = document.getElementById('google-signin-btn');
                 const userProfileDropdown = document.getElementById('user-profile-dropdown');
@@ -1685,7 +1710,7 @@
                     actionButton.className = 'winner-button px-8 py-3 bg-purple-700 text-white font-semibold rounded-full shadow-lg hover:bg-purple-800 transition duration-300 ease-in-out';
                     actionButton.disabled = false;
                     actionButton.onclick = startWinnerGeneration;
-                    
+
                     // 5. Initialize app data
                     initializeSnehaNidhiData();
 
@@ -2498,7 +2523,7 @@
 
                 winners.forEach(winner => {
 
-                    const deleteButtonHTML = AppState.currentUserRole === 'Admin' 
+                    const deleteButtonHTML = AppState.currentUserRole === 'Admin'
                         ? `<i class="fa-solid fa-trash-can delete-btn text-red-500 hover:text-red-700 transition cursor-pointer" data-doc-id="${winner.docId}" title="Delete this draw"></i>`
                         : ''; // Render an empty string if not an admin
 
@@ -2766,7 +2791,7 @@
                 await initializeFirebase(firebaseConfig);
                 // Set up all the event listeners for the "Add New Member" modal
                 setupAddMemberModal();
-                
+
             });
 
             // Add an unload listener to clean up the Firestore listener
