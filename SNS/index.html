@@ -1326,7 +1326,7 @@
 
 
             /**
-             * Deletes a member document from Firestore after user confirmation.
+             * Asks for confirmation and then deletes a member document from Firestore.
              * @param {string} memberId - The SNS_ID of the member to delete.
              */
             async function deleteMember(memberId) {
@@ -1335,28 +1335,27 @@
                     return;
                 }
 
-                // BEST PRACTICE: Always ask for confirmation before a destructive action.
-                const isConfirmed = confirm(`Are you sure you want to delete member ${memberId}? This action cannot be undone.`);
+                // 1. Define the message for the user.
+                const message = `Are you sure you want to delete member ${memberId}? This action cannot be undone.`;
 
-                if (!isConfirmed) {
-                    return; // User cancelled the action.
-                }
+                // 2. Define the action to be taken on confirmation.
+                const deleteAction = async () => {
+                    try {
+                        const docPath = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers/${memberId}`;
+                        const memberDocRef = doc(db, docPath);
+                        
+                        await deleteDoc(memberDocRef);
+                        
+                        console.log(`Successfully deleted member: ${memberId}`);
+                        // The real-time listener on the AG Grid will handle the UI update.
+                    } catch (error) {
+                        console.error(`Failed to delete member ${memberId}:`, error);
+                        showModal("Delete Failed", `Could not delete member. Error: ${error.message}`);
+                    }
+                };
 
-                try {
-                    // Construct the full path to the document.
-                    const docPath = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers/${memberId}`;
-                    const memberDocRef = doc(db, docPath);
-
-                    // Send the delete request to Firestore.
-                    await deleteDoc(memberDocRef);
-
-                    console.log(`Successfully deleted member: ${memberId}`);
-                    // AG Grid's real-time listener will automatically remove the row from the UI.
-                    
-                } catch (error) {
-                    console.error(`Failed to delete member ${memberId}:`, error);
-                    showModal("Delete Failed", `Could not delete member. Error: ${error.message}`);
-                }
+                // 3. Call the generic modal with the message and the action.
+                showGenericConfirmationModal(message, deleteAction);
             }
 
 
@@ -2505,10 +2504,42 @@
             }
 
             /**
+             * Displays a generic confirmation modal.
+             * @param {string} message - The question to ask the user (e.g., "Are you sure?").
+             * @param {Function} onConfirmCallback - The async function to execute if the user clicks "Confirm".
+             */
+            function showGenericConfirmationModal(message, onConfirmCallback) {
+                // Assuming these are global references to your modal elements
+                const confirmationModal = document.getElementById('confirmationModal');
+                const confirmationBody = document.getElementById('confirmationBody');
+                const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+                const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+
+                // 1. Set the custom message
+                confirmationBody.textContent = message;
+
+                // 2. Show the modal
+                confirmationModal.style.display = 'block';
+
+                // 3. Set up a ONE-TIME event listener for the confirm button
+                confirmDeleteBtn.onclick = async () => {
+                    confirmationModal.style.display = 'none'; // Hide the modal
+                    await onConfirmCallback(); // Execute the provided action
+                };
+
+                // 4. Set up the cancel button listener
+                cancelDeleteBtn.onclick = () => {
+                    confirmationModal.style.display = 'none'; // Just hide the modal
+                };
+            }
+
+
+
+            /**
              * Displays a confirmation modal before deleting a winner.
              * @param {object} rowData - The data of the row to be deleted.
              */
-            function showConfirmationModal(rowData) {
+            function showConfirmationModal1(rowData) {
                 const docId = rowData.docId;
                 confirmationBody.textContent = `Are you sure you want to delete the entire winner draw for ${rowData.monthAndYear}? This action cannot be undone.`;
                 confirmationModal.style.display = 'block';
@@ -2522,6 +2553,21 @@
                 cancelDeleteBtn.onclick = () => {
                     confirmationModal.style.display = 'none';
                 };
+            }
+
+
+            /**
+             * Displays a confirmation modal before deleting a winner draw.
+             * @param {object} rowData - The data of the row to be deleted.
+             */
+            function showConfirmationModal(rowData) {
+                const message = `Are you sure you want to delete the entire winner draw for ${rowData.monthAndYear}? This action cannot be undone.`;
+                
+                const deleteAction = async () => {
+                    await deleteWinner(rowData.docId);
+                };
+
+                showGenericConfirmationModal(message, deleteAction);
             }
 
             /**
