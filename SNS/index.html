@@ -1289,6 +1289,71 @@
             }
 
 
+            /**
+             * AG Grid Cell Renderer that displays a delete button only for Admin users.
+             * @param {object} params - The AG Grid parameters object for the cell.
+             * @returns {HTMLElement | null} The button element or null.
+             */
+            function deleteCellRenderer(params) {
+                // 1. Immediately return nothing if the user is not an Admin.
+                if (AppState.currentUserRole !== 'Admin') {
+                    return null; // Render an empty cell
+                }
+
+                // 2. Create the delete button element for Admins.
+                const button = document.createElement('button');
+                button.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+                button.className = 'text-red-500 hover:text-red-700 transition focus:outline-none';
+                button.title = 'Delete Member';
+
+                // 3. Add the click event listener.
+                button.addEventListener('click', () => {
+                    // Call a separate function to handle the deletion logic.
+                    // We pass the SNS_ID from the row's data.
+                    deleteMember(params.data.SNS_ID);
+                });
+
+                // 4. Return the fully constructed button element to AG Grid.
+                return button;
+            }
+
+
+            /**
+             * Deletes a member document from Firestore after user confirmation.
+             * @param {string} memberId - The SNS_ID of the member to delete.
+             */
+            async function deleteMember(memberId) {
+                if (!memberId) {
+                    console.error("Delete failed: No member ID provided.");
+                    return;
+                }
+
+                // BEST PRACTICE: Always ask for confirmation before a destructive action.
+                const isConfirmed = confirm(`Are you sure you want to delete member ${memberId}? This action cannot be undone.`);
+
+                if (!isConfirmed) {
+                    return; // User cancelled the action.
+                }
+
+                try {
+                    // Construct the full path to the document.
+                    const docPath = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers/${memberId}`;
+                    const memberDocRef = doc(db, docPath);
+
+                    // Send the delete request to Firestore.
+                    await deleteDoc(memberDocRef);
+
+                    console.log(`Successfully deleted member: ${memberId}`);
+                    // AG Grid's real-time listener will automatically remove the row from the UI.
+                    
+                } catch (error) {
+                    console.error(`Failed to delete member ${memberId}:`, error);
+                    showModal("Delete Failed", `Could not delete member. Error: ${error.message}`);
+                }
+            }
+
+
+            
             function loadMembersWithAGGrid() {
                 // Exit if the Firestore database instance is not available.
                 if (!db) return;
@@ -1369,9 +1434,19 @@
                                         return numA - numB;
                                     }
                                 }, // 'headerName' is the title, 'field' links to data
-                                { headerName: "Member Name", field: "SNSMemberName", editable: true, filter: true, width: 250 }, // 'filter: true' adds a filter menu
-                                { headerName: "Church Contact Name", field: "ChurchContactName", width: 250, editable: true, filter: true },
-                                { headerName: "Contact Phone", field: "ChurchContactPhone", editable: true, width: 150, filter: true }
+                                { headerName: "Member Name", field: "SNSMemberName", editable: true, filter: true, width: 200 }, // 'filter: true' adds a filter menu
+                                { headerName: "Church Contact Name", field: "ChurchContactName", width: 200, editable: true, filter: true },
+                                { headerName: "Contact Phone", field: "ChurchContactPhone", editable: true, width: 150, filter: true },
+                                // --- NEW: Add this "Actions" column at the end ---
+                                {
+                                    headerName: 'Actions',
+                                    width: 80,
+                                    editable: false,
+                                    filter: false,
+                                    floatingFilter: false,
+                                    // The cellRenderer is the key. It will call our custom function.
+                                    cellRenderer: deleteCellRenderer 
+                                }
                             ],
 
                             // --- Data ---
