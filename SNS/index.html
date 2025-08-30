@@ -691,47 +691,58 @@
             <!-- Subtle pattern for the main content box -->
             <div class="main-content-pattern"></div>
 
-            <!-- Header Section -->
-            <div class="flex flex-col items-center justify-center md:flex-row md:justify-start mb-4 border-b pb-4">
-                <!-- Logo -->
-                <div class="w-16 h-16 md:w-20 md:h-20 mr-3 md:mr-4 flex-shrink-0">
-                    <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png"
-                        alt="St. Sebastian's Church Logo" class="w-full h-full object-contain rounded-full">
-                </div>
-                <!-- Title and Contact -->
-                <div class="flex flex-col items-center md:items-start text-center md:text-left">
-                    <h1 class="text-xl md:text-2xl font-extrabold text-indigo-800 whitespace-nowrap">
-                        SSC - Sneha Nidhi Scheme
-                    </h1>
-                    <div class="text-gray-600 text-xs md:text-sm">
-                        <p>No**************************************************************</p>
-                        <p>+91 7090424365 | stsebastianssmc@gmail.com</p>
+           
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <!-- Header Section -->
+                <div class="flex flex-col items-center justify-center md:flex-row md:justify-start mb-4 border-b pb-4">
+                    <!-- Logo -->
+                    <div class="w-16 h-16 md:w-20 md:h-20 mr-3 md:mr-4 flex-shrink-0">
+                        <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png"
+                            alt="St. Sebastian's Church Logo" class="w-full h-full object-contain rounded-full">
+                    </div>
+                    <!-- Title and Contact -->
+                    <div class="flex flex-col items-center md:items-start text-center md:text-left">
+                        <h1 class="text-xl md:text-2xl font-extrabold text-indigo-800 whitespace-nowrap">
+                            SSC - Sneha Nidhi Scheme
+                        </h1>
+                        <div class="text-gray-600 text-xs md:text-sm">
+                            <p>No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</p>
+                            <p>+91 7090424365 | stsebastianssmc@gmail.com</p>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Personalization Bar (Right-aligned) -->
-            <div id="auth-section" class="flex justify-center md:justify-end items-center space-x-4 mb-6">
-                <!-- User Profile (hidden by default) -->
-                <div id="user-profile" class="flex items-center space-x-2 hidden">
-                    <img id="user-photo" class="w-10 h-10 rounded-full" src="" alt="User profile photo">
-                    <div>
-                        <p id="user-name" class="text-lg font-semibold text-gray-800"></p>
-                        <p id="user-id" class="text-xs text-gray-500"></p>
+                <!-- Sleek Personalization Bar -->
+                <div id="auth-section" class="flex justify-end items-center h-12 mb-6">
+                    <!-- Sign-in Button (for logged-out users) -->
+                    <button id="google-signin-btn"
+                            class="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-md shadow-sm hover:bg-indigo-700 transition">
+                        Sign in with Google
+                    </button>
+
+                    <!-- User Dropdown (for logged-in users, hidden by default) -->
+                    <div id="user-profile-dropdown" class="relative hidden">
+                        <!-- Dropdown Trigger -->
+                        <button id="user-menu-button" class="flex items-center space-x-2 focus:outline-none">
+                            <span id="user-name" class="text-sm font-medium text-gray-700"></span>
+                            <img id="user-photo" class="w-8 h-8 rounded-full" src="" alt="User photo">
+                        </button>
+
+                        <!-- Dropdown Panel -->
+                        <div id="user-menu-panel"
+                            class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 hidden z-10">
+                            <div class="px-4 py-2 border-b">
+                                <p class="text-sm font-semibold text-gray-800 truncate" id="user-name-dropdown"></p>
+                                <p class="text-xs text-gray-500 truncate" id="user-id-dropdown"></p>
+                            </div>
+                            <a href="#" id="signout-btn"
+                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign Out</a>
+                        </div>
                     </div>
                 </div>
-                <!-- Sign-in Button -->
-                <button id="google-signin-btn"
-                        class="winner-button px-8 py-3 bg-indigo-600 text-white font-semibold rounded-full shadow-lg hover:bg-indigo-700 transition">
-                    Sign in with Google
-                </button>
-                <!-- Sign-out Button (hidden by default) -->
-                <button id="signout-btn"
-                        class="winner-button p-3 bg-gray-500 text-white font-semibold rounded-full shadow-lg hover:bg-gray-600 transition hidden relative"
-                        title="Sign Out">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                </button>
             </div>
+            
+
 
 
             <!--
@@ -1091,6 +1102,24 @@
             const chitWinnerTicketNumbers = new Set();
 
             
+            const userMenuButton = document.getElementById('user-menu-button');
+            const userMenuPanel = document.getElementById('user-menu-panel');
+
+            if (userMenuButton && userMenuPanel) {
+                userMenuButton.addEventListener('click', () => {
+                    userMenuPanel.classList.toggle('hidden');
+                });
+
+                // Optional: Close the dropdown if the user clicks outside of it
+                document.addEventListener('click', (event) => {
+                    if (!userMenuButton.contains(event.target) && !userMenuPanel.contains(event.target)) {
+                        userMenuPanel.classList.add('hidden');
+                    }
+                });
+            }
+
+
+
             // NEW, BULLETPROOF VERSION
             function preprocessMembersData(snapshot) {
                 const processedData = []; // Start with an empty array
@@ -1606,48 +1635,69 @@
 
 
             /**
-             * Updates the UI based on the current authentication state.
-             * @param {object} user - The authenticated user object or null.
-             */
+            * Updates the UI based on the current authentication state, populating the new dropdown menu.
+            * @param {object} user - The authenticated user object or null.
+            */
             function updateUIForAuthState(user) {
-                if (!actionButton || !userProfileElement || !statusMessageElement) {
-                    console.error("UI elements not found. Cannot update UI.");
+                // --- Get references to all relevant UI elements ---
+                
+                // Auth Bar Elements
+                const googleSigninBtn = document.getElementById('google-signin-btn');
+                const userProfileDropdown = document.getElementById('user-profile-dropdown');
+                const userPhoto = document.getElementById('user-photo');
+                const userName = document.getElementById('user-name'); // Name next to avatar
+                const userNameDropdown = document.getElementById('user-name-dropdown'); // Name inside dropdown
+                const userIdDropdown = document.getElementById('user-id-dropdown'); // ID inside dropdown
+                const signoutBtn = document.getElementById('signout-btn');
+
+                // Other Page Elements (from your original function)
+                const actionButton = document.getElementById('action-button'); // Assuming this is the ID
+                const statusMessageElement = document.getElementById('status-message'); // Assuming this is the ID
+
+                // --- Check if essential elements exist ---
+                if (!googleSigninBtn || !userProfileDropdown || !actionButton) {
+                    console.error("Essential UI elements not found. Cannot update auth state.");
                     return;
                 }
 
                 if (user) {
+                    // --- USER IS SIGNED IN ---
                     console.log("User is authenticated:", user.uid);
-                    userId = user.uid;
-                    userName = user.displayName || user.email || 'Anonymous';
+                    const displayName = user.displayName || user.email || 'Anonymous';
+                    const photoURL = user.photoURL || 'https://placehold.co/40x40/94a3b8/e2e8f0?text=U'; // Default placeholder
 
-                    // Show user profile and hide sign-in button
-                    userProfileElement.classList.remove('hidden');
-                    userPhotoElement.src = user.photoURL || 'https://placehold.co/40x40/94a3b8/e2e8f0?text=User'; // Default placeholder image
-                    userPhotoElement.alt = `${userName}'s profile photo`;
-                    userNameElement.textContent = userName;
-                    // Only show a trimmed user ID to keep it clean
-                    document.getElementById('user-id').textContent = `ID: ${userId.substring(0, 8)}...`;
+                    // 1. Update visibility
+                    userProfileDropdown.classList.remove('hidden');
                     googleSigninBtn.classList.add('hidden');
-                    signoutBtn.classList.remove('hidden');
 
-                    // Enable the action button and set its text
+                    // 2. Populate the user dropdown elements
+                    userPhoto.src = photoURL;
+                    userPhoto.alt = `${displayName}'s profile photo`;
+                    userName.textContent = displayName; // For the trigger button
+                    userNameDropdown.textContent = displayName; // For inside the panel
+                    userIdDropdown.textContent = `ID: ${user.uid.substring(0, 8)}...`;
+
+                    // 3. Set up event listeners
+                    signoutBtn.onclick = signOutUser;
+
+                    // 4. Handle the main action button (logic preserved from your original function)
                     actionButton.textContent = getFormattedButtonText();
                     actionButton.className = 'winner-button px-8 py-3 bg-purple-700 text-white font-semibold rounded-full shadow-lg hover:bg-purple-800 transition duration-300 ease-in-out';
                     actionButton.disabled = false;
-
-                    // Set up event listeners and initialize app data
                     actionButton.onclick = startWinnerGeneration;
-                    signoutBtn.onclick = signOutUser;
+                    
+                    // 5. Initialize app data
                     initializeSnehaNidhiData();
+
                 } else {
+                    // --- USER IS SIGNED OUT ---
                     console.log("User is not authenticated. Awaiting sign-in.");
 
-                    // Hide profile and show sign-in button
-                    userProfileElement.classList.add('hidden');
+                    // 1. Update visibility
+                    userProfileDropdown.classList.add('hidden');
                     googleSigninBtn.classList.remove('hidden');
-                    signoutBtn.classList.add('hidden');
 
-                    // Disable the action button and provide instructions
+                    // 2. Disable the main action button (logic preserved from your original function)
                     actionButton.textContent = `Sign in to Generate Winner`;
                     actionButton.className = 'winner-button px-8 py-3 bg-gray-500 text-white font-semibold rounded-full shadow-lg';
                     actionButton.disabled = true;
