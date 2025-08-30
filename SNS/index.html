@@ -1290,9 +1290,9 @@
 
 
             /**
-             * AG Grid Cell Renderer that displays a delete button only for Admin users.
+             * AG Grid Cell Renderer that displays a vertically centered delete button only for Admin users.
              * @param {object} params - The AG Grid parameters object for the cell.
-             * @returns {HTMLElement | null} The button element or null.
+             * @returns {HTMLElement | null} The wrapper div containing the button, or null.
              */
             function deleteCellRenderer(params) {
                 // 1. Immediately return nothing if the user is not an Admin.
@@ -1300,21 +1300,28 @@
                     return null; // Render an empty cell
                 }
 
-                // 2. Create the delete button element for Admins.
+                // --- NEW: Create a wrapper div to handle the centering ---
+                const wrapper = document.createElement('div');
+                // Use flexbox to center the content both vertically and horizontally.
+                // h-full ensures the wrapper takes the full height of the AG Grid cell.
+                wrapper.className = 'flex items-center justify-center h-full';
+
+                // 2. Create the delete button element (this part is the same).
                 const button = document.createElement('button');
                 button.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
                 button.className = 'text-red-500 hover:text-red-700 transition focus:outline-none';
                 button.title = 'Delete Member';
 
-                // 3. Add the click event listener.
+                // 3. Add the click event listener (this part is the same).
                 button.addEventListener('click', () => {
-                    // Call a separate function to handle the deletion logic.
-                    // We pass the SNS_ID from the row's data.
                     deleteMember(params.data.SNS_ID);
                 });
 
-                // 4. Return the fully constructed button element to AG Grid.
-                return button;
+                // --- NEW: Append the button to the centering wrapper ---
+                wrapper.appendChild(button);
+
+                // 4. Return the wrapper div instead of the button directly.
+                return wrapper;
             }
 
 
@@ -1353,7 +1360,7 @@
             }
 
 
-            
+
             function loadMembersWithAGGrid() {
                 // Exit if the Firestore database instance is not available.
                 if (!db) return;
