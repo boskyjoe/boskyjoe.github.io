@@ -1351,7 +1351,24 @@
                                     // 4. Hide the floating filter, as it's not ideal for this type of filter.
                                     floatingFilter: false
                                 },
-                                { headerName: "SNS_ID", field: "SNS_ID", editable: false, width: 200 }, // 'headerName' is the title, 'field' links to data
+                                { headerName: "SNS_ID", field: "SNS_ID", sort:'asc',  editable: false, width: 200,
+                                    // 2. Provide a custom comparator function for natural sorting.
+                                    comparator: (valueA, valueB) => {
+                                        // This function compares two values, e.g., "SSC12" and "SSC5"
+
+                                        // Safety check for null or undefined values
+                                        if (valueA == null && valueB == null) return 0;
+                                        if (valueA == null) return -1; // Put nulls at the beginning
+                                        if (valueB == null) return 1;  // Put nulls at the beginning
+
+                                        // Extract the numeric part of the ID strings
+                                        const numA = parseInt(valueA.replace('SSC', ''), 10);
+                                        const numB = parseInt(valueB.replace('SSC', ''), 10);
+
+                                        // Compare the numbers to get the correct sort order
+                                        return numA - numB;
+                                    }
+                                }, // 'headerName' is the title, 'field' links to data
                                 { headerName: "Member Name", field: "SNSMemberName", editable: true, filter: true, width: 250 }, // 'filter: true' adds a filter menu
                                 { headerName: "Church Contact Name", field: "ChurchContactName", width: 250, editable: true, filter: true },
                                 { headerName: "Contact Phone", field: "ChurchContactPhone", editable: true, width: 150, filter: true }
