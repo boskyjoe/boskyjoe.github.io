@@ -1158,6 +1158,8 @@
              */
             function updateAdminControls() {
                 // Safety check in case the button isn't found
+                console.log("DEBUG: updateAdminControls", AppState.currentUserRole);
+
                 if (!addMemberButton) return; 
 
                 if (AppState.currentUserRole === 'Admin') {
