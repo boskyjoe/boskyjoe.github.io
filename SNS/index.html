@@ -816,7 +816,7 @@
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
                         <!-- An icon provides a clear visual cue -->
-                        <i class="fa-solid fa-circle-info text-blue-500 text-xl"></i>
+                        <i id="status-message-icon" class="fa-solid fa-circle-info text-blue-500 text-xl"></i>
                     </div>
                     <div class="ml-3">
                         <!-- The text will be set by JavaScript -->
@@ -1809,6 +1809,53 @@
 
 
             /**
+             * Displays a status message with a specific style (info, progress, etc.).
+             * @param {string} message - The text to display.
+             * @param {string} type - The style type ('info' or 'progress'). Defaults to 'info'.
+             */
+            function showStatusMessage(message, type = 'info') {
+                const container = document.getElementById('status-message-container');
+                const textElement = document.getElementById('status-message');
+                const iconElement = document.getElementById('status-message-icon');
+
+                if (!container || !textElement || !iconElement) {
+                    console.error("Status message elements not found in the DOM.");
+                    return;
+                }
+
+                // 1. Reset all possible style and icon classes
+                container.classList.remove('bg-blue-50', 'border-blue-400', 'bg-yellow-50', 'border-yellow-400');
+                iconElement.classList.remove('fa-circle-info', 'text-blue-500', 'fa-spinner', 'fa-spin', 'text-yellow-500');
+
+                // 2. Apply classes based on the type
+                switch (type) {
+                    case 'progress':
+                        container.classList.add('bg-yellow-50', 'border-yellow-400');
+                        iconElement.classList.add('fa-solid', 'fa-spinner', 'fa-spin', 'text-yellow-500');
+                        break;
+                    case 'info':
+                    default:
+                        container.classList.add('bg-blue-50', 'border-blue-400');
+                        iconElement.classList.add('fa-solid', 'fa-circle-info', 'text-blue-500');
+                        break;
+                }
+
+                // 3. Set the message text and make the container visible
+                textElement.textContent = message;
+                container.classList.remove('hidden');
+            }
+
+            /**
+             * Hides the status message container.
+             */
+            function hideStatusMessage() {
+                const container = document.getElementById('status-message-container');
+                if (container) {
+                    container.classList.add('hidden');
+                }
+            }
+
+            /**
             * Updates the UI based on the current authentication state, populating the new dropdown menu.
             * @param {object} user - The authenticated user object or null.
             */
@@ -1828,8 +1875,6 @@
 
                 // Other Page Elements (from your original function)
                 const actionButton = document.getElementById('action-button'); // Assuming this is the ID
-                const statusMessageContainer = document.getElementById('status-message-container');
-                const statusMessageElement = document.getElementById('status-message'); // Assuming this is the ID
 
                 // NEW: Get references to the main content sections
                 const previousWinnersSection = document.getElementById('previous-winners-section');
@@ -1848,7 +1893,7 @@
                     const displayName = user.displayName || user.email || 'Anonymous';
                     const photoURL = user.photoURL || 'https://placehold.co/40x40/94a3b8/e2e8f0?text=U'; // Default placeholder
 
-                    statusMessageContainer.classList.add('hidden');
+                    hideStatusMessage();
 
                     // 1. Update visibility
                     userProfileDropdown.classList.remove('hidden');
@@ -1907,10 +1952,7 @@
                     actionButton.className = 'winner-button px-8 py-3 bg-gray-500 text-white font-semibold rounded-full shadow-lg';
                     actionButton.disabled = true;
 
-                    if (statusMessageElement) {
-                        statusMessageElement.textContent = "Please sign in to start the draw.";
-                    }
-                     statusMessageContainer.classList.remove('hidden');
+                    showStatusMessage("Please sign in to start the draw and manage members.", 'info');
                 }
             }
 
@@ -2091,9 +2133,7 @@
                     return Promise.reject("Authentication or database not ready.");
                 }
 
-                if (statusMessageElement) {
-                    statusMessageElement.textContent = "Importing member data from Google Sheets...";
-                }
+                showStatusMessage("Importing member data from Google Sheets...", 'progress');
 
                 try {
                     const membersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
@@ -2101,6 +2141,9 @@
                     // ** NEW LOGIC: Check if the collection already has data **
                     const existingMembersSnapshot = await getDocs(membersCollection);
                     if (existingMembersSnapshot.size > 0) {
+
+                        hideStatusMessage(); 
+
                         console.log("Member data already exists in Firestore. Skipping Google Sheets import.");
                         showModal("Import Skipped", "Member data is already up-to-date. No new import needed from Google Sheets.");
 
@@ -2126,6 +2169,7 @@
                         const eligibleTickets = allTicketIds.filter(ticketId => !previousWinnerIds.has(ticketId));
 
                         console.log("DEBUG: Eligible tickets for draw:", eligibleTickets);
+                        hideStatusMessage();
                         return eligibleTickets;
                     }
 
@@ -2216,6 +2260,7 @@
                     console.error("ERROR: Failed to import data from Google Sheets:", error);
                     showModal("Import Failed", `Could not import data from Google Sheets. Please ensure the sheet is publicly accessible and the Sheet ID and Sheet Name in the code are correct. Error: ${error.message}`);
                     disableAllButtons();
+                    hideStatusMessage();
                     return Promise.reject(error);
                 }
             }
@@ -2249,16 +2294,17 @@
             }
 
             async function initializeSnehaNidhiData() {
-                if (statusMessageElement) {
-                    statusMessageElement.textContent = "Loading ticket data...";
-                }
+
+
+                showStatusMessage("Loading ticket data...", 'progress');
+
                 disableAllButtons();
                 clearDisplayedWinners(); // Clear previous winners' details, including names/contacts
 
                 // Only proceed if user is logged in
                 if (!auth.currentUser) {
                     console.log("Not logged in. Awaiting user login to initialize data.");
-                    statusMessageElement.textContent = "Please sign in to start the draw.";
+                    showStatusMessage("Please sign in to start the draw.", 'info');
                     return;
                 }
 
@@ -2307,6 +2353,7 @@
 
                     if (snehanidhiTicketsWinners.length < 4) {
                         showModal("Data Error", `Error: Not enough unique ticket numbers available. The database has ${snehanidhiTicketsWinners.length} eligible tickets (needs at least 4 for all prizes). Please add more members to the Google Sheet and ensure their 'WinningTerm' is blank.`);
+                        hideStatusMessage();
                         disableAllButtons();
                         return;
                     }
@@ -2362,9 +2409,9 @@
                             thirdConsolationContact.textContent = `Contact: ${consolationPrizes[2].memberDetails?.ChurchContactName || 'N/A'}`;
                         }
 
-                        if (statusMessageElement) {
-                            statusMessageElement.textContent = `Winner for ${currentWinnerData.monthAndYear} has already been drawn. Click 'Reset SnehaNidhi' to start a new month.`;
-                        }
+                        const message = `Winner for ${currentWinnerData.monthAndYear} has already been drawn. Click 'Reset SnehaNidhi' to start a new month.`;
+                        showStatusMessage(message, 'info');
+
                         disableAllButtons();
                         if (resetSnehaNidhiBtn) {
                             resetSnehaNidhiBtn.disabled = false;
@@ -2373,9 +2420,8 @@
                         }
                     } else {
                         const newMonthAndYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-                        if (statusMessageElement) {
-                            statusMessageElement.textContent = `Sneha Nidhi data loaded successfully! Click 'Generate Winner' to begin.`;
-                        }
+                        showStatusMessage('Sneha Nidhi data loaded successfully! Click \'Generate Winner\' to begin.', 'info');
+            
                         if (firstPlaceSection) {
                             firstPlaceSection.classList.remove('inactive-section');
                         }
@@ -2393,6 +2439,7 @@
                 catch (error) {
                     console.error("ERROR: Initialization failed in initializeSnehaNidhiData:", error);
                     showModal("Initialization Failed", `Failed to initialize SnehaNidhi data. Please check console for details.`);
+                    hideStatusMessage();
                     disableAllButtons();
                 }
             }
@@ -2837,9 +2884,12 @@
             async function startWinnerGeneration() {
                 const winnerExists = await checkForExistingWinner();
                 if (winnerExists) {
-                    if (statusMessageElement) {
-                        statusMessageElement.textContent = `A winner for ${currentWinnerData.monthAndYear} has already been drawn. Click 'Reset SnehaNidhi' to start a new month.`;
-                    }
+                    
+                    // --- 1. Show an "info" message if the winner is already drawn ---
+                    const message = `A winner for ${currentWinnerData.monthAndYear} has already been drawn. Click 'Reset SnehaNidhi' to start a new month.`;
+                    showStatusMessage(message, 'info');
+        
+
                     disableAllButtons();
                     if (resetSnehaNidhiBtn) {
                         resetSnehaNidhiBtn.disabled = false;
@@ -2855,9 +2905,7 @@
                     actionButton.textContent = "Drawing...";
                 }
 
-                if (statusMessageElement) {
-                    statusMessageElement.textContent = "Drawing Winning Number...";
-                }
+                showStatusMessage("Drawing Winning Number...", 'progress');
 
                 if (poweredBySection) {
                     poweredBySection.classList.remove('hidden', 'fade-out-and-hide-animation');
@@ -2907,9 +2955,9 @@
                 finalFirstWinner = primaryWinner;
                 await delay(1000);
 
-                if (statusMessageElement) {
-                    statusMessageElement.textContent = "Winning number drawn! Now, generate the consolation prizes.";
-                }
+                // --- 3. Show an "info" message prompting the next step ---
+                showStatusMessage("Winning number drawn! Now, generate the consolation prizes.", 'info');
+
 
                 // After main winner, enable consolation section and button
                 consolationWinnersSection.style.display = 'block';
@@ -2923,9 +2971,10 @@
             async function startConsolationGeneration() {
                 generateConsolationBtn.disabled = true;
                 generateConsolationBtn.textContent = "Drawing...";
-                if (statusMessageElement) {
-                    statusMessageElement.textContent = "Drawing consolation winners...";
-                }
+                
+                // --- 1. Show a "progress" message while drawing ---
+                showStatusMessage("Drawing consolation winners...", 'progress');
+
 
                 // Show powered by animation for consolation winners
                 if (poweredBySection) {
@@ -2964,6 +3013,7 @@
                     const winner = pickSingleUniqueTicket(snehanidhiTicketsWinners);
                     if (winner === "N/A") {
                         console.warn("Not enough tickets for all consolation prizes.");
+                        hideStatusMessage();
                         break;
                     }
                     await animateNumberReveal(consolationElements[i], winner, 5000);
@@ -2989,9 +3039,9 @@
                     }, { once: true });
                 }
 
-                if (statusMessageElement) {
-                    statusMessageElement.textContent = "All winners have been drawn! Click 'Reset SnehaNidhi' to start a new draw.";
-                }
+                // --- 2. Show an "info" message when the process is complete ---
+                showStatusMessage("All winners have been drawn! Click 'Reset SnehaNidhi' to start a new draw.", 'info');
+
 
                 const currentDate = new Date();
                 const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
