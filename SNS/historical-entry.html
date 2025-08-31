@@ -309,6 +309,29 @@
         async function saveHistoricalWinner(winnerTicket, consolationTickets, monthAndYear, drawTimestamp) {
             if (!auth.currentUser) throw new Error("User not authenticated.");
 
+            // --- NEW: VALIDATION STEP ---
+            // Check if the proposed Chit Winner has won the main prize before.
+            const winnersCollectionRef = db.collection(`/artifacts/${appId}/public/data/SnehaNidhiWinners`);
+            const snapshot = await winnersCollectionRef.get();
+
+            for (const doc of snapshot.docs) {
+                const drawData = doc.data();
+                if (drawData.winners && Array.isArray(drawData.winners)) {
+                    // Check if any winner in this past draw matches our criteria
+                    const alreadyWon = drawData.winners.some(
+                        pastWinner => pastWinner.prize === 'Chit Winner' && pastWinner.ticketNumber === winnerTicket
+                    );
+
+                    if (alreadyWon) {
+                        // If a match is found, stop immediately and throw an error.
+                        throw new Error(`Validation Failed: Ticket '${winnerTicket}' has already won the 'Chit Winner' prize in the ${drawData.monthAndYear} draw.`);
+                    }
+                }
+            }
+            // --- END OF VALIDATION STEP ---
+
+            console.log(`Validation passed: Ticket ${winnerTicket} is a unique Chit Winner.`);
+
             const allWinnerTickets = [winnerTicket, ...consolationTickets];
             const winnersData = [];
             const prizeNames = ['Chit Winner', 'First Consolation Prize', 'Second Consolation Prize', 'Third Consolation Prize'];
