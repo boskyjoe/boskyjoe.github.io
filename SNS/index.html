@@ -1426,6 +1426,8 @@
                                     flex: 0,
                                     resizable: false,
                                     editable: false,
+                                    wrapHeaderText: true,
+                                    autoHeaderHeight: true,
                                     cellClass: 'grid-icon-cell', // The class for centering
                                     cellRenderer: (params) => {
                                         // Check if this row's ID is in our winner set
@@ -1472,8 +1474,8 @@
                                         return numA - numB;
                                     }
                                 }, // 'headerName' is the title, 'field' links to data
-                                { headerName: "Member Name", field: "SNSMemberName", editable: true, filter: true, width: 200 }, // 'filter: true' adds a filter menu
-                                { headerName: "Church Contact Name", field: "ChurchContactName", width: 200, editable: true, filter: true },
+                                { headerName: "Member Name", field: "SNSMemberName", editable: true, filter: true, width: 200,wrapText: true,autoHeight: true }, // 'filter: true' adds a filter menu
+                                { headerName: "Church Contact Name", field: "ChurchContactName", width: 200, editable: true, filter: true,wrapText: true,autoHeight: true },
                                 { headerName: "Contact Phone", field: "ChurchContactPhone", editable: true, width: 150, filter: true },
                                 // --- NEW: Add this "Actions" column at the end ---
                                 {
