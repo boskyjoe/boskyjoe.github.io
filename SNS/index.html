@@ -805,9 +805,24 @@
                 <!-- This div is now empty, as its content has been moved into the combined header -->
             </div>
 
-            <!-- Status Message Section -->
+            <!-- Status Message Section 
             <div id="status-message-container" class="mb-6">
                 <p id="status-message" class="text-lg font-semibold text-gray-700"></p>
+            </div>-->
+
+            <!-- Status Message Section -->
+            <!-- This entire block is hidden by default and will be shown by JavaScript for logged-out users -->
+            <div id="status-message-container" class="hidden p-4 mb-6 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <!-- An icon provides a clear visual cue -->
+                        <i class="fa-solid fa-circle-info text-blue-500 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <!-- The text will be set by JavaScript -->
+                        <p id="status-message" class="text-sm font-medium text-blue-800"></p>
+                    </div>
+                </div>
             </div>
 
             <!-- Single SnehaNidhi Winner Section -->
@@ -1053,7 +1068,9 @@
             let confirmationModal, confirmationBody, confirmDeleteBtn, cancelDeleteBtn;
 
             // Get references to key UI elements
+            const statusMessageContainer = document.getElementById('status-message-container');
             const statusMessageElement = document.getElementById('status-message');
+
             const actionButton = document.getElementById('action-button');
             const resetSnehaNidhiBtn = document.getElementById('reset-snehanidhi-btn');
             const firstPlaceSection = document.getElementById('first-place-section');
@@ -1811,6 +1828,7 @@
 
                 // Other Page Elements (from your original function)
                 const actionButton = document.getElementById('action-button'); // Assuming this is the ID
+                const statusMessageContainer = document.getElementById('status-message-container');
                 const statusMessageElement = document.getElementById('status-message'); // Assuming this is the ID
 
                 // NEW: Get references to the main content sections
@@ -1829,6 +1847,8 @@
                     console.log("User is authenticated:", user.uid);
                     const displayName = user.displayName || user.email || 'Anonymous';
                     const photoURL = user.photoURL || 'https://placehold.co/40x40/94a3b8/e2e8f0?text=U'; // Default placeholder
+
+                    statusMessageContainer.classList.add('hidden');
 
                     // 1. Update visibility
                     userProfileDropdown.classList.remove('hidden');
@@ -1890,6 +1910,7 @@
                     if (statusMessageElement) {
                         statusMessageElement.textContent = "Please sign in to start the draw.";
                     }
+                     statusMessageContainer.classList.remove('hidden');
                 }
             }
 
