@@ -130,7 +130,10 @@
                 if (user) {
                     const userDocRef = db.doc(`/artifacts/${appId}/Users/${user.uid}`);
                     const userDoc = await userDocRef.get();
-                    if (!userDoc.exists() || userDoc.data().Role !== 'Admin') {
+                    
+                    // --- THIS IS THE FIX ---
+                    // Changed userDoc.exists() to userDoc.exists
+                    if (!userDoc.exists || userDoc.data().Role !== 'Admin') {
                         saveBtn.disabled = true;
                         statusMessage.innerHTML = `<p class="text-red-600 font-bold">Access Denied: You must be an Admin to use this page.</p>`;
                     }
