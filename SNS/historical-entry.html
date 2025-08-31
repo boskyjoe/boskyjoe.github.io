@@ -102,11 +102,17 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
 
-        // --- Helper Functions (ASSUMED TO EXIST) ---
-        // This function must exist in your codebase to fetch member details.
+        /**
+         * Fetches a member's details from Firestore using the v9 compat/v8 syntax.
+         * @param {string} ticketNumber - The SNS_ID of the member.
+         * @returns {Promise<object|null>} A promise that resolves with the member's data or null.
+         */
         async function getMemberDetails(ticketNumber) {
-            const docRef = db.doc(`/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers/${ticketNumber}`);
-            const docSnap = await docRef.get();
+             // Modern syntax uses helper functions
+            const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers/${ticketNumber}`);
+            const docSnap = await getDoc(docRef);
+
+            // In the modern v9 SDK, .exists() IS a function.
             return docSnap.exists() ? docSnap.data() : null;
         }
 
