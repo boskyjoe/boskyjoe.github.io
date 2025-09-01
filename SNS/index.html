@@ -744,6 +744,12 @@
                                     <p class="text-sm font-semibold text-gray-800 truncate" id="user-name-dropdown"></p>
                                     <p class="text-xs text-gray-500 truncate" id="user-id-dropdown"></p>
                                 </div>
+                                <a href="./historical-entry.html" id="historical-entry-link"
+                                class="hidden block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                target="_blank"
+                                rel="noopener noreferrer"> 
+                                <i class="fa-solid fa-clock-rotate-left w-4 mr-2"></i>Old Winner Entry
+                                </a>
                                 <a href="#" id="signout-btn"
                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign Out</a>
                             </div>
@@ -1873,6 +1879,8 @@
 
                 const addMemberButton = document.getElementById('add-member-button');
 
+                const historicalEntryLink = document.getElementById('historical-entry-link');
+
                 // Other Page Elements (from your original function)
                 const actionButton = document.getElementById('action-button'); // Assuming this is the ID
 
@@ -1909,11 +1917,15 @@
                         addMemberButton.classList.remove('bg-gray-400', 'cursor-not-allowed', 'opacity-50');
                         addMemberButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
                         addMemberButton.title = 'Add a new member to the scheme';
+                        // 2. Show the "Old Winner Entry" menu item
+                        historicalEntryLink.classList.remove('hidden');
                     } else {
                         addMemberButton.disabled = true;
                         addMemberButton.classList.add('bg-gray-400', 'cursor-not-allowed', 'opacity-50');
                         addMemberButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
                         addMemberButton.title = 'You must be an Admin to add a new member.';
+                        // 2. Hide the "Old Winner Entry" menu item
+                        historicalEntryLink.classList.add('hidden');
                     }
 
                     // 2. Populate the user dropdown elements
