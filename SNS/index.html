@@ -1524,43 +1524,7 @@
                                 headerCheckbox: true
                             },
                             columnDefs: [
-                                // NEW column for the icon
-                                {
-                                    headerName: '', // No title
-                                    width: 30,
-                                    flex: 0,
-                                    resizable: false,
-                                    editable: false,
-                                    wrapHeaderText: true,
-                                    autoHeaderHeight: true,
-                                    cellClass: 'grid-icon-cell', // The class for centering
-                                    cellRenderer: (params) => {
-                                        // Check if this row's ID is in our winner set
-                                        if (chitWinnerTicketNumbers.has(params.data.SNS_ID)) {
-                                            // If yes, return the HTML for the icon
-                                            return '<span class="winner-icon"><i class="fa fa-trophy"></i></span>';
-                                        }
-                                        return ''; // Otherwise, return an empty string
-                                    },
-                                    // --- NEW PROPERTIES TO ENABLE FILTERING ---
-
-                                    // 1. The Value Getter: Creates the data for the filter to use.
-                                    valueGetter: (params) => {
-                                        return chitWinnerTicketNumbers.has(params.data.SNS_ID) ? 'Chit Winner' : 'Non-Winner';
-                                    },
-                                    // 2. The Filter Type: Use the powerful Set Filter.
-                                    filter: 'agTextColumnFilter',
-                                    // 3. We can configure the text filter to be more user-friendly.
-                                    filterParams: {
-                                        // Provide a list of options to create a dropdown-style filter
-                                        filterOptions: ['contains'],
-                                        // Suppress the text input box, as we only want to filter by 'Winner'
-                                        suppressAndOrCondition: true,
-                                    },
-
-                                    // 4. Hide the floating filter, as it's not ideal for this type of filter.
-                                    floatingFilter: false
-                                },
+                                
                                 { headerName: "SNS_ID", field: "SNS_ID", sort:'asc',  editable: false, width: 150,
                                     // Add these two properties to enable checkboxes
                                     // 2. Provide a custom comparator function for natural sorting.
