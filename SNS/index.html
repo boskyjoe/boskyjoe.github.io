@@ -648,18 +648,32 @@
                 /* Remove default cell padding */
             }
 
-            .ag-selection-checkbox {
-                border: 2px solid #ef4444; /* red-500 */
-                border-radius: 4px;
-                transition: box-shadow 0.2s ease-in-out;
+            /* --- Professional Red Checkbox Styling for AG Grid --- */
+
+            /* 1. Style the UNCHECKED checkbox icon */
+            /* This makes the empty square red */
+            .ag-icon-checkbox-unchecked {
+                color: #ef4444; /* A nice red color (Tailwind's red-500) */
             }
 
-            .ag-selection-checkbox:hover {
-                box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3);
-            }
-
+            /* 2. Style the CHECKED checkbox icon */
+            /* This makes the checkmark itself red */
             .ag-icon-checkbox-checked {
-                color: #dc2626; /* red-600 */
+                color: #dc2626; /* A slightly darker red (red-600) for contrast */
+            }
+
+            /* 3. Style the INDETERMINATE state (for the header checkbox) */
+            /* This makes the dash icon red */
+            .ag-icon-checkbox-indeterminate {
+                color: #ef4444; /* red-500 */
+            }
+
+            /* 4. Optional: Add a subtle glow on hover for better UX */
+            /* We apply this to the parent container so the glow appears around the icon */
+            .ag-selection-checkbox:hover {
+                /* A soft, transparent red glow */
+                background-color: rgba(239, 68, 68, 0.1);
+                border-radius: 50%; /* Make the glow circular */
             }
         </style>
     </head>
