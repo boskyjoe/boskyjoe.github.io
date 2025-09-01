@@ -648,32 +648,15 @@
                 /* Remove default cell padding */
             }
 
-            /* --- Professional Red Checkbox Styling for AG Grid --- */
-
-            /* 1. Style the UNCHECKED checkbox icon */
-            /* This makes the empty square red */
-            .ag-icon-checkbox-unchecked {
-                color: #ef4444; /* A nice red color (Tailwind's red-500) */
+            /* This is the new class for rows marked for deletion */
+            .ag-row-marked-for-deletion {
+                background-color: #fee2e2 !important; /* A very light red (Tailwind's red-100) */
+                font-weight: 500; /* Make the text slightly bolder */
             }
 
-            /* 2. Style the CHECKED checkbox icon */
-            /* This makes the checkmark itself red */
-            .ag-icon-checkbox-checked {
-                color: #dc2626; /* A slightly darker red (red-600) for contrast */
-            }
-
-            /* 3. Style the INDETERMINATE state (for the header checkbox) */
-            /* This makes the dash icon red */
-            .ag-icon-checkbox-indeterminate {
-                color: #ef4444; /* red-500 */
-            }
-
-            /* 4. Optional: Add a subtle glow on hover for better UX */
-            /* We apply this to the parent container so the glow appears around the icon */
-            .ag-selection-checkbox:hover {
-                /* A soft, transparent red glow */
-                background-color: rgba(239, 68, 68, 0.1);
-                border-radius: 50%; /* Make the glow circular */
+            /* Optional: Make the text color a bit darker for better contrast */
+            .ag-row-marked-for-deletion .ag-cell {
+                color: #991b1b; /* A dark red (red-800) */
             }
         </style>
     </head>
@@ -1574,6 +1557,9 @@
                                 'ag-row-winner': (params) => {
                                     // The function checks if the row's ID is in our winner set
                                     return chitWinnerTicketNumbers.has(params.data.SNS_ID);
+                                },
+                                'ag-row-marked-for-deletion': (params) => {
+                                    return params.node.isSelected();
                                 }
                             },
 
