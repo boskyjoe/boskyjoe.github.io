@@ -1019,7 +1019,7 @@
                  <div id="bulk-actions-container">
                     <button id="bulk-delete-btn" class="hidden px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md shadow-sm hover:bg-red-700 flex items-center transition">
                         <i class="fa-solid fa-trash-can mr-2"></i>
-                        Delete Selected Members
+                        Deactivate Selected Members
                     </button>
                 </div>
 
@@ -1371,42 +1371,77 @@
                 }
             }
 
-
-            /**
-             * AG Grid Cell Renderer that displays a vertically centered delete button only for Admin users.
-             * @param {object} params - The AG Grid parameters object for the cell.
-             * @returns {HTMLElement | null} The wrapper div containing the button, or null.
-             */
-            function deleteCellRenderer(params) {
-                // 1. Immediately return nothing if the user is not an Admin.
-                if (AppState.currentUserRole !== 'Admin') {
-                    return null; // Render an empty cell
-                }
-
-                // --- NEW: Create a wrapper div to handle the centering ---
-                const wrapper = document.createElement('div');
-                // Use flexbox to center the content both vertically and horizontally.
-                // h-full ensures the wrapper takes the full height of the AG Grid cell.
-                wrapper.className = 'flex items-center justify-center h-full';
-
-                // 2. Create the delete button element (this part is the same).
-                const button = document.createElement('button');
-                button.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
-                button.className = 'text-red-500 hover:text-red-700 transition focus:outline-none';
-                button.title = 'Delete Member';
-
-                // 3. Add the click event listener (this part is the same).
-                button.addEventListener('click', () => {
-                    deleteMember(params.data.SNS_ID);
-                });
-
-                // --- NEW: Append the button to the centering wrapper ---
-                wrapper.appendChild(button);
-
-                // 4. Return the wrapper div instead of the button directly.
-                return wrapper;
+            // Function to handle deactivating a SINGLE member
+            async function handleDeactivateMember(memberId) {
+                const message = `Are you sure you want to deactivate member ${memberId}?`;
+                const action = async () => {
+                    const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers/${memberId}`);
+                    await updateDoc(docRef, {
+                        isActive: false,
+                        modifiedBy: auth.currentUser.uid,
+                        modifiedAt: serverTimestamp()
+                    });
+                    showModal("Success", `Member ${memberId} has been deactivated.`);
+                };
+                showGenericConfirmationModal(message, action);
             }
 
+            // Function to handle activating a SINGLE member
+            async function handleActivateMember(memberId) {
+                const message = `Are you sure you want to reactivate member ${memberId}?`;
+                const action = async () => {
+                    const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers/${memberId}`);
+                    await updateDoc(docRef, {
+                        isActive: true,
+                        modifiedBy: auth.currentUser.uid,
+                        modifiedAt: serverTimestamp()
+                    });
+                    showModal("Success", `Member ${memberId} has been reactivated.`);
+                };
+                showGenericConfirmationModal(message, action);
+            }
+
+
+            
+
+            /**
+             * AG Grid Cell Renderer that dynamically displays an "Activate" or "Deactivate" button
+             * based on the row's 'isActive' status, visible only to Admins.
+             * @param {object} params - The AG Grid parameters object for the cell.
+             * @returns {HTMLElement | null} The button element or null.
+             */
+            function actionCellRenderer(params) {
+                // Immediately return if not an Admin or if it's a group row
+                if (AppState.currentUserRole !== 'Admin' || !params.data) {
+                    return null;
+                }
+
+                const memberId = params.data.SNS_ID;
+                const isActive = params.data.isActive !== false; // Default to true if field is missing
+
+                const button = document.createElement('button');
+                
+                if (isActive) {
+                    // If member is Active, show a "Deactivate" button
+                    button.innerHTML = '<i class="fa-solid fa-user-slash"></i>';
+                    button.className = 'text-red-500 hover:text-red-700 transition focus:outline-none';
+                    button.title = 'Deactivate Member';
+                    button.addEventListener('click', () => handleDeactivateMember(memberId));
+                } else {
+                    // If member is Inactive, show an "Activate" button
+                    button.innerHTML = '<i class="fa-solid fa-user-check"></i>';
+                    button.className = 'text-green-500 hover:text-green-700 transition focus:outline-none';
+                    button.title = 'Activate Member';
+                    button.addEventListener('click', () => handleActivateMember(memberId));
+                }
+
+                // Wrap the button in a centered div
+                const wrapper = document.createElement('div');
+                wrapper.className = 'flex items-center justify-center h-full';
+                wrapper.appendChild(button);
+
+                return wrapper;
+            }
 
             /**
              * Asks for confirmation and then deletes a member document from Firestore.
@@ -1463,6 +1498,19 @@
 
                         // AG Grid configuration object. This is like the Handsontable constructor object.
                         const gridOptions = {
+                            // Automatically expand the groups when the grid loads.
+                            groupDefaultExpanded: 1,
+
+                            // Show a specific column for the group titles.
+                            autoGroupColumnDef: {
+                                headerName: 'Member Status',
+                                // Show the count of items in each group in parentheses.
+                                cellRendererParams: {
+                                    suppressCount: false,
+                                },
+                                // Allow this group column to be wider.
+                                flex: 1,
+                            },
                             // This sets default properties for ALL column definitions.
                             defaultColDef: {
                                 filter: true,
@@ -1533,6 +1581,16 @@
                                         return numA - numB;
                                     }
                                 }, // 'headerName' is the title, 'field' links to data
+                                {
+                                    headerName: 'Status',
+                                    field: 'isActive',
+                                    // This is the key: it tells the grid to group by this column.
+                                    rowGroup: true, 
+                                    // Hide the column itself, as we only need it for grouping.
+                                    hide: true, 
+                                    // Use a value formatter to display "Active" or "Inactive" instead of true/false.
+                                    valueFormatter: params => params.value === false ? 'Inactive Members' : 'Active Members'
+                                },
                                 { headerName: "Member Name", field: "SNSMemberName", editable: true, filter: true, width: 200,wrapText: true,autoHeight: true }, // 'filter: true' adds a filter menu
                                 { headerName: "Church Contact Name", field: "ChurchContactName", width: 200, editable: true, filter: true,wrapText: true,autoHeight: true },
                                 { headerName: "Contact Phone", field: "ChurchContactPhone", editable: true, width: 150, filter: true },
@@ -1544,7 +1602,7 @@
                                     filter: false,
                                     floatingFilter: false,
                                     // The cellRenderer is the key. It will call our custom function.
-                                    cellRenderer: deleteCellRenderer 
+                                    cellRenderer: actionCellRenderer 
                                 }
                             ],
 
