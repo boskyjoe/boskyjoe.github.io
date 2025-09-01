@@ -1001,16 +1001,24 @@
 
 
 
-            <div class="mb-4">
-                <button id="add-member-button" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                    Add New Member
-                </button>
-            </div>
-            <div id="bulk-actions-container">
-                <button id="bulk-delete-btn" class="hidden px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md shadow-sm hover:bg-red-700 flex items-center transition">
-                    <i class="fa-solid fa-trash-can mr-2"></i>
-                    Delete Selected
-                </button>
+            <!-- NEW: Container for all action buttons above the grid -->
+            <div class="flex justify-between items-center mb-4">
+                
+                <!-- Left-aligned "Add New Member" button -->
+                <div>
+                    <button id="add-member-button" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                        Add New Member
+                    </button>
+                </div>
+
+                <!-- Right-aligned "Bulk Actions" container -->
+                <div id="bulk-actions-container">
+                    <button id="bulk-delete-btn" class="hidden px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md shadow-sm hover:bg-red-700 flex items-center transition">
+                        <i class="fa-solid fa-trash-can mr-2"></i>
+                        Delete Selected
+                    </button>
+                </div>
+
             </div>
 
             <div id="members-grid" class="ag-theme-alpine" style="height: 500px; width: 900px;"></div>
@@ -3206,7 +3214,7 @@
 
 
                 await initializeFirebase(firebaseConfig);
-                
+
                 bulkDeleteBtn = document.getElementById('bulk-delete-btn');
                 if (bulkDeleteBtn) {
                     bulkDeleteBtn.addEventListener('click', handleBulkDelete);
