@@ -658,6 +658,17 @@
             .ag-row-marked-for-deletion .ag-cell {
                 color: #991b1b; /* A dark red (red-800) */
             }
+
+            /* This is the new class for inactive rows */
+            .ag-row-inactive {
+                background-color: #f3f4f6; /* A light gray (Tailwind's gray-100) */
+                color: #6b7280; /* A muted text color (gray-500) */
+            }
+
+            /* Optional: Make the inactive rows less prominent on hover */
+            .ag-row-inactive.ag-row-hover {
+                background-color: #e5e7eb; /* A slightly darker gray (gray-200) */
+            }
         </style>
     </head>
 
@@ -1498,19 +1509,7 @@
 
                         // AG Grid configuration object. This is like the Handsontable constructor object.
                         const gridOptions = {
-                            // Automatically expand the groups when the grid loads.
-                            groupDefaultExpanded: 1,
-
-                            // Show a specific column for the group titles.
-                            autoGroupColumnDef: {
-                                headerName: 'Member Status',
-                                // Show the count of items in each group in parentheses.
-                                cellRendererParams: {
-                                    suppressCount: false,
-                                },
-                                // Allow this group column to be wider.
-                                flex: 1,
-                            },
+                            
                             // This sets default properties for ALL column definitions.
                             defaultColDef: {
                                 filter: true,
@@ -1584,12 +1583,11 @@
                                 {
                                     headerName: 'Status',
                                     field: 'isActive',
-                                    // This is the key: it tells the grid to group by this column.
-                                    rowGroup: true, 
-                                    // Hide the column itself, as we only need it for grouping.
-                                    hide: true, 
-                                    // Use a value formatter to display "Active" or "Inactive" instead of true/false.
-                                    valueFormatter: params => params.value === false ? 'Inactive Members' : 'Active Members'
+                                    width: 120,
+                                    // Set the initial sort order: 'desc' will put true (Active) before false (Inactive).
+                                    sort: 'desc', 
+                                    // Use a value formatter to display user-friendly text.
+                                    valueFormatter: params => params.value === false ? 'Inactive' : 'Active'
                                 },
                                 { headerName: "Member Name", field: "SNSMemberName", editable: true, filter: true, width: 200,wrapText: true,autoHeight: true }, // 'filter: true' adds a filter menu
                                 { headerName: "Church Contact Name", field: "ChurchContactName", width: 200, editable: true, filter: true,wrapText: true,autoHeight: true },
@@ -1611,13 +1609,16 @@
 
                             // --- NEW: Row Class Rules for Highlighting ---
                             rowClassRules: {
-                                // Apply the 'ag-row-winner' class if the function returns true
                                 'ag-row-winner': (params) => {
-                                    // The function checks if the row's ID is in our winner set
                                     return chitWinnerTicketNumbers.has(params.data.SNS_ID);
                                 },
                                 'ag-row-marked-for-deletion': (params) => {
                                     return params.node.isSelected();
+                                },
+                                // --- THIS IS THE NEW RULE ---
+                                // Apply the 'ag-row-inactive' class if the member is not active.
+                                'ag-row-inactive': (params) => {
+                                    return params.data.isActive === false;
                                 }
                             },
 
