@@ -1937,14 +1937,18 @@
                         if (memberId) {
                             const docPath = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers/${memberId}`;
                             const memberDocRef = doc(db, docPath);
-                            batch.delete(memberDocRef);
+                             batch.update(memberDocRef, {
+                                isActive: false, // The soft-delete flag
+                                deletedBy: auth.currentUser.uid, // For auditing
+                                deletedAt: serverTimestamp() // For auditing
+                            });
                         }
                     });
 
                     try {
                         await batch.commit();
-                        console.log(`Successfully deleted ${selectedRows.length} members.`);
-                        showModal("Success", `Successfully deleted ${selectedRows.length} members.`);
+                        console.log(`Successfully deactivated ${selectedRows.length} members.`);
+                        showModal("Success", `Successfully deactivated ${selectedRows.length} members.`);
                         // The real-time listener will automatically update the grid UI.
                     } catch (error) {
                         console.error("Bulk delete failed:", error);
