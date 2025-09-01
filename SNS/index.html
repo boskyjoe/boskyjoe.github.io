@@ -2297,7 +2297,9 @@
                         showModal("Import Skipped", "Member data is already up-to-date. No new import needed from Google Sheets.");
 
                         // Proceed directly to fetching the eligible tickets from the existing data
-                        const allTicketIds = existingMembersSnapshot.docs.map(doc => doc.id);
+                        const allTicketIds = existingMembersSnapshot.docs
+                            .filter(doc => doc.data().isActive !== false)
+                            .map(doc => doc.id);
 
                         const winnersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`);
                         const q = query(winnersCollection, where("prize", "==", "Chit Winner"));
@@ -2365,6 +2367,7 @@
                                 batch.set(newDocRef, memberData, { merge: true });
                                 updateCount++;
                             } else {
+                                memberData.isActive = true;
                                 memberData.createdBy = auth.currentUser.uid;
                                 memberData.createdDate = serverTimestamp();
                                 batch.set(newDocRef, memberData);
