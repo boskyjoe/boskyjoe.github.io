@@ -1588,6 +1588,15 @@
                             // --- IMPORTANT for real-time updates ---
                             // This tells AG Grid how to find a unique row.
                             getRowId: (params) => params.data.SNS_ID,
+
+                            // Add this event listener to force a style refresh whenever a row is selected or deselected.
+                            onRowSelected: (event) => {
+                                // The most efficient way to update styles is to refresh the cells.
+                                // We use { force: true } to ensure the refresh happens even if data hasn't changed.
+                                gridApi.refreshCells({ force: true });
+                            },
+
+
                         };
 
                         const gridDiv = document.getElementById('members-grid');
