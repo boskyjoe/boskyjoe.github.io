@@ -2622,6 +2622,8 @@
                         monthAndYear: monthAndYear,
                         winners: winnersData, // Save the new structured data
                         timestamp: new Date(),
+                        // 2. NEW: This saves the user's timezone identifier (e.g., 'Asia/Kolkata').
+                        userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                         userId: auth.currentUser.uid,
                         userEmial:auth.currentUser.email,
                         userName: auth.currentUser.displayName || auth.currentUser.email
@@ -2639,7 +2641,7 @@
              * @param {Object} firebaseTimestamp - The Firebase Timestamp object.
              * @returns {string} The formatted date string.
              */
-            function formatTimestamp(firebaseTimestamp) {
+            function formatTimestamp1(firebaseTimestamp) {
                 if (!firebaseTimestamp || typeof firebaseTimestamp.toDate !== 'function') {
                     return 'N/A';
                 }
@@ -2652,6 +2654,55 @@
                 const seconds = date.getSeconds().toString().padStart(2, '0');
                 return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
             }
+
+
+
+            /**
+             * Formats a Firestore Timestamp into a readable string, using a specific timezone if provided.
+             * @param {object} firestoreTimestamp - The timestamp object from Firestore.
+             * @param {string | null} timezoneString - The IANA timezone identifier (e.g., 'Asia/Kolkata').
+             * @returns {string} The formatted date string.
+             */
+            function formatTimestamp(firestoreTimestamp, timezoneString) {
+                // Return a placeholder if the timestamp is invalid
+                if (!firestoreTimestamp || typeof firestoreTimestamp.toDate !== 'function') {
+                    return 'N/A';
+                }
+
+                try {
+                    // Convert the Firestore Timestamp to a standard JavaScript Date object
+                    const dateObject = firestoreTimestamp.toDate();
+
+                    // Define the desired format for the output
+                    const options = {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true // Use AM/PM
+                    };
+
+                    // --- THIS IS THE KEY LOGIC ---
+                    // If a specific timezone is provided, use it.
+                    if (timezoneString) {
+                        options.timeZone = timezoneString;
+                    }
+                    // If timezoneString is null or undefined, toLocaleString will automatically
+                    // use the CURRENT user's browser timezone, which is a safe fallback.
+
+                    // Format the date. 'en-GB' is used for a common DD/MM/YYYY order, but you can change it.
+                    return dateObject.toLocaleString('en-GB', options);
+
+                } catch (error) {
+                    // This catch block handles cases where an invalid timezone string might be provided.
+                    console.error("Error formatting timestamp:", error);
+                    // Fallback to a basic ISO string format on error
+                    return firestoreTimestamp.toDate().toISOString().substring(0, 16);
+                }
+            }
+
+
 
             /**
              * Displays a generic confirmation modal.
@@ -2770,6 +2821,7 @@
                             monthAndYear: data.monthAndYear,
                             drawnBy: data.userName,
                             dateDrawn: data.timestamp,
+                            userTimezone: data.userTimezone || null, // Fetch the timezone
                             winners: data.winners || [], // Now expects a structured array
                         });
                     });
@@ -2830,11 +2882,11 @@
                         <i class="fa-solid fa-calendar-alt text-blue-500"></i>
                         <span>${winner.monthAndYear}</span>
                     </td>
-                    <td>Drawn by: ${winner.drawnBy} on ${formatTimestamp(winner.dateDrawn)}</td>
+                    <td>Drawn by: ${winner.drawnBy} on ${formatTimestamp(winner.dateDrawn, winner.userTimezone)}</td>
                     <td class="text-right">
-                        ${deleteButtonHTML}  <!-- The delete button will only appear here for Admins -->
+                        ${deleteButtonHTML}
                     </td>
-                `;
+                    `;
                     winnersTableBody.appendChild(drawRow);
 
                     // NEW: Nested table row for winner details
