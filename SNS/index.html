@@ -730,14 +730,19 @@
                         </button>
 
                         <!-- User Dropdown (for logged-in users, hidden by default) -->
-                        <div id="user-menu-panel"
-                            class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 hidden z-10">
+                        <div id="user-profile-dropdown" class="relative hidden">
                             
-                            <div class="px-4 py-2 border-b">
-                                <p class="text-sm font-semibold text-gray-800 truncate" id="user-name-dropdown"></p>
-                                <p class="text-xs text-gray-500 truncate" id="user-id-dropdown"></p>
-                            </div>
+                            <button id="user-menu-button" class="flex items-center space-x-2 focus:outline-none"> 
+                                <span id="user-name" class="hidden sm:inline text-sm font-medium text-gray-700"></span> 
+                                <img id="user-photo" class="w-8 h-8 rounded-full" src="" alt="User photo"> 
+                            </button>
 
+                            <div id="user-menu-panel" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 hidden z-10"> 
+                                <div class="px-4 py-2 border-b"> 
+                                    <p class="text-sm font-semibold text-gray-800 truncate" id="user-name-dropdown"></p>
+                                    <p class="text-xs text-gray-500 truncate" id="user-id-dropdown"></p> 
+                            </div>
+                            
                             <!-- NEW: Admin-only link to the historical entry page -->
                             <!-- It has an ID so we can target it, and it's hidden by default -->
                             <a href="./historical-entry.html" id="historical-entry-link"
