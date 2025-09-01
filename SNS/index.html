@@ -1260,6 +1260,7 @@
                             ChurchContactName: data.ChurchContactName || "",
                             ChurchContactPhone: data.ChurchContactPhone || "",
                             updatedBy: data.updatedBy || "",
+                            isActive: docData.isActive === false ? false : true,
                             updatedDate: isValidTimestamp
                                 ? data.updatedDate.toDate().toLocaleString()
                                 : "" // Default to empty string if not a valid timestamp
