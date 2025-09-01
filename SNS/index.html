@@ -730,85 +730,38 @@
                         </button>
 
                         <!-- User Dropdown (for logged-in users, hidden by default) -->
-                        <div id="user-profile-dropdown" class="relative hidden">
-                            <!-- Dropdown Trigger -->
-                            <button id="user-menu-button" class="flex items-center space-x-2 focus:outline-none">
-                                <span id="user-name" class="hidden sm:inline text-sm font-medium text-gray-700"></span>
-                                <img id="user-photo" class="w-8 h-8 rounded-full" src="" alt="User photo">
-                            </button>
-
-                            <!-- Dropdown Panel -->
-                            <div id="user-menu-panel"
-                                class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 hidden z-10">
-                                <div class="px-4 py-2 border-b">
-                                    <p class="text-sm font-semibold text-gray-800 truncate" id="user-name-dropdown"></p>
-                                    <p class="text-xs text-gray-500 truncate" id="user-id-dropdown"></p>
-                                </div>
-                                <a href="#" id="signout-btn"
-                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign Out</a>
+                        <div id="user-menu-panel"
+                            class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 hidden z-10">
+                            
+                            <div class="px-4 py-2 border-b">
+                                <p class="text-sm font-semibold text-gray-800 truncate" id="user-name-dropdown"></p>
+                                <p class="text-xs text-gray-500 truncate" id="user-id-dropdown"></p>
                             </div>
+
+                            <!-- NEW: Admin-only link to the historical entry page -->
+                            <!-- It has an ID so we can target it, and it's hidden by default -->
+                            <a href="./historical-entry.html" id="historical-entry-link"
+                            class="hidden block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <i class="fa-solid fa-clock-rotate-left w-4 mr-2"></i>Old Winner Entry
+                            </a>
+
+                            <!-- Existing Sign Out link -->
+                            <a href="#" id="signout-btn"
+                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <i class="fa-solid fa-right-from-bracket w-4 mr-2"></i>Sign Out
+                            </a>
                         </div>
                     </div>
 
                 </div>
             </div>
 
-
-
-
-
-
-
-            <!--
-            NEW: Combined header with auth section
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                 Header Section (Left-aligned) 
-                <div class="flex flex-col items-center justify-center md:flex-row md:justify-start mb-2">
-                    <div class="w-16 h-16 md:w-20 md:h-20 mr-3 md:mr-4 flex-shrink-0">
-                        <img src="https://static.wixstatic.com/media/df2113_f71b21a1906c4d2bace3f797f5a6a8bb~mv2.png/v1/crop/x_5,y_0,w_365,h_315/fill/w_87,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LogoDesign-II%20(1)_edited.png"
-                            alt="St. Sebastian's Church Logo" class="w-full h-full object-contain rounded-full">
-                    </div>
-                    <div class="flex flex-col items-center md:items-start text-center md:text-left">
-                        <h1 class="text-xl md:text-2xl font-extrabold text-indigo-800 whitespace-nowrap">
-                            SSC - Sneha Nidhi Scheme
-                        </h1>
-                        <div class="text-gray-600 text-xs md:text-sm">
-                            <p>No:184/C, New Byppanahalli Extn, Indiranagar, Bengaluru – 560038</p>
-                            <p>+91 7090424365 | stsebastianssmc@gmail.com</p>
-                        </div>
-                    </div>
-                </div>
-
-                Authentication Section (Right-aligned)
-                <div id="auth-section"
-                    class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4">
-                    <div id="user-profile" class="flex items-center space-x-2 hidden">
-                        <img id="user-photo" class="w-10 h-10 rounded-full" src="" alt="User profile photo">
-                        <div>
-                            <p id="user-name" class="text-lg font-semibold text-gray-800"></p>
-                            <p id="user-id" class="text-xs text-gray-500"></p>
-                        </div>
-                    </div>
-                    <button id="google-signin-btn"
-                        class="winner-button px-8 py-3 bg-indigo-600 text-white font-semibold rounded-full shadow-lg hover:bg-indigo-700 transition">
-                        Sign in with Google
-                    </button>
-                    <button id="signout-btn"
-                        class="winner-button p-3 bg-gray-500 text-white font-semibold rounded-full shadow-lg hover:bg-gray-600 transition hidden relative"
-                        title="Sign Out">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                    </button>
-                </div>
-            </div>-->
 
             <div class="mb-4 relative z-10">
                 <!-- This div is now empty, as its content has been moved into the combined header -->
             </div>
 
-            <!-- Status Message Section 
-            <div id="status-message-container" class="mb-6">
-                <p id="status-message" class="text-lg font-semibold text-gray-700"></p>
-            </div>-->
+    
 
             <!-- Status Message Section -->
             <!-- This entire block is hidden by default and will be shown by JavaScript for logged-out users -->
@@ -1145,6 +1098,8 @@
             const AppState = {
                 currentUserRole: null,
             };
+
+            let historicalEntryLink;        
 
 
             // --- NEW FUNCTION ---
@@ -1873,6 +1828,8 @@
 
                 const addMemberButton = document.getElementById('add-member-button');
 
+                const historicalEntryLink = document.getElementById('historical-entry-link');
+
                 // Other Page Elements (from your original function)
                 const actionButton = document.getElementById('action-button'); // Assuming this is the ID
 
@@ -1909,11 +1866,15 @@
                         addMemberButton.classList.remove('bg-gray-400', 'cursor-not-allowed', 'opacity-50');
                         addMemberButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
                         addMemberButton.title = 'Add a new member to the scheme';
+                        // 2. Show the "Old Winner Entry" menu item
+                        historicalEntryLink.classList.remove('hidden');
                     } else {
                         addMemberButton.disabled = true;
                         addMemberButton.classList.add('bg-gray-400', 'cursor-not-allowed', 'opacity-50');
                         addMemberButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
                         addMemberButton.title = 'You must be an Admin to add a new member.';
+                        // 2. Hide the "Old Winner Entry" menu item
+                        historicalEntryLink.classList.add('hidden');
                     }
 
                     // 2. Populate the user dropdown elements
