@@ -1459,7 +1459,12 @@
                             },
                             // --- Column Definitions (replaces 'columns' and 'colHeaders') ---
                             // --- NEW: Enable multi-row selection ---
-                            rowSelection: 'multiple',
+                            rowSelection: {
+                                mode: 'multiple',
+                                enableClickSelection: false, // Note the inverted logic
+                                checkboxes: true,
+                                headerCheckbox: true
+                            },
                             // This is a good UX practice to prevent deselecting rows by accident
                             suppressRowClickSelection: true,
                             columnDefs: [
@@ -1502,8 +1507,8 @@
                                 },
                                 { headerName: "SNS_ID", field: "SNS_ID", sort:'asc',  editable: false, width: 200,
                                     // Add these two properties to enable checkboxes
-                                    checkboxSelection: true,
-                                    headerCheckboxSelection: true,
+                                    //checkboxSelection: true,
+                                    //headerCheckboxSelection: true,
                                     // 2. Provide a custom comparator function for natural sorting.
                                     comparator: (valueA, valueB) => {
                                         // This function compares two values, e.g., "SSC12" and "SSC5"
