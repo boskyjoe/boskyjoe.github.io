@@ -1465,13 +1465,11 @@
                                 checkboxes: true,
                                 headerCheckbox: true
                             },
-                            // This is a good UX practice to prevent deselecting rows by accident
-                            suppressRowClickSelection: true,
                             columnDefs: [
                                 // NEW column for the icon
                                 {
                                     headerName: '', // No title
-                                    width: 50,
+                                    width: 30,
                                     flex: 0,
                                     resizable: false,
                                     editable: false,
@@ -1505,7 +1503,7 @@
                                     // 4. Hide the floating filter, as it's not ideal for this type of filter.
                                     floatingFilter: false
                                 },
-                                { headerName: "SNS_ID", field: "SNS_ID", sort:'asc',  editable: false, width: 200,
+                                { headerName: "SNS_ID", field: "SNS_ID", sort:'asc',  editable: false, width: 150,
                                     // Add these two properties to enable checkboxes
                                     // 2. Provide a custom comparator function for natural sorting.
                                     comparator: (valueA, valueB) => {
