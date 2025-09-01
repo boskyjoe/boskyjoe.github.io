@@ -1006,6 +1006,13 @@
                     Add New Member
                 </button>
             </div>
+            <div id="bulk-actions-container">
+                <button id="bulk-delete-btn" class="hidden px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md shadow-sm hover:bg-red-700 flex items-center transition">
+                    <i class="fa-solid fa-trash-can mr-2"></i>
+                    Delete Selected
+                </button>
+            </div>
+
             <div id="members-grid" class="ag-theme-alpine" style="height: 500px; width: 900px;"></div>
 
 
@@ -1141,6 +1148,7 @@
             let membersTable = null;
             let unsubscribeMembersListener = null;
             let isEditing = false;
+            let bulkDeleteBtn;
 
             let membersHot;
             // A local copy of the data array, which we will manage
@@ -1441,6 +1449,10 @@
                                 floatingFilter: true,
                             },
                             // --- Column Definitions (replaces 'columns' and 'colHeaders') ---
+                            // --- NEW: Enable multi-row selection ---
+                            rowSelection: 'multiple',
+                            // This is a good UX practice to prevent deselecting rows by accident
+                            suppressRowClickSelection: true,
                             columnDefs: [
                                 // NEW column for the icon
                                 {
@@ -1480,6 +1492,9 @@
                                     floatingFilter: false
                                 },
                                 { headerName: "SNS_ID", field: "SNS_ID", sort:'asc',  editable: false, width: 200,
+                                    // Add these two properties to enable checkboxes
+                                    checkboxSelection: true,
+                                    headerCheckboxSelection: true,
                                     // 2. Provide a custom comparator function for natural sorting.
                                     comparator: (valueA, valueB) => {
                                         // This function compares two values, e.g., "SSC12" and "SSC5"
@@ -1861,6 +1876,56 @@
                 }
             }
 
+
+            /**
+             * Handles the bulk deletion of selected members from the AG Grid.
+             */
+            async function handleBulkDelete() {
+                if (!gridApi) {
+                    showModal("Error", "Grid is not ready.");
+                    return;
+                }
+
+                // 1. Get the selected rows from the grid
+                const selectedRows = gridApi.getSelectedRows();
+
+                if (selectedRows.length === 0) {
+                    showModal("No Selection", "Please select one or more members to delete using the checkboxes.");
+                    return;
+                }
+
+                // 2. Define the confirmation message and the delete action
+                const message = `Are you sure you want to permanently delete ${selectedRows.length} selected member(s)? This action cannot be undone.`;
+
+                const deleteAction = async () => {
+                    // Use a Firestore WriteBatch for efficient and atomic deletion
+                    const batch = writeBatch(db);
+                    
+                    selectedRows.forEach(row => {
+                        const memberId = row.SNS_ID;
+                        if (memberId) {
+                            const docPath = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers/${memberId}`;
+                            const memberDocRef = doc(db, docPath);
+                            batch.delete(memberDocRef);
+                        }
+                    });
+
+                    try {
+                        await batch.commit();
+                        console.log(`Successfully deleted ${selectedRows.length} members.`);
+                        showModal("Success", `Successfully deleted ${selectedRows.length} members.`);
+                        // The real-time listener will automatically update the grid UI.
+                    } catch (error) {
+                        console.error("Bulk delete failed:", error);
+                        showModal("Delete Failed", `Could not delete members. Error: ${error.message}`);
+                    }
+                };
+
+                // 3. Show the generic confirmation modal
+                showGenericConfirmationModal(message, deleteAction);
+            }
+
+
             /**
             * Updates the UI based on the current authentication state, populating the new dropdown menu.
             * @param {object} user - The authenticated user object or null.
@@ -1888,6 +1953,8 @@
                 const previousWinnersSection = document.getElementById('previous-winners-section');
                 const membersSection = document.getElementById('members-section');
 
+
+                const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
 
                 // --- Check if essential elements exist ---
                 if (!googleSigninBtn || !userProfileDropdown || !actionButton) {
@@ -1919,6 +1986,7 @@
                         addMemberButton.title = 'Add a new member to the scheme';
                         // 2. Show the "Old Winner Entry" menu item
                         historicalEntryLink.classList.remove('hidden');
+                        bulkDeleteBtn.classList.remove('hidden');
                     } else {
                         addMemberButton.disabled = true;
                         addMemberButton.classList.add('bg-gray-400', 'cursor-not-allowed', 'opacity-50');
@@ -1926,6 +1994,7 @@
                         addMemberButton.title = 'You must be an Admin to add a new member.';
                         // 2. Hide the "Old Winner Entry" menu item
                         historicalEntryLink.classList.add('hidden');
+                        bulkDeleteBtn.classList.add('hidden');
                     }
 
                     // 2. Populate the user dropdown elements
@@ -3137,6 +3206,11 @@
 
 
                 await initializeFirebase(firebaseConfig);
+                
+                bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+                if (bulkDeleteBtn) {
+                    bulkDeleteBtn.addEventListener('click', handleBulkDelete);
+                }
                 // Set up all the event listeners for the "Add New Member" modal
                 setupAddMemberModal();
 
