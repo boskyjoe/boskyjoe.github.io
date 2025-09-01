@@ -357,6 +357,7 @@
                 monthAndYear: monthAndYear,
                 winners: winnersData,
                 timestamp: drawTimestamp,
+                userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 userId: auth.currentUser.uid,
                 userEmail: auth.currentUser.email,
                 userName: auth.currentUser.displayName || auth.currentUser.email
