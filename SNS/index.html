@@ -1214,33 +1214,7 @@
                 });
             }
 
-            /**
-             * Enables or disables admin-only UI controls based on the current user's role.
-             * This provides clear visual feedback to the user.
-             */
-            function updateAdminControls() {
-                // Safety check in case the button isn't found
-                console.log("DEBUG: updateAdminControls", AppState.currentUserRole);
-
-                if (!addMemberButton) return; 
-
-                if (AppState.currentUserRole === 'Admin') {
-                    // --- USER IS AN ADMIN ---
-                    addMemberButton.disabled = false;
-                    // Restore the original, clickable styling
-                    addMemberButton.classList.remove('bg-gray-400', 'cursor-not-allowed', 'opacity-50');
-                    addMemberButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
-                    addMemberButton.title = 'Add a new member to the scheme';
-                } else {
-                    // --- USER IS NOT AN ADMIN (or is a 'Guest') ---
-                    addMemberButton.disabled = true;
-                    // Apply disabled styling for clear visual feedback
-                    addMemberButton.classList.add('bg-gray-400', 'cursor-not-allowed', 'opacity-50');
-                    addMemberButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
-                    addMemberButton.title = 'You must be an Admin to add a new member.';
-                }
-            }
-
+            
             // NEW, BULLETPROOF VERSION
             function preprocessMembersData(snapshot) {
                 const processedData = []; // Start with an empty array
@@ -1455,40 +1429,6 @@
                 return wrapper;
             }
 
-            /**
-             * Asks for confirmation and then deletes a member document from Firestore.
-             * @param {string} memberId - The SNS_ID of the member to delete.
-             */
-            async function deleteMember(memberId) {
-                if (!memberId) {
-                    console.error("Delete failed: No member ID provided.");
-                    return;
-                }
-
-                // 1. Define the message for the user.
-                const message = `Are you sure you want to delete member ${memberId}? This action cannot be undone.`;
-
-                // 2. Define the action to be taken on confirmation.
-                const deleteAction = async () => {
-                    try {
-                        const docPath = `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers/${memberId}`;
-                        const memberDocRef = doc(db, docPath);
-                        
-                        await deleteDoc(memberDocRef);
-                        
-                        console.log(`Successfully deleted member: ${memberId}`);
-                        // The real-time listener on the AG Grid will handle the UI update.
-                    } catch (error) {
-                        console.error(`Failed to delete member ${memberId}:`, error);
-                        showModal("Delete Failed", `Could not delete member. Error: ${error.message}`);
-                    }
-                };
-
-                // 3. Call the generic modal with the message and the action.
-                showGenericConfirmationModal(message, deleteAction);
-            }
-
-
 
             function loadMembersWithAGGrid() {
                 // Exit if the Firestore database instance is not available.
@@ -1667,35 +1607,6 @@
                 });
             }
 
-
-            //function formatFirestoreDate(cell) {
-            //    const val = cell.getValue();
-            //    if (!val || !val.toDate) return "";
-            //     const d = val.toDate();
-            //     return `${d.getDate().toString().padStart(2, '0')}-${d.toLocaleString('default', { month: 'short' })}-${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-            // }
-
-
-
-
-            //function buildMembersColumns(members) {
-            //    if (members.length === 0) return [];
-
-            //    const fields = Object.keys(members[0]);
-            //    return fields.map(field => {
-            //        return {
-            //            title: field,
-            //            field: field,
-            //             editor: field === "SNS_ID" ? false : "input",
-            //             headerFilter: "input",
-            //             headerSort: true,
-            ///          };
-            //      });
-            //  }
-
-
-
-
             /**
              * Generates the formatted button text with the current month and year.
              * @returns {string} The formatted button text.
@@ -1728,67 +1639,6 @@
                     event.target.style.display = 'none';
                 }
             };
-
-            async function loadMembers() {
-                if (!db) return;
-                const membersCollectionRef = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
-                try {
-                    const snapshot = await getDocs(membersCollectionRef);
-                    const members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                    if (members.length === 0) {
-                        noMembersMessage.classList.remove('hidden');
-                        return;
-                    }
-
-                    // Build table header dynamically
-                    const columns = Object.keys(members[0]);
-                    membersHeaderRow.innerHTML = columns.map(col => `
-            <th class="px-4 py-2 border-b text-left">${col}</th>
-        `).join('');
-
-                    // Populate rows
-                    membersTableBody.innerHTML = '';
-                    members.forEach(member => {
-                        const row = document.createElement('tr');
-                        row.className = 'hover:bg-gray-50';
-                        row.innerHTML = columns.map(col => {
-                            const isEditable = col !== 'SNS_ID';
-                            return `<td class="border-b px-4 py-2" contenteditable="${isEditable}" 
-                            data-id="${member.id}" data-field="${col}"
-                            ${!isEditable ? 'class="bg-gray-100 text-gray-600 cursor-not-allowed"' : ''}>
-                            ${member[col] || ''}
-                        </td>`;
-                        }).join('');
-                        membersTableBody.appendChild(row);
-                    });
-
-                    attachMemberTableListeners();
-
-                } catch (err) {
-                    console.error("Error loading members:", err);
-                    showModal("Error", "Failed to load members from Firestore.");
-                }
-            }
-
-            function attachMemberTableListeners() {
-                membersTableBody.querySelectorAll('td[contenteditable="true"]').forEach(cell => {
-                    cell.addEventListener('blur', async (e) => {
-                        const newValue = e.target.textContent.trim();
-                        const docId = e.target.dataset.id;
-                        const field = e.target.dataset.field;
-
-                        try {
-                            const memberDocRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`, docId);
-                            await setDoc(memberDocRef, { [field]: newValue, updatedBy: auth.currentUser.uid, updatedDate: serverTimestamp() }, { merge: true });
-                            console.log(`Updated ${field} for ${docId} to ${newValue}`);
-                        } catch (err) {
-                            console.error("Failed to update member:", err);
-                            showModal("Update Failed", "Could not save changes. Check console for details.");
-                        }
-                    });
-                });
-            }
 
 
             /**
