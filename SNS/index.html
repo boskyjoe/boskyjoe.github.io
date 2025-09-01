@@ -1008,7 +1008,7 @@
                  <div id="bulk-actions-container">
                     <button id="bulk-delete-btn" class="hidden px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md shadow-sm hover:bg-red-700 flex items-center transition">
                         <i class="fa-solid fa-trash-can mr-2"></i>
-                        Delete Selected
+                        Delete Selected Members
                     </button>
                 </div>
 
@@ -1460,7 +1460,7 @@
                             // --- Column Definitions (replaces 'columns' and 'colHeaders') ---
                             // --- NEW: Enable multi-row selection ---
                             rowSelection: {
-                                mode: 'multiple',
+                                mode: 'multiRow',
                                 enableClickSelection: false, // Note the inverted logic
                                 checkboxes: true,
                                 headerCheckbox: true
@@ -1507,8 +1507,6 @@
                                 },
                                 { headerName: "SNS_ID", field: "SNS_ID", sort:'asc',  editable: false, width: 200,
                                     // Add these two properties to enable checkboxes
-                                    //checkboxSelection: true,
-                                    //headerCheckboxSelection: true,
                                     // 2. Provide a custom comparator function for natural sorting.
                                     comparator: (valueA, valueB) => {
                                         // This function compares two values, e.g., "SSC12" and "SSC5"
