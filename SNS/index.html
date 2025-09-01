@@ -1260,7 +1260,7 @@
                             ChurchContactName: data.ChurchContactName || "",
                             ChurchContactPhone: data.ChurchContactPhone || "",
                             updatedBy: data.updatedBy || "",
-                            isActive: docData.isActive === false ? false : true,
+                            isActive: data.isActive === false ? false : true,
                             updatedDate: isValidTimestamp
                                 ? data.updatedDate.toDate().toLocaleString()
                                 : "" // Default to empty string if not a valid timestamp
@@ -1638,10 +1638,19 @@
                         const toRemove = [];
 
                         snapshot.docChanges().forEach((change) => {
-                            const docData = { ...change.doc.data(), SNS_ID: change.doc.id };
-                            if (change.type === "added") toAdd.push(docData);
-                            if (change.type === "modified") toUpdate.push(docData);
-                            if (change.type === "removed") toRemove.push(docData);
+                            const data = change.doc.data(); // Get the data object
+
+                            // Create the object for the grid, including the normalized 'isActive' field
+                            const gridRowData = {
+                                ...data,
+                                SNS_ID: change.doc.id,
+                                isActive: data.isActive === false ? false : true
+                            };
+
+                            if (change.type === "added") toAdd.push(gridRowData);
+                            if (change.type === "modified") toUpdate.push(gridRowData);
+                            // For 'removed', we just need the ID, but sending the whole object is fine.
+                            if (change.type === "removed") toRemove.push(gridRowData);
                         });
 
                         // Apply all changes in one batch
