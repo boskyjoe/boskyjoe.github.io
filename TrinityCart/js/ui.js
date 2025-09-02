@@ -34,8 +34,13 @@ const productsGridOptions = {
 // --- UI FUNCTIONS ---
 
 export function initializeGrids() {
-    memberGridApi = new agGrid.Grid(memberGridDiv, memberGridOptions);
-    productsGridApi = new agGrid.Grid(productsGridDiv, productsGridOptions);
+    // THE FIX: Use window.agGrid to access the global library
+    if (memberGridDiv) {
+        new window.agGrid.Grid(memberGridDiv, memberGridOptions);
+    }
+    if (productsGridDiv) {
+        new window.agGrid.Grid(productsGridDiv, productsGridOptions);
+    }
 }
 
 export function showView(viewId) {
