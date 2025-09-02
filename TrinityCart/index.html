@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Church Store Management</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- ag-Grid CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-alpine.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <!-- ======================= -->
+    <!--      HEADER / TITLE BAR -->
+    <!-- ======================= -->
+    <header class="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-10">
+        <div class="flex items-center space-x-4">
+            <img src="https://via.placeholder.com/50/4B5563/FFFFFF?text=CS" alt="Store Logo" class="h-12 w-12 rounded-full">
+            <div>
+                <h1 class="text-xl font-bold text-gray-800">St. Mary's Festival Store</h1>
+                <p class="text-sm text-gray-500">123 Church Lane, Anytown, USA</p>
+            </div>
+        </div>
+        <nav class="flex items-center space-x-6">
+            <a href="#" id="dashboard-link" class="text-gray-600 hover:text-blue-600 font-medium">My Dashboard</a>
+            <button id="auth-button" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                Login
+            </button>
+        </nav>
+    </header>
+
+    <!-- ======================= -->
+    <!--      MAIN CONTENT AREA  -->
+    <!-- ======================= -->
+    <main class="p-4 sm:p-8">
+        <!-- View 1: Login Prompt (Default View) -->
+        <div id="login-view" class="view text-center">
+            <h2 class="text-2xl font-semibold mb-4">Welcome to the Store Management App</h2>
+            <p class="text-gray-600">Please log in to continue.</p>
+        </div>
+
+        <!-- View 2: Member Dashboard -->
+        <div id="member-dashboard-view" class="view">
+            <h2 class="text-2xl font-semibold mb-6">Member Dashboard</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <button class="action-card bg-green-500">Checkout New Items</button>
+                <button class="action-card bg-yellow-500">Report a Sale</button>
+                <button class="action-card bg-red-500">Return Unsold Items</button>
+            </div>
+            <h3 class="text-xl font-semibold mb-4">My Current Items</h3>
+            <div id="member-consignment-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+        </div>
+
+        <!-- View 3: Admin Dashboard (Control Panel) -->
+        <div id="admin-dashboard-view" class="view">
+            <h2 class="text-2xl font-semibold mb-6">Admin Control Panel</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div id="admin-manage-seasons" class="admin-card"><h3 class="font-bold text-lg">Manage Seasons</h3></div>
+                <div id="admin-manage-vendors" class="admin-card"><h3 class="font-bold text-lg">Manage Vendors</h3></div>
+                <div id="admin-manage-products" class="admin-card"><h3 class="font-bold text-lg">Manage Products</h3></div>
+                <div id="admin-log-delivery" class="admin-card"><h3 class="font-bold text-lg">Log New Delivery</h3></div>
+                <div id="admin-view-reports" class="admin-card"><h3 class="font-bold text-lg">View Reports</h3></div>
+                <div id="admin-manage-users" class="admin-card"><h3 class="font-bold text-lg">Manage Users</h3></div>
+            </div>
+        </div>
+        
+        <!-- View 4: Admin Form Example (Manage Products) -->
+        <div id="admin-manage-products-view" class="view">
+            <a href="#" class="back-link">&larr; Back to Admin Dashboard</a>
+            <h2 class="text-2xl font-semibold mb-4">Manage Products</h2>
+            <div class="bg-white p-6 rounded-lg shadow mb-6">
+                <h3 class="text-xl font-semibold mb-4">Add New Product</h3>
+                <form class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="text" placeholder="Product Name (e.g., Christmas Cake Slice)" class="form-input">
+                    <input type="number" placeholder="Selling Price" class="form-input">
+                    <select class="form-input"><option disabled selected>Select Source Item</option></select>
+                    <input type="number" placeholder="Conversion Factor (e.g., 10)" class="form-input">
+                    <button type="submit" class="md:col-span-2 bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Save Product</button>
+                </form>
+            </div>
+            <h3 class="text-xl font-semibold mb-4">Existing Products</h3>
+            <div id="products-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+        </div>
+        
+        <!-- Add other admin views here as needed, following the same pattern -->
+
+    </main>
+
+    <!-- ag-Grid JS -->
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    <!-- Our Application JS - LOADED AS A MODULE -->
+    <script type="module" src="js/main.js"></script> 
+</body>
+</html>
