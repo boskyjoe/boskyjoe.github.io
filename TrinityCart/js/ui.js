@@ -1,3 +1,5 @@
+import { Grid } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
+
 import { appState } from './state.js';
 import { fetchProducts, fetchMemberConsignments } from './api.js';
 import { handleLogout } from './main.js'; // Import the logout handler
@@ -12,7 +14,6 @@ const memberGridDiv = document.getElementById('member-consignment-grid');
 const productsGridDiv = document.getElementById('products-grid');
 
 // --- GRID DEFINITIONS ---
-let memberGridApi;
 const memberGridOptions = {
     columnDefs: [
         { field: "productName", headerName: "Item Name", flex: 2 },
@@ -21,7 +22,6 @@ const memberGridOptions = {
     rowData: [],
 };
 
-let productsGridApi;
 const productsGridOptions = {
     columnDefs: [
         { field: "productName", headerName: "Product Name", flex: 2 },
@@ -35,33 +35,26 @@ const productsGridOptions = {
 // --- UI FUNCTIONS ---
 
 export function renderAuthUI() {
-    // Clear previous auth buttons
     authContainer.innerHTML = '';
-
     if (appState.currentUser) {
-        // User is logged in, show a logout button
         const logoutButton = document.createElement('button');
         logoutButton.id = 'logout-button';
         logoutButton.className = 'bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors';
         logoutButton.textContent = 'Logout';
-        logoutButton.onclick = handleLogout; // Attach the handler
+        logoutButton.onclick = handleLogout;
         authContainer.appendChild(logoutButton);
     } else {
-        // User is logged out, render the Google button
-        google.accounts.id.renderButton(
-            authContainer,
-            { theme: "outline", size: "large" }  // Customization options
-        );
+        google.accounts.id.renderButton(authContainer, { theme: "outline", size: "large" });
     }
 }
 
 export function initializeGrids() {
-    // THE FIX: Use window.agGrid to access the global library
+    // THE FIX: Now we can just use `new Grid(...)` because we imported it.
     if (memberGridDiv) {
-        new window.agGrid.Grid(memberGridDiv, memberGridOptions);
+        new Grid(memberGridDiv, memberGridOptions);
     }
     if (productsGridDiv) {
-        new window.agGrid.Grid(productsGridDiv, productsGridOptions);
+        new Grid(productsGridDiv, productsGridOptions);
     }
 }
 
@@ -74,8 +67,7 @@ export function showView(viewId) {
 }
 
 export async function updateUI() {
-    renderAuthUI(); // Always update the auth button first
-
+    renderAuthUI();
     if (appState.currentUser && appState.currentUser.role !== 'guest') {
         dashboardLink.style.display = 'inline-block';
         if (appState.currentUser.role === 'admin') {
@@ -83,7 +75,9 @@ export async function updateUI() {
         } else {
             showView('member-dashboard-view');
             const consignments = await fetchMemberConsignments();
-            memberGridOptions.api.setRowData(consignments);
+            if (memberGridOptions.api) { // Check if grid is ready
+                memberGridOptions.api.setRowData(consignments);
+            }
         }
     } else {
         dashboardLink.style.display = 'none';
@@ -92,9 +86,11 @@ export async function updateUI() {
 }
 
 
+
 export async function showAdminProductsView() {
     showView('admin-manage-products-view');
-    // Load data for the products grid
     const products = await fetchProducts();
-    productsGridOptions.api.setRowData(products);
+    if (productsGridOptions.api) { // Check if grid is ready
+        productsGridOptions.api.setRowData(products);
+    }
 }
