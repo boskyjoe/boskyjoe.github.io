@@ -29,32 +29,17 @@ function parseJwt(token) {
  * @param {object} response The response object from Google.
  */
 window.handleCredentialResponse = function(response) {
-    console.log("Encoded JWT ID token: " + response.credential);
     const payload = parseJwt(response.credential);
-
-    // Get user info from the token
     const userEmail = payload.email;
     const userName = payload.name;
     
-    // --- BACKEND SIMULATION ---
-    // Check if the logged-in user is authorized in our "database"
     if (authorizedUsers[userEmail]) {
-        appState.currentUser = {
-            name: userName,
-            email: userEmail,
-            role: authorizedUsers[userEmail].role // Assign role from our list
-        };
+        appState.currentUser = { name: userName, email: userEmail, role: authorizedUsers[userEmail].role };
         console.log(`User ${userName} logged in with role: ${appState.currentUser.role}`);
     } else {
-        // This user is not in our system
-        appState.currentUser = {
-            name: userName,
-            email: userEmail,
-            role: 'guest' // Assign a default, non-privileged role
-        };
+        appState.currentUser = { name: userName, email: userEmail, role: 'guest' };
         alert(`Welcome, ${userName}! Your email (${userEmail}) is not registered for a specific role.`);
     }
-
     updateUI();
 }
 
@@ -63,12 +48,8 @@ window.handleCredentialResponse = function(response) {
  * Handles user logout.
  */
 function handleLogout() {
-    // Clear our application's user state
     appState.currentUser = null;
-    
-    // Optional: Tell Google to not automatically select the previous account on next visit.
     google.accounts.id.disableAutoSelect();
-
     console.log("User logged out.");
     updateUI();
 }
@@ -76,8 +57,6 @@ function handleLogout() {
 
 // --- EVENT LISTENER SETUP ---
 function setupEventListeners() {
-    // We now add the logout listener dynamically in ui.js
-    // Main dashboard link
     const dashboardLink = document.getElementById('dashboard-link');
     dashboardLink.addEventListener('click', (e) => {
         e.preventDefault();
@@ -87,10 +66,8 @@ function setupEventListeners() {
         }
     });
 
-    // Admin dashboard cards
     document.getElementById('admin-manage-products').addEventListener('click', showAdminProductsView);
     
-    // Back links
     document.querySelector('#admin-manage-products-view .back-link').addEventListener('click', (e) => {
         e.preventDefault();
         showView('admin-dashboard-view');
@@ -119,28 +96,23 @@ function initializeApp() {
     renderAuthUI();
 }
 
-/**
- * This function waits for the ag-Grid library to be loaded before starting the app.
- */
-function waitForAgGridAndInitialize() {
-    // Check every 100ms
-    const interval = setInterval(() => {
-        // If the window.agGrid object exists, the library is loaded.
-        if (window.agGrid) {
-            // Stop checking
-            clearInterval(interval);
-            // Start the main application
-            initializeApp();
-        } else {
-            console.log("Waiting for ag-Grid to load...");
-        }
-    }, 100);
-}
 
 // --- APPLICATION ENTRY POINT ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Instead of starting the app directly, we start the waiting process.
-    waitForAgGridAndInitialize();
+    console.log("Application Initializing...");
+
+    // Initialize everything in a clean order
+    initializeGrids();
+    setupEventListeners();
+    
+    // Initialize Google Sign-In
+    google.accounts.id.initialize({
+        client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com", // <-- PASTE YOUR CLIENT ID HERE
+        callback: window.handleCredentialResponse
+    });
+
+    // Render the initial UI (which includes the auth buttons)
+    updateUI();
 });
 
 // We need to export handleLogout so ui.js can attach it to the button
