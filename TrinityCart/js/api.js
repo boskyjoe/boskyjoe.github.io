@@ -32,18 +32,19 @@ export async function getVendors() {
     }
 }
 
-async function postData(action, data, userEmail) { // Add userEmail parameter
+async function postData(action, data, userEmail) {
     try {
         const response = await fetch(API_URL, {
             method: 'POST',
-            mode: 'no-cors',
+            // mode: 'no-cors', // <-- REMOVE THIS LINE
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action, data, userEmail }), // Pass userEmail in the request body
+            body: JSON.stringify({ action, data, userEmail }),
         });
-        return { success: true };
+        // Now that we can read the response, let's return it!
+        return await response.json(); 
     } catch (error) {
         console.error(`Action ${action} failed:`, error);
-        return { success: false };
+        return { success: false, error: error.message };
     }
 }
 
