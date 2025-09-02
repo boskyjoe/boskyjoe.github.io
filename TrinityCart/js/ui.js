@@ -1,9 +1,10 @@
 import { appState } from './state.js';
 import { fetchProducts, fetchMemberConsignments } from './api.js';
+import { handleLogout } from './main.js'; // Import the logout handler
 
 // --- DOM ELEMENT REFERENCES ---
 const views = document.querySelectorAll('.view');
-const authButton = document.getElementById('auth-button');
+const authContainer = document.getElementById('auth-container');
 const dashboardLink = document.getElementById('dashboard-link');
 
 // --- GRID ELEMENTS ---
@@ -33,6 +34,27 @@ const productsGridOptions = {
 
 // --- UI FUNCTIONS ---
 
+export function renderAuthUI() {
+    // Clear previous auth buttons
+    authContainer.innerHTML = '';
+
+    if (appState.currentUser) {
+        // User is logged in, show a logout button
+        const logoutButton = document.createElement('button');
+        logoutButton.id = 'logout-button';
+        logoutButton.className = 'bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors';
+        logoutButton.textContent = 'Logout';
+        logoutButton.onclick = handleLogout; // Attach the handler
+        authContainer.appendChild(logoutButton);
+    } else {
+        // User is logged out, render the Google button
+        google.accounts.id.renderButton(
+            authContainer,
+            { theme: "outline", size: "large" }  // Customization options
+        );
+    }
+}
+
 export function initializeGrids() {
     // THE FIX: Use window.agGrid to access the global library
     if (memberGridDiv) {
@@ -52,26 +74,23 @@ export function showView(viewId) {
 }
 
 export async function updateUI() {
-    if (appState.currentUser) {
-        // User is LOGGED IN
-        authButton.textContent = 'Logout';
-        dashboardLink.style.display = 'inline-block';
+    renderAuthUI(); // Always update the auth button first
 
+    if (appState.currentUser && appState.currentUser.role !== 'guest') {
+        dashboardLink.style.display = 'inline-block';
         if (appState.currentUser.role === 'admin') {
             showView('admin-dashboard-view');
         } else {
             showView('member-dashboard-view');
-            // Load data for the member's grid
             const consignments = await fetchMemberConsignments();
             memberGridOptions.api.setRowData(consignments);
         }
     } else {
-        // User is LOGGED OUT
-        authButton.textContent = 'Login';
         dashboardLink.style.display = 'none';
         showView('login-view');
     }
 }
+
 
 export async function showAdminProductsView() {
     showView('admin-manage-products-view');
