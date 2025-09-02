@@ -169,6 +169,40 @@
 
         <!-- Add other admin views here as needed, following the same pattern -->
 
+        <!-- View 5: Admin - Manage Vendors -->
+        <div id="admin-manage-vendors-view" class="view">
+            <a href="#" class="back-link">&larr; Back to Admin Dashboard</a>
+            <h2 class="text-2xl font-semibold mb-4">Manage Vendors</h2>
+            
+            <!-- UPDATED Form to Add/Edit a Vendor -->
+            <div class="bg-white p-6 rounded-lg shadow mb-6">
+                <h3 id="vendor-form-title" class="text-xl font-semibold mb-4">Add New Vendor</h3>
+                <form id="vendor-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" id="vendorId-input"> <!-- For updates -->
+                    
+                    <!-- Row 1 -->
+                    <input type="text" id="vendorName-input" placeholder="Vendor Name" class="form-input" required>
+                    <input type="text" id="address-input" placeholder="Address" class="form-input">
+                    
+                    <!-- Row 2 -->
+                    <input type="tel" id="contactNo-input" placeholder="Contact No" class="form-input">
+                    <input type="email" id="contactEmail-input" placeholder="Contact Email" class="form-input">
+
+                    <!-- Row 3: Buttons -->
+                    <div class="md:col-span-2 flex space-x-2">
+                        <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Save Vendor</button>
+                        <button type="button" id="vendor-form-clear" class="w-full bg-gray-500 text-white p-2 rounded hover:bg-gray-600">Clear</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Grid to Display Existing Vendors -->
+            <h3 class="text-xl font-semibold mb-4">Existing Vendors</h3>
+            <div id="vendors-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+        </div>
+
+
+
     </main>
 
 
