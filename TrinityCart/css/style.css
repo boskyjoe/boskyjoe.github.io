@@ -28,3 +28,6 @@
 .back-link {
     @apply text-blue-600 mb-4 inline-block hover:underline;
 }
+.admin-card {
+    @apply bg-white p-6 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer flex flex-col items-center justify-center;
+}
