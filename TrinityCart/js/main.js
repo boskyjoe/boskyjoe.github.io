@@ -1,3 +1,5 @@
+import { ModuleRegistry, AllCommunityModule } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
+
 import { appState } from './state.js';
 import { updateUI, showView, initializeGrids, showAdminProductsView, renderAuthUI } from './ui.js';
 
@@ -101,7 +103,10 @@ function initializeApp() {
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Application Initializing...");
 
-    // Initialize everything in a clean order
+    // THE FIX: Register the ag-Grid Community modules to enable all features.
+    ModuleRegistry.registerModules([AllCommunityModule]);
+
+    // Initialize everything else in a clean order
     initializeGrids();
     setupEventListeners();
     
