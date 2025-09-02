@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Church Store Management</title>
-    <!-- Tailwind CSS -->
+    
+    <!-- Google Sign-In Library -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <!-- Tailwind CSS, ag-Grid CSS, Custom CSS (order is fine) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- ag-Grid CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-alpine.css">
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="bg-gray-100 font-sans">
@@ -17,7 +19,7 @@
     <!-- ======================= -->
     <!--      HEADER / TITLE BAR -->
     <!-- ======================= -->
-    <header class="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-10">
+     <header class="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-10">
         <div class="flex items-center space-x-4">
             <img src="https://via.placeholder.com/50/4B5563/FFFFFF?text=CS" alt="Store Logo" class="h-12 w-12 rounded-full">
             <div>
@@ -27,9 +29,13 @@
         </div>
         <nav class="flex items-center space-x-6">
             <a href="#" id="dashboard-link" class="text-gray-600 hover:text-blue-600 font-medium">My Dashboard</a>
-            <button id="auth-button" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
-                Login
-            </button>
+            
+            <!-- THE OLD BUTTON IS REPLACED BY THIS DIV -->
+            <div id="auth-container">
+                <!-- This is where the Google button will render -->
+            </div>
+            
+            <!-- We will create a new logout button with JS when needed -->
         </nav>
     </header>
 
@@ -40,7 +46,7 @@
         <!-- View 1: Login Prompt (Default View) -->
         <div id="login-view" class="view text-center">
             <h2 class="text-2xl font-semibold mb-4">Welcome to the Store Management App</h2>
-            <p class="text-gray-600">Please log in to continue.</p>
+            <p class="text-gray-600">Please log in with your Google account to continue.</p>
         </div>
 
         <!-- View 2: Member Dashboard -->
