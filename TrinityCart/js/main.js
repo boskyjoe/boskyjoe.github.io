@@ -3,6 +3,12 @@ import { ModuleRegistry, AllCommunityModule } from 'https://cdn.jsdelivr.net/npm
 import { appState } from './state.js';
 import { updateUI, showView, initializeGrids, showAdminProductsView, renderAuthUI } from './ui.js';
 
+
+import { showAdminVendorsView, populateVendorForm, clearVendorForm } from './ui.js';
+import { setVendorStatus, addVendor, updateVendor } from './api.js'; // Update imports
+
+
+
 // --- MOCK USER DATA ---
 const authorizedUsers = {
     'stsebastianschurchupdates@gmail.com': { name: 'John Doe', role: 'member' },
@@ -67,6 +73,70 @@ function setupEventListeners() {
             showView(viewId);
         }
     });
+
+    // Admin dashboard cards
+    document.getElementById('admin-manage-vendors').addEventListener('click', showAdminVendorsView);
+    
+    // Back links
+    document.querySelector('#admin-manage-vendors-view .back-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        showView('admin-dashboard-view');
+    });
+
+    // Vendor form submission
+    document.getElementById('vendor-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const vendorId = document.getElementById('vendorId-input').value;
+        const userEmail = appState.currentUser.email; // Get the current user's email
+
+        const vendorData = { /* ... (this part is the same) ... */ };
+
+        if (vendorId) {
+            vendorData.vendorId = vendorId;
+            await updateVendor(vendorData, userEmail); // Pass email
+        } else {
+            await addVendor(vendorData, userEmail); // Pass email
+        }
+        
+        alert('Vendor saved successfully!');
+        clearVendorForm();
+        showAdminVendorsView();
+    });
+
+
+    // Vendor form clear button
+    document.getElementById('vendor-form-clear').addEventListener('click', clearVendorForm);
+
+    // Listener for Modify/Delete buttons in the vendors grid (Event Delegation)
+    const vendorsGrid = document.getElementById('vendors-grid');
+
+    vendorsGrid.addEventListener('click', async (e) => {
+        const target = e.target;
+        const vendorId = target.dataset.id;
+        if (!vendorId) return; // Exit if the click wasn't on a button with a data-id
+
+        const rowNode = vendorsGridOptions.api.getRowNode(vendorId);
+        const userEmail = appState.currentUser.email;
+
+        if (target.classList.contains('btn-modify')) {
+            populateVendorForm(rowNode.data);
+        }
+
+        if (target.classList.contains('btn-deactivate')) {
+            if (confirm(`Are you sure you want to DEACTIVATE vendor ${vendorId}?`)) {
+                await setVendorStatus(vendorId, false, userEmail); // Set isActive to false
+                showAdminVendorsView();
+            }
+        }
+
+        if (target.classList.contains('btn-activate')) {
+            if (confirm(`Are you sure you want to ACTIVATE vendor ${vendorId}?`)) {
+                await setVendorStatus(vendorId, true, userEmail); // Set isActive to true
+                showAdminVendorsView();
+            }
+        }
+    });
+
 
     document.getElementById('admin-manage-products').addEventListener('click', showAdminProductsView);
     
