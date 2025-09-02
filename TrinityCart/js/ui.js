@@ -1,4 +1,5 @@
-import { Grid } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
+import { createGrid } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
+
 
 import { appState } from './state.js';
 import { fetchProducts, fetchMemberConsignments } from './api.js';
@@ -33,6 +34,17 @@ const productsGridOptions = {
 };
 
 // --- UI FUNCTIONS ---
+export function initializeGrids() {
+    // THE FIX: Call `createGrid` as a function, instead of `new Grid()`.
+    if (memberGridDiv) {
+        createGrid(memberGridDiv, memberGridOptions);
+    }
+    if (productsGridDiv) {
+        createGrid(productsGridDiv, productsGridOptions);
+    }
+}
+
+
 
 export function renderAuthUI() {
     authContainer.innerHTML = '';
@@ -45,16 +57,6 @@ export function renderAuthUI() {
         authContainer.appendChild(logoutButton);
     } else {
         google.accounts.id.renderButton(authContainer, { theme: "outline", size: "large" });
-    }
-}
-
-export function initializeGrids() {
-    // THE FIX: Now we can just use `new Grid(...)` because we imported it.
-    if (memberGridDiv) {
-        new Grid(memberGridDiv, memberGridOptions);
-    }
-    if (productsGridDiv) {
-        new Grid(productsGridDiv, productsGridOptions);
     }
 }
 
