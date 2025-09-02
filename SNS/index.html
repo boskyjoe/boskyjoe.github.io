@@ -1030,7 +1030,7 @@
                  <div id="bulk-actions-container">
                    <button id="bulk-toggle-status-btn" class="hidden px-4 py-2 bg-yellow-500 text-white text-sm font-semibold rounded-md shadow-sm hover:bg-yellow-600 flex items-center transition">
                         <i class="fa-solid fa-arrows-rotate mr-2"></i>
-                        Toggle Status
+                        Toggle Member Status
                     </button>
                 </div>
 
@@ -1846,6 +1846,10 @@
                     // Only commit the batch if there are actual changes to be made.
                     if (changedCount === 0) {
                         showModal("No Change", "All selected members are already in the target state.");
+                        // Deselect rows even if no change was made to clear the red highlight.
+                        if (gridApi) {
+                            gridApi.deselectAll();
+                        }
                         return;
                     }
 
@@ -1853,7 +1857,10 @@
                         await batch.commit();
                         console.log(`Successfully ${actionVerb.toLowerCase()}d ${changedCount} members.`);
                         showModal("Success", `Successfully ${actionVerb.toLowerCase()}d ${changedCount} members.`);
-                        // The real-time listener will automatically update the grid UI.
+                        if (gridApi) {
+                            gridApi.deselectAll();
+                        }
+
                     } catch (error) {
                         console.error(`Bulk ${actionVerb.toLowerCase()} failed:`, error);
                         showModal("Action Failed", `Could not ${actionVerb.toLowerCase()} members. Error: ${error.message}`);
