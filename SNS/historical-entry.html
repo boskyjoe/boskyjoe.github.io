@@ -265,10 +265,22 @@
             ];
             
             const timestampValue = document.getElementById('draw-timestamp').value;
-
+            
+            // 1. First, check if any fields are empty
             if (!monthInputValue || !timestampValue || !winnerTicket || consolationTickets.some(t => !t)) {
                 statusMessage.innerHTML = `<p class="text-red-600">Error: All fields are required.</p>`;
                 resetSaveButton();
+                return;
+            }
+
+            // 2. NEW VALIDATION: Check the format of all ticket numbers
+            const ticketFormatRegex = /^SSC\d+$/;
+            const isWinnerTicketValid = ticketFormatRegex.test(winnerTicket);
+            const areConsolationTicketsValid = consolationTickets.every(ticket => ticketFormatRegex.test(ticket));
+
+            if (!isWinnerTicketValid || !areConsolationTicketsValid) {
+                statusMessage.innerHTML = `<p class="text-red-600">Error: All ticket numbers must start with 'SSC' followed only by numbers (e.g., SSC12345).</p>`;
+                resetSaveButton(); // Assuming resetSaveButton is defined elsewhere
                 return;
             }
 
