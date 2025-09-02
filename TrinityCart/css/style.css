@@ -1,0 +1,30 @@
+/* A simple class to hide/show our views */
+.view {
+    display: none;
+}
+.view.active {
+    display: block;
+    animation: fadeIn 0.5s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Reusable component styles */
+.action-card {
+    @apply text-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow text-lg font-semibold;
+}
+
+.admin-card {
+    @apply bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer;
+}
+
+.form-input {
+    @apply p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+}
+
+.back-link {
+    @apply text-blue-600 mb-4 inline-block hover:underline;
+}
