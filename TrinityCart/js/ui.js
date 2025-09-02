@@ -5,6 +5,8 @@ import { appState } from './state.js';
 import { fetchProducts, fetchMemberConsignments } from './api.js';
 import { handleLogout } from './main.js'; // Import the logout handler
 
+import { getVendors } from './api.js';
+
 // --- DOM ELEMENT REFERENCES ---
 const views = document.querySelectorAll('.view');
 const authContainer = document.getElementById('auth-container');
@@ -33,6 +35,47 @@ const productsGridOptions = {
     rowData: [],
 };
 
+
+
+const vendorsGridDiv = document.getElementById('vendors-grid');
+const vendorsGridOptions = {
+    columnDefs: [
+        { field: "VendorID", headerName: "ID", width: 150 },
+        { field: "VendorName", headerName: "Vendor Name", flex: 1, minWidth: 150 },
+        { field: "Address", headerName: "Address", flex: 2, minWidth: 200 },
+        { field: "ContactNo", headerName: "Contact No", flex: 1, minWidth: 120 },
+        { field: "ContactEmail", headerName: "Email", flex: 1, minWidth: 150 },
+        { field: "isActive", headerName: "Status", width: 100, cellRenderer: p => p.value ? 'Active' : 'Inactive' },
+        {
+            headerName: "Actions",
+            width: 150,
+            cellRenderer: (params) => {
+                const id = params.data.VendorID;
+                const isActive = params.data.isActive;
+                const actionButton = isActive
+                    ? `<button class='btn-deactivate' data-id='${id}'>Deactivate</button>`
+                    : `<button class='btn-activate' data-id='${id}'>Activate</button>`;
+                
+                return `
+                    <button class='btn-modify' data-id='${id}'>Modify</button>
+                    ${actionButton}
+                `;
+            }
+        },
+        // Audit columns are useful for debugging but hidden by default
+        { field: "createdBy", headerName: "Created By", hide: true },
+        { field: "createdDate", headerName: "Created Date", hide: true },
+        { field: "updatedBy", headerName: "Updated By", hide: true },
+        { field: "updatedDate", headerName: "Updated Date", hide: true },
+    ],
+    rowData: [],
+    getRowId: params => params.data.VendorID,
+    // This rule will style the entire row if the vendor is inactive
+    rowClassRules: {
+        'opacity-50 line-through': params => params.data.isActive === false,
+    }
+};
+
 // --- UI FUNCTIONS ---
 export function initializeGrids() {
     // THE FIX: Call `createGrid` as a function, instead of `new Grid()`.
@@ -42,7 +85,38 @@ export function initializeGrids() {
     if (productsGridDiv) {
         createGrid(productsGridDiv, productsGridOptions);
     }
+    if (vendorsGridDiv) {
+        createGrid(vendorsGridDiv, vendorsGridOptions);
+    }
 }
+
+export async function showAdminVendorsView() {
+    showView('admin-manage-vendors-view');
+    clearVendorForm();
+    const vendors = await getVendors();
+    if (vendorsGridOptions.api) {
+        vendorsGridOptions.api.setRowData(vendors);
+    }
+}
+
+export function populateVendorForm(vendorData) {
+    document.getElementById('vendor-form-title').textContent = 'Edit Vendor';
+    document.getElementById('vendorId-input').value = vendorData.VendorID;
+    document.getElementById('vendorName-input').value = vendorData.VendorName;
+    document.getElementById('address-input').value = vendorData.Address;
+    document.getElementById('contactNo-input').value = vendorData.ContactNo;
+    document.getElementById('contactEmail-input').value = vendorData.ContactEmail;
+}
+
+
+export function clearVendorForm() {
+    document.getElementById('vendor-form-title').textContent = 'Add New Vendor';
+    document.getElementById('vendor-form').reset();
+    document.getElementById('vendorId-input').value = '';
+}
+
+
+
 
 
 
