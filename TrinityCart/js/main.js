@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize Google Sign-In
     google.accounts.id.initialize({
-        client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com", // <-- PASTE YOUR CLIENT ID HERE
+        client_id: "713239097105-tpveo8brjt63epqodgm7pojvj5nadps9.apps.googleusercontent.com", // <-- PASTE YOUR CLIENT ID HERE
         callback: window.handleCredentialResponse
     });
 
