@@ -97,19 +97,50 @@ function setupEventListeners() {
     });
 }
 
-// --- APPLICATION INITIALIZATION ---
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("Application Initializing...");
+function initializeApp() {
+    console.log("ag-Grid is ready. Initializing application...");
+    
+    // 1. Initialize Grids now that we know agGrid is available
     initializeGrids();
+    
+    // 2. Set up all our button clicks and navigation
     setupEventListeners();
+    
+    // 3. Render the initial UI state
     updateUI();
     
-    // Initialize the Google Sign-In button
+    // 4. Initialize the Google Sign-In button
     google.accounts.id.initialize({
-        client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com", // <-- PASTE YOUR CLIENT ID HERE
+        client_id: "713239097105-tpveo8brjt63epqodgm7pojvj5nadps9.apps.googleusercontent.com", // <-- PASTE YOUR CLIENT ID HERE
         callback: window.handleCredentialResponse
     });
+    
+    // 5. Render the Google button or the logout button
     renderAuthUI();
+}
+
+/**
+ * This function waits for the ag-Grid library to be loaded before starting the app.
+ */
+function waitForAgGridAndInitialize() {
+    // Check every 100ms
+    const interval = setInterval(() => {
+        // If the window.agGrid object exists, the library is loaded.
+        if (window.agGrid) {
+            // Stop checking
+            clearInterval(interval);
+            // Start the main application
+            initializeApp();
+        } else {
+            console.log("Waiting for ag-Grid to load...");
+        }
+    }, 100);
+}
+
+// --- APPLICATION ENTRY POINT ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Instead of starting the app directly, we start the waiting process.
+    waitForAgGridAndInitialize();
 });
 
 // We need to export handleLogout so ui.js can attach it to the button
