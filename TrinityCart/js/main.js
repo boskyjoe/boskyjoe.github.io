@@ -87,6 +87,7 @@ function setupEventListeners() {
     document.getElementById('vendor-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const vendorId = document.getElementById('vendorId-input').value;
+        const userEmail = appState.currentUser.email; // Get the current user's email
         
         // UPDATED: Collect data from all new form fields
         const vendorData = {
