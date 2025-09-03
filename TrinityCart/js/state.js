@@ -1,5 +1,5 @@
-// This object is the "single source of truth" for our application's state.
+// js/state.js
 export const appState = {
-    currentUser: null, // Holds user info { name, email, role } when logged in.
-    currentSeason: null, // Will hold the active season object.
+    currentUser: null, // Will hold { uid, displayName, email, role }
+    activeView: 'login-view',
 };
