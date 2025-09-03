@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GAS POST Tester</title>
+    <title>GAS CORS & POST Tester</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -12,10 +12,9 @@
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
     <div class="bg-white p-8 rounded-lg shadow-xl max-w-lg w-full text-center">
-        <h1 class="text-2xl font-bold mb-4">Google Apps Script POST Test</h1>
+        <h1 class="text-2xl font-bold mb-4">Detailed GAS Test</h1>
         <p class="text-gray-600 mb-6">
-            Click the button below to send a POST request to your Google Apps Script endpoint.
-            Open your browser's console to see the response.
+            This will send a POST request and show you the exact response headers and body.
         </p>
 
         <div class="flex items-center justify-center space-x-2 mb-6">
@@ -23,20 +22,23 @@
             <input type="text" id="apiUrl" class="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500 text-sm" value="https://script.google.com/macros/s/AKfycbyKWb0zxExuWtrvGw0kOtkoxdf5UGYtZSrXLZk8VWYzms8q0kHt4Ynn_J0U9G9g7tiY/exec" placeholder="Paste your /exec URL here">
         </div>
 
-        <button id="postBtn" class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-            Send POST Request
+        <button id="testBtn" class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+            Send Test Request
         </button>
 
         <div id="responseContainer" class="mt-8 p-4 bg-gray-50 border border-gray-200 rounded-md text-left hidden">
-            <h3 class="font-bold text-gray-800 mb-2">Response:</h3>
+            <h3 class="font-bold text-gray-800 mb-2">Request Status & Headers:</h3>
+            <pre id="statusOutput" class="text-sm text-gray-700 mb-4"></pre>
+            <h3 class="font-bold text-gray-800 mb-2">Response Body:</h3>
             <pre id="responseOutput" class="text-sm text-gray-700 whitespace-pre-wrap break-words"></pre>
         </div>
     </div>
 
     <script>
-        const postBtn = document.getElementById('postBtn');
+        const testBtn = document.getElementById('testBtn');
         const apiUrlInput = document.getElementById('apiUrl');
         const responseContainer = document.getElementById('responseContainer');
+        const statusOutput = document.getElementById('statusOutput');
         const responseOutput = document.getElementById('responseOutput');
 
         async function postData() {
@@ -45,15 +47,13 @@
                 action: 'addVendor',
                 data: {
                     vendorName: 'Test Vendor',
-                    address: '123 Test St',
-                    contactNo: '123-456-7890',
-                    contactEmail: 'test@example.com'
-                },
-                userEmail: 'test-user@example.com'
+                    address: '123 Test St'
+                }
             };
 
             responseContainer.classList.add('hidden');
-            responseOutput.textContent = 'Loading...';
+            statusOutput.textContent = 'Loading...';
+            responseOutput.textContent = '';
 
             try {
                 const response = await fetch(API_URL, {
@@ -61,23 +61,32 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+                
+                let headersText = '';
+                response.headers.forEach((value, key) => {
+                    headersText += `${key}: ${value}\n`;
+                });
+
+                statusOutput.textContent = `Status: ${response.status} ${response.statusText}\n\n` + headersText;
 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorText = await response.text();
+                    responseOutput.textContent = `Error Response:\n${errorText}`;
+                    throw new Error(`HTTP error! Status: ${response.status}`);
                 }
                 
                 const data = await response.json();
                 responseOutput.textContent = JSON.stringify(data, null, 2);
 
             } catch (error) {
-                responseOutput.textContent = `Error: ${error.message}. Please check your API URL and Apps Script deployment settings.`;
+                responseOutput.textContent = `Fetch error: ${error.message}`;
                 console.error('Fetch error:', error);
             } finally {
                 responseContainer.classList.remove('hidden');
             }
         }
 
-        postBtn.addEventListener('click', postData);
+        testBtn.addEventListener('click', postData);
     </script>
 </body>
 </html>
