@@ -1,3 +1,15 @@
-// This will hold the URL of our deployed Google Apps Script.
-// We will fill this in after we create the backend.
-export const API_URL = 'https://script.google.com/macros/s/AKfycbyKWb0zxExuWtrvGw0kOtkoxdf5UGYtZSrXLZk8VWYzms8q0kHt4Ynn_J0U9G9g7tiY/exec'; 
+// js/config.js
+
+// Your real Firebase project configuration
+export const firebaseConfig = {
+  apiKey: "AIzaSyBAt_2gMhSPPSBi0zApb7z05ODZjMceDOk",
+  authDomain: "trinitycart-9e055.firebaseapp.com",
+  projectId: "trinitycart-9e055",
+  storageBucket: "trinitycart-9e055.appspot.com", // Corrected this line
+  messagingSenderId: "450216949740",
+  appId: "1:450216949740:web:375d45d553bfd2a541f2c9",
+  measurementId: "G-57JRDMJB14"
+};
+
+// The path to your users collection
+export const USERS_COLLECTION_PATH = 'artifacts/TrinityCart-default-app-id/users';
