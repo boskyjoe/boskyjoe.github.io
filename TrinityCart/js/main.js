@@ -11,8 +11,8 @@ import { setVendorStatus, addVendor, updateVendor } from './api.js'; // Update i
 
 // --- MOCK USER DATA ---
 const authorizedUsers = {
-    'stsebastianschurchupdates@gmail.com': { name: 'John Doe', role: 'member' },
-    'ciscoibmpoc@gmail.com': { name: 'Admin Alice', role: 'admin' }
+    'stsebastianschurchupdates@gmail.com': { name: 'Amin Doe', role: 'admin' },
+    'ciscoibmpoc@gmail.com': { name: 'Member Alice', role: 'member' }
 };
 
 // --- HELPER FUNCTION ---
