@@ -1,4 +1,4 @@
-/* A simple class to hide/show our views */
+/* General view handling */
 .view {
     display: none;
 }
@@ -6,44 +6,37 @@
     display: block;
     animation: fadeIn 0.5s;
 }
-
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/* Reusable component styles */
-.action-card {
-    @apply text-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow text-lg font-semibold;
+/* Sidebar Navigation Link Styling */
+.nav-link {
+    @apply flex items-center px-4 py-2 mt-2 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors;
+}
+.nav-link.active {
+    @apply bg-blue-600 text-white;
+}
+.nav-link svg {
+    @apply w-6 h-6 mr-3;
 }
 
+/* Dashboard Card Styling */
 .admin-card {
-    @apply bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer;
+    @apply bg-white p-6 rounded-lg shadow-md;
 }
 
-.form-input {
-    @apply p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
-}
-
-.back-link {
-    @apply text-blue-600 mb-4 inline-block hover:underline;
-}
-.admin-card {
-    @apply bg-white p-6 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer flex flex-col items-center justify-center;
-}
-
-.btn-modify, .btn-delete {
-    @apply text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300 mr-1;
-}
-.btn-delete {
-    @apply hover:bg-red-400 hover:text-white;
-}
-.btn-deactivate, .btn-activate {
-    @apply text-xs px-2 py-1 rounded ml-1;
-}
-.btn-deactivate {
-    @apply bg-red-200 text-red-800 hover:bg-red-300;
-}
-.btn-activate {
-    @apply bg-green-200 text-green-800 hover:bg-green-300;
+/* Mobile Sidebar Transition */
+@media (max-width: 1024px) {
+    #sidebar {
+        position: absolute;
+        left: -16rem; /* 256px, same as w-64 */
+        transition: left 0.3s ease-in-out;
+        z-index: 20;
+        height: 100%;
+    }
+    #sidebar.active {
+        left: 0;
+    }
 }
