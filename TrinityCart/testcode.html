@@ -3,90 +3,253 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GAS CORS & POST Tester</title>
+    <title>Enhanced GAS CORS & API Tester</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
+        .json-viewer { background: #1f2937; color: #e5e7eb; }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+        .warning { color: #f59e0b; }
     </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+<body class="bg-gray-100 min-h-screen p-4">
 
-    <div class="bg-white p-8 rounded-lg shadow-xl max-w-lg w-full text-center">
-        <h1 class="text-2xl font-bold mb-4">Detailed GAS Test</h1>
-        <p class="text-gray-600 mb-6">
-            This will send a POST request and show you the exact response headers and body.
-        </p>
+    <div class="max-w-4xl mx-auto space-y-6">
+        <div class="bg-white p-6 rounded-lg shadow-xl">
+            <h1 class="text-3xl font-bold mb-4 text-center">Google Apps Script API Tester</h1>
+            <p class="text-gray-600 mb-6 text-center">
+                Test all your vendor API endpoints with detailed response analysis
+            </p>
 
-        <div class="flex items-center justify-center space-x-2 mb-6">
-            <label for="apiUrl" class="text-gray-700 font-medium">API URL:</label>
-            <input type="text" id="apiUrl" class="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500 text-sm" value="https://script.google.com/macros/s/AKfycbyKWb0zxExuWtrvGw0kOtkoxdf5UGYtZSrXLZk8VWYzms8q0kHt4Ynn_J0U9G9g7tiY/exec" placeholder="Paste your /exec URL here">
+            <!-- API URL Configuration -->
+            <div class="mb-6">
+                <label for="apiUrl" class="block text-gray-700 font-medium mb-2">API URL:</label>
+                <input type="text" id="apiUrl" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500" 
+                       value="https://script.google.com/macros/s/AKfycbyKWb0zxExuWtrvGw0kOtkoxdf5UGYzms8q0kHt4Ynn_J0U9G9g7tiY/exec" 
+                       placeholder="Paste your /exec URL here">
+            </div>
+
+            <!-- User Email for POST requests -->
+            <div class="mb-6">
+                <label for="userEmail" class="block text-gray-700 font-medium mb-2">User Email (for POST requests):</label>
+                <input type="email" id="userEmail" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500" 
+                       value="test.user@example.com" placeholder="Enter your email">
+            </div>
+
+            <!-- Test Buttons -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <button id="testGetBtn" class="bg-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors">
+                    GET Vendors
+                </button>
+                <button id="testAddBtn" class="bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                    ADD Vendor
+                </button>
+                <button id="testUpdateBtn" class="bg-yellow-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-yellow-700 transition-colors">
+                    UPDATE Vendor
+                </button>
+                <button id="testStatusBtn" class="bg-purple-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors">
+                    SET Status
+                </button>
+            </div>
+
+            <!-- Quick Connection Test -->
+            <div class="text-center mb-6">
+                <button id="quickTestBtn" class="bg-gray-800 text-white font-semibold py-2 px-6 rounded-lg hover:bg-gray-900 transition-colors">
+                    🔍 Quick Connection Test
+                </button>
+            </div>
         </div>
 
-        <button id="testBtn" class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-            Send Test Request
-        </button>
+        <!-- Response Display -->
+        <div id="responseContainer" class="bg-white p-6 rounded-lg shadow-xl hidden">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Response Details</h3>
+            
+            <!-- Status and Headers -->
+            <div class="mb-4">
+                <h4 class="font-bold text-gray-700 mb-2">Request Status & Headers:</h4>
+                <pre id="statusOutput" class="text-sm bg-gray-100 p-3 rounded border overflow-x-auto"></pre>
+            </div>
 
-        <div id="responseContainer" class="mt-8 p-4 bg-gray-50 border border-gray-200 rounded-md text-left hidden">
-            <h3 class="font-bold text-gray-800 mb-2">Request Status & Headers:</h3>
-            <pre id="statusOutput" class="text-sm text-gray-700 mb-4"></pre>
-            <h3 class="font-bold text-gray-800 mb-2">Response Body:</h3>
-            <pre id="responseOutput" class="text-sm text-gray-700 whitespace-pre-wrap break-words"></pre>
+            <!-- Response Body -->
+            <div class="mb-4">
+                <h4 class="font-bold text-gray-700 mb-2">Response Body:</h4>
+                <pre id="responseOutput" class="text-sm json-viewer p-4 rounded border overflow-x-auto whitespace-pre-wrap"></pre>
+            </div>
+
+            <!-- Analysis -->
+            <div id="analysisOutput" class="mt-4 p-3 border rounded"></div>
+        </div>
+
+        <!-- Logs -->
+        <div id="logContainer" class="bg-white p-6 rounded-lg shadow-xl">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Test Log</h3>
+            <div id="logOutput" class="space-y-2 max-h-60 overflow-y-auto"></div>
+            <button id="clearLogsBtn" class="mt-4 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors">
+                Clear Logs
+            </button>
         </div>
     </div>
 
     <script>
-        const testBtn = document.getElementById('testBtn');
         const apiUrlInput = document.getElementById('apiUrl');
+        const userEmailInput = document.getElementById('userEmail');
         const responseContainer = document.getElementById('responseContainer');
         const statusOutput = document.getElementById('statusOutput');
         const responseOutput = document.getElementById('responseOutput');
+        const analysisOutput = document.getElementById('analysisOutput');
+        const logOutput = document.getElementById('logOutput');
 
-        async function postData() {
-            const API_URL = apiUrlInput.value;
-            const payload = {
-                action: 'addVendor',
-                data: {
-                    vendorName: 'Test Vendor',
-                    address: '123 Test St'
-                }
-            };
+        // Logging function
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `p-2 rounded text-sm ${type === 'error' ? 'bg-red-100 text-red-800' : type === 'success' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logOutput.insertBefore(logEntry, logOutput.firstChild);
+        }
 
-            responseContainer.classList.add('hidden');
-            statusOutput.textContent = 'Loading...';
-            responseOutput.textContent = '';
-
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+        // Response analysis function
+        function analyzeResponse(response, data, requestType) {
+            let analysis = '';
+            
+            if (response.status === 200) {
+                analysis += '<div class="success">✅ HTTP Status: OK (200)</div>';
                 
-                let headersText = '';
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    analysis += '<div class="success">✅ Content-Type: JSON</div>';
+                    
+                    if (data && typeof data === 'object') {
+                        if (requestType === 'GET' && Array.isArray(data)) {
+                            analysis += `<div class="success">✅ GET Response: Array with ${data.length} items</div>`;
+                        } else if (data.success === true) {
+                            analysis += '<div class="success">✅ Operation: Successful</div>';
+                        } else if (data.success === false) {
+                            analysis += `<div class="error">❌ Operation Failed: ${data.error || 'Unknown error'}</div>`;
+                        }
+                    }
+                } else {
+                    analysis += `<div class="error">❌ Content-Type: ${contentType || 'Unknown'} (Expected JSON)</div>`;
+                }
+            } else {
+                analysis += `<div class="error">❌ HTTP Status: ${response.status} ${response.statusText}</div>`;
+            }
+            
+            analysisOutput.innerHTML = analysis;
+        }
+
+        // Generic API call function
+        async function makeAPICall(method, action, payload = null, requestType = 'POST') {
+            const API_URL = apiUrlInput.value;
+            const userEmail = userEmailInput.value;
+            
+            log(`Making ${method} request: ${action}`, 'info');
+            
+            responseContainer.classList.add('hidden');
+            
+            try {
+                let url = API_URL;
+                let options = { method };
+                
+                if (method === 'GET') {
+                    url += `?action=${action}`;
+                } else {
+                    options.headers = { 'Content-Type': 'application/json' };
+                    options.body = JSON.stringify({
+                        action,
+                        data: payload,
+                        userEmail
+                    });
+                }
+                
+                const response = await fetch(url, options);
+                
+                // Collect headers
+                let headersText = `URL: ${url}\nMethod: ${method}\n\n`;
                 response.headers.forEach((value, key) => {
                     headersText += `${key}: ${value}\n`;
                 });
-
-                statusOutput.textContent = `Status: ${response.status} ${response.statusText}\n\n` + headersText;
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    responseOutput.textContent = `Error Response:\n${errorText}`;
-                    throw new Error(`HTTP error! Status: ${response.status}`);
+                
+                statusOutput.textContent = `Status: ${response.status} ${response.statusText}\n\n${headersText}`;
+                
+                let data;
+                try {
+                    const responseText = await response.text();
+                    responseOutput.textContent = responseText;
+                    
+                    // Try to parse as JSON
+                    data = JSON.parse(responseText);
+                    responseOutput.textContent = JSON.stringify(data, null, 2);
+                } catch (parseError) {
+                    log(`JSON Parse Error: ${parseError.message}`, 'error');
                 }
                 
-                const data = await response.json();
-                responseOutput.textContent = JSON.stringify(data, null, 2);
-
+                analyzeResponse(response, data, requestType);
+                
+                if (response.ok && data) {
+                    log(`${action} completed successfully`, 'success');
+                } else {
+                    log(`${action} failed: ${response.status} ${response.statusText}`, 'error');
+                }
+                
             } catch (error) {
-                responseOutput.textContent = `Fetch error: ${error.message}`;
-                console.error('Fetch error:', error);
+                responseOutput.textContent = `Network Error: ${error.message}`;
+                log(`Network error: ${error.message}`, 'error');
+                analysisOutput.innerHTML = `<div class="error">❌ Network Error: ${error.message}</div>`;
             } finally {
                 responseContainer.classList.remove('hidden');
             }
         }
 
-        testBtn.addEventListener('click', postData);
+        // Event listeners
+        document.getElementById('testGetBtn').addEventListener('click', () => {
+            makeAPICall('GET', 'getVendors', null, 'GET');
+        });
+
+        document.getElementById('testAddBtn').addEventListener('click', () => {
+            const payload = {
+                vendorName: 'Test Vendor ' + Date.now(),
+                address: '123 Test Street',
+                contactNo: '555-0123',
+                contactEmail: 'test@vendor.com'
+            };
+            makeAPICall('POST', 'addVendor', payload);
+        });
+
+        document.getElementById('testUpdateBtn').addEventListener('click', () => {
+            const payload = {
+                vendorId: 'V1234567890', // You might need to change this to a real ID
+                vendorName: 'Updated Vendor Name',
+                address: '456 Updated Street',
+                contactNo: '555-9876',
+                contactEmail: 'updated@vendor.com'
+            };
+            makeAPICall('POST', 'updateVendor', payload);
+        });
+
+        document.getElementById('testStatusBtn').addEventListener('click', () => {
+            const payload = {
+                vendorId: 'V1234567890', // You might need to change this to a real ID
+                isActive: false
+            };
+            makeAPICall('POST', 'setVendorStatus', payload);
+        });
+
+        document.getElementById('quickTestBtn').addEventListener('click', async () => {
+            log('Running quick connection test...', 'info');
+            await makeAPICall('GET', 'getVendors', null, 'GET');
+        });
+
+        document.getElementById('clearLogsBtn').addEventListener('click', () => {
+            logOutput.innerHTML = '';
+            log('Logs cleared', 'info');
+        });
+
+        // Initialize with a connection test
+        window.addEventListener('load', () => {
+            log('API Tester loaded. Click "Quick Connection Test" to verify your setup.', 'info');
+        });
     </script>
 </body>
 </html>
