@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAS POST Tester</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-white p-8 rounded-lg shadow-xl max-w-lg w-full text-center">
+        <h1 class="text-2xl font-bold mb-4">Google Apps Script POST Test</h1>
+        <p class="text-gray-600 mb-6">
+            Click the button below to send a POST request to your Google Apps Script endpoint.
+            Open your browser's console to see the response.
+        </p>
+
+        <div class="flex items-center justify-center space-x-2 mb-6">
+            <label for="apiUrl" class="text-gray-700 font-medium">API URL:</label>
+            <input type="text" id="apiUrl" class="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500 text-sm" value="https://script.google.com/macros/s/AKfycbyKWb0zxExuWtrvGw0kOtkoxdf5UGYtZSrXLZk8VWYzms8q0kHt4Ynn_J0U9G9g7tiY/exec" placeholder="Paste your /exec URL here">
+        </div>
+
+        <button id="postBtn" class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+            Send POST Request
+        </button>
+
+        <div id="responseContainer" class="mt-8 p-4 bg-gray-50 border border-gray-200 rounded-md text-left hidden">
+            <h3 class="font-bold text-gray-800 mb-2">Response:</h3>
+            <pre id="responseOutput" class="text-sm text-gray-700 whitespace-pre-wrap break-words"></pre>
+        </div>
+    </div>
+
+    <script>
+        const postBtn = document.getElementById('postBtn');
+        const apiUrlInput = document.getElementById('apiUrl');
+        const responseContainer = document.getElementById('responseContainer');
+        const responseOutput = document.getElementById('responseOutput');
+
+        async function postData() {
+            const API_URL = apiUrlInput.value;
+            const payload = {
+                action: 'addVendor',
+                data: {
+                    vendorName: 'Test Vendor',
+                    address: '123 Test St',
+                    contactNo: '123-456-7890',
+                    contactEmail: 'test@example.com'
+                },
+                userEmail: 'test-user@example.com'
+            };
+
+            responseContainer.classList.add('hidden');
+            responseOutput.textContent = 'Loading...';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                responseOutput.textContent = JSON.stringify(data, null, 2);
+
+            } catch (error) {
+                responseOutput.textContent = `Error: ${error.message}. Please check your API URL and Apps Script deployment settings.`;
+                console.error('Fetch error:', error);
+            } finally {
+                responseContainer.classList.remove('hidden');
+            }
+        }
+
+        postBtn.addEventListener('click', postData);
+    </script>
+</body>
+</html>
