@@ -176,7 +176,7 @@
 
 
 
-                
+
                 <!-- New placeholder views based on the refined navigation -->
                 <div id="products-view" class="view">
                     <h2 class="text-2xl font-semibold">Product Management</h2>
@@ -190,9 +190,62 @@
                 <div id="payments-view" class="view">
                     <h2 class="text-2xl font-semibold">Payment Management</h2>
                 </div>
+
+
+
+
+
+                <!-- View: Admin Modules (Navigation Hub) -->
                 <div id="admin-modules-view" class="view">
-                    <h2 class="text-2xl font-semibold">Admin Modules (Master Data)</h2>
+                    <h2 class="text-2xl font-semibold mb-6">Admin Modules - Master Data</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <!-- These cards now act as navigation links -->
+                        <a href="#" class="master-data-card" data-view-id="categories-view">
+                            <h3 class="font-bold text-lg text-gray-800">Product Categories</h3>
+                            <p class="text-sm text-gray-500 mt-1">Manage product groupings</p>
+                        </a>
+                        <a href="#" class="master-data-card" data-view-id="payment-modes-view">
+                            <h3 class="font-bold text-lg text-gray-800">Payment Modes</h3>
+                            <p class="text-sm text-gray-500 mt-1">Manage payment methods</p>
+                        </a>
+                        <!-- Add other cards for Banks, Sale Types, etc. as needed -->
+                    </div>
                 </div>
+
+
+                <!-- View: Manage Product Categories -->
+                <div id="categories-view" class="view space-y-8">
+                    <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
+                    
+                    <!-- Card 1: Add New Category Form -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Add New Category</h3>
+                        </div>
+                        <div class="p-6">
+                            <form id="add-category-form" class="flex items-end space-x-4">
+                                <div class="flex-grow">
+                                    <label for="categoryName-input" class="form-label">Category Name</label>
+                                    <input type="text" id="categoryName-input" placeholder="e.g., Snacks" class="form-input w-full" required>
+                                </div>
+                                <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 h-10">Add Category</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Existing Categories Grid -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Existing Categories</h3>
+                        </div>
+                        <div class="p-2">
+                            <div id="categories-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+
+
 
             </main>
         </div>
