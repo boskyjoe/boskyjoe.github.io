@@ -3,6 +3,11 @@ import { appState } from './state.js';
 import { updateUI, showView } from './ui.js';
 import { firebaseConfig, USERS_COLLECTION_PATH } from './config.js';
 
+
+import { showSuppliersView } from './ui.js';
+import { addSupplier, updateSupplier, setSupplierStatus } from './api.js';
+
+
 // --- FIREBASE INITIALIZATION ---
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -80,16 +85,99 @@ auth.onAuthStateChanged(async (user) => {
 
 // --- EVENT LISTENER SETUP ---
 function setupEventListeners() {
-    // Use event delegation for dynamically created elements
-    document.addEventListener('click', (e) => {
-        // Check if the clicked element or its parent is the login button
-        if (e.target.closest('#login-button')) {
-            handleLogin();
+
+        // Add click handler for the "Supplier Management" nav link
+        const sidebarNav = document.getElementById('sidebar-nav');
+        sidebarNav.addEventListener('click', (e) => {
+            const link = e.target.closest('.nav-link');
+            if (link && link.dataset.viewId === 'suppliers-view') {
+                e.preventDefault();
+                showSuppliersView();
+            }
+        });
+
+        // Add Supplier Form Submission
+        const addSupplierForm = document.getElementById('add-supplier-form');
+        if (addSupplierForm) {
+            addSupplierForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const user = appState.currentUser;
+                if (!user) return alert("You must be logged in.");
+
+                const supplierData = {
+                    supplierName: document.getElementById('supplierName-input').value,
+                    address: document.getElementById('address-input').value,
+                    contactNo: document.getElementById('contactNo-input').value,
+                    contactEmail: document.getElementById('contactEmail-input').value,
+                    creditTerm: document.getElementById('creditTerm-input').value,
+                };
+
+                try {
+                    await addSupplier(supplierData, user);
+                    alert('Supplier added successfully!');
+                    addSupplierForm.reset();
+                    showSuppliersView(); // Refresh the grid
+                } catch (error) {
+                    console.error("Error adding supplier:", error);
+                    alert("Failed to add supplier.");
+                }
+            });
         }
-        // Check if the clicked element or its parent is the logout button
-        if (e.target.closest('#logout-button')) {
-            handleLogout();
+
+        // In-Grid Update Event
+        document.addEventListener('updateSupplier', async (e) => {
+            const { docId, updatedData } = e.detail;
+            const user = appState.currentUser;
+            if (!user) return;
+            try {
+                await updateSupplier(docId, updatedData, user);
+            } catch (error) {
+                console.error("Error updating supplier:", error);
+                alert("Failed to update supplier.");
+                showSuppliersView(); // Refresh grid to revert failed change
+            }
+        });
+
+        // Action Buttons (Activate/Deactivate) in Grid
+        const suppliersGrid = document.getElementById('suppliers-grid');
+        if (suppliersGrid) {
+            suppliersGrid.addEventListener('click', async (e) => {
+                const user = appState.currentUser;
+                if (!user) return;
+
+                const target = e.target;
+                const docId = target.dataset.id;
+                if (!docId) return;
+
+                if (target.classList.contains('btn-deactivate')) {
+                    if (confirm(`Are you sure you want to DEACTIVATE this supplier?`)) {
+                        await setSupplierStatus(docId, false, user);
+                        showSuppliersView();
+                    }
+                } else if (target.classList.contains('btn-activate')) {
+                    if (confirm(`Are you sure you want to ACTIVATE this supplier?`)) {
+                        await setSupplierStatus(docId, true, user);
+                        showSuppliersView();
+                    }
+                }
+            });
         }
+
+
+
+
+
+
+        // Use event delegation for dynamically created elements
+        document.addEventListener('click', (e) => {
+            // Check if the clicked element or its parent is the login button
+            if (e.target.closest('#login-button')) {
+                handleLogin();
+            }
+            // Check if the clicked element or its parent is the logout button
+            if (e.target.closest('#logout-button')) {
+                handleLogout();
+            }
     });
 
     // Sidebar navigation
