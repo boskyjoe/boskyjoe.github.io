@@ -151,9 +151,18 @@ const categoriesGridOptions = {
         {
             headerName: "Actions", width: 120,
             cellRenderer: params => {
-                const actionText = params.data.isActive ? 'Deactivate' : 'Activate';
-                const buttonClass = params.data.isActive ? 'btn-deactivate' : 'btn-activate';
-                return `<button class="${buttonClass}" data-id="${params.data.id}">${actionText}</button>`;
+                const docId = params.data.id;
+                const isActive = params.data.isActive;
+
+                const deactivateIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`;
+                const activateIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
+
+                // Determine which icon, class, and tooltip to use
+                const icon = isActive ? deactivateIcon : activateIcon;
+                const buttonClass = isActive ? 'btn-deactivate' : 'btn-activate';
+                const tooltip = isActive ? 'Deactivate Category' : 'Activate Category';
+
+                return `<button class="${buttonClass}" data-id="${docId}" title="${tooltip}">${icon}</button>`;
             }
         }
     ],
