@@ -181,7 +181,6 @@ function setupEventListeners() {
     });
 
     // Sidebar navigation
-    const sidebarNav = document.getElementById('sidebar-nav');
     sidebarNav.addEventListener('click', (e) => {
         const link = e.target.closest('.nav-link');
         if (link) {
