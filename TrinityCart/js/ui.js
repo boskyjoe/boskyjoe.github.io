@@ -2,11 +2,100 @@
 import { appState } from './state.js';
 import { navConfig } from './config.js';
 
+import { getSuppliers } from './api.js';
+
+
 // --- DOM ELEMENT REFERENCES ---
 const views = document.querySelectorAll('.view');
 const sidebarNav = document.getElementById('sidebar-nav');
 const authContainer = document.getElementById('auth-container');
 const viewTitle = document.getElementById('view-title');
+
+
+const suppliersGridDiv = document.getElementById('suppliers-grid');
+
+
+
+
+const suppliersGridOptions = {
+    columnDefs: [
+        { field: "supplierId", headerName: "ID", width: 150 },
+        { field: "supplierName", headerName: "Name", flex: 2, editable: true, minWidth: 150 },
+        { field: "address", headerName: "Address", flex: 3, editable: true, minWidth: 200 },
+        { field: "contactNo", headerName: "Contact No", flex: 1, editable: true, minWidth: 120 },
+        { field: "contactEmail", headerName: "Email", flex: 1, editable: true, minWidth: 150 },
+        { field: "creditTerm", headerName: "Credit Term", flex: 1, editable: true, minWidth: 100 },
+        { 
+            field: "isActive", 
+            headerName: "Status", 
+            width: 120,
+            cellRenderer: params => params.value ? 
+                '<span class="text-green-600 font-semibold">Active</span>' : 
+                '<span class="text-red-600 font-semibold">Inactive</span>'
+        },
+        {
+            headerName: "Actions",
+            width: 120,
+            cellRenderer: (params) => {
+                const docId = params.data.id;
+                const isActive = params.data.isActive;
+                const hasActivePurchases = params.data.hasActivePurchases;
+
+                if (isActive) {
+                    // If supplier is active, show the "Deactivate" button
+                    const isDisabled = hasActivePurchases;
+                    const disabledClass = isDisabled ? 'opacity-50 cursor-not-allowed' : 'btn-deactivate';
+                    const tooltip = isDisabled ? 'title="Cannot deactivate supplier with active purchases"' : '';
+                    return `<button class="${disabledClass}" data-id="${docId}" ${tooltip} ${isDisabled ? 'disabled' : ''}>Deactivate</button>`;
+                } else {
+                    // If supplier is inactive, show the "Activate" button
+                    return `<button class="btn-activate" data-id="${docId}">Activate</button>`;
+                }
+            },
+            editable: false, sortable: false, filter: false,
+        }
+    ],
+    defaultColDef: {
+        sortable: true, filter: true, resizable: true,
+    },
+    rowData: [],
+    rowClassRules: {
+        'opacity-50': params => !params.data.isActive,
+    },
+    onCellValueChanged: (params) => {
+        const docId = params.data.id;
+        const field = params.colDef.field;
+        const newValue = params.newValue;
+        document.dispatchEvent(new CustomEvent('updateSupplier', { 
+            detail: { docId, updatedData: { [field]: newValue } } 
+        }));
+    }
+};
+
+
+
+// --- UI FUNCTIONS ---
+export function initializeGrids() {
+    // ... (keep existing grid initializations)
+    if (suppliersGridDiv) {
+        new agGrid.Grid(suppliersGridDiv, suppliersGridOptions);
+    }
+}
+
+export async function showSuppliersView() {
+    showView('suppliers-view');
+    try {
+        const suppliers = await getSuppliers();
+        if (suppliersGridOptions.api) {
+            suppliersGridOptions.api.setRowData(suppliers);
+        }
+    } catch (error) {
+        console.error("Could not display suppliers:", error);
+        alert("Error loading supplier data.");
+    }
+}
+
+
 
 // --- RENDER FUNCTIONS ---
 
