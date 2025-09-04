@@ -116,3 +116,16 @@
 .modal-btn-secondary {
     @apply bg-gray-200 text-gray-800 hover:bg-gray-300;
 }
+
+/* UPDATED Card style for the admin modules page */
+.master-data-card {
+    @apply bg-white p-4 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all flex items-center space-x-4;
+}
+
+/* NEW Style for the icon container within the card */
+.icon-container {
+    @apply rounded-full p-3 flex-shrink-0;
+}
+.icon-container svg {
+    @apply w-6 h-6;
+}
