@@ -164,6 +164,7 @@ const categoriesGridOptions = {
 
                 return `<button class="${buttonClass}" data-id="${docId}" title="${tooltip}">${icon}</button>`;
             }
+            cellClass: 'flex items-center justify-center'
         }
     ],
     defaultColDef: { resizable: true },
