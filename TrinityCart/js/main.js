@@ -4,6 +4,7 @@ import { appState } from './state.js';
 import { firebaseConfig, USERS_COLLECTION_PATH } from './config.js';
 
 import { updateUI, showView, showSuppliersView } from './ui.js';
+import { refreshSuppliersGrid, clearSupplierForm } from './ui.js';
 
 
 import { addSupplier, updateSupplier, setSupplierStatus } from './api.js';
@@ -145,7 +146,7 @@ function setupEventListeners() {
                 await addSupplier(supplierData, user);
                 alert('Supplier added successfully!');
                 addSupplierForm.reset();
-                showSuppliersView(); // Refresh the grid
+                refreshSuppliersGrid(); // Refresh the grid
             } catch (error) {
                 console.error("Error adding supplier:", error);
                 alert("Failed to add supplier.");
@@ -163,7 +164,7 @@ function setupEventListeners() {
         } catch (error) {
             console.error("Error updating supplier:", error);
             alert("Failed to update supplier.");
-            showSuppliersView(); // Refresh grid to revert failed change
+            refreshSuppliersGrid(); // Refresh grid to revert failed change
         }
     });
 
@@ -181,12 +182,12 @@ function setupEventListeners() {
             if (target.classList.contains('btn-deactivate')) {
                 if (confirm(`Are you sure you want to DEACTIVATE this supplier?`)) {
                     await setSupplierStatus(docId, false, user);
-                    showSuppliersView();
+                    refreshSuppliersGrid();
                 }
             } else if (target.classList.contains('btn-activate')) {
                 if (confirm(`Are you sure you want to ACTIVATE this supplier?`)) {
                     await setSupplierStatus(docId, true, user);
-                    showSuppliersView();
+                    refreshSuppliersGrid();
                 }
             }
         });
@@ -199,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("Application Initializing...");
     // This MUST be done once at the start of the application.
     ModuleRegistry.registerModules([AllCommunityModule]);
-    
+
     setupEventListeners();
     // The initial UI update is now handled by the onAuthStateChanged listener
 });
