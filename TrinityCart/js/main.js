@@ -101,7 +101,7 @@ function setupEventListeners() {
         if (link) {
             e.preventDefault();
             const viewId = link.dataset.viewId;
-            
+            console.log(`[main.js] Nav link clicked. View ID: ${viewId}`);
             // First, always show the correct view div
             showView(viewId);
 
