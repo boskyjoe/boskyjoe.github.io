@@ -74,8 +74,10 @@ const suppliersGridOptions = {
             suppliersGridApi.setGridOption('loading', true);
             const suppliers = await getSuppliers();
             suppliersGridApi.setGridOption('rowData', suppliers);
+            suppliersGridApi.setGridOption('loading', false);
         } catch (error) {
             console.error("[ui.js] Could not load initial supplier data:", error);
+            suppliersGridApi.setGridOption('loading', false);
             suppliersGridApi.showNoRowsOverlay();
         }
     },
@@ -124,8 +126,10 @@ export async function refreshSuppliersGrid() {
         suppliersGridApi.setGridOption('loading', true);
         const suppliers = await getSuppliers();
         suppliersGridApi.setGridOption('rowData', suppliers);
+        suppliersGridApi.setGridOption('loading', false);
     } catch (error) {
         console.error("[ui.js] Could not refresh supplier data:", error);
+        suppliersGridApi.setGridOption('loading', false);
         suppliersGridApi.showNoRowsOverlay();
     }
 }
