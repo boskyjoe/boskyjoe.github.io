@@ -165,7 +165,7 @@ function setupEventListeners() {
             await updateSupplier(docId, updatedData, user);
         } catch (error) {
             console.error("Error updating supplier:", error);
-            alert("Failed to update supplier.");
+            await showModal('error', 'Error', 'Failed to update the supplier. Please try again.');
             refreshSuppliersGrid(); // Refresh grid to revert failed change
         }
     });
@@ -222,32 +222,61 @@ function setupEventListeners() {
 
             try {
                 await addCategory(categoryName, user);
+                await showModal('success', 'Success', 'Category has been added successfully.');
                 addCategoryForm.reset();
                 refreshCategoriesGrid();
-            } catch (error) { console.error("Error adding category:", error); }
+            } catch (error) { 
+                console.error("Error adding category:", error); 
+                await showModal('error', 'Error', 'Failed to add the category. Please try again.');
+            }
         });
     }
+
 
     // In-Grid Update for Categories
     document.addEventListener('updateCategory', async (e) => {
         const { docId, updatedData } = e.detail;
-        await updateCategory(docId, updatedData, appState.currentUser);
+        const user = appState.currentUser;
+        if (!user) return;
+        try {
+            await updateCategory(docId, updatedData, appState.currentUser);
+        } catch (error) {
+            console.error("Error updating product category:", error);
+            await showModal('error', 'Error', 'Failed to update the product category. Please try again.');
+            refreshCategoriesGrid(); // Refresh grid to revert failed change
+        }
+        
     });
 
     // Action Buttons for Categories Grid
     const categoriesGrid = document.getElementById('categories-grid');
     if (categoriesGrid) {
         categoriesGrid.addEventListener('click', async (e) => {
+            const user = appState.currentUser;
+            if (!user) return;
+
             const target = e.target;
             const docId = target.dataset.id;
             if (!docId) return;
 
-            const newStatus = target.classList.contains('btn-activate');
-            await setCategoryStatus(docId, newStatus, appState.currentUser);
-            refreshCategoriesGrid();
+            if (target.classList.contains('btn-deactivate')) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to deactivate this product category?<br>This action can be undone.`);
+                if (confirmed) {
+                    await setCategoryStatus(docId, false, user);
+                    refreshCategoriesGrid();
+                }
+            } else if (target.classList.contains('btn-activate')) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to deactivate this supplier?<br>This action can be undone.`);
+                if (confirmed) {
+                    await setCategoryStatus(docId, true, user);
+                    refreshCategoriesGrid();
+                }
+            }
         });
     }
 
+
+    
 
 
 
