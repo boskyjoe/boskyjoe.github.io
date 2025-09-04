@@ -104,13 +104,14 @@ export async function showSuppliersView() {
     initializeSuppliersGrid();
 
     try {
-        suppliersGridApi.showLoadingOverlay();
+        suppliersGridApi.setGridOption('loading', true);
         const suppliers = await getSuppliers();
         suppliersGridApi.setRowData(suppliers);
     } catch (error) {
         console.error("[ui.js] Could not display suppliers:", error);
         alert("Error loading supplier data. Check the console for details.");
         if (suppliersGridApi) {
+            suppliersGridApi.setGridOption('loading', false);
             suppliersGridApi.showNoRowsOverlay();
         } 
     }
