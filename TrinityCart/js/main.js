@@ -5,7 +5,6 @@ import { firebaseConfig, USERS_COLLECTION_PATH } from './config.js';
 import { updateUI, showView, showSuppliersView } from './ui.js';
 
 
-import { showSuppliersView } from './ui.js';
 import { addSupplier, updateSupplier, setSupplierStatus } from './api.js';
 
 
