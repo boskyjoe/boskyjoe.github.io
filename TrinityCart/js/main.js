@@ -83,120 +83,115 @@ auth.onAuthStateChanged(async (user) => {
 });
 
 
-// --- EVENT LISTENER SETUP ---
 function setupEventListeners() {
-
-        // Add click handler for the "Supplier Management" nav link
-        const sidebarNav = document.getElementById('sidebar-nav');
-        sidebarNav.addEventListener('click', (e) => {
-            const link = e.target.closest('.nav-link');
-            if (link && link.dataset.viewId === 'suppliers-view') {
-                e.preventDefault();
-                showSuppliersView();
-            }
-        });
-
-        // Add Supplier Form Submission
-        const addSupplierForm = document.getElementById('add-supplier-form');
-        if (addSupplierForm) {
-            addSupplierForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const user = appState.currentUser;
-                if (!user) return alert("You must be logged in.");
-
-                const supplierData = {
-                    supplierName: document.getElementById('supplierName-input').value,
-                    address: document.getElementById('address-input').value,
-                    contactNo: document.getElementById('contactNo-input').value,
-                    contactEmail: document.getElementById('contactEmail-input').value,
-                    creditTerm: document.getElementById('creditTerm-input').value,
-                };
-
-                try {
-                    await addSupplier(supplierData, user);
-                    alert('Supplier added successfully!');
-                    addSupplierForm.reset();
-                    showSuppliersView(); // Refresh the grid
-                } catch (error) {
-                    console.error("Error adding supplier:", error);
-                    alert("Failed to add supplier.");
-                }
-            });
+    // Use event delegation for dynamically created elements
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('#login-button')) {
+            handleLogin();
         }
-
-        // In-Grid Update Event
-        document.addEventListener('updateSupplier', async (e) => {
-            const { docId, updatedData } = e.detail;
-            const user = appState.currentUser;
-            if (!user) return;
-            try {
-                await updateSupplier(docId, updatedData, user);
-            } catch (error) {
-                console.error("Error updating supplier:", error);
-                alert("Failed to update supplier.");
-                showSuppliersView(); // Refresh grid to revert failed change
-            }
-        });
-
-        // Action Buttons (Activate/Deactivate) in Grid
-        const suppliersGrid = document.getElementById('suppliers-grid');
-        if (suppliersGrid) {
-            suppliersGrid.addEventListener('click', async (e) => {
-                const user = appState.currentUser;
-                if (!user) return;
-
-                const target = e.target;
-                const docId = target.dataset.id;
-                if (!docId) return;
-
-                if (target.classList.contains('btn-deactivate')) {
-                    if (confirm(`Are you sure you want to DEACTIVATE this supplier?`)) {
-                        await setSupplierStatus(docId, false, user);
-                        showSuppliersView();
-                    }
-                } else if (target.classList.contains('btn-activate')) {
-                    if (confirm(`Are you sure you want to ACTIVATE this supplier?`)) {
-                        await setSupplierStatus(docId, true, user);
-                        showSuppliersView();
-                    }
-                }
-            });
+        if (e.target.closest('#logout-button')) {
+            handleLogout();
         }
-
-
-
-
-
-
-        // Use event delegation for dynamically created elements
-        document.addEventListener('click', (e) => {
-            // Check if the clicked element or its parent is the login button
-            if (e.target.closest('#login-button')) {
-                handleLogin();
-            }
-            // Check if the clicked element or its parent is the logout button
-            if (e.target.closest('#logout-button')) {
-                handleLogout();
-            }
     });
 
-    // Sidebar navigation
+    // --- NEW, SMARTER SIDEBAR NAVIGATION HANDLER ---
+    const sidebarNav = document.getElementById('sidebar-nav');
     sidebarNav.addEventListener('click', (e) => {
         const link = e.target.closest('.nav-link');
         if (link) {
             e.preventDefault();
             const viewId = link.dataset.viewId;
+            
+            // First, always show the correct view div
             showView(viewId);
+
+            // Second, if this view needs special data, call its function
+            if (viewId === 'suppliers-view') {
+                showSuppliersView();
+            }
+            // We will add more 'if' statements here for other modules
+            // else if (viewId === 'products-view') { showProductsView(); }
         }
     });
     
     // Mobile menu toggle
-    const sidebar = document.getElementById('sidebar');
     const mobileMenuButton = document.getElementById('mobile-menu-button');
     mobileMenuButton.addEventListener('click', () => {
+        const sidebar = document.getElementById('sidebar');
         sidebar.classList.toggle('active');
     });
+
+    // --- ALL THE SUPPLIER FORM AND GRID LISTENERS ---
+    // (This part remains the same as before)
+
+    // Add Supplier Form Submission
+    const addSupplierForm = document.getElementById('add-supplier-form');
+    if (addSupplierForm) {
+        addSupplierForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            if (!user) return alert("You must be logged in.");
+
+            const supplierData = {
+                supplierName: document.getElementById('supplierName-input').value,
+                address: document.getElementById('address-input').value,
+                contactNo: document.getElementById('contactNo-input').value,
+                contactEmail: document.getElementById('contactEmail-input').value,
+                creditTerm: document.getElementById('creditTerm-input').value,
+            };
+
+            try {
+                await addSupplier(supplierData, user);
+                alert('Supplier added successfully!');
+                addSupplierForm.reset();
+                showSuppliersView(); // Refresh the grid
+            } catch (error) {
+                console.error("Error adding supplier:", error);
+                alert("Failed to add supplier.");
+            }
+        });
+    }
+
+    // In-Grid Update Event
+    document.addEventListener('updateSupplier', async (e) => {
+        const { docId, updatedData } = e.detail;
+        const user = appState.currentUser;
+        if (!user) return;
+        try {
+            await updateSupplier(docId, updatedData, user);
+        } catch (error) {
+            console.error("Error updating supplier:", error);
+            alert("Failed to update supplier.");
+            showSuppliersView(); // Refresh grid to revert failed change
+        }
+    });
+
+    // Action Buttons (Activate/Deactivate) in Grid
+    const suppliersGrid = document.getElementById('suppliers-grid');
+    if (suppliersGrid) {
+        suppliersGrid.addEventListener('click', async (e) => {
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const target = e.target;
+            const docId = target.dataset.id;
+            if (!docId) return;
+
+            if (target.classList.contains('btn-deactivate')) {
+                if (confirm(`Are you sure you want to DEACTIVATE this supplier?`)) {
+                    await setSupplierStatus(docId, false, user);
+                    showSuppliersView();
+                }
+            } else if (target.classList.contains('btn-activate')) {
+                if (confirm(`Are you sure you want to ACTIVATE this supplier?`)) {
+                    await setSupplierStatus(docId, true, user);
+                    showSuppliersView();
+                }
+            }
+        });
+    }
 }
+
 
 // --- APPLICATION INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
