@@ -1,4 +1,5 @@
 import { SUPPLIERS_COLLECTION_PATH } from './config.js';
+import { CATEGORIES_COLLECTION_PATH } from './config.js';
 
 // This file will contain all functions that interact with the backend.
 // For now, they return mock data instantly.
@@ -183,4 +184,51 @@ export async function setSupplierStatus(docId, newStatus, user) {
     const db = firebase.firestore();
     // This is a simplified call. The real business logic will be in the event handler.
     return updateSupplier(docId, { isActive: newStatus }, user);
+}
+
+
+// --- CATEGORY API FUNCTIONS ---
+
+export async function getCategories() {
+    const db = firebase.firestore();
+    try {
+        // Use the correct, nested path
+        const snapshot = await db.collection(CATEGORIES_COLLECTION_PATH).orderBy('categoryName').get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching categories:", error);
+        throw error;
+    }
+}
+
+export async function addCategory(categoryName, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const categoryId = `CAT-${Date.now()}`;
+
+    // Use the correct, nested path
+    return db.collection(CATEGORIES_COLLECTION_PATH).add({
+        categoryId: categoryId,
+        categoryName: categoryName,
+        isActive: true,
+        createdBy: user.email,
+        createdOn: now,
+        updatedBy: user.email,
+        updatedOn: now,
+    });
+}
+
+export async function updateCategory(docId, updatedData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    // Use the correct, nested path
+    return db.collection(CATEGORIES_COLLECTION_PATH).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updatedOn: now,
+    });
+}
+
+export async function setCategoryStatus(docId, newStatus, user) {
+    return updateCategory(docId, { isActive: newStatus }, user);
 }
