@@ -1,4 +1,5 @@
 // js/main.js
+import { ModuleRegistry, AllCommunityModule } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
 import { appState } from './state.js';
 import { firebaseConfig, USERS_COLLECTION_PATH } from './config.js';
 
@@ -196,6 +197,9 @@ function setupEventListeners() {
 // --- APPLICATION INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Application Initializing...");
+    // This MUST be done once at the start of the application.
+    ModuleRegistry.registerModules([AllCommunityModule]);
+    
     setupEventListeners();
     // The initial UI update is now handled by the onAuthStateChanged listener
 });
