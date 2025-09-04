@@ -73,8 +73,40 @@
                 <!-- View 3: Manage Suppliers -->
                 <div id="suppliers-view" class="view">
                     <h2 class="text-2xl font-semibold mb-4">Manage Suppliers</h2>
-                    <!-- Supplier management form and grid will go here -->
-                    <p>Content for managing suppliers.</p>
+                    
+                    <!-- Form to Add a New Supplier -->
+                    <div class="bg-white p-6 rounded-lg shadow mb-8">
+                        <h3 class="text-xl font-semibold mb-4">Add New Supplier</h3>
+                        <form id="add-supplier-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                            <div class="flex flex-col">
+                                <label for="supplierName-input" class="form-label">Supplier Name</label>
+                                <input type="text" id="supplierName-input" class="form-input" required>
+                            </div>
+                            <div class="flex flex-col">
+                                <label for="address-input" class="form-label">Address</label>
+                                <textarea id="address-input" class="form-input" rows="3" placeholder="e.g., 123 Main St&#10;Anytown, USA 12345"></textarea>
+                            </div>
+                            <div class="flex flex-col">
+                                <label for="contactNo-input" class="form-label">Contact No</label>
+                                <input type="tel" id="contactNo-input" class="form-input">
+                            </div>
+                            <div class="flex flex-col">
+                                <label for="contactEmail-input" class="form-label">Contact Email</label>
+                                <input type="email" id="contactEmail-input" class="form-input">
+                            </div>
+                            <div class="flex flex-col">
+                                <label for="creditTerm-input" class="form-label">Credit Term</label>
+                                <input type="text" id="creditTerm-input" placeholder="e.g., Net 30" class="form-input">
+                            </div>
+                            <div class="flex items-end">
+                                <button type="submit" class="w-full bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors">Add Supplier</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Grid to Display Existing Suppliers -->
+                    <h3 class="text-xl font-semibold mb-4">Existing Suppliers</h3>
+                    <div id="suppliers-grid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
                 </div>
 
                 <!-- New placeholder views based on the refined navigation -->
