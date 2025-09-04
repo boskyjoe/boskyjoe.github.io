@@ -22,6 +22,10 @@ export const PRODUCTS_COLLECTION_PATH = `${BASE_DOC_PATH}/products`;
 export const PURCHASES_COLLECTION_PATH = `${BASE_DOC_PATH}/purchaseInvoices`;
 export const SALES_COLLECTION_PATH = `${BASE_DOC_PATH}/salesInvoices`;
 
+
+export const CATEGORIES_COLLECTION_PATH = `${BASE_DOC_PATH}/productCategories`;
+
+
 // Navigation Configuration - THIS WAS MISSING
 // This object drives the entire sidebar navigation.
 export const navConfig = [
