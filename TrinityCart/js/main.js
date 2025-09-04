@@ -40,7 +40,8 @@ auth.onAuthStateChanged(async (user) => {
         const userDocRef = db.collection(USERS_COLLECTION_PATH).doc(user.uid);
         const docSnap = await userDocRef.get();
 
-        if (docSnap.exists() && docSnap.data().isActive) {
+        // THE FIX: Changed docSnap.exists() to docSnap.exists
+        if (docSnap.exists && docSnap.data().isActive) {
             // User exists in our DB and is active.
             const userData = docSnap.data();
             appState.currentUser = {
@@ -53,7 +54,11 @@ auth.onAuthStateChanged(async (user) => {
             console.log("User role set to:", appState.currentUser.role);
         } else {
             // User is not in our DB or is inactive. Treat as a guest.
-            console.warn("User not found in Firestore or is inactive.");
+            if (!docSnap.exists) {
+                console.warn("User document not found in Firestore for UID:", user.uid);
+            } else {
+                console.warn("User is marked as inactive in Firestore.");
+            }
             appState.currentUser = {
                 uid: user.uid,
                 displayName: user.displayName,
@@ -62,7 +67,6 @@ auth.onAuthStateChanged(async (user) => {
                 role: 'guest' // Assign a non-privileged guest role
             };
             alert("Your account is not authorized for this application or has been deactivated. Please contact an administrator.");
-            // We still keep them logged in to Firebase, but the UI won't show them anything.
         }
     } else {
         // User is signed out.
