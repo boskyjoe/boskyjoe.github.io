@@ -15,14 +15,24 @@ export function renderSidebar(role) {
     if (!role) return; // Don't render if no role
 
     navConfig.forEach(item => {
-        // If the item's roles array includes the current user's role, create the link
+        // First, check if the user's role is allowed to see this item at all
         if (item.roles.includes(role)) {
-            const link = document.createElement('a');
-            link.href = '#';
-            link.className = 'nav-link';
-            link.dataset.viewId = item.viewId; // Store viewId in a data attribute
-            link.innerHTML = `${item.icon}<span>${item.label}</span>`;
-            sidebarNav.appendChild(link);
+            
+            // Check the type of the navigation item
+            if (item.type === 'heading') {
+                const heading = document.createElement('h3');
+                heading.className = 'nav-heading';
+                heading.textContent = item.label;
+                sidebarNav.appendChild(heading);
+            } 
+            else if (item.type === 'link') {
+                const link = document.createElement('a');
+                link.href = '#';
+                link.className = 'nav-link';
+                link.dataset.viewId = item.viewId; // Store viewId in a data attribute
+                link.innerHTML = `${item.icon}<span>${item.label}</span>`;
+                sidebarNav.appendChild(link);
+            }
         }
     });
 }
