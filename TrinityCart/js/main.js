@@ -1,7 +1,8 @@
 // js/main.js
 import { appState } from './state.js';
-import { updateUI, showView } from './ui.js';
 import { firebaseConfig, USERS_COLLECTION_PATH } from './config.js';
+
+import { updateUI, showView, showSuppliersView } from './ui.js';
 
 
 import { showSuppliersView } from './ui.js';
