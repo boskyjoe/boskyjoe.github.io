@@ -198,17 +198,65 @@
                 <!-- View: Admin Modules (Navigation Hub) -->
                 <div id="admin-modules-view" class="view">
                     <h2 class="text-2xl font-semibold mb-6">Admin Modules - Master Data</h2>
+                    <p class="text-gray-600 mb-8 -mt-4">Manage core application settings and dropdown lists.</p>
+                    
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        <!-- These cards now act as navigation links -->
+
+                        <!-- Card: Product Categories -->
                         <a href="#" class="master-data-card" data-view-id="categories-view">
-                            <h3 class="font-bold text-lg text-gray-800">Product Categories</h3>
-                            <p class="text-sm text-gray-500 mt-1">Manage product groupings</p>
+                            <div class="icon-container bg-blue-100 text-blue-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" /></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-800">Product Categories</h3>
+                                <p class="text-sm text-gray-500 mt-1">Manage product groupings</p>
+                            </div>
                         </a>
+
+                        <!-- Card: Payment Modes -->
                         <a href="#" class="master-data-card" data-view-id="payment-modes-view">
-                            <h3 class="font-bold text-lg text-gray-800">Payment Modes</h3>
-                            <p class="text-sm text-gray-500 mt-1">Manage payment methods</p>
+                            <div class="icon-container bg-green-100 text-green-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" /></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-800">Payment Modes</h3>
+                                <p class="text-sm text-gray-500 mt-1">Manage payment methods</p>
+                            </div>
                         </a>
-                        <!-- Add other cards for Banks, Sale Types, etc. as needed -->
+
+                        <!-- Card: Sale Types -->
+                        <a href="#" class="master-data-card" data-view-id="sale-types-view">
+                            <div class="icon-container bg-purple-100 text-purple-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-800">Sale Types</h3>
+                                <p class="text-sm text-gray-500 mt-1">Manage different types of sales</p>
+                            </div>
+                        </a>
+
+                        <!-- Card: Banks -->
+                        <a href="#" class="master-data-card" data-view-id="banks-view">
+                            <div class="icon-container bg-yellow-100 text-yellow-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z" /></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-800">Banks</h3>
+                                <p class="text-sm text-gray-500 mt-1">Manage bank names for transactions</p>
+                            </div>
+                        </a>
+
+                        <!-- Card: Church Teams -->
+                        <a href="#" class="master-data-card" data-view-id="church-teams-view">
+                            <div class="icon-container bg-red-100 text-red-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m-7.5-2.962a3.75 3.75 0 0 1 5.25 0m4.5 0a3.75 3.75 0 0 1 5.25 0M4.5 19.5h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" /></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-800">Church Teams</h3>
+                                <p class="text-sm text-gray-500 mt-1">Manage different church teams</p>
+                            </div>
+                        </a>
+
                     </div>
                 </div>
 
