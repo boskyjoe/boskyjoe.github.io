@@ -17,7 +17,8 @@ const viewTitle = document.getElementById('view-title');
 const suppliersGridDiv = document.getElementById('suppliers-grid');
 
 
-
+// --- A NEW VARIABLE TO HOLD THE GRID API ---
+let suppliersGridApi = null;
 
 const suppliersGridOptions = {
     columnDefs: [
@@ -66,8 +67,17 @@ const suppliersGridOptions = {
     },
     onGridReady: (params) => {
         console.log("[ui.js] Suppliers Grid is ready!");
+        suppliersGridApi = params.api;
         // We don't need to do anything here on initial load,
         // but this event guarantees that params.api is now available.
+        try {
+            suppliersGridApi.setGridOption('loading', true);
+            const suppliers = await getSuppliers();
+            suppliersGridApi.setRowData(suppliers);
+        } catch (error) {
+            console.error("[ui.js] Could not load initial supplier data:", error);
+            suppliersGridApi.showNoRowsOverlay();
+        }
     },
     onCellValueChanged: (params) => {
         const docId = params.data.id;
@@ -80,19 +90,20 @@ const suppliersGridOptions = {
 };
 
 
-// --- A NEW VARIABLE TO HOLD THE GRID API ---
-let suppliersGridApi = null;
+// --- A FLAG TO PREVENT RE-INITIALIZATION ---
+let isSuppliersGridInitialized = false;
+
 
 // --- THE NEW INITIALIZATION FUNCTION ---
 export function initializeSuppliersGrid() {
     // If the grid has already been initialized, do nothing.
-    if (suppliersGridApi) {
+    if (isSuppliersGridInitialized) {
         return;
     }
-    console.log("[ui.js] Initializing Suppliers Grid for the first time.");
-    // Create the grid and, crucially, capture the returned API object.
     if (suppliersGridDiv) {
-        suppliersGridApi = createGrid(suppliersGridDiv, suppliersGridOptions);
+        console.log("[ui.js] Initializing Suppliers Grid for the first time.");
+        createGrid(suppliersGridDiv, suppliersGridOptions);
+        isSuppliersGridInitialized = true;
     }
 }
 
@@ -102,21 +113,22 @@ export async function showSuppliersView() {
 
     // 1. Initialize the grid if it's the first time viewing this page.
     initializeSuppliersGrid();
+}
 
+export async function refreshSuppliersGrid() {
+    if (!suppliersGridApi) {
+        console.error("Cannot refresh: Suppliers Grid API not available.");
+        return;
+    }
     try {
         suppliersGridApi.setGridOption('loading', true);
         const suppliers = await getSuppliers();
         suppliersGridApi.setRowData(suppliers);
     } catch (error) {
-        console.error("[ui.js] Could not display suppliers:", error);
-        alert("Error loading supplier data. Check the console for details.");
-        if (suppliersGridApi) {
-            suppliersGridApi.setGridOption('loading', false);
-            suppliersGridApi.showNoRowsOverlay();
-        } 
+        console.error("[ui.js] Could not refresh supplier data:", error);
+        suppliersGridApi.showNoRowsOverlay();
     }
 }
-
 
 
 // --- RENDER FUNCTIONS ---
