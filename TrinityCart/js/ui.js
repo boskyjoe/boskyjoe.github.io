@@ -11,28 +11,29 @@ const viewTitle = document.getElementById('view-title');
 // --- RENDER FUNCTIONS ---
 
 export function renderSidebar(role) {
+    const sidebarNav = document.getElementById('sidebar-nav');
     sidebarNav.innerHTML = ''; // Clear existing links
     if (!role) return; // Don't render if no role
 
     navConfig.forEach(item => {
-        // First, check if the user's role is allowed to see this item at all
+        // Check if the user's role is allowed to see this item
         if (item.roles.includes(role)) {
             
-            // Check the type of the navigation item
+            const li = document.createElement('li');
+
             if (item.type === 'heading') {
-                const heading = document.createElement('h3');
-                heading.className = 'nav-heading';
-                heading.textContent = item.label;
-                sidebarNav.appendChild(heading);
+                li.className = 'nav-heading';
+                li.textContent = item.label;
             } 
             else if (item.type === 'link') {
                 const link = document.createElement('a');
                 link.href = '#';
                 link.className = 'nav-link';
-                link.dataset.viewId = item.viewId; // Store viewId in a data attribute
+                link.dataset.viewId = item.viewId;
                 link.innerHTML = `${item.icon}<span>${item.label}</span>`;
-                sidebarNav.appendChild(link);
+                li.appendChild(link);
             }
+            sidebarNav.appendChild(li);
         }
     });
 }
