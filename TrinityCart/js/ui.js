@@ -62,6 +62,11 @@ const suppliersGridOptions = {
     rowClassRules: {
         'opacity-50': params => !params.data.isActive,
     },
+    onGridReady: (params) => {
+        console.log("[ui.js] Suppliers Grid is ready!");
+        // We don't need to do anything here on initial load,
+        // but this event guarantees that params.api is now available.
+    },
     onCellValueChanged: (params) => {
         const docId = params.data.id;
         const field = params.colDef.field;
@@ -85,16 +90,23 @@ export function initializeGrids() {
 export async function showSuppliersView() {
     console.log("[ui.js] showSuppliersView() called. Attempting to fetch data...");
     showView('suppliers-view');
+
+    if (!suppliersGridOptions.api) {
+        console.log("[ui.js] Grid is not ready yet. Waiting for onGridReady to fire.");
+        // If the grid isn't ready, we can't do anything yet. 
+        // This shouldn't happen if initializeGrids was called on startup,
+        // but it's a good safeguard.
+        return;
+    }
+
     try {
+        suppliersGridOptions.api.showLoadingOverlay();
         const suppliers = await getSuppliers();
-        if (suppliersGridOptions.api) {
-            suppliersGridOptions.api.setRowData(suppliers);
-        } else {
-            console.error("[ui.js] ag-Grid API not available yet."); // <-- ADD THIS ERROR LOG
-        }
+        suppliersGridOptions.api.setRowData(suppliers);
     } catch (error) {
         console.error("[ui.js] Could not display suppliers:", error);
         alert("Error loading supplier data. Check the console for details.");
+        suppliersGridOptions.api.showNoRowsOverlay(); 
     }
 }
 
