@@ -5,6 +5,7 @@ import { firebaseConfig, USERS_COLLECTION_PATH } from './config.js';
 
 import { updateUI, showView, showSuppliersView } from './ui.js';
 import { refreshSuppliersGrid} from './ui.js';
+import { showModal } from './modal.js';
 
 
 import { addSupplier, updateSupplier, setSupplierStatus } from './api.js';
@@ -144,12 +145,12 @@ function setupEventListeners() {
 
             try {
                 await addSupplier(supplierData, user);
-                alert('Supplier added successfully!');
+                await showModal('success', 'Success', 'Supplier has been added successfully.');
                 addSupplierForm.reset();
                 refreshSuppliersGrid(); // Refresh the grid
             } catch (error) {
                 console.error("Error adding supplier:", error);
-                alert("Failed to add supplier.");
+                await showModal('error', 'Error', 'Failed to add the supplier. Please try again.');
             }
         });
     }
@@ -180,12 +181,14 @@ function setupEventListeners() {
             if (!docId) return;
 
             if (target.classList.contains('btn-deactivate')) {
-                if (confirm(`Are you sure you want to DEACTIVATE this supplier?`)) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to deactivate this supplier?<br>This action can be undone.`);
+                if (confirmed) {
                     await setSupplierStatus(docId, false, user);
                     refreshSuppliersGrid();
                 }
             } else if (target.classList.contains('btn-activate')) {
-                if (confirm(`Are you sure you want to ACTIVATE this supplier?`)) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to deactivate this supplier?<br>This action can be undone.`);
+                if (confirmed) {
                     await setSupplierStatus(docId, true, user);
                     refreshSuppliersGrid();
                 }
