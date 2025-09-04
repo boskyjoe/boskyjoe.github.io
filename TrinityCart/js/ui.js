@@ -83,15 +83,18 @@ export function initializeGrids() {
 }
 
 export async function showSuppliersView() {
+    console.log("[ui.js] showSuppliersView() called. Attempting to fetch data...");
     showView('suppliers-view');
     try {
         const suppliers = await getSuppliers();
         if (suppliersGridOptions.api) {
             suppliersGridOptions.api.setRowData(suppliers);
+        } else {
+            console.error("[ui.js] ag-Grid API not available yet."); // <-- ADD THIS ERROR LOG
         }
     } catch (error) {
-        console.error("Could not display suppliers:", error);
-        alert("Error loading supplier data.");
+        console.error("[ui.js] Could not display suppliers:", error);
+        alert("Error loading supplier data. Check the console for details.");
     }
 }
 
