@@ -5,6 +5,7 @@ import { navConfig } from './config.js';
 import { createGrid } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
 
 import { getSuppliers } from './api.js';
+import { getCategories } from './api.js';
 
 
 // --- DOM ELEMENT REFERENCES ---
@@ -15,6 +16,8 @@ const viewTitle = document.getElementById('view-title');
 
 
 const suppliersGridDiv = document.getElementById('suppliers-grid');
+const categoriesGridDiv = document.getElementById('categories-grid');
+
 
 
 // --- A NEW VARIABLE TO HOLD THE GRID API ---
@@ -133,6 +136,68 @@ export async function refreshSuppliersGrid() {
         suppliersGridApi.showNoRowsOverlay();
     }
 }
+
+
+
+
+const categoriesGridOptions = {
+    columnDefs: [
+        { field: "categoryId", headerName: "ID", width: 150 },
+        { field: "categoryName", headerName: "Category Name", flex: 1, editable: true },
+        { 
+            field: "isActive", headerName: "Status", width: 120,
+            cellRenderer: p => p.value ? 'Active' : 'Inactive'
+        },
+        {
+            headerName: "Actions", width: 120,
+            cellRenderer: params => {
+                const actionText = params.data.isActive ? 'Deactivate' : 'Activate';
+                const buttonClass = params.data.isActive ? 'btn-deactivate' : 'btn-activate';
+                return `<button class="${buttonClass}" data-id="${params.data.id}">${actionText}</button>`;
+            }
+        }
+    ],
+    defaultColDef: { resizable: true },
+    rowData: [],
+    onCellValueChanged: (params) => {
+        document.dispatchEvent(new CustomEvent('updateCategory', { 
+            detail: { docId: params.data.id, updatedData: { categoryName: params.newValue } } 
+        }));
+    }
+};
+
+let categoriesGridApi = null;
+let isCategoriesGridInitialized = false;
+
+export function initializeCategoriesGrid() {
+    if (isCategoriesGridInitialized || !categoriesGridDiv) return;
+    categoriesGridApi = createGrid(categoriesGridDiv, categoriesGridOptions);
+    isCategoriesGridInitialized = true;
+}
+
+export async function showCategoriesView() {
+    showView('categories-view');
+    initializeCategoriesGrid();
+    
+    try {
+        categoriesGridApi.setGridOption('loading', true);
+        const categories = await getCategories();
+        categoriesGridApi.setGridOption('rowData', categories);
+    } catch (error) {
+        console.error("Error loading categories:", error);
+        categoriesGridApi.showNoRowsOverlay();
+    }
+}
+
+export async function refreshCategoriesGrid() {
+    if (!categoriesGridApi) return;
+    try {
+        categoriesGridApi.setGridOption('loading', true);
+        const categories = await getCategories();
+        categoriesGridApi.setGridOption('rowData', categories);
+    } catch (error) { console.error("Error refreshing categories:", error); }
+}
+
 
 
 // --- RENDER FUNCTIONS ---
