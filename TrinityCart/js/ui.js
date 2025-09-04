@@ -197,7 +197,7 @@ export async function refreshCategoriesGrid() {
         categoriesGridApi.setGridOption('loading', true);
         const categories = await getCategories();
         categoriesGridApi.setGridOption('rowData', categories);
-        suppliersGridApi.setGridOption('loading', false);
+        categoriesGridApi.setGridOption('loading', false);
     } catch (error) { 
         console.error("Error refreshing categories:", error); 
         categoriesGridApi.setGridOption('loading', false);
