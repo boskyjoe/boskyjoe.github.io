@@ -11,8 +11,16 @@ export const firebaseConfig = {
   measurementId: "G-57JRDMJB14"
 };
 
+
+// 1. Define the base document path for all our data.
+const BASE_DOC_PATH = 'artifacts/TrinityCart-default-app-id';
+
 // The path to your users collection
-export const USERS_COLLECTION_PATH = 'artifacts/TrinityCart-default-app-id/users';
+export const USERS_COLLECTION_PATH = `${BASE_DOC_PATH}/users`;
+export const SUPPLIERS_COLLECTION_PATH = `${BASE_DOC_PATH}/suppliers`;
+export const PRODUCTS_COLLECTION_PATH = `${BASE_DOC_PATH}/products`;
+export const PURCHASES_COLLECTION_PATH = `${BASE_DOC_PATH}/purchaseInvoices`;
+export const SALES_COLLECTION_PATH = `${BASE_DOC_PATH}/salesInvoices`;
 
 // Navigation Configuration - THIS WAS MISSING
 // This object drives the entire sidebar navigation.
