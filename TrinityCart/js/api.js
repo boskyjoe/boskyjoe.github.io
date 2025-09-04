@@ -134,13 +134,16 @@ export async function testAPI() {
 // --- SUPPLIER API FUNCTIONS ---
 
 export async function getSuppliers() {
+    console.log("[api.js] getSuppliers() called.");
     const db = firebase.firestore();
     try {
         // Use the new path constant
         const snapshot = await db.collection(SUPPLIERS_COLLECTION_PATH).orderBy('supplierName').get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const suppliers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log(`[api.js] Firestore returned ${suppliers.length} suppliers.`, suppliers);
+        return suppliers ;
     } catch (error) {
-        console.error("Error fetching suppliers:", error);
+        console.error("[api.js] Error fetching suppliers from Firestore:", error);
         throw error;
     }
 }
