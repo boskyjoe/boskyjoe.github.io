@@ -266,7 +266,7 @@ function setupEventListeners() {
                     refreshCategoriesGrid();
                 }
             } else if (target.classList.contains('btn-activate')) {
-                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this supplier?`);
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this product category?`);
                 if (confirmed) {
                     await setCategoryStatus(docId, true, user);
                     refreshCategoriesGrid();
