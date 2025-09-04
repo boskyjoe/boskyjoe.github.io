@@ -65,7 +65,7 @@ const suppliersGridOptions = {
     rowClassRules: {
         'opacity-50': params => !params.data.isActive,
     },
-    onGridReady: (params) => {
+    onGridReady: async (params) => {
         console.log("[ui.js] Suppliers Grid is ready!");
         suppliersGridApi = params.api;
         // We don't need to do anything here on initial load,
