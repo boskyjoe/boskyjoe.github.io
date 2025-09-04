@@ -34,7 +34,7 @@ export function showModal(type, title, message) {
             button.textContent = text;
             button.className = primary ? 'modal-btn modal-btn-primary' : 'modal-btn modal-btn-secondary';
             button.onclick = () => {
-                modalElement.classList.add('modal-hidden');
+                modalElement.style.display = 'none';
                 resolve(value);
             };
             return button;
@@ -47,6 +47,6 @@ export function showModal(type, title, message) {
             modalButtons.appendChild(createButton('OK', true, true));
         }
 
-        modalElement.classList.remove('modal-hidden');
+        modalElement.style.display = 'flex';
     });
 }
