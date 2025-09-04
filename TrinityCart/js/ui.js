@@ -2,6 +2,8 @@
 import { appState } from './state.js';
 import { navConfig } from './config.js';
 
+import { createGrid } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
+
 import { getSuppliers } from './api.js';
 
 
@@ -78,12 +80,19 @@ const suppliersGridOptions = {
 };
 
 
+// --- A NEW VARIABLE TO HOLD THE GRID API ---
+let suppliersGridApi = null;
 
-// --- UI FUNCTIONS ---
-export function initializeGrids() {
-    // ... (keep existing grid initializations)
+// --- THE NEW INITIALIZATION FUNCTION ---
+export function initializeSuppliersGrid() {
+    // If the grid has already been initialized, do nothing.
+    if (suppliersGridApi) {
+        return;
+    }
+    console.log("[ui.js] Initializing Suppliers Grid for the first time.");
+    // Create the grid and, crucially, capture the returned API object.
     if (suppliersGridDiv) {
-        new agGrid.Grid(suppliersGridDiv, suppliersGridOptions);
+        suppliersGridApi = createGrid(suppliersGridDiv, suppliersGridOptions);
     }
 }
 
@@ -91,22 +100,19 @@ export async function showSuppliersView() {
     console.log("[ui.js] showSuppliersView() called. Attempting to fetch data...");
     showView('suppliers-view');
 
-    if (!suppliersGridOptions.api) {
-        console.log("[ui.js] Grid is not ready yet. Waiting for onGridReady to fire.");
-        // If the grid isn't ready, we can't do anything yet. 
-        // This shouldn't happen if initializeGrids was called on startup,
-        // but it's a good safeguard.
-        return;
-    }
+    // 1. Initialize the grid if it's the first time viewing this page.
+    initializeSuppliersGrid();
 
     try {
-        suppliersGridOptions.api.showLoadingOverlay();
+        suppliersGridApi.showLoadingOverlay();
         const suppliers = await getSuppliers();
-        suppliersGridOptions.api.setRowData(suppliers);
+        suppliersGridApi.setRowData(suppliers);
     } catch (error) {
         console.error("[ui.js] Could not display suppliers:", error);
         alert("Error loading supplier data. Check the console for details.");
-        suppliersGridOptions.api.showNoRowsOverlay(); 
+        if (suppliersGridApi) {
+            suppliersGridApi.showNoRowsOverlay();
+        } 
     }
 }
 
