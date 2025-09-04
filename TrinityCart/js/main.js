@@ -9,6 +9,7 @@ import { showModal } from './modal.js';
 
 
 import { addSupplier, updateSupplier, setSupplierStatus } from './api.js';
+import { addCategory, updateCategory, setCategoryStatus } from './api.js';
 
 
 // --- FIREBASE INITIALIZATION ---
@@ -195,6 +196,61 @@ function setupEventListeners() {
             }
         });
     }
+
+    // Handler for the Admin Modules hub page and back links
+    document.addEventListener('click', (e) => {
+        const card = e.target.closest('.master-data-card, .back-link');
+        if (card) {
+            e.preventDefault();
+            const viewId = card.dataset.viewId;
+            if (viewId === 'categories-view') {
+                showCategoriesView();
+            } else if (viewId) {
+                showView(viewId);
+            }
+        }
+    });
+
+    // Add Category Form
+    const addCategoryForm = document.getElementById('add-category-form');
+    if (addCategoryForm) {
+        addCategoryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const categoryName = document.getElementById('categoryName-input').value.trim();
+            if (!user || !categoryName) return;
+
+            try {
+                await addCategory(categoryName, user);
+                addCategoryForm.reset();
+                refreshCategoriesGrid();
+            } catch (error) { console.error("Error adding category:", error); }
+        });
+    }
+
+    // In-Grid Update for Categories
+    document.addEventListener('updateCategory', async (e) => {
+        const { docId, updatedData } = e.detail;
+        await updateCategory(docId, updatedData, appState.currentUser);
+    });
+
+    // Action Buttons for Categories Grid
+    const categoriesGrid = document.getElementById('categories-grid');
+    if (categoriesGrid) {
+        categoriesGrid.addEventListener('click', async (e) => {
+            const target = e.target;
+            const docId = target.dataset.id;
+            if (!docId) return;
+
+            const newStatus = target.classList.contains('btn-activate');
+            await setCategoryStatus(docId, newStatus, appState.currentUser);
+            refreshCategoriesGrid();
+        });
+    }
+
+
+
+
 }
 
 
