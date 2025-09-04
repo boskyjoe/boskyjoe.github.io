@@ -1,4 +1,4 @@
-import { API_URL } from './config.js';
+import { SUPPLIERS_COLLECTION_PATH } from './config.js';
 
 // This file will contain all functions that interact with the backend.
 // For now, they return mock data instantly.
@@ -127,4 +127,57 @@ export async function testAPI() {
         console.log('❌ API test failed');
         return false;
     }
+}
+
+
+
+// --- SUPPLIER API FUNCTIONS ---
+
+export async function getSuppliers() {
+    const db = firebase.firestore();
+    try {
+        // Use the new path constant
+        const snapshot = await db.collection(SUPPLIERS_COLLECTION_PATH).orderBy('supplierName').get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching suppliers:", error);
+        throw error;
+    }
+}
+
+export async function addSupplier(supplierData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const supplierId = `SUP-${Date.now()}`;
+
+    // Use the new path constant
+    return db.collection(SUPPLIERS_COLLECTION_PATH).add({
+        ...supplierData,
+        supplierId: supplierId,
+        isActive: true,
+        hasActivePurchases: false,
+        createdBy: user.email,
+        createdOn: now,
+        updatedBy: user.email,
+        updatedOn: now,
+    });
+}
+
+
+export async function updateSupplier(docId, updatedData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    // Use the new path constant
+    return db.collection(SUPPLIERS_COLLECTION_PATH).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updatedOn: now,
+    });
+}
+
+
+export async function setSupplierStatus(docId, newStatus, user) {
+    const db = firebase.firestore();
+    // This is a simplified call. The real business logic will be in the event handler.
+    return updateSupplier(docId, { isActive: newStatus }, user);
 }
