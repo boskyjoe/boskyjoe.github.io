@@ -73,7 +73,7 @@ const suppliersGridOptions = {
         try {
             suppliersGridApi.setGridOption('loading', true);
             const suppliers = await getSuppliers();
-            suppliersGridApi.setRowData(suppliers);
+            suppliersGridApi.setGridOption('rowData', suppliers);
         } catch (error) {
             console.error("[ui.js] Could not load initial supplier data:", error);
             suppliersGridApi.showNoRowsOverlay();
@@ -96,7 +96,7 @@ let isSuppliersGridInitialized = false;
 
 // --- THE NEW INITIALIZATION FUNCTION ---
 export function initializeSuppliersGrid() {
-    // If the grid has already been initialized, do nothing.
+    // This function will now only be called ONCE.
     if (isSuppliersGridInitialized) {
         return;
     }
@@ -123,7 +123,7 @@ export async function refreshSuppliersGrid() {
     try {
         suppliersGridApi.setGridOption('loading', true);
         const suppliers = await getSuppliers();
-        suppliersGridApi.setRowData(suppliers);
+        suppliersGridApi.setGridOption('rowData', suppliers);
     } catch (error) {
         console.error("[ui.js] Could not refresh supplier data:", error);
         suppliersGridApi.showNoRowsOverlay();
