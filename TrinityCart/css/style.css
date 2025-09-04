@@ -61,3 +61,58 @@
         left: 0;
     }
 }
+
+.form-label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+}
+
+/* Action Buttons in Grid */
+.btn-deactivate, .btn-activate {
+    @apply text-xs px-3 py-1 rounded-full font-semibold transition-colors;
+}
+.btn-deactivate {
+    @apply bg-red-100 text-red-800 hover:bg-red-200;
+}
+.btn-activate {
+    @apply bg-green-100 text-green-800 hover:bg-green-200;
+}
+
+.modal-hidden {
+    display: none;
+}
+
+#custom-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 50; /* Ensure it's on top of everything */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+/* Animate the overlay */
+#modal-overlay {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Animate the panel */
+#modal-panel {
+    animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Reusable button styles */
+.modal-btn {
+    @apply px-4 py-2 rounded-md font-semibold text-sm transition-colors;
+}
+.modal-btn-primary {
+    @apply bg-blue-600 text-white hover:bg-blue-700;
+}
+.modal-btn-secondary {
+    @apply bg-gray-200 text-gray-800 hover:bg-gray-300;
+}
