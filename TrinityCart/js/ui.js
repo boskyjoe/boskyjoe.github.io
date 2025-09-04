@@ -183,8 +183,10 @@ export async function showCategoriesView() {
         categoriesGridApi.setGridOption('loading', true);
         const categories = await getCategories();
         categoriesGridApi.setGridOption('rowData', categories);
+        categoriesGridApi.setGridOption('loading', false);
     } catch (error) {
         console.error("Error loading categories:", error);
+        categoriesGridApi.setGridOption('loading', false);
         categoriesGridApi.showNoRowsOverlay();
     }
 }
@@ -195,9 +197,13 @@ export async function refreshCategoriesGrid() {
         categoriesGridApi.setGridOption('loading', true);
         const categories = await getCategories();
         categoriesGridApi.setGridOption('rowData', categories);
-    } catch (error) { console.error("Error refreshing categories:", error); }
+        suppliersGridApi.setGridOption('loading', false);
+    } catch (error) { 
+        console.error("Error refreshing categories:", error); 
+        categoriesGridApi.setGridOption('loading', false);
+        categoriesGridApi.showNoRowsOverlay();
+    }
 }
-
 
 
 // --- RENDER FUNCTIONS ---
