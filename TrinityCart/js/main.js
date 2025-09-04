@@ -182,13 +182,13 @@ function setupEventListeners() {
             if (!docId) return;
 
             if (target.classList.contains('btn-deactivate')) {
-                const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to deactivate this supplier?<br>This action can be undone.`);
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this supplier?`);
                 if (confirmed) {
                     await setSupplierStatus(docId, false, user);
                     refreshSuppliersGrid();
                 }
             } else if (target.classList.contains('btn-activate')) {
-                const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to deactivate this supplier?<br>This action can be undone.`);
+                const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to Deactivate this supplier?`);
                 if (confirmed) {
                     await setSupplierStatus(docId, true, user);
                     refreshSuppliersGrid();
@@ -260,13 +260,13 @@ function setupEventListeners() {
             if (!docId) return;
 
             if (target.classList.contains('btn-deactivate')) {
-                const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to deactivate this product category?<br>This action can be undone.`);
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this product category?`);
                 if (confirmed) {
                     await setCategoryStatus(docId, false, user);
                     refreshCategoriesGrid();
                 }
             } else if (target.classList.contains('btn-activate')) {
-                const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to deactivate this supplier?<br>This action can be undone.`);
+                const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to deactivate this supplier?`);
                 if (confirmed) {
                     await setCategoryStatus(docId, true, user);
                     refreshCategoriesGrid();
