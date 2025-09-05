@@ -1,343 +1,360 @@
-<!DOCTYPE html>
-<html lang="en">
+// js/main.js
+import { ModuleRegistry, AllCommunityModule } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
+import { appState } from './state.js';
+import { firebaseConfig, USERS_COLLECTION_PATH } from './config.js';
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrinityCart - POS & Inventory</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css">
-</head>
-
-<body class="bg-gray-100 font-sans">
-    <div class="flex h-screen bg-gray-200">
-        <!-- ======================= -->
-        <!--      SIDEBAR / NAV      -->
-        <!-- ======================= -->
-        <aside id="sidebar" class="w-64 bg-gray-800 text-white p-4 flex-shrink-0 flex flex-col">
-            <!-- Logo and Title -->
-            <div class="flex items-center mb-8">
-                <div class="h-12 w-12 rounded-full bg-white flex items-center justify-center">
-                    <span class="text-gray-800 font-bold text-xl">TC</span>
-                </div>
-                <h1 class="text-xl font-bold ml-3">TrinityCart</h1>
-            </div>
-
-            <!-- Navigation Links (will be populated by JS) -->
-            <div class="overflow-y-auto"> <!-- Added a wrapper div for scrolling -->
-                <ul id="sidebar-nav" class="space-y-2">
-                    <!-- Dynamic links will be inserted here by JS -->
-                </ul>
-            </div>
-        </aside>
-
-        <!-- ======================= -->
-        <!--      MAIN CONTAINER     -->
-        <!-- ======================= -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-            <!-- Header Bar -->
-            <header class="bg-white shadow-md p-4 flex justify-between items-center">
-                <!-- Mobile Menu Button -->
-                <button id="mobile-menu-button" class="text-gray-500 focus:outline-none lg:hidden">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
-                </button>
-                <h2 id="view-title" class="text-xl font-semibold text-gray-700">Dashboard</h2>
-
-                <!-- User Profile & Auth -->
-                <div id="auth-container" class="flex items-center space-x-4">
-                    <!-- Login button or user profile will be inserted here by JS -->
-                </div>
-            </header>
-
-            <!-- Main Content Area -->
-            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
-
-                <!-- View 1: Login Prompt (Default View) -->
-                <div id="login-view" class="view active text-center">
-                    <h2 class="text-2xl font-semibold mb-4">Welcome to TrinityCart</h2>
-                    <p class="text-gray-600">Please log in to continue.</p>
-                </div>
-
-                <!-- View 2: Dashboard -->
-                <div id="dashboard-view" class="view">
-                    <!-- Dashboard content will go here -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div class="admin-card">
-                            <h3>Today's Sales</h3>
-                            <p class="text-2xl font-bold">$0.00</p>
-                        </div>
-                        <div class="admin-card">
-                            <h3>Low Stock Items</h3>
-                            <p class="text-2xl font-bold">0</p>
-                        </div>
-                        <div class="admin-card">
-                            <h3>Outstanding Customer Balance</h3>
-                            <p class="text-2xl font-bold">$0.00</p>
-                        </div>
-                        <div class="admin-card">
-                            <h3>Outstanding Supplier Balance</h3>
-                            <p class="text-2xl font-bold">$0.00</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- View 3: Manage Suppliers -->
-                <div id="suppliers-view" class="view space-y-8">
-
-                    <!-- Card 1: Add New Supplier Form -->
-                    <div class="bg-white rounded-lg shadow-lg">
-                        <!-- Card Header -->
-                        <div
-                            class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg flex items-center space-x-3">
-                            <svg class="w-6 h-6 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                            </svg>
-                            <h3 class="text-lg font-semibold text-gray-800">Add New Supplier</h3>
-                        </div>
-
-                        <!-- Card Body -->
-                        <div class="p-6">
-                            <form id="add-supplier-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <!-- Supplier Name -->
-                                <div class="sm:col-span-1">
-                                    <label for="supplierName-input" class="form-label">Supplier Name</label>
-                                    <input type="text" id="supplierName-input" placeholder="e.g., Mary's Bakery"
-                                        class="form-input w-full" required>
-                                </div>
-
-                                <!-- Contact No -->
-                                <div class="sm:col-span-1">
-                                    <label for="contactNo-input" class="form-label">Contact No</label>
-                                    <input type="tel" id="contactNo-input" placeholder="e.g., 555-123-4567"
-                                        class="form-input w-full">
-                                </div>
-
-                                <!-- Contact Email -->
-                                <div class="sm:col-span-1">
-                                    <label for="contactEmail-input" class="form-label">Contact Email</label>
-                                    <input type="email" id="contactEmail-input" placeholder="e.g., mary@bakery.com"
-                                        class="form-input w-full">
-                                </div>
-
-                                <!-- Address -->
-                                <div class="sm:col-span-2">
-                                    <label for="address-input" class="form-label">Address</label>
-                                    <textarea id="address-input" class="form-input w-full" rows="3"
-                                        placeholder="e.g., 123 Main St, Anytown, USA 12345"></textarea>
-                                </div>
-
-                                <!-- Credit Term -->
-                                <div class="sm:col-span-1">
-                                    <label for="creditTerm-input" class="form-label">Credit Term</label>
-                                    <input type="text" id="creditTerm-input" placeholder="e.g., Net 30"
-                                        class="form-input w-full">
-                                </div>
-
-                                <!-- Form Actions / Submit Button -->
-                                <div class="sm:col-span-full flex justify-end">
-                                    <button type="submit"
-                                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors font-semibold">
-                                        Save Supplier
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- Card 2: Existing Suppliers Grid -->
-                    <div class="bg-white rounded-lg shadow-lg">
-                        <!-- Card Header -->
-                        <div
-                            class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg flex items-center space-x-3">
-                            <svg class="w-6 h-6 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
-                            </svg>
-                            <h3 class="text-lg font-semibold text-gray-800">Existing Suppliers</h3>
-                        </div>
-
-                        <!-- Card Body -->
-                        <div class="p-2">
-                            <div id="suppliers-grid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
-                        </div>
-                    </div>
-
-                </div>
+import { updateUI, showView, showSuppliersView } from './ui.js';
+import { showCategoriesView,refreshSuppliersGrid,refreshCategoriesGrid} from './ui.js';
+import { showModal } from './modal.js';
 
 
+import { addSupplier, updateSupplier, setSupplierStatus } from './api.js';
+import { addCategory, updateCategory, setCategoryStatus } from './api.js';
+
+import { showSaleTypesView, refreshSaleTypesGrid } from './ui.js';
+import { addSaleType, updateSaleType, setSaleTypeStatus } from './api.js';
+
+// --- FIREBASE INITIALIZATION ---
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// --- AUTHENTICATION LOGIC ---
+
+/**
+ * Initiates the Google Sign-In popup flow.
+ */
+function handleLogin() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(error => {
+        console.error("Google Sign-In Error:", error);
+        alert("Login failed. Please try again.");
+    });
+}
+
+/**
+ * Signs the user out of Firebase.
+ */
+function handleLogout() {
+    auth.signOut();
+}
+
+/**
+ * This is the main authentication listener.
+ * It fires when the app loads and whenever the user's login state changes.
+ */
+auth.onAuthStateChanged(async (user) => {
+    if (user) {
+        // User is signed in. Now, let's get their role from Firestore.
+        console.log("Firebase user signed in:", user.email);
+        
+        const userDocRef = db.collection(USERS_COLLECTION_PATH).doc(user.uid);
+        const docSnap = await userDocRef.get();
+
+        // THE FIX: Changed docSnap.exists() to docSnap.exists
+        if (docSnap.exists && docSnap.data().isActive) {
+            // User exists in our DB and is active.
+            const userData = docSnap.data();
+            appState.currentUser = {
+                uid: user.uid,
+                displayName: user.displayName,
+                email: user.email,
+                photoURL: user.photoURL,
+                role: userData.role // The crucial role from Firestore!
+            };
+            console.log("User role set to:", appState.currentUser.role);
+        } else {
+            // User is not in our DB or is inactive. Treat as a guest.
+            if (!docSnap.exists) {
+                console.warn("User document not found in Firestore for UID:", user.uid);
+            } else {
+                console.warn("User is marked as inactive in Firestore.");
+            }
+            appState.currentUser = {
+                uid: user.uid,
+                displayName: user.displayName,
+                email: user.email,
+                photoURL: user.photoURL,
+                role: 'guest' // Assign a non-privileged guest role
+            };
+            alert("Your account is not authorized for this application or has been deactivated. Please contact an administrator.");
+        }
+    } else {
+        // User is signed out.
+        console.log("User signed out.");
+        appState.currentUser = null;
+    }
+    // Update the entire UI based on the new state (logged in or out).
+    updateUI();
+});
 
 
-                <!-- New placeholder views based on the refined navigation -->
-                <div id="products-view" class="view">
-                    <h2 class="text-2xl font-semibold">Product Management</h2>
-                </div>
-                <div id="purchases-view" class="view">
-                    <h2 class="text-2xl font-semibold">Purchase Management</h2>
-                </div>
-                <div id="sales-view" class="view">
-                    <h2 class="text-2xl font-semibold">Sales Management</h2>
-                </div>
-                <div id="payments-view" class="view">
-                    <h2 class="text-2xl font-semibold">Payment Management</h2>
-                </div>
+function setupEventListeners() {
+    // Use event delegation for dynamically created elements
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('#login-button')) {
+            handleLogin();
+        }
+        if (e.target.closest('#logout-button')) {
+            handleLogout();
+        }
+    });
+
+    // --- NEW, SMARTER SIDEBAR NAVIGATION HANDLER ---
+    const sidebarNav = document.getElementById('sidebar-nav');
+    sidebarNav.addEventListener('click', (e) => {
+        const link = e.target.closest('.nav-link');
+        if (link) {
+            e.preventDefault();
+            const viewId = link.dataset.viewId;
+            console.log(`[main.js] Nav link clicked. View ID: ${viewId}`);
+            // First, always show the correct view div
+            showView(viewId);
+
+            // Second, if this view needs special data, call its function
+            if (viewId === 'suppliers-view') {
+                showSuppliersView();
+            }
+            // We will add more 'if' statements here for other modules
+            // else if (viewId === 'products-view') { showProductsView(); }
+        }
+    });
+    
+    // Mobile menu toggle
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    mobileMenuButton.addEventListener('click', () => {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('active');
+    });
+
+    // --- ALL THE SUPPLIER FORM AND GRID LISTENERS ---
+    // (This part remains the same as before)
+
+    // Add Supplier Form Submission
+    const addSupplierForm = document.getElementById('add-supplier-form');
+    if (addSupplierForm) {
+        addSupplierForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            if (!user) return alert("You must be logged in.");
+
+            const supplierData = {
+                supplierName: document.getElementById('supplierName-input').value,
+                address: document.getElementById('address-input').value,
+                contactNo: document.getElementById('contactNo-input').value,
+                contactEmail: document.getElementById('contactEmail-input').value,
+                creditTerm: document.getElementById('creditTerm-input').value,
+            };
+
+            try {
+                await addSupplier(supplierData, user);
+                await showModal('success', 'Success', 'Supplier has been added successfully.');
+                addSupplierForm.reset();
+                refreshSuppliersGrid(); // Refresh the grid
+            } catch (error) {
+                console.error("Error adding supplier:", error);
+                await showModal('error', 'Error', 'Failed to add the supplier. Please try again.');
+            }
+        });
+    }
+
+    // In-Grid Update Event
+    document.addEventListener('updateSupplier', async (e) => {
+        const { docId, updatedData } = e.detail;
+        const user = appState.currentUser;
+        if (!user) return;
+        try {
+            await updateSupplier(docId, updatedData, user);
+        } catch (error) {
+            console.error("Error updating supplier:", error);
+            await showModal('error', 'Error', 'Failed to update the supplier. Please try again.');
+            refreshSuppliersGrid(); // Refresh grid to revert failed change
+        }
+    });
+
+    // Action Buttons (Activate/Deactivate) in Grid
+    const suppliersGrid = document.getElementById('suppliers-grid');
+    if (suppliersGrid) {
+        suppliersGrid.addEventListener('click', async (e) => {
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const target = e.target;
+            const docId = target.dataset.id;
+            if (!docId) return;
+
+            if (target.classList.contains('btn-deactivate')) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to Deactivate  this supplier?`);
+                if (confirmed) {
+                    await setSupplierStatus(docId, false, user);
+                    refreshSuppliersGrid();
+                }
+            } else if (target.classList.contains('btn-activate')) {
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this supplier?`);
+                if (confirmed) {
+                    await setSupplierStatus(docId, true, user);
+                    refreshSuppliersGrid();
+                }
+            }
+        });
+    }
+
+    // Handler for the Admin Modules hub page and back links
+    document.addEventListener('click', (e) => {
+        const card = e.target.closest('.master-data-card, .back-link');
+        if (card) {
+            e.preventDefault();
+            const viewId = card.dataset.viewId;
+            if (viewId === 'categories-view') {
+                showCategoriesView();
+            } else if (viewId === 'sale-types-view') { 
+                showSaleTypesView();
+            } else if (viewId) {
+                showView(viewId);
+            }
+        }
+    });
+
+    // Add Category Form
+    const addCategoryForm = document.getElementById('add-category-form');
+    if (addCategoryForm) {
+        addCategoryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const categoryName = document.getElementById('categoryName-input').value.trim();
+            if (!user || !categoryName) return;
+
+            try {
+                await addCategory(categoryName, user);
+                await showModal('success', 'Success', 'Category has been added successfully.');
+                addCategoryForm.reset();
+                refreshCategoriesGrid();
+            } catch (error) { 
+                console.error("Error adding category:", error); 
+                await showModal('error', 'Error', 'Failed to add the category. Please try again.');
+            }
+        });
+    }
 
 
+    // In-Grid Update for Categories
+    document.addEventListener('updateCategory', async (e) => {
+        const { docId, updatedData } = e.detail;
+        const user = appState.currentUser;
+        if (!user) return;
+        try {
+            await updateCategory(docId, updatedData, appState.currentUser);
+        } catch (error) {
+            console.error("Error updating product category:", error);
+            await showModal('error', 'Error', 'Failed to update the product category. Please try again.');
+            refreshCategoriesGrid(); // Refresh grid to revert failed change
+        }
+        
+    });
+
+    // Action Buttons for Categories Grid
+    const categoriesGrid = document.getElementById('categories-grid');
+    if (categoriesGrid) {
+        categoriesGrid.addEventListener('click', async (e) => {
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const button = e.target.closest('button');
+            if (!button) return;
+
+            const docId = target.dataset.id;
+            if (!docId) return;
+
+            if (button.classList.contains('btn-deactivate')) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this product category?`);
+                if (confirmed) {
+                    await setCategoryStatus(docId, false, user);
+                    refreshCategoriesGrid();
+                }
+            } else if (button.classList.contains('btn-activate')) {
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this product category?`);
+                if (confirmed) {
+                    await setCategoryStatus(docId, true, user);
+                    refreshCategoriesGrid();
+                }
+            }
+        });
+    }
+
+     // Add Sale Type Form
+    const addSaleTypeForm = document.getElementById('add-sale-type-form');
+    if (addSaleTypeForm) {
+        addSaleTypeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const saleTypeName = document.getElementById('saleTypeName-input').value.trim();
+            if (!user || !saleTypeName) return;
+
+            try {
+                await addSaleType(saleTypeName, user);
+                await showModal('success', 'Success', 'Sales Type has been added successfully.');
+                addSaleTypeForm.reset();
+                refreshSaleTypesGrid();
+            } catch (error) { 
+                console.error("Error adding sale type:", error); 
+                await showModal('error', 'Error', 'Failed to add the Sales Type. Please try again.');
+
+            }
+        });
+    }
+
+    
+    // In-Grid Update for Sale Types
+    document.addEventListener('updateSaleType', async (e) => {
+        const { docId, updatedData } = e.detail;
+        try {
+            await updateSaleType(docId, updatedData, appState.currentUser);
+        } catch (error) {
+            console.error("Error updating sales type:", error);
+            await showModal('error', 'Error', 'Failed to update the sales type. Please try again.');
+            refreshSaleTypesGrid(); // Refresh grid to revert failed change
+        }
+    });
+
+    // Action Buttons for Sale Types Grid
+    const saleTypesGrid = document.getElementById('sale-types-grid');
+    if (saleTypesGrid) {
+        saleTypesGrid.addEventListener('click', async (e) => {
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const button = e.target.closest('button');
+            if (!button) return;
+            const docId = button.dataset.id;
+            if (!docId) return;
+
+            if (button.classList.contains('btn-deactivate')) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this sales type?`);
+                if (confirmed) {
+                    await setSaleTypeStatus(docId, false, user);
+                    refreshSaleTypesGrid();
+                }
+            } else if (button.classList.contains('btn-activate')) {
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this sales type?`);
+                if (confirmed) {
+                    await setSaleTypeStatus(docId, true, user);
+                    refreshSaleTypesGrid();
+                }
+            }
+        });
+    }
+    
 
 
-
-                <!-- View: Admin Modules (Navigation Hub) -->
-                <div id="admin-modules-view" class="view">
-                    <h2 class="text-2xl font-semibold mb-6">Admin Modules - Master Data</h2>
-                    <p class="text-gray-600 mb-8 -mt-4">Manage core application settings and dropdown lists.</p>
-                    
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-
-                        <!-- Card: Product Categories -->
-                        <a href="#" class="master-data-card" data-view-id="categories-view">
-                            <div class="icon-container bg-blue-100 text-blue-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" /></svg>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-lg text-gray-800">Product Categories</h3>
-                                <p class="text-sm text-gray-500 mt-1">Manage product groupings</p>
-                            </div>
-                        </a>
-
-                        <!-- Card: Payment Modes -->
-                        <a href="#" class="master-data-card" data-view-id="payment-modes-view">
-                            <div class="icon-container bg-green-100 text-green-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" /></svg>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-lg text-gray-800">Payment Modes</h3>
-                                <p class="text-sm text-gray-500 mt-1">Manage payment methods</p>
-                            </div>
-                        </a>
-
-                        <!-- Card: Sale Types -->
-                        <a href="#" class="master-data-card" data-view-id="sale-types-view">
-                            <div class="icon-container bg-purple-100 text-purple-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-lg text-gray-800">Sale Types</h3>
-                                <p class="text-sm text-gray-500 mt-1">Manage different types of sales</p>
-                            </div>
-                        </a>
-
-                        <!-- Card: Banks -->
-                        <a href="#" class="master-data-card" data-view-id="banks-view">
-                            <div class="icon-container bg-yellow-100 text-yellow-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z" /></svg>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-lg text-gray-800">Banks</h3>
-                                <p class="text-sm text-gray-500 mt-1">Manage bank names for transactions</p>
-                            </div>
-                        </a>
-
-                        <!-- Card: Church Teams -->
-                        <a href="#" class="master-data-card" data-view-id="church-teams-view">
-                            <div class="icon-container bg-red-100 text-red-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m-7.5-2.962a3.75 3.75 0 0 1 5.25 0m4.5 0a3.75 3.75 0 0 1 5.25 0M4.5 19.5h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" /></svg>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-lg text-gray-800">Church Teams</h3>
-                                <p class="text-sm text-gray-500 mt-1">Manage different church teams</p>
-                            </div>
-                        </a>
-
-                    </div>
-                </div>
+}
 
 
-                <!-- View: Manage Product Categories -->
-                <div id="categories-view" class="view space-y-8">
-                    <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
-                    
-                    <!-- Card 1: Add New Category Form -->
-                    <div class="bg-white rounded-lg shadow-lg">
-                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 class="text-lg font-semibold text-gray-800">Add New Category</h3>
-                        </div>
-                        <div class="p-6">
-                            <form id="add-category-form" class="flex items-end space-x-4">
-                                <div class="flex-grow">
-                                    <label for="categoryName-input" class="form-label">Category Name</label>
-                                    <input type="text" id="categoryName-input" placeholder="e.g., Snacks" class="form-input w-full" required>
-                                </div>
-                                <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 h-10">Add Category</button>
-                            </form>
-                        </div>
-                    </div>
+// --- APPLICATION INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Application Initializing...");
+    // This MUST be done once at the start of the application.
+    ModuleRegistry.registerModules([AllCommunityModule]);
 
-                    <!-- Card 2: Existing Categories Grid -->
-                    <div class="bg-white rounded-lg shadow-lg">
-                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 class="text-lg font-semibold text-gray-800">Existing Categories</h3>
-                        </div>
-                        <div class="p-2">
-                            <div id="categories-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
-                        </div>
-                    </div>
-                </div>
-
-
-
-
-            </main>
-        </div>
-    </div>
-
-
-
-
-
-    <!-- ======================= -->
-    <!--   CUSTOM MODAL DIALOG   -->
-    <!-- ======================= -->
-    <div id="custom-modal" style="display: none;">
-        <!-- Modal Overlay -->
-        <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-60"></div>
-
-        <!-- Modal Panel -->
-        <div id="modal-panel" class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-auto z-10">
-            <div class="flex items-start space-x-4">
-                <!-- Icon will be inserted here by JS -->
-                <div id="modal-icon" class="flex-shrink-0"></div>
-
-                <!-- Content -->
-                <div class="flex-1">
-                    <h3 id="modal-title" class="text-lg font-bold text-gray-900">Modal Title</h3>
-                    <p id="modal-message" class="text-sm text-gray-600 mt-1">Modal message goes here.</p>
-                </div>
-            </div>
-
-            <!-- Buttons will be inserted here by JS -->
-            <div id="modal-buttons" class="mt-6 flex justify-end space-x-3"></div>
-        </div>
-    </div>
-
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-
-    <!-- ag-Grid JS -->
-    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
-
-    <!-- Our Application JS -->
-    <script type="module" src="js/main.js"></script>
-</body>
-
-</html>
+    setupEventListeners();
+    // The initial UI update is now handled by the onAuthStateChanged listener
+});
