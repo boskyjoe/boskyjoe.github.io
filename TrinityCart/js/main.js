@@ -11,6 +11,8 @@ import { showModal } from './modal.js';
 import { addSupplier, updateSupplier, setSupplierStatus } from './api.js';
 import { addCategory, updateCategory, setCategoryStatus } from './api.js';
 
+import { showSaleTypesView, refreshSaleTypesGrid } from './ui.js';
+import { addSaleType, updateSaleType, setSaleTypeStatus } from './api.js';
 
 // --- FIREBASE INITIALIZATION ---
 firebase.initializeApp(firebaseConfig);
@@ -205,6 +207,8 @@ function setupEventListeners() {
             const viewId = card.dataset.viewId;
             if (viewId === 'categories-view') {
                 showCategoriesView();
+            } else if (viewId === 'sale-types-view') { 
+                showSaleTypesView();
             } else if (viewId) {
                 showView(viewId);
             }
@@ -277,9 +281,69 @@ function setupEventListeners() {
         });
     }
 
+     // Add Sale Type Form
+    const addSaleTypeForm = document.getElementById('add-sale-type-form');
+    if (addSaleTypeForm) {
+        addSaleTypeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const saleTypeName = document.getElementById('saleTypeName-input').value.trim();
+            if (!user || !saleTypeName) return;
+
+            try {
+                await addSaleType(saleTypeName, user);
+                await showModal('success', 'Success', 'Sales Type has been added successfully.');
+                addSaleTypeForm.reset();
+                refreshSaleTypesGrid();
+            } catch (error) { 
+                console.error("Error adding sale type:", error); 
+                await showModal('error', 'Error', 'Failed to add the Sales Type. Please try again.');
+
+            }
+        });
+    }
 
     
+    // In-Grid Update for Sale Types
+    document.addEventListener('updateSaleType', async (e) => {
+        const { docId, updatedData } = e.detail;
+        try {
+            await updateSaleType(docId, updatedData, appState.currentUser);
+        } catch (error) {
+            console.error("Error updating sales type:", error);
+            await showModal('error', 'Error', 'Failed to update the sales type. Please try again.');
+            refreshSaleTypesGrid(); // Refresh grid to revert failed change
+        }
+    });
 
+    // Action Buttons for Sale Types Grid
+    const saleTypesGrid = document.getElementById('sale-types-grid');
+    if (saleTypesGrid) {
+        saleTypesGrid.addEventListener('click', async (e) => {
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const button = e.target.closest('button');
+            if (!button) return;
+            const docId = button.dataset.id;
+            if (!docId) return;
+
+            if (button.classList.contains('btn-deactivate')) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this sales type?`);
+                if (confirmed) {
+                    await setSaleTypeStatus(docId, false, user);
+                    refreshSaleTypesGrid();
+                }
+            } else if (button.classList.contains('btn-activate')) {
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this sales type?`);
+                if (confirmed) {
+                    await setSaleTypeStatus(docId, true, user);
+                    refreshSaleTypesGrid();
+                }
+            }
+        });
+    }
+    
 
 
 }
