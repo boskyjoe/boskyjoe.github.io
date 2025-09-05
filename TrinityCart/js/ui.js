@@ -309,7 +309,7 @@ const productsGridOptions = {
             flex: 1, 
             cellEditor: 'agSelectCellEditor',
             cellEditorParams: {
-                values: () => availableCategories 
+                values: [] 
             },
             editable: true 
         },
@@ -344,7 +344,6 @@ const productsGridOptions = {
                     '<span class="text-gray-500 font-semibold">No</span>';
             }
         },
-        { field: "isReadyForSale", headerName: "Ready for Sale?", width: 150, cellRenderer: p => p.value ? 'Yes' : 'No' },
         { 
             field: "isActive", headerName: "Status", width: 120,
             cellRenderer: p => p.value ? 
@@ -384,6 +383,17 @@ const productsGridOptions = {
             ]);
             // Store the active category names for the dropdown
             availableCategories = categories.filter(c => c.isActive).map(c => c.categoryName);
+
+            // 1. Get the current column definitions
+            const columnDefs = productsGridOptions.columnDefs;
+            // 2. Find the 'category' column definition
+            const categoryCol = columnDefs.find(col => col.field === 'category');
+            // 3. Update its values
+            if (categoryCol) {
+                categoryCol.cellEditorParams.values = availableCategories;
+            }
+            // 4. Tell the grid to apply the updated column definitions
+            productsGridApi.setGridOption('columnDefs', columnDefs);
 
         
             productsGridApi.setGridOption('rowData', products);
