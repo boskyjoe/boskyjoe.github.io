@@ -297,27 +297,44 @@ export async function refreshSaleTypesGrid() {
     }
 }
 
-
+let availableCategories = [];
 
 const productsGridOptions = {
     columnDefs: [
         { field: "itemId", headerName: "ID", width: 150 },
         { field: "itemName", headerName: "Item Name", flex: 2, editable: true },
-        { field: "category", headerName: "Category", flex: 1, editable: true },
+        { 
+            field: "category", 
+            headerName: "Category", 
+            flex: 1, 
+            cellEditor: 'agSelectCellEditor', // Use the built-in dropdown editor
+            cellEditorParams: {
+                values: [] // We will populate this dynamically
+            },
+            editable: true 
+        },
         { 
             field: "unitPrice", 
             headerName: "Unit Price", 
             flex: 1, 
             editable: true, 
-            valueFormatter: p => (typeof p.value === 'number') ? p.value.toFixed(2) : '' // Check if value is a number
+            valueFormatter: p => (typeof p.value === 'number') ? p.value.toFixed(2) : '',
+            valueParser: p => parseFloat(p.newValue) // Ensure the edited value is a number
         },
-        { field: "unitMarginPercentage", headerName: "Margin %", flex: 1, editable: true },
+        { 
+            field: "unitMarginPercentage", 
+            headerName: "Margin %", 
+            flex: 1, 
+            editable: true,
+            valueParser: p => parseFloat(p.newValue)
+        },
         { 
             field: "sellingPrice", 
             headerName: "Selling Price", 
             flex: 1, 
-            editable: true, 
-            valueFormatter: p => (typeof p.value === 'number') ? p.value.toFixed(2) : '' // Check if value is a number
+            editable: false, // This is now calculated, not edited directly
+            valueFormatter: p => (typeof p.value === 'number') ? p.value.toFixed(2) : '',
+            cellStyle: { 'background-color': '#f3f4f6' } // Give it a slight gray background
         },
         { field: "isReadyForSale", headerName: "Ready for Sale?", width: 150, cellRenderer: p => p.value ? 'Yes' : 'No' },
         { field: "isActive", headerName: "Status", width: 120, cellRenderer: p => p.value ? 'Active' : 'Inactive' },
@@ -342,13 +359,24 @@ const productsGridOptions = {
         'opacity-50': params => !params.data.isActive,
     },
     onGridReady: async (params) => {
-        console.log("[ui.js] Suppliers Grid is ready!");
+        console.log("[ui.js] Products Grid is now ready.");
         productsGridApi = params.api;
         // We don't need to do anything here on initial load,
         // but this event guarantees that params.api is now available.
         try {
             productsGridApi.setGridOption('loading', true);
-            const products = await getProducts();
+            const [products, categories] = await Promise.all([
+                getProducts(),
+                getCategories()
+            ]);
+            // Store the active category names for the dropdown
+            availableCategories = categories.filter(c => c.isActive).map(c => c.categoryName);
+
+            // Update the column definition with the category values
+            const categoryCol = productsGridApi.getColumnDef('category');
+            if (categoryCol) {
+                categoryCol.cellEditorParams.values = availableCategories;
+            }
             productsGridApi.setGridOption('rowData', products);
             productsGridApi.setGridOption('loading', false);
         } catch (error) {
@@ -361,8 +389,30 @@ const productsGridOptions = {
         const docId = params.data.id;
         const field = params.colDef.field;
         const newValue = params.newValue;
+        const node = params.node;
+        
+        let updatedData = { [field]: newValue };
+
+        // --- NEW AUTO-CALCULATION LOGIC ---
+        if (field === 'unitPrice' || field === 'unitMarginPercentage') {
+            const cost = parseFloat(node.data.unitPrice) || 0;
+            const margin = parseFloat(node.data.unitMarginPercentage) || 0;
+            
+            if (cost > 0) {
+                const newSellingPrice = cost * (1 + margin / 100);
+                
+                // Update the grid data locally for instant feedback
+                node.setDataValue('sellingPrice', newSellingPrice);
+                
+                // Add the new selling price to the data we'll save to Firestore
+                updatedData.sellingPrice = newSellingPrice;
+            }
+        }
+
+
+
         document.dispatchEvent(new CustomEvent('updateProduct', { 
-            detail: { docId, updatedData: { [field]: newValue } } 
+            detail: { docId, updatedData } 
         }));
     }
 };
