@@ -1,7 +1,7 @@
 import { SUPPLIERS_COLLECTION_PATH } from './config.js';
 import { CATEGORIES_COLLECTION_PATH } from './config.js';
 import { SALE_TYPES_COLLECTION_PATH } from './config.js';
-
+import { PRODUCTS_CATALOGUE_COLLECTION_PATH } from './config.js';
 
 // This file will contain all functions that interact with the backend.
 // For now, they return mock data instantly.
@@ -278,4 +278,51 @@ export async function updateSaleType(docId, updatedData, user) {
 
 export async function setSaleTypeStatus(docId, newStatus, user) {
     return updateSaleType(docId, { isActive: newStatus }, user);
+}
+
+
+
+// --- PRODUCT CATALOGUE API FUNCTIONS ---
+
+export async function getProducts() {
+    const db = firebase.firestore();
+    try {
+        const snapshot = await db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).orderBy('itemName').get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching products:", error);
+        throw error;
+    }
+}
+
+export async function addProduct(productData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const itemId = `ITEM-${Date.now()}`;
+
+    return db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).add({
+        ...productData,
+        itemId: itemId,
+        isActive: true,
+        isReadyForSale: false, // Default to not ready until stock is added
+        createdBy: user.email,
+        createdOn: now,
+        updatedBy: user.email,
+        updateDate: now, // Note: field name from SRS
+    });
+}
+
+export async function updateProduct(docId, updatedData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    return db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updateDate: now,
+    });
+}
+
+export async function setProductStatus(docId, field, newStatus, user) {
+    // This function can toggle 'isActive' or 'isReadyForSale'
+    return updateProduct(docId, { [field]: newStatus }, user);
 }
