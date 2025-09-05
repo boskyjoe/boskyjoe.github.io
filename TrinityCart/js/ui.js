@@ -138,15 +138,15 @@ export async function refreshSuppliersGrid() {
 }
 
 
-
-
 const categoriesGridOptions = {
     columnDefs: [
         { field: "categoryId", headerName: "ID", width: 150 },
         { field: "categoryName", headerName: "Category Name", flex: 1, editable: true },
         { 
             field: "isActive", headerName: "Status", width: 120,
-            cellRenderer: p => p.value ? 'Active' : 'Inactive'
+            cellRenderer: p => p.value ? 
+                '<span class="text-green-600 font-semibold">Active</span>' : 
+                '<span class="text-red-600 font-semibold">Inactive</span>'
         },
         {
             headerName: "Actions", width: 120,
