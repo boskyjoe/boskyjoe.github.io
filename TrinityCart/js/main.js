@@ -14,6 +14,9 @@ import { addCategory, updateCategory, setCategoryStatus } from './api.js';
 import { showSaleTypesView, refreshSaleTypesGrid } from './ui.js';
 import { addSaleType, updateSaleType, setSaleTypeStatus } from './api.js';
 
+import { showProductsView, refreshProductsGrid } from './ui.js';
+import { addProduct, updateProduct, setProductStatus } from './api.js';
+
 // --- FIREBASE INITIALIZATION ---
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -114,6 +117,10 @@ function setupEventListeners() {
             // Second, if this view needs special data, call its function
             if (viewId === 'suppliers-view') {
                 showSuppliersView();
+            }
+
+            if (viewId === 'products-view') {
+                showProductsView();
             }
             // We will add more 'if' statements here for other modules
             // else if (viewId === 'products-view') { showProductsView(); }
@@ -343,6 +350,88 @@ function setupEventListeners() {
             }
         });
     }
+    
+    // Add Product Form
+    const addProductForm = document.getElementById('add-product-form');
+    if (addProductForm) {
+        addProductForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const unitPrice = parseFloat(document.getElementById('unitPrice-input').value);
+            const unitMarginPercentage = parseFloat(document.getElementById('unitMargin-input').value);
+            const sellingPrice = unitPrice * (1 + unitMarginPercentage / 100);
+
+            const productData = {
+                itemName: document.getElementById('itemName-input').value,
+                category: document.getElementById('itemCategory-select').value,
+                unitPrice: unitPrice,
+                unitMarginPercentage: unitMarginPercentage,
+                sellingPrice: sellingPrice,
+            };
+
+            try { 
+                await addProduct(productData, user);
+                await showModal('success', 'Success', 'Product has been added successfully.');
+                addProductForm.reset();
+                refreshProductsGrid();
+            } catch (error) {
+                console.error("Error adding sale type:", error); 
+                await showModal('error', 'Error', 'Failed to add the Product. Please try again.');
+            }
+
+        });
+    }
+    
+
+    // In-Grid Update Event
+    document.addEventListener('updateProduct', async (e) => {
+        const { docId, updatedData } = e.detail;
+        const user = appState.currentUser;
+        if (!user) return;
+        try {
+            await updateProduct(docId, updatedData, user);
+        } catch (error) {
+            console.error("Error updating supplier:", error);
+            await showModal('error', 'Error', 'Failed to update the supplier. Please try again.');
+            refreshProductsGrid(); // Refresh grid to revert failed change
+        }
+    });
+
+    // Action Buttons (Activate/Deactivate) in Grid
+    const productGrid = document.getElementById('products-catalogue-grid');
+    if (productGrid) {
+        productGrid.addEventListener('click', async (e) => {
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const target = e.target;
+            const docId = target.dataset.id;
+            if (!docId) return;
+
+            if (target.classList.contains('btn-deactivate')) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to Deactivate  this Product?`);
+                if (confirmed) {
+                    await setProductStatus(docId, false, user);
+                    refreshSuppliersGrid();
+                }
+            } else if (target.classList.contains('btn-activate')) {
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this Product?`);
+                if (confirmed) {
+                    await setProductStatus(docId, true, user);
+                    refreshSuppliersGrid();
+                }
+            }
+        });
+    }
+
+    
+
+
+
+
+
+
+
     
 
 
