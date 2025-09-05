@@ -25,6 +25,7 @@ export const SALES_COLLECTION_PATH = `${BASE_DOC_PATH}/salesInvoices`;
 
 export const CATEGORIES_COLLECTION_PATH = `${BASE_DOC_PATH}/productCategories`;
 export const SALE_TYPES_COLLECTION_PATH = `${BASE_DOC_PATH}/saleTypes`;
+export const PRODUCTS_CATALOGUE_COLLECTION_PATH = `${BASE_DOC_PATH}/productCatalogue`;
 
 
 // Navigation Configuration - THIS WAS MISSING
