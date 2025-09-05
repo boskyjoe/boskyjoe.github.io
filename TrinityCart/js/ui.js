@@ -5,8 +5,9 @@ import { navConfig } from './config.js';
 import { createGrid } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
 
 import { getSuppliers } from './api.js';
-import { getCategories } from './api.js';
 import { getSaleTypes } from './api.js';
+
+import { getProducts, getCategories } from './api.js';
 
 
 // --- DOM ELEMENT REFERENCES ---
@@ -19,6 +20,14 @@ const viewTitle = document.getElementById('view-title');
 const suppliersGridDiv = document.getElementById('suppliers-grid');
 const categoriesGridDiv = document.getElementById('categories-grid');
 const saleTypesGridDiv = document.getElementById('sale-types-grid');
+
+
+const productsGridDiv = document.getElementById('products-catalogue-grid');
+
+const itemCategorySelect = document.getElementById('itemCategory-select');
+const unitPriceInput = document.getElementById('unitPrice-input');
+const unitMarginInput = document.getElementById('unitMargin-input');
+const sellingPriceDisplay = document.getElementById('sellingPrice-display');
 
 
 
@@ -289,6 +298,147 @@ export async function refreshSaleTypesGrid() {
 }
 
 
+
+const productsGridOptions = {
+    columnDefs: [
+        { field: "itemId", headerName: "ID", width: 150 },
+        { field: "itemName", headerName: "Item Name", flex: 2, editable: true },
+        { field: "category", headerName: "Category", flex: 1, editable: true },
+        { field: "unitPrice", headerName: "Unit Price", flex: 1, editable: true, valueFormatter: p => p.value.toFixed(2) },
+        { field: "unitMarginPercentage", headerName: "Margin %", flex: 1, editable: true },
+        { field: "sellingPrice", headerName: "Selling Price", flex: 1, editable: true, valueFormatter: p => p.value.toFixed(2) },
+        { field: "isReadyForSale", headerName: "Ready for Sale?", width: 150, cellRenderer: p => p.value ? 'Yes' : 'No' },
+        { field: "isActive", headerName: "Status", width: 120, cellRenderer: p => p.value ? 'Active' : 'Inactive' },
+        {
+            headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
+            cellRenderer: params => { 
+                const icon = params.data.isActive 
+                    ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
+                    : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
+                const buttonClass = params.data.isActive ? 'btn-deactivate' : 'btn-activate';
+                const tooltip = params.data.isActive ? 'Deactivate Sale Type' : 'Activate Sale Type';
+                return `<button class="${buttonClass}" data-id="${params.data.id}" title="${tooltip}">${icon}</button>`;
+
+            }
+        }
+    ],
+    defaultColDef: {
+        sortable: true, filter: true, resizable: true,
+    },
+    rowData: [],
+    rowClassRules: {
+        'opacity-50': params => !params.data.isActive,
+    },
+    onGridReady: async (params) => {
+        console.log("[ui.js] Suppliers Grid is ready!");
+        suppliersGridApi = params.api;
+        // We don't need to do anything here on initial load,
+        // but this event guarantees that params.api is now available.
+        try {
+            suppliersGridApi.setGridOption('loading', true);
+            const suppliers = await getSuppliers();
+            suppliersGridApi.setGridOption('rowData', suppliers);
+            suppliersGridApi.setGridOption('loading', false);
+        } catch (error) {
+            console.error("[ui.js] Could not load initial supplier data:", error);
+            suppliersGridApi.setGridOption('loading', false);
+            suppliersGridApi.showNoRowsOverlay();
+        }
+    },
+    onCellValueChanged: (params) => {
+        const docId = params.data.id;
+        const field = params.colDef.field;
+        const newValue = params.newValue;
+        document.dispatchEvent(new CustomEvent('updateProduct', { 
+            detail: { docId, updatedData: { [field]: newValue } } 
+        }));
+    }
+};
+
+let productsGridApi = null;
+let isProductsGridInitialized = false;
+
+
+// --- THE NEW INITIALIZATION FUNCTION ---
+export function initializeProductGrid() {
+    // This function will now only be called ONCE.
+    if (isProductsGridInitialized) {
+        return;
+    }
+    if (suppliersGridDiv) {
+        console.log("[ui.js] Initializing Suppliers Grid for the first time.");
+        createGrid(suppliersGridDiv, suppliersGridOptions);
+        isSuppliersGridInitialized = true;
+    }
+}
+
+// --- UI FUNCTIONS ---
+
+function calculateSellingPrice() {
+    const cost = parseFloat(unitPriceInput.value) || 0;
+    const margin = parseFloat(unitMarginInput.value) || 0;
+    if (cost > 0 && margin > 0) {
+        const sellingPrice = cost * (1 + margin / 100);
+        sellingPriceDisplay.value = sellingPrice.toFixed(2);
+    } else {
+        sellingPriceDisplay.value = '';
+    }
+}
+
+export function initializeProductsGrid() {
+    // This function will now only be called ONCE.
+    if (isProductsGridInitialized) {
+        return;
+    }
+    if (productsGridDiv) {
+        console.log("[ui.js] Initializing Product Grid for the first time.");
+        createGrid(productsGridDiv, productsGridOptions);
+        isProductsGridInitialized = true;
+    }
+}
+
+export async function showProductsView() {
+    showView('products-view');
+    initializeProductsGrid();
+    
+    // Populate the category dropdown
+    const categories = await getCategories();
+    itemCategorySelect.innerHTML = '<option value="">Select a category...</option>';
+    categories.filter(c => c.isActive).forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.categoryName;
+        option.textContent = cat.categoryName;
+        itemCategorySelect.appendChild(option);
+    });
+
+    // Add listeners for auto-calculation
+    unitPriceInput.addEventListener('input', calculateSellingPrice);
+    unitMarginInput.addEventListener('input', calculateSellingPrice);
+
+    // Load data into the grid
+    try {
+        productsGridApi.setGridOption('loading', true);
+        const products = await getProducts();
+        productsGridApi.setGridOption('rowData', products);
+    } catch (error) {
+        console.error("Error loading products:", error);
+        productsGridApi.showNoRowsOverlay();
+    }
+}
+
+export async function refreshProductsGrid() {
+    if (!productsGridApi) return;
+    try {
+        productsGridApi.setGridOption('loading', true);
+        const products = await getProducts();
+        productsGridApi.setGridOption('rowData', products);
+        productsGridApi.setGridOption('loading', false);
+    } catch (error) { 
+        console.error("Error refreshing sale types:", error); 
+        productsGridApi.setGridOption('loading', false);
+        productsGridApi.showNoRowsOverlay();
+    }
+}
 
 
 
