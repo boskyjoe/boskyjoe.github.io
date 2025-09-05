@@ -163,7 +163,7 @@ const categoriesGridOptions = {
                 const tooltip = isActive ? 'Deactivate Category' : 'Activate Category';
 
                 return `<button class="${buttonClass}" data-id="${docId}" title="${tooltip}">${icon}</button>`;
-            }
+            },
             cellClass: 'flex items-center justify-center'
         }
     ],
