@@ -348,8 +348,8 @@ const productsGridOptions = {
         // but this event guarantees that params.api is now available.
         try {
             productsGridApi.setGridOption('loading', true);
-            const suppliers = await getSuppliers();
-            productsGridApi.setGridOption('rowData', suppliers);
+            const products = await getProducts();
+            productsGridApi.setGridOption('rowData', products);
             productsGridApi.setGridOption('loading', false);
         } catch (error) {
             console.error("[ui.js] Could not load initial product data:", error);
