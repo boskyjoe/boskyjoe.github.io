@@ -304,9 +304,21 @@ const productsGridOptions = {
         { field: "itemId", headerName: "ID", width: 150 },
         { field: "itemName", headerName: "Item Name", flex: 2, editable: true },
         { field: "category", headerName: "Category", flex: 1, editable: true },
-        { field: "unitPrice", headerName: "Unit Price", flex: 1, editable: true, valueFormatter: p => p.value.toFixed(2) },
+        { 
+            field: "unitPrice", 
+            headerName: "Unit Price", 
+            flex: 1, 
+            editable: true, 
+            valueFormatter: p => (typeof p.value === 'number') ? p.value.toFixed(2) : '' // Check if value is a number
+        },
         { field: "unitMarginPercentage", headerName: "Margin %", flex: 1, editable: true },
-        { field: "sellingPrice", headerName: "Selling Price", flex: 1, editable: true, valueFormatter: p => p.value.toFixed(2) },
+        { 
+            field: "sellingPrice", 
+            headerName: "Selling Price", 
+            flex: 1, 
+            editable: true, 
+            valueFormatter: p => (typeof p.value === 'number') ? p.value.toFixed(2) : '' // Check if value is a number
+        },
         { field: "isReadyForSale", headerName: "Ready for Sale?", width: 150, cellRenderer: p => p.value ? 'Yes' : 'No' },
         { field: "isActive", headerName: "Status", width: 120, cellRenderer: p => p.value ? 'Active' : 'Inactive' },
         {
@@ -316,7 +328,7 @@ const productsGridOptions = {
                     ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
                     : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
                 const buttonClass = params.data.isActive ? 'btn-deactivate' : 'btn-activate';
-                const tooltip = params.data.isActive ? 'Deactivate Sale Type' : 'Activate Sale Type';
+                const tooltip = params.data.isActive ? 'Deactivate Product' : 'Activate Product';
                 return `<button class="${buttonClass}" data-id="${params.data.id}" title="${tooltip}">${icon}</button>`;
 
             }
@@ -340,7 +352,7 @@ const productsGridOptions = {
             productsGridApi.setGridOption('rowData', suppliers);
             productsGridApi.setGridOption('loading', false);
         } catch (error) {
-            console.error("[ui.js] Could not load initial supplier data:", error);
+            console.error("[ui.js] Could not load initial product data:", error);
             productsGridApi.setGridOption('loading', false);
             productsGridApi.showNoRowsOverlay();
         }
