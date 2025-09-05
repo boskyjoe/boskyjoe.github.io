@@ -1,5 +1,7 @@
 import { SUPPLIERS_COLLECTION_PATH } from './config.js';
 import { CATEGORIES_COLLECTION_PATH } from './config.js';
+import { SALE_TYPES_COLLECTION_PATH } from './config.js';
+
 
 // This file will contain all functions that interact with the backend.
 // For now, they return mock data instantly.
@@ -231,4 +233,49 @@ export async function updateCategory(docId, updatedData, user) {
 
 export async function setCategoryStatus(docId, newStatus, user) {
     return updateCategory(docId, { isActive: newStatus }, user);
+}
+
+
+
+// --- SALE TYPE API FUNCTIONS ---
+
+export async function getSaleTypes() {
+    const db = firebase.firestore();
+    try {
+        const snapshot = await db.collection(SALE_TYPES_COLLECTION_PATH).orderBy('saleTypeName').get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching sale types:", error);
+        throw error;
+    }
+}
+
+export async function addSaleType(saleTypeName, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const saleTypeId = `ST-${Date.now()}`;
+
+    return db.collection(SALE_TYPES_COLLECTION_PATH).add({
+        saleTypeId: saleTypeId,
+        saleTypeName: saleTypeName,
+        isActive: true,
+        createdBy: user.email,
+        createdOn: now,
+        updatedBy: user.email,
+        updatedOn: now,
+    });
+}
+
+export async function updateSaleType(docId, updatedData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    return db.collection(SALE_TYPES_COLLECTION_PATH).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updatedOn: now,
+    });
+}
+
+export async function setSaleTypeStatus(docId, newStatus, user) {
+    return updateSaleType(docId, { isActive: newStatus }, user);
 }
