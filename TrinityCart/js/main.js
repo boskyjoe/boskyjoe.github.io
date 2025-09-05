@@ -391,8 +391,8 @@ function setupEventListeners() {
         try {
             await updateProduct(docId, updatedData, user);
         } catch (error) {
-            console.error("Error updating supplier:", error);
-            await showModal('error', 'Error', 'Failed to update the supplier. Please try again.');
+            console.error("Error updating Products:", error);
+            await showModal('error', 'Error', 'Failed to update the Products. Please try again.');
             refreshProductsGrid(); // Refresh grid to revert failed change
         }
     });
