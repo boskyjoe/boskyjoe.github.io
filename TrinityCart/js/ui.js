@@ -329,6 +329,14 @@ const productsGridOptions = {
             valueParser: p => parseFloat(p.newValue)
         },
         { 
+            field: "sellingPrice", 
+            headerName: "Selling Price", 
+            flex: 1, 
+            editable: false,
+            valueFormatter: p => (typeof p.value === 'number') ? p.value.toFixed(2) : '',
+            cellStyle: { 'background-color': '#f3f4f6' }
+        },
+        { 
             field: "isReadyForSale", 
             headerName: "Ready for Sale?", 
             width: 150, 
