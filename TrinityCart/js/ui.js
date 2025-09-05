@@ -307,9 +307,9 @@ const productsGridOptions = {
             field: "category", 
             headerName: "Category", 
             flex: 1, 
-            cellEditor: 'agSelectCellEditor', // Use the built-in dropdown editor
+            cellEditor: 'agSelectCellEditor',
             cellEditorParams: {
-                values: [] // We will populate this dynamically
+                values: () => availableCategories 
             },
             editable: true 
         },
@@ -329,15 +329,28 @@ const productsGridOptions = {
             valueParser: p => parseFloat(p.newValue)
         },
         { 
-            field: "sellingPrice", 
-            headerName: "Selling Price", 
-            flex: 1, 
-            editable: false, // This is now calculated, not edited directly
-            valueFormatter: p => (typeof p.value === 'number') ? p.value.toFixed(2) : '',
-            cellStyle: { 'background-color': '#f3f4f6' } // Give it a slight gray background
+            field: "isReadyForSale", 
+            headerName: "Ready for Sale?", 
+            width: 150, 
+            editable: true,
+            cellEditor: 'agSelectCellEditor',
+            cellEditorParams: {
+                values: [true, false] // Simple boolean options
+            },
+            // Custom renderer to make it look nice
+            cellRenderer: p => {
+                return p.value ? 
+                    '<span class="text-green-600 font-semibold">Yes</span>' : 
+                    '<span class="text-gray-500 font-semibold">No</span>';
+            }
         },
         { field: "isReadyForSale", headerName: "Ready for Sale?", width: 150, cellRenderer: p => p.value ? 'Yes' : 'No' },
-        { field: "isActive", headerName: "Status", width: 120, cellRenderer: p => p.value ? 'Active' : 'Inactive' },
+        { 
+            field: "isActive", headerName: "Status", width: 120,
+            cellRenderer: p => p.value ? 
+                '<span class="text-green-600 font-semibold">Active</span>' : 
+                '<span class="text-red-600 font-semibold">Inactive</span>'
+        },
         {
             headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
             cellRenderer: params => { 
@@ -372,11 +385,7 @@ const productsGridOptions = {
             // Store the active category names for the dropdown
             availableCategories = categories.filter(c => c.isActive).map(c => c.categoryName);
 
-            // Update the column definition with the category values
-            const categoryCol = productsGridApi.getColumnDef('category');
-            if (categoryCol) {
-                categoryCol.cellEditorParams.values = availableCategories;
-            }
+        
             productsGridApi.setGridOption('rowData', products);
             productsGridApi.setGridOption('loading', false);
         } catch (error) {
