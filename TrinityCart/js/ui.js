@@ -6,6 +6,7 @@ import { createGrid } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@lates
 
 import { getSuppliers } from './api.js';
 import { getCategories } from './api.js';
+import { getSaleTypes } from './api.js';
 
 
 // --- DOM ELEMENT REFERENCES ---
@@ -17,6 +18,7 @@ const viewTitle = document.getElementById('view-title');
 
 const suppliersGridDiv = document.getElementById('suppliers-grid');
 const categoriesGridDiv = document.getElementById('categories-grid');
+const saleTypesGridDiv = document.getElementById('sale-types-grid');
 
 
 
@@ -214,6 +216,81 @@ export async function refreshCategoriesGrid() {
         categoriesGridApi.showNoRowsOverlay();
     }
 }
+
+
+const saleTypesGridOptions = {
+    columnDefs: [
+        { field: "saleTypeId", headerName: "ID", width: 150 },
+        { field: "saleTypeName", headerName: "Sale Type Name", flex: 1, editable: true },
+        { field: "isActive", headerName: "Status", width: 120, cellRenderer: p => p.value ? 'Active' : 'Inactive' },
+        {
+            headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
+            cellRenderer: params => {
+                const icon = params.data.isActive 
+                    ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
+                    : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
+                const buttonClass = params.data.isActive ? 'btn-deactivate' : 'btn-activate';
+                const tooltip = params.data.isActive ? 'Deactivate Sale Type' : 'Activate Sale Type';
+                return `<button class="${buttonClass}" data-id="${params.data.id}" title="${tooltip}">${icon}</button>`;
+            }
+        }
+    ],
+    defaultColDef: { resizable: true },
+    onCellValueChanged: (params) => {
+        document.dispatchEvent(new CustomEvent('updateSaleType', { 
+            detail: { docId: params.data.id, updatedData: { saleTypeName: params.newValue } } 
+        }));
+    }
+};
+
+let saleTypesGridApi = null;
+let isSaleTypesGridInitialized = false;
+
+export function initializeSaleTypesGrid() {
+    if (isSaleTypesGridInitialized || !saleTypesGridDiv) return;
+    saleTypesGridApi = createGrid(saleTypesGridDiv, saleTypesGridOptions);
+    isSaleTypesGridInitialized = true;
+}
+
+export async function showSaleTypesView() {
+    showView('sale-types-view');
+    initializeSaleTypesGrid();
+    
+    try {
+        saleTypesGridApi.setGridOption('loading', true);
+        const saleTypes = await getSaleTypes();
+        saleTypesGridApi.setGridOption('rowData', saleTypes);
+        saleTypesGridApi.setGridOption('loading', false);
+    } catch (error) {
+        console.error("Error loading sale types:", error);
+        saleTypesGridApi.setGridOption('loading', false);
+        saleTypesGridApi.showNoRowsOverlay();
+    }
+}
+
+
+export async function refreshSaleTypesGrid() {
+    if (!saleTypesGridApi) return;
+    try {
+        saleTypesGridApi.setGridOption('loading', true);
+        const saleTypes = await getSaleTypes();
+        saleTypesGridApi.setGridOption('rowData', saleTypes);
+        saleTypesGridApi.setGridOption('loading', false);
+    } catch (error) { 
+        console.error("Error refreshing sale types:", error); 
+        saleTypesGridApi.setGridOption('loading', false);
+        saleTypesGridApi.showNoRowsOverlay();
+    }
+}
+
+
+
+
+
+
+
+
+
 
 
 // --- RENDER FUNCTIONS ---
