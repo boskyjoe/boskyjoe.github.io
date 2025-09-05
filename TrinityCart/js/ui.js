@@ -492,6 +492,7 @@ export async function showProductsView() {
         productsGridApi.setGridOption('rowData', products);
     } catch (error) {
         console.error("Error loading products:", error);
+        productsGridApi.setGridOption('loading', false);
         productsGridApi.showNoRowsOverlay();
     }
 }
