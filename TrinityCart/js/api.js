@@ -304,7 +304,7 @@ export async function addProduct(productData, user) {
         ...productData,
         itemId: itemId,
         isActive: true,
-        isReadyForSale: false, // Default to not ready until stock is added
+        isReadyForSale: true, 
         createdBy: user.email,
         createdOn: now,
         updatedBy: user.email,
