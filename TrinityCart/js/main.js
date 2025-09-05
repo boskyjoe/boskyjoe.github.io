@@ -255,17 +255,19 @@ function setupEventListeners() {
             const user = appState.currentUser;
             if (!user) return;
 
-            const target = e.target;
+            const button = e.target.closest('button');
+            if (!button) return;
+
             const docId = target.dataset.id;
             if (!docId) return;
 
-            if (target.classList.contains('btn-deactivate')) {
+            if (button.classList.contains('btn-deactivate')) {
                 const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this product category?`);
                 if (confirmed) {
                     await setCategoryStatus(docId, false, user);
                     refreshCategoriesGrid();
                 }
-            } else if (target.classList.contains('btn-activate')) {
+            } else if (button.classList.contains('btn-activate')) {
                 const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this product category?`);
                 if (confirmed) {
                     await setCategoryStatus(docId, true, user);
