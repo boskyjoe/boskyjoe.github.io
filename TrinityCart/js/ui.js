@@ -331,18 +331,18 @@ const productsGridOptions = {
     },
     onGridReady: async (params) => {
         console.log("[ui.js] Suppliers Grid is ready!");
-        suppliersGridApi = params.api;
+        productsGridApi = params.api;
         // We don't need to do anything here on initial load,
         // but this event guarantees that params.api is now available.
         try {
-            suppliersGridApi.setGridOption('loading', true);
+            productsGridApi.setGridOption('loading', true);
             const suppliers = await getSuppliers();
-            suppliersGridApi.setGridOption('rowData', suppliers);
-            suppliersGridApi.setGridOption('loading', false);
+            productsGridApi.setGridOption('rowData', suppliers);
+            productsGridApi.setGridOption('loading', false);
         } catch (error) {
             console.error("[ui.js] Could not load initial supplier data:", error);
-            suppliersGridApi.setGridOption('loading', false);
-            suppliersGridApi.showNoRowsOverlay();
+            productsGridApi.setGridOption('loading', false);
+            productsGridApi.showNoRowsOverlay();
         }
     },
     onCellValueChanged: (params) => {
@@ -359,19 +359,6 @@ let productsGridApi = null;
 let isProductsGridInitialized = false;
 
 
-// --- THE NEW INITIALIZATION FUNCTION ---
-export function initializeProductGrid() {
-    // This function will now only be called ONCE.
-    if (isProductsGridInitialized) {
-        return;
-    }
-    if (suppliersGridDiv) {
-        console.log("[ui.js] Initializing Suppliers Grid for the first time.");
-        createGrid(suppliersGridDiv, suppliersGridOptions);
-        isSuppliersGridInitialized = true;
-    }
-}
-
 // --- UI FUNCTIONS ---
 
 function calculateSellingPrice() {
@@ -386,15 +373,9 @@ function calculateSellingPrice() {
 }
 
 export function initializeProductsGrid() {
-    // This function will now only be called ONCE.
-    if (isProductsGridInitialized) {
-        return;
-    }
-    if (productsGridDiv) {
-        console.log("[ui.js] Initializing Product Grid for the first time.");
-        createGrid(productsGridDiv, productsGridOptions);
-        isProductsGridInitialized = true;
-    }
+    if (isProductsGridInitialized || !productsGridDiv) return;
+    productsGridApi = createGrid(productsGridDiv, productsGridOptions);
+    isProductsGridInitialized = true;
 }
 
 export async function showProductsView() {
