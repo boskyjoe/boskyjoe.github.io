@@ -417,6 +417,41 @@
                     </div>
                 </div>
 
+                <!-- View: Manage Payment Modes -->
+                <div id="payment-modes-view" class="view space-y-8">
+                    <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
+                    
+                    <!-- Card 1: Add New Payment Mode Form -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Add New Payment Mode</h3>
+                        </div>
+                        <div class="p-6">
+                            <form id="add-payment-mode-form" class="flex items-end space-x-4">
+                                <div class="flex-grow">
+                                    <label for="paymentModeName-input" class="form-label">Payment Mode Name</label>
+                                    <input type="text" id="paymentModeName-input" placeholder="e.g., Bank Transfer" class="form-input w-full" required>
+                                </div>
+                                <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 h-10">Add Mode</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Existing Payment Modes Grid -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Existing Payment Modes</h3>
+                        </div>
+                        <div class="p-2">
+                            <div id="payment-modes-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+
+
 
 
 
