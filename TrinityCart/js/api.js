@@ -288,6 +288,7 @@ export async function setSaleTypeStatus(docId, newStatus, user) {
 
 export async function getPaymentModes() {
     const db = firebase.firestore();
+    console.log("api.js:getPaymentModes") ;
     try {
         const snapshot = await db.collection(PAYMENT_MODES_COLLECTION_PATH).orderBy('paymentMode').get();
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
