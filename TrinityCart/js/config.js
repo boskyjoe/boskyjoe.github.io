@@ -27,6 +27,7 @@ export const CATEGORIES_COLLECTION_PATH = `${BASE_DOC_PATH}/productCategories`;
 export const SALE_TYPES_COLLECTION_PATH = `${BASE_DOC_PATH}/saleTypes`;
 export const PRODUCTS_CATALOGUE_COLLECTION_PATH = `${BASE_DOC_PATH}/productCatalogue`;
 export const PAYMENT_MODES_COLLECTION_PATH = `${BASE_DOC_PATH}/paymentModes`;
+export const SEASONS_COLLECTION_PATH = `${BASE_DOC_PATH}/salesSeasons`;
 
 
 // Navigation Configuration - THIS WAS MISSING
