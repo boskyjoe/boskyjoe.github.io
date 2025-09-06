@@ -337,6 +337,7 @@ let paymentModesGridApi = null;
 let isPaymentModesGridInitialized = false;
 
 export function initializePaymentModesGrid() {
+    console.log("ui.js: initializePaymentModesGrid") ;
     if (isPaymentModesGridInitialized || !paymentModesGridApi) return;
     paymentModesGridApi = createGrid(paymentModesGridApi, paymentModesGridOptions);
     isPaymentModesGridInitialized = true;
@@ -347,8 +348,7 @@ export async function showPaymentModesView() {
     initializePaymentModesGrid();
     
     try {
-        console.error("Google Sign-In Error:", error);
-        console.log("showPaymentModesView") ;
+        console.log("ui.js: showPaymentModesView") ;
         paymentModesGridApi.setGridOption('loading', true);
         const paymentMode = await getPaymentModes();
         paymentModesGridApi.setGridOption('rowData', paymentMode);
