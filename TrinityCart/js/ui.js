@@ -301,6 +301,10 @@ export async function refreshSaleTypesGrid() {
 }
 
 
+let paymentModesGridApi = null;
+let isPaymentModesGridInitialized = false;
+
+
 const paymentModesGridOptions = {
     columnDefs: [
         { field: "paymentTypeId", headerName: "ID", width: 150 },
@@ -328,12 +332,26 @@ const paymentModesGridOptions = {
         document.dispatchEvent(new CustomEvent('updatePaymentMode', { 
             detail: { docId: params.data.id, updatedData: { paymentMode: params.newValue } } 
         }));
+    },
+    onGridReady: async (params) => {
+        console.log("[ui.js] Payment Modes Grid is now ready.");
+        paymentModesGridApi = params.api;
+        
+        try {
+            paymentModesGridApi.setGridOption('loading', true);
+            const paymentModes = await getPaymentModes();
+            paymentModesGridApi.setGridOption('rowData', paymentModes);
+            paymentModesGridApi.setGridOption('loading', false);
+        } catch (error) {
+            console.error("Error loading payment modes:", error);
+            paymentModesGridApi.setGridOption('loading', false);
+            paymentModesGridApi.showNoRowsOverlay();
+        }
     }
 
 }
 
-let paymentModesGridApi = null;
-let isPaymentModesGridInitialized = false;
+
 
 export function initializePaymentModesGrid() {
     console.log("ui.js: initializePaymentModesGrid") ;
@@ -346,19 +364,8 @@ export async function showPaymentModesView() {
     console.log("ui.js: initializePaymentModesGrid") ;
     showView('payment-modes-view');
     initializePaymentModesGrid();
-    
-    try {
-        console.log("ui.js: showPaymentModesView") ;
-        paymentModesGridApi.setGridOption('loading', true);
-        const paymentMode = await getPaymentModes();
-        paymentModesGridApi.setGridOption('rowData', paymentMode);
-        paymentModesGridApi.setGridOption('loading', false);
-    } catch (error) {
-        console.error("Error loading payment mode:", error);
-        paymentModesGridApi.setGridOption('loading', false);
-        paymentModesGridApi.showNoRowsOverlay();
-    }
 }
+
 
 
 export async function refreshPaymentModesGrid() {
