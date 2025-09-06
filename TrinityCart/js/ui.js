@@ -347,6 +347,8 @@ export async function showPaymentModesView() {
     initializePaymentModesGrid();
     
     try {
+        console.error("Google Sign-In Error:", error);
+        console.log("showPaymentModesView") ;
         paymentModesGridApi.setGridOption('loading', true);
         const paymentMode = await getPaymentModes();
         paymentModesGridApi.setGridOption('rowData', paymentMode);
