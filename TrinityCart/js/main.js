@@ -126,9 +126,6 @@ function setupEventListeners() {
             if (viewId === 'products-view') {
                 showProductsView();
             }
-            if (viewId === 'payment-modes-view') {
-                showPaymentModesView();
-            }
             // We will add more 'if' statements here for other modules
             // else if (viewId === 'products-view') { showProductsView(); }
         }
@@ -225,6 +222,8 @@ function setupEventListeners() {
                 showSaleTypesView();
             } else if (viewId) {
                 showView(viewId);
+            } else if (viewId === 'payment-modes-view') {
+                showPaymentModesView();
             }
         }
     });
