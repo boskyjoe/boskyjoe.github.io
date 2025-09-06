@@ -222,10 +222,10 @@ function setupEventListeners() {
                 showCategoriesView();
             } else if (viewId === 'sale-types-view') { 
                 showSaleTypesView();
-            } else if (viewId) {
-                showView(viewId);
             } else if (viewId === 'payment-modes-view') {
                 showPaymentModesView();
+            } else if (viewId) {
+                showView(viewId);
             }
         }
     });
