@@ -373,7 +373,7 @@ export async function refreshPaymentModesGrid() {
     try {
         paymentModesGridApi.setGridOption('loading', true);
         const paymentMode = await getPaymentModes();
-        paymentModesGridApi.setGridOption('rowData', saleTypes);
+        paymentModesGridApi.setGridOption('rowData', paymentMode);
         paymentModesGridApi.setGridOption('loading', false);
     } catch (error) { 
         console.error("Error refreshing payment mode:", error); 
