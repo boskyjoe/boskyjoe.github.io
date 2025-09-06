@@ -213,10 +213,11 @@ function setupEventListeners() {
     // Handler for the Admin Modules hub page and back links
     document.addEventListener('click', (e) => {
         const card = e.target.closest('.master-data-card, .back-link');
-        console.log(`[main.js] Nav link clicked. View ID: ${viewId}`);
+        
         if (card) {
             e.preventDefault();
             const viewId = card.dataset.viewId;
+            console.log(`[main.js] Nav link clicked. View ID: ${viewId}`);
             if (viewId === 'categories-view') {
                 showCategoriesView();
             } else if (viewId === 'sale-types-view') { 
