@@ -220,19 +220,11 @@ export function initializeCategoriesGrid() {
 }
 
 export async function showCategoriesView() {
+    
+    console.log("[ui.js] showCategoriesView called.");
+
     showView('categories-view');
     initializeCategoriesGrid();
-    
-    try {
-        categoriesGridApi.setGridOption('loading', true);
-        const categories = await getCategories();
-        categoriesGridApi.setGridOption('rowData', categories);
-        categoriesGridApi.setGridOption('loading', false);
-    } catch (error) {
-        console.error("Error loading categories:", error);
-        categoriesGridApi.setGridOption('loading', false);
-        categoriesGridApi.showNoRowsOverlay();
-    }
 }
 
 export async function refreshCategoriesGrid() {
