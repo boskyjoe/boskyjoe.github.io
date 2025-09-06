@@ -6,6 +6,7 @@ import { createGrid } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@lates
 
 import { getSuppliers } from './api.js';
 import { getSaleTypes } from './api.js';
+import { getPaymentModes } from './api.js';
 
 import { getProducts, getCategories } from './api.js';
 
@@ -20,6 +21,8 @@ const viewTitle = document.getElementById('view-title');
 const suppliersGridDiv = document.getElementById('suppliers-grid');
 const categoriesGridDiv = document.getElementById('categories-grid');
 const saleTypesGridDiv = document.getElementById('sale-types-grid');
+const paymentModesGridDiv = document.getElementById('payment-modes-grid');
+
 
 
 const productsGridDiv = document.getElementById('products-catalogue-grid');
@@ -28,6 +31,7 @@ const itemCategorySelect = document.getElementById('itemCategory-select');
 const unitPriceInput = document.getElementById('unitPrice-input');
 const unitMarginInput = document.getElementById('unitMargin-input');
 const sellingPriceDisplay = document.getElementById('sellingPrice-display');
+
 
 
 
@@ -296,6 +300,92 @@ export async function refreshSaleTypesGrid() {
         saleTypesGridApi.showNoRowsOverlay();
     }
 }
+
+
+const paymentModesGridOptions = {
+    columnDefs: [
+        { field: "paymentTypeId", headerName: "ID", width: 150 },
+        { field: "paymentMode", headerName: "Payment Mode", flex: 1, editable: true },
+        { 
+            field: "isActive", headerName: "Status", width: 120,
+            cellRenderer: p => p.value ? 
+                '<span class="text-green-600 font-semibold">Active</span>' : 
+                '<span class="text-red-600 font-semibold">Inactive</span>'
+        },
+        {
+            headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
+            cellRenderer: params => {
+                const icon = params.data.isActive 
+                    ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
+                    : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
+                const buttonClass = params.data.isActive ? 'btn-deactivate' : 'btn-activate';
+                const tooltip = params.data.isActive ? 'Deactivate Sale Type' : 'Activate Sale Type';
+                return `<button class="${buttonClass}" data-id="${params.data.id}" title="${tooltip}">${icon}</button>`;
+            }
+        }
+    ],
+    defaultColDef: { resizable: true },
+    onCellValueChanged: (params) => {
+        document.dispatchEvent(new CustomEvent('updatePaymentMode', { 
+            detail: { docId: params.data.id, updatedData: { paymentMode: params.newValue } } 
+        }));
+    }
+
+}
+
+let paymentModesGridApi = null;
+let isPaymentModesGridInitialized = false;
+
+export function initializePaymentModesGrid() {
+    if (isPaymentModesGridInitialized || !paymentModesGridApi) return;
+    paymentModesGridApi = createGrid(paymentModesGridApi, paymentModesGridOptions);
+    isPaymentModesGridInitialized = true;
+}
+
+export async function showPaymentModesView() {
+    showView('payment-modes-view');
+    initializePaymentModesGrid();
+    
+    try {
+        paymentModesGridApi.setGridOption('loading', true);
+        const paymentMode = await getPaymentModes();
+        paymentModesGridApi.setGridOption('rowData', paymentMode);
+        paymentModesGridApi.setGridOption('loading', false);
+    } catch (error) {
+        console.error("Error loading payment mode:", error);
+        paymentModesGridApi.setGridOption('loading', false);
+        paymentModesGridApi.showNoRowsOverlay();
+    }
+}
+
+
+export async function refreshPaymentModesGrid() {
+    if (!paymentModesGridApi) return;
+    try {
+        paymentModesGridApi.setGridOption('loading', true);
+        const paymentMode = await getPaymentModes();
+        paymentModesGridApi.setGridOption('rowData', saleTypes);
+        paymentModesGridApi.setGridOption('loading', false);
+    } catch (error) { 
+        console.error("Error refreshing payment mode:", error); 
+        paymentModesGridApi.setGridOption('loading', false);
+        paymentModesGridApi.showNoRowsOverlay();
+    }
+}
+
+
+
+
+///above is the admin modules 
+
+
+
+
+
+
+
+
+
 
 let availableCategories = [];
 
