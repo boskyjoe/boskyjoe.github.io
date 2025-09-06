@@ -459,6 +459,54 @@
                 </div>
 
 
+                <!-- View: Manage Sales Seasons -->
+                <div id="seasons-view" class="view space-y-8">
+                    <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
+                    
+                    <!-- Card 1: Add New Season Form -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Add New Sales Season</h3>
+                        </div>
+                        <div class="p-6">
+                            <form id="add-season-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <!-- Season Name -->
+                                <div class="md:col-span-1">
+                                    <label for="seasonName-input" class="form-label">Season Name</label>
+                                    <input type="text" id="seasonName-input" placeholder="e.g., Christmas 2024" class="form-input w-full" required>
+                                </div>
+                                <!-- Start Date -->
+                                <div>
+                                    <label for="startDate-input" class="form-label">Start Date</label>
+                                    <input type="date" id="startDate-input" class="form-input w-full" required>
+                                </div>
+                                <!-- End Date -->
+                                <div>
+                                    <label for="endDate-input" class="form-label">End Date</label>
+                                    <input type="date" id="endDate-input" class="form-input w-full" required>
+                                </div>
+                                <!-- Form Actions -->
+                                <div class="md:col-span-3 flex justify-end">
+                                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
+                                        Add Season
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Existing Seasons Grid -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Existing Sales Seasons</h3>
+                        </div>
+                        <div class="p-2">
+                            <div id="seasons-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+
 
 
 
