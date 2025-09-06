@@ -1,700 +1,540 @@
-// js/ui.js
+// js/main.js
+import { ModuleRegistry, AllCommunityModule } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
 import { appState } from './state.js';
-import { navConfig } from './config.js';
+import { firebaseConfig, USERS_COLLECTION_PATH } from './config.js';
 
-import { createGrid } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
+import { updateUI, showView, showSuppliersView } from './ui.js';
+import { showCategoriesView,refreshSuppliersGrid,refreshCategoriesGrid} from './ui.js';
+import { showModal } from './modal.js';
 
-import { getSuppliers } from './api.js';
-import { getSaleTypes } from './api.js';
-import { getPaymentModes } from './api.js';
 
-import { getProducts, getCategories } from './api.js';
+import { addSupplier, updateSupplier, setSupplierStatus } from './api.js';
+import { addCategory, updateCategory, setCategoryStatus } from './api.js';
 
+import { showSaleTypesView, refreshSaleTypesGrid } from './ui.js';
+import { addSaleType, updateSaleType, setSaleTypeStatus } from './api.js';
 
-// --- DOM ELEMENT REFERENCES ---
-const views = document.querySelectorAll('.view');
-const sidebarNav = document.getElementById('sidebar-nav');
-const authContainer = document.getElementById('auth-container');
-const viewTitle = document.getElementById('view-title');
+import { showPaymentModesView, refreshPaymentModesGrid } from './ui.js';
+import { addPaymentMode, updatePaymentMode, setPaymentModeStatus } from './api.js';
 
 
-const suppliersGridDiv = document.getElementById('suppliers-grid');
-const categoriesGridDiv = document.getElementById('categories-grid');
-const saleTypesGridDiv = document.getElementById('sale-types-grid');
-const paymentModesGridDiv = document.getElementById('payment-modes-grid');
+import { showProductsView, refreshProductsGrid } from './ui.js';
+import { addProduct, updateProduct, setProductStatus } from './api.js';
 
+// --- FIREBASE INITIALIZATION ---
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
+// --- AUTHENTICATION LOGIC ---
 
-const productsGridDiv = document.getElementById('products-catalogue-grid');
-
-const itemCategorySelect = document.getElementById('itemCategory-select');
-const unitPriceInput = document.getElementById('unitPrice-input');
-const unitMarginInput = document.getElementById('unitMargin-input');
-const sellingPriceDisplay = document.getElementById('sellingPrice-display');
-
-
-
-
-// --- A NEW VARIABLE TO HOLD THE GRID API ---
-let suppliersGridApi = null;
-
-const suppliersGridOptions = {
-    columnDefs: [
-        { field: "supplierId", headerName: "ID", width: 150 },
-        { field: "supplierName", headerName: "Name", flex: 2, editable: true, minWidth: 150 },
-        { field: "address", headerName: "Address", flex: 3, editable: true, minWidth: 200 },
-        { field: "contactNo", headerName: "Contact No", flex: 1, editable: true, minWidth: 120 },
-        { field: "contactEmail", headerName: "Email", flex: 1, editable: true, minWidth: 150 },
-        { field: "creditTerm", headerName: "Credit Term", flex: 1, editable: true, minWidth: 100 },
-        { 
-            field: "isActive", 
-            headerName: "Status", 
-            width: 120,
-            cellRenderer: params => params.value ? 
-                '<span class="text-green-600 font-semibold">Active</span>' : 
-                '<span class="text-red-600 font-semibold">Inactive</span>'
-        },
-        {
-            headerName: "Actions",
-            width: 120,
-            cellRenderer: (params) => {
-                const docId = params.data.id;
-                const isActive = params.data.isActive;
-                const hasActivePurchases = params.data.hasActivePurchases;
-
-                if (isActive) {
-                    // If supplier is active, show the "Deactivate" button
-                    const isDisabled = hasActivePurchases;
-                    const disabledClass = isDisabled ? 'opacity-50 cursor-not-allowed' : 'btn-deactivate';
-                    const tooltip = isDisabled ? 'title="Cannot deactivate supplier with active purchases"' : '';
-                    return `<button class="${disabledClass}" data-id="${docId}" ${tooltip} ${isDisabled ? 'disabled' : ''}>Deactivate</button>`;
-                } else {
-                    // If supplier is inactive, show the "Activate" button
-                    return `<button class="btn-activate" data-id="${docId}">Activate</button>`;
-                }
-            },
-            editable: false, sortable: false, filter: false,
-        }
-    ],
-    defaultColDef: {
-        sortable: true, filter: true, resizable: true,
-    },
-    rowData: [],
-    rowClassRules: {
-        'opacity-50': params => !params.data.isActive,
-    },
-    onGridReady: async (params) => {
-        console.log("[ui.js] Suppliers Grid is ready!");
-        suppliersGridApi = params.api;
-        // We don't need to do anything here on initial load,
-        // but this event guarantees that params.api is now available.
-        try {
-            suppliersGridApi.setGridOption('loading', true);
-            const suppliers = await getSuppliers();
-            suppliersGridApi.setGridOption('rowData', suppliers);
-            suppliersGridApi.setGridOption('loading', false);
-        } catch (error) {
-            console.error("[ui.js] Could not load initial supplier data:", error);
-            suppliersGridApi.setGridOption('loading', false);
-            suppliersGridApi.showNoRowsOverlay();
-        }
-    },
-    onCellValueChanged: (params) => {
-        const docId = params.data.id;
-        const field = params.colDef.field;
-        const newValue = params.newValue;
-        document.dispatchEvent(new CustomEvent('updateSupplier', { 
-            detail: { docId, updatedData: { [field]: newValue } } 
-        }));
-    }
-};
-
-
-// --- A FLAG TO PREVENT RE-INITIALIZATION ---
-let isSuppliersGridInitialized = false;
-
-
-// --- THE NEW INITIALIZATION FUNCTION ---
-export function initializeSuppliersGrid() {
-    // This function will now only be called ONCE.
-    if (isSuppliersGridInitialized) {
-        return;
-    }
-    if (suppliersGridDiv) {
-        console.log("[ui.js] Initializing Suppliers Grid for the first time.");
-        createGrid(suppliersGridDiv, suppliersGridOptions);
-        isSuppliersGridInitialized = true;
-    }
-}
-
-export async function showSuppliersView() {
-    console.log("[ui.js] showSuppliersView() called. Attempting to fetch data...");
-    showView('suppliers-view');
-
-    // 1. Initialize the grid if it's the first time viewing this page.
-    initializeSuppliersGrid();
-}
-
-export async function refreshSuppliersGrid() {
-    if (!suppliersGridApi) {
-        console.error("Cannot refresh: Suppliers Grid API not available.");
-        return;
-    }
-    try {
-        suppliersGridApi.setGridOption('loading', true);
-        const suppliers = await getSuppliers();
-        suppliersGridApi.setGridOption('rowData', suppliers);
-        suppliersGridApi.setGridOption('loading', false);
-    } catch (error) {
-        console.error("[ui.js] Could not refresh supplier data:", error);
-        suppliersGridApi.setGridOption('loading', false);
-        suppliersGridApi.showNoRowsOverlay();
-    }
-}
-
-
-const categoriesGridOptions = {
-    columnDefs: [
-        { field: "categoryId", headerName: "ID", width: 150 },
-        { field: "categoryName", headerName: "Category Name", flex: 1, editable: true },
-        { 
-            field: "isActive", headerName: "Status", width: 120,
-            cellRenderer: p => p.value ? 
-                '<span class="text-green-600 font-semibold">Active</span>' : 
-                '<span class="text-red-600 font-semibold">Inactive</span>'
-        },
-        {
-            headerName: "Actions", width: 120,
-            cellRenderer: params => {
-                const docId = params.data.id;
-                const isActive = params.data.isActive;
-
-                const deactivateIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`;
-                const activateIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
-
-                // Determine which icon, class, and tooltip to use
-                const icon = isActive ? deactivateIcon : activateIcon;
-                const buttonClass = isActive ? 'btn-deactivate' : 'btn-activate';
-                const tooltip = isActive ? 'Deactivate Category' : 'Activate Category';
-
-                return `<button class="${buttonClass}" data-id="${docId}" title="${tooltip}">${icon}</button>`;
-            },
-            cellClass: 'flex items-center justify-center'
-        }
-    ],
-    defaultColDef: { resizable: true },
-    rowData: [],
-    onCellValueChanged: (params) => {
-        document.dispatchEvent(new CustomEvent('updateCategory', { 
-            detail: { docId: params.data.id, updatedData: { categoryName: params.newValue } } 
-        }));
-    }
-};
-
-let categoriesGridApi = null;
-let isCategoriesGridInitialized = false;
-
-export function initializeCategoriesGrid() {
-    if (isCategoriesGridInitialized || !categoriesGridDiv) return;
-    categoriesGridApi = createGrid(categoriesGridDiv, categoriesGridOptions);
-    isCategoriesGridInitialized = true;
-}
-
-export async function showCategoriesView() {
-    showView('categories-view');
-    initializeCategoriesGrid();
-    
-    try {
-        categoriesGridApi.setGridOption('loading', true);
-        const categories = await getCategories();
-        categoriesGridApi.setGridOption('rowData', categories);
-        categoriesGridApi.setGridOption('loading', false);
-    } catch (error) {
-        console.error("Error loading categories:", error);
-        categoriesGridApi.setGridOption('loading', false);
-        categoriesGridApi.showNoRowsOverlay();
-    }
-}
-
-export async function refreshCategoriesGrid() {
-    if (!categoriesGridApi) return;
-    try {
-        categoriesGridApi.setGridOption('loading', true);
-        const categories = await getCategories();
-        categoriesGridApi.setGridOption('rowData', categories);
-        categoriesGridApi.setGridOption('loading', false);
-    } catch (error) { 
-        console.error("Error refreshing categories:", error); 
-        categoriesGridApi.setGridOption('loading', false);
-        categoriesGridApi.showNoRowsOverlay();
-    }
-}
-
-
-const saleTypesGridOptions = {
-    columnDefs: [
-        { field: "saleTypeId", headerName: "ID", width: 150 },
-        { field: "saleTypeName", headerName: "Sale Type Name", flex: 1, editable: true },
-        { 
-            field: "isActive", headerName: "Status", width: 120,
-            cellRenderer: p => p.value ? 
-                '<span class="text-green-600 font-semibold">Active</span>' : 
-                '<span class="text-red-600 font-semibold">Inactive</span>'
-        },
-        {
-            headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
-            cellRenderer: params => {
-                const icon = params.data.isActive 
-                    ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
-                    : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
-                const buttonClass = params.data.isActive ? 'btn-deactivate' : 'btn-activate';
-                const tooltip = params.data.isActive ? 'Deactivate Sale Type' : 'Activate Sale Type';
-                return `<button class="${buttonClass}" data-id="${params.data.id}" title="${tooltip}">${icon}</button>`;
-            }
-        }
-    ],
-    defaultColDef: { resizable: true },
-    onCellValueChanged: (params) => {
-        document.dispatchEvent(new CustomEvent('updateSaleType', { 
-            detail: { docId: params.data.id, updatedData: { saleTypeName: params.newValue } } 
-        }));
-    }
-};
-
-let saleTypesGridApi = null;
-let isSaleTypesGridInitialized = false;
-
-export function initializeSaleTypesGrid() {
-    if (isSaleTypesGridInitialized || !saleTypesGridDiv) return;
-    saleTypesGridApi = createGrid(saleTypesGridDiv, saleTypesGridOptions);
-    isSaleTypesGridInitialized = true;
-}
-
-export async function showSaleTypesView() {
-    showView('sale-types-view');
-    initializeSaleTypesGrid();
-    
-    try {
-        saleTypesGridApi.setGridOption('loading', true);
-        const saleTypes = await getSaleTypes();
-        saleTypesGridApi.setGridOption('rowData', saleTypes);
-        saleTypesGridApi.setGridOption('loading', false);
-    } catch (error) {
-        console.error("Error loading sale types:", error);
-        saleTypesGridApi.setGridOption('loading', false);
-        saleTypesGridApi.showNoRowsOverlay();
-    }
-}
-
-
-export async function refreshSaleTypesGrid() {
-    if (!saleTypesGridApi) return;
-    try {
-        saleTypesGridApi.setGridOption('loading', true);
-        const saleTypes = await getSaleTypes();
-        saleTypesGridApi.setGridOption('rowData', saleTypes);
-        saleTypesGridApi.setGridOption('loading', false);
-    } catch (error) { 
-        console.error("Error refreshing sale types:", error); 
-        saleTypesGridApi.setGridOption('loading', false);
-        saleTypesGridApi.showNoRowsOverlay();
-    }
-}
-
-
-const paymentModesGridOptions = {
-    columnDefs: [
-        { field: "paymentTypeId", headerName: "ID", width: 150 },
-        { field: "paymentMode", headerName: "Payment Mode", flex: 1, editable: true },
-        { 
-            field: "isActive", headerName: "Status", width: 120,
-            cellRenderer: p => p.value ? 
-                '<span class="text-green-600 font-semibold">Active</span>' : 
-                '<span class="text-red-600 font-semibold">Inactive</span>'
-        },
-        {
-            headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
-            cellRenderer: params => {
-                const icon = params.data.isActive 
-                    ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
-                    : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
-                const buttonClass = params.data.isActive ? 'btn-deactivate' : 'btn-activate';
-                const tooltip = params.data.isActive ? 'Deactivate Sale Type' : 'Activate Sale Type';
-                return `<button class="${buttonClass}" data-id="${params.data.id}" title="${tooltip}">${icon}</button>`;
-            }
-        }
-    ],
-    defaultColDef: { resizable: true },
-    onCellValueChanged: (params) => {
-        document.dispatchEvent(new CustomEvent('updatePaymentMode', { 
-            detail: { docId: params.data.id, updatedData: { paymentMode: params.newValue } } 
-        }));
-    }
-
-}
-
-let paymentModesGridApi = null;
-let isPaymentModesGridInitialized = false;
-
-export function initializePaymentModesGrid() {
-    console.log("ui.js: initializePaymentModesGrid") ;
-    if (isPaymentModesGridInitialized || !paymentModesGridApi) return;
-    paymentModesGridApi = createGrid(paymentModesGridApi, paymentModesGridOptions);
-    isPaymentModesGridInitialized = true;
-}
-
-export async function showPaymentModesView() {
-    showView('payment-modes-view');
-    initializePaymentModesGrid();
-    
-    try {
-        console.log("ui.js: showPaymentModesView") ;
-        paymentModesGridApi.setGridOption('loading', true);
-        const paymentMode = await getPaymentModes();
-        paymentModesGridApi.setGridOption('rowData', paymentMode);
-        paymentModesGridApi.setGridOption('loading', false);
-    } catch (error) {
-        console.error("Error loading payment mode:", error);
-        paymentModesGridApi.setGridOption('loading', false);
-        paymentModesGridApi.showNoRowsOverlay();
-    }
-}
-
-
-export async function refreshPaymentModesGrid() {
-    if (!paymentModesGridApi) return;
-    try {
-        paymentModesGridApi.setGridOption('loading', true);
-        const paymentMode = await getPaymentModes();
-        paymentModesGridApi.setGridOption('rowData', saleTypes);
-        paymentModesGridApi.setGridOption('loading', false);
-    } catch (error) { 
-        console.error("Error refreshing payment mode:", error); 
-        paymentModesGridApi.setGridOption('loading', false);
-        paymentModesGridApi.showNoRowsOverlay();
-    }
-}
-
-
-
-
-///above is the admin modules 
-
-
-
-
-
-
-
-
-
-
-let availableCategories = [];
-
-const productsGridOptions = {
-    columnDefs: [
-        { field: "itemId", headerName: "ID", width: 150 },
-        { field: "itemName", headerName: "Item Name", flex: 2, editable: true },
-        { 
-            field: "category", 
-            headerName: "Category", 
-            flex: 1, 
-            cellEditor: 'agSelectCellEditor',
-            cellEditorParams: {
-                values: [] 
-            },
-            editable: true 
-        },
-        { 
-            field: "unitPrice", 
-            headerName: "Unit Price", 
-            flex: 1, 
-            editable: true, 
-            valueFormatter: p => (typeof p.value === 'number') ? p.value.toFixed(2) : '',
-            valueParser: p => parseFloat(p.newValue) // Ensure the edited value is a number
-        },
-        { 
-            field: "unitMarginPercentage", 
-            headerName: "Margin %", 
-            flex: 1, 
-            editable: true,
-            valueParser: p => parseFloat(p.newValue)
-        },
-        { 
-            field: "sellingPrice", 
-            headerName: "Selling Price", 
-            flex: 1, 
-            editable: false,
-            valueFormatter: p => (typeof p.value === 'number') ? p.value.toFixed(2) : '',
-            cellStyle: { 'background-color': '#f3f4f6' }
-        },
-        { 
-            field: "isReadyForSale", 
-            headerName: "Ready for Sale?", 
-            width: 150, 
-            editable: true,
-            cellEditor: 'agSelectCellEditor',
-            cellEditorParams: {
-                values: [true, false] // Simple boolean options
-            },
-            // Custom renderer to make it look nice
-            cellRenderer: p => {
-                return p.value ? 
-                    '<span class="text-green-600 font-semibold">Yes</span>' : 
-                    '<span class="text-gray-500 font-semibold">No</span>';
-            }
-        },
-        { 
-            field: "isActive", headerName: "Status", width: 120,
-            cellRenderer: p => p.value ? 
-                '<span class="text-green-600 font-semibold">Active</span>' : 
-                '<span class="text-red-600 font-semibold">Inactive</span>'
-        },
-        {
-            headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
-            cellRenderer: params => { 
-                const icon = params.data.isActive 
-                    ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
-                    : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
-                const buttonClass = params.data.isActive ? 'btn-deactivate' : 'btn-activate';
-                const tooltip = params.data.isActive ? 'Deactivate Product' : 'Activate Product';
-                return `<button class="${buttonClass}" data-id="${params.data.id}" title="${tooltip}">${icon}</button>`;
-
-            }
-        }
-    ],
-    defaultColDef: {
-        sortable: true, filter: true, resizable: true,
-    },
-    rowData: [],
-    rowClassRules: {
-        'opacity-50': params => !params.data.isActive,
-    },
-    onGridReady: async (params) => {
-        console.log("[ui.js] Products Grid is now ready.");
-        productsGridApi = params.api;
-        // We don't need to do anything here on initial load,
-        // but this event guarantees that params.api is now available.
-        try {
-            productsGridApi.setGridOption('loading', true);
-            const [products, categories] = await Promise.all([
-                getProducts(),
-                getCategories()
-            ]);
-            // Store the active category names for the dropdown
-            availableCategories = categories.filter(c => c.isActive).map(c => c.categoryName);
-
-            // 1. Get the current column definitions
-            const columnDefs = productsGridOptions.columnDefs;
-            // 2. Find the 'category' column definition
-            const categoryCol = columnDefs.find(col => col.field === 'category');
-            // 3. Update its values
-            if (categoryCol) {
-                categoryCol.cellEditorParams.values = availableCategories;
-            }
-            // 4. Tell the grid to apply the updated column definitions
-            productsGridApi.setGridOption('columnDefs', columnDefs);
-
-        
-            productsGridApi.setGridOption('rowData', products);
-            productsGridApi.setGridOption('loading', false);
-        } catch (error) {
-            console.error("[ui.js] Could not load initial product data:", error);
-            productsGridApi.setGridOption('loading', false);
-            productsGridApi.showNoRowsOverlay();
-        }
-    },
-    onCellValueChanged: (params) => {
-        const docId = params.data.id;
-        const field = params.colDef.field;
-        const newValue = params.newValue;
-        const node = params.node;
-        
-        let updatedData = { [field]: newValue };
-
-        // --- NEW AUTO-CALCULATION LOGIC ---
-        if (field === 'unitPrice' || field === 'unitMarginPercentage') {
-            const cost = parseFloat(node.data.unitPrice) || 0;
-            const margin = parseFloat(node.data.unitMarginPercentage) || 0;
-            
-            if (cost > 0) {
-                const newSellingPrice = cost * (1 + margin / 100);
-                
-                // Update the grid data locally for instant feedback
-                node.setDataValue('sellingPrice', newSellingPrice);
-                
-                // Add the new selling price to the data we'll save to Firestore
-                updatedData.sellingPrice = newSellingPrice;
-            }
-        }
-
-
-
-        document.dispatchEvent(new CustomEvent('updateProduct', { 
-            detail: { docId, updatedData } 
-        }));
-    }
-};
-
-let productsGridApi = null;
-let isProductsGridInitialized = false;
-
-
-// --- UI FUNCTIONS ---
-
-function calculateSellingPrice() {
-    const cost = parseFloat(unitPriceInput.value) || 0;
-    const margin = parseFloat(unitMarginInput.value) || 0;
-    if (cost > 0 && margin > 0) {
-        const sellingPrice = cost * (1 + margin / 100);
-        sellingPriceDisplay.value = sellingPrice.toFixed(2);
-    } else {
-        sellingPriceDisplay.value = '';
-    }
-}
-
-export function initializeProductsGrid() {
-    if (isProductsGridInitialized || !productsGridDiv) return;
-    productsGridApi = createGrid(productsGridDiv, productsGridOptions);
-    isProductsGridInitialized = true;
-}
-
-export async function showProductsView() {
-    showView('products-view');
-    initializeProductsGrid();
-    
-    // Populate the category dropdown
-    const categories = await getCategories();
-    itemCategorySelect.innerHTML = '<option value="">Select a category...</option>';
-    categories.filter(c => c.isActive).forEach(cat => {
-        const option = document.createElement('option');
-        option.value = cat.categoryName;
-        option.textContent = cat.categoryName;
-        itemCategorySelect.appendChild(option);
-    });
-
-    // Add listeners for auto-calculation
-    unitPriceInput.addEventListener('input', calculateSellingPrice);
-    unitMarginInput.addEventListener('input', calculateSellingPrice);
-
-    // Load data into the grid
-    try {
-        productsGridApi.setGridOption('loading', true);
-        const products = await getProducts();
-        productsGridApi.setGridOption('rowData', products);
-    } catch (error) {
-        console.error("Error loading products:", error);
-        productsGridApi.setGridOption('loading', false);
-        productsGridApi.showNoRowsOverlay();
-    }
-}
-
-export async function refreshProductsGrid() {
-    if (!productsGridApi) return;
-    try {
-        productsGridApi.setGridOption('loading', true);
-        const products = await getProducts();
-        productsGridApi.setGridOption('rowData', products);
-        productsGridApi.setGridOption('loading', false);
-    } catch (error) { 
-        console.error("Error refreshing sale types:", error); 
-        productsGridApi.setGridOption('loading', false);
-        productsGridApi.showNoRowsOverlay();
-    }
-}
-
-
-
-
-
-
-
-
-
-// --- RENDER FUNCTIONS ---
-
-export function renderSidebar(role) {
-    const sidebarNav = document.getElementById('sidebar-nav');
-    sidebarNav.innerHTML = ''; // Clear existing links
-    if (!role) return; // Don't render if no role
-
-    navConfig.forEach(item => {
-        // Check if the user's role is allowed to see this item
-        if (item.roles.includes(role)) {
-            
-            const li = document.createElement('li');
-
-            if (item.type === 'heading') {
-                li.className = 'nav-heading';
-                li.textContent = item.label;
-            } 
-            else if (item.type === 'link') {
-                const link = document.createElement('a');
-                link.href = '#';
-                link.className = 'nav-link';
-                link.dataset.viewId = item.viewId;
-                link.innerHTML = `${item.icon}<span>${item.label}</span>`;
-                li.appendChild(link);
-            }
-            sidebarNav.appendChild(li);
-        }
+/**
+ * Initiates the Google Sign-In popup flow.
+ */
+function handleLogin() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(error => {
+        console.error("Google Sign-In Error:", error);
+        alert("Login failed. Please try again.");
     });
 }
 
-export function showView(viewId) {
-    appState.activeView = viewId;
-    views.forEach(view => {
-        view.classList.toggle('active', view.id === viewId);
-    });
-
-    // Update the header title
-    const navItem = navConfig.find(item => item.viewId === viewId);
-    viewTitle.textContent = navItem ? navItem.label : 'Dashboard';
-
-    // Update active link in sidebar
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.classList.toggle('active', link.dataset.viewId === viewId);
-    });
+/**
+ * Signs the user out of Firebase.
+ */
+function handleLogout() {
+    auth.signOut();
 }
 
-export function renderUserProfile(user) {
-    authContainer.innerHTML = ''; // Clear previous content
-
+/**
+ * This is the main authentication listener.
+ * It fires when the app loads and whenever the user's login state changes.
+ */
+auth.onAuthStateChanged(async (user) => {
     if (user) {
-        // User is logged in
-        const profileDiv = document.createElement('div');
-        profileDiv.className = 'flex items-center space-x-3';
-        profileDiv.innerHTML = `
-            <span class="text-right">
-                <span class="font-semibold text-gray-700">${user.displayName}</span>
-                <span class="block text-xs text-gray-500">${user.role.replace('_', ' ')}</span>
-            </span>
-            <img class="h-10 w-10 rounded-full" src="${user.photoURL || 'https://placehold.co/40x40'}" alt="User Avatar">
-            <button id="logout-button" class="p-2 rounded-full hover:bg-gray-200">
-                <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-            </button>
-        `;
-        authContainer.appendChild(profileDiv);
+        // User is signed in. Now, let's get their role from Firestore.
+        console.log("Firebase user signed in:", user.email);
+        
+        const userDocRef = db.collection(USERS_COLLECTION_PATH).doc(user.uid);
+        const docSnap = await userDocRef.get();
+
+        // THE FIX: Changed docSnap.exists() to docSnap.exists
+        if (docSnap.exists && docSnap.data().isActive) {
+            // User exists in our DB and is active.
+            const userData = docSnap.data();
+            appState.currentUser = {
+                uid: user.uid,
+                displayName: user.displayName,
+                email: user.email,
+                photoURL: user.photoURL,
+                role: userData.role // The crucial role from Firestore!
+            };
+            console.log("User role set to:", appState.currentUser.role);
+        } else {
+            // User is not in our DB or is inactive. Treat as a guest.
+            if (!docSnap.exists) {
+                console.warn("User document not found in Firestore for UID:", user.uid);
+            } else {
+                console.warn("User is marked as inactive in Firestore.");
+            }
+            appState.currentUser = {
+                uid: user.uid,
+                displayName: user.displayName,
+                email: user.email,
+                photoURL: user.photoURL,
+                role: 'guest' // Assign a non-privileged guest role
+            };
+            alert("Your account is not authorized for this application or has been deactivated. Please contact an administrator.");
+        }
     } else {
-        // User is logged out
-        const loginButton = document.createElement('button');
-        loginButton.id = 'login-button';
-        loginButton.className = 'bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors';
-        loginButton.textContent = 'Login with Google';
-        authContainer.appendChild(loginButton);
+        // User is signed out.
+        console.log("User signed out.");
+        appState.currentUser = null;
     }
+    // Update the entire UI based on the new state (logged in or out).
+    updateUI();
+});
+
+
+function setupEventListeners() {
+    // Use event delegation for dynamically created elements
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('#login-button')) {
+            handleLogin();
+        }
+        if (e.target.closest('#logout-button')) {
+            handleLogout();
+        }
+    });
+
+    // --- NEW, SMARTER SIDEBAR NAVIGATION HANDLER ---
+    const sidebarNav = document.getElementById('sidebar-nav');
+    sidebarNav.addEventListener('click', (e) => {
+        const link = e.target.closest('.nav-link');
+        if (link) {
+            e.preventDefault();
+            const viewId = link.dataset.viewId;
+            console.log(`[main.js] Nav link clicked. View ID: ${viewId}`);
+            // First, always show the correct view div
+            showView(viewId);
+
+            // Second, if this view needs special data, call its function
+            if (viewId === 'suppliers-view') {
+                showSuppliersView();
+            }
+
+            if (viewId === 'products-view') {
+                showProductsView();
+            }
+            // We will add more 'if' statements here for other modules
+            // else if (viewId === 'products-view') { showProductsView(); }
+        }
+    });
+    
+    // Mobile menu toggle
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    mobileMenuButton.addEventListener('click', () => {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('active');
+    });
+
+    // --- ALL THE SUPPLIER FORM AND GRID LISTENERS ---
+    // (This part remains the same as before)
+
+    // Add Supplier Form Submission
+    const addSupplierForm = document.getElementById('add-supplier-form');
+    if (addSupplierForm) {
+        addSupplierForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            if (!user) return alert("You must be logged in.");
+
+            const supplierData = {
+                supplierName: document.getElementById('supplierName-input').value,
+                address: document.getElementById('address-input').value,
+                contactNo: document.getElementById('contactNo-input').value,
+                contactEmail: document.getElementById('contactEmail-input').value,
+                creditTerm: document.getElementById('creditTerm-input').value,
+            };
+
+            try {
+                await addSupplier(supplierData, user);
+                await showModal('success', 'Success', 'Supplier has been added successfully.');
+                addSupplierForm.reset();
+                refreshSuppliersGrid(); // Refresh the grid
+            } catch (error) {
+                console.error("Error adding supplier:", error);
+                await showModal('error', 'Error', 'Failed to add the supplier. Please try again.');
+            }
+        });
+    }
+
+    // In-Grid Update Event
+    document.addEventListener('updateSupplier', async (e) => {
+        const { docId, updatedData } = e.detail;
+        const user = appState.currentUser;
+        if (!user) return;
+        try {
+            await updateSupplier(docId, updatedData, user);
+        } catch (error) {
+            console.error("Error updating supplier:", error);
+            await showModal('error', 'Error', 'Failed to update the supplier. Please try again.');
+            refreshSuppliersGrid(); // Refresh grid to revert failed change
+        }
+    });
+
+    // Action Buttons (Activate/Deactivate) in Grid
+    const suppliersGrid = document.getElementById('suppliers-grid');
+    if (suppliersGrid) {
+        suppliersGrid.addEventListener('click', async (e) => {
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const target = e.target;
+            const docId = target.dataset.id;
+            if (!docId) return;
+
+            if (target.classList.contains('btn-deactivate')) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to Deactivate  this supplier?`);
+                if (confirmed) {
+                    await setSupplierStatus(docId, false, user);
+                    refreshSuppliersGrid();
+                }
+            } else if (target.classList.contains('btn-activate')) {
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this supplier?`);
+                if (confirmed) {
+                    await setSupplierStatus(docId, true, user);
+                    refreshSuppliersGrid();
+                }
+            }
+        });
+    }
+
+    // Handler for the Admin Modules hub page and back links
+    document.addEventListener('click', (e) => {
+        const card = e.target.closest('.master-data-card, .back-link');
+        
+        if (card) {
+            e.preventDefault();
+            const viewId = card.dataset.viewId;
+            console.log(`[main.js] Nav link clicked. View ID: ${viewId}`);
+            if (viewId === 'categories-view') {
+                showCategoriesView();
+            } else if (viewId === 'sale-types-view') { 
+                showSaleTypesView();
+            } else if (viewId === 'payment-modes-view') {
+                showPaymentModesView();
+            } else if (viewId) {
+                showView(viewId);
+            }
+        }
+    });
+
+    // Add Category Form
+    const addCategoryForm = document.getElementById('add-category-form');
+    if (addCategoryForm) {
+        addCategoryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const categoryName = document.getElementById('categoryName-input').value.trim();
+            if (!user || !categoryName) return;
+
+            try {
+                await addCategory(categoryName, user);
+                await showModal('success', 'Success', 'Category has been added successfully.');
+                addCategoryForm.reset();
+                refreshCategoriesGrid();
+            } catch (error) { 
+                console.error("Error adding category:", error); 
+                await showModal('error', 'Error', 'Failed to add the category. Please try again.');
+            }
+        });
+    }
+
+
+    // In-Grid Update for Categories
+    document.addEventListener('updateCategory', async (e) => {
+        const { docId, updatedData } = e.detail;
+        const user = appState.currentUser;
+        if (!user) return;
+        try {
+            await updateCategory(docId, updatedData, appState.currentUser);
+        } catch (error) {
+            console.error("Error updating product category:", error);
+            await showModal('error', 'Error', 'Failed to update the product category. Please try again.');
+            refreshCategoriesGrid(); // Refresh grid to revert failed change
+        }
+        
+    });
+
+    // Action Buttons for Categories Grid
+    const categoriesGrid = document.getElementById('categories-grid');
+    if (categoriesGrid) {
+        categoriesGrid.addEventListener('click', async (e) => {
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const button = e.target.closest('button');
+            if (!button) return;
+
+            const docId = target.dataset.id;
+            if (!docId) return;
+
+            if (button.classList.contains('btn-deactivate')) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this product category?`);
+                if (confirmed) {
+                    await setCategoryStatus(docId, false, user);
+                    refreshCategoriesGrid();
+                }
+            } else if (button.classList.contains('btn-activate')) {
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this product category?`);
+                if (confirmed) {
+                    await setCategoryStatus(docId, true, user);
+                    refreshCategoriesGrid();
+                }
+            }
+        });
+    }
+
+     // Add Sale Type Form
+    const addSaleTypeForm = document.getElementById('add-sale-type-form');
+    if (addSaleTypeForm) {
+        addSaleTypeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const saleTypeName = document.getElementById('saleTypeName-input').value.trim();
+            if (!user || !saleTypeName) return;
+
+            try {
+                await addSaleType(saleTypeName, user);
+                await showModal('success', 'Success', 'Sales Type has been added successfully.');
+                addSaleTypeForm.reset();
+                refreshSaleTypesGrid();
+            } catch (error) { 
+                console.error("Error adding sale type:", error); 
+                await showModal('error', 'Error', 'Failed to add the Sales Type. Please try again.');
+
+            }
+        });
+    }
+
+    
+    // In-Grid Update for Sale Types
+    document.addEventListener('updateSaleType', async (e) => {
+        const { docId, updatedData } = e.detail;
+        try {
+            await updateSaleType(docId, updatedData, appState.currentUser);
+        } catch (error) {
+            console.error("Error updating sales type:", error);
+            await showModal('error', 'Error', 'Failed to update the sales type. Please try again.');
+            refreshSaleTypesGrid(); // Refresh grid to revert failed change
+        }
+    });
+
+    // Action Buttons for Sale Types Grid
+    const saleTypesGrid = document.getElementById('sale-types-grid');
+    if (saleTypesGrid) {
+        saleTypesGrid.addEventListener('click', async (e) => {
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const button = e.target.closest('button');
+            if (!button) return;
+            const docId = button.dataset.id;
+            if (!docId) return;
+
+            if (button.classList.contains('btn-deactivate')) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this sales type?`);
+                if (confirmed) {
+                    await setSaleTypeStatus(docId, false, user);
+                    refreshSaleTypesGrid();
+                }
+            } else if (button.classList.contains('btn-activate')) {
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this sales type?`);
+                if (confirmed) {
+                    await setSaleTypeStatus(docId, true, user);
+                    refreshSaleTypesGrid();
+                }
+            }
+        });
+    }
+
+
+
+
+
+
+
+
+
+     // Add Payment type Form
+    const addPaymentTypeForm = document.getElementById('add-payment-mode-form');
+    if (addPaymentTypeForm) {
+        addPaymentTypeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const paymentMode = document.getElementById('paymentModeName-input').value.trim();
+            if (!user || !paymentMode) return;
+
+            try {
+                await addPaymentMode(paymentMode, user);
+                await showModal('success', 'Success', 'Payment Mode has been added successfully.');
+                addPaymentTypeForm.reset();
+                refreshPaymentModesGrid();
+            } catch (error) { 
+                console.error("Error adding payment mode:", error); 
+                await showModal('error', 'Error', 'Failed to add the Payment Mode. Please try again.');
+
+            }
+        });
+    }
+
+    
+    // In-Grid Update for Sale Types
+    document.addEventListener('updatePaymentMode', async (e) => {
+        const { docId, updatedData } = e.detail;
+        try {
+            await updatePaymentMode(docId, updatedData, appState.currentUser);
+        } catch (error) {
+            console.error("Error updating payment mode:", error);
+            await showModal('error', 'Error', 'Failed to update the payment mode. Please try again.');
+            refreshPaymentModesGrid(); // Refresh grid to revert failed change
+        }
+    });
+
+    // Action Buttons for Sale Types Grid
+    const paymentModeGrid = document.getElementById('payment-modes-grid');
+    if (paymentModeGrid) {
+        paymentModeGrid.addEventListener('click', async (e) => {
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const button = e.target.closest('button');
+            if (!button) return;
+            const docId = button.dataset.id;
+            if (!docId) return;
+
+            if (button.classList.contains('btn-deactivate')) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this sales type?`);
+                if (confirmed) {
+                    await setPaymentModeStatus(docId, false, user);
+                    refreshPaymentModesGrid();
+                }
+            } else if (button.classList.contains('btn-activate')) {
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this sales type?`);
+                if (confirmed) {
+                    await setPaymentModeStatus(docId, true, user);
+                    refreshPaymentModesGrid();
+                }
+            }
+        });
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    // Add Product Form
+    const addProductForm = document.getElementById('add-product-form');
+    if (addProductForm) {
+        addProductForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const unitPrice = parseFloat(document.getElementById('unitPrice-input').value);
+            const unitMarginPercentage = parseFloat(document.getElementById('unitMargin-input').value);
+            const sellingPrice = unitPrice * (1 + unitMarginPercentage / 100);
+
+            const productData = {
+                itemName: document.getElementById('itemName-input').value,
+                category: document.getElementById('itemCategory-select').value,
+                unitPrice: unitPrice,
+                unitMarginPercentage: unitMarginPercentage,
+                sellingPrice: sellingPrice,
+            };
+
+            try { 
+                await addProduct(productData, user);
+                await showModal('success', 'Success', 'Product has been added successfully.');
+                addProductForm.reset();
+                refreshProductsGrid();
+            } catch (error) {
+                console.error("Error adding sale type:", error); 
+                await showModal('error', 'Error', 'Failed to add the Product. Please try again.');
+            }
+
+        });
+    }
+    
+
+    // In-Grid Update Event
+    document.addEventListener('updateProduct', async (e) => {
+        const { docId, updatedData } = e.detail;
+        const user = appState.currentUser;
+        if (!user) return;
+        try {
+            await updateProduct(docId, updatedData, user);
+        } catch (error) {
+            console.error("Error updating Products:", error);
+            await showModal('error', 'Error', 'Failed to update the Products. Please try again.');
+            refreshProductsGrid(); // Refresh grid to revert failed change
+        }
+    });
+
+    // Action Buttons (Activate/Deactivate) in Grid
+    const productGrid = document.getElementById('products-catalogue-grid');
+    if (productGrid) {
+        productGrid.addEventListener('click', async (e) => {
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const target = e.target;
+            const docId = target.dataset.id;
+            if (!docId) return;
+
+            if (target.classList.contains('btn-deactivate')) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to Deactivate  this Product?`);
+                if (confirmed) {
+                    await setProductStatus(docId, false, user);
+                    refreshSuppliersGrid();
+                }
+            } else if (target.classList.contains('btn-activate')) {
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this Product?`);
+                if (confirmed) {
+                    await setProductStatus(docId, true, user);
+                    refreshSuppliersGrid();
+                }
+            }
+        });
+    }
+
+    
+
+
+
+
+
+
+
+    
+
+
 }
 
-export function updateUI() {
-    const user = appState.currentUser;
-    renderUserProfile(user);
-    renderSidebar(user ? user.role : null);
 
-    if (user && user.role !== 'guest') {
-        // If the user is logged in with a valid role, show their default view
-        showView(appState.activeView || 'dashboard-view');
-    } else {
-        // If logged out or a guest, show the login view
-        showView('login-view');
-    }
-}
+// --- APPLICATION INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Application Initializing...");
+    // This MUST be done once at the start of the application.
+    ModuleRegistry.registerModules([AllCommunityModule]);
+
+    setupEventListeners();
+    // The initial UI update is now handled by the onAuthStateChanged listener
+});
