@@ -3,6 +3,8 @@ import { CATEGORIES_COLLECTION_PATH } from './config.js';
 import { SALE_TYPES_COLLECTION_PATH } from './config.js';
 import { PRODUCTS_CATALOGUE_COLLECTION_PATH } from './config.js';
 
+import { PAYMENT_MODES_COLLECTION_PATH } from './config.js';
+
 // This file will contain all functions that interact with the backend.
 // For now, they return mock data instantly.
 
@@ -131,6 +133,7 @@ export async function testAPI() {
         return false;
     }
 }
+
 
 
 
@@ -279,6 +282,55 @@ export async function updateSaleType(docId, updatedData, user) {
 export async function setSaleTypeStatus(docId, newStatus, user) {
     return updateSaleType(docId, { isActive: newStatus }, user);
 }
+
+
+// --- PAYMENT MODE API FUNCTIONS ---
+
+export async function getPaymentModes() {
+    const db = firebase.firestore();
+    try {
+        const snapshot = await db.collection(PAYMENT_MODES_COLLECTION_PATH).orderBy('paymentMode').get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching payment mode:", error);
+        throw error;
+    }
+}
+
+export async function addPaymentMode(modeName, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const paymentTypeId = `PM-${Date.now()}`;
+    return db.collection(PAYMENT_MODES_COLLECTION_PATH).add({
+        paymentTypeId: paymentTypeId,
+        paymentMode: modeName,
+        isActive: true,
+        createdBy: user.email,
+        createdOn: now,
+        updatedBy: user.email,
+        updatedOn: now,
+    });
+}
+
+export async function updatePaymentMode(docId, updatedData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    return db.collection(PAYMENT_MODES_COLLECTION_PATH).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updatedOn: now,
+    });
+}
+
+export async function setPaymentModeStatus(docId, newStatus, user) {
+    return updatePaymentMode(docId, { isActive: newStatus }, user);
+}
+
+
+
+
+
+
 
 
 
