@@ -533,8 +533,10 @@ const productsGridOptions = {
             productsGridApi.setGridOption('loading', false);
         } catch (error) {
             console.error("[ui.js] Could not load initial product data:", error);
-            productsGridApi.setGridOption('loading', false);
-            productsGridApi.showNoRowsOverlay();
+            if (productsGridApi) {
+                productsGridApi.setGridOption('loading', false);
+                productsGridApi.showNoRowsOverlay();
+            }
         }
     },
     onCellValueChanged: (params) => {
@@ -615,6 +617,7 @@ export async function showProductsView() {
         productsGridApi.setGridOption('loading', true);
         const products = await getProducts();
         productsGridApi.setGridOption('rowData', products);
+        productsGridApi.setGridOption('loading', false);
     } catch (error) {
         console.error("Error loading products:", error);
         productsGridApi.setGridOption('loading', false);
