@@ -152,6 +152,9 @@ export async function refreshSuppliersGrid() {
 }
 
 
+let categoriesGridApi = null;
+let isCategoriesGridInitialized = false;
+
 const categoriesGridOptions = {
     columnDefs: [
         { field: "categoryId", headerName: "ID", width: 150 },
@@ -187,16 +190,33 @@ const categoriesGridOptions = {
         document.dispatchEvent(new CustomEvent('updateCategory', { 
             detail: { docId: params.data.id, updatedData: { categoryName: params.newValue } } 
         }));
+    },
+    onGridReady: async (params) => {
+        console.log("[ui.js] Payment Modes Grid is now ready.");
+        categoriesGridApi = params.api;
+        
+        try {
+            categoriesGridApi.setGridOption('loading', true);
+            const categories = await getCategories();
+            categoriesGridApi.setGridOption('rowData', categories);
+            categoriesGridApi.setGridOption('loading', false);
+        } catch (error) {
+            console.error("Error loading payment modes:", error);
+            categoriesGridApi.setGridOption('loading', false);
+            categoriesGridApi.showNoRowsOverlay();
+        }
     }
 };
 
-let categoriesGridApi = null;
-let isCategoriesGridInitialized = false;
-
 export function initializeCategoriesGrid() {
-    if (isCategoriesGridInitialized || !categoriesGridDiv) return;
-    categoriesGridApi = createGrid(categoriesGridDiv, categoriesGridOptions);
-    isCategoriesGridInitialized = true;
+    // THE FIX: Only check the flag and get the correct div element.
+    if (isCategoriesGridInitialized) return;
+    const categoriesGridDiv = document.getElementById('categories-grid');
+    if (categoriesGridDiv) {
+        console.log("[ui.js] Initializing Category Grid for the first time.");
+        createGrid(categoriesGridDiv, categoriesGridOptions);
+        isCategoriesGridInitialized = true;
+    }
 }
 
 export async function showCategoriesView() {
