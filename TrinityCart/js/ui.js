@@ -351,13 +351,15 @@ const paymentModesGridOptions = {
 
 }
 
-
-
 export function initializePaymentModesGrid() {
-    console.log("ui.js: initializePaymentModesGrid") ;
-    if (isPaymentModesGridInitialized || !paymentModesGridApi) return;
-    paymentModesGridApi = createGrid(paymentModesGridDiv, paymentModesGridOptions);
-    isPaymentModesGridInitialized = true;
+    // THE FIX: Only check the flag and get the correct div element.
+    if (isPaymentModesGridInitialized) return;
+    const paymentModesGridDiv = document.getElementById('payment-modes-grid');
+    if (paymentModesGridDiv) {
+        console.log("[ui.js] Initializing Payment Modes Grid for the first time.");
+        createGrid(paymentModesGridDiv, paymentModesGridOptions);
+        isPaymentModesGridInitialized = true;
+    }
 }
 
 export async function showPaymentModesView() {
