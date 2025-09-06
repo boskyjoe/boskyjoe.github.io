@@ -18,8 +18,8 @@ const viewTitle = document.getElementById('view-title');
 
 
 const suppliersGridDiv = document.getElementById('suppliers-grid');
-const categoriesGridDiv = document.getElementById('categories-grid');
-const saleTypesGridDiv = document.getElementById('sale-types-grid');
+
+
 
 
 
@@ -220,7 +220,7 @@ export function initializeCategoriesGrid() {
 }
 
 export async function showCategoriesView() {
-    
+
     console.log("[ui.js] showCategoriesView called.");
 
     showView('categories-view');
@@ -241,6 +241,9 @@ export async function refreshCategoriesGrid() {
     }
 }
 
+
+let saleTypesGridApi = null;
+let isSaleTypesGridInitialized = false;
 
 const saleTypesGridOptions = {
     columnDefs: [
@@ -269,32 +272,41 @@ const saleTypesGridOptions = {
         document.dispatchEvent(new CustomEvent('updateSaleType', { 
             detail: { docId: params.data.id, updatedData: { saleTypeName: params.newValue } } 
         }));
+    },
+    onGridReady: async (params) => {
+        console.log("[ui.js] Sales Type Grid is now ready.");
+        saleTypesGridApi = params.api;
+        
+        try {
+            saleTypesGridApi.setGridOption('loading', true);
+            const salesType = await getSaleTypes();
+            saleTypesGridApi.setGridOption('rowData', salesType);
+            saleTypesGridApi.setGridOption('loading', false);
+        } catch (error) {
+            console.error("Error loading sales type:", error);
+            saleTypesGridApi.setGridOption('loading', false);
+            saleTypesGridApi.showNoRowsOverlay();
+        }
     }
 };
 
-let saleTypesGridApi = null;
-let isSaleTypesGridInitialized = false;
+
 
 export function initializeSaleTypesGrid() {
-    if (isSaleTypesGridInitialized || !saleTypesGridDiv) return;
-    saleTypesGridApi = createGrid(saleTypesGridDiv, saleTypesGridOptions);
-    isSaleTypesGridInitialized = true;
+    if (isSaleTypesGridInitialized) return;
+    const saleTypesGridDiv = document.getElementById('sale-types-grid');
+    if (saleTypesGridDiv) {
+        console.log("[ui.js] Initializing Sales Type Grid for the first time.");
+        createGrid(saleTypesGridDiv, saleTypesGridOptions);
+        isSaleTypesGridInitialized = true;
+    }
 }
 
 export async function showSaleTypesView() {
+    console.log("[ui.js] showSaleTypesView called.");
     showView('sale-types-view');
     initializeSaleTypesGrid();
     
-    try {
-        saleTypesGridApi.setGridOption('loading', true);
-        const saleTypes = await getSaleTypes();
-        saleTypesGridApi.setGridOption('rowData', saleTypes);
-        saleTypesGridApi.setGridOption('loading', false);
-    } catch (error) {
-        console.error("Error loading sale types:", error);
-        saleTypesGridApi.setGridOption('loading', false);
-        saleTypesGridApi.showNoRowsOverlay();
-    }
 }
 
 
