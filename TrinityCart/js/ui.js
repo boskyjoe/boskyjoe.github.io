@@ -30,6 +30,7 @@ const unitPriceInput = document.getElementById('unitPrice-input');
 const unitMarginInput = document.getElementById('unitMargin-input');
 const sellingPriceDisplay = document.getElementById('sellingPrice-display');
 
+const paymentModesGridDiv = document.getElementById('payment-modes-grid');
 
 
 
@@ -337,11 +338,12 @@ let isPaymentModesGridInitialized = false;
 export function initializePaymentModesGrid() {
     console.log("ui.js: initializePaymentModesGrid") ;
     if (isPaymentModesGridInitialized || !paymentModesGridApi) return;
-    paymentModesGridApi = createGrid(paymentModesGridApi, paymentModesGridOptions);
+    paymentModesGridApi = createGrid(paymentModesGridDiv, paymentModesGridOptions);
     isPaymentModesGridInitialized = true;
 }
 
 export async function showPaymentModesView() {
+    console.log("ui.js: initializePaymentModesGrid") ;
     showView('payment-modes-view');
     initializePaymentModesGrid();
     
