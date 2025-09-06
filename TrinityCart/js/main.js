@@ -14,6 +14,10 @@ import { addCategory, updateCategory, setCategoryStatus } from './api.js';
 import { showSaleTypesView, refreshSaleTypesGrid } from './ui.js';
 import { addSaleType, updateSaleType, setSaleTypeStatus } from './api.js';
 
+import { showPaymentModesView, refreshPaymentModesGrid } from './ui.js';
+import { addPaymentMode, updatePaymentMode, setPaymentModeStatus } from './api.js';
+
+
 import { showProductsView, refreshProductsGrid } from './ui.js';
 import { addProduct, updateProduct, setProductStatus } from './api.js';
 
@@ -121,6 +125,9 @@ function setupEventListeners() {
 
             if (viewId === 'products-view') {
                 showProductsView();
+            }
+            if (viewId === 'payment-modes-view') {
+                showPaymentModesView();
             }
             // We will add more 'if' statements here for other modules
             // else if (viewId === 'products-view') { showProductsView(); }
@@ -350,6 +357,89 @@ function setupEventListeners() {
             }
         });
     }
+
+
+
+
+
+
+
+
+
+     // Add Payment type Form
+    const addPaymentTypeForm = document.getElementById('add-payment-mode-form');
+    if (addPaymentTypeForm) {
+        addPaymentTypeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const paymentMode = document.getElementById('paymentModeName-input').value.trim();
+            if (!user || !paymentMode) return;
+
+            try {
+                await addPaymentMode(paymentMode, user);
+                await showModal('success', 'Success', 'Payment Mode has been added successfully.');
+                addPaymentTypeForm.reset();
+                refreshPaymentModesGrid();
+            } catch (error) { 
+                console.error("Error adding payment mode:", error); 
+                await showModal('error', 'Error', 'Failed to add the Payment Mode. Please try again.');
+
+            }
+        });
+    }
+
+    
+    // In-Grid Update for Sale Types
+    document.addEventListener('updatePaymentMode', async (e) => {
+        const { docId, updatedData } = e.detail;
+        try {
+            await updatePaymentMode(docId, updatedData, appState.currentUser);
+        } catch (error) {
+            console.error("Error updating payment mode:", error);
+            await showModal('error', 'Error', 'Failed to update the payment mode. Please try again.');
+            refreshPaymentModesGrid(); // Refresh grid to revert failed change
+        }
+    });
+
+    // Action Buttons for Sale Types Grid
+    const paymentModeGrid = document.getElementById('payment-modes-grid');
+    if (paymentModeGrid) {
+        paymentModeGrid.addEventListener('click', async (e) => {
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const button = e.target.closest('button');
+            if (!button) return;
+            const docId = button.dataset.id;
+            if (!docId) return;
+
+            if (button.classList.contains('btn-deactivate')) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this sales type?`);
+                if (confirmed) {
+                    await setPaymentModeStatus(docId, false, user);
+                    refreshPaymentModesGrid();
+                }
+            } else if (button.classList.contains('btn-activate')) {
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this sales type?`);
+                if (confirmed) {
+                    await setPaymentModeStatus(docId, true, user);
+                    refreshPaymentModesGrid();
+                }
+            }
+        });
+    }
+
+
+
+
+
+
+
+
+
+
+
+
     
     // Add Product Form
     const addProductForm = document.getElementById('add-product-form');
