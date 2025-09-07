@@ -30,6 +30,7 @@ export const PAYMENT_MODES_COLLECTION_PATH = `${BASE_DOC_PATH}/paymentModes`;
 export const SEASONS_COLLECTION_PATH = `${BASE_DOC_PATH}/salesSeasons`;
 
 
+
 // Navigation Configuration - THIS WAS MISSING
 // This object drives the entire sidebar navigation.
 export const navConfig = [
