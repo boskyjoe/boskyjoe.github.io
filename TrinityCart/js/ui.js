@@ -7,6 +7,7 @@ import { createGrid } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@lates
 import { getSuppliers } from './api.js';
 import { getSaleTypes } from './api.js';
 import { getPaymentModes } from './api.js';
+import { getSeasons } from './api.js';
 
 import { getProducts, getCategories } from './api.js';
 
@@ -407,6 +408,103 @@ export async function refreshPaymentModesGrid() {
         paymentModesGridApi.showNoRowsOverlay();
     }
 }
+
+let seasonsGridApi = null;
+let isSeasonsGridInitialized = false;
+
+const seasonsGridOptions = {
+    columnDefs: [
+        { field: "seasonId", headerName: "ID", width: 180 },
+        { field: "seasonName", headerName: "Season Name", flex: 2, editable: true },
+        { 
+            field: "startDate", headerName: "Start Date", flex: 1,
+            valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : ''
+        },
+        { 
+            field: "endDate", headerName: "End Date", flex: 1,
+            valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : ''
+        },
+        { 
+            field: "status", headerName: "Status", flex: 1, editable: true,
+            cellEditor: 'agSelectCellEditor',
+            cellEditorParams: { values: ['Upcoming', 'Active', 'Archived'] }
+        },
+        { 
+            field: "isActive", headerName: "Active", width: 120,
+            cellRenderer: p => p.value ? 'Yes' : 'No'
+        },
+        {
+            headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
+            cellRenderer: params => { /* ... same icon logic as other grids ... */ }
+        }
+    ],
+    defaultColDef: { resizable: true, sortable: true, filter: true },
+    onCellValueChanged: (params) => {
+        const { id } = params.data;
+        const field = params.colDef.field;
+        const newValue = params.newValue;
+        document.dispatchEvent(new CustomEvent('updateSeason', { 
+            detail: { docId: id, updatedData: { [field]: newValue } } 
+        }));
+    },
+    onGridReady: async (params) => {
+        console.log("[ui.js] Seasons Grid is now ready.");
+        seasonsGridApi = params.api;
+        
+        try {
+            seasonsGridApi.setGridOption('loading', true);
+            const salesSeasons = await getSeasons();
+            seasonsGridApi.setGridOption('rowData', salesSeasons);
+            seasonsGridApi.setGridOption('loading', false);
+        } catch (error) {
+            console.error("Error loading payment modes:", error);
+            seasonsGridApi.setGridOption('loading', false);
+            seasonsGridApi.showNoRowsOverlay();
+        }
+    }
+};
+
+export function initializeSeasonsGrid() {
+    if (isSeasonsGridInitialized) return ;
+    const seasonsGridDiv = document.getElementById('seasons-grid');
+
+    if (seasonsGridDiv) { 
+        console.log("[ui.js] Initializing Seasons Grid for the first time.");
+        createGrid(seasonsGridDiv, seasonsGridOptions);
+        isSeasonsGridInitialized = true;
+    }
+   
+}
+
+export async function showSeasonsView() {
+    console.log("ui.js: initializeSeasonsGrid") ;
+    showView('seasons-view');
+    initializeSeasonsGrid();
+}
+
+export async function refreshSeasonsGrid() {
+    if (!seasonsGridApi) return;
+    try {
+        seasonsGridApi.setGridOption('loading', true);
+        const seasons = await getSeasons();
+        seasonsGridApi.setGridOption('rowData', seasons);
+        seasonsGridApi.setGridOption('loading', false);
+    } catch (error) { 
+        console.error("Error refreshing seasons:", error); 
+        seasonsGridApi.setGridOption('loading', false);
+        seasonsGridApi.showNoRowsOverlay();
+    }
+}
+
+
+
+
+
+
+
+
+
+
 
 
 
