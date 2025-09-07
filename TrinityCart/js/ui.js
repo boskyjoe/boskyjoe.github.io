@@ -550,10 +550,17 @@ const usersGridOptions = {
 let usersGridApi = null;
 let isUsersGridInitialized = false;
 
+
 export function initializeUsersGrid() {
-    if (isUsersGridInitialized || !usersGridDiv) return;
-    usersGridApi = createGrid(usersGridDiv, usersGridOptions);
-    isUsersGridInitialized = true;
+    if (isUsersGridInitialized) return;
+
+    const usersGridDiv = document.getElementById('users-grid');
+
+    if (usersGridDiv) {
+         console.log("[ui.js] Initializing User Grid for the first time.");
+        usersGridApi = createGrid(usersGridDiv, usersGridOptions);
+        isUsersGridInitialized = true;
+    }
 }
 
 export async function showUsersView() {
