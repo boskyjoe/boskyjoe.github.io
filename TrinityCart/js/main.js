@@ -24,6 +24,10 @@ import { addSeason, updateSeason, setSeasonStatus } from './api.js';
 import { showProductsView, refreshProductsGrid } from './ui.js';
 import { addProduct, updateProduct, setProductStatus } from './api.js';
 
+import { showUsersView, refreshUsersGrid } from './ui.js';
+import { updateUserRole, setUserActiveStatus } from './api.js';
+
+
 // --- FIREBASE INITIALIZATION ---
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -229,6 +233,8 @@ function setupEventListeners() {
                 showPaymentModesView();
             } else if (viewId === 'seasons-view') {
                 showSeasonsView();
+            } else if (viewId === 'users-view') {
+                showUsersView();
             } else if (viewId) {
                 showView(viewId);
             }
@@ -498,8 +504,53 @@ function setupEventListeners() {
         });
     }
 
+    // In-Grid Update for User Roles
+    document.addEventListener('updateUserRole', async (e) => {
+        const { uid, newRole } = e.detail;
+        const adminUser = appState.currentUser;
+        try {
+            await updateUserRole(uid, newRole, adminUser);
+            await showModal('success', 'Role Updated', `User role has been changed to ${newRole}.`);
+            refreshUsersGrid();
+        } catch (error) {
+            console.error("Error updating user role:", error);
+            await showModal('error', 'Update Failed', 'Could not update the user role.');
+        }
+    });
 
 
+    // Action Buttons for Users Grid
+    const usersGrid = document.getElementById('users-grid');
+    if (usersGrid) {
+        usersGrid.addEventListener('click', async (e) => {
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const button = e.target.closest('button');
+            if (!button) return;
+            const uid = button.dataset.id;
+            if (!uid) return;
+
+            if (button.classList.contains('btn-deactivate')) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this User?`);
+                if (confirmed) {
+                    await setUserActiveStatus(uid, false, user);
+                    refreshSeasonsGrid();
+                }
+            } else if (button.classList.contains('btn-activate')) {
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this User?`);
+                if (confirmed) {
+                    await setUserActiveStatus(uid, true, user);
+                    refreshSeasonsGrid();
+                }
+            }
+        });
+    }
+
+
+
+
+    
 
 
 
