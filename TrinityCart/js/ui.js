@@ -10,7 +10,7 @@ import { getPaymentModes } from './api.js';
 import { getSeasons } from './api.js';
 
 import { getProducts, getCategories } from './api.js';
-
+import { getUsersWithRoles } from './api.js';
 
 // --- DOM ELEMENT REFERENCES ---
 const views = document.querySelectorAll('.view');
@@ -31,7 +31,8 @@ const unitPriceInput = document.getElementById('unitPrice-input');
 const unitMarginInput = document.getElementById('unitMargin-input');
 const sellingPriceDisplay = document.getElementById('sellingPrice-display');
 
-const paymentModesGridDiv = document.getElementById('payment-modes-grid');
+// --- GRID DEFINITIONS ---
+const rolesList = ['admin', 'sales_staff', 'inventory_manager', 'finance', 'team_lead', 'guest'];
 
 
 
@@ -496,11 +497,85 @@ export async function refreshSeasonsGrid() {
     }
 }
 
+const usersGridOptions = {
+    columnDefs: [
+        { field: "displayName", headerName: "Name", flex: 2 },
+        { field: "email", headerName: "Email", flex: 2 },
+        { 
+            field: "role", 
+            headerName: "Role", 
+            flex: 1, 
+            editable: true,
+            cellEditor: 'agSelectCellEditor',
+            cellEditorParams: { values: rolesList }
+        },
+        { 
+            field: "isActive", headerName: "Status", width: 120,
+            cellRenderer: p => p.value ? 'Active' : 'Inactive'
+        },
+        {
+            headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
+            cellRenderer: params => {
+                const actionText = params.data.isActive ? 'Deactivate' : 'Activate';
+                const buttonClass = params.data.isActive ? 'btn-deactivate' : 'btn-activate';
+                return `<button class="${buttonClass}" data-id="${params.data.id}">${actionText}</button>`;
+            }
+        }
+    ],
+    defaultColDef: { resizable: true, sortable: true, filter: true },
+    onCellValueChanged: (params) => {
+        // This event handles role changes from the dropdown
+        document.dispatchEvent(new CustomEvent('updateUserRole', { 
+            detail: { uid: params.data.id, newRole: params.newValue } 
+        }));
+    },
+    onGridReady: async (params) => {
+        console.log("[ui.js] User Grid is now ready.");
+        usersGridApi = params.api;
+        
+        try {
+            usersGridApi.setGridOption('loading', true);
+            const users = await getUsersWithRoles();
+            usersGridApi.setGridOption('rowData', users);
+            usersGridApi.setGridOption('loading', false);
+        } catch (error) {
+            console.error("Error loading users:", error);
+            usersGridApi.setGridOption('loading', false);
+            usersGridApi.showNoRowsOverlay();
+        }
+    }
+};
 
 
+let usersGridApi = null;
+let isUsersGridInitialized = false;
+
+export function initializeUsersGrid() {
+    if (isUsersGridInitialized || !usersGridDiv) return;
+    usersGridApi = createGrid(usersGridDiv, usersGridOptions);
+    isUsersGridInitialized = true;
+}
+
+export async function showUsersView() {
+    console.log("ui.js: initializeUsersGrid") ;
+    showView('users-view');
+    initializeUsersGrid();
+}
 
 
-
+export async function refreshUsersGrid() {
+    if (!usersGridApi) return;
+    try {
+        usersGridApi.setGridOption('loading', true);
+        const users = await getUsersWithRoles();
+        usersGridApi.setGridOption('rowData', users);
+        usersGridApi.setGridOption('loading', false);
+    } catch (error) { 
+        console.error("Error refreshing users:", error); 
+        usersGridApi.setGridOption('loading', false);
+        usersGridApi.showNoRowsOverlay();
+    }
+}
 
 
 
