@@ -5,6 +5,8 @@ import { PRODUCTS_CATALOGUE_COLLECTION_PATH } from './config.js';
 
 import { PAYMENT_MODES_COLLECTION_PATH } from './config.js';
 import { SEASONS_COLLECTION_PATH } from './config.js';
+import { USERS_COLLECTION_PATH } from './config.js';
+
 
 // This file will contain all functions that interact with the backend.
 // For now, they return mock data instantly.
@@ -376,6 +378,72 @@ export async function updateSeason(docId, updatedData, user) {
 export async function setSeasonStatus(docId, newStatus, user) {
     return updateSeason(docId, { isActive: newStatus }, user);
 }
+
+
+// --- USER MANAGEMENT API FUNCTIONS ---
+
+
+export async function getUsersWithRoles() {
+    const db = firebase.firestore();
+    console.log("api.js:getUsersWithRoles") ;
+    try {
+        const snapshot = await db.collection(USERS_COLLECTION_PATH).get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching user roles:", error);
+        throw error;
+    }
+}
+
+/**
+ * Creates or updates a user's role document in Firestore.
+ * This is an "upsert" operation.
+ * @param {string} uid - The Firebase Auth UID of the user.
+ * @param {string} email - The user's email.
+ * @param {string} displayName - The user's name.
+ * @param {string} role - The role to assign.
+ * @param {object} adminUser - The admin performing the action.
+ */
+export async function provisionUserRole(uid, email, displayName, role, adminUser) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const userDocRef = db.collection(USERS_COLLECTION_PATH).doc(uid);
+
+    return userDocRef.set({
+        uid: uid,
+        email: email,
+        displayName: displayName,
+        role: role,
+        isActive: true,
+        createdBy: adminUser.email,
+        createdOn: now,
+        updatedBy: adminUser.email,
+        updatedOn: now,
+    }, { merge: true }); // { merge: true } prevents overwriting fields if the doc already exists
+}
+
+export async function updateUserRole(uid, newRole, adminUser) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    return db.collection(USERS_COLLECTION_PATH).doc(uid).update({
+        role: newRole,
+        updatedBy: adminUser.email,
+        updatedOn: now,
+    });
+}
+
+export async function setUserActiveStatus(uid, newStatus, adminUser) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    return db.collection(USERS_COLLECTION_PATH).doc(uid).update({
+        isActive: newStatus,
+        updatedBy: adminUser.email,
+        updatedOn: now,
+    });
+}
+
+
+
 
 
 
