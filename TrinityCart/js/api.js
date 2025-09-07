@@ -4,6 +4,7 @@ import { SALE_TYPES_COLLECTION_PATH } from './config.js';
 import { PRODUCTS_CATALOGUE_COLLECTION_PATH } from './config.js';
 
 import { PAYMENT_MODES_COLLECTION_PATH } from './config.js';
+import { SEASONS_COLLECTION_PATH } from './config.js';
 
 // This file will contain all functions that interact with the backend.
 // For now, they return mock data instantly.
@@ -326,6 +327,57 @@ export async function updatePaymentMode(docId, updatedData, user) {
 export async function setPaymentModeStatus(docId, newStatus, user) {
     return updatePaymentMode(docId, { isActive: newStatus }, user);
 }
+
+
+// --- SALES SEASON API FUNCTIONS ---
+
+export async function getSeasons() {
+    const db = firebase.firestore();
+    console.log("api.js:getSeasons") ;
+    try {
+        const snapshot = await db.collection(SEASONS_COLLECTION_PATH).orderBy('startDate', 'desc').get();
+
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching Seasons:", error);
+        throw error;
+    }
+    
+    
+}
+
+export async function addSeason(seasonData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const seasonId = `SEASON-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`;
+
+    return db.collection(SEASONS_COLLECTION_PATH).add({
+        ...seasonData,
+        seasonId: seasonId,
+        status: 'Upcoming', // Default status
+        isActive: true,
+        createdBy: user.email,
+        createdOn: now,
+        updatedBy: user.email,
+        updatedOn: now,
+    });
+}
+
+export async function updateSeason(docId, updatedData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    return db.collection(SEASONS_COLLECTION_PATH).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updatedOn: now,
+    });
+}
+
+export async function setSeasonStatus(docId, newStatus, user) {
+    return updateSeason(docId, { isActive: newStatus }, user);
+}
+
+
 
 
 
