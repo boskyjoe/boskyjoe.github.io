@@ -17,6 +17,9 @@ import { addSaleType, updateSaleType, setSaleTypeStatus } from './api.js';
 import { showPaymentModesView, refreshPaymentModesGrid } from './ui.js';
 import { addPaymentMode, updatePaymentMode, setPaymentModeStatus } from './api.js';
 
+import { showSeasonsView, refreshSeasonsGrid } from './ui.js';
+import { addSeason, updateSeason, setSeasonStatus } from './api.js';
+
 
 import { showProductsView, refreshProductsGrid } from './ui.js';
 import { addProduct, updateProduct, setProductStatus } from './api.js';
@@ -224,6 +227,8 @@ function setupEventListeners() {
                 showSaleTypesView();
             } else if (viewId === 'payment-modes-view') {
                 showPaymentModesView();
+            } else if (viewId === 'seasons-view') {
+                showSeasonsView();
             } else if (viewId) {
                 showView(viewId);
             }
@@ -359,15 +364,7 @@ function setupEventListeners() {
         });
     }
 
-
-
-
-
-
-
-
-
-     // Add Payment type Form
+     // Add Payment mode Form
     const addPaymentTypeForm = document.getElementById('add-payment-mode-form');
     if (addPaymentTypeForm) {
         addPaymentTypeForm.addEventListener('submit', async (e) => {
@@ -390,7 +387,7 @@ function setupEventListeners() {
     }
 
     
-    // In-Grid Update for Sale Types
+    // In-Grid Update for payment  mode
     document.addEventListener('updatePaymentMode', async (e) => {
         const { docId, updatedData } = e.detail;
         try {
@@ -402,7 +399,7 @@ function setupEventListeners() {
         }
     });
 
-    // Action Buttons for Sale Types Grid
+    // Action Buttons for payment mode Grid
     const paymentModeGrid = document.getElementById('payment-modes-grid');
     if (paymentModeGrid) {
         paymentModeGrid.addEventListener('click', async (e) => {
@@ -431,9 +428,75 @@ function setupEventListeners() {
     }
 
 
+    // Add Season Form
+    const addSeasonForm = document.getElementById('add-season-form');
+    if (addSeasonForm) {
+        addSeasonForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const seasonName = document.getElementById('seasonName-input').value.trim();
+            const startDate = document.getElementById('startDate-input').value;
+            const endDate = document.getElementById('endDate-input').value;
+            if (!user || !seasonName || !startDate || !endDate) return;
 
+            const seasonData = {
+                seasonName: seasonName,
+                startDate: new Date(startDate), // Convert string to Date object
+                endDate: new Date(endDate)
+            };
 
+            try {
+                await addSeason(seasonData, user);
+                await showModal('success', 'Success', 'Season has been added successfully.');
+                addSeasonForm.reset();
+                refreshSeasonsGrid();
+            } catch (error) { 
+                console.error("Error adding season:", error); 
+                await showModal('error', 'Error', 'Failed to add the Season. Please try again.');
+            }
+        });
+    }
 
+    // In-Grid Update for Seasons
+    document.addEventListener('updateSeason', async (e) => {
+        const { docId, updatedData } = e.detail;
+
+        try {
+            await updateSeason(docId, updatedData, appState.currentUser);
+        } catch (error) {
+            console.error("Error updating season:", error);
+            await showModal('error', 'Error', 'Failed to update the season. Please try again.');
+            refreshSeasonsGrid(); // Refresh grid to revert failed change
+        }
+    }) ;
+
+    // Action Buttons for Seasons Grid
+    const seasonsGrid = document.getElementById('seasons-grid');
+    if (seasonsGrid) {
+        seasonsGrid.addEventListener('click', async (e) => {
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const button = e.target.closest('button');
+            if (!button) return;
+            const docId = button.dataset.id;
+            if (!docId) return;
+
+            if (button.classList.contains('btn-deactivate')) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this Season?`);
+                if (confirmed) {
+                    await setSeasonStatus(docId, false, user);
+                    refreshSeasonsGrid();
+                }
+            } else if (button.classList.contains('btn-activate')) {
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this Season?`);
+                if (confirmed) {
+                    await setSeasonStatus(docId, true, user);
+                    refreshSeasonsGrid();
+                }
+            }
+        });
+    }
 
 
 
