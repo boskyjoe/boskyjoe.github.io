@@ -50,6 +50,14 @@ export const navConfig = [
         viewId: "products-view",
         roles: ["admin", "inventory_manager"]
     },
+    // NEW: Sales Catalogue Management
+    {
+        type: "link",
+        label: "Sales Catalogue",
+        icon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 2.75a.75.75 0 00-1.5 0v8.586l-1.22-1.22a.75.75 0 00-1.06 1.06l2.5 2.5a.75.75 0 001.06 0l2.5-2.5a.75.75 0 10-1.06-1.06l-1.22 1.22V2.75z" /><path d="M3.5 9.75a.75.75 0 01.75-.75h11.5a.75.75 0 010 1.5H4.25a.75.75 0 01-.75-.75zM3 13.25a.75.75 0 01.75-.75h12.5a.75.75 0 010 1.5H3.75a.75.75 0 01-.75-.75z" /></svg>`,
+        viewId: "sales-catalogue-view",
+        roles: ["admin", "inventory_manager"]
+    },
     // 3. Purchase Management
     {
         type: "link",
