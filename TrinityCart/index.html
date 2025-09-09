@@ -537,6 +537,63 @@
                 </div>
 
 
+
+                <!-- View: Manage Sales Events -->
+                <div id="sales-events-view" class="view space-y-8">
+                    <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
+                    
+                    <!-- Card 1: Add New Sales Event Form -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Add New Sales Event</h3>
+                        </div>
+                        <div class="p-6">
+                            <form id="add-event-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <!-- Parent Season Dropdown -->
+                                <div class="md:col-span-1">
+                                    <label for="parentSeason-select" class="form-label">Parent Season</label>
+                                    <select id="parentSeason-select" class="form-input w-full" required>
+                                        <option value="">Select a season...</option>
+                                        <!-- Options will be populated by JS -->
+                                    </select>
+                                </div>
+                                <!-- Event Name -->
+                                <div class="md:col-span-2">
+                                    <label for="eventName-input" class="form-label">Event Name</label>
+                                    <input type="text" id="eventName-input" placeholder="e.g., Weekend Bake Sale" class="form-input w-full" required>
+                                </div>
+                                <!-- Start Date -->
+                                <div>
+                                    <label for="eventStartDate-input" class="form-label">Event Start Date</label>
+                                    <input type="date" id="eventStartDate-input" class="form-input w-full" required>
+                                </div>
+                                <!-- End Date -->
+                                <div>
+                                    <label for="eventEndDate-input" class="form-label">Event End Date</label>
+                                    <input type="date" id="eventEndDate-input" class="form-input w-full" required>
+                                </div>
+                                <!-- Form Actions -->
+                                <div class="md:col-span-3 flex justify-end">
+                                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
+                                        Add Event
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Existing Sales Events Grid -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Existing Sales Events</h3>
+                        </div>
+                        <div class="p-2">
+                            <div id="sales-events-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+
                 <!-- View: Manage Users -->
                 <div id="users-view" class="view space-y-8">
                     <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
