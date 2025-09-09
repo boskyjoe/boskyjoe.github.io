@@ -436,7 +436,9 @@ const seasonsGridOptions = {
         },
         { 
             field: "isActive", headerName: "Active", width: 120,
-            cellRenderer: p => p.value ? 'Yes' : 'No'
+            cellRenderer: p => p.value ? 
+                '<span class="text-green-600 font-semibold">Active</span>' : 
+                '<span class="text-red-600 font-semibold">Inactive</span>'
         },
         {
             headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
@@ -525,7 +527,12 @@ const salesEventsGridOptions = {
             field: "eventEndDate", headerName: "End Date", flex: 1,
             valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : ''
         },
-        { field: "isActive", headerName: "Status", width: 120, cellRenderer: p => p.value ? 'Active' : 'Inactive' },
+        { 
+            field: "isActive", headerName: "Active", width: 120,
+            cellRenderer: p => p.value ? 
+                '<span class="text-green-600 font-semibold">Active</span>' : 
+                '<span class="text-red-600 font-semibold">Inactive</span>'
+        },
         {
             headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
