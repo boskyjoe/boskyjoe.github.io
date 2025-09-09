@@ -6,7 +6,7 @@ import { PRODUCTS_CATALOGUE_COLLECTION_PATH } from './config.js';
 import { PAYMENT_MODES_COLLECTION_PATH } from './config.js';
 import { SEASONS_COLLECTION_PATH } from './config.js';
 import { USERS_COLLECTION_PATH } from './config.js';
-
+import { EVENTS_COLLECTION_PATH } from './config.js';
 
 // This file will contain all functions that interact with the backend.
 // For now, they return mock data instantly.
@@ -378,6 +378,63 @@ export async function updateSeason(docId, updatedData, user) {
 export async function setSeasonStatus(docId, newStatus, user) {
     return updateSeason(docId, { isActive: newStatus }, user);
 }
+
+
+
+// --- SALES EVENT API FUNCTIONS ---
+
+export async function getSalesEvents() {
+    const db = firebase.firestore();
+    console.log("api.js:getSalesEvents") ;
+
+    try {
+        const snapshot = await db.collection(EVENTS_COLLECTION_PATH).orderBy('eventStartDate', 'desc').get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+         console.error("Error fetching Sales Event:", error);
+        throw error;
+    }
+    
+}
+
+export async function addSalesEvent(eventData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const eventId = `EVENT-${Date.now()}`;
+
+    return db.collection(EVENTS_COLLECTION_PATH).add({
+        ...eventData,
+        eventId: eventId,
+        isActive: true,
+        createdBy: user.email,
+        createdOn: now,
+        updatedBy: user.email,
+        updatedOn: now,
+    });
+}
+
+export async function updateSalesEvent(docId, updatedData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    return db.collection(EVENTS_COLLECTION_PATH).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updatedOn: now,
+    });
+}
+
+export async function setSalesEventStatus(docId, newStatus, user) {
+    return updateSalesEvent(docId, { isActive: newStatus }, user);
+}
+
+
+
+
+
+
+
+
+
 
 
 // --- USER MANAGEMENT API FUNCTIONS ---
