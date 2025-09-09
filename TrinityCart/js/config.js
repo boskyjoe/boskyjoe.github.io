@@ -28,6 +28,7 @@ export const SALE_TYPES_COLLECTION_PATH = `${BASE_DOC_PATH}/saleTypes`;
 export const PRODUCTS_CATALOGUE_COLLECTION_PATH = `${BASE_DOC_PATH}/productCatalogue`;
 export const PAYMENT_MODES_COLLECTION_PATH = `${BASE_DOC_PATH}/paymentModes`;
 export const SEASONS_COLLECTION_PATH = `${BASE_DOC_PATH}/salesSeasons`;
+export const EVENTS_COLLECTION_PATH = `${BASE_DOC_PATH}/salesEvents`;
 
 
 
