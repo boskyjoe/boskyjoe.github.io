@@ -7,10 +7,10 @@ import { createGrid } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@lates
 import { getSuppliers } from './api.js';
 import { getSaleTypes } from './api.js';
 import { getPaymentModes } from './api.js';
-import { getSeasons } from './api.js';
 
 import { getProducts, getCategories } from './api.js';
 import { getUsersWithRoles } from './api.js';
+import { getSalesEvents, getSeasons } from './api.js';
 
 // --- DOM ELEMENT REFERENCES ---
 const views = document.querySelectorAll('.view');
@@ -496,6 +496,115 @@ export async function refreshSeasonsGrid() {
         seasonsGridApi.showNoRowsOverlay();
     }
 }
+
+
+let salesEventsGridApi = null;
+let isSalesEventsGridInitialized = false;
+
+const salesEventsGridOptions = {
+    columnDefs: [
+        { field: "eventId", headerName: "ID", width: 180 },
+        { field: "eventName", headerName: "Event Name", flex: 2, editable: true },
+        { field: "seasonName", headerName: "Parent Season", flex: 1 },
+        { 
+            field: "eventStartDate", headerName: "Start Date", flex: 1,
+            valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : ''
+        },
+        { 
+            field: "eventEndDate", headerName: "End Date", flex: 1,
+            valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : ''
+        },
+        { field: "isActive", headerName: "Status", width: 120, cellRenderer: p => p.value ? 'Active' : 'Inactive' },
+        {
+            headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
+            cellRenderer: params => { /* ... same icon logic as other grids ... */ }
+        }
+    ],
+    defaultColDef: { resizable: true, sortable: true, filter: true },
+    onCellValueChanged: (params) => {
+        document.dispatchEvent(new CustomEvent('updateSalesEvent', { 
+            detail: { docId: params.data.id, updatedData: { eventName: params.newValue } } 
+        }));
+    },
+    onGridReady: async (params) => {
+        console.log("[ui.js] Sales Event Grid is now ready.");
+        salesEventsGridApi = params.api;
+        
+        try {
+            salesEventsGridApi.setGridOption('loading', true);
+            const salesEvent = await getSalesEvents();
+            salesEventsGridApi.setGridOption('rowData', salesEvent);
+            salesEventsGridApi.setGridOption('loading', false);
+        } catch (error) {
+            console.error("Error loading payment modes:", error);
+            salesEventsGridApi.setGridOption('loading', false);
+            salesEventsGridApi.showNoRowsOverlay();
+        }
+    }
+};
+
+// --- UI FUNCTIONS ---
+export function initializeSalesEventsGrid() {
+    if (isSalesEventsGridInitialized) return ;
+    const salesEventsGridDiv = document.getElementById('sales-events-grid');
+
+    if(salesEventsGridDiv) {
+        console.log("[ui.js] Initializing Sales Events Grid for the first time.");
+        createGrid(salesEventsGridDiv, salesEventsGridOptions);
+        isSalesEventsGridInitialized = true;
+    }   
+}
+
+
+export async function showSalesEventsView() {
+    showView('sales-events-view');
+    initializeSalesEventsGrid();
+    
+    // Populate the parent season dropdown
+    const parentSeasonSelect = document.getElementById('parentSeason-select');
+    const seasons = await getSeasons();
+    parentSeasonSelect.innerHTML = '<option value="">Select a parent season...</option>';
+    seasons.filter(s => s.isActive).forEach(season => {
+        const option = document.createElement('option');
+        // Store both ID and Name for later use
+        option.value = JSON.stringify({ seasonId: season.id, seasonName: season.seasonName });
+        option.textContent = season.seasonName;
+        parentSeasonSelect.appendChild(option);
+    });
+
+    try {
+        salesEventsGridApi.setGridOption('loading', true);
+        const events = await getSalesEvents();
+        salesEventsGridApi.setGridOption('rowData', events);
+        salesEventsGridApi.setGridOption('loading', false);
+    } catch (error) {
+        console.error("Error loading sales events:", error);
+        salesEventsGridApi.setGridOption('loading', false);
+        salesEventsGridApi.showNoRowsOverlay();
+    }
+}
+
+export async function refreshSalesEventsGrid() {
+    if (!salesEventsGridApi) return;
+    try {
+        salesEventsGridApi.setGridOption('loading', true);
+        const events = await getSalesEvents();
+        salesEventsGridApi.setGridOption('rowData', events);
+        salesEventsGridApi.setGridOption('loading', false);
+    } catch (error) { 
+        console.error("Error refreshing sales events:", error); 
+        salesEventsGridApi.setGridOption('loading', false);
+        salesEventsGridApi.showNoRowsOverlay();
+    }
+}
+
+
+
+
+
+
+
+
 
 const usersGridOptions = {
     columnDefs: [
