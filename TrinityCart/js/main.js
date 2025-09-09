@@ -20,6 +20,9 @@ import { addPaymentMode, updatePaymentMode, setPaymentModeStatus } from './api.j
 import { showSeasonsView, refreshSeasonsGrid } from './ui.js';
 import { addSeason, updateSeason, setSeasonStatus } from './api.js';
 
+import { showSalesEventsView, refreshSalesEventsGrid } from './ui.js';
+import { addSalesEvent, updateSalesEvent, setSalesEventStatus } from './api.js';
+
 
 import { showProductsView, refreshProductsGrid } from './ui.js';
 import { addProduct, updateProduct, setProductStatus } from './api.js';
@@ -133,6 +136,7 @@ function setupEventListeners() {
             if (viewId === 'products-view') {
                 showProductsView();
             }
+            
             // We will add more 'if' statements here for other modules
             // else if (viewId === 'products-view') { showProductsView(); }
         }
@@ -235,6 +239,8 @@ function setupEventListeners() {
                 showSeasonsView();
             } else if (viewId === 'users-view') {
                 showUsersView();
+            } else if (viewId === 'sales-events-view') {
+                showSalesEventsView();
             } else if (viewId) {
                 showView(viewId);
             }
@@ -503,6 +509,89 @@ function setupEventListeners() {
             }
         });
     }
+
+    // Add Sales Event Form
+    const addEventForm = document.getElementById('add-event-form');
+    if (addEventForm) {
+        addEventForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const eventName = document.getElementById('eventName-input').value.trim();
+            const parentSeasonData = JSON.parse(document.getElementById('parentSeason-select').value);
+            const startDate = document.getElementById('eventStartDate-input').value;
+            const endDate = document.getElementById('eventEndDate-input').value;
+
+            if (!user || !eventName || !parentSeasonData || !startDate || !endDate) return;
+
+            const eventData = {
+                eventName: eventName,
+                seasonId: parentSeasonData.seasonId,
+                seasonName: parentSeasonData.seasonName, // Denormalized name
+                eventStartDate: new Date(startDate),
+                eventEndDate: new Date(endDate)
+            };
+
+            try {
+                await addSalesEvent(eventData, user);
+                await showModal('success', 'Success', 'Sales Event has been added successfully.');
+                addEventForm.reset();
+                refreshSalesEventsGrid();
+            } catch (error) { 
+                console.error("Error adding event:", error); 
+                await showModal('error', 'Error', 'Failed to add the Sales Event. Please try again.');
+            }
+        });
+    }
+
+
+
+    // In-Grid Update for Sales Events
+    document.addEventListener('updateSalesEvent', async (e) => {
+        const { docId, updatedData } = e.detail;
+
+        try {
+            await updateSalesEvent(docId, updatedData, appState.currentUser);
+        } catch (error) {
+            console.error("Error updating Sales Event:", error);
+            await showModal('error', 'Error', 'Failed to update the Sales Event. Please try again.');
+            refreshSalesEventsGrid(); // Refresh grid to revert failed change
+        }
+        
+    });
+
+    // Action Buttons for Sales Events Grid
+    const salesEventsGrid = document.getElementById('sales-events-grid');
+    if (salesEventsGrid) {
+        salesEventsGrid.addEventListener('click', async (e) => {
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const button = e.target.closest('button');
+            if (!button) return;
+            const docId = button.dataset.id;
+            if (!docId) return;
+
+            if (button.classList.contains('btn-deactivate')) {
+                const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this Sales Event?`);
+                if (confirmed) {
+                    await setSalesEventStatus(docId, false, user);
+                    refreshSalesEventsGrid();
+                }
+            } else if (button.classList.contains('btn-activate')) {
+                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this Sales Event?`);
+                if (confirmed) {
+                    await setSalesEventStatus(docId, true, user);
+                    refreshSalesEventsGrid();
+                }
+            }
+
+        });
+    }
+
+
+
+
+
 
     // In-Grid Update for User Roles
     document.addEventListener('updateUserRole', async (e) => {
