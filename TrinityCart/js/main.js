@@ -644,6 +644,9 @@ function setupEventListeners() {
 
 
 
+
+
+    
     
     // Add Product Form
     const addProductForm = document.getElementById('add-product-form');
@@ -653,11 +656,13 @@ function setupEventListeners() {
             const user = appState.currentUser;
             const unitPrice = parseFloat(document.getElementById('unitPrice-input').value);
             const unitMarginPercentage = parseFloat(document.getElementById('unitMargin-input').value);
+            const categoryData = JSON.parse(document.getElementById('itemCategory-select').value) ;
             const sellingPrice = unitPrice * (1 + unitMarginPercentage / 100);
 
             const productData = {
                 itemName: document.getElementById('itemName-input').value,
-                category: document.getElementById('itemCategory-select').value,
+                categoryId:categoryData.categoryId ,
+                category: categoryData.categoryName ,
                 unitPrice: unitPrice,
                 unitMarginPercentage: unitMarginPercentage,
                 sellingPrice: sellingPrice,
