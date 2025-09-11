@@ -749,7 +749,6 @@ const productsGridOptions = {
             cellEditor: 'agSelectCellEditor',
             cellEditorParams: {
                 values: [],
-                cellRenderer: params => params.value,
             },
             editable: true,
             // This formatter converts the ID to a Name for display in the grid
