@@ -653,16 +653,24 @@ function setupEventListeners() {
             const user = appState.currentUser;
             const unitPrice = parseFloat(document.getElementById('unitPrice-input').value);
             const unitMarginPercentage = parseFloat(document.getElementById('unitMargin-input').value);
+            
+            if (isNaN(unitPrice) || isNaN(unitMarginPercentage)) {
+                return showModal('error', 'Invalid Input', 'Unit Price and Unit Margin must be valid numbers.');
+            }   
+
             const sellingPrice = unitPrice * (1 + unitMarginPercentage / 100);
 
             const productData = {
                 itemName: document.getElementById('itemName-input').value,
-                category: document.getElementById('itemCategory-select').value,
+                ategoryId: document.getElementById('itemCategory-select').value, 
                 unitPrice: unitPrice,
                 unitMarginPercentage: unitMarginPercentage,
                 sellingPrice: sellingPrice,
             };
 
+            if (!productData.categoryId) {
+                return showModal('error', 'Invalid Input', 'Please select a product category.');
+            }   
             try { 
                 await addProduct(productData, user);
                 await showModal('success', 'Success', 'Product has been added successfully.');
