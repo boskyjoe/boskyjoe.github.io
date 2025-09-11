@@ -662,7 +662,7 @@ function setupEventListeners() {
 
             const productData = {
                 itemName: document.getElementById('itemName-input').value,
-                ategoryId: document.getElementById('itemCategory-select').value, 
+                categoryId: document.getElementById('itemCategory-select').value, 
                 unitPrice: unitPrice,
                 unitMarginPercentage: unitMarginPercentage,
                 sellingPrice: sellingPrice,
