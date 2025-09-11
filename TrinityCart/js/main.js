@@ -4,7 +4,7 @@ import { appState } from './state.js';
 import { firebaseConfig, USERS_COLLECTION_PATH } from './config.js';
 
 import { updateUI, showView, showSuppliersView } from './ui.js';
-import { showCategoriesView,refreshSuppliersGrid,refreshCategoriesGrid} from './ui.js';
+import { showCategoriesView,refreshSuppliersGrid} from './ui.js';
 import { showModal } from './modal.js';
 
 
