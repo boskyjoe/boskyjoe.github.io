@@ -743,14 +743,25 @@ const productsGridOptions = {
         { field: "itemId", headerName: "ID", width: 150 },
         { field: "itemName", headerName: "Item Name", flex: 2, editable: true },
         { 
-            field: "category", 
+            field: "categoryId", 
             headerName: "Category", 
             flex: 1, 
             cellEditor: 'agSelectCellEditor',
             cellEditorParams: {
-                values: [] 
+                values: [],
+                cellRenderer: params => params.value,
             },
             editable: true 
+        },
+        // This formatter converts the ID to a Name for display in the grid
+        valueFormatter: params => {
+            const category = availableCategories.find(c => c.id === params.value);
+            return category ? category.categoryName : params.value;
+        },
+        // This parser converts the selected Name back to an ID when editing
+        valueParser: params => {
+            const category = availableCategories.find(c => c.categoryName === params.newValue);
+            return category ? category.id : params.oldValue;
         },
         { 
             field: "unitPrice", 
@@ -829,15 +840,16 @@ const productsGridOptions = {
                 getCategories()
             ]);
             // Store the active category names for the dropdown
-            availableCategories = categories.filter(c => c.isActive).map(c => c.categoryName);
+            availableCategories = categories.filter(c => c.isActive).map(c => ({ id: c.id, categoryName: c.categoryName }));
+            const categoryNames = availableCategories.map(c => c.categoryName);
 
             // 1. Get the current column definitions
-            const columnDefs = productsGridOptions.columnDefs;
+            const columnDefs = productsGridApi.getColumnDefs();
             // 2. Find the 'category' column definition
-            const categoryCol = columnDefs.find(col => col.field === 'category');
+            const categoryCol = columnDefs.find(col => col.field === 'categoryId');
             // 3. Update its values
             if (categoryCol) {
-                categoryCol.cellEditorParams.values = availableCategories;
+                categoryCol.cellEditorParams.values = categoryNames;
             }
             // 4. Tell the grid to apply the updated column definitions
             productsGridApi.setGridOption('columnDefs', columnDefs);
@@ -908,16 +920,25 @@ export function initializeProductsGrid() {
     isProductsGridInitialized = true;
 }
 
+
+
+
+
 export async function showProductsView() {
     showView('products-view');
     initializeProductsGrid();
     
+
+    const itemCategorySelect = document.getElementById('itemCategory-select');
+    const unitPriceInput = document.getElementById('unitPrice-input');
+    const unitMarginInput = document.getElementById('unitMargin-input');
+
     // Populate the category dropdown
     const categories = await getCategories();
     itemCategorySelect.innerHTML = '<option value="">Select a category...</option>';
     categories.filter(c => c.isActive).forEach(cat => {
         const option = document.createElement('option');
-        option.value = cat.categoryName;
+        option.value = cat.id; 
         option.textContent = cat.categoryName;
         itemCategorySelect.appendChild(option);
     });
