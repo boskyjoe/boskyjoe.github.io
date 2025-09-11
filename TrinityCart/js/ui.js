@@ -148,6 +148,11 @@ export function detachAllRealtimeListeners() {
         unsubscribeSaleTypesListener();
         unsubscribeSaleTypesListener = null;
     }
+    if (unsubscribeSeasonsListener) {
+        console.log("[ui.js] Detaching real-time seasons listener.");
+        unsubscribeSeasonsListener();
+        unsubscribeSeasonsListener = null;
+    }
 }
 
 
@@ -439,32 +444,9 @@ export async function showPaymentModesView() {
 }
 
 
-
-export async function refreshPaymentModesGrid() {
-    if (!paymentModesGridApi) return;
-    try {
-        paymentModesGridApi.setGridOption('loading', true);
-        const paymentMode = await getPaymentModes();
-        paymentModesGridApi.setGridOption('rowData', paymentMode);
-        paymentModesGridApi.setGridOption('loading', false);
-    } catch (error) { 
-        console.error("Error refreshing payment mode:", error); 
-        paymentModesGridApi.setGridOption('loading', false);
-        paymentModesGridApi.showNoRowsOverlay();
-    }
-}
-
-
-
-
-
-
-
 let seasonsGridApi = null;
 let isSeasonsGridInitialized = false;
-
-
-
+let unsubscribeSeasonsListener = null;
 
 
 const seasonsGridOptions = {
@@ -514,17 +496,6 @@ const seasonsGridOptions = {
     onGridReady: async (params) => {
         console.log("[ui.js] Seasons Grid is now ready.");
         seasonsGridApi = params.api;
-        
-        try {
-            seasonsGridApi.setGridOption('loading', true);
-            const salesSeasons = await getSeasons();
-            seasonsGridApi.setGridOption('rowData', salesSeasons);
-            seasonsGridApi.setGridOption('loading', false);
-        } catch (error) {
-            console.error("Error loading payment modes:", error);
-            seasonsGridApi.setGridOption('loading', false);
-            seasonsGridApi.showNoRowsOverlay();
-        }
     }
 };
 
@@ -544,20 +515,30 @@ export async function showSeasonsView() {
     console.log("ui.js: initializeSeasonsGrid") ;
     showView('seasons-view');
     initializeSeasonsGrid();
-}
 
-export async function refreshSeasonsGrid() {
-    if (!seasonsGridApi) return;
-    try {
-        seasonsGridApi.setGridOption('loading', true);
-        const seasons = await getSeasons();
-        seasonsGridApi.setGridOption('rowData', seasons);
-        seasonsGridApi.setGridOption('loading', false);
-    } catch (error) { 
-        console.error("Error refreshing seasons:", error); 
-        seasonsGridApi.setGridOption('loading', false);
-        seasonsGridApi.showNoRowsOverlay();
-    }
+    const waitForGrid = setInterval(() => {
+        if (seasonsGridApi) {
+            clearInterval(waitForGrid);
+
+            console.log("[ui.js] Grid is ready. Attaching real-time seasons listener.");
+            const db = firebase.firestore();
+            seasonsGridApi.setGridOption('loading', true);
+
+            unsubscribeSeasonsListener = db.collection(SEASONS_COLLECTION_PATH)
+                .orderBy('startDate', 'desc')
+                .onSnapshot(snapshot => {
+                    console.log("[Firestore] Received real-time update for seasons.");
+                    const seasons = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    seasonsGridApi.setGridOption('rowData', seasons);
+                    seasonsGridApi.setGridOption('loading', false);
+                }, error => {
+                    console.error("Error with seasons real-time listener:", error);
+                    seasonsGridApi.setGridOption('loading', false);
+                    seasonsGridApi.showNoRowsOverlay();
+                });
+        }
+    }, 50);
+
 }
 
 
@@ -1138,6 +1119,8 @@ export function showView(viewId) {
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.toggle('active', link.dataset.viewId === viewId);
     });
+
+    
 }
 
 export function renderUserProfile(user) {
