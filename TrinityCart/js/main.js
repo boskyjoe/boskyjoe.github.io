@@ -172,7 +172,6 @@ function setupEventListeners() {
                 await addSupplier(supplierData, user);
                 await showModal('success', 'Success', 'Supplier has been added successfully.');
                 addSupplierForm.reset();
-                refreshSuppliersGrid(); // Refresh the grid
             } catch (error) {
                 console.error("Error adding supplier:", error);
                 await showModal('error', 'Error', 'Failed to add the supplier. Please try again.');
@@ -190,7 +189,6 @@ function setupEventListeners() {
         } catch (error) {
             console.error("Error updating supplier:", error);
             await showModal('error', 'Error', 'Failed to update the supplier. Please try again.');
-            refreshSuppliersGrid(); // Refresh grid to revert failed change
         }
     });
 
@@ -209,13 +207,11 @@ function setupEventListeners() {
                 const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to Deactivate  this supplier?`);
                 if (confirmed) {
                     await setSupplierStatus(docId, false, user);
-                    refreshSuppliersGrid();
                 }
             } else if (target.classList.contains('btn-activate')) {
                 const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this supplier?`);
                 if (confirmed) {
                     await setSupplierStatus(docId, true, user);
-                    refreshSuppliersGrid();
                 }
             }
         });
