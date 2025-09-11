@@ -445,7 +445,6 @@ function setupEventListeners() {
                 await addSeason(seasonData, user);
                 await showModal('success', 'Success', 'Season has been added successfully.');
                 addSeasonForm.reset();
-                refreshSeasonsGrid();
             } catch (error) { 
                 console.error("Error adding season:", error); 
                 await showModal('error', 'Error', 'Failed to add the Season. Please try again.');
