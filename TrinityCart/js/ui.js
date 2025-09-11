@@ -14,6 +14,8 @@ import { getSalesEvents, getSeasons } from './api.js';
 
 
 import { SUPPLIERS_COLLECTION_PATH } from './config.js';
+import { CATEGORIES_COLLECTION_PATH } from './config.js';
+
 
 
 // --- DOM ELEMENT REFERENCES ---
