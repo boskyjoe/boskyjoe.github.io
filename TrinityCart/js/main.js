@@ -256,7 +256,6 @@ function setupEventListeners() {
                 await addCategory(categoryName, user);
                 await showModal('success', 'Success', 'Category has been added successfully.');
                 addCategoryForm.reset();
-                refreshCategoriesGrid();
             } catch (error) { 
                 console.error("Error adding category:", error); 
                 await showModal('error', 'Error', 'Failed to add the category. Please try again.');
@@ -275,7 +274,6 @@ function setupEventListeners() {
         } catch (error) {
             console.error("Error updating product category:", error);
             await showModal('error', 'Error', 'Failed to update the product category. Please try again.');
-            refreshCategoriesGrid(); // Refresh grid to revert failed change
         }
         
     });
@@ -297,13 +295,11 @@ function setupEventListeners() {
                 const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this product category?`);
                 if (confirmed) {
                     await setCategoryStatus(docId, false, user);
-                    refreshCategoriesGrid();
                 }
             } else if (button.classList.contains('btn-activate')) {
                 const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this product category?`);
                 if (confirmed) {
                     await setCategoryStatus(docId, true, user);
-                    refreshCategoriesGrid();
                 }
             }
         });
