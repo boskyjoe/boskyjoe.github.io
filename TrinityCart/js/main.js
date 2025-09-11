@@ -14,7 +14,7 @@ import { addCategory, updateCategory, setCategoryStatus } from './api.js';
 import { showSaleTypesView, refreshSaleTypesGrid } from './ui.js';
 import { addSaleType, updateSaleType, setSaleTypeStatus } from './api.js';
 
-import { showPaymentModesView, refreshPaymentModesGrid } from './ui.js';
+import { showPaymentModesView } from './ui.js';
 import { addPaymentMode, updatePaymentMode, setPaymentModeStatus } from './api.js';
 
 import { showSeasonsView, refreshSeasonsGrid } from './ui.js';
@@ -369,9 +369,9 @@ function setupEventListeners() {
     }
 
      // Add Payment mode Form
-    const addPaymentTypeForm = document.getElementById('add-payment-mode-form');
-    if (addPaymentTypeForm) {
-        addPaymentTypeForm.addEventListener('submit', async (e) => {
+    const addPaymentModeForm = document.getElementById('add-payment-mode-form'); 
+    if (addPaymentModeForm) {
+        addPaymentModeForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const user = appState.currentUser;
             const paymentMode = document.getElementById('paymentModeName-input').value.trim();
@@ -380,8 +380,7 @@ function setupEventListeners() {
             try {
                 await addPaymentMode(paymentMode, user);
                 await showModal('success', 'Success', 'Payment Mode has been added successfully.');
-                addPaymentTypeForm.reset();
-                refreshPaymentModesGrid();
+                addPaymentModeForm.reset();
             } catch (error) { 
                 console.error("Error adding payment mode:", error); 
                 await showModal('error', 'Error', 'Failed to add the Payment Mode. Please try again.');
@@ -399,7 +398,6 @@ function setupEventListeners() {
         } catch (error) {
             console.error("Error updating payment mode:", error);
             await showModal('error', 'Error', 'Failed to update the payment mode. Please try again.');
-            refreshPaymentModesGrid(); // Refresh grid to revert failed change
         }
     });
 
@@ -419,13 +417,11 @@ function setupEventListeners() {
                 const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this sales type?`);
                 if (confirmed) {
                     await setPaymentModeStatus(docId, false, user);
-                    refreshPaymentModesGrid();
                 }
             } else if (button.classList.contains('btn-activate')) {
                 const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this sales type?`);
                 if (confirmed) {
                     await setPaymentModeStatus(docId, true, user);
-                    refreshPaymentModesGrid();
                 }
             }
         });
