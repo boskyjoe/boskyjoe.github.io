@@ -751,17 +751,17 @@ const productsGridOptions = {
                 values: [],
                 cellRenderer: params => params.value,
             },
-            editable: true 
-        },
-        // This formatter converts the ID to a Name for display in the grid
-        valueFormatter: params => {
-            const category = availableCategories.find(c => c.id === params.value);
-            return category ? category.categoryName : params.value;
-        },
-        // This parser converts the selected Name back to an ID when editing
-        valueParser: params => {
-            const category = availableCategories.find(c => c.categoryName === params.newValue);
-            return category ? category.id : params.oldValue;
+            editable: true,
+            // This formatter converts the ID to a Name for display in the grid
+            valueFormatter: params => {
+                const category = availableCategories.find(c => c.id === params.value);
+                return category ? category.categoryName : params.value;
+            },
+            // This parser converts the selected Name back to an ID when editing
+            valueParser: params => {
+                const category = availableCategories.find(c => c.categoryName === params.newValue);
+                return category ? category.id : params.oldValue;
+            }
         },
         { 
             field: "unitPrice", 
