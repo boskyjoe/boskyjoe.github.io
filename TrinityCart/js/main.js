@@ -11,7 +11,7 @@ import { showModal } from './modal.js';
 import { addSupplier, updateSupplier, setSupplierStatus } from './api.js';
 import { addCategory, updateCategory, setCategoryStatus } from './api.js';
 
-import { showSaleTypesView, refreshSaleTypesGrid } from './ui.js';
+import { showSaleTypesView } from './ui.js';
 import { addSaleType, updateSaleType, setSaleTypeStatus } from './api.js';
 
 import { showPaymentModesView } from './ui.js';
@@ -318,7 +318,6 @@ function setupEventListeners() {
                 await addSaleType(saleTypeName, user);
                 await showModal('success', 'Success', 'Sales Type has been added successfully.');
                 addSaleTypeForm.reset();
-                refreshSaleTypesGrid();
             } catch (error) { 
                 console.error("Error adding sale type:", error); 
                 await showModal('error', 'Error', 'Failed to add the Sales Type. Please try again.');
@@ -336,7 +335,6 @@ function setupEventListeners() {
         } catch (error) {
             console.error("Error updating sales type:", error);
             await showModal('error', 'Error', 'Failed to update the sales type. Please try again.');
-            refreshSaleTypesGrid(); // Refresh grid to revert failed change
         }
     });
 
@@ -356,13 +354,11 @@ function setupEventListeners() {
                 const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this sales type?`);
                 if (confirmed) {
                     await setSaleTypeStatus(docId, false, user);
-                    refreshSaleTypesGrid();
                 }
             } else if (button.classList.contains('btn-activate')) {
                 const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this sales type?`);
                 if (confirmed) {
                     await setSaleTypeStatus(docId, true, user);
-                    refreshSaleTypesGrid();
                 }
             }
         });
