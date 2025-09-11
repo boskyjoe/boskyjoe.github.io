@@ -17,6 +17,7 @@ import { SUPPLIERS_COLLECTION_PATH } from './config.js';
 import { CATEGORIES_COLLECTION_PATH } from './config.js';
 import { PAYMENT_MODES_COLLECTION_PATH } from './config.js';
 import { SALE_TYPES_COLLECTION_PATH } from './config.js';
+import { SEASONS_COLLECTION_PATH } from './config.js';
 
 
 
