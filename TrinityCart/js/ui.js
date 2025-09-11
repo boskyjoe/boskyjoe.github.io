@@ -12,6 +12,10 @@ import { getProducts, getCategories } from './api.js';
 import { getUsersWithRoles } from './api.js';
 import { getSalesEvents, getSeasons } from './api.js';
 
+
+import { SUPPLIERS_COLLECTION_PATH } from './config.js';
+
+
 // --- DOM ELEMENT REFERENCES ---
 const views = document.querySelectorAll('.view');
 const authContainer = document.getElementById('auth-container');
