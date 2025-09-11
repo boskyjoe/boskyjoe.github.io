@@ -511,14 +511,36 @@ export async function refreshSeasonsGrid() {
 }
 
 
+
 let salesEventsGridApi = null;
 let isSalesEventsGridInitialized = false;
+let availableSeasons = [];
 
 const salesEventsGridOptions = {
     columnDefs: [
         { field: "eventId", headerName: "ID", width: 180 },
         { field: "eventName", headerName: "Event Name", flex: 2, editable: true },
-        { field: "seasonName", headerName: "Parent Season", flex: 1 },
+        { 
+            field: "seasonId", // The field in our data is the ID
+            headerName: "Parent Season", 
+            flex: 1, 
+            editable: true,
+            cellEditor: 'agSelectCellEditor',
+            cellEditorParams: {
+                // The values are the raw season IDs
+                values: [], 
+                // This renderer tells the dropdown how to DISPLAY each ID
+                cellRenderer: params => {
+                    const season = availableSeasons.find(s => s.id === params.value);
+                    return season ? season.seasonName : params.value;
+                }
+            },
+            // This formatter converts the ID to a Name for display in the grid cell
+            valueFormatter: params => {
+                const season = availableSeasons.find(s => s.id === params.value);
+                return season ? season.seasonName : params.value;
+            }
+        },
         { 
             field: "eventStartDate", headerName: "Start Date", flex: 1,
             valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : ''
@@ -547,8 +569,22 @@ const salesEventsGridOptions = {
     ],
     defaultColDef: { resizable: true, sortable: true, filter: true },
     onCellValueChanged: (params) => {
+        const docId = params.data.id;
+        const field = params.colDef.field;
+        const newValue = params.newValue;
+
+        let updatedData = { [field]: newValue };
+        // If the season was changed, we also need to update the denormalized seasonName
+        if (field === 'seasonId') {
+            const season = availableSeasons.find(s => s.id === newValue);
+            if (season) {
+                updatedData.seasonName = season.seasonName;
+                // Refresh the row to make sure the formatter updates the display instantly
+                params.node.setData(Object.assign(params.data, updatedData));
+            }
+        }
         document.dispatchEvent(new CustomEvent('updateSalesEvent', { 
-            detail: { docId: params.data.id, updatedData: { eventName: params.newValue } } 
+            detail: { docId, updatedData }  
         }));
     },
     onGridReady: async (params) => {
@@ -557,8 +593,25 @@ const salesEventsGridOptions = {
         
         try {
             salesEventsGridApi.setGridOption('loading', true);
-            const salesEvent = await getSalesEvents();
-            salesEventsGridApi.setGridOption('rowData', salesEvent);
+
+            // Fetch both events and seasons
+            const [events, seasons] = await Promise.all([
+                getSalesEvents(),
+                getSeasons()
+            ]);
+
+            // Store the full season objects for our formatters/renderers
+            availableSeasons = seasons.filter(s => s.isActive).map(s => ({ id: s.id, seasonName: s.seasonName }));
+            const seasonIds = availableSeasons.map(s => s.id);
+
+            // Update the column definition with the season IDs for the dropdown
+            const columnDefs = salesEventsGridApi.getColumnDefs();
+            const seasonCol = columnDefs.find(col => col.field === 'seasonId');
+            if (seasonCol) {
+                seasonCol.cellEditorParams.values = seasonIds;
+            }
+            salesEventsGridApi.setGridOption('columnDefs', columnDefs);
+            salesEventsGridApi.setGridOption('rowData', events);
             salesEventsGridApi.setGridOption('loading', false);
         } catch (error) {
             console.error("Error loading payment modes:", error);
@@ -587,15 +640,20 @@ export async function showSalesEventsView() {
     
     // Populate the parent season dropdown
     const parentSeasonSelect = document.getElementById('parentSeason-select');
-    const seasons = await getSeasons();
-    parentSeasonSelect.innerHTML = '<option value="">Select a parent season...</option>';
-    seasons.filter(s => s.isActive).forEach(season => {
-        const option = document.createElement('option');
-        // Store both ID and Name for later use
-        option.value = JSON.stringify({ seasonId: season.id, seasonName: season.seasonName });
-        option.textContent = season.seasonName;
-        parentSeasonSelect.appendChild(option);
-    });
+
+    try {
+        const seasons = await getSeasons();
+        parentSeasonSelect.innerHTML = '<option value="">Select a parent season...</option>';
+        seasons.filter(s => s.isActive).forEach(season => {
+            const option = document.createElement('option');
+            // The value is a JSON string containing both ID and Name
+            option.value = JSON.stringify({ seasonId: season.id, seasonName: season.seasonName });
+            option.textContent = season.seasonName;
+            parentSeasonSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Could not populate seasons dropdown:", error);
+    }
 
     try {
         salesEventsGridApi.setGridOption('loading', true);
