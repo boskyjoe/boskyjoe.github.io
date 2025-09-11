@@ -1100,7 +1100,7 @@ export function renderSidebar(role) {
 
 export function showView(viewId) {
 
-    detachAllListeners();
+    detachAllRealtimeListeners();
 
     appState.activeView = viewId;
     views.forEach(view => {
