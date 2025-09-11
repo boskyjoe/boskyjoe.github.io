@@ -15,6 +15,7 @@ import { getSalesEvents, getSeasons } from './api.js';
 
 import { SUPPLIERS_COLLECTION_PATH } from './config.js';
 import { CATEGORIES_COLLECTION_PATH } from './config.js';
+import { PAYMENT_MODES_COLLECTION_PATH } from './config.js';
 
 
 
@@ -133,6 +134,12 @@ export function detachAllRealtimeListeners() {
         console.log("[ui.js] Detaching real-time categories listener.");
         unsubscribeCategoriesListener();
         unsubscribeCategoriesListener = null;
+    }
+
+    if (unsubscribePaymentModesListener) {
+        console.log("[ui.js] Detaching real-time payment modes listener.");
+        unsubscribePaymentModesListener();
+        unsubscribePaymentModesListener = null;
     }
 }
 
@@ -348,6 +355,7 @@ export async function refreshSaleTypesGrid() {
 
 let paymentModesGridApi = null;
 let isPaymentModesGridInitialized = false;
+let unsubscribePaymentModesListener = null;
 
 
 const paymentModesGridOptions = {
@@ -372,7 +380,7 @@ const paymentModesGridOptions = {
             }
         }
     ],
-    defaultColDef: { resizable: true },
+    defaultColDef: { resizable: true, sortable: true, filter: true },
     onCellValueChanged: (params) => {
         document.dispatchEvent(new CustomEvent('updatePaymentMode', { 
             detail: { docId: params.data.id, updatedData: { paymentMode: params.newValue } } 
@@ -381,17 +389,6 @@ const paymentModesGridOptions = {
     onGridReady: async (params) => {
         console.log("[ui.js] Payment Modes Grid is now ready.");
         paymentModesGridApi = params.api;
-        
-        try {
-            paymentModesGridApi.setGridOption('loading', true);
-            const paymentModes = await getPaymentModes();
-            paymentModesGridApi.setGridOption('rowData', paymentModes);
-            paymentModesGridApi.setGridOption('loading', false);
-        } catch (error) {
-            console.error("Error loading payment modes:", error);
-            paymentModesGridApi.setGridOption('loading', false);
-            paymentModesGridApi.showNoRowsOverlay();
-        }
     }
 
 }
@@ -411,6 +408,28 @@ export async function showPaymentModesView() {
     console.log("ui.js: initializePaymentModesGrid") ;
     showView('payment-modes-view');
     initializePaymentModesGrid();
+    const waitForGrid = setInterval(() => {
+        if (paymentModesGridApi) {
+            clearInterval(waitForGrid);
+
+            console.log("[ui.js] Grid is ready. Attaching real-time payment modes listener.");
+            const db = firebase.firestore();
+            paymentModesGridApi.setGridOption('loading', true);
+
+            unsubscribePaymentModesListener = db.collection(PAYMENT_MODES_COLLECTION_PATH)
+                .orderBy('paymentMode')
+                .onSnapshot(snapshot => {
+                    console.log("[Firestore] Received real-time update for payment modes.");
+                    const paymentModes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    paymentModesGridApi.setGridOption('rowData', paymentModes);
+                    paymentModesGridApi.setGridOption('loading', false);
+                }, error => {
+                    console.error("Error with payment modes real-time listener:", error);
+                    paymentModesGridApi.setGridOption('loading', false);
+                    paymentModesGridApi.showNoRowsOverlay();
+                });
+        }
+    }, 50);
 }
 
 
@@ -428,6 +447,12 @@ export async function refreshPaymentModesGrid() {
         paymentModesGridApi.showNoRowsOverlay();
     }
 }
+
+
+
+
+
+
 
 let seasonsGridApi = null;
 let isSeasonsGridInitialized = false;
