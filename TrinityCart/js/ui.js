@@ -16,6 +16,8 @@ import { getSalesEvents, getSeasons } from './api.js';
 import { SUPPLIERS_COLLECTION_PATH } from './config.js';
 import { CATEGORIES_COLLECTION_PATH } from './config.js';
 import { PAYMENT_MODES_COLLECTION_PATH } from './config.js';
+import { SALE_TYPES_COLLECTION_PATH } from './config.js';
+
 
 
 
@@ -140,6 +142,11 @@ export function detachAllRealtimeListeners() {
         console.log("[ui.js] Detaching real-time payment modes listener.");
         unsubscribePaymentModesListener();
         unsubscribePaymentModesListener = null;
+    }
+    if (unsubscribeSaleTypesListener) {
+        console.log("[ui.js] Detaching real-time sale types listener.");
+        unsubscribeSaleTypesListener();
+        unsubscribeSaleTypesListener = null;
     }
 }
 
@@ -272,6 +279,7 @@ export async function showCategoriesView() {
 
 let saleTypesGridApi = null;
 let isSaleTypesGridInitialized = false;
+let unsubscribeSaleTypesListener = null;
 
 const saleTypesGridOptions = {
     columnDefs: [
@@ -295,7 +303,7 @@ const saleTypesGridOptions = {
             }
         }
     ],
-    defaultColDef: { resizable: true },
+    defaultColDef: { resizable: true, sortable: true, filter: true },
     onCellValueChanged: (params) => {
         document.dispatchEvent(new CustomEvent('updateSaleType', { 
             detail: { docId: params.data.id, updatedData: { saleTypeName: params.newValue } } 
@@ -304,17 +312,6 @@ const saleTypesGridOptions = {
     onGridReady: async (params) => {
         console.log("[ui.js] Sales Type Grid is now ready.");
         saleTypesGridApi = params.api;
-        
-        try {
-            saleTypesGridApi.setGridOption('loading', true);
-            const salesType = await getSaleTypes();
-            saleTypesGridApi.setGridOption('rowData', salesType);
-            saleTypesGridApi.setGridOption('loading', false);
-        } catch (error) {
-            console.error("Error loading sales type:", error);
-            saleTypesGridApi.setGridOption('loading', false);
-            saleTypesGridApi.showNoRowsOverlay();
-        }
     }
 };
 
@@ -334,23 +331,32 @@ export async function showSaleTypesView() {
     console.log("[ui.js] showSaleTypesView called.");
     showView('sale-types-view');
     initializeSaleTypesGrid();
+
+    const waitForGrid = setInterval(() => {
+        if (saleTypesGridApi) {
+            clearInterval(waitForGrid);
+
+            console.log("[ui.js] Grid is ready. Attaching real-time sale types listener.");
+            const db = firebase.firestore();
+            saleTypesGridApi.setGridOption('loading', true);
+
+            unsubscribeSaleTypesListener = db.collection(SALE_TYPES_COLLECTION_PATH)
+                .orderBy('saleTypeName')
+                .onSnapshot(snapshot => {
+                    console.log("[Firestore] Received real-time update for sale types.");
+                    const saleTypes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    saleTypesGridApi.setGridOption('rowData', saleTypes);
+                    saleTypesGridApi.setGridOption('loading', false);
+                }, error => {
+                    console.error("Error with sale types real-time listener:", error);
+                    saleTypesGridApi.setGridOption('loading', false);
+                    saleTypesGridApi.showNoRowsOverlay();
+                });
+        }
+    }, 50);
     
 }
 
-
-export async function refreshSaleTypesGrid() {
-    if (!saleTypesGridApi) return;
-    try {
-        saleTypesGridApi.setGridOption('loading', true);
-        const saleTypes = await getSaleTypes();
-        saleTypesGridApi.setGridOption('rowData', saleTypes);
-        saleTypesGridApi.setGridOption('loading', false);
-    } catch (error) { 
-        console.error("Error refreshing sale types:", error); 
-        saleTypesGridApi.setGridOption('loading', false);
-        saleTypesGridApi.showNoRowsOverlay();
-    }
-}
 
 
 let paymentModesGridApi = null;
