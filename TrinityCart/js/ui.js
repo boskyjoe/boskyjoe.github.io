@@ -127,6 +127,11 @@ export function detachAllRealtimeListeners() {
     }
     // As we add more real-time grids, we'll add their unsubscribe calls here.
     // if (unsubscribeProductsListener) { unsubscribeProductsListener(); }
+    if (unsubscribeCategoriesListener) {
+        console.log("[ui.js] Detaching real-time categories listener.");
+        unsubscribeCategoriesListener();
+        unsubscribeCategoriesListener = null;
+    }
 }
 
 
@@ -167,26 +172,9 @@ export async function showSuppliersView() {
 
 
 
-export async function refreshSuppliersGrid() {
-    if (!suppliersGridApi) {
-        console.error("Cannot refresh: Suppliers Grid API not available.");
-        return;
-    }
-    try {
-        suppliersGridApi.setGridOption('loading', true);
-        const suppliers = await getSuppliers();
-        suppliersGridApi.setGridOption('rowData', suppliers);
-        suppliersGridApi.setGridOption('loading', false);
-    } catch (error) {
-        console.error("[ui.js] Could not refresh supplier data:", error);
-        suppliersGridApi.setGridOption('loading', false);
-        suppliersGridApi.showNoRowsOverlay();
-    }
-}
-
-
 let categoriesGridApi = null;
 let isCategoriesGridInitialized = false;
+let unsubscribeCategoriesListener = null; 
 
 const categoriesGridOptions = {
     columnDefs: [
@@ -217,7 +205,7 @@ const categoriesGridOptions = {
             cellClass: 'flex items-center justify-center'
         }
     ],
-    defaultColDef: { resizable: true },
+    defaultColDef: { resizable: true, sortable: true, filter: true },
     rowData: [],
     onCellValueChanged: (params) => {
         document.dispatchEvent(new CustomEvent('updateCategory', { 
@@ -227,17 +215,6 @@ const categoriesGridOptions = {
     onGridReady: async (params) => {
         console.log("[ui.js] Payment Modes Grid is now ready.");
         categoriesGridApi = params.api;
-        
-        try {
-            categoriesGridApi.setGridOption('loading', true);
-            const categories = await getCategories();
-            categoriesGridApi.setGridOption('rowData', categories);
-            categoriesGridApi.setGridOption('loading', false);
-        } catch (error) {
-            console.error("Error loading payment modes:", error);
-            categoriesGridApi.setGridOption('loading', false);
-            categoriesGridApi.showNoRowsOverlay();
-        }
     }
 };
 
@@ -258,20 +235,29 @@ export async function showCategoriesView() {
 
     showView('categories-view');
     initializeCategoriesGrid();
-}
 
-export async function refreshCategoriesGrid() {
-    if (!categoriesGridApi) return;
-    try {
-        categoriesGridApi.setGridOption('loading', true);
-        const categories = await getCategories();
-        categoriesGridApi.setGridOption('rowData', categories);
-        categoriesGridApi.setGridOption('loading', false);
-    } catch (error) { 
-        console.error("Error refreshing categories:", error); 
-        categoriesGridApi.setGridOption('loading', false);
-        categoriesGridApi.showNoRowsOverlay();
-    }
+    const waitForGrid = setInterval(() => {
+        if (categoriesGridApi) {
+            clearInterval(waitForGrid);
+
+            console.log("[ui.js] Grid is ready. Attaching real-time categories listener.");
+            const db = firebase.firestore();
+            categoriesGridApi.setGridOption('loading', true);
+
+            unsubscribeCategoriesListener = db.collection(CATEGORIES_COLLECTION_PATH)
+                .orderBy('categoryName')
+                .onSnapshot(snapshot => {
+                    console.log("[Firestore] Received real-time update for categories.");
+                    const categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    categoriesGridApi.setGridOption('rowData', categories);
+                    categoriesGridApi.setGridOption('loading', false);
+                }, error => {
+                    console.error("Error with categories real-time listener:", error);
+                    categoriesGridApi.setGridOption('loading', false);
+                    categoriesGridApi.showNoRowsOverlay();
+                });
+        }
+    }, 50);
 }
 
 
