@@ -749,17 +749,16 @@ const productsGridOptions = {
             cellEditor: 'agSelectCellEditor',
             cellEditorParams: {
                 values: [],
+                cellRenderer: params => {
+                    const category = availableCategories.find(c => c.id === params.value);
+                    return category ? category.categoryName : params.value;
+                }
             },
             editable: true,
             // This formatter converts the ID to a Name for display in the grid
             valueFormatter: params => {
                 const category = availableCategories.find(c => c.id === params.value);
                 return category ? category.categoryName : params.value;
-            },
-            // This parser converts the selected Name back to an ID when editing
-            valueParser: params => {
-                const category = availableCategories.find(c => c.categoryName === params.newValue);
-                return category ? category.id : params.oldValue;
             }
         },
         { 
@@ -843,12 +842,15 @@ const productsGridOptions = {
             const categoryNames = availableCategories.map(c => c.categoryName);
 
             // 1. Get the current column definitions
+            const categoryIds = availableCategories.map(c => c.id);
             const columnDefs = productsGridApi.getColumnDefs();
+
             // 2. Find the 'category' column definition
             const categoryCol = columnDefs.find(col => col.field === 'categoryId');
             // 3. Update its values
             if (categoryCol) {
-                categoryCol.cellEditorParams.values = categoryNames;
+                // Provide the list of IDs to the editor
+                categoryCol.cellEditorParams.values = categoryIds;
             }
             // 4. Tell the grid to apply the updated column definitions
             productsGridApi.setGridOption('columnDefs', columnDefs);
