@@ -17,7 +17,7 @@ import { addSaleType, updateSaleType, setSaleTypeStatus } from './api.js';
 import { showPaymentModesView } from './ui.js';
 import { addPaymentMode, updatePaymentMode, setPaymentModeStatus } from './api.js';
 
-import { showSeasonsView, refreshSeasonsGrid } from './ui.js';
+import { showSeasonsView } from './ui.js';
 import { addSeason, updateSeason, setSeasonStatus } from './api.js';
 
 import { showSalesEventsView, refreshSalesEventsGrid } from './ui.js';
@@ -482,13 +482,11 @@ function setupEventListeners() {
                 const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this Season?`);
                 if (confirmed) {
                     await setSeasonStatus(docId, false, user);
-                    refreshSeasonsGrid();
                 }
             } else if (button.classList.contains('btn-activate')) {
                 const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this Season?`);
                 if (confirmed) {
                     await setSeasonStatus(docId, true, user);
-                    refreshSeasonsGrid();
                 }
             }
         });
@@ -608,13 +606,11 @@ function setupEventListeners() {
                 const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this User?`);
                 if (confirmed) {
                     await setUserActiveStatus(uid, false, user);
-                    refreshSeasonsGrid();
                 }
             } else if (button.classList.contains('btn-activate')) {
                 const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this User?`);
                 if (confirmed) {
                     await setUserActiveStatus(uid, true, user);
-                    refreshSeasonsGrid();
                 }
             }
         });
