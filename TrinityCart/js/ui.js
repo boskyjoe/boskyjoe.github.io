@@ -18,9 +18,6 @@ const authContainer = document.getElementById('auth-container');
 const viewTitle = document.getElementById('view-title');
 
 
-const suppliersGridDiv = document.getElementById('suppliers-grid');
-
-
 
 
 
@@ -38,6 +35,8 @@ const rolesList = ['admin', 'sales_staff', 'inventory_manager', 'finance', 'team
 
 // --- A NEW VARIABLE TO HOLD THE GRID API ---
 let suppliersGridApi = null;
+let isSuppliersGridInitialized = false;
+let unsubscribeSuppliersListener = null;
 
 const suppliersGridOptions = {
     columnDefs: [
@@ -87,18 +86,6 @@ const suppliersGridOptions = {
     onGridReady: async (params) => {
         console.log("[ui.js] Suppliers Grid is ready!");
         suppliersGridApi = params.api;
-        // We don't need to do anything here on initial load,
-        // but this event guarantees that params.api is now available.
-        try {
-            suppliersGridApi.setGridOption('loading', true);
-            const suppliers = await getSuppliers();
-            suppliersGridApi.setGridOption('rowData', suppliers);
-            suppliersGridApi.setGridOption('loading', false);
-        } catch (error) {
-            console.error("[ui.js] Could not load initial supplier data:", error);
-            suppliersGridApi.setGridOption('loading', false);
-            suppliersGridApi.showNoRowsOverlay();
-        }
     },
     onCellValueChanged: (params) => {
         const docId = params.data.id;
@@ -111,8 +98,6 @@ const suppliersGridOptions = {
 };
 
 
-// --- A FLAG TO PREVENT RE-INITIALIZATION ---
-let isSuppliersGridInitialized = false;
 
 
 // --- THE NEW INITIALIZATION FUNCTION ---
@@ -121,6 +106,7 @@ export function initializeSuppliersGrid() {
     if (isSuppliersGridInitialized) {
         return;
     }
+    const suppliersGridDiv = document.getElementById('suppliers-grid');
     if (suppliersGridDiv) {
         console.log("[ui.js] Initializing Suppliers Grid for the first time.");
         createGrid(suppliersGridDiv, suppliersGridOptions);
@@ -128,13 +114,54 @@ export function initializeSuppliersGrid() {
     }
 }
 
+// This is our new central function to clean up ALL listeners.
+export function detachAllRealtimeListeners() {
+    if (unsubscribeSuppliersListener) {
+        console.log("[ui.js] Detaching real-time suppliers listener.");
+        unsubscribeSuppliersListener(); // This is the function Firestore gives us to stop listening.
+        unsubscribeSuppliersListener = null;
+    }
+    // As we add more real-time grids, we'll add their unsubscribe calls here.
+    // if (unsubscribeProductsListener) { unsubscribeProductsListener(); }
+}
+
+
+
+
 export async function showSuppliersView() {
     console.log("[ui.js] showSuppliersView() called. Attempting to fetch data...");
     showView('suppliers-view');
 
     // 1. Initialize the grid if it's the first time viewing this page.
     initializeSuppliersGrid();
+
+    const waitForGrid = setInterval(() => {
+        if (suppliersGridApi) {
+            clearInterval(waitForGrid); // Stop checking once the grid is ready.
+
+            console.log("[ui.js] Grid is ready. Attaching real-time suppliers listener.");
+            const db = firebase.firestore();
+            suppliersGridApi.setGridOption('loading', true);
+
+            // Attach the real-time listener and store the "unsubscribe" function it returns.
+            unsubscribeSuppliersListener = db.collection(SUPPLIERS_COLLECTION_PATH)
+                .orderBy('supplierName')
+                .onSnapshot(snapshot => {
+                    console.log("[Firestore] Received real-time update for suppliers.");
+                    const suppliers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    suppliersGridApi.setGridOption('rowData', suppliers);
+                    suppliersGridApi.setGridOption('loading', false);
+                }, error => {
+                    console.error("Error with suppliers real-time listener:", error);
+                    suppliersGridApi.setGridOption('loading', false);
+                    suppliersGridApi.showNoRowsOverlay();
+                });
+        }
+    }, 50); // Check every 50ms
+
 }
+
+
 
 export async function refreshSuppliersGrid() {
     if (!suppliersGridApi) {
@@ -1072,6 +1099,9 @@ export function renderSidebar(role) {
 }
 
 export function showView(viewId) {
+
+    detachAllListeners();
+
     appState.activeView = viewId;
     views.forEach(view => {
         view.classList.toggle('active', view.id === viewId);
