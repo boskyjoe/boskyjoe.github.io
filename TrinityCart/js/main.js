@@ -20,7 +20,7 @@ import { addPaymentMode, updatePaymentMode, setPaymentModeStatus } from './api.j
 import { showSeasonsView } from './ui.js';
 import { addSeason, updateSeason, setSeasonStatus } from './api.js';
 
-import { showSalesEventsView, refreshSalesEventsGrid } from './ui.js';
+import { showSalesEventsView } from './ui.js';
 import { addSalesEvent, updateSalesEvent, setSalesEventStatus } from './api.js';
 
 
@@ -29,6 +29,9 @@ import { addProduct, updateProduct, setProductStatus } from './api.js';
 
 import { showUsersView, refreshUsersGrid } from './ui.js';
 import { updateUserRole, setUserActiveStatus } from './api.js';
+
+
+import { initializeMasterDataListeners } from './masterData.js';
 
 
 // --- FIREBASE INITIALIZATION ---
@@ -516,7 +519,6 @@ function setupEventListeners() {
                 await addSalesEvent(eventData, user);
                 await showModal('success', 'Success', 'Sales Event has been added successfully.');
                 addEventForm.reset();
-                refreshSalesEventsGrid();
             } catch (error) { 
                 console.error("Error adding event:", error); 
                 await showModal('error', 'Error', 'Failed to add the Sales Event. Please try again.');
@@ -535,7 +537,6 @@ function setupEventListeners() {
         } catch (error) {
             console.error("Error updating Sales Event:", error);
             await showModal('error', 'Error', 'Failed to update the Sales Event. Please try again.');
-            refreshSalesEventsGrid(); // Refresh grid to revert failed change
         }
         
     });
@@ -556,13 +557,11 @@ function setupEventListeners() {
                 const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this Sales Event?`);
                 if (confirmed) {
                     await setSalesEventStatus(docId, false, user);
-                    refreshSalesEventsGrid();
                 }
             } else if (button.classList.contains('btn-activate')) {
                 const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this Sales Event?`);
                 if (confirmed) {
                     await setSalesEventStatus(docId, true, user);
-                    refreshSalesEventsGrid();
                 }
             }
 
@@ -724,6 +723,8 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("Application Initializing...");
     // This MUST be done once at the start of the application.
     ModuleRegistry.registerModules([AllCommunityModule]);
+
+    initializeMasterDataListeners();
 
     setupEventListeners();
     // The initial UI update is now handled by the onAuthStateChanged listener
