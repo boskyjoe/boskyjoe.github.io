@@ -17,7 +17,6 @@ import { getSalesEvents, getSeasons } from './api.js';
 import { masterData } from './masterData.js';
 // We no longer need to import getCategories or getSeasons here for the dropdowns.
 // import { getProducts, getCategories, getSeasons, ... } from './api.js';
-import { getSalesEvents } from './api.js'; // Simplified import
 
 
 import { SUPPLIERS_COLLECTION_PATH } from './config.js';
@@ -681,7 +680,15 @@ export async function showSalesEventsView() {
                 });
         }
     }, 50);
-
+    // This part is for the form dropdown and can be simplified.
+    const parentSeasonSelect = document.getElementById('parentSeason-select');
+    parentSeasonSelect.innerHTML = '<option value="">Select a parent season...</option>';
+    masterData.seasons.forEach(season => {
+        const option = document.createElement('option');
+        option.value = JSON.stringify({ seasonId: season.id, seasonName: season.seasonName });
+        option.textContent = season.seasonName;
+        parentSeasonSelect.appendChild(option);
+    });
     
 }
 
