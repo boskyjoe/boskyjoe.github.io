@@ -62,14 +62,20 @@ document.addEventListener('masterDataUpdated', (e) => {
     }
 
     if (type === 'seasons') {
-        // Update the "Add Event" form dropdown
+        // This is now the ONLY place that updates the grid's columns.
+        updateSalesEventsGridColumns();
+
+        // This also updates the form dropdown, ensuring consistency.
         const parentSeasonSelect = document.getElementById('parentSeason-select');
         if (parentSeasonSelect) {
-            // ... (existing logic for the form dropdown) ...
+            parentSeasonSelect.innerHTML = '<option value="">Select a parent season...</option>';
+            masterData.seasons.forEach(season => {
+                const option = document.createElement('option');
+                option.value = JSON.stringify({ seasonId: season.id, seasonName: season.seasonName });
+                option.textContent = season.seasonName;
+                parentSeasonSelect.appendChild(option);
+            });
         }
-
-        // THE FIX: When seasons data is updated, also update the grid's columns.
-        updateSalesEventsGridColumns();
     }
 });
 
@@ -586,17 +592,17 @@ export async function showSeasonsView() {
 let salesEventsGridApi = null;
 let isSalesEventsGridInitialized = false;
 let unsubscribeSalesEventsListener = null; 
-let availableSeasons = [];
 
 
 // --- NEW HELPER FUNCTION ---
 function updateSalesEventsGridColumns() {
-    if (!salesEventsGridApi) return; // Don't do anything if the grid isn't ready
+    if (!salesEventsGridApi) return;
 
     console.log("[ui.js] Updating Sales Events grid columns with fresh season data.");
-    
     const seasonIds = masterData.seasons.map(s => s.id);
-    const columnDefs = salesEventsGridApi.getColumnDefs();
+    
+    // We get the column defs from the options object, modify it, then apply it.
+    const columnDefs = salesEventsGridOptions.columnDefs;
     const seasonCol = columnDefs.find(col => col.field === 'seasonId');
     
     if (seasonCol) {
@@ -604,7 +610,6 @@ function updateSalesEventsGridColumns() {
     }
     
     salesEventsGridApi.setGridOption('columnDefs', columnDefs);
-    // Refresh the cells to make sure the new valueFormatter is applied
     salesEventsGridApi.refreshCells({ force: true });
 }
 
@@ -623,13 +628,13 @@ const salesEventsGridOptions = {
                 values: [], 
                 // This renderer tells the dropdown how to DISPLAY each ID
                 cellRenderer: params => {
-                    const season = availableSeasons.find(s => s.id === params.value);
+                    const season = masterData.seasons.find(s => s.id === params.value);
                     return season ? season.seasonName : params.value;
                 }
             },
             // This formatter converts the ID to a Name for display in the grid cell
             valueFormatter: params => {
-                const season = availableSeasons.find(s => s.id === params.value);
+                const season = masterData.seasons.find(s => s.id === params.value);
                 return season ? season.seasonName : params.value;
             }
         },
@@ -680,8 +685,6 @@ const salesEventsGridOptions = {
     onGridReady: async (params) => {
         console.log("[ui.js] Sales Event Grid is now ready.");
         salesEventsGridApi = params.api;
-
-        updateSalesEventsGridColumns(); 
     }
 };
 
