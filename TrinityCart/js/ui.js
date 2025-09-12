@@ -13,11 +13,20 @@ import { getUsersWithRoles } from './api.js';
 import { getSalesEvents, getSeasons } from './api.js';
 
 
+// Import the new masterData object at the top
+import { masterData } from './masterData.js';
+// We no longer need to import getCategories or getSeasons here for the dropdowns.
+// import { getProducts, getCategories, getSeasons, ... } from './api.js';
+import { getSalesEvents } from './api.js'; // Simplified import
+
+
 import { SUPPLIERS_COLLECTION_PATH } from './config.js';
 import { CATEGORIES_COLLECTION_PATH } from './config.js';
 import { PAYMENT_MODES_COLLECTION_PATH } from './config.js';
 import { SALE_TYPES_COLLECTION_PATH } from './config.js';
 import { SEASONS_COLLECTION_PATH } from './config.js';
+import { EVENTS_COLLECTION_PATH } from './config.js';
+
 
 
 
@@ -153,6 +162,11 @@ export function detachAllRealtimeListeners() {
         console.log("[ui.js] Detaching real-time seasons listener.");
         unsubscribeSeasonsListener();
         unsubscribeSeasonsListener = null;
+    }
+    if (unsubscribeSalesEventsListener) {
+        console.log("[ui.js] Detaching real-time sales events listener.");
+        unsubscribeSalesEventsListener();
+        unsubscribeSalesEventsListener = null;
     }
 }
 
@@ -546,6 +560,7 @@ export async function showSeasonsView() {
 
 let salesEventsGridApi = null;
 let isSalesEventsGridInitialized = false;
+let unsubscribeSalesEventsListener = null; 
 let availableSeasons = [];
 
 const salesEventsGridOptions = {
@@ -622,34 +637,6 @@ const salesEventsGridOptions = {
     onGridReady: async (params) => {
         console.log("[ui.js] Sales Event Grid is now ready.");
         salesEventsGridApi = params.api;
-        
-        try {
-            salesEventsGridApi.setGridOption('loading', true);
-
-            // Fetch both events and seasons
-            const [events, seasons] = await Promise.all([
-                getSalesEvents(),
-                getSeasons()
-            ]);
-
-            // Store the full season objects for our formatters/renderers
-            availableSeasons = seasons.filter(s => s.isActive).map(s => ({ id: s.id, seasonName: s.seasonName }));
-            const seasonIds = availableSeasons.map(s => s.id);
-
-            // Update the column definition with the season IDs for the dropdown
-            const columnDefs = salesEventsGridApi.getColumnDefs();
-            const seasonCol = columnDefs.find(col => col.field === 'seasonId');
-            if (seasonCol) {
-                seasonCol.cellEditorParams.values = seasonIds;
-            }
-            salesEventsGridApi.setGridOption('columnDefs', columnDefs);
-            salesEventsGridApi.setGridOption('rowData', events);
-            salesEventsGridApi.setGridOption('loading', false);
-        } catch (error) {
-            console.error("Error loading payment modes:", error);
-            salesEventsGridApi.setGridOption('loading', false);
-            salesEventsGridApi.showNoRowsOverlay();
-        }
     }
 };
 
@@ -670,47 +657,32 @@ export async function showSalesEventsView() {
     showView('sales-events-view');
     initializeSalesEventsGrid();
     
-    // Populate the parent season dropdown
-    const parentSeasonSelect = document.getElementById('parentSeason-select');
 
-    try {
-        const seasons = await getSeasons();
-        parentSeasonSelect.innerHTML = '<option value="">Select a parent season...</option>';
-        seasons.filter(s => s.isActive).forEach(season => {
-            const option = document.createElement('option');
-            // The value is a JSON string containing both ID and Name
-            option.value = JSON.stringify({ seasonId: season.id, seasonName: season.seasonName });
-            option.textContent = season.seasonName;
-            parentSeasonSelect.appendChild(option);
-        });
-    } catch (error) {
-        console.error("Could not populate seasons dropdown:", error);
-    }
+    const waitForGrid = setInterval(() => {
+        if (salesEventsGridApi) {
+            clearInterval(waitForGrid);
 
-    try {
-        salesEventsGridApi.setGridOption('loading', true);
-        const events = await getSalesEvents();
-        salesEventsGridApi.setGridOption('rowData', events);
-        salesEventsGridApi.setGridOption('loading', false);
-    } catch (error) {
-        console.error("Error loading sales events:", error);
-        salesEventsGridApi.setGridOption('loading', false);
-        salesEventsGridApi.showNoRowsOverlay();
-    }
-}
+            console.log("[ui.js] Grid is ready. Attaching real-time sales events listener.");
+            const db = firebase.firestore();
+            salesEventsGridApi.setGridOption('loading', true);
 
-export async function refreshSalesEventsGrid() {
-    if (!salesEventsGridApi) return;
-    try {
-        salesEventsGridApi.setGridOption('loading', true);
-        const events = await getSalesEvents();
-        salesEventsGridApi.setGridOption('rowData', events);
-        salesEventsGridApi.setGridOption('loading', false);
-    } catch (error) { 
-        console.error("Error refreshing sales events:", error); 
-        salesEventsGridApi.setGridOption('loading', false);
-        salesEventsGridApi.showNoRowsOverlay();
-    }
+            // Attach the real-time listener
+            unsubscribeSalesEventsListener = db.collection(EVENTS_COLLECTION_PATH)
+                .orderBy('eventStartDate', 'desc')
+                .onSnapshot(snapshot => {
+                    console.log("[Firestore] Received real-time update for sales events.");
+                    const events = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    salesEventsGridApi.setGridOption('rowData', events);
+                    salesEventsGridApi.setGridOption('loading', false);
+                }, error => {
+                    console.error("Error with sales events real-time listener:", error);
+                    salesEventsGridApi.setGridOption('loading', false);
+                    salesEventsGridApi.showNoRowsOverlay();
+                });
+        }
+    }, 50);
+
+    
 }
 
 
