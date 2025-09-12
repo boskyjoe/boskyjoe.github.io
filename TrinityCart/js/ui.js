@@ -622,11 +622,9 @@ const salesEventsGridOptions = {
         let updatedData = { [field]: newValue };
         // If the season was changed, we also need to update the denormalized seasonName
         if (field === 'seasonId') {
-            const season = availableSeasons.find(s => s.id === newValue);
+            const season = masterData.seasons.find(s => s.id === newValue);
             if (season) {
                 updatedData.seasonName = season.seasonName;
-                // Refresh the row to make sure the formatter updates the display instantly
-                params.node.setData(Object.assign(params.data, updatedData));
             }
         }
         document.dispatchEvent(new CustomEvent('updateSalesEvent', { 
@@ -636,6 +634,15 @@ const salesEventsGridOptions = {
     onGridReady: async (params) => {
         console.log("[ui.js] Sales Event Grid is now ready.");
         salesEventsGridApi = params.api;
+
+        const seasonIds = masterData.seasons.map(s => s.id);
+
+        const columnDefs = salesEventsGridApi.getColumnDefs();
+        const seasonCol = columnDefs.find(col => col.field === 'seasonId');
+        if (seasonCol) {
+            seasonCol.cellEditorParams.values = seasonIds;
+        }
+        salesEventsGridApi.setGridOption('columnDefs', columnDefs);
     }
 };
 
@@ -656,6 +663,15 @@ export async function showSalesEventsView() {
     showView('sales-events-view');
     initializeSalesEventsGrid();
     
+    const parentSeasonSelect = document.getElementById('parentSeason-select');
+    parentSeasonSelect.innerHTML = '<option value="">Select a parent season...</option>';
+    masterData.seasons.forEach(season => {
+        const option = document.createElement('option');
+        option.value = JSON.stringify({ seasonId: season.id, seasonName: season.seasonName });
+        option.textContent = season.seasonName;
+        parentSeasonSelect.appendChild(option);
+    });
+
 
     const waitForGrid = setInterval(() => {
         if (salesEventsGridApi) {
@@ -680,15 +696,7 @@ export async function showSalesEventsView() {
                 });
         }
     }, 50);
-    // This part is for the form dropdown and can be simplified.
-    const parentSeasonSelect = document.getElementById('parentSeason-select');
-    parentSeasonSelect.innerHTML = '<option value="">Select a parent season...</option>';
-    masterData.seasons.forEach(season => {
-        const option = document.createElement('option');
-        option.value = JSON.stringify({ seasonId: season.id, seasonName: season.seasonName });
-        option.textContent = season.seasonName;
-        parentSeasonSelect.appendChild(option);
-    });
+    
     
 }
 
