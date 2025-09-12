@@ -25,6 +25,7 @@ import { PAYMENT_MODES_COLLECTION_PATH } from './config.js';
 import { SALE_TYPES_COLLECTION_PATH } from './config.js';
 import { SEASONS_COLLECTION_PATH } from './config.js';
 import { EVENTS_COLLECTION_PATH } from './config.js';
+import { PRODUCTS_CATALOGUE_COLLECTION_PATH } from './config.js';
 
 
 
