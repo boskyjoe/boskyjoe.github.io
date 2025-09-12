@@ -24,7 +24,7 @@ import { showSalesEventsView } from './ui.js';
 import { addSalesEvent, updateSalesEvent, setSalesEventStatus } from './api.js';
 
 
-import { showProductsView, refreshProductsGrid } from './ui.js';
+import { showProductsView } from './ui.js';
 import { addProduct, updateProduct, setProductStatus } from './api.js';
 
 import { showUsersView, refreshUsersGrid } from './ui.js';
@@ -653,7 +653,6 @@ function setupEventListeners() {
                 await addProduct(productData, user);
                 await showModal('success', 'Success', 'Product has been added successfully.');
                 addProductForm.reset();
-                refreshProductsGrid();
             } catch (error) {
                 console.error("Error adding sale type:", error); 
                 await showModal('error', 'Error', 'Failed to add the Product. Please try again.');
@@ -673,7 +672,6 @@ function setupEventListeners() {
         } catch (error) {
             console.error("Error updating Products:", error);
             await showModal('error', 'Error', 'Failed to update the Products. Please try again.');
-            refreshProductsGrid(); // Refresh grid to revert failed change
         }
     });
 
@@ -692,13 +690,11 @@ function setupEventListeners() {
                 const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to Deactivate  this Product?`);
                 if (confirmed) {
                     await setProductStatus(docId, false, user);
-                    refreshSuppliersGrid();
                 }
             } else if (target.classList.contains('btn-activate')) {
                 const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this Product?`);
                 if (confirmed) {
                     await setProductStatus(docId, true, user);
-                    refreshSuppliersGrid();
                 }
             }
         });
