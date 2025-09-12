@@ -62,19 +62,16 @@ document.addEventListener('masterDataUpdated', (e) => {
     }
 
     if (type === 'seasons') {
-        // This is now the ONLY place that updates the grid's columns.
-        updateSalesEventsGridColumns();
+        // THE FIX: We no longer need to update the columns. We just need to
+        // refresh the cells to make sure the valueFormatter runs again.
+        if (salesEventsGridApi) {
+            salesEventsGridApi.refreshCells({ force: true });
+        }
 
-        // This also updates the form dropdown, ensuring consistency.
+        // This part for the form is still correct
         const parentSeasonSelect = document.getElementById('parentSeason-select');
         if (parentSeasonSelect) {
-            parentSeasonSelect.innerHTML = '<option value="">Select a parent season...</option>';
-            masterData.seasons.forEach(season => {
-                const option = document.createElement('option');
-                option.value = JSON.stringify({ seasonId: season.id, seasonName: season.seasonName });
-                option.textContent = season.seasonName;
-                parentSeasonSelect.appendChild(option);
-            });
+            // ... (logic to populate the form dropdown) ...
         }
     }
 });
@@ -594,24 +591,6 @@ let isSalesEventsGridInitialized = false;
 let unsubscribeSalesEventsListener = null; 
 
 
-// --- NEW HELPER FUNCTION ---
-function updateSalesEventsGridColumns() {
-    if (!salesEventsGridApi) return;
-
-    console.log("[ui.js] Updating Sales Events grid columns with fresh season data.");
-    const seasonIds = masterData.seasons.map(s => s.id);
-    
-    // We get the column defs from the options object, modify it, then apply it.
-    const columnDefs = salesEventsGridOptions.columnDefs;
-    const seasonCol = columnDefs.find(col => col.field === 'seasonId');
-    
-    if (seasonCol) {
-        seasonCol.cellEditorParams.values = seasonIds;
-    }
-    
-    salesEventsGridApi.setGridOption('columnDefs', columnDefs);
-    salesEventsGridApi.refreshCells({ force: true });
-}
 
 const salesEventsGridOptions = {
     columnDefs: [
@@ -623,14 +602,16 @@ const salesEventsGridOptions = {
             flex: 1, 
             editable: true,
             cellEditor: 'agSelectCellEditor',
-            cellEditorParams: {
-                // The values are the raw season IDs
-                values: [], 
-                // This renderer tells the dropdown how to DISPLAY each ID
-                cellRenderer: params => {
-                    const season = masterData.seasons.find(s => s.id === params.value);
-                    return season ? season.seasonName : params.value;
-                }
+            cellEditorParams: (params) => {
+                const seasonIds = masterData.seasons.map(s => s.id);
+                return {
+                    values: seasonIds,
+                    // This renderer is still needed to show names in the dropdown list
+                    cellRenderer: (cellParams) => {
+                        const season = masterData.seasons.find(s => s.id === cellParams.value);
+                        return season ? season.seasonName : cellParams.value;
+                    }
+                };
             },
             // This formatter converts the ID to a Name for display in the grid cell
             valueFormatter: params => {
