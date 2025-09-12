@@ -168,6 +168,11 @@ export function detachAllRealtimeListeners() {
         unsubscribeSuppliersListener(); // This is the function Firestore gives us to stop listening.
         unsubscribeSuppliersListener = null;
     }
+    if (unsubscribeProductsListener) {
+        console.log("[ui.js] Detaching real-time products listener.");
+        unsubscribeProductsListener();
+        unsubscribeProductsListener = null;
+    }
     // As we add more real-time grids, we'll add their unsubscribe calls here.
     // if (unsubscribeProductsListener) { unsubscribeProductsListener(); }
     if (unsubscribeCategoriesListener) {
@@ -835,8 +840,9 @@ export async function refreshUsersGrid() {
 
 
 
-
-let availableCategories = [];
+let productsGridApi = null;
+let isProductsGridInitialized = false;
+let unsubscribeProductsListener = null;
 
 const productsGridOptions = {
     columnDefs: [
@@ -847,17 +853,20 @@ const productsGridOptions = {
             headerName: "Category", 
             flex: 1, 
             cellEditor: 'agSelectCellEditor',
-            cellEditorParams: {
-                values: [],
-                cellRenderer: params => {
-                    const category = availableCategories.find(c => c.id === params.value);
-                    return category ? category.categoryName : params.value;
-                }
+            cellEditorParams: (params) => {
+                const categoryIds = masterData.categories.map(c => c.id);
+                return {
+                    values: categoryIds,
+                    cellRenderer: (cellParams) => {
+                        const category = masterData.categories.find(c => c.id === cellParams.value);
+                        return category ? category.categoryName : cellParams.value;
+                    }
+                };
             },
             editable: true,
             // This formatter converts the ID to a Name for display in the grid
             valueFormatter: params => {
-                const category = availableCategories.find(c => c.id === params.value);
+                const category = masterData.categories.find(c => c.id === params.value);
                 return category ? category.categoryName : params.value;
             }
         },
@@ -926,80 +935,30 @@ const productsGridOptions = {
     rowClassRules: {
         'opacity-50': params => !params.data.isActive,
     },
-    onGridReady: async (params) => {
+     onGridReady: (params) => {
         console.log("[ui.js] Products Grid is now ready.");
         productsGridApi = params.api;
-        // We don't need to do anything here on initial load,
-        // but this event guarantees that params.api is now available.
-        try {
-            productsGridApi.setGridOption('loading', true);
-            const [products, categories] = await Promise.all([
-                getProducts(),
-                getCategories()
-            ]);
-            // Store the active category names for the dropdown
-            availableCategories = categories.filter(c => c.isActive).map(c => ({ id: c.id, categoryName: c.categoryName }));
-            const categoryNames = availableCategories.map(c => c.categoryName);
-
-            // 1. Get the current column definitions
-            const categoryIds = availableCategories.map(c => c.id);
-            const columnDefs = productsGridApi.getColumnDefs();
-
-            // 2. Find the 'category' column definition
-            const categoryCol = columnDefs.find(col => col.field === 'categoryId');
-            // 3. Update its values
-            if (categoryCol) {
-                // Provide the list of IDs to the editor
-                categoryCol.cellEditorParams.values = categoryIds;
-            }
-            // 4. Tell the grid to apply the updated column definitions
-            productsGridApi.setGridOption('columnDefs', columnDefs);
-
-        
-            productsGridApi.setGridOption('rowData', products);
-            productsGridApi.setGridOption('loading', false);
-        } catch (error) {
-            console.error("[ui.js] Could not load initial product data:", error);
-            if (productsGridApi) {
-                productsGridApi.setGridOption('loading', false);
-                productsGridApi.showNoRowsOverlay();
-            }
-        }
     },
     onCellValueChanged: (params) => {
         const docId = params.data.id;
         const field = params.colDef.field;
         const newValue = params.newValue;
         const node = params.node;
-        
         let updatedData = { [field]: newValue };
 
-        // --- NEW AUTO-CALCULATION LOGIC ---
         if (field === 'unitPrice' || field === 'unitMarginPercentage') {
             const cost = parseFloat(node.data.unitPrice) || 0;
             const margin = parseFloat(node.data.unitMarginPercentage) || 0;
-            
             if (cost > 0) {
                 const newSellingPrice = cost * (1 + margin / 100);
-                
-                // Update the grid data locally for instant feedback
                 node.setDataValue('sellingPrice', newSellingPrice);
-                
-                // Add the new selling price to the data we'll save to Firestore
                 updatedData.sellingPrice = newSellingPrice;
             }
         }
-
-
-
-        document.dispatchEvent(new CustomEvent('updateProduct', { 
-            detail: { docId, updatedData } 
-        }));
+        document.dispatchEvent(new CustomEvent('updateProduct', { detail: { docId, updatedData } }));
     }
 };
 
-let productsGridApi = null;
-let isProductsGridInitialized = false;
 
 
 // --- UI FUNCTIONS ---
@@ -1016,64 +975,62 @@ function calculateSellingPrice() {
 }
 
 export function initializeProductsGrid() {
-    if (isProductsGridInitialized || !productsGridDiv) return;
-    productsGridApi = createGrid(productsGridDiv, productsGridOptions);
-    isProductsGridInitialized = true;
+    if (isProductsGridInitialized) return;
+    const productsGridDiv = document.getElementById('products-catalogue-grid');
+    if (productsGridDiv) {
+        createGrid(productsGridDiv, productsGridOptions);
+        isProductsGridInitialized = true;
+    }
 }
 
 
 
 
 
-export async function showProductsView() {
+export function showProductsView() {
     showView('products-view');
     initializeProductsGrid();
-    
 
+    const waitForGrid = setInterval(() => {
+        if (productsGridApi) {
+            clearInterval(waitForGrid);
+
+            console.log("[ui.js] Grid is ready. Attaching real-time products listener.");
+            const db = firebase.firestore();
+            productsGridApi.setGridOption('loading', true);
+
+            unsubscribeProductsListener = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH)
+                .orderBy('itemName')
+                .onSnapshot(snapshot => {
+                    console.log("[Firestore] Received real-time update for products.");
+                    const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    productsGridApi.setGridOption('rowData', products);
+                    productsGridApi.setGridOption('loading', false);
+                }, error => {
+                    console.error("Error with products real-time listener:", error);
+                    productsGridApi.setGridOption('loading', false);
+                    productsGridApi.showNoRowsOverlay();
+                });
+        }
+    }, 50);
+
+    // This part for the form uses the masterData store.
     const itemCategorySelect = document.getElementById('itemCategory-select');
-    const unitPriceInput = document.getElementById('unitPrice-input');
-    const unitMarginInput = document.getElementById('unitMargin-input');
-
-    // Populate the category dropdown
-    const categories = await getCategories();
     itemCategorySelect.innerHTML = '<option value="">Select a category...</option>';
-    categories.filter(c => c.isActive).forEach(cat => {
+    masterData.categories.forEach(cat => {
         const option = document.createElement('option');
-        option.value = cat.id; 
+        option.value = cat.id;
         option.textContent = cat.categoryName;
         itemCategorySelect.appendChild(option);
     });
 
-    // Add listeners for auto-calculation
+    // Setup form calculation listeners
+    const unitPriceInput = document.getElementById('unitPrice-input');
+    const unitMarginInput = document.getElementById('unitMargin-input');
     unitPriceInput.addEventListener('input', calculateSellingPrice);
     unitMarginInput.addEventListener('input', calculateSellingPrice);
-
-    // Load data into the grid
-    try {
-        productsGridApi.setGridOption('loading', true);
-        const products = await getProducts();
-        productsGridApi.setGridOption('rowData', products);
-        productsGridApi.setGridOption('loading', false);
-    } catch (error) {
-        console.error("Error loading products:", error);
-        productsGridApi.setGridOption('loading', false);
-        productsGridApi.showNoRowsOverlay();
-    }
 }
 
-export async function refreshProductsGrid() {
-    if (!productsGridApi) return;
-    try {
-        productsGridApi.setGridOption('loading', true);
-        const products = await getProducts();
-        productsGridApi.setGridOption('rowData', products);
-        productsGridApi.setGridOption('loading', false);
-    } catch (error) { 
-        console.error("Error refreshing sale types:", error); 
-        productsGridApi.setGridOption('loading', false);
-        productsGridApi.showNoRowsOverlay();
-    }
-}
 
 
 
