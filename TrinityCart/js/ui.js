@@ -51,6 +51,32 @@ const rolesList = ['admin', 'sales_staff', 'inventory_manager', 'finance', 'team
 
 
 
+
+
+// --- UPDATE THE GLOBAL EVENT LISTENER ---
+document.addEventListener('masterDataUpdated', (e) => {
+    const { type } = e.detail;
+
+    if (type === 'categories') {
+        // ... (existing logic for categories) ...
+    }
+
+    if (type === 'seasons') {
+        // Update the "Add Event" form dropdown
+        const parentSeasonSelect = document.getElementById('parentSeason-select');
+        if (parentSeasonSelect) {
+            // ... (existing logic for the form dropdown) ...
+        }
+
+        // THE FIX: When seasons data is updated, also update the grid's columns.
+        updateSalesEventsGridColumns();
+    }
+});
+
+
+
+
+
 // --- A NEW VARIABLE TO HOLD THE GRID API ---
 let suppliersGridApi = null;
 let isSuppliersGridInitialized = false;
@@ -562,6 +588,26 @@ let isSalesEventsGridInitialized = false;
 let unsubscribeSalesEventsListener = null; 
 let availableSeasons = [];
 
+
+// --- NEW HELPER FUNCTION ---
+function updateSalesEventsGridColumns() {
+    if (!salesEventsGridApi) return; // Don't do anything if the grid isn't ready
+
+    console.log("[ui.js] Updating Sales Events grid columns with fresh season data.");
+    
+    const seasonIds = masterData.seasons.map(s => s.id);
+    const columnDefs = salesEventsGridApi.getColumnDefs();
+    const seasonCol = columnDefs.find(col => col.field === 'seasonId');
+    
+    if (seasonCol) {
+        seasonCol.cellEditorParams.values = seasonIds;
+    }
+    
+    salesEventsGridApi.setGridOption('columnDefs', columnDefs);
+    // Refresh the cells to make sure the new valueFormatter is applied
+    salesEventsGridApi.refreshCells({ force: true });
+}
+
 const salesEventsGridOptions = {
     columnDefs: [
         { field: "eventId", headerName: "ID", width: 180 },
@@ -635,14 +681,7 @@ const salesEventsGridOptions = {
         console.log("[ui.js] Sales Event Grid is now ready.");
         salesEventsGridApi = params.api;
 
-        const seasonIds = masterData.seasons.map(s => s.id);
-
-        const columnDefs = salesEventsGridApi.getColumnDefs();
-        const seasonCol = columnDefs.find(col => col.field === 'seasonId');
-        if (seasonCol) {
-            seasonCol.cellEditorParams.values = seasonIds;
-        }
-        salesEventsGridApi.setGridOption('columnDefs', columnDefs);
+        updateSalesEventsGridColumns(); 
     }
 };
 
