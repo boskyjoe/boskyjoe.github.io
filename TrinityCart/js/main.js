@@ -110,40 +110,76 @@ auth.onAuthStateChanged(async (user) => {
 
 
 function setupEventListeners() {
-    // Use event delegation for dynamically created elements
+    // --- GLOBAL CLICK HANDLER (for dynamic elements) ---
     document.addEventListener('click', (e) => {
-        if (e.target.closest('#login-button')) {
+        const target = e.target;
+
+        // Handle Login/Logout
+        if (target.closest('#login-button')) {
             handleLogin();
         }
-        if (e.target.closest('#logout-button')) {
+        if (target.closest('#logout-button')) {
             handleLogout();
         }
-    });
 
-    // --- NEW, SMARTER SIDEBAR NAVIGATION HANDLER ---
-    const sidebarNav = document.getElementById('sidebar-nav');
-    sidebarNav.addEventListener('click', (e) => {
-        const link = e.target.closest('.nav-link');
-        if (link) {
+        // Handle Sidebar Navigation
+        const navLink = target.closest('.nav-link');
+        if (navLink) {
             e.preventDefault();
-            const viewId = link.dataset.viewId;
-            console.log(`[main.js] Nav link clicked. View ID: ${viewId}`);
-            // First, always show the correct view div
-            showView(viewId);
-
-            // Second, if this view needs special data, call its function
-            if (viewId === 'suppliers-view') {
-                showSuppliersView();
-            }
-
-            if (viewId === 'products-view') {
-                showProductsView();
-            }
+            const viewId = navLink.dataset.viewId;
+            console.log(`[main.js] Navigating to view: ${viewId}`);
             
-            // We will add more 'if' statements here for other modules
-            // else if (viewId === 'products-view') { showProductsView(); }
+            // Call the appropriate function for the view
+            switch (viewId) {
+                case 'suppliers-view':
+                    showSuppliersView();
+                    break;
+                case 'products-view':
+                    showProductsView();
+                    break;
+                case 'categories-view':
+                    showCategoriesView();
+                    break;
+                case 'payment-modes-view':
+                    showPaymentModesView();
+                    break;
+                case 'sale-types-view':
+                    showSaleTypesView();
+                    break;
+                case 'seasons-view':
+                    showSeasonsView();
+                    break;
+                case 'sales-events-view':
+                    showSalesEventsView();
+                    break;
+                case 'users-view':
+                    showUsersView();
+                    break;
+                case 'purchases-view':
+                    showPurchasesView();
+                    break;
+                default:
+                    showView(viewId); // For simple views without special logic
+            }
+        }
+
+        // Handle "Back to Admin" links
+        const backLink = target.closest('.back-link');
+        if (backLink) {
+            e.preventDefault();
+            const viewId = backLink.dataset.viewId;
+            if (viewId) {
+                showView(viewId);
+            }
+        }
+
+        // Handle "Add Line Item" button in Purchase form
+        if (target.closest('#add-line-item-btn')) {
+            addLineItem();
         }
     });
+
+
     
     // Mobile menu toggle
     const mobileMenuButton = document.getElementById('mobile-menu-button');
@@ -219,6 +255,59 @@ function setupEventListeners() {
             }
         });
     }
+
+
+
+    // Add Purchase Invoice Form
+    const purchaseInvoiceForm = document.getElementById('purchase-invoice-form');
+    if (purchaseInvoiceForm) {
+        purchaseInvoiceForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            console.log("Purchase Invoice form submitted! Ready to save data.");
+            // We will build the save logic here next.
+            // Example: collectAndSavePurchaseInvoice();
+        });
+    }
+
+
+    // ... (add other form listeners here as we build them) ...
+
+
+    // --- GRID AND DYNAMIC ELEMENT EVENT LISTENERS (using event delegation) ---
+
+    // For any input changes within the Purchase Invoice form (for total calculations)
+    const purchaseFormContainer = document.getElementById('purchases-view');
+    if (purchaseFormContainer) {
+        purchaseFormContainer.addEventListener('input', (e) => {
+            const target = e.target;
+            // Recalculate if any of these inputs change
+            if (target.matches('.line-item-qty, .line-item-price, .line-item-tax, #invoice-discount-type, #invoice-discount-value, #invoice-tax-percentage')) {
+                calculateAllTotals();
+            }
+        });
+        // Handle removing a line item
+        purchaseFormContainer.addEventListener('click', (e) => {
+            if (e.target.closest('.remove-line-item-btn')) {
+                e.target.closest('.grid').remove();
+                calculateAllTotals();
+            }
+        });
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // Handler for the Admin Modules hub page and back links
     document.addEventListener('click', (e) => {
