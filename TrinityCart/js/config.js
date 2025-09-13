@@ -31,6 +31,11 @@ export const SEASONS_COLLECTION_PATH = `${BASE_DOC_PATH}/salesSeasons`;
 export const EVENTS_COLLECTION_PATH = `${BASE_DOC_PATH}/salesEvents`;
 
 
+export const PURCHASE_INVOICES_COLLECTION_PATH = `${BASE_DOC_PATH}/purchaseInvoices`;
+export const INVENTORY_LEDGER_COLLECTION_PATH = `${BASE_DOC_PATH}/inventoryLedger`;
+export const SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH = `${BASE_DOC_PATH}/supplierPaymentsLedger`;
+
+
 
 // Navigation Configuration - THIS WAS MISSING
 // This object drives the entire sidebar navigation.
