@@ -33,7 +33,6 @@ import { updateUserRole, setUserActiveStatus } from './api.js';
 
 import { initializeMasterDataListeners } from './masterData.js';
 
-import {calculateAllTotals} from './ui.js';
 
 
 // --- FIREBASE INITIALIZATION ---
@@ -277,36 +276,7 @@ function setupEventListeners() {
 
     // --- GRID AND DYNAMIC ELEMENT EVENT LISTENERS (using event delegation) ---
 
-    // For any input changes within the Purchase Invoice form (for total calculations)
-    const purchaseFormContainer = document.getElementById('purchases-view');
-    if (purchaseFormContainer) {
-        purchaseFormContainer.addEventListener('input', (e) => {
-            const target = e.target;
-            // Recalculate if any of these inputs change
-            if (target.matches('.line-item-qty, .line-item-price, .line-item-tax, .line-item-discount-type, .line-item-discount-value, #invoice-discount-type, #invoice-discount-value, #invoice-tax-percentage')) {
-                calculateAllTotals();
-            }
-        });
-        // Handle removing a line item
-        purchaseFormContainer.addEventListener('click', (e) => {
-            if (e.target.closest('.remove-line-item-btn')) {
-                e.target.closest('.grid').remove();
-                calculateAllTotals();
-            }
-        });
-    }
-
-
-
-
-
-
-
-
-
-
-
-
+    
 
 
 
