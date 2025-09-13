@@ -1088,6 +1088,7 @@ function createLineItemRow(id) {
     return row;
 }
 
+// This function is exported so main.js can call it.
 export function addLineItem() {
     lineItemCounter++;
     const lineItemsContainer = document.getElementById('purchase-line-items-container');
@@ -1108,12 +1109,13 @@ export function addLineItem() {
     });
 }
 
-function calculateAllTotals() {
-    const lineItemRows = document.querySelectorAll('#purchase-line-items-container > div');
-    let itemsSubtotal = 0; // The sum of all line items AFTER their individual discounts
-    let totalItemLevelTax = 0; // The sum of all tax calculated on each line item
 
-    // --- Part 1: Calculate totals for each line item ---
+// This function is also exported so main.js can call it.
+export function calculateAllTotals() {
+    const lineItemRows = document.querySelectorAll('#purchase-line-items-container > div');
+    let itemsSubtotal = 0;
+    let totalItemLevelTax = 0;
+
     lineItemRows.forEach(row => {
         const qty = parseFloat(row.querySelector('[data-field="quantity"]').value) || 0;
         const price = parseFloat(row.querySelector('[data-field="unitPurchasePrice"]').value) || 0;
@@ -1123,36 +1125,25 @@ function calculateAllTotals() {
 
         const grossPrice = qty * price;
         let discountAmount = 0;
+        if (discountType === 'Percentage') { discountAmount = grossPrice * (discountValue / 100); } 
+        else { discountAmount = discountValue; }
 
-        if (discountType === 'Percentage' && discountValue > 0) {
-            discountAmount = grossPrice * (discountValue / 100);
-        } else if (discountType === 'Amount' && discountValue > 0) {
-            discountAmount = discountValue;
-        }
-
-        const netPrice = grossPrice - discountAmount; // Price after line-item discount
+        const netPrice = grossPrice - discountAmount;
         const taxAmount = netPrice * (taxPercentage / 100);
         
-        // This is not the final total, but the pre-tax total for this line
         row.querySelector('.line-item-net-price').value = netPrice.toFixed(2);
 
-        // Add this line's totals to the invoice-level sums
         itemsSubtotal += netPrice;
         totalItemLevelTax += taxAmount;
     });
 
-    // --- Part 2: Calculate overall invoice totals ---
     document.getElementById('purchase-subtotal').textContent = `$${itemsSubtotal.toFixed(2)}`;
 
     const invoiceDiscountType = document.getElementById('invoice-discount-type').value;
     const invoiceDiscountValue = parseFloat(document.getElementById('invoice-discount-value').value) || 0;
     let invoiceDiscountAmount = 0;
-
-    if (invoiceDiscountType === 'Percentage' && invoiceDiscountValue > 0) {
-        invoiceDiscountAmount = itemsSubtotal * (invoiceDiscountValue / 100);
-    } else if (invoiceDiscountType === 'Amount' && invoiceDiscountValue > 0) {
-        invoiceDiscountAmount = invoiceDiscountValue;
-    }
+    if (invoiceDiscountType === 'Percentage') { invoiceDiscountAmount = itemsSubtotal * (invoiceDiscountValue / 100); } 
+    else { invoiceDiscountAmount = invoiceDiscountValue; }
 
     const taxableAmountForInvoice = itemsSubtotal - invoiceDiscountAmount;
     const invoiceTaxPercentage = parseFloat(document.getElementById('invoice-tax-percentage').value) || 0;
@@ -1163,6 +1154,7 @@ function calculateAllTotals() {
     
     document.getElementById('purchase-grand-total').textContent = `$${grandTotal.toFixed(2)}`;
 }
+
 
 export function showPurchasesView() {
     showView('purchases-view');
