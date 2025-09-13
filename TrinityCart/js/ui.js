@@ -1188,6 +1188,16 @@ export function showPurchasesView() {
         supplierSelect.appendChild(option);
     });
 
+    const purchaseInvoiceForm = document.getElementById('purchase-invoice-form');
+    if (purchaseInvoiceForm) {
+        purchaseInvoiceForm.addEventListener('input', (e) => {
+            // Check if the changed input is one that affects totals
+            if (e.target.matches('.line-item-qty, .line-item-price, .line-item-tax, .line-item-discount-type, .line-item-discount-value, #invoice-discount-type, #invoice-discount-value, #invoice-tax-percentage')) {
+                calculateAllTotals();
+            }
+        });
+    }
+
     // Initial calculation
     calculateAllTotals();
 }
