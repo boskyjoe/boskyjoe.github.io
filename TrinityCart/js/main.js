@@ -33,6 +33,8 @@ import { updateUserRole, setUserActiveStatus } from './api.js';
 
 import { initializeMasterDataListeners } from './masterData.js';
 
+import {calculateAllTotals} from './ui.js';
+
 
 // --- FIREBASE INITIALIZATION ---
 firebase.initializeApp(firebaseConfig);
