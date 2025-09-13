@@ -4,7 +4,7 @@ import { appState } from './state.js';
 import { firebaseConfig, USERS_COLLECTION_PATH } from './config.js';
 
 import { updateUI, showView, showSuppliersView, showPurchasesView } from './ui.js';
-import { showCategoriesView} from './ui.js';
+import { showCategoriesView } from './ui.js';
 import { showModal } from './modal.js';
 
 
@@ -33,6 +33,9 @@ import { updateUserRole, setUserActiveStatus } from './api.js';
 
 import { initializeMasterDataListeners } from './masterData.js';
 
+
+import { addPurchaseInvoice } from './api.js';
+import { addLineItem, calculateAllTotals, showPurchasesView } from './ui.js';
 
 
 // --- FIREBASE INITIALIZATION ---
@@ -68,7 +71,7 @@ auth.onAuthStateChanged(async (user) => {
     if (user) {
         // User is signed in. Now, let's get their role from Firestore.
         console.log("Firebase user signed in:", user.email);
-        
+
         const userDocRef = db.collection(USERS_COLLECTION_PATH).doc(user.uid);
         const docSnap = await userDocRef.get();
 
@@ -110,6 +113,96 @@ auth.onAuthStateChanged(async (user) => {
 });
 
 
+
+async function handleSavePurchaseInvoice() {
+    const user = appState.currentUser;
+    if (!user) return showModal('error', 'Not Logged In', 'You must be logged in to save a purchase.');
+
+    // 1. Collect Header Data
+    const purchaseDate = document.getElementById('purchase-date').value;
+    const supplierSelect = document.getElementById('purchase-supplier');
+    const supplierId = supplierSelect.value;
+    const supplierName = supplierSelect.options[supplierSelect.selectedIndex].text;
+    const supplierInvoiceNo = document.getElementById('supplier-invoice-no').value;
+
+    if (!purchaseDate || !supplierId) {
+        return showModal('error', 'Missing Information', 'Please select a Purchase Date and a Supplier.');
+    }
+
+    // 2. Collect Line Item Data
+    const lineItemRows = document.querySelectorAll('#purchase-line-items-container > div');
+    const lineItems = [];
+    for (const row of lineItemRows) {
+        const masterProductId = row.querySelector('[data-field="masterProductId"]').value;
+        if (!masterProductId) continue;
+
+        const productSelect = row.querySelector('.line-item-product');
+        const productName = productSelect.options[productSelect.selectedIndex].text;
+
+        lineItems.push({
+            masterProductId: masterProductId,
+            productName: productName,
+            quantity: parseFloat(row.querySelector('[data-field="quantity"]').value) || 0,
+            unitPurchasePrice: parseFloat(row.querySelector('[data-field="unitPurchasePrice"]').value) || 0,
+            discountType: row.querySelector('[data-field="discountType"]').value,
+            discountValue: parseFloat(row.querySelector('[data-field="discountValue"]').value) || 0,
+            taxPercentage: parseFloat(row.querySelector('[data-field="taxPercentage"]').value) || 0,
+        });
+    }
+
+    if (lineItems.length === 0) {
+        return showModal('error', 'No Items', 'Please add at least one product to the invoice.');
+    }
+
+    // 3. Perform Final Calculations
+    let itemsSubtotal = 0, totalItemLevelTax = 0;
+    lineItems.forEach(item => {
+        item.grossPrice = item.quantity * item.unitPurchasePrice;
+        item.discountAmount = item.discountType === 'Percentage' ? item.grossPrice * (item.discountValue / 100) : item.discountValue;
+        item.netPrice = item.grossPrice - item.discountAmount;
+        item.taxAmount = item.netPrice * (item.taxPercentage / 100);
+        item.lineItemTotal = item.netPrice + item.taxAmount;
+        itemsSubtotal += item.netPrice;
+        totalItemLevelTax += item.taxAmount;
+    });
+
+    const invoiceDiscountType = document.getElementById('invoice-discount-type').value;
+    const invoiceDiscountValue = parseFloat(document.getElementById('invoice-discount-value').value) || 0;
+    const invoiceDiscountAmount = invoiceDiscountType === 'Percentage' ? itemsSubtotal * (invoiceDiscountValue / 100) : invoiceDiscountValue;
+    const taxableAmountForInvoice = itemsSubtotal - invoiceDiscountAmount;
+    const invoiceTaxPercentage = parseFloat(document.getElementById('invoice-tax-percentage').value) || 0;
+    const invoiceLevelTaxAmount = taxableAmountForInvoice * (invoiceTaxPercentage / 100);
+    const totalTaxAmount = totalItemLevelTax + invoiceLevelTaxAmount;
+    const invoiceTotal = taxableAmountForInvoice + totalTaxAmount;
+
+    // 4. Assemble the final invoice object
+    const invoiceData = {
+        purchaseDate: new Date(purchaseDate), supplierId, supplierName, supplierInvoiceNo,
+        lineItems, itemsSubtotal, invoiceDiscountType, invoiceDiscountValue, invoiceDiscountAmount,
+        taxableAmountForInvoice, totalItemLevelTax, invoiceLevelTaxPercentage, invoiceLevelTaxAmount,
+        totalTaxAmount, invoiceTotal
+    };
+
+    // 5. Save to Firestore
+    try {
+        await addPurchaseInvoice(invoiceData, user);
+        await showModal('success', 'Success', `Purchase Invoice has been saved.`);
+        document.getElementById('purchase-invoice-form').reset();
+        document.getElementById('purchase-line-items-container').innerHTML = '';
+        addLineItem();
+        calculateAllTotals();
+    } catch (error) {
+        console.error("Error saving purchase invoice:", error);
+        await showModal('error', 'Save Failed', 'There was an error saving the invoice.');
+    }
+}
+
+
+
+
+
+
+
 function setupEventListeners() {
     // --- GLOBAL CLICK HANDLER (for dynamic elements) ---
     document.addEventListener('click', (e) => {
@@ -129,7 +222,7 @@ function setupEventListeners() {
             e.preventDefault();
             const viewId = navLink.dataset.viewId;
             console.log(`[main.js] Navigating to view: ${viewId}`);
-            
+
             // Call the appropriate function for the view
             switch (viewId) {
                 case 'suppliers-view':
@@ -181,7 +274,7 @@ function setupEventListeners() {
     });
 
 
-    
+
     // Mobile menu toggle
     const mobileMenuButton = document.getElementById('mobile-menu-button');
     mobileMenuButton.addEventListener('click', () => {
@@ -259,24 +352,43 @@ function setupEventListeners() {
 
 
 
-    // Add Purchase Invoice Form
+    // --- FORM SUBMISSION HANDLERS ---
     const purchaseInvoiceForm = document.getElementById('purchase-invoice-form');
     if (purchaseInvoiceForm) {
         purchaseInvoiceForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            console.log("Purchase Invoice form submitted! Ready to save data.");
-            // We will build the save logic here next.
-            // Example: collectAndSavePurchaseInvoice();
+            handleSavePurchaseInvoice(); 
         });
     }
 
 
-    // ... (add other form listeners here as we build them) ...
+    // --- OTHER LISTENERS ---
+    const purchaseFormContainer = document.getElementById('purchases-view');
+    if (purchaseFormContainer) {
+        purchaseFormContainer.addEventListener('input', (e) => {
+            if (e.target.matches('.line-item-qty, .line-item-price, .line-item-tax, .line-item-discount-type, .line-item-discount-value, #invoice-discount-type, #invoice-discount-value, #invoice-tax-percentage')) {
+                calculateAllTotals();
+            }
+        });
+        purchaseFormContainer.addEventListener('click', (e) => {
+            if (e.target.closest('.remove-line-item-btn')) {
+                e.target.closest('.grid').remove();
+                calculateAllTotals();
+            }
+        });
+        // Auto-fill price listener
+        const lineItemsContainer = document.getElementById('purchase-line-items-container');
+        lineItemsContainer.addEventListener('change', (e) => {
+            if (e.target.matches('.line-item-product')) {
+                const selectedOption = e.target.options[e.target.selectedIndex];
+                const price = selectedOption.dataset.unitPrice || 0;
+                const priceInput = e.target.closest('.grid').querySelector('.line-item-price');
+                priceInput.value = price;
+                calculateAllTotals();
+            }
+        });
+    }
 
-
-    // --- GRID AND DYNAMIC ELEMENT EVENT LISTENERS (using event delegation) ---
-
-    
 
 
 
@@ -284,14 +396,14 @@ function setupEventListeners() {
     // Handler for the Admin Modules hub page and back links
     document.addEventListener('click', (e) => {
         const card = e.target.closest('.master-data-card, .back-link');
-        
+
         if (card) {
             e.preventDefault();
             const viewId = card.dataset.viewId;
             console.log(`[main.js] Nav link clicked. View ID: ${viewId}`);
             if (viewId === 'categories-view') {
                 showCategoriesView();
-            } else if (viewId === 'sale-types-view') { 
+            } else if (viewId === 'sale-types-view') {
                 showSaleTypesView();
             } else if (viewId === 'payment-modes-view') {
                 showPaymentModesView();
@@ -320,8 +432,8 @@ function setupEventListeners() {
                 await addCategory(categoryName, user);
                 await showModal('success', 'Success', 'Category has been added successfully.');
                 addCategoryForm.reset();
-            } catch (error) { 
-                console.error("Error adding category:", error); 
+            } catch (error) {
+                console.error("Error adding category:", error);
                 await showModal('error', 'Error', 'Failed to add the category. Please try again.');
             }
         });
@@ -339,7 +451,7 @@ function setupEventListeners() {
             console.error("Error updating product category:", error);
             await showModal('error', 'Error', 'Failed to update the product category. Please try again.');
         }
-        
+
     });
 
     // Action Buttons for Categories Grid
@@ -369,7 +481,7 @@ function setupEventListeners() {
         });
     }
 
-     // Add Sale Type Form
+    // Add Sale Type Form
     const addSaleTypeForm = document.getElementById('add-sale-type-form');
     if (addSaleTypeForm) {
         addSaleTypeForm.addEventListener('submit', async (e) => {
@@ -382,15 +494,15 @@ function setupEventListeners() {
                 await addSaleType(saleTypeName, user);
                 await showModal('success', 'Success', 'Sales Type has been added successfully.');
                 addSaleTypeForm.reset();
-            } catch (error) { 
-                console.error("Error adding sale type:", error); 
+            } catch (error) {
+                console.error("Error adding sale type:", error);
                 await showModal('error', 'Error', 'Failed to add the Sales Type. Please try again.');
 
             }
         });
     }
 
-    
+
     // In-Grid Update for Sale Types
     document.addEventListener('updateSaleType', async (e) => {
         const { docId, updatedData } = e.detail;
@@ -428,8 +540,8 @@ function setupEventListeners() {
         });
     }
 
-     // Add Payment mode Form
-    const addPaymentModeForm = document.getElementById('add-payment-mode-form'); 
+    // Add Payment mode Form
+    const addPaymentModeForm = document.getElementById('add-payment-mode-form');
     if (addPaymentModeForm) {
         addPaymentModeForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -441,15 +553,15 @@ function setupEventListeners() {
                 await addPaymentMode(paymentMode, user);
                 await showModal('success', 'Success', 'Payment Mode has been added successfully.');
                 addPaymentModeForm.reset();
-            } catch (error) { 
-                console.error("Error adding payment mode:", error); 
+            } catch (error) {
+                console.error("Error adding payment mode:", error);
                 await showModal('error', 'Error', 'Failed to add the Payment Mode. Please try again.');
 
             }
         });
     }
 
-    
+
     // In-Grid Update for payment  mode
     document.addEventListener('updatePaymentMode', async (e) => {
         const { docId, updatedData } = e.detail;
@@ -509,8 +621,8 @@ function setupEventListeners() {
                 await addSeason(seasonData, user);
                 await showModal('success', 'Success', 'Season has been added successfully.');
                 addSeasonForm.reset();
-            } catch (error) { 
-                console.error("Error adding season:", error); 
+            } catch (error) {
+                console.error("Error adding season:", error);
                 await showModal('error', 'Error', 'Failed to add the Season. Please try again.');
             }
         });
@@ -527,7 +639,7 @@ function setupEventListeners() {
             await showModal('error', 'Error', 'Failed to update the season. Please try again.');
             refreshSeasonsGrid(); // Refresh grid to revert failed change
         }
-    }) ;
+    });
 
     // Action Buttons for Seasons Grid
     const seasonsGrid = document.getElementById('seasons-grid');
@@ -580,8 +692,8 @@ function setupEventListeners() {
                 await addSalesEvent(eventData, user);
                 await showModal('success', 'Success', 'Sales Event has been added successfully.');
                 addEventForm.reset();
-            } catch (error) { 
-                console.error("Error adding event:", error); 
+            } catch (error) {
+                console.error("Error adding event:", error);
                 await showModal('error', 'Error', 'Failed to add the Sales Event. Please try again.');
             }
         });
@@ -599,7 +711,7 @@ function setupEventListeners() {
             console.error("Error updating Sales Event:", error);
             await showModal('error', 'Error', 'Failed to update the Sales Event. Please try again.');
         }
-        
+
     });
 
     // Action Buttons for Sales Events Grid
@@ -678,12 +790,12 @@ function setupEventListeners() {
 
 
 
-    
 
 
 
 
-    
+
+
     // Add Product Form
     const addProductForm = document.getElementById('add-product-form');
     if (addProductForm) {
@@ -692,16 +804,16 @@ function setupEventListeners() {
             const user = appState.currentUser;
             const unitPrice = parseFloat(document.getElementById('unitPrice-input').value);
             const unitMarginPercentage = parseFloat(document.getElementById('unitMargin-input').value);
-            
+
             if (isNaN(unitPrice) || isNaN(unitMarginPercentage)) {
                 return showModal('error', 'Invalid Input', 'Unit Price and Unit Margin must be valid numbers.');
-            }   
+            }
 
             const sellingPrice = unitPrice * (1 + unitMarginPercentage / 100);
 
             const productData = {
                 itemName: document.getElementById('itemName-input').value,
-                categoryId: document.getElementById('itemCategory-select').value, 
+                categoryId: document.getElementById('itemCategory-select').value,
                 unitPrice: unitPrice,
                 unitMarginPercentage: unitMarginPercentage,
                 sellingPrice: sellingPrice,
@@ -709,19 +821,19 @@ function setupEventListeners() {
 
             if (!productData.categoryId) {
                 return showModal('error', 'Invalid Input', 'Please select a product category.');
-            }   
-            try { 
+            }
+            try {
                 await addProduct(productData, user);
                 await showModal('success', 'Success', 'Product has been added successfully.');
                 addProductForm.reset();
             } catch (error) {
-                console.error("Error adding sale type:", error); 
+                console.error("Error adding sale type:", error);
                 await showModal('error', 'Error', 'Failed to add the Product. Please try again.');
             }
 
         });
     }
-    
+
 
     // In-Grid Update Event
     document.addEventListener('updateProduct', async (e) => {
@@ -761,7 +873,6 @@ function setupEventListeners() {
         });
     }
 
-    
 
 
 
@@ -769,7 +880,8 @@ function setupEventListeners() {
 
 
 
-    
+
+
 
 
 }
