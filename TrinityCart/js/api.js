@@ -8,6 +8,8 @@ import { SEASONS_COLLECTION_PATH } from './config.js';
 import { USERS_COLLECTION_PATH } from './config.js';
 import { EVENTS_COLLECTION_PATH } from './config.js';
 
+import { PURCHASE_INVOICES_COLLECTION_PATH } from './config.js';
+
 // This file will contain all functions that interact with the backend.
 // For now, they return mock data instantly.
 
@@ -555,4 +557,29 @@ export async function updateProduct(docId, updatedData, user) {
 export async function setProductStatus(docId, field, newStatus, user) {
     // This function can toggle 'isActive' or 'isReadyForSale'
     return updateProduct(docId, { [field]: newStatus }, user);
+}
+
+
+
+
+// --- PURCHASE INVOICE API FUNCTION ---
+
+export async function addPurchaseInvoice(invoiceData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const invoiceId = `PI-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+
+    return db.collection(PURCHASE_INVOICES_COLLECTION_PATH).add({
+        ...invoiceData,
+        invoiceId: invoiceId,
+        amountPaid: 0, // Invoices always start as unpaid
+        balanceDue: invoiceData.invoiceTotal,
+        paymentStatus: 'Unpaid',
+        audit: {
+            createdBy: user.email,
+            createdOn: now,
+            updatedBy: user.email,
+            updatedOn: now,
+        }
+    });
 }
