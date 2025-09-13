@@ -1165,22 +1165,21 @@ export function switchPurchaseTab(tabName) {
     const invoicePanel = document.getElementById('panel-invoices');
     const paymentsPanel = document.getElementById('panel-payments');
 
+    if (!invoiceTab || !paymentsTab || !invoicePanel || !paymentsPanel) return;
+
     if (tabName === 'invoices') {
         invoiceTab.classList.add('tab-active');
         paymentsTab.classList.remove('tab-active');
         invoicePanel.classList.add('active');
         paymentsPanel.classList.remove('active');
-    } else {
+    } else if (tabName === 'payments') {
         invoiceTab.classList.remove('tab-active');
         paymentsTab.classList.add('tab-active');
-        paymentsTab.classList.remove('tab-disabled');
+        // We still want to enable it in case it was disabled
+        paymentsTab.classList.remove('tab-disabled'); 
         invoicePanel.classList.remove('active');
         paymentsPanel.classList.add('active');
     }
-    // Disable the payments tab on initial view load
-    document.getElementById('tab-payments').classList.add('tab-disabled');
-    // Clear any previously selected invoice
-    appState.selectedPurchaseInvoiceId = null; 
 }
 
 
@@ -1306,6 +1305,9 @@ export function showPurchasesView() {
     initializePurchaseGrids();
     switchPurchaseTab('invoices');
     
+    document.getElementById('tab-payments').classList.add('tab-disabled'); // Start with payments tab disabled
+    appState.selectedPurchaseInvoiceId = null; // Clear any previous selection
+
     // Clear any existing line items and add the first one
     document.getElementById('purchase-line-items-container').innerHTML = '';
     addLineItem();
