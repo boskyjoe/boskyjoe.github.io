@@ -3,7 +3,7 @@ import { ModuleRegistry, AllCommunityModule } from 'https://cdn.jsdelivr.net/npm
 import { appState } from './state.js';
 import { firebaseConfig, USERS_COLLECTION_PATH } from './config.js';
 
-import { updateUI, showView, showSuppliersView, showPurchasesView } from './ui.js';
+import { updateUI, showView, showSuppliersView } from './ui.js';
 import { showCategoriesView } from './ui.js';
 import { showModal } from './modal.js';
 
