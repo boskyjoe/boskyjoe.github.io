@@ -351,6 +351,7 @@ function setupEventListeners() {
     }
 
 
+    // --- PURCHASE MANAGEMENT LISTENERS ---
 
     // --- FORM SUBMISSION HANDLERS ---
     const purchaseInvoiceForm = document.getElementById('purchase-invoice-form');
@@ -364,7 +365,7 @@ function setupEventListeners() {
                 }
             }
         });
-        
+
         purchaseInvoiceForm.addEventListener('submit', (e) => {
             e.preventDefault();
             handleSavePurchaseInvoice(); 
@@ -400,6 +401,52 @@ function setupEventListeners() {
     }
 
 
+    // Handle Tab Clicks
+    const invoiceTab = document.getElementById('tab-invoices');
+    if (invoiceTab) {
+        invoiceTab.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchPurchaseTab('invoices');
+        });
+    }
+    const paymentsTab = document.getElementById('tab-payments');
+    if (paymentsTab) {
+        paymentsTab.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (!paymentsTab.classList.contains('tab-disabled')) {
+                switchPurchaseTab('payments');
+            }
+        });
+    }
+
+    // Handle Row Selection to show payments
+    document.addEventListener('invoiceRowSelected', async (e) => {
+        const { invoiceId } = e.detail;
+        switchPurchaseTab('payments'); // Switch to the payments tab
+        
+        purchasePaymentsGridApi.setGridOption('loading', true);
+        const payments = await getPaymentsForInvoice(invoiceId);
+        purchasePaymentsGridApi.setGridOption('rowData', payments);
+        purchasePaymentsGridApi.setGridOption('loading', false);
+    });
+
+
+    // Handle Edit Invoice button click
+    const invoicesGrid = document.getElementById('purchase-invoices-grid');
+    if (invoicesGrid) {
+        invoicesGrid.addEventListener('click', (e) => {
+            const editButton = e.target.closest('.action-btn-edit');
+            if (editButton) {
+                const invoiceId = editButton.dataset.id;
+                // We will build this function next:
+                // loadInvoiceDataIntoForm(invoiceId);
+                console.log(`Editing invoice: ${invoiceId}`);
+            }
+        });
+    }
+
+    
+    // --- PURCHASE MANAGEMENT LISTENERS end---
 
 
 
