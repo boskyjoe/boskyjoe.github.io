@@ -35,7 +35,7 @@ import { initializeMasterDataListeners } from './masterData.js';
 
 
 import { addPurchaseInvoice } from './api.js';
-import { addLineItem, calculateAllTotals, showPurchasesView,switchPurchaseTab } from './ui.js';
+import { addLineItem, calculateAllTotals, showPurchasesView,switchPurchaseTab, loadPaymentsForSelectedInvoice } from './ui.js';
 
 
 // --- FIREBASE INITIALIZATION ---
@@ -414,7 +414,9 @@ function setupEventListeners() {
         paymentsTab.addEventListener('click', (e) => {
             e.preventDefault();
             if (!paymentsTab.classList.contains('tab-disabled')) {
+                // THE FIX: Switch the tab AND load the data.
                 switchPurchaseTab('payments');
+                loadPaymentsForSelectedInvoice();
             }
         });
     }
@@ -431,16 +433,27 @@ function setupEventListeners() {
     });
 
 
-    // Handle Edit Invoice button click
+    // Handle Action Button Clicks in the Invoices Grid
     const invoicesGrid = document.getElementById('purchase-invoices-grid');
     if (invoicesGrid) {
         invoicesGrid.addEventListener('click', (e) => {
-            const editButton = e.target.closest('.action-btn-edit');
-            if (editButton) {
-                const invoiceId = editButton.dataset.id;
-                // We will build this function next:
-                // loadInvoiceDataIntoForm(invoiceId);
-                console.log(`Editing invoice: ${invoiceId}`);
+            const button = e.target.closest('button');
+            if (!button) return;
+
+            const invoiceId = button.dataset.id;
+            
+            if (button.classList.contains('action-btn-edit')) {
+                // ... logic to load invoice into form ...
+            }
+            
+            // THE FIX: Specific logic for the payment button
+            if (button.classList.contains('action-btn-payment')) {
+                console.log(`Record payment for invoice: ${invoiceId}`);
+                // Here you would open a payment modal.
+                // For now, we can make it switch to the payments tab as a placeholder.
+                appState.selectedPurchaseInvoiceId = invoiceId; // Make sure it's selected
+                switchPurchaseTab('payments');
+                loadPaymentsForSelectedInvoice();
             }
         });
     }
