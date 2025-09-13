@@ -179,7 +179,7 @@ async function handleSavePurchaseInvoice() {
     const invoiceData = {
         purchaseDate: new Date(purchaseDate), supplierId, supplierName, supplierInvoiceNo,
         lineItems, itemsSubtotal, invoiceDiscountType, invoiceDiscountValue, invoiceDiscountAmount,
-        taxableAmountForInvoice, totalItemLevelTax, invoiceLevelTaxPercentage, invoiceLevelTaxAmount,
+        taxableAmountForInvoice, totalItemLevelTax, invoiceTaxPercentage, invoiceLevelTaxAmount,
         totalTaxAmount, invoiceTotal
     };
 
