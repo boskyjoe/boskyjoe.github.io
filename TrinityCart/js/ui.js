@@ -1119,8 +1119,9 @@ export function initializePurchaseGrids() {
     const invoicesGridDiv = document.getElementById('purchase-invoices-grid');
     const paymentsGridDiv = document.getElementById('purchase-payments-grid');
     if (invoicesGridDiv && paymentsGridDiv) {
-        createGrid(invoicesGridDiv, purchaseInvoicesGridOptions);
-        createGrid(paymentsGridDiv, purchasePaymentsGridOptions);
+        console.log("[ui.js] Initializing Purchase Grids for the first time.");
+        purchaseInvoicesGridApi = createGrid(invoicesGridDiv, purchaseInvoicesGridOptions);
+        purchasePaymentsGridApi = createGrid(paymentsGridDiv, purchasePaymentsGridOptions);
         isPurchaseGridsInitialized = true;
     }
 }
