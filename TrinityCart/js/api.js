@@ -8,7 +8,8 @@ import { SEASONS_COLLECTION_PATH } from './config.js';
 import { USERS_COLLECTION_PATH } from './config.js';
 import { EVENTS_COLLECTION_PATH } from './config.js';
 
-import { PURCHASE_INVOICES_COLLECTION_PATH } from './config.js';
+import { PURCHASE_INVOICES_COLLECTION_PATH, SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH } from './config.js';
+
 
 // This file will contain all functions that interact with the backend.
 // For now, they return mock data instantly.
@@ -582,4 +583,19 @@ export async function addPurchaseInvoice(invoiceData, user) {
             updatedOn: now,
         }
     });
+}
+
+export async function getPurchaseInvoices() {
+    const db = firebase.firestore();
+    const snapshot = await db.collection(PURCHASE_INVOICES_COLLECTION_PATH).orderBy('purchaseDate', 'desc').get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+export async function getPaymentsForInvoice(invoiceId) {
+    const db = firebase.firestore();
+    const snapshot = await db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH)
+        .where('relatedInvoiceId', '==', invoiceId)
+        .orderBy('paymentDate', 'desc')
+        .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
