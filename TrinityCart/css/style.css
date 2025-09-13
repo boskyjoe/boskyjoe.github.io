@@ -129,3 +129,21 @@
 .icon-container svg {
     @apply w-6 h-6;
 }
+
+/* --- TABBED INTERFACE STYLES --- */
+
+.tab {
+    @apply whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300;
+}
+.tab.tab-active {
+    @apply border-blue-500 text-blue-600;
+}
+.tab.tab-disabled {
+    @apply text-gray-300 cursor-not-allowed hover:border-transparent;
+}
+.tab-panel {
+    display: none;
+}
+.tab-panel.active {
+    display: block;
+}
