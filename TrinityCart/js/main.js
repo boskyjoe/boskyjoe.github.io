@@ -281,7 +281,7 @@ function setupEventListeners() {
         purchaseFormContainer.addEventListener('input', (e) => {
             const target = e.target;
             // Recalculate if any of these inputs change
-            if (target.matches('.line-item-qty, .line-item-price, .line-item-tax, #invoice-discount-type, #invoice-discount-value, #invoice-tax-percentage')) {
+            if (target.matches('.line-item-qty, .line-item-price, .line-item-tax, .line-item-discount-type, .line-item-discount-value, #invoice-discount-type, #invoice-discount-value, #invoice-tax-percentage')) {
                 calculateAllTotals();
             }
         });
