@@ -1084,15 +1084,16 @@ const purchaseInvoicesGridOptions = {
                 <button class="action-btn-payment" data-id="${params.data.id}" title="Record Payment">...</button>
                 <button class="action-btn-delete" data-id="${params.data.id}" title="Delete Invoice">...</button>
             `
-        },
-        onGridReady: (params) => {
-            console.log("[ui.js] Purchase Invoices Grid is now ready.");
-            purchaseInvoicesGridApi = params.api;
         }
     ],
+    defaultColDef: { resizable: true, sortable: true, filter: true },
     onRowClicked: (params) => {
         // When a row is clicked, show its payments
         document.dispatchEvent(new CustomEvent('invoiceRowSelected', { detail: { invoiceId: params.data.id } }));
+    }, 
+    onGridReady: (params) => {
+        console.log("[ui.js] Purchase Invoices Grid is now ready.");
+        purchaseInvoicesGridApi = params.api;
     }
 };
 
