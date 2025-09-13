@@ -355,6 +355,16 @@ function setupEventListeners() {
     // --- FORM SUBMISSION HANDLERS ---
     const purchaseInvoiceForm = document.getElementById('purchase-invoice-form');
     if (purchaseInvoiceForm) {
+
+         purchaseInvoiceForm.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                // Check if the event target is a textarea, which should allow Enter.
+                if (e.target.tagName.toLowerCase() !== 'textarea') {
+                    e.preventDefault(); // Stop the form from submitting.
+                }
+            }
+        });
+        
         purchaseInvoiceForm.addEventListener('submit', (e) => {
             e.preventDefault();
             handleSavePurchaseInvoice(); 
