@@ -1,12 +1,13 @@
 // js/masterData.js
 
-import { CATEGORIES_COLLECTION_PATH, SEASONS_COLLECTION_PATH } from './config.js';
+import { CATEGORIES_COLLECTION_PATH, SEASONS_COLLECTION_PATH,PRODUCTS_CATALOGUE_COLLECTION_PATH, SUPPLIERS_COLLECTION_PATH } from './config.js';
 
 // This object will be our local, always-up-to-date cache of master data.
 export const masterData = {
     categories: [],
     seasons: [],
-    // We will add paymentModes, etc., here later
+    products: [],
+    suppliers: [],
 };
 
 /**
@@ -38,6 +39,28 @@ export function initializeMasterDataListeners() {
     }, error => {
         console.error("Error listening to seasons collection:", error);
     });
+
+
+    // Listener for Products
+    db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).onSnapshot(snapshot => {
+        const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        masterData.products = products.filter(p => p.isActive);
+        console.log("Master data updated: Products", masterData.products);
+        document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'products' } }));
+    });
+
+    // Listener for Suppliers
+    db.collection(SUPPLIERS_COLLECTION_PATH).onSnapshot(snapshot => {
+        const suppliers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        masterData.suppliers = suppliers.filter(s => s.isActive);
+        console.log("Master data updated: Suppliers", masterData.suppliers);
+        document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'suppliers' } }));
+    });
+
+
+
+
+
 
     // Add more listeners here for payment modes, banks, etc.
 }
