@@ -1,5 +1,7 @@
-// js/state.js
+// In js/state.js
 export const appState = {
-    currentUser: null, // Will hold { uid, displayName, email, role }
+    currentUser: null,
     activeView: 'login-view',
+    // ADD THIS NEW STATE VARIABLE
+    selectedPurchaseInvoiceId: null, 
 };
