@@ -1117,33 +1117,57 @@ function addLineItem() {
 
 function calculateAllTotals() {
     const lineItemRows = document.querySelectorAll('#purchase-line-items-container > div');
-    let itemsSubtotal = 0;
+    let itemsSubtotal = 0; // The sum of all line items AFTER their individual discounts
+    let totalItemLevelTax = 0; // The sum of all tax calculated on each line item
 
+    // --- Part 1: Calculate totals for each line item ---
     lineItemRows.forEach(row => {
-        const qty = parseFloat(row.querySelector('.line-item-qty').value) || 0;
-        const price = parseFloat(row.querySelector('.line-item-price').value) || 0;
-        const netPrice = qty * price; // For now, we ignore line-item discounts
+        const qty = parseFloat(row.querySelector('[data-field="quantity"]').value) || 0;
+        const price = parseFloat(row.querySelector('[data-field="unitPurchasePrice"]').value) || 0;
+        const discountType = row.querySelector('[data-field="discountType"]').value;
+        const discountValue = parseFloat(row.querySelector('[data-field="discountValue"]').value) || 0;
+        const taxPercentage = parseFloat(row.querySelector('[data-field="taxPercentage"]').value) || 0;
+
+        const grossPrice = qty * price;
+        let discountAmount = 0;
+
+        if (discountType === 'Percentage' && discountValue > 0) {
+            discountAmount = grossPrice * (discountValue / 100);
+        } else if (discountType === 'Amount' && discountValue > 0) {
+            discountAmount = discountValue;
+        }
+
+        const netPrice = grossPrice - discountAmount; // Price after line-item discount
+        const taxAmount = netPrice * (taxPercentage / 100);
+        
+        // This is not the final total, but the pre-tax total for this line
         row.querySelector('.line-item-net-price').value = netPrice.toFixed(2);
+
+        // Add this line's totals to the invoice-level sums
         itemsSubtotal += netPrice;
+        totalItemLevelTax += taxAmount;
     });
 
+    // --- Part 2: Calculate overall invoice totals ---
     document.getElementById('purchase-subtotal').textContent = `$${itemsSubtotal.toFixed(2)}`;
 
-    const discountType = document.getElementById('invoice-discount-type').value;
-    const discountValue = parseFloat(document.getElementById('invoice-discount-value').value) || 0;
+    const invoiceDiscountType = document.getElementById('invoice-discount-type').value;
+    const invoiceDiscountValue = parseFloat(document.getElementById('invoice-discount-value').value) || 0;
     let invoiceDiscountAmount = 0;
 
-    if (discountType === 'Percentage') {
-        invoiceDiscountAmount = itemsSubtotal * (discountValue / 100);
-    } else {
-        invoiceDiscountAmount = discountValue;
+    if (invoiceDiscountType === 'Percentage' && invoiceDiscountValue > 0) {
+        invoiceDiscountAmount = itemsSubtotal * (invoiceDiscountValue / 100);
+    } else if (invoiceDiscountType === 'Amount' && invoiceDiscountValue > 0) {
+        invoiceDiscountAmount = invoiceDiscountValue;
     }
 
-    const taxableAmount = itemsSubtotal - invoiceDiscountAmount;
-    const taxPercentage = parseFloat(document.getElementById('invoice-tax-percentage').value) || 0;
-    const totalTax = taxableAmount * (taxPercentage / 100); // Simplified for now
+    const taxableAmountForInvoice = itemsSubtotal - invoiceDiscountAmount;
+    const invoiceTaxPercentage = parseFloat(document.getElementById('invoice-tax-percentage').value) || 0;
+    const invoiceLevelTaxAmount = taxableAmountForInvoice * (invoiceTaxPercentage / 100);
 
-    const grandTotal = taxableAmount + totalTax;
+    const totalTax = totalItemLevelTax + invoiceLevelTaxAmount;
+    const grandTotal = taxableAmountForInvoice + totalTax;
+    
     document.getElementById('purchase-grand-total').textContent = `$${grandTotal.toFixed(2)}`;
 }
 
