@@ -1035,6 +1035,135 @@ export function showProductsView() {
 
 
 
+// --- PURCHASE MANAGEMENT UI ---
+
+let lineItemCounter = 0;
+
+// This function creates the HTML for a single new line item row
+function createLineItemRow(id) {
+    const row = document.createElement('div');
+    row.id = `line-item-${id}`;
+    row.className = 'grid grid-cols-12 gap-x-4 gap-y-2 items-end p-2 border rounded-md';
+    
+    row.innerHTML = `
+        <!-- Product Dropdown -->
+        <div class="col-span-12 md:col-span-4">
+            <label class="form-label text-xs">Product</label>
+            <select data-field="masterProductId" class="line-item-product form-input w-full" required>
+                <option value="">Select product...</option>
+            </select>
+        </div>
+        <!-- Quantity -->
+        <div class="col-span-3 md:col-span-1">
+            <label class="form-label text-xs">Qty</label>
+            <input type="number" data-field="quantity" class="line-item-qty form-input w-full" required value="1">
+        </div>
+        <!-- Unit Price -->
+        <div class="col-span-4 md:col-span-2">
+            <label class="form-label text-xs">Unit Price</label>
+            <input type="number" data-field="unitPurchasePrice" class="line-item-price form-input w-full" required step="0.01">
+        </div>
+        <!-- Line Item Tax -->
+        <div class="col-span-3 md:col-span-1">
+            <label class="form-label text-xs">Tax %</label>
+            <input type="number" data-field="taxPercentage" class="line-item-tax form-input w-full" value="0">
+        </div>
+        <!-- Net Price (Read-only) -->
+        <div class="col-span-4 md:col-span-2">
+            <label class="form-label text-xs">Net Price</label>
+            <input type="text" class="line-item-net-price form-input w-full bg-gray-100" readonly>
+        </div>
+        <!-- Remove Button -->
+        <div class="col-span-2 md:col-span-1 flex justify-end">
+            <button type="button" class="remove-line-item-btn p-2 text-red-500 hover:text-red-700">&times;</button>
+        </div>
+    `;
+    return row;
+}
+
+function addLineItem() {
+    lineItemCounter++;
+    const lineItemsContainer = document.getElementById('purchase-line-items-container');
+    const newRow = createLineItemRow(lineItemCounter);
+    lineItemsContainer.appendChild(newRow);
+
+    // Populate the new dropdown
+    const productSelect = newRow.querySelector('.line-item-product');
+    masterData.products.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p.id;
+        option.textContent = p.itemName;
+        productSelect.appendChild(option);
+    });
+}
+
+function calculateAllTotals() {
+    const lineItemRows = document.querySelectorAll('#purchase-line-items-container > div');
+    let itemsSubtotal = 0;
+
+    lineItemRows.forEach(row => {
+        const qty = parseFloat(row.querySelector('.line-item-qty').value) || 0;
+        const price = parseFloat(row.querySelector('.line-item-price').value) || 0;
+        const netPrice = qty * price; // For now, we ignore line-item discounts
+        row.querySelector('.line-item-net-price').value = netPrice.toFixed(2);
+        itemsSubtotal += netPrice;
+    });
+
+    document.getElementById('purchase-subtotal').textContent = `$${itemsSubtotal.toFixed(2)}`;
+
+    const discountType = document.getElementById('invoice-discount-type').value;
+    const discountValue = parseFloat(document.getElementById('invoice-discount-value').value) || 0;
+    let invoiceDiscountAmount = 0;
+
+    if (discountType === 'Percentage') {
+        invoiceDiscountAmount = itemsSubtotal * (discountValue / 100);
+    } else {
+        invoiceDiscountAmount = discountValue;
+    }
+
+    const taxableAmount = itemsSubtotal - invoiceDiscountAmount;
+    const taxPercentage = parseFloat(document.getElementById('invoice-tax-percentage').value) || 0;
+    const totalTax = taxableAmount * (taxPercentage / 100); // Simplified for now
+
+    const grandTotal = taxableAmount + totalTax;
+    document.getElementById('purchase-grand-total').textContent = `$${grandTotal.toFixed(2)}`;
+}
+
+export function showPurchasesView() {
+    showView('purchases-view');
+    
+    // Clear any existing line items and add the first one
+    document.getElementById('purchase-line-items-container').innerHTML = '';
+    addLineItem();
+
+    // Populate supplier dropdown
+    const supplierSelect = document.getElementById('purchase-supplier');
+    supplierSelect.innerHTML = '<option value="">Select a supplier...</option>';
+    masterData.suppliers.forEach(s => {
+        const option = document.createElement('option');
+        option.value = s.id;
+        option.textContent = s.supplierName;
+        supplierSelect.appendChild(option);
+    });
+
+    // Initial calculation
+    calculateAllTotals();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
