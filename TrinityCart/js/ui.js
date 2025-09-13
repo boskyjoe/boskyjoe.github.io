@@ -202,6 +202,21 @@ export function detachAllRealtimeListeners() {
         unsubscribeSalesEventsListener();
         unsubscribeSalesEventsListener = null;
     }
+
+    if (unsubscribeInvoicesListener) {
+        console.log("[ui.js] Detaching real-time invoices listener.");
+        unsubscribeInvoicesListener();
+        unsubscribeInvoicesListener = null;
+    }
+    if (unsubscribePaymentsListener) {
+        console.log("[ui.js] Detaching real-time payments listener.");
+        unsubscribePaymentsListener();
+        unsubscribePaymentsListener = null;
+    }
+
+
+
+
 }
 
 
@@ -1042,6 +1057,8 @@ let lineItemCounter = 0;
 let purchaseInvoicesGridApi = null;
 let purchasePaymentsGridApi = null;
 let isPurchaseGridsInitialized = false;
+let unsubscribeInvoicesListener = null; // The "off switch" for the invoices listener
+let unsubscribePaymentsListener = null;
 
 
 
@@ -1067,6 +1084,10 @@ const purchaseInvoicesGridOptions = {
                 <button class="action-btn-payment" data-id="${params.data.id}" title="Record Payment">...</button>
                 <button class="action-btn-delete" data-id="${params.data.id}" title="Delete Invoice">...</button>
             `
+        },
+        onGridReady: (params) => {
+            console.log("[ui.js] Purchase Invoices Grid is now ready.");
+            purchaseInvoicesGridApi = params.api;
         }
     ],
     onRowClicked: (params) => {
@@ -1086,7 +1107,11 @@ const purchasePaymentsGridOptions = {
             headerName: "Actions", width: 80, cellClass: 'flex items-center justify-center',
             cellRenderer: params => `<button class="action-btn-delete-payment" data-id="${params.data.id}">...</button>`
         }
-    ]
+    ],
+    onGridReady: (params) => {
+        console.log("[ui.js] Purchase Payments Grid is now ready.");
+        purchasePaymentsGridApi = params.api;
+    }
 };
 
 export function initializePurchaseGrids() {
@@ -1094,8 +1119,8 @@ export function initializePurchaseGrids() {
     const invoicesGridDiv = document.getElementById('purchase-invoices-grid');
     const paymentsGridDiv = document.getElementById('purchase-payments-grid');
     if (invoicesGridDiv && paymentsGridDiv) {
-        purchaseInvoicesGridApi = createGrid(invoicesGridDiv, purchaseInvoicesGridOptions);
-        purchasePaymentsGridApi = createGrid(paymentsGridDiv, purchasePaymentsGridOptions);
+        createGrid(invoicesGridDiv, purchaseInvoicesGridOptions);
+        createGrid(paymentsGridDiv, purchasePaymentsGridOptions);
         isPurchaseGridsInitialized = true;
     }
 }
@@ -1258,18 +1283,46 @@ export function showPurchasesView() {
         supplierSelect.appendChild(option);
     });
 
-    const purchaseInvoiceForm = document.getElementById('purchase-invoice-form');
-    if (purchaseInvoiceForm) {
-        purchaseInvoiceForm.addEventListener('input', (e) => {
+    document.getElementById('purchase-line-items-container').innerHTML = '';
+    addLineItem();
+    calculateAllTotals();
+    
+    const waitForGrid = setInterval(() => {
+        if (purchaseInvoicesGridApi) {
+            clearInterval(waitForGrid);
+
+            console.log("[ui.js] Invoices grid is ready. Attaching real-time listener.");
+            const db = firebase.firestore();
+            purchaseInvoicesGridApi.setGridOption('loading', true);
+
+            unsubscribeInvoicesListener = db.collection(PURCHASE_INVOICES_COLLECTION_PATH)
+                .orderBy('purchaseDate', 'desc')
+                .onSnapshot(snapshot => {
+                    console.log("[Firestore] Received real-time update for purchase invoices.");
+                    const invoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    purchaseInvoicesGridApi.setGridOption('rowData', invoices);
+                    purchaseInvoicesGridApi.setGridOption('loading', false);
+                }, error => {
+                    console.error("Error with invoices real-time listener:", error);
+                    purchaseInvoicesGridApi.setGridOption('loading', false);
+                    purchaseInvoicesGridApi.showNoRowsOverlay();
+                });
+        }
+    }, 50);
+
+
+    //const purchaseInvoiceForm = document.getElementById('purchase-invoice-form');
+    //if (purchaseInvoiceForm) {
+       // purchaseInvoiceForm.addEventListener('input', (e) => {
             // Check if the changed input is one that affects totals
-            if (e.target.matches('.line-item-qty, .line-item-price, .line-item-tax, .line-item-discount-type, .line-item-discount-value, #invoice-discount-type, #invoice-discount-value, #invoice-tax-percentage')) {
-                calculateAllTotals();
-            }
-        });
-    }
+         //   if (e.target.matches('.line-item-qty, .line-item-price, .line-item-tax, .line-item-discount-type, .line-item-discount-value, #invoice-discount-type, #invoice-discount-value, #invoice-tax-percentage')) {
+           //     calculateAllTotals();
+           // }
+       // });
+    //}
 
     // Initial calculation
-    calculateAllTotals();
+    //calculateAllTotals();
 }
 
 
