@@ -1087,8 +1087,11 @@ const purchaseInvoicesGridOptions = {
     ],
     defaultColDef: { resizable: true, sortable: true, filter: true },
     onRowClicked: (params) => {
-        // When a row is clicked, show its payments
-        document.dispatchEvent(new CustomEvent('invoiceRowSelected', { detail: { invoiceId: params.data.id } }));
+        console.log(`[ui.js] Invoice row ${params.data.id} selected.`);
+        appState.selectedPurchaseInvoiceId = params.data.id;
+        // It no longer dispatches an event or switches tabs.
+        // We can also enable the payments tab here.
+        document.getElementById('tab-payments').classList.remove('tab-disabled');
     }, 
     onGridReady: (params) => {
         console.log("[ui.js] Purchase Invoices Grid is now ready.");
@@ -1126,6 +1129,35 @@ export function initializePurchaseGrids() {
     }
 }
 
+
+// NEW FUNCTION: This function will be called when the payments tab is clicked.
+export async function loadPaymentsForSelectedInvoice() {
+    const invoiceId = appState.selectedPurchaseInvoiceId;
+    if (!invoiceId) {
+        console.warn("No invoice selected to load payments for.");
+        // Optionally show a message in the payments grid
+        if (purchasePaymentsGridApi) {
+            purchasePaymentsGridApi.setGridOption('rowData', []);
+            purchasePaymentsGridApi.showNoRowsOverlay();
+        }
+        return;
+    }
+
+    if (!purchasePaymentsGridApi) return;
+
+    try {
+        purchasePaymentsGridApi.setGridOption('loading', true);
+        const payments = await getPaymentsForInvoice(invoiceId);
+        purchasePaymentsGridApi.setGridOption('rowData', payments);
+        purchasePaymentsGridApi.setGridOption('loading', false);
+    } catch (error) {
+        console.error("Error loading payments for invoice:", error);
+        purchasePaymentsGridApi.setGridOption('loading', false);
+        purchasePaymentsGridApi.showNoRowsOverlay();
+    }
+}
+
+
 // Function to switch between tabs
 export function switchPurchaseTab(tabName) {
     const invoiceTab = document.getElementById('tab-invoices');
@@ -1145,6 +1177,10 @@ export function switchPurchaseTab(tabName) {
         invoicePanel.classList.remove('active');
         paymentsPanel.classList.add('active');
     }
+    // Disable the payments tab on initial view load
+    document.getElementById('tab-payments').classList.add('tab-disabled');
+    // Clear any previously selected invoice
+    appState.selectedPurchaseInvoiceId = null; 
 }
 
 
