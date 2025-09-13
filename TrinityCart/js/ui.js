@@ -1039,6 +1039,89 @@ export function showProductsView() {
 
 let lineItemCounter = 0;
 
+let purchaseInvoicesGridApi = null;
+let purchasePaymentsGridApi = null;
+let isPurchaseGridsInitialized = false;
+
+
+
+
+// Grid for the main list of invoices
+const purchaseInvoicesGridOptions = {
+    columnDefs: [
+        { field: "invoiceId", headerName: "Invoice ID", width: 150 },
+        { field: "supplierName", headerName: "Supplier", flex: 1 },
+        { field: "purchaseDate", headerName: "Date", valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
+        { field: "invoiceTotal", headerName: "Total", valueFormatter: p => `$${p.value.toFixed(2)}` },
+        { field: "balanceDue", headerName: "Balance", valueFormatter: p => `$${p.value.toFixed(2)}` },
+        { field: "paymentStatus", headerName: "Status", cellRenderer: p => {
+            const status = p.value;
+            if (status === 'Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">Paid</span>`;
+            if (status === 'Partially Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">Partial</span>`;
+            return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">Unpaid</span>`;
+        }},
+        {
+            headerName: "Actions", width: 150, cellClass: 'flex items-center justify-center',
+            cellRenderer: params => `
+                <button class="action-btn-edit" data-id="${params.data.id}" title="Edit Invoice">...</button>
+                <button class="action-btn-payment" data-id="${params.data.id}" title="Record Payment">...</button>
+                <button class="action-btn-delete" data-id="${params.data.id}" title="Delete Invoice">...</button>
+            `
+        }
+    ],
+    onRowClicked: (params) => {
+        // When a row is clicked, show its payments
+        document.dispatchEvent(new CustomEvent('invoiceRowSelected', { detail: { invoiceId: params.data.id } }));
+    }
+};
+
+// Grid for the payments of a selected invoice
+const purchasePaymentsGridOptions = {
+    columnDefs: [
+        { field: "paymentDate", headerName: "Payment Date", flex: 1, valueFormatter: p => p.value.toDate().toLocaleDateString() },
+        { field: "amountPaid", headerName: "Amount Paid", flex: 1, valueFormatter: p => `$${p.value.toFixed(2)}` },
+        { field: "paymentMode", headerName: "Mode", flex: 1 },
+        { field: "transactionRef", headerName: "Reference #", flex: 2 },
+        {
+            headerName: "Actions", width: 80, cellClass: 'flex items-center justify-center',
+            cellRenderer: params => `<button class="action-btn-delete-payment" data-id="${params.data.id}">...</button>`
+        }
+    ]
+};
+
+export function initializePurchaseGrids() {
+    if (isPurchaseGridsInitialized) return;
+    const invoicesGridDiv = document.getElementById('purchase-invoices-grid');
+    const paymentsGridDiv = document.getElementById('purchase-payments-grid');
+    if (invoicesGridDiv && paymentsGridDiv) {
+        purchaseInvoicesGridApi = createGrid(invoicesGridDiv, purchaseInvoicesGridOptions);
+        purchasePaymentsGridApi = createGrid(paymentsGridDiv, purchasePaymentsGridOptions);
+        isPurchaseGridsInitialized = true;
+    }
+}
+
+// Function to switch between tabs
+export function switchPurchaseTab(tabName) {
+    const invoiceTab = document.getElementById('tab-invoices');
+    const paymentsTab = document.getElementById('tab-payments');
+    const invoicePanel = document.getElementById('panel-invoices');
+    const paymentsPanel = document.getElementById('panel-payments');
+
+    if (tabName === 'invoices') {
+        invoiceTab.classList.add('tab-active');
+        paymentsTab.classList.remove('tab-active');
+        invoicePanel.classList.add('active');
+        paymentsPanel.classList.remove('active');
+    } else {
+        invoiceTab.classList.remove('tab-active');
+        paymentsTab.classList.add('tab-active');
+        paymentsTab.classList.remove('tab-disabled');
+        invoicePanel.classList.remove('active');
+        paymentsPanel.classList.add('active');
+    }
+}
+
+
 // This is a private helper function within ui.js
 function createLineItemRow(id) {
     const row = document.createElement('div');
@@ -1158,6 +1241,8 @@ export function calculateAllTotals() {
 
 export function showPurchasesView() {
     showView('purchases-view');
+    initializePurchaseGrids();
+    switchPurchaseTab('invoices');
     
     // Clear any existing line items and add the first one
     document.getElementById('purchase-line-items-container').innerHTML = '';
