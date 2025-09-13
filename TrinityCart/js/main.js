@@ -35,7 +35,7 @@ import { initializeMasterDataListeners } from './masterData.js';
 
 
 import { addPurchaseInvoice } from './api.js';
-import { addLineItem, calculateAllTotals, showPurchasesView } from './ui.js';
+import { addLineItem, calculateAllTotals, showPurchasesView,switchPurchaseTab } from './ui.js';
 
 
 // --- FIREBASE INITIALIZATION ---
@@ -445,7 +445,7 @@ function setupEventListeners() {
         });
     }
 
-    
+
     // --- PURCHASE MANAGEMENT LISTENERS end---
 
 
