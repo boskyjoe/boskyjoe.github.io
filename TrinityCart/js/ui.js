@@ -1043,10 +1043,10 @@ let lineItemCounter = 0;
 function createLineItemRow(id) {
     const row = document.createElement('div');
     row.id = `line-item-${id}`;
-    row.className = 'grid grid-cols-12 gap-x-4 gap-y-2 items-end p-2 border rounded-md';
+    row.className = 'grid grid-cols-12 gap-x-2 gap-y-2 items-end p-3 border-b';
     
     row.innerHTML = `
-        <!-- Product Dropdown -->
+        <!-- Product Dropdown (col-span-12 on small, col-span-4 on medium+) -->
         <div class="col-span-12 md:col-span-4">
             <label class="form-label text-xs">Product</label>
             <select data-field="masterProductId" class="line-item-product form-input w-full" required>
@@ -1054,27 +1054,45 @@ function createLineItemRow(id) {
             </select>
         </div>
         <!-- Quantity -->
-        <div class="col-span-3 md:col-span-1">
+        <div class="col-span-2 md:col-span-1">
             <label class="form-label text-xs">Qty</label>
-            <input type="number" data-field="quantity" class="line-item-qty form-input w-full" required value="1">
+            <input type="number" data-field="quantity" class="line-item-qty form-input w-full" required value="1" step="any">
         </div>
         <!-- Unit Price -->
-        <div class="col-span-4 md:col-span-2">
+        <div class="col-span-3 md:col-span-2">
             <label class="form-label text-xs">Unit Price</label>
             <input type="number" data-field="unitPurchasePrice" class="line-item-price form-input w-full" required step="0.01">
         </div>
-        <!-- Line Item Tax -->
-        <div class="col-span-3 md:col-span-1">
-            <label class="form-label text-xs">Tax %</label>
-            <input type="number" data-field="taxPercentage" class="line-item-tax form-input w-full" value="0">
+
+        <!-- NEW: Line Item Discount -->
+        <div class="col-span-4 md:col-span-2 flex items-end space-x-1">
+            <div class="flex-shrink-0 w-24">
+                <label class="form-label text-xs">Disc. Type</label>
+                <select data-field="discountType" class="line-item-discount-type form-input w-full">
+                    <option value="Percentage">Percent</option>
+                    <option value="Amount">Amount</option>
+                </select>
+            </div>
+            <div class="flex-grow">
+                <label class="form-label text-xs">Disc. Value</label>
+                <input type="number" data-field="discountValue" class="line-item-discount-value form-input w-full" value="0" step="any">
+            </div>
         </div>
+
+        <!-- Line Item Tax -->
+        <div class="col-span-2 md:col-span-1">
+            <label class="form-label text-xs">Tax %</label>
+            <input type="number" data-field="taxPercentage" class="line-item-tax form-input w-full" value="0" step="any">
+        </div>
+        
         <!-- Net Price (Read-only) -->
-        <div class="col-span-4 md:col-span-2">
+        <div class="col-span-3 md:col-span-1">
             <label class="form-label text-xs">Net Price</label>
             <input type="text" class="line-item-net-price form-input w-full bg-gray-100" readonly>
         </div>
+
         <!-- Remove Button -->
-        <div class="col-span-2 md:col-span-1 flex justify-end">
+        <div class="col-span-1 flex justify-end">
             <button type="button" class="remove-line-item-btn p-2 text-red-500 hover:text-red-700">&times;</button>
         </div>
     `;
