@@ -74,6 +74,21 @@ document.addEventListener('masterDataUpdated', (e) => {
             // ... (logic to populate the form dropdown) ...
         }
     }
+
+
+    if (type === 'paymentModes') {
+        const paymentModeSelect = document.getElementById('payment-mode-select');
+        if (paymentModeSelect) {
+            paymentModeSelect.innerHTML = '<option value="">Select a mode...</option>';
+            masterData.paymentModes.forEach(mode => {
+                const option = document.createElement('option');
+                option.value = mode.paymentMode;
+                option.textContent = mode.paymentMode;
+                paymentModeSelect.appendChild(option);
+            });
+        }
+    }
+
 });
 
 
