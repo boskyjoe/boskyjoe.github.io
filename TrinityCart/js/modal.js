@@ -25,16 +25,18 @@ const iconMap = {
 export function showModal(type, title, message) {
     return new Promise((resolve) => {
         modalTitle.textContent = title;
-        modalMessage.innerHTML = message; // Use innerHTML to allow for line breaks
+        modalMessage.innerHTML = message;
         modalIcon.innerHTML = iconMap[type] || iconMap.info;
-        modalButtons.innerHTML = ''; // Clear previous buttons
+        modalButtons.innerHTML = '';
 
         const createButton = (text, primary = false, value = false) => {
             const button = document.createElement('button');
             button.textContent = text;
             button.className = primary ? 'modal-btn modal-btn-primary' : 'modal-btn modal-btn-secondary';
             button.onclick = () => {
-                modalElement.style.display = 'none';
+                // THE FIX: Hide by adding 'hidden' and removing 'flex'.
+                modalElement.classList.add('hidden');
+                modalElement.classList.remove('flex');
                 resolve(value);
             };
             return button;
@@ -47,6 +49,8 @@ export function showModal(type, title, message) {
             modalButtons.appendChild(createButton('OK', true, true));
         }
 
-        modalElement.style.display = 'flex';
+        // THE FIX: Show by removing 'hidden' and adding 'flex'.
+        modalElement.classList.remove('hidden');
+        modalElement.classList.add('flex');
     });
 }
