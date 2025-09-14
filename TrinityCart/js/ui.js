@@ -1360,20 +1360,6 @@ export function showPurchasesView() {
                 });
         }
     }, 50);
-
-
-    //const purchaseInvoiceForm = document.getElementById('purchase-invoice-form');
-    //if (purchaseInvoiceForm) {
-       // purchaseInvoiceForm.addEventListener('input', (e) => {
-            // Check if the changed input is one that affects totals
-         //   if (e.target.matches('.line-item-qty, .line-item-price, .line-item-tax, .line-item-discount-type, .line-item-discount-value, #invoice-discount-type, #invoice-discount-value, #invoice-tax-percentage')) {
-           //     calculateAllTotals();
-           // }
-       // });
-    //}
-
-    // Initial calculation
-    //calculateAllTotals();
 }
 
 // NEW: Function to reset the form to "Create New" mode
@@ -1438,9 +1424,47 @@ export async function loadInvoiceDataIntoForm(invoiceData) {
 }
 
 
+// --- RECORD PAYMENT MODAL UI ---
 
+const paymentModal = document.getElementById('record-payment-modal');
+const paymentModalTitle = document.getElementById('payment-modal-title');
+const paymentForm = document.getElementById('record-payment-form');
+const paymentInvoiceIdInput = document.getElementById('payment-invoice-id');
+const paymentSupplierIdInput = document.getElementById('payment-supplier-id');
+const paymentModeSelect = document.getElementById('payment-mode-select');
 
+export function showPaymentModal(invoice) {
+    if (!paymentModal) return;
 
+    // Populate hidden fields
+    paymentInvoiceIdInput.value = invoice.id;
+    paymentSupplierIdInput.value = invoice.supplierId;
+
+    // Set title and default values
+    paymentModalTitle.textContent = `Record Payment for Invoice: ${invoice.invoiceId}`;
+    paymentForm.reset(); // Clear previous entries
+    document.getElementById('payment-date-input').valueAsDate = new Date(); // Default to today
+    document.getElementById('payment-amount-input').value = invoice.balanceDue.toFixed(2); // Default to paying the balance
+
+    // Populate payment modes dropdown from masterData
+    paymentModeSelect.innerHTML = '<option value="">Select a mode...</option>';
+    masterData.paymentModes.forEach(mode => {
+        const option = document.createElement('option');
+        option.value = mode.paymentMode;
+        option.textContent = mode.paymentMode;
+        paymentModeSelect.appendChild(option);
+    });
+
+    // Show the modal
+    paymentModal.classList.remove('hidden');
+    paymentModal.classList.add('flex');
+}
+
+export function closePaymentModal() {
+    if (!paymentModal) return;
+    paymentModal.classList.add('hidden');
+    paymentModal.classList.remove('flex');
+}
 
 
 
