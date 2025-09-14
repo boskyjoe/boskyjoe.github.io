@@ -1466,7 +1466,15 @@ export function closePaymentModal() {
     paymentModal.classList.remove('flex');
 }
 
-
+// --- NEW EXPORTED HELPER FUNCTION ---
+export function getInvoiceDataFromGridById(rowId) {
+    if (!purchaseInvoicesGridApi) {
+        console.error("Cannot get row data: Purchase Invoices Grid API not available.");
+        return null;
+    }
+    const rowNode = purchaseInvoicesGridApi.getRowNode(rowId);
+    return rowNode ? rowNode.data : null;
+}
 
 
 
