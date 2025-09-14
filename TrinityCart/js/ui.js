@@ -1085,12 +1085,12 @@ let unsubscribePaymentsListener = null;
 const purchaseInvoicesGridOptions = {
     columnDefs: [
         { field: "invoiceId", headerName: "Invoice ID", width: 150 },
-        { field: "supplierInvoiceNo", headerName: "Supplier Invoice #", width: 180 },
-        { field: "supplierName", headerName: "Supplier", flex: 1 },
-        { field: "purchaseDate", headerName: "Date", valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
+        { field: "supplierInvoiceNo", headerName: "Supplier Invoice #", width: 150 },
+        { field: "supplierName", headerName: "Supplier", flex: 1, width: 150 },
+        { field: "purchaseDate", headerName: "Date", valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' ,width: 100},
         { field: "invoiceTotal", headerName: "Total", valueFormatter: p => `$${p.value.toFixed(2)}` },
         { field: "balanceDue", headerName: "Balance", valueFormatter: p => `$${p.value.toFixed(2)}` },
-        { field: "paymentStatus", headerName: "Status", cellRenderer: p => {
+        { field: "paymentStatus", headerName: "Status", width: 100, cellRenderer: p => {
             const status = p.value;
             if (status === 'Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">Paid</span>`;
             if (status === 'Partially Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">Partial</span>`;
@@ -1118,19 +1118,22 @@ const purchaseInvoicesGridOptions = {
         }
     ],
     defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
+    rowSelection: 'single',
     rowClassRules: {
         'ag-row-selected-custom': params => params.data && params.data.id === appState.selectedPurchaseInvoiceId,
     },
-    onRowClicked: (params) => {
-        console.log(`[ui.js] Invoice row ${params.data.id} selected.`);
-        appState.selectedPurchaseInvoiceId = params.data.id;
-        // It no longer dispatches an event or switches tabs.
-        // We can also enable the payments tab here.
-        document.getElementById('tab-payments').classList.remove('tab-disabled');
-        if (purchaseInvoicesGridApi) {
-            purchaseInvoicesGridApi.redrawRows();
+    onRowSelected: (event) => {
+        // This event fires whenever a row is selected OR deselected.
+        const selectedNode = event.node;
+        
+        if (selectedNode.isSelected()) {
+            console.log(`[ui.js] Invoice row ${selectedNode.data.id} selected.`);
+            appState.selectedPurchaseInvoiceId = selectedNode.data.id;
+            
+            // Enable the payments tab
+            document.getElementById('tab-payments').classList.remove('tab-disabled');
         }
-    }, 
+    },
     onGridReady: (params) => {
         console.log("[ui.js] Purchase Invoices Grid is now ready.");
         purchaseInvoicesGridApi = params.api;
