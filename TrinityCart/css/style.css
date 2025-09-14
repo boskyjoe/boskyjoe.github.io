@@ -186,3 +186,6 @@
 .ag-row-selected-custom:hover {
     @apply bg-blue-200;
 }
+.ag-header-cell-label .ag-header-cell-text {
+    white-space: normal !important;
+}
