@@ -599,3 +599,25 @@ export async function getPaymentsForInvoice(invoiceId) {
         .get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
+
+export async function getPurchaseInvoiceById(docId) {
+    const db = firebase.firestore();
+    const docRef = db.collection(PURCHASE_INVOICES_COLLECTION_PATH).doc(docId);
+    const docSnap = await docRef.get();
+    if (docSnap.exists) {
+        return { id: docSnap.id, ...docSnap.data() };
+    } else {
+        throw new Error("Invoice not found!");
+    }
+}
+
+// We also need an `updatePurchaseInvoice` function
+export async function updatePurchaseInvoice(docId, invoiceData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    return db.collection(PURCHASE_INVOICES_COLLECTION_PATH).doc(docId).update({
+        ...invoiceData,
+        'audit.updatedBy': user.email,
+        'audit.updatedOn': now,
+    });
+}
