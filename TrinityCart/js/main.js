@@ -36,6 +36,9 @@ import { initializeMasterDataListeners } from './masterData.js';
 
 import { addPurchaseInvoice, getPurchaseInvoiceById, updatePurchaseInvoice } from './api.js';
 import { addLineItem, calculateAllTotals, showPurchasesView,switchPurchaseTab, loadPaymentsForSelectedInvoice,resetPurchaseForm, loadInvoiceDataIntoForm } from './ui.js';
+import { addSupplierPayment } from './api.js';
+import { showPaymentModal, closePaymentModal } from './ui.js';
+
 
 
 // --- FIREBASE INITIALIZATION ---
@@ -469,6 +472,11 @@ function setupEventListeners() {
                     showModal('error', 'Load Failed', 'Could not find the selected invoice.');
                 }
             }
+
+            // Get the row data from ag-Grid
+            const rowId = button.closest('.ag-row').getAttribute('row-id');
+            const invoiceData = purchaseInvoicesGridApi.getRowNode(rowId)?.data;
+            if (!invoiceData) return;
             
             // THE FIX: Specific logic for the payment button
             if (button.classList.contains('action-btn-payment')) {
@@ -476,8 +484,7 @@ function setupEventListeners() {
                 // Here you would open a payment modal.
                 // For now, we can make it switch to the payments tab as a placeholder.
                 appState.selectedPurchaseInvoiceId = invoiceId; // Make sure it's selected
-                switchPurchaseTab('payments');
-                loadPaymentsForSelectedInvoice();
+                showPaymentModal(invoiceData);
             }
 
             // Handle "Delete" button click
@@ -488,8 +495,48 @@ function setupEventListeners() {
         });
     }
 
+     // --- NEW: LISTENERS FOR THE PAYMENT MODAL ---
+    const paymentForm = document.getElementById('record-payment-form');
+    if (paymentForm) {
+        paymentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            if (!user) return;
+
+            // Collect data from the payment form
+            const paymentData = {
+                paymentDate: new Date(document.getElementById('payment-date-input').value),
+                amountPaid: parseFloat(document.getElementById('payment-amount-input').value),
+                paymentMode: document.getElementById('payment-mode-select').value,
+                transactionRef: document.getElementById('payment-ref-input').value,
+                notes: document.getElementById('payment-notes-input').value,
+                // Get related IDs from hidden inputs
+                relatedInvoiceId: document.getElementById('payment-invoice-id').value,
+                supplierId: document.getElementById('payment-supplier-id').value,
+            };
+            
+            if (isNaN(paymentData.amountPaid) || paymentData.amountPaid <= 0) {
+                return showModal('error', 'Invalid Amount', 'Payment amount must be greater than zero.');
+            }
+
+            try {
+                await addSupplierPayment(paymentData, user);
+                await showModal('success', 'Success', 'Payment has been recorded successfully.');
+                closePaymentModal();
+                // The real-time listener will automatically update the grid!
+            } catch (error) {
+                console.error("Error recording payment:", error);
+                await showModal('error', 'Save Failed', 'There was an error recording the payment.');
+            }
+        });
+    }
 
 
+    // Close button for the payment modal
+    const paymentModalCloseBtn = document.getElementById('payment-modal-close');
+    if (paymentModalCloseBtn) {
+        paymentModalCloseBtn.addEventListener('click', closePaymentModal);
+    }
 
 
     // --- PURCHASE MANAGEMENT LISTENERS end---
