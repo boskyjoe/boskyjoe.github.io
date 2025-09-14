@@ -37,7 +37,7 @@ import { initializeMasterDataListeners } from './masterData.js';
 import { addPurchaseInvoice, getPurchaseInvoiceById, updatePurchaseInvoice } from './api.js';
 import { addLineItem, calculateAllTotals, showPurchasesView,switchPurchaseTab, loadPaymentsForSelectedInvoice,resetPurchaseForm, loadInvoiceDataIntoForm } from './ui.js';
 import { addSupplierPayment } from './api.js';
-import { showPaymentModal, closePaymentModal } from './ui.js';
+import { showPaymentModal, closePaymentModal,getInvoiceDataFromGridById } from './ui.js';
 
 
 
@@ -474,16 +474,20 @@ function setupEventListeners() {
             }
 
             // Get the row data from ag-Grid
-            const rowId = button.closest('.ag-row').getAttribute('row-id');
-            const invoiceData = purchaseInvoicesGridApi.getRowNode(rowId)?.data;
-            if (!invoiceData) return;
+            // Get the row ID from the button's parent row
+            const rowId = button.closest('.ag-row')?.getAttribute('row-id');
+            if (!rowId) return;
+
+            const invoiceData = getInvoiceDataFromGridById(rowId);
+            if (!invoiceData) {
+                console.error(`Could not find data for row ID: ${rowId}`);
+                return;
+            }
             
             // THE FIX: Specific logic for the payment button
             if (button.classList.contains('action-btn-payment')) {
                 console.log(`Record payment for invoice: ${invoiceId}`);
-                // Here you would open a payment modal.
-                // For now, we can make it switch to the payments tab as a placeholder.
-                appState.selectedPurchaseInvoiceId = invoiceId; // Make sure it's selected
+                
                 showPaymentModal(invoiceData);
             }
 
