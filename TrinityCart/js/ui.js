@@ -1085,6 +1085,7 @@ let unsubscribePaymentsListener = null;
 const purchaseInvoicesGridOptions = {
     columnDefs: [
         { field: "invoiceId", headerName: "Invoice ID", width: 150 },
+        { field: "supplierInvoiceNo", headerName: "Supplier Invoice #", width: 180 },
         { field: "supplierName", headerName: "Supplier", flex: 1 },
         { field: "purchaseDate", headerName: "Date", valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
         { field: "invoiceTotal", headerName: "Total", valueFormatter: p => `$${p.value.toFixed(2)}` },
@@ -1117,12 +1118,18 @@ const purchaseInvoicesGridOptions = {
         }
     ],
     defaultColDef: { resizable: true, sortable: true, filter: true },
+    rowClassRules: {
+        'ag-row-selected-custom': params => params.data && params.data.id === appState.selectedPurchaseInvoiceId,
+    },
     onRowClicked: (params) => {
         console.log(`[ui.js] Invoice row ${params.data.id} selected.`);
         appState.selectedPurchaseInvoiceId = params.data.id;
         // It no longer dispatches an event or switches tabs.
         // We can also enable the payments tab here.
         document.getElementById('tab-payments').classList.remove('tab-disabled');
+        if (purchaseInvoicesGridApi) {
+            purchaseInvoicesGridApi.redrawRows();
+        }
     }, 
     onGridReady: (params) => {
         console.log("[ui.js] Purchase Invoices Grid is now ready.");
