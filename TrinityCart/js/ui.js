@@ -1376,7 +1376,66 @@ export function showPurchasesView() {
     //calculateAllTotals();
 }
 
+// NEW: Function to reset the form to "Create New" mode
+export function resetPurchaseForm() {
+    const form = document.getElementById('purchase-invoice-form');
+    if (!form) return;
 
+    form.reset(); // Resets all input values
+    document.getElementById('purchase-invoice-doc-id').value = ''; // Clear the hidden ID
+    document.getElementById('purchase-form-title').textContent = 'Create New Purchase Invoice';
+    document.getElementById('purchase-form-submit-btn').textContent = 'Save New Invoice';
+    document.getElementById('cancel-edit-btn').style.display = 'none';
+
+    // Reset line items to a single blank row
+    const lineItemsContainer = document.getElementById('purchase-line-items-container');
+    lineItemsContainer.innerHTML = '';
+    addLineItem();
+    calculateAllTotals();
+}
+
+// NEW: Function to load invoice data into the form for editing
+export async function loadInvoiceDataIntoForm(invoiceData) {
+    // Switch to Edit Mode
+    document.getElementById('purchase-invoice-doc-id').value = invoiceData.id;
+    document.getElementById('purchase-form-title').textContent = `Editing Invoice: ${invoiceData.invoiceId}`;
+    document.getElementById('purchase-form-submit-btn').textContent = 'Update Invoice';
+    document.getElementById('cancel-edit-btn').style.display = 'block';
+
+    // Populate Header Fields
+    document.getElementById('purchase-date').valueAsDate = invoiceData.purchaseDate.toDate();
+    document.getElementById('purchase-supplier').value = invoiceData.supplierId;
+    document.getElementById('supplier-invoice-no').value = invoiceData.supplierInvoiceNo;
+
+    // Populate Line Items
+    const lineItemsContainer = document.getElementById('purchase-line-items-container');
+    lineItemsContainer.innerHTML = ''; // Clear existing rows
+    lineItemCounter = 0; // Reset counter
+
+    invoiceData.lineItems.forEach(item => {
+        addLineItem(); // Creates a new blank row
+        const newRow = document.getElementById(`line-item-${lineItemCounter}`);
+        
+        // Populate the fields in the new row
+        newRow.querySelector('[data-field="masterProductId"]').value = item.masterProductId;
+        newRow.querySelector('[data-field="quantity"]').value = item.quantity;
+        newRow.querySelector('[data-field="unitPurchasePrice"]').value = item.unitPurchasePrice;
+        newRow.querySelector('[data-field="discountType"]').value = item.discountType || 'Percentage';
+        newRow.querySelector('[data-field="discountValue"]').value = item.discountValue || 0;
+        newRow.querySelector('[data-field="taxPercentage"]').value = item.taxPercentage || 0;
+    });
+
+    // Populate Invoice-level totals/discounts
+    document.getElementById('invoice-discount-type').value = invoiceData.invoiceDiscountType || 'Percentage';
+    document.getElementById('invoice-discount-value').value = invoiceData.invoiceDiscountValue || 0;
+    document.getElementById('invoice-tax-percentage').value = invoiceData.invoiceLevelTaxPercentage || 0;
+
+    // Recalculate all totals to ensure UI is consistent
+    calculateAllTotals();
+
+    // Scroll the form into view for a better user experience
+    document.getElementById('purchase-invoice-form').scrollIntoView({ behavior: 'smooth' });
+}
 
 
 
