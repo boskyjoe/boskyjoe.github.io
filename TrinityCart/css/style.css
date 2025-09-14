@@ -156,3 +156,24 @@
 .action-btn-icon.action-btn-delete:hover {
     @apply bg-red-100 text-red-600;
 }
+
+/* --- NEW ROBUST MODAL STYLES --- */
+
+.modal-panel-centered {
+    position: relative; /* For stacking context */
+    margin: auto; /* Helps with centering */
+    max-height: 90vh; /* Prevent modal from being too tall */
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.4s ease-out;
+}
+
+/* The form inside should handle its own scrolling if content is too long */
+.modal-panel-centered form {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.modal-panel-centered form > .p-6 { /* The main body content */
+    overflow-y: auto;
+}
