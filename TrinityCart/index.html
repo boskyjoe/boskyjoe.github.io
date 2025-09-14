@@ -794,6 +794,64 @@
 
 
 
+
+
+    <!-- ======================= -->
+    <!--  RECORD PAYMENT MODAL   -->
+    <!-- ======================= -->
+    <div id="record-payment-modal" class="hidden"> <!-- Starts hidden -->
+        <div class="fixed inset-0 bg-black bg-opacity-60"></div>
+        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-lg mx-auto z-10">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 id="payment-modal-title" class="text-lg font-bold text-gray-900">Record Payment for Invoice</h3>
+            </div>
+            <!-- Modal Body -->
+            <form id="record-payment-form">
+                <input type="hidden" id="payment-invoice-id">
+                <input type="hidden" id="payment-supplier-id">
+
+                <div class="p-6 space-y-4">
+                    <!-- Payment Date -->
+                    <div>
+                        <label for="payment-date-input" class="form-label">Payment Date</label>
+                        <input type="date" id="payment-date-input" class="form-input w-full" required>
+                    </div>
+                    <!-- Amount Paid -->
+                    <div>
+                        <label for="payment-amount-input" class="form-label">Amount Paid</label>
+                        <input type="number" id="payment-amount-input" placeholder="0.00" class="form-input w-full" required step="0.01">
+                    </div>
+                    <!-- Payment Mode Dropdown -->
+                    <div>
+                        <label for="payment-mode-select" class="form-label">Payment Mode</label>
+                        <select id="payment-mode-select" class="form-input w-full" required>
+                            <option value="">Select a mode...</option>
+                            <!-- Options will be populated by JS from masterData -->
+                        </select>
+                    </div>
+                    <!-- Transaction Reference -->
+                    <div>
+                        <label for="payment-ref-input" class="form-label">Reference # (Optional)</label>
+                        <input type="text" id="payment-ref-input" placeholder="e.g., Check #123, NEFT-987" class="form-input w-full">
+                    </div>
+                    <!-- Notes -->
+                    <div>
+                        <label for="payment-notes-input" class="form-label">Notes (Optional)</label>
+                        <textarea id="payment-notes-input" class="form-input w-full" rows="2"></textarea>
+                    </div>
+                </div>
+                <!-- Modal Footer -->
+                <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
+                    <button type="button" id="payment-modal-close" class="modal-btn modal-btn-secondary">Cancel</button>
+                    <button type="submit" class="modal-btn modal-btn-primary">Save Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+
     <!-- ======================= -->
     <!--   CUSTOM MODAL DIALOG   -->
     <!-- ======================= -->
