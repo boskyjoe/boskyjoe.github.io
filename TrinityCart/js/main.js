@@ -34,7 +34,7 @@ import { updateUserRole, setUserActiveStatus } from './api.js';
 import { initializeMasterDataListeners } from './masterData.js';
 
 
-import { addPurchaseInvoice } from './api.js';
+import { addPurchaseInvoice, getPurchaseInvoiceById } from './api.js';
 import { addLineItem, calculateAllTotals, showPurchasesView,switchPurchaseTab, loadPaymentsForSelectedInvoice,resetPurchaseForm, loadInvoiceDataIntoForm } from './ui.js';
 
 
