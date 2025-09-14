@@ -1,6 +1,6 @@
 // js/masterData.js
 
-import { CATEGORIES_COLLECTION_PATH, SEASONS_COLLECTION_PATH,PRODUCTS_CATALOGUE_COLLECTION_PATH, SUPPLIERS_COLLECTION_PATH } from './config.js';
+import { CATEGORIES_COLLECTION_PATH, SEASONS_COLLECTION_PATH,PRODUCTS_CATALOGUE_COLLECTION_PATH, SUPPLIERS_COLLECTION_PATH,PAYMENT_MODES_COLLECTION_PATH } from './config.js';
 
 // This object will be our local, always-up-to-date cache of master data.
 export const masterData = {
@@ -8,6 +8,7 @@ export const masterData = {
     seasons: [],
     products: [],
     suppliers: [],
+    paymentModes: [],
 };
 
 /**
@@ -57,6 +58,17 @@ export function initializeMasterDataListeners() {
         document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'suppliers' } }));
     });
 
+    //Listener for Payment Modes ---
+    db.collection(PAYMENT_MODES_COLLECTION_PATH).onSnapshot(snapshot => {
+        const paymentModes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        masterData.paymentModes = paymentModes.filter(p => p.isActive); // Store only active ones
+        console.log("Master data updated: Payment Modes", masterData.paymentModes);
+        
+        // Dispatch a custom event to notify the app that data has changed
+        document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'paymentModes' } }));
+    }, error => {
+        console.error("Error listening to paymentModes collection:", error);
+    });
 
 
 
