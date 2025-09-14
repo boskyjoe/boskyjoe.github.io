@@ -35,7 +35,7 @@ import { initializeMasterDataListeners } from './masterData.js';
 
 
 import { addPurchaseInvoice } from './api.js';
-import { addLineItem, calculateAllTotals, showPurchasesView,switchPurchaseTab, loadPaymentsForSelectedInvoice } from './ui.js';
+import { addLineItem, calculateAllTotals, showPurchasesView,switchPurchaseTab, loadPaymentsForSelectedInvoice,resetPurchaseForm, loadInvoiceDataIntoForm } from './ui.js';
 
 
 // --- FIREBASE INITIALIZATION ---
@@ -183,18 +183,37 @@ async function handleSavePurchaseInvoice() {
         totalTaxAmount, invoiceTotal
     };
 
+
+    const docId = document.getElementById('purchase-invoice-doc-id').value;
+    const isEditMode = !!docId;
+
+
     // 5. Save to Firestore
     try {
-        await addPurchaseInvoice(invoiceData, user);
-        await showModal('success', 'Success', `Purchase Invoice has been saved.`);
-        document.getElementById('purchase-invoice-form').reset();
-        document.getElementById('purchase-line-items-container').innerHTML = '';
-        addLineItem();
-        calculateAllTotals();
+        if (isEditMode) {
+            // UPDATE existing invoice
+            await updatePurchaseInvoice(docId, invoiceData, user);
+            await showModal('success', 'Success', 'Purchase Invoice has been updated.');
+        } else {
+            await addPurchaseInvoice(invoiceData, user);
+            await showModal('success', 'Success', `Purchase Invoice has been saved.`);
+            document.getElementById('purchase-invoice-form').reset();
+            document.getElementById('purchase-line-items-container').innerHTML = '';
+            addLineItem();
+            calculateAllTotals();
+        }
+        resetPurchaseForm();
     } catch (error) {
         console.error("Error saving purchase invoice:", error);
         await showModal('error', 'Save Failed', 'There was an error saving the invoice.');
     }
+
+
+
+
+
+
+
 }
 
 
@@ -356,22 +375,18 @@ function setupEventListeners() {
     // --- FORM SUBMISSION HANDLERS ---
     const purchaseInvoiceForm = document.getElementById('purchase-invoice-form');
     if (purchaseInvoiceForm) {
-
-         purchaseInvoiceForm.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                // Check if the event target is a textarea, which should allow Enter.
-                if (e.target.tagName.toLowerCase() !== 'textarea') {
-                    e.preventDefault(); // Stop the form from submitting.
-                }
-            }
-        });
-
         purchaseInvoiceForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            handleSavePurchaseInvoice(); 
+            handleSavePurchaseInvoice();
         });
     }
 
+    const cancelEditBtn = document.getElementById('cancel-edit-btn');
+    if (cancelEditBtn) {
+        cancelEditBtn.addEventListener('click', () => {
+            resetPurchaseForm();
+        });
+    }
 
     // --- OTHER LISTENERS ---
     const purchaseFormContainer = document.getElementById('purchases-view');
@@ -436,14 +451,23 @@ function setupEventListeners() {
     // Handle Action Button Clicks in the Invoices Grid
     const invoicesGrid = document.getElementById('purchase-invoices-grid');
     if (invoicesGrid) {
-        invoicesGrid.addEventListener('click', (e) => {
+        invoicesGrid.addEventListener('click', async (e) => {
             const button = e.target.closest('button');
             if (!button) return;
+
+            const docId = button.dataset.id;
+            if (!docId) return;
 
             const invoiceId = button.dataset.id;
             
             if (button.classList.contains('action-btn-edit')) {
-                // ... logic to load invoice into form ...
+                try {
+                    const invoiceData = await getPurchaseInvoiceById(docId);
+                    loadInvoiceDataIntoForm(invoiceData);
+                } catch (error) {
+                    console.error("Failed to load invoice for editing:", error);
+                    showModal('error', 'Load Failed', 'Could not find the selected invoice.');
+                }
             }
             
             // THE FIX: Specific logic for the payment button
@@ -455,8 +479,17 @@ function setupEventListeners() {
                 switchPurchaseTab('payments');
                 loadPaymentsForSelectedInvoice();
             }
+
+            // Handle "Delete" button click
+            if (button.classList.contains('action-btn-delete')) {
+                // We will build this logic next
+                console.log(`Delete invoice: ${docId}`);
+            }
         });
     }
+
+
+
 
 
     // --- PURCHASE MANAGEMENT LISTENERS end---
