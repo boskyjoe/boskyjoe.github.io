@@ -11,6 +11,7 @@ import { EVENTS_COLLECTION_PATH } from './config.js';
 import { PURCHASE_INVOICES_COLLECTION_PATH, SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH } from './config.js';
 
 
+
 // This file will contain all functions that interact with the backend.
 // For now, they return mock data instantly.
 
@@ -619,5 +620,20 @@ export async function updatePurchaseInvoice(docId, invoiceData, user) {
         ...invoiceData,
         'audit.updatedBy': user.email,
         'audit.updatedOn': now,
+    });
+}
+
+// --- SUPPLIER PAYMENT API FUNCTION ---
+
+export async function addSupplierPayment(paymentData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+
+    return db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH).add({
+        ...paymentData,
+        audit: {
+            createdBy: user.email,
+            createdOn: now,
+        }
     });
 }
