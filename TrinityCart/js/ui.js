@@ -1119,7 +1119,7 @@ const purchaseInvoicesGridOptions = {
     ],
     defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
     rowSelection: {
-        mode: 'single'
+        mode: 'singleRow'
     },
     rowClassRules: {
         'ag-row-selected-custom': params => params.data && params.data.id === appState.selectedPurchaseInvoiceId,
