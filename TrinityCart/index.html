@@ -799,8 +799,10 @@
     <!-- ======================= -->
     <!--  RECORD PAYMENT MODAL   -->
     <!-- ======================= -->
-    <div id="record-payment-modal" class="hidden"> <!-- Starts hidden -->
-        <div class="fixed inset-0 bg-black bg-opacity-60"></div>
+    <div id="record-payment-modal" class="hidden fixed inset-0 z-50"> <!-- Starts hidden -->
+        <!-- Modal Overlay -->
+        <div class="absolute inset-0 bg-black bg-opacity-60 modal-close-trigger"></div>
+        <div class="modal-panel-centered bg-white rounded-lg shadow-xl w-full max-w-lg">
         <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-lg mx-auto z-10">
             <!-- Modal Header -->
             <div class="px-6 py-4 border-b border-gray-200">
@@ -843,7 +845,7 @@
                 </div>
                 <!-- Modal Footer -->
                 <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
-                    <button type="button" id="payment-modal-close" class="modal-btn modal-btn-secondary">Cancel</button>
+                    <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">Cancel</button>
                     <button type="submit" class="modal-btn modal-btn-primary">Save Payment</button>
                 </div>
             </form>
