@@ -179,11 +179,10 @@
 }
 
 /* --- NEW: Style for the selected/highlighted row in ag-Grid --- */
-.ag-row-selected-custom {
+.ag-theme-alpine .ag-row-selected {
     @apply bg-blue-100;
 }
-/* Optional: Make it even more prominent on hover */
-.ag-row-selected-custom:hover {
+.ag-theme-alpine .ag-row-selected:hover {
     @apply bg-blue-200;
 }
 .ag-header-cell-label .ag-header-cell-text {
