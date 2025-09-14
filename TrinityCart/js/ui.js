@@ -1117,7 +1117,7 @@ const purchaseInvoicesGridOptions = {
             }
         }
     ],
-    defaultColDef: { resizable: true, sortable: true, filter: true },
+    defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
     rowClassRules: {
         'ag-row-selected-custom': params => params.data && params.data.id === appState.selectedPurchaseInvoiceId,
     },
@@ -1149,6 +1149,7 @@ const purchasePaymentsGridOptions = {
             cellRenderer: params => `<button class="action-btn-delete-payment" data-id="${params.data.id}">...</button>`
         }
     ],
+    defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
     onGridReady: (params) => {
         console.log("[ui.js] Purchase Payments Grid is now ready.");
         purchasePaymentsGridApi = params.api;
