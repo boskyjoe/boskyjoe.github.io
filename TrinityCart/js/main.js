@@ -37,7 +37,7 @@ import { initializeMasterDataListeners } from './masterData.js';
 import { addPurchaseInvoice, getPurchaseInvoiceById, updatePurchaseInvoice } from './api.js';
 import { addLineItem, calculateAllTotals, showPurchasesView,switchPurchaseTab, loadPaymentsForSelectedInvoice,resetPurchaseForm, loadInvoiceDataIntoForm } from './ui.js';
 import { addSupplierPayment } from './api.js';
-import { showPaymentModal, closePaymentModal,getInvoiceDataFromGridById } from './ui.js';
+import { showPaymentModal, closePaymentModal,getInvoiceDataFromGridById, initializeModals } from './ui.js';
 
 
 
@@ -1049,6 +1049,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeMasterDataListeners();
 
+    initializeModals(); 
+    
     setupEventListeners();
     // The initial UI update is now handled by the onAuthStateChanged listener
 });
