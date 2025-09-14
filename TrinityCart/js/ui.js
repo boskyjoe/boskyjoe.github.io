@@ -1472,13 +1472,17 @@ export function showPaymentModal(invoice) {
 
     // Show the modal
     paymentModal.classList.remove('hidden');
-    paymentModal.classList.add('flex');
+    // --- THE FOCUS MANAGEMENT FIX ---
+    // Find the first input in the form and give it focus.
+    const firstInput = paymentModal.querySelector('input, select');
+    if (firstInput) {
+        firstInput.focus();
+    }
 }
 
 export function closePaymentModal() {
     if (!paymentModal) return;
     paymentModal.classList.add('hidden');
-    paymentModal.classList.remove('flex');
 }
 
 // --- NEW EXPORTED HELPER FUNCTION ---
@@ -1491,7 +1495,26 @@ export function getInvoiceDataFromGridById(rowId) {
     return rowNode ? rowNode.data : null;
 }
 
+export function initializeModals() {
+    document.addEventListener('click', (e) => {
+        // If the user clicks an element with the close trigger class...
+        if (e.target.closest('.modal-close-trigger')) {
+            // ...find the parent modal and close it.
+            const modalToClose = e.target.closest('#record-payment-modal, #custom-modal');
+            if (modalToClose) {
+                modalToClose.classList.add('hidden');
+            }
+        }
+    });
 
+    // Also close modals with the Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closePaymentModal();
+            // close other modals if needed
+        }
+    });
+}
 
 
 
