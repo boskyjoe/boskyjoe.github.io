@@ -119,7 +119,10 @@ auth.onAuthStateChanged(async (user) => {
 
 async function handleSavePurchaseInvoice() {
     const user = appState.currentUser;
-    if (!user) return showModal('error', 'Not Logged In', 'You must be logged in to save a purchase.');
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in.');
+        return; // This is correct.
+    }
 
     // 1. Collect Header Data
     const purchaseDate = document.getElementById('purchase-date').value;
@@ -129,7 +132,8 @@ async function handleSavePurchaseInvoice() {
     const supplierInvoiceNo = document.getElementById('supplier-invoice-no').value;
 
     if (!purchaseDate || !supplierId) {
-        return showModal('error', 'Missing Information', 'Please select a Purchase Date and a Supplier.');
+        await showModal('error', 'Missing Information', 'Please select a Purchase Date and a Supplier.');
+        return ;
     }
 
     // 2. Collect Line Item Data
@@ -154,7 +158,8 @@ async function handleSavePurchaseInvoice() {
     }
 
     if (lineItems.length === 0) {
-        return showModal('error', 'No Items', 'Please add at least one product to the invoice.');
+        await showModal('error', 'No Items', 'Please add at least one product to the invoice.');
+        return ;
     }
 
     // 3. Perform Final Calculations
@@ -202,6 +207,7 @@ async function handleSavePurchaseInvoice() {
             successMessage = 'Purchase Invoice has been updated successfully.';
             console.log(successMessage);
         } else {
+            console.log("Simulating add new invoice.");
             await addPurchaseInvoice(invoiceData, user);
             successMessage = 'Purchase Invoice has been saved successfully.';
             document.getElementById('purchase-invoice-form').reset();
@@ -209,6 +215,7 @@ async function handleSavePurchaseInvoice() {
             addLineItem();
             calculateAllTotals();
         }
+        console.log("Database call skipped. Attempting to show modal...");
         await showModal('success', 'Success', successMessage);
         resetPurchaseForm();
     } catch (error) {
