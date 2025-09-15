@@ -195,6 +195,7 @@ async function handleSavePurchaseInvoice() {
     try {
         if (isEditMode) {
             // UPDATE existing invoice
+            console.log("Update Invoice");
             await updatePurchaseInvoice(docId, invoiceData, user);
             await showModal('success', 'Success', 'Purchase Invoice has been updated.');
         } else {
@@ -1050,7 +1051,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeMasterDataListeners();
 
     initializeModals(); 
-    
+
     setupEventListeners();
     // The initial UI update is now handled by the onAuthStateChanged listener
 });
