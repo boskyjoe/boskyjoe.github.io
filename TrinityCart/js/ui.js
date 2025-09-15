@@ -12,6 +12,7 @@ import { getProducts, getCategories } from './api.js';
 import { getUsersWithRoles } from './api.js';
 import { getSalesEvents, getSeasons } from './api.js';
 import { getPaymentsForInvoice } from './api.js';
+import { showModal } from './modal.js';
 
 
 
@@ -1383,13 +1384,22 @@ export function showPurchasesView() {
                 .onSnapshot(snapshot => {
 
                     if (appState.isLocalUpdateInProgress) {
-                        console.log("[Firestore] Ignoring real-time update due to local operation.");
-                        return; // Do nothing if the update was from this user
+                        console.log("[Firestore] Local update detected. Showing success UI.");
+                        showModal('success', 'Success', 'Purchase Invoice has been saved successfully.');
+                        resetPurchaseForm();
+                        appState.isLocalUpdateInProgress = false;
+                        
+                        // We still need to update the grid with the latest data.
+                        const invoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        purchaseInvoicesGridApi.setGridOption('rowData', invoices);
+                    } else {
+                        // This was an update from another user. Just update the grid silently.
+                        console.log("[Firestore] Received remote update for purchase invoices.");
+                        const invoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        purchaseInvoicesGridApi.setGridOption('rowData', invoices);
                     }
-                    console.log("[Firestore] Received real-time update for purchase invoices.");
-                    const invoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    purchaseInvoicesGridApi.setGridOption('rowData', invoices);
                     purchaseInvoicesGridApi.setGridOption('loading', false);
+
                 }, error => {
                     console.error("Error with invoices real-time listener:", error);
                     purchaseInvoicesGridApi.setGridOption('loading', false);
