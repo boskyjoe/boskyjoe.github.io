@@ -195,6 +195,9 @@ async function handleSavePurchaseInvoice() {
     const docId = document.getElementById('purchase-invoice-doc-id').value;
     const isEditMode = !!docId;
 
+    let success = false;
+    let successMessage = '';
+
 
     // 5. Save to Firestore
     try {
@@ -203,6 +206,7 @@ async function handleSavePurchaseInvoice() {
             // UPDATE existing invoice
             console.log("Update Invoice");
             await updatePurchaseInvoice(docId, invoiceData, user);
+            successMessage = 'Purchase Invoice has been updated successfully.';
         } else {
             console.log("Simulating add new invoice.");
             await addPurchaseInvoice(invoiceData, user);
@@ -210,19 +214,22 @@ async function handleSavePurchaseInvoice() {
             document.getElementById('purchase-line-items-container').innerHTML = '';
             addLineItem();
             calculateAllTotals();
-            await showModal('success', 'Success', 'Purchase Invoice has been added successfully.');
+            successMessage = 'Purchase Invoice has been saved successfully.';
         }
         console.log("Database call skipped. Attempting to show modal...");
-        document.dispatchEvent(new CustomEvent('invoiceSaveSuccess', {
-            detail: { message: isEditMode ? 'Purchase Invoice has been updated.' : 'Purchase Invoice has been saved.' }
-        }));
+        success = true;
     } catch (error) {
         console.error("Error saving purchase invoice:", error);
         await showModal('error', 'Save Failed', 'There was an error saving the invoice.');
-        appState.isLocalUpdateInProgress = false;
+        success = false;
     } finally {
-        // --- THE FIX: Always reset the flag after the operation is complete ---
-        appState.isLocalUpdateInProgress = false;
+        if (success) {
+            // We are using .then() to ensure these UI updates run in a new, clean "tick"
+            // of the event loop, completely separate from the database promise chain.
+            showModal('success', 'Success', successMessage).then(() => {
+                resetPurchaseForm();
+            });
+        }
     }
 
 
