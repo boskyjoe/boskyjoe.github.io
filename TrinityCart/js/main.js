@@ -671,7 +671,7 @@ function setupEventListeners() {
             await showModal('error', 'Update Failed', 'Could not update the user role.');
         }
     });
-
+}
 
 
 
