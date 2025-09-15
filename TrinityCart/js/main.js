@@ -226,6 +226,7 @@ async function handleSavePurchaseInvoice() {
         if (success) {
             // We are using .then() to ensure these UI updates run in a new, clean "tick"
             // of the event loop, completely separate from the database promise chain.
+            console.log("[handleSavePurchaseInvoice]: In Finally");
             showModal('success', 'Success', successMessage).then(() => {
                 resetPurchaseForm();
             });
