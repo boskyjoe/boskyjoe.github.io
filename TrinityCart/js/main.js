@@ -199,6 +199,7 @@ async function handleSavePurchaseInvoice() {
             console.log("Update Invoice");
             await updatePurchaseInvoice(docId, invoiceData, user);
             successMessage = 'Purchase Invoice has been updated successfully.';
+            console.log(successMessage);
         } else {
             await addPurchaseInvoice(invoiceData, user);
             successMessage = 'Purchase Invoice has been saved successfully.';
