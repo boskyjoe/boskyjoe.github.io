@@ -1,11 +1,5 @@
 // js/modal.js
 
-const modalElement = document.getElementById('custom-modal');
-const modalTitle = document.getElementById('modal-title');
-const modalMessage = document.getElementById('modal-message');
-const modalIcon = document.getElementById('modal-icon');
-const modalButtons = document.getElementById('modal-buttons');
-
 // Define icons and colors for different modal types
 const iconMap = {
     info: `<svg class="h-6 w-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`,
@@ -23,7 +17,30 @@ const iconMap = {
  * @returns {Promise<boolean>}
  */
 export function showModal(type, title, message) {
+
+    const modalElement = document.getElementById('custom-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalMessage = document.getElementById('modal-message');
+    const modalIcon = document.getElementById('modal-icon');
+    const modalButtons = document.getElementById('modal-buttons');
+
+
+
     return new Promise((resolve) => {
+        modalTitle.textContent = title;
+        modalMessage.innerHTML = message;
+        modalIcon.innerHTML = iconMap[type] || iconMap.info;
+        modalButtons.innerHTML = '';
+
+        // Safety check in case the modal HTML is missing
+        if (!modalElement || !modalTitle || !modalMessage || !modalIcon || !modalButtons) {
+            console.error("Modal elements not found in the DOM!");
+            // Fallback to a standard alert
+            alert(`${title}\n\n${message}`);
+            return Promise.resolve(false);
+        }
+
+        return new Promise((resolve) => {
         modalTitle.textContent = title;
         modalMessage.innerHTML = message;
         modalIcon.innerHTML = iconMap[type] || iconMap.info;
@@ -34,7 +51,6 @@ export function showModal(type, title, message) {
             button.textContent = text;
             button.className = primary ? 'modal-btn modal-btn-primary' : 'modal-btn modal-btn-secondary';
             button.onclick = () => {
-                // THE FIX: Hide by adding 'hidden' and removing 'flex'.
                 modalElement.classList.add('hidden');
                 modalElement.classList.remove('flex');
                 resolve(value);
@@ -49,7 +65,6 @@ export function showModal(type, title, message) {
             modalButtons.appendChild(createButton('OK', true, true));
         }
 
-        // THE FIX: Show by removing 'hidden' and adding 'flex'.
         modalElement.classList.remove('hidden');
         modalElement.classList.add('flex');
     });
