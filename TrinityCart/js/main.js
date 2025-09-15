@@ -116,7 +116,6 @@ auth.onAuthStateChanged(async (user) => {
 });
 
 
-let isLocalUpdateInProgress = false;
 
 async function handleSavePurchaseInvoice() {
     const user = appState.currentUser;
@@ -195,7 +194,7 @@ async function handleSavePurchaseInvoice() {
     // 5. Save to Firestore
     try {
         let successMessage = '';
-        isLocalUpdateInProgress = true; 
+        appState.isLocalUpdateInProgress = true; 
         if (isEditMode) {
             // UPDATE existing invoice
             console.log("Update Invoice");
@@ -217,7 +216,7 @@ async function handleSavePurchaseInvoice() {
         await showModal('error', 'Save Failed', 'There was an error saving the invoice.');
     } finally {
         // --- THE FIX: Always reset the flag after the operation is complete ---
-        isLocalUpdateInProgress = false;
+        appState.isLocalUpdateInProgress = false;
     }
 
 
