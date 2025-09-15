@@ -17,30 +17,22 @@ const iconMap = {
  * @returns {Promise<boolean>}
  */
 export function showModal(type, title, message) {
-
+    // THE FIX: Get all elements inside the function, when we know the DOM is ready.
     const modalElement = document.getElementById('custom-modal');
     const modalTitle = document.getElementById('modal-title');
     const modalMessage = document.getElementById('modal-message');
     const modalIcon = document.getElementById('modal-icon');
     const modalButtons = document.getElementById('modal-buttons');
 
-
+    // Safety check in case the modal HTML is missing
+    if (!modalElement || !modalTitle || !modalMessage || !modalIcon || !modalButtons) {
+        console.error("Modal elements not found in the DOM!");
+        // Fallback to a standard alert
+        alert(`${title}\n\n${message}`);
+        return Promise.resolve(false);
+    }
 
     return new Promise((resolve) => {
-        modalTitle.textContent = title;
-        modalMessage.innerHTML = message;
-        modalIcon.innerHTML = iconMap[type] || iconMap.info;
-        modalButtons.innerHTML = '';
-
-        // Safety check in case the modal HTML is missing
-        if (!modalElement || !modalTitle || !modalMessage || !modalIcon || !modalButtons) {
-            console.error("Modal elements not found in the DOM!");
-            // Fallback to a standard alert
-            alert(`${title}\n\n${message}`);
-            return Promise.resolve(false);
-        }
-
-        return new Promise((resolve) => {
         modalTitle.textContent = title;
         modalMessage.innerHTML = message;
         modalIcon.innerHTML = iconMap[type] || iconMap.info;
