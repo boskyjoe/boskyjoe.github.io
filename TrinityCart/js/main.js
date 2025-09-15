@@ -232,104 +232,107 @@ async function handleSavePurchaseInvoice() {
             });
         }
     }
-
-
-
-
-
-
-
 }
 
 
 
-
-
-
-
 function setupEventListeners() {
-    // --- GLOBAL CLICK HANDLER (for dynamic elements) ---
-    document.addEventListener('click', (e) => {
+    
+    // ==================================================================
+    // --- 1. SINGLE, GLOBAL CLICK HANDLER for all click events ---
+    // ==================================================================
+    document.addEventListener('click', async (e) => {
         const target = e.target;
+        const user = appState.currentUser;
 
-        // Handle Login/Logout
-        if (target.closest('#login-button')) {
-            handleLogin();
-        }
-        if (target.closest('#logout-button')) {
-            handleLogout();
-        }
+        // --- Handle Login/Logout ---
+        if (target.closest('#login-button')) { handleLogin(); return; }
+        if (target.closest('#logout-button')) { handleLogout(); return; }
 
-        // Handle Sidebar Navigation
-        const navLink = target.closest('.nav-link');
-        if (navLink) {
+        // --- Handle Sidebar Navigation & Back Links ---
+        const navOrBackLink = target.closest('.nav-link, .back-link');
+        if (navOrBackLink) {
             e.preventDefault();
-            const viewId = navLink.dataset.viewId;
-            console.log(`[main.js] Navigating to view: ${viewId}`);
+            const viewId = navOrBackLink.dataset.viewId;
+            if (!viewId) return;
 
-            // Call the appropriate function for the view
             switch (viewId) {
-                case 'suppliers-view':
-                    showSuppliersView();
-                    break;
-                case 'products-view':
-                    showProductsView();
-                    break;
-                case 'categories-view':
-                    showCategoriesView();
-                    break;
-                case 'payment-modes-view':
-                    showPaymentModesView();
-                    break;
-                case 'sale-types-view':
-                    showSaleTypesView();
-                    break;
-                case 'seasons-view':
-                    showSeasonsView();
-                    break;
-                case 'sales-events-view':
-                    showSalesEventsView();
-                    break;
-                case 'users-view':
-                    showUsersView();
-                    break;
-                case 'purchases-view':
-                    showPurchasesView();
-                    break;
-                default:
-                    showView(viewId); // For simple views without special logic
+                case 'suppliers-view': showSuppliersView(); break;
+                case 'products-view': showProductsView(); break;
+                case 'categories-view': showCategoriesView(); break;
+                case 'payment-modes-view': showPaymentModesView(); break;
+                case 'sale-types-view': showSaleTypesView(); break;
+                case 'seasons-view': showSeasonsView(); break;
+                case 'sales-events-view': showSalesEventsView(); break;
+                case 'users-view': showUsersView(); break;
+                case 'purchases-view': showPurchasesView(); break;
+                default: showView(viewId);
             }
+            return;
         }
 
-        // Handle "Back to Admin" links
-        const backLink = target.closest('.back-link');
-        if (backLink) {
+        // --- Handle Admin Module Hub Cards ---
+        const adminCard = target.closest('.master-data-card');
+        if (adminCard) {
             e.preventDefault();
-            const viewId = backLink.dataset.viewId;
-            if (viewId) {
-                showView(viewId);
+            const viewId = adminCard.dataset.viewId;
+            // Programmatically click the corresponding sidebar link to trigger the navigation logic
+            document.querySelector(`.nav-link[data-view-id="${viewId}"]`)?.click();
+            return;
+        }
+
+        // --- Handle ALL Grid Action Buttons ---
+        const gridButton = target.closest('button[data-id]');
+        if (gridButton) {
+            if (!user) return;
+            const docId = gridButton.dataset.id;
+            const grid = gridButton.closest('.ag-theme-alpine');
+            if (!docId || !grid) return;
+
+            // Logic for Purchase Invoices Grid
+            if (grid.id === 'purchase-invoices-grid') {
+                if (gridButton.classList.contains('action-btn-edit')) {
+                    const invoiceData = await getPurchaseInvoiceById(docId);
+                    if (invoiceData) loadInvoiceDataIntoForm(invoiceData);
+                } else if (gridButton.classList.contains('action-btn-payment')) {
+                    const invoiceData = getInvoiceDataFromGridById(docId);
+                    if (invoiceData) showPaymentModal(invoiceData);
+                } else if (gridButton.classList.contains('action-btn-delete')) {
+                    // Placeholder for delete logic
+                    console.log(`Delete purchase invoice: ${docId}`);
+                }
+            } 
+            // Logic for ALL other master data grids (Suppliers, Categories, etc.)
+            else {
+                const newStatus = gridButton.classList.contains('btn-activate');
+                const moduleName = grid.id.split('-')[0]; // e.g., "suppliers", "categories"
+                if (await showModal('confirm', `Confirm ${newStatus ? 'Activation' : 'Deactivation'}`, `Are you sure you want to ${newStatus ? 'activate' : 'deactivate'} this item?`)) {
+                    if (grid.id === 'suppliers-grid') await setSupplierStatus(docId, newStatus, user);
+                    else if (grid.id === 'categories-grid') await setCategoryStatus(docId, newStatus, user);
+                    else if (grid.id === 'payment-modes-grid') await setPaymentModeStatus(docId, newStatus, user);
+                    else if (grid.id === 'sale-types-grid') await setSaleTypeStatus(docId, newStatus, user);
+                    else if (grid.id === 'seasons-grid') await setSeasonStatus(docId, newStatus, user);
+                    else if (grid.id === 'sales-events-grid') await setSalesEventStatus(docId, newStatus, user);
+                    else if (grid.id === 'users-grid') await setUserActiveStatus(docId, newStatus, user);
+                    else if (grid.id === 'products-catalogue-grid') await setProductStatus(docId, 'isActive', newStatus, user);
+                }
             }
+            return;
         }
 
-        // Handle "Add Line Item" button in Purchase form
-        if (target.closest('#add-line-item-btn')) {
-            addLineItem();
-        }
+        // --- Handle Other Standalone Buttons ---
+        if (target.closest('#add-line-item-btn')) { addLineItem(); return; }
+        if (target.closest('.remove-line-item-btn')) { target.closest('.grid').remove(); calculateAllTotals(); return; }
+        if (target.closest('#cancel-edit-btn')) { resetPurchaseForm(); return; }
+        if (target.closest('#payment-modal-close')) { closePaymentModal(); return; }
     });
 
+    
+     // ==================================================================
+    // --- 2. ISOLATED FORM SUBMISSION & OTHER EVENT HANDLERS ---
+    // ==================================================================
 
-
-    // Mobile menu toggle
-    const mobileMenuButton = document.getElementById('mobile-menu-button');
-    mobileMenuButton.addEventListener('click', () => {
-        const sidebar = document.getElementById('sidebar');
-        sidebar.classList.toggle('active');
-    });
-
-    // --- ALL THE SUPPLIER FORM AND GRID LISTENERS ---
-    // (This part remains the same as before)
-
-    // Add Supplier Form Submission
+    // --- Form Submissions ---
     const addSupplierForm = document.getElementById('add-supplier-form');
     if (addSupplierForm) {
         addSupplierForm.addEventListener('submit', async (e) => {
@@ -355,636 +358,6 @@ function setupEventListeners() {
             }
         });
     }
-
-    // In-Grid Update Event
-    document.addEventListener('updateSupplier', async (e) => {
-        const { docId, updatedData } = e.detail;
-        const user = appState.currentUser;
-        if (!user) return;
-        try {
-            await updateSupplier(docId, updatedData, user);
-        } catch (error) {
-            console.error("Error updating supplier:", error);
-            await showModal('error', 'Error', 'Failed to update the supplier. Please try again.');
-        }
-    });
-
-    // Action Buttons (Activate/Deactivate) in Grid
-    const suppliersGrid = document.getElementById('suppliers-grid');
-    if (suppliersGrid) {
-        suppliersGrid.addEventListener('click', async (e) => {
-            const user = appState.currentUser;
-            if (!user) return;
-
-            const target = e.target;
-            const docId = target.dataset.id;
-            if (!docId) return;
-
-            if (target.classList.contains('btn-deactivate')) {
-                const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to Deactivate  this supplier?`);
-                if (confirmed) {
-                    await setSupplierStatus(docId, false, user);
-                }
-            } else if (target.classList.contains('btn-activate')) {
-                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this supplier?`);
-                if (confirmed) {
-                    await setSupplierStatus(docId, true, user);
-                }
-            }
-        });
-    }
-
-
-    // --- PURCHASE MANAGEMENT LISTENERS ---
-
-    // --- FORM SUBMISSION HANDLERS ---
-    const purchaseInvoiceForm = document.getElementById('purchase-invoice-form');
-    if (purchaseInvoiceForm) {
-        purchaseInvoiceForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            handleSavePurchaseInvoice();
-        });
-    }
-
-    const cancelEditBtn = document.getElementById('cancel-edit-btn');
-    if (cancelEditBtn) {
-        cancelEditBtn.addEventListener('click', () => {
-            resetPurchaseForm();
-        });
-    }
-
-    // --- OTHER LISTENERS ---
-    const purchaseFormContainer = document.getElementById('purchases-view');
-    if (purchaseFormContainer) {
-        purchaseFormContainer.addEventListener('input', (e) => {
-            if (e.target.matches('.line-item-qty, .line-item-price, .line-item-tax, .line-item-discount-type, .line-item-discount-value, #invoice-discount-type, #invoice-discount-value, #invoice-tax-percentage')) {
-                calculateAllTotals();
-            }
-        });
-        purchaseFormContainer.addEventListener('click', (e) => {
-            if (e.target.closest('.remove-line-item-btn')) {
-                e.target.closest('.grid').remove();
-                calculateAllTotals();
-            }
-        });
-        // Auto-fill price listener
-        const lineItemsContainer = document.getElementById('purchase-line-items-container');
-        lineItemsContainer.addEventListener('change', (e) => {
-            if (e.target.matches('.line-item-product')) {
-                const selectedOption = e.target.options[e.target.selectedIndex];
-                const price = selectedOption.dataset.unitPrice || 0;
-                const priceInput = e.target.closest('.grid').querySelector('.line-item-price');
-                priceInput.value = price;
-                calculateAllTotals();
-            }
-        });
-    }
-
-
-    // Handle Tab Clicks
-    const invoiceTab = document.getElementById('tab-invoices');
-    if (invoiceTab) {
-        invoiceTab.addEventListener('click', (e) => {
-            e.preventDefault();
-            switchPurchaseTab('invoices');
-        });
-    }
-    const paymentsTab = document.getElementById('tab-payments');
-    if (paymentsTab) {
-        paymentsTab.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (!paymentsTab.classList.contains('tab-disabled')) {
-                // THE FIX: Switch the tab AND load the data.
-                switchPurchaseTab('payments');
-                loadPaymentsForSelectedInvoice();
-            }
-        });
-    }
-
-    // Handle Row Selection to show payments
-    document.addEventListener('invoiceRowSelected', async (e) => {
-        const { invoiceId } = e.detail;
-        switchPurchaseTab('payments'); // Switch to the payments tab
-        
-        purchasePaymentsGridApi.setGridOption('loading', true);
-        const payments = await getPaymentsForInvoice(invoiceId);
-        purchasePaymentsGridApi.setGridOption('rowData', payments);
-        purchasePaymentsGridApi.setGridOption('loading', false);
-    });
-
-
-    // Handle Action Button Clicks in the Invoices Grid
-    const invoicesGrid = document.getElementById('purchase-invoices-grid');
-    if (invoicesGrid) {
-        invoicesGrid.addEventListener('click', async (e) => {
-            const button = e.target.closest('button');
-            if (!button) return;
-
-            const docId = button.dataset.id;
-            if (!docId) return;
-
-            const invoiceId = button.dataset.id;
-            
-            if (button.classList.contains('action-btn-edit')) {
-                try {
-                    const invoiceData = await getPurchaseInvoiceById(docId);
-                    loadInvoiceDataIntoForm(invoiceData);
-                } catch (error) {
-                    console.error("Failed to load invoice for editing:", error);
-                    showModal('error', 'Load Failed', 'Could not find the selected invoice.');
-                }
-            }
-
-            // Get the row data from ag-Grid
-            // Get the row ID from the button's parent row
-            const rowId = button.closest('.ag-row')?.getAttribute('row-id');
-            if (!rowId) return;
-
-            const invoiceData = getInvoiceDataFromGridById(rowId);
-            if (!invoiceData) {
-                console.error(`Could not find data for row ID: ${rowId}`);
-                return;
-            }
-            
-            // THE FIX: Specific logic for the payment button
-            if (button.classList.contains('action-btn-payment')) {
-                console.log(`Record payment for invoice: ${invoiceId}`);
-                
-                showPaymentModal(invoiceData);
-            }
-
-            // Handle "Delete" button click
-            if (button.classList.contains('action-btn-delete')) {
-                // We will build this logic next
-                console.log(`Delete invoice: ${docId}`);
-            }
-        });
-    }
-
-     // --- NEW: LISTENERS FOR THE PAYMENT MODAL ---
-    const paymentForm = document.getElementById('record-payment-form');
-    if (paymentForm) {
-        paymentForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const user = appState.currentUser;
-            if (!user) return;
-
-            // Collect data from the payment form
-            const paymentData = {
-                paymentDate: new Date(document.getElementById('payment-date-input').value),
-                amountPaid: parseFloat(document.getElementById('payment-amount-input').value),
-                paymentMode: document.getElementById('payment-mode-select').value,
-                transactionRef: document.getElementById('payment-ref-input').value,
-                notes: document.getElementById('payment-notes-input').value,
-                // Get related IDs from hidden inputs
-                relatedInvoiceId: document.getElementById('payment-invoice-id').value,
-                supplierId: document.getElementById('payment-supplier-id').value,
-            };
-            
-            if (isNaN(paymentData.amountPaid) || paymentData.amountPaid <= 0) {
-                return showModal('error', 'Invalid Amount', 'Payment amount must be greater than zero.');
-            }
-
-            try {
-                await addSupplierPayment(paymentData, user);
-                await showModal('success', 'Success', 'Payment has been recorded successfully.');
-                closePaymentModal();
-                // The real-time listener will automatically update the grid!
-            } catch (error) {
-                console.error("Error recording payment:", error);
-                await showModal('error', 'Save Failed', 'There was an error recording the payment.');
-            }
-        });
-    }
-
-
-    // Close button for the payment modal
-    const paymentModalCloseBtn = document.getElementById('payment-modal-close');
-    if (paymentModalCloseBtn) {
-        paymentModalCloseBtn.addEventListener('click', closePaymentModal);
-    }
-
-    // --- NEW: Listener for our custom success event ---
-    document.addEventListener('invoiceSaveSuccess', async (e) => {
-        const { message } = e.detail;
-        
-        // Now it is safe to show the modal and reset the form.
-        await showModal('success', 'Success', message);
-        resetPurchaseForm(); // This function should be exported from ui.js
-        
-        // The operation is complete, so we can reset the flag.
-        appState.isLocalUpdateInProgress = false;
-    });
-
-
-
-
-    // --- PURCHASE MANAGEMENT LISTENERS end---
-
-
-
-    // Handler for the Admin Modules hub page and back links
-    document.addEventListener('click', (e) => {
-        const card = e.target.closest('.master-data-card, .back-link');
-
-        if (card) {
-            e.preventDefault();
-            const viewId = card.dataset.viewId;
-            console.log(`[main.js] Nav link clicked. View ID: ${viewId}`);
-            if (viewId === 'categories-view') {
-                showCategoriesView();
-            } else if (viewId === 'sale-types-view') {
-                showSaleTypesView();
-            } else if (viewId === 'payment-modes-view') {
-                showPaymentModesView();
-            } else if (viewId === 'seasons-view') {
-                showSeasonsView();
-            } else if (viewId === 'users-view') {
-                showUsersView();
-            } else if (viewId === 'sales-events-view') {
-                showSalesEventsView();
-            } else if (viewId) {
-                showView(viewId);
-            }
-        }
-    });
-
-    // Add Category Form
-    const addCategoryForm = document.getElementById('add-category-form');
-    if (addCategoryForm) {
-        addCategoryForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const user = appState.currentUser;
-            const categoryName = document.getElementById('categoryName-input').value.trim();
-            if (!user || !categoryName) return;
-
-            try {
-                await addCategory(categoryName, user);
-                await showModal('success', 'Success', 'Category has been added successfully.');
-                addCategoryForm.reset();
-            } catch (error) {
-                console.error("Error adding category:", error);
-                await showModal('error', 'Error', 'Failed to add the category. Please try again.');
-            }
-        });
-    }
-
-
-    // In-Grid Update for Categories
-    document.addEventListener('updateCategory', async (e) => {
-        const { docId, updatedData } = e.detail;
-        const user = appState.currentUser;
-        if (!user) return;
-        try {
-            await updateCategory(docId, updatedData, appState.currentUser);
-        } catch (error) {
-            console.error("Error updating product category:", error);
-            await showModal('error', 'Error', 'Failed to update the product category. Please try again.');
-        }
-
-    });
-
-    // Action Buttons for Categories Grid
-    const categoriesGrid = document.getElementById('categories-grid');
-    if (categoriesGrid) {
-        categoriesGrid.addEventListener('click', async (e) => {
-            const user = appState.currentUser;
-            if (!user) return;
-
-            const button = e.target.closest('button');
-            if (!button) return;
-
-            const docId = target.dataset.id;
-            if (!docId) return;
-
-            if (button.classList.contains('btn-deactivate')) {
-                const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this product category?`);
-                if (confirmed) {
-                    await setCategoryStatus(docId, false, user);
-                }
-            } else if (button.classList.contains('btn-activate')) {
-                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this product category?`);
-                if (confirmed) {
-                    await setCategoryStatus(docId, true, user);
-                }
-            }
-        });
-    }
-
-    // Add Sale Type Form
-    const addSaleTypeForm = document.getElementById('add-sale-type-form');
-    if (addSaleTypeForm) {
-        addSaleTypeForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const user = appState.currentUser;
-            const saleTypeName = document.getElementById('saleTypeName-input').value.trim();
-            if (!user || !saleTypeName) return;
-
-            try {
-                await addSaleType(saleTypeName, user);
-                await showModal('success', 'Success', 'Sales Type has been added successfully.');
-                addSaleTypeForm.reset();
-            } catch (error) {
-                console.error("Error adding sale type:", error);
-                await showModal('error', 'Error', 'Failed to add the Sales Type. Please try again.');
-
-            }
-        });
-    }
-
-
-    // In-Grid Update for Sale Types
-    document.addEventListener('updateSaleType', async (e) => {
-        const { docId, updatedData } = e.detail;
-        try {
-            await updateSaleType(docId, updatedData, appState.currentUser);
-        } catch (error) {
-            console.error("Error updating sales type:", error);
-            await showModal('error', 'Error', 'Failed to update the sales type. Please try again.');
-        }
-    });
-
-    // Action Buttons for Sale Types Grid
-    const saleTypesGrid = document.getElementById('sale-types-grid');
-    if (saleTypesGrid) {
-        saleTypesGrid.addEventListener('click', async (e) => {
-            const user = appState.currentUser;
-            if (!user) return;
-
-            const button = e.target.closest('button');
-            if (!button) return;
-            const docId = button.dataset.id;
-            if (!docId) return;
-
-            if (button.classList.contains('btn-deactivate')) {
-                const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this sales type?`);
-                if (confirmed) {
-                    await setSaleTypeStatus(docId, false, user);
-                }
-            } else if (button.classList.contains('btn-activate')) {
-                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this sales type?`);
-                if (confirmed) {
-                    await setSaleTypeStatus(docId, true, user);
-                }
-            }
-        });
-    }
-
-    // Add Payment mode Form
-    const addPaymentModeForm = document.getElementById('add-payment-mode-form');
-    if (addPaymentModeForm) {
-        addPaymentModeForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const user = appState.currentUser;
-            const paymentMode = document.getElementById('paymentModeName-input').value.trim();
-            if (!user || !paymentMode) return;
-
-            try {
-                await addPaymentMode(paymentMode, user);
-                await showModal('success', 'Success', 'Payment Mode has been added successfully.');
-                addPaymentModeForm.reset();
-            } catch (error) {
-                console.error("Error adding payment mode:", error);
-                await showModal('error', 'Error', 'Failed to add the Payment Mode. Please try again.');
-
-            }
-        });
-    }
-
-
-    // In-Grid Update for payment  mode
-    document.addEventListener('updatePaymentMode', async (e) => {
-        const { docId, updatedData } = e.detail;
-        try {
-            await updatePaymentMode(docId, updatedData, appState.currentUser);
-        } catch (error) {
-            console.error("Error updating payment mode:", error);
-            await showModal('error', 'Error', 'Failed to update the payment mode. Please try again.');
-        }
-    });
-
-    // Action Buttons for payment mode Grid
-    const paymentModeGrid = document.getElementById('payment-modes-grid');
-    if (paymentModeGrid) {
-        paymentModeGrid.addEventListener('click', async (e) => {
-            const user = appState.currentUser;
-            if (!user) return;
-
-            const button = e.target.closest('button');
-            if (!button) return;
-            const docId = button.dataset.id;
-            if (!docId) return;
-
-            if (button.classList.contains('btn-deactivate')) {
-                const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this sales type?`);
-                if (confirmed) {
-                    await setPaymentModeStatus(docId, false, user);
-                }
-            } else if (button.classList.contains('btn-activate')) {
-                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this sales type?`);
-                if (confirmed) {
-                    await setPaymentModeStatus(docId, true, user);
-                }
-            }
-        });
-    }
-
-
-    // Add Season Form
-    const addSeasonForm = document.getElementById('add-season-form');
-    if (addSeasonForm) {
-        addSeasonForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const user = appState.currentUser;
-            const seasonName = document.getElementById('seasonName-input').value.trim();
-            const startDate = document.getElementById('startDate-input').value;
-            const endDate = document.getElementById('endDate-input').value;
-            if (!user || !seasonName || !startDate || !endDate) return;
-
-            const seasonData = {
-                seasonName: seasonName,
-                startDate: new Date(startDate), // Convert string to Date object
-                endDate: new Date(endDate)
-            };
-
-            try {
-                await addSeason(seasonData, user);
-                await showModal('success', 'Success', 'Season has been added successfully.');
-                addSeasonForm.reset();
-            } catch (error) {
-                console.error("Error adding season:", error);
-                await showModal('error', 'Error', 'Failed to add the Season. Please try again.');
-            }
-        });
-    }
-
-    // In-Grid Update for Seasons
-    document.addEventListener('updateSeason', async (e) => {
-        const { docId, updatedData } = e.detail;
-
-        try {
-            await updateSeason(docId, updatedData, appState.currentUser);
-        } catch (error) {
-            console.error("Error updating season:", error);
-            await showModal('error', 'Error', 'Failed to update the season. Please try again.');
-            refreshSeasonsGrid(); // Refresh grid to revert failed change
-        }
-    });
-
-    // Action Buttons for Seasons Grid
-    const seasonsGrid = document.getElementById('seasons-grid');
-    if (seasonsGrid) {
-        seasonsGrid.addEventListener('click', async (e) => {
-            const user = appState.currentUser;
-            if (!user) return;
-
-            const button = e.target.closest('button');
-            if (!button) return;
-            const docId = button.dataset.id;
-            if (!docId) return;
-
-            if (button.classList.contains('btn-deactivate')) {
-                const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this Season?`);
-                if (confirmed) {
-                    await setSeasonStatus(docId, false, user);
-                }
-            } else if (button.classList.contains('btn-activate')) {
-                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this Season?`);
-                if (confirmed) {
-                    await setSeasonStatus(docId, true, user);
-                }
-            }
-        });
-    }
-
-    // Add Sales Event Form
-    const addEventForm = document.getElementById('add-event-form');
-    if (addEventForm) {
-        addEventForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const user = appState.currentUser;
-            const eventName = document.getElementById('eventName-input').value.trim();
-            const parentSeasonData = JSON.parse(document.getElementById('parentSeason-select').value);
-            const startDate = document.getElementById('eventStartDate-input').value;
-            const endDate = document.getElementById('eventEndDate-input').value;
-
-            if (!user || !eventName || !parentSeasonData || !startDate || !endDate) return;
-
-            const eventData = {
-                eventName: eventName,
-                seasonId: parentSeasonData.seasonId,
-                seasonName: parentSeasonData.seasonName, // Denormalized name
-                eventStartDate: new Date(startDate),
-                eventEndDate: new Date(endDate)
-            };
-
-            try {
-                await addSalesEvent(eventData, user);
-                await showModal('success', 'Success', 'Sales Event has been added successfully.');
-                addEventForm.reset();
-            } catch (error) {
-                console.error("Error adding event:", error);
-                await showModal('error', 'Error', 'Failed to add the Sales Event. Please try again.');
-            }
-        });
-    }
-
-
-
-    // In-Grid Update for Sales Events
-    document.addEventListener('updateSalesEvent', async (e) => {
-        const { docId, updatedData } = e.detail;
-
-        try {
-            await updateSalesEvent(docId, updatedData, appState.currentUser);
-        } catch (error) {
-            console.error("Error updating Sales Event:", error);
-            await showModal('error', 'Error', 'Failed to update the Sales Event. Please try again.');
-        }
-
-    });
-
-    // Action Buttons for Sales Events Grid
-    const salesEventsGrid = document.getElementById('sales-events-grid');
-    if (salesEventsGrid) {
-        salesEventsGrid.addEventListener('click', async (e) => {
-            const user = appState.currentUser;
-            if (!user) return;
-
-            const button = e.target.closest('button');
-            if (!button) return;
-            const docId = button.dataset.id;
-            if (!docId) return;
-
-            if (button.classList.contains('btn-deactivate')) {
-                const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this Sales Event?`);
-                if (confirmed) {
-                    await setSalesEventStatus(docId, false, user);
-                }
-            } else if (button.classList.contains('btn-activate')) {
-                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this Sales Event?`);
-                if (confirmed) {
-                    await setSalesEventStatus(docId, true, user);
-                }
-            }
-
-        });
-    }
-
-
-
-
-
-
-    // In-Grid Update for User Roles
-    document.addEventListener('updateUserRole', async (e) => {
-        const { uid, newRole } = e.detail;
-        const adminUser = appState.currentUser;
-        try {
-            await updateUserRole(uid, newRole, adminUser);
-            await showModal('success', 'Role Updated', `User role has been changed to ${newRole}.`);
-            refreshUsersGrid();
-        } catch (error) {
-            console.error("Error updating user role:", error);
-            await showModal('error', 'Update Failed', 'Could not update the user role.');
-        }
-    });
-
-
-    // Action Buttons for Users Grid
-    const usersGrid = document.getElementById('users-grid');
-    if (usersGrid) {
-        usersGrid.addEventListener('click', async (e) => {
-            const user = appState.currentUser;
-            if (!user) return;
-
-            const button = e.target.closest('button');
-            if (!button) return;
-            const uid = button.dataset.id;
-            if (!uid) return;
-
-            if (button.classList.contains('btn-deactivate')) {
-                const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this User?`);
-                if (confirmed) {
-                    await setUserActiveStatus(uid, false, user);
-                }
-            } else if (button.classList.contains('btn-activate')) {
-                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this User?`);
-                if (confirmed) {
-                    await setUserActiveStatus(uid, true, user);
-                }
-            }
-        });
-    }
-
-
-
-
-
-
-
-
-
 
     // Add Product Form
     const addProductForm = document.getElementById('add-product-form');
@@ -1024,8 +397,35 @@ function setupEventListeners() {
         });
     }
 
+    const purchaseInvoiceForm = document.getElementById('purchase-invoice-form');
+    if (purchaseInvoiceForm) {
+        purchaseInvoiceForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            handleSavePurchaseInvoice(); 
+        });
+        purchaseInvoiceForm.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.target.tagName.toLowerCase() !== 'textarea') e.preventDefault();
+        });
+    }
 
-    // In-Grid Update Event
+
+
+    // --- In-Grid Update Custom Event Listeners ---
+
+    // In-Grid Update Event updateSupplier
+    document.addEventListener('updateSupplier', async (e) => {
+        const { docId, updatedData } = e.detail;
+        const user = appState.currentUser;
+        if (!user) return;
+        try {
+            await updateSupplier(docId, updatedData, user);
+        } catch (error) {
+            console.error("Error updating supplier:", error);
+            await showModal('error', 'Error', 'Failed to update the supplier. Please try again.');
+        }
+    });
+
+    // In-Grid Update Event updateProduct
     document.addEventListener('updateProduct', async (e) => {
         const { docId, updatedData } = e.detail;
         const user = appState.currentUser;
@@ -1038,27 +438,24 @@ function setupEventListeners() {
         }
     });
 
-    // Action Buttons (Activate/Deactivate) in Grid
-    const productGrid = document.getElementById('products-catalogue-grid');
-    if (productGrid) {
-        productGrid.addEventListener('click', async (e) => {
-            const user = appState.currentUser;
-            if (!user) return;
+    
 
-            const target = e.target;
-            const docId = target.dataset.id;
-            if (!docId) return;
-
-            if (target.classList.contains('btn-deactivate')) {
-                const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to Deactivate  this Product?`);
-                if (confirmed) {
-                    await setProductStatus(docId, false, user);
-                }
-            } else if (target.classList.contains('btn-activate')) {
-                const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this Product?`);
-                if (confirmed) {
-                    await setProductStatus(docId, true, user);
-                }
+    // --- Other Listeners ---
+    const purchaseFormContainer = document.getElementById('purchases-view');
+    if (purchaseFormContainer) {
+        purchaseFormContainer.addEventListener('input', (e) => {
+            if (e.target.matches('.line-item-qty, .line-item-price, .line-item-tax, .line-item-discount-type, .line-item-discount-value, #invoice-discount-type, #invoice-discount-value, #invoice-tax-percentage')) {
+                calculateAllTotals();
+            }
+        });
+        const lineItemsContainer = document.getElementById('purchase-line-items-container');
+        lineItemsContainer.addEventListener('change', (e) => {
+            if (e.target.matches('.line-item-product')) {
+                const selectedOption = e.target.options[e.target.selectedIndex];
+                const price = selectedOption.dataset.unitPrice || 0;
+                const priceInput = e.target.closest('.grid').querySelector('.line-item-price');
+                priceInput.value = price;
+                calculateAllTotals();
             }
         });
     }
@@ -1067,6 +464,213 @@ function setupEventListeners() {
 
 
 
+    ////--------------------------------------------*******************************
+
+    //Admin Adds
+
+    // Add Category Form
+    const addCategoryForm = document.getElementById('add-category-form');
+    if (addCategoryForm) {
+        addCategoryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const categoryName = document.getElementById('categoryName-input').value.trim();
+            if (!user || !categoryName) return;
+
+            try {
+                await addCategory(categoryName, user);
+                await showModal('success', 'Success', 'Category has been added successfully.');
+                addCategoryForm.reset();
+            } catch (error) {
+                console.error("Error adding category:", error);
+                await showModal('error', 'Error', 'Failed to add the category. Please try again.');
+            }
+        });
+    }
+
+
+    // Add Payment mode Form
+    const addPaymentModeForm = document.getElementById('add-payment-mode-form');
+    if (addPaymentModeForm) {
+        addPaymentModeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const paymentMode = document.getElementById('paymentModeName-input').value.trim();
+            if (!user || !paymentMode) return;
+
+            try {
+                await addPaymentMode(paymentMode, user);
+                await showModal('success', 'Success', 'Payment Mode has been added successfully.');
+                addPaymentModeForm.reset();
+            } catch (error) {
+                console.error("Error adding payment mode:", error);
+                await showModal('error', 'Error', 'Failed to add the Payment Mode. Please try again.');
+
+            }
+        });
+    }
+
+    // Add Sale Type Form
+    const addSaleTypeForm = document.getElementById('add-sale-type-form');
+    if (addSaleTypeForm) {
+        addSaleTypeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const saleTypeName = document.getElementById('saleTypeName-input').value.trim();
+            if (!user || !saleTypeName) return;
+
+            try {
+                await addSaleType(saleTypeName, user);
+                await showModal('success', 'Success', 'Sales Type has been added successfully.');
+                addSaleTypeForm.reset();
+            } catch (error) {
+                console.error("Error adding sale type:", error);
+                await showModal('error', 'Error', 'Failed to add the Sales Type. Please try again.');
+
+            }
+        });
+    }
+
+    // Add Season Form
+    const addSeasonForm = document.getElementById('add-season-form');
+    if (addSeasonForm) {
+        addSeasonForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const seasonName = document.getElementById('seasonName-input').value.trim();
+            const startDate = document.getElementById('startDate-input').value;
+            const endDate = document.getElementById('endDate-input').value;
+            if (!user || !seasonName || !startDate || !endDate) return;
+
+            const seasonData = {
+                seasonName: seasonName,
+                startDate: new Date(startDate), // Convert string to Date object
+                endDate: new Date(endDate)
+            };
+
+            try {
+                await addSeason(seasonData, user);
+                await showModal('success', 'Success', 'Season has been added successfully.');
+                addSeasonForm.reset();
+            } catch (error) {
+                console.error("Error adding season:", error);
+                await showModal('error', 'Error', 'Failed to add the Season. Please try again.');
+            }
+        });
+    }
+
+    // Add Sales Event Form
+    const addEventForm = document.getElementById('add-event-form');
+    if (addEventForm) {
+        addEventForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            const eventName = document.getElementById('eventName-input').value.trim();
+            const parentSeasonData = JSON.parse(document.getElementById('parentSeason-select').value);
+            const startDate = document.getElementById('eventStartDate-input').value;
+            const endDate = document.getElementById('eventEndDate-input').value;
+
+            if (!user || !eventName || !parentSeasonData || !startDate || !endDate) return;
+
+            const eventData = {
+                eventName: eventName,
+                seasonId: parentSeasonData.seasonId,
+                seasonName: parentSeasonData.seasonName, // Denormalized name
+                eventStartDate: new Date(startDate),
+                eventEndDate: new Date(endDate)
+            };
+
+            try {
+                await addSalesEvent(eventData, user);
+                await showModal('success', 'Success', 'Sales Event has been added successfully.');
+                addEventForm.reset();
+            } catch (error) {
+                console.error("Error adding event:", error);
+                await showModal('error', 'Error', 'Failed to add the Sales Event. Please try again.');
+            }
+        });
+    }
+
+
+
+    // --- In-Grid Update Custom Event Listeners ---
+
+    // In-Grid Update for Categories
+    document.addEventListener('updateCategory', async (e) => {
+        const { docId, updatedData } = e.detail;
+        const user = appState.currentUser;
+        if (!user) return;
+        try {
+            await updateCategory(docId, updatedData, appState.currentUser);
+        } catch (error) {
+            console.error("Error updating product category:", error);
+            await showModal('error', 'Error', 'Failed to update the product category. Please try again.');
+        }
+
+    });
+
+
+    // In-Grid Update for payment  mode
+    document.addEventListener('updatePaymentMode', async (e) => {
+        const { docId, updatedData } = e.detail;
+        try {
+            await updatePaymentMode(docId, updatedData, appState.currentUser);
+        } catch (error) {
+            console.error("Error updating payment mode:", error);
+            await showModal('error', 'Error', 'Failed to update the payment mode. Please try again.');
+        }
+    });
+
+    // In-Grid Update for Sale Types
+    document.addEventListener('updateSaleType', async (e) => {
+        const { docId, updatedData } = e.detail;
+        try {
+            await updateSaleType(docId, updatedData, appState.currentUser);
+        } catch (error) {
+            console.error("Error updating sales type:", error);
+            await showModal('error', 'Error', 'Failed to update the sales type. Please try again.');
+        }
+    });
+
+    // In-Grid Update for Seasons
+    document.addEventListener('updateSeason', async (e) => {
+        const { docId, updatedData } = e.detail;
+
+        try {
+            await updateSeason(docId, updatedData, appState.currentUser);
+        } catch (error) {
+            console.error("Error updating season:", error);
+            await showModal('error', 'Error', 'Failed to update the season. Please try again.');
+            refreshSeasonsGrid(); // Refresh grid to revert failed change
+        }
+    });
+
+    // In-Grid Update for Sales Events
+    document.addEventListener('updateSalesEvent', async (e) => {
+        const { docId, updatedData } = e.detail;
+
+        try {
+            await updateSalesEvent(docId, updatedData, appState.currentUser);
+        } catch (error) {
+            console.error("Error updating Sales Event:", error);
+            await showModal('error', 'Error', 'Failed to update the Sales Event. Please try again.');
+        }
+
+    });
+
+    // In-Grid Update for User Roles
+    document.addEventListener('updateUserRole', async (e) => {
+        const { uid, newRole } = e.detail;
+        const adminUser = appState.currentUser;
+        try {
+            await updateUserRole(uid, newRole, adminUser);
+            await showModal('success', 'Role Updated', `User role has been changed to ${newRole}.`);
+            refreshUsersGrid();
+        } catch (error) {
+            console.error("Error updating user role:", error);
+            await showModal('error', 'Update Failed', 'Could not update the user role.');
+        }
+    });
 
 
 
@@ -1074,7 +678,11 @@ function setupEventListeners() {
 
 
 
-}
+    //----------End of Admin event listeners-------------------
+
+
+
+
 
 
 // --- APPLICATION INITIALIZATION ---
