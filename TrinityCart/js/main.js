@@ -212,6 +212,9 @@ async function handleSavePurchaseInvoice() {
             calculateAllTotals();
         }
         console.log("Database call skipped. Attempting to show modal...");
+        document.dispatchEvent(new CustomEvent('invoiceSaveSuccess', {
+            detail: { message: isEditMode ? 'Purchase Invoice has been updated.' : 'Purchase Invoice has been saved.' }
+        }));
     } catch (error) {
         console.error("Error saving purchase invoice:", error);
         await showModal('error', 'Save Failed', 'There was an error saving the invoice.');
@@ -551,6 +554,20 @@ function setupEventListeners() {
     if (paymentModalCloseBtn) {
         paymentModalCloseBtn.addEventListener('click', closePaymentModal);
     }
+
+    // --- NEW: Listener for our custom success event ---
+    document.addEventListener('invoiceSaveSuccess', async (e) => {
+        const { message } = e.detail;
+        
+        // Now it is safe to show the modal and reset the form.
+        await showModal('success', 'Success', message);
+        resetPurchaseForm(); // This function should be exported from ui.js
+        
+        // The operation is complete, so we can reset the flag.
+        appState.isLocalUpdateInProgress = false;
+    });
+
+
 
 
     // --- PURCHASE MANAGEMENT LISTENERS end---
