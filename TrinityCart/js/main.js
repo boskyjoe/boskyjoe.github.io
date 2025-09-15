@@ -203,7 +203,6 @@ async function handleSavePurchaseInvoice() {
             // UPDATE existing invoice
             console.log("Update Invoice");
             await updatePurchaseInvoice(docId, invoiceData, user);
-            console.log(successMessage);
         } else {
             console.log("Simulating add new invoice.");
             await addPurchaseInvoice(invoiceData, user);
