@@ -1381,19 +1381,12 @@ export function showPurchasesView() {
 
             unsubscribeInvoicesListener = db.collection(PURCHASE_INVOICES_COLLECTION_PATH)
                 .orderBy('purchaseDate', 'desc')
-                .onSnapshot(snapshot => {
-
-                    if (appState.isLocalUpdateInProgress) {
-                        console.log("[Firestore] Local update detected. Showing success UI.");
-                        return ;
-                    } 
+                .onSnapshot(snapshot => { 
                     // This was an update from another user. Just update the grid silently.
-                    console.log("[Firestore] Received remote update for purchase invoices.");
+                    console.log("[Firestore] Received real-time update for purchase invoices.");
                     const invoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    if (purchaseInvoicesGridApi) {
-                        purchaseInvoicesGridApi.setGridOption('rowData', invoices);
-                        purchaseInvoicesGridApi.setGridOption('loading', false);
-                    }
+                    purchaseInvoicesGridApi.setGridOption('rowData', invoices);
+                    purchaseInvoicesGridApi.setGridOption('loading', false);
 
                 }, error => {
                     console.error("Error with invoices real-time listener:", error);
