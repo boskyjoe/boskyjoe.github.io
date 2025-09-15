@@ -198,29 +198,25 @@ async function handleSavePurchaseInvoice() {
 
     // 5. Save to Firestore
     try {
-        let successMessage = '';
         appState.isLocalUpdateInProgress = true; 
         if (isEditMode) {
             // UPDATE existing invoice
             console.log("Update Invoice");
             await updatePurchaseInvoice(docId, invoiceData, user);
-            successMessage = 'Purchase Invoice has been updated successfully.';
             console.log(successMessage);
         } else {
             console.log("Simulating add new invoice.");
             await addPurchaseInvoice(invoiceData, user);
-            successMessage = 'Purchase Invoice has been saved successfully.';
             document.getElementById('purchase-invoice-form').reset();
             document.getElementById('purchase-line-items-container').innerHTML = '';
             addLineItem();
             calculateAllTotals();
         }
         console.log("Database call skipped. Attempting to show modal...");
-        await showModal('success', 'Success', successMessage);
-        resetPurchaseForm();
     } catch (error) {
         console.error("Error saving purchase invoice:", error);
         await showModal('error', 'Save Failed', 'There was an error saving the invoice.');
+        appState.isLocalUpdateInProgress = false;
     } finally {
         // --- THE FIX: Always reset the flag after the operation is complete ---
         appState.isLocalUpdateInProgress = false;
