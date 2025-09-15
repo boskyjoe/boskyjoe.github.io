@@ -1381,6 +1381,11 @@ export function showPurchasesView() {
             unsubscribeInvoicesListener = db.collection(PURCHASE_INVOICES_COLLECTION_PATH)
                 .orderBy('purchaseDate', 'desc')
                 .onSnapshot(snapshot => {
+
+                    if (isLocalUpdateInProgress) {
+                        console.log("[Firestore] Ignoring real-time update due to local operation.");
+                        return; // Do nothing if the update was from this user
+                    }
                     console.log("[Firestore] Received real-time update for purchase invoices.");
                     const invoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     purchaseInvoicesGridApi.setGridOption('rowData', invoices);
