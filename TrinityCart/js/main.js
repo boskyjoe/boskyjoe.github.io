@@ -193,19 +193,21 @@ async function handleSavePurchaseInvoice() {
 
     // 5. Save to Firestore
     try {
+        let successMessage = '';
         if (isEditMode) {
             // UPDATE existing invoice
             console.log("Update Invoice");
             await updatePurchaseInvoice(docId, invoiceData, user);
-            await showModal('success', 'Success', 'Purchase Invoice has been updated.');
+            successMessage = 'Purchase Invoice has been updated successfully.';
         } else {
             await addPurchaseInvoice(invoiceData, user);
-            await showModal('success', 'Success', `Purchase Invoice has been saved.`);
+            successMessage = 'Purchase Invoice has been saved successfully.';
             document.getElementById('purchase-invoice-form').reset();
             document.getElementById('purchase-line-items-container').innerHTML = '';
             addLineItem();
             calculateAllTotals();
         }
+        await showModal('success', 'Success', successMessage);
         resetPurchaseForm();
     } catch (error) {
         console.error("Error saving purchase invoice:", error);
