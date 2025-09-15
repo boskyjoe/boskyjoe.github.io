@@ -1385,20 +1385,15 @@ export function showPurchasesView() {
 
                     if (appState.isLocalUpdateInProgress) {
                         console.log("[Firestore] Local update detected. Showing success UI.");
-                        showModal('success', 'Success', 'Purchase Invoice has been saved successfully.');
-                        resetPurchaseForm();
-                        appState.isLocalUpdateInProgress = false;
-                        
-                        // We still need to update the grid with the latest data.
-                        const invoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        return ;
+                    } 
+                    // This was an update from another user. Just update the grid silently.
+                    console.log("[Firestore] Received remote update for purchase invoices.");
+                    const invoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    if (purchaseInvoicesGridApi) {
                         purchaseInvoicesGridApi.setGridOption('rowData', invoices);
-                    } else {
-                        // This was an update from another user. Just update the grid silently.
-                        console.log("[Firestore] Received remote update for purchase invoices.");
-                        const invoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        purchaseInvoicesGridApi.setGridOption('rowData', invoices);
+                        purchaseInvoicesGridApi.setGridOption('loading', false);
                     }
-                    purchaseInvoicesGridApi.setGridOption('loading', false);
 
                 }, error => {
                     console.error("Error with invoices real-time listener:", error);
