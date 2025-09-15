@@ -1382,7 +1382,7 @@ export function showPurchasesView() {
                 .orderBy('purchaseDate', 'desc')
                 .onSnapshot(snapshot => {
 
-                    if (isLocalUpdateInProgress) {
+                    if (appState.isLocalUpdateInProgress) {
                         console.log("[Firestore] Ignoring real-time update due to local operation.");
                         return; // Do nothing if the update was from this user
                     }
