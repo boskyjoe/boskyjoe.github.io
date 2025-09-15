@@ -210,6 +210,7 @@ async function handleSavePurchaseInvoice() {
             document.getElementById('purchase-line-items-container').innerHTML = '';
             addLineItem();
             calculateAllTotals();
+            await showModal('success', 'Success', 'Purchase Invoice has been added successfully.');
         }
         console.log("Database call skipped. Attempting to show modal...");
         document.dispatchEvent(new CustomEvent('invoiceSaveSuccess', {
