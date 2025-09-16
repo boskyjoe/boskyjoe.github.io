@@ -297,40 +297,49 @@ function setupEventListeners() {
             } 
             // Logic for ALL other master data grids (Suppliers, Categories, etc.)
             else {
-                const newStatus = gridButton.classList.contains('btn-activate');
-                const moduleName = grid.id.replace('-grid', '').replace('-', ' '); // e.g., "suppliers", "categories"
+                const isActivate = gridButton.classList.contains('btn-activate');
+                const moduleName = grid.id.replace('-grid', '').replace('-', ' ');
+
                 const confirmed = await showModal(
                     'confirm', 
-                    `Confirm ${newStatus ? 'Activation' : 'Deactivation'}`, 
-                    `Are you sure you want to ${newStatus ? 'activate' : 'deactivate'} this ${moduleName}?`
+                    `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 
+                    `Are you sure you want to ${isActivate ? 'activate' : 'deactivate'} this ${moduleName}?`
                 );
+
                 if (confirmed) {
-                    // Call the correct API function based on the grid's ID
-                    switch (grid.id) {
-                        case 'suppliers-grid':
-                            await setSupplierStatus(docId, newStatus, user);
-                            break;
-                        case 'categories-grid':
-                            await setCategoryStatus(docId, newStatus, user);
-                            break;
-                        case 'payment-modes-grid':
-                            await setPaymentModeStatus(docId, newStatus, user);
-                            break;
-                        case 'sale-types-grid':
-                            await setSaleTypeStatus(docId, newStatus, user);
-                            break;
-                        case 'seasons-grid':
-                            await setSeasonStatus(docId, newStatus, user);
-                            break;
-                        case 'sales-events-grid':
-                            await setSalesEventStatus(docId, newStatus, user);
-                            break;
-                        case 'users-grid':
-                            await setUserActiveStatus(docId, newStatus, user);
-                            break;
-                        case 'products-catalogue-grid':
-                            await setProductStatus(docId, 'isActive', newStatus, user);
-                            break;
+                    // This block will now execute correctly after confirmation.
+                    try {
+                        switch (grid.id) {
+                            case 'suppliers-grid':
+                                await setSupplierStatus(docId, isActivate, user);
+                                break;
+                            case 'categories-grid':
+                                await setCategoryStatus(docId, isActivate, user);
+                                break;
+                            case 'payment-modes-grid':
+                                await setPaymentModeStatus(docId, isActivate, user);
+                                break;
+                            case 'sale-types-grid':
+                                await setSaleTypeStatus(docId, isActivate, user);
+                                break;
+                            case 'seasons-grid':
+                                await setSeasonStatus(docId, isActivate, user);
+                                break;
+                            case 'sales-events-grid':
+                                await setSalesEventStatus(docId, isActivate, user);
+                                break;
+                            case 'users-grid':
+                                await setUserActiveStatus(docId, isActivate, user);
+                                break;
+                            case 'products-catalogue-grid':
+                                // Assuming the product status function needs the field name
+                                await setProductStatus(docId, 'isActive', isActivate, user);
+                                break;
+                        }
+                        // The real-time listener will handle the grid refresh automatically.
+                    } catch (error) {
+                        console.error(`Error updating status for ${moduleName}:`, error);
+                        await showModal('error', 'Update Failed', 'The status could not be updated.');
                     }
                 }
             }
