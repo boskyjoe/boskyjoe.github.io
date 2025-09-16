@@ -4,4 +4,5 @@ export const appState = {
     activeView: 'login-view',
     // ADD THIS NEW STATE VARIABLE
     selectedPurchaseInvoiceId: null, 
+    isLocalUpdateInProgress:false,
 };
