@@ -282,6 +282,7 @@ function setupEventListeners() {
             const grid = gridButton.closest('.ag-theme-alpine');
             if (!docId || !grid) return;
 
+            console.log('[what is the grid]:', grid.id);
             // Logic for Purchase Invoices Grid
             if (grid.id === 'purchase-invoices-grid') {
                 if (gridButton.classList.contains('action-btn-edit')) {
@@ -321,6 +322,7 @@ function setupEventListeners() {
             // --- Logic for Categories Grid ---
             if (grid.id === 'categories-grid') {
                 const isActivate = gridButton.classList.contains('btn-activate');
+                console.log('[supplier grid is action]:', isActivate);
                 if (await showModal('confirm', `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 'Are you sure?')) {
                     await setCategoryStatus(docId, isActivate, user);
                 }
