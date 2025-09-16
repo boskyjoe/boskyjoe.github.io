@@ -381,27 +381,6 @@ function setupEventListeners() {
         }
 
 
-        // Handle Tab Clicks
-        const invoiceTab = document.getElementById('tab-invoices');
-        if (invoiceTab) {
-            invoiceTab.addEventListener('click', (e) => {
-                e.preventDefault();
-                switchPurchaseTab('invoices');
-            });
-        }
-        const paymentsTab = document.getElementById('tab-payments');
-        if (paymentsTab) {
-            paymentsTab.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (!paymentsTab.classList.contains('tab-disabled')) {
-                    // THE FIX: Switch the tab AND load the data.
-                    switchPurchaseTab('payments');
-                    loadPaymentsForSelectedInvoice();
-                }
-            });
-        }
-
-
 
 
 
