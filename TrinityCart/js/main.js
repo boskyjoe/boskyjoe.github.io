@@ -305,52 +305,50 @@ function setupEventListeners() {
                 }
             } 
             // Logic for ALL other master data grids (Suppliers, Categories, etc.)
-            else {
+            
+            // --- Logic for Suppliers Grid ---
+            if (grid.id === 'suppliers-grid') {
                 const isActivate = gridButton.classList.contains('btn-activate');
-                const moduleName = grid.id.replace('-grid', '').replace(/-/g, ' ');
-
-                const confirmed = await showModal(
-                    'confirm', 
-                    `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 
-                    `Are you sure you want to ${isActivate ? 'activate' : 'deactivate'} this ${moduleName}?`
-                );
-
-                if (confirmed) {
-                    // This block will now execute correctly after confirmation.
-                    try {
-                        switch (grid.id) {
-                            case 'suppliers-grid':
-                                await setSupplierStatus(docId, isActivate, user);
-                                break;
-                            case 'categories-grid':
-                                await setCategoryStatus(docId, isActivate, user);
-                                break;
-                            case 'payment-modes-grid':
-                                await setPaymentModeStatus(docId, isActivate, user);
-                                break;
-                            case 'sale-types-grid':
-                                await setSaleTypeStatus(docId, isActivate, user);
-                                break;
-                            case 'seasons-grid':
-                                await setSeasonStatus(docId, isActivate, user);
-                                break;
-                            case 'sales-events-grid':
-                                await setSalesEventStatus(docId, isActivate, user);
-                                break;
-                            case 'users-grid':
-                                await setUserActiveStatus(docId, isActivate, user);
-                                break;
-                            case 'products-catalogue-grid':
-                                // Assuming the product status function needs the field name
-                                await setProductStatus(docId, 'isActive', isActivate, user);
-                                break;
-                        }
-                        // The real-time listener will handle the grid refresh automatically.
-                    } catch (error) {
-                        console.error(`Error updating status for ${moduleName}:`, error);
-                        await showModal('error', 'Update Failed', 'The status could not be updated.');
-                    }
+                if (await showModal('confirm', `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 'Are you sure?')) {
+                    await setSupplierStatus(docId, isActivate, user);
                 }
+                return; // Stop after handling
+            }
+
+            // --- Logic for Categories Grid ---
+            if (grid.id === 'categories-grid') {
+                const isActivate = gridButton.classList.contains('btn-activate');
+                if (await showModal('confirm', `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 'Are you sure?')) {
+                    await setCategoryStatus(docId, isActivate, user);
+                }
+                return; // Stop after handling
+            }
+
+            // --- Logic for Payment Modes Grid ---
+            if (grid.id === 'payment-modes-grid') {
+                const isActivate = gridButton.classList.contains('btn-activate');
+                if (await showModal('confirm', `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 'Are you sure?')) {
+                    await setPaymentModeStatus(docId, isActivate, user);
+                }
+                return; // Stop after handling
+            }
+
+            // --- Logic for Sale Types Grid ---
+            if (grid.id === 'sale-types-grid') {
+                const isActivate = gridButton.classList.contains('btn-activate');
+                if (await showModal('confirm', `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 'Are you sure?')) {
+                    await setSaleTypeStatus(docId, isActivate, user);
+                }
+                return; // Stop after handling
+            }
+
+            // --- Logic for Sale Types Grid ---
+            if (grid.id === 'sale-types-grid') {
+                const isActivate = gridButton.classList.contains('btn-activate');
+                if (await showModal('confirm', `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 'Are you sure?')) {
+                    await setSaleTypeStatus(docId, isActivate, user);
+                }
+                return; // Stop after handling
             }
             return;
         }
