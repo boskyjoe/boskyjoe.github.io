@@ -47,8 +47,7 @@ export function showModal(type, title, message) {
             button.textContent = text;
             button.className = primary ? 'modal-btn modal-btn-primary' : 'modal-btn modal-btn-secondary';
             button.onclick = () => {
-                modalElement.classList.add('hidden');
-                modalElement.classList.remove('flex');
+                modalElement.classList.remove('visible');
                 resolve(value);
             };
             return button;
@@ -61,7 +60,10 @@ export function showModal(type, title, message) {
             modalButtons.appendChild(createButton('OK', true, true));
         }
 
-        modalElement.classList.remove('hidden');
-        modalElement.classList.add('flex');
+        modalElement.classList.add('visible');
+        
+        // Also, ensure the first button is focused for accessibility
+        const firstButton = modalButtons.querySelector('button');
+        if(firstButton) firstButton.focus();
     });
 }
