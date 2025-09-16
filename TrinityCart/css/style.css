@@ -77,9 +77,25 @@
     @apply bg-green-100 text-green-800 hover:bg-green-200;
 }
 
-.modal-hidden {
-    display: none;
+/* --- NEW, ROBUST MODAL VISIBILITY STYLES --- */
+.modal-container {
+    /* Starts invisible and unclickable */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease-in-out;
 }
+
+.modal-container.visible {
+    /* Becomes visible and clickable */
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Animate the panel when it becomes visible */
+.modal-container.visible .modal-panel-centered {
+    animation: slideUp 0.4s ease-out;
+}
+
 
 #custom-modal {
     position: fixed;
