@@ -325,10 +325,8 @@ function setupEventListeners() {
                 const isActivate = gridButton.classList.contains('btn-activate');
                 console.log('[supplier grid is action]:', gridButton.classList);
                 console.log('[categories-grid is action]:', isActivate);
-                if (await showModal('confirm', `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 'Are you sure?')) {
-                    await setCategoryStatus(docId, isActivate, user);
-                }
-                return;
+                await setCategoryStatus(docId, isActivate, user);
+                await showModal('confirm', `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 'Are you sure?')
             }
 
             // --- Logic for Payment Modes Grid ---
