@@ -320,6 +320,7 @@ function setupEventListeners() {
             }
 
             // --- Logic for Categories Grid ---
+            const categoriesGrid = document.getElementById('categories-grid');
             if (categoriesGrid) {
                 categoriesGrid.addEventListener('click', async (e) => {
                     const user = appState.currentUser;
