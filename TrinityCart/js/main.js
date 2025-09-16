@@ -332,9 +332,16 @@ function setupEventListeners() {
 
                     const docId = button.dataset.id;
                     
+                    console.log('[main.js : categoriesGrid]: inside the if look ');
+
                     // This is the crucial check.
                     const isActivateClick = button.classList.contains('btn-activate');
                     const isDeactivateClick = button.classList.contains('btn-deactivate');
+
+                    console.log('[main.js : categoriesGrid]: inside the if look ',isActivateClick);
+                    console.log('[main.js : categoriesGrid]: inside the if look ',isDeactivateClick);
+
+
 
                     if (isDeactivateClick) {
                         console.log("Deactivate button clicked. Showing modal...");
