@@ -385,11 +385,14 @@ export async function showCategoriesView() {
             const db = firebase.firestore();
             categoriesGridApi.setGridOption('loading', true);
 
+            console.log('[categories-grid is action] app state:', appState.isLocalUpdateInProgress);
+
             unsubscribeCategoriesListener = db.collection(CATEGORIES_COLLECTION_PATH)
                 .orderBy('categoryName')
                 .onSnapshot(snapshot => {
                     if (appState.isLocalUpdateInProgress) {
                         console.log("[Firestore] Ignoring categories update due to local operation.");
+                        categoriesGridApi.setGridOption('loading', false);
                         return; // Do nothing.
                     }
                     console.log("[Firestore] Received real-time update for categories.");
