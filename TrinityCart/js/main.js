@@ -323,7 +323,7 @@ function setupEventListeners() {
             // --- Logic for Categories Grid ---
             if (grid.id === 'categories-grid') {
                 const isActivate = gridButton.classList.contains('btn-activate');
-                console.log('[supplier grid is action]:', gridButton.classList);
+                console.log('[categories-grid is action] app state:', appState.isLocalUpdateInProgress);
                 console.log('[categories-grid is action]:', isActivate);
                 try {
                     appState.isLocalUpdateInProgress = true;
