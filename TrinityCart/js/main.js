@@ -301,8 +301,9 @@ function setupEventListeners() {
                         showModal('error', 'Error', 'Failed to load invoice data for payment.');
                     }
                 } else if (gridButton.classList.contains('action-btn-delete')) {
-                    // Placeholder for delete logic
-                    console.log(`Delete purchase invoice: ${docId}`);
+                    if (await showModal('confirm', 'Confirm Deletion', 'Are you sure you want to permanently delete this invoice?')) {
+                        // await deletePurchaseInvoice(docId); // Call the delete API
+                    }
                 }
             } 
             // Logic for ALL other master data grids (Suppliers, Categories, etc.)
@@ -322,6 +323,7 @@ function setupEventListeners() {
             // --- Logic for Categories Grid ---
             if (grid.id === 'categories-grid') {
                 const isActivate = gridButton.classList.contains('btn-activate');
+                console.log('[supplier grid is action]:', gridButton.classList);
                 console.log('[categories-grid is action]:', isActivate);
                 if (await showModal('confirm', `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 'Are you sure?')) {
                     await setCategoryStatus(docId, isActivate, user);
