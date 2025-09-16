@@ -298,16 +298,40 @@ function setupEventListeners() {
             // Logic for ALL other master data grids (Suppliers, Categories, etc.)
             else {
                 const newStatus = gridButton.classList.contains('btn-activate');
-                const moduleName = grid.id.split('-')[0]; // e.g., "suppliers", "categories"
-                if (await showModal('confirm', `Confirm ${newStatus ? 'Activation' : 'Deactivation'}`, `Are you sure you want to ${newStatus ? 'activate' : 'deactivate'} this item?`)) {
-                    if (grid.id === 'suppliers-grid') await setSupplierStatus(docId, newStatus, user);
-                    else if (grid.id === 'categories-grid') await setCategoryStatus(docId, newStatus, user);
-                    else if (grid.id === 'payment-modes-grid') await setPaymentModeStatus(docId, newStatus, user);
-                    else if (grid.id === 'sale-types-grid') await setSaleTypeStatus(docId, newStatus, user);
-                    else if (grid.id === 'seasons-grid') await setSeasonStatus(docId, newStatus, user);
-                    else if (grid.id === 'sales-events-grid') await setSalesEventStatus(docId, newStatus, user);
-                    else if (grid.id === 'users-grid') await setUserActiveStatus(docId, newStatus, user);
-                    else if (grid.id === 'products-catalogue-grid') await setProductStatus(docId, 'isActive', newStatus, user);
+                const moduleName = grid.id.replace('-grid', '').replace('-', ' '); // e.g., "suppliers", "categories"
+                const confirmed = await showModal(
+                    'confirm', 
+                    `Confirm ${newStatus ? 'Activation' : 'Deactivation'}`, 
+                    `Are you sure you want to ${newStatus ? 'activate' : 'deactivate'} this ${moduleName}?`
+                );
+                if (confirmed) {
+                    // Call the correct API function based on the grid's ID
+                    switch (grid.id) {
+                        case 'suppliers-grid':
+                            await setSupplierStatus(docId, newStatus, user);
+                            break;
+                        case 'categories-grid':
+                            await setCategoryStatus(docId, newStatus, user);
+                            break;
+                        case 'payment-modes-grid':
+                            await setPaymentModeStatus(docId, newStatus, user);
+                            break;
+                        case 'sale-types-grid':
+                            await setSaleTypeStatus(docId, newStatus, user);
+                            break;
+                        case 'seasons-grid':
+                            await setSeasonStatus(docId, newStatus, user);
+                            break;
+                        case 'sales-events-grid':
+                            await setSalesEventStatus(docId, newStatus, user);
+                            break;
+                        case 'users-grid':
+                            await setUserActiveStatus(docId, newStatus, user);
+                            break;
+                        case 'products-catalogue-grid':
+                            await setProductStatus(docId, 'isActive', newStatus, user);
+                            break;
+                    }
                 }
             }
             return;
