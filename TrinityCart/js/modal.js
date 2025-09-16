@@ -24,12 +24,16 @@ export function showModal(type, title, message) {
     const modalIcon = document.getElementById('modal-icon');
     const modalButtons = document.getElementById('modal-buttons');
 
-    // Safety check in case the modal HTML is missing
+    // Safety check in case the modal HTML is missing from index.html
     if (!modalElement || !modalTitle || !modalMessage || !modalIcon || !modalButtons) {
-        console.error("Modal elements not found in the DOM!");
-        // Fallback to a standard alert
-        alert(`${title}\n\n${message}`);
-        return Promise.resolve(false);
+        console.error("Modal elements not found in the DOM! Falling back to standard confirm/alert.");
+        // Fallback to the browser's default for critical confirmations
+        if (type === 'confirm') {
+            return Promise.resolve(confirm(`${title}\n\n${message}`));
+        } else {
+            alert(`${title}\n\n${message}`);
+            return Promise.resolve(true);
+        }
     }
 
     return new Promise((resolve) => {
