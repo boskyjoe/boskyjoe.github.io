@@ -124,8 +124,9 @@ const suppliersGridOptions = {
         {
             headerName: "Actions",
             width: 120,
-
+            cellClass: 'flex items-center justify-center space-x-2',
             cellRenderer: (params) => {
+                if (!params.data) return ''; 
                 const docId = params.data.id;
                 const isActive = params.data.isActive;
                 const hasActivePurchases = params.data.hasActivePurchases;
@@ -133,17 +134,34 @@ const suppliersGridOptions = {
                 const deactivateIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`;
                 const activateIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
 
+                let icon, buttonClass, tooltip, isDisabled = false;
+
                 if (isActive) {
-                    // If supplier is active, show the "Deactivate" button
-                    const isDisabled = hasActivePurchases;
-                    const disabledClass = isDisabled ? 'opacity-50 cursor-not-allowed' : 'btn-deactivate';
-                    const tooltip = isDisabled ? 'title="Cannot deactivate supplier with active purchases"' : '' ;
-                    return `<button class="${disabledClass}" data-id="${docId}" title="${tooltip}">${deactivateIcon}</button>`;
+                    icon = deactivateIcon;
+                    buttonClass = 'btn-deactivate';
+                    tooltip = 'Deactivate Supplier';
+                    // Check if the button should be disabled
+                    if (hasActivePurchases) {
+                        isDisabled = true;
+                        tooltip = 'Cannot deactivate supplier with active purchases';
+                    }
                 } else {
-                    // If supplier is inactive, show the "Activate" button
-                    const tooltip = 'title="Deactivate Supplier"' ;
-                    return `<button class="btn-activate" data-id="${docId}" title="${tooltip}">${activateIcon}</button>`;
+                    icon = activateIcon;
+                    buttonClass = 'btn-activate';
+                    tooltip = 'Activate Supplier';
                 }
+                // Build the final button HTML using the variables
+                const disabledAttribute = isDisabled ? 'disabled' : '';
+                const disabledClasses = isDisabled ? 'opacity-50 cursor-not-allowed' : '';
+
+                return `<button 
+                            class="action-btn-icon ${buttonClass} ${disabledClasses}" 
+                            data-id="${docId}" 
+                            title="${tooltip}" 
+                            ${disabledAttribute}>
+                                ${icon}
+                        </button>`;
+
             },
             editable: false, sortable: false, filter: false,
         }
@@ -297,7 +315,9 @@ const categoriesGridOptions = {
         },
         {
             headerName: "Actions", width: 120,
+            cellClass: 'flex items-center justify-center space-x-2',
             cellRenderer: params => {
+                if (!params.data) return ''; 
                 const docId = params.data.id;
                 const isActive = params.data.isActive;
 
@@ -305,13 +325,25 @@ const categoriesGridOptions = {
                 const activateIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
 
                 // Determine which icon, class, and tooltip to use
-                const icon = isActive ? deactivateIcon : activateIcon;
-                const buttonClass = isActive ? 'btn-deactivate' : 'btn-activate';
-                const tooltip = isActive ? 'Deactivate Category' : 'Activate Category';
+                let icon, buttonClass, tooltip;
 
-                return `<button class="${buttonClass}" data-id="${docId}" title="${tooltip}">${icon}</button>`;
+                if (isActive) {
+                    icon = deactivateIcon;
+                    buttonClass = 'btn-deactivate';
+                    tooltip = 'Deactivate Category';
+                } else {
+                    icon = activateIcon;
+                    buttonClass = 'btn-activate';
+                    tooltip = 'Activate Category';
+                }
+                return `<button 
+                            class="action-btn-icon ${buttonClass}" 
+                            data-id="${docId}" 
+                            title="${tooltip}">
+                                ${icon}
+                        </button>`;
             },
-            cellClass: 'flex items-center justify-center'
+            editable: false, sortable: false, filter: false,
         }
     ],
     defaultColDef: { resizable: true, sortable: true, filter: true },
