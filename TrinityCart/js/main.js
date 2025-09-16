@@ -250,12 +250,15 @@ function setupEventListeners() {
         if (target.closest('#logout-button')) { handleLogout(); return; }
 
         // --- Handle Sidebar Navigation & Back Links ---
-        const navOrBackLink = target.closest('.nav-link, .back-link');
-        if (navOrBackLink) {
+        const navTrigger = target.closest('.nav-link, .back-link, .master-data-card');
+        if (navTrigger) {
             e.preventDefault();
-            const viewId = navOrBackLink.dataset.viewId;
+            const viewId = navTrigger.dataset.viewId;
             if (!viewId) return;
 
+            console.log(`[main.js] Navigating to view: ${viewId}`);
+
+            // The switch statement now handles all navigation triggers
             switch (viewId) {
                 case 'suppliers-view': showSuppliersView(); break;
                 case 'products-view': showProductsView(); break;
@@ -268,17 +271,7 @@ function setupEventListeners() {
                 case 'purchases-view': showPurchasesView(); break;
                 default: showView(viewId);
             }
-            return;
-        }
-
-        // --- Handle Admin Module Hub Cards ---
-        const adminCard = target.closest('.master-data-card');
-        if (adminCard) {
-            e.preventDefault();
-            const viewId = adminCard.dataset.viewId;
-            // Programmatically click the corresponding sidebar link to trigger the navigation logic
-            document.querySelector(`.nav-link[data-view-id="${viewId}"]`)?.click();
-            return;
+            return; // Stop processing after handling navigation
         }
 
         // --- Handle ALL Grid Action Buttons ---
