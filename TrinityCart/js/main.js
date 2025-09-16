@@ -356,6 +356,7 @@ function setupEventListeners() {
         }
 
         // --- Handle Other Standalone Buttons ---
+            
         if (target.closest('#add-line-item-btn')) { addLineItem(); return; }
         if (target.closest('.remove-line-item-btn')) { target.closest('.grid').remove(); calculateAllTotals(); return; }
         if (target.closest('#cancel-edit-btn')) { resetPurchaseForm(); return; }
@@ -443,7 +444,41 @@ function setupEventListeners() {
         });
     }
 
+     // --- NEW: LISTENERS FOR THE PAYMENT MODAL ---
+    const paymentForm = document.getElementById('record-payment-form');
+    if (paymentForm) {
+        paymentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            if (!user) return;
 
+            // Collect data from the payment form
+            const paymentData = {
+                paymentDate: new Date(document.getElementById('payment-date-input').value),
+                amountPaid: parseFloat(document.getElementById('payment-amount-input').value),
+                paymentMode: document.getElementById('payment-mode-select').value,
+                transactionRef: document.getElementById('payment-ref-input').value,
+                notes: document.getElementById('payment-notes-input').value,
+                // Get related IDs from hidden inputs
+                relatedInvoiceId: document.getElementById('payment-invoice-id').value,
+                supplierId: document.getElementById('payment-supplier-id').value,
+            };
+            
+            if (isNaN(paymentData.amountPaid) || paymentData.amountPaid <= 0) {
+                return showModal('error', 'Invalid Amount', 'Payment amount must be greater than zero.');
+            }
+
+            try {
+                await addSupplierPayment(paymentData, user);
+                await showModal('success', 'Success', 'Payment has been recorded successfully.');
+                closePaymentModal();
+                // The real-time listener will automatically update the grid!
+            } catch (error) {
+                console.error("Error recording payment:", error);
+                await showModal('error', 'Save Failed', 'There was an error recording the payment.');
+            }
+        });
+    }
 
     // --- In-Grid Update Custom Event Listeners ---
 
