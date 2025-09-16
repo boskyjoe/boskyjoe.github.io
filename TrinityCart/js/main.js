@@ -320,13 +320,37 @@ function setupEventListeners() {
             }
 
             // --- Logic for Categories Grid ---
-            if (grid.id === 'categories-grid') {
-                const isActivate = gridButton.classList.contains('btn-activate');
-                console.log('[supplier grid is action]:', isActivate);
-                if (await showModal('confirm', `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 'Are you sure?')) {
-                    await setCategoryStatus(docId, isActivate, user);
-                }
-                return; // Stop after handling
+            if (categoriesGrid) {
+                categoriesGrid.addEventListener('click', async (e) => {
+                    const user = appState.currentUser;
+                    if (!user) return;
+
+                    const button = e.target.closest('button[data-id]');
+                    if (!button) return;
+
+                    const docId = button.dataset.id;
+                    
+                    // This is the crucial check.
+                    const isActivateClick = button.classList.contains('btn-activate');
+                    const isDeactivateClick = button.classList.contains('btn-deactivate');
+
+                    if (isDeactivateClick) {
+                        console.log("Deactivate button clicked. Showing modal...");
+                        const confirmed = await showModal('confirm', 'Confirm Deactivation', `Are you sure you want to deactivate this product category?`);
+                        if (confirmed) {
+                            console.log("Deactivation confirmed. Calling API...");
+                            await setCategoryStatus(docId, false, user);
+                        }
+                    } 
+                    else if (isActivateClick) {
+                        console.log("Activate button clicked. Showing modal...");
+                        const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to activate this product category?`);
+                        if (confirmed) {
+                            console.log("Activation confirmed. Calling API...");
+                            await setCategoryStatus(docId, true, user);
+                        }
+                    }
+                });
             }
 
             // --- Logic for Payment Modes Grid ---
