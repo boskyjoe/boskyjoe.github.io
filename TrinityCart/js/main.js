@@ -288,8 +288,17 @@ function setupEventListeners() {
                     const invoiceData = await getPurchaseInvoiceById(docId);
                     if (invoiceData) loadInvoiceDataIntoForm(invoiceData);
                 } else if (gridButton.classList.contains('action-btn-payment')) {
-                    const invoiceData = getInvoiceDataFromGridById(docId);
-                    if (invoiceData) showPaymentModal(invoiceData);
+                    try {
+                        const invoiceData = await getPurchaseInvoiceById(docId);
+                        if (invoiceData) {
+                            showPaymentModal(invoiceData);
+                        } else {
+                            showModal('error', 'Error', 'Could not find the selected invoice data.');
+                        }
+                    } catch (error) {
+                        console.error("Error fetching invoice for payment:", error);
+                        showModal('error', 'Error', 'Failed to load invoice data for payment.');
+                    }
                 } else if (gridButton.classList.contains('action-btn-delete')) {
                     // Placeholder for delete logic
                     console.log(`Delete purchase invoice: ${docId}`);
