@@ -361,6 +361,50 @@ function setupEventListeners() {
         if (target.closest('.remove-line-item-btn')) { target.closest('.grid').remove(); calculateAllTotals(); return; }
         if (target.closest('#cancel-edit-btn')) { resetPurchaseForm(); return; }
         if (target.closest('#payment-modal-close')) { closePaymentModal(); return; }
+
+
+
+        const tab = target.closest('.tab');
+        if (tab) {
+            e.preventDefault();
+            
+            if (tab.id === 'tab-invoices') {
+                switchPurchaseTab('invoices');
+            } 
+            else if (tab.id === 'tab-payments') {
+                if (!tab.classList.contains('tab-disabled')) {
+                    switchPurchaseTab('payments');
+                    loadPaymentsForSelectedInvoice();
+                }
+            }
+            return; // Stop processing after handling a tab click
+        }
+
+
+        // Handle Tab Clicks
+        const invoiceTab = document.getElementById('tab-invoices');
+        if (invoiceTab) {
+            invoiceTab.addEventListener('click', (e) => {
+                e.preventDefault();
+                switchPurchaseTab('invoices');
+            });
+        }
+        const paymentsTab = document.getElementById('tab-payments');
+        if (paymentsTab) {
+            paymentsTab.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (!paymentsTab.classList.contains('tab-disabled')) {
+                    // THE FIX: Switch the tab AND load the data.
+                    switchPurchaseTab('payments');
+                    loadPaymentsForSelectedInvoice();
+                }
+            });
+        }
+
+
+
+
+
     });
 
     
