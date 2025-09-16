@@ -305,13 +305,16 @@ function setupEventListeners() {
                 }
             } 
             // Logic for ALL other master data grids (Suppliers, Categories, etc.)
-            
+        
+
             // --- Logic for Suppliers Grid ---
             if (grid.id === 'suppliers-grid') {
                 const isActivate = gridButton.classList.contains('btn-activate');
+                console.log('[supplier grid is action]:', isActivate);
                 if (await showModal('confirm', `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 'Are you sure?')) {
                     await setSupplierStatus(docId, isActivate, user);
                 }
+
                 return; // Stop after handling
             }
 
