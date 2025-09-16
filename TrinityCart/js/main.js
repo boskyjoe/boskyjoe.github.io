@@ -298,7 +298,7 @@ function setupEventListeners() {
             // Logic for ALL other master data grids (Suppliers, Categories, etc.)
             else {
                 const isActivate = gridButton.classList.contains('btn-activate');
-                const moduleName = grid.id.replace('-grid', '').replace('-', ' ');
+                const moduleName = grid.id.replace('-grid', '').replace(/-/g, ' ');
 
                 const confirmed = await showModal(
                     'confirm', 
