@@ -325,8 +325,17 @@ function setupEventListeners() {
                 const isActivate = gridButton.classList.contains('btn-activate');
                 console.log('[supplier grid is action]:', gridButton.classList);
                 console.log('[categories-grid is action]:', isActivate);
-                await setCategoryStatus(docId, isActivate, user);
-                await showModal('confirm', `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 'Are you sure?')
+                try {
+                    appState.isLocalUpdateInProgress = true;
+                    await setCategoryStatus(docId, isActivate, user);
+                    await showModal('sucess',`Category has been ${isActivate ? 'activated' : 'deactivated'}.`)
+                } catch (error) {
+                    console.error("Error updating category status:", error);
+                    await showModal('error', 'Update Failed', 'The status could not be updated.');
+                } finally {
+                    appState.isLocalUpdateInProgress = false;
+                }
+                return ;
             }
 
             // --- Logic for Payment Modes Grid ---
