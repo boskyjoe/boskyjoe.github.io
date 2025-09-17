@@ -44,14 +44,26 @@ export function showModal(type, title, message) {
         modalIcon.innerHTML = iconMap[type] || iconMap.info;
         modalButtons.innerHTML = '';
 
+        modalElement.style.display = 'flex';
+        modalElement.classList.add('visible');
+
         const createButton = (text, primary = false, value = false) => {
             const button = document.createElement('button');
             button.textContent = text;
             button.className = primary ? 'modal-btn modal-btn-primary' : 'modal-btn modal-btn-secondary';
+            //button.onclick = () => {
+              //  modalElement.classList.remove('visible');
+               // resolve(value);
+           // };
+
             button.onclick = () => {
                 modalElement.classList.remove('visible');
+                setTimeout(() => {
+                    modalElement.style.display = 'none';
+                }, 300); // Wait for fade transition
                 resolve(value);
             };
+            
             return button;
         };
 
