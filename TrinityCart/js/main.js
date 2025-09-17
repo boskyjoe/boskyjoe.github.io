@@ -326,6 +326,9 @@ function setupEventListeners() {
                 console.log('[categories-grid is action] app state:', appState.isLocalUpdateInProgress);
                 console.log('[categories-grid is action]:', isActivate);
 
+                const button = e.target.closest('button');
+                if (!button) return;
+
                 if (button.classList.contains('btn-deactivate')) {
                     const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this product category?`);
                     if (confirmed) {
