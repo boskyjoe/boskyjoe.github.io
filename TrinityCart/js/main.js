@@ -338,10 +338,13 @@ function setupEventListeners() {
             // --- Logic for Payment Modes Grid ---
             if (grid.id === 'payment-modes-grid') {
                 const isActivate = gridButton.classList.contains('btn-activate');
-                if (await showModal('confirm', `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 'Are you sure?')) {
+
+                try {
                     await setPaymentModeStatus(docId, isActivate, user);
+                } catch (error) {
+                    console.error("Error updating payment mode status:", error);
+                    await showModal('error', 'Update Failed', 'The payment mode status could not be updated.');
                 }
-                return; // Stop after handling
             }
 
             // --- Logic for Sale Types Grid ---
