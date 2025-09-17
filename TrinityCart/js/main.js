@@ -327,17 +327,21 @@ function setupEventListeners() {
                 console.log('[categories-grid is action]:', isActivate);
 
                 if (isActivate) {
-                    const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this product category?`);
-                    console.log('[categories-grid is confirmed]:', confirmed);
-                    if (confirmed) {
-                        await setCategoryStatus(docId, false, user);
-                    }
+
+                    await setCategoryStatus(docId, false, user);
+                    //const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this product category?`);
+                    //console.log('[categories-grid is confirmed]:', confirmed);
+                    //if (confirmed) {
+                    //    await setCategoryStatus(docId, false, user);
+                    //}
                 } else  {
-                    const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this product category?`);
-                    console.log('[categories-grid is confirmed]:', confirmed);
-                    if (confirmed) {
-                        await setCategoryStatus(docId, true, user);
-                    }
+                    await setCategoryStatus(docId, true, user);
+                    
+                    //const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this product category?`);
+                    //console.log('[categories-grid is confirmed]:', confirmed);
+                    //if (confirmed) {
+                    //    await setCategoryStatus(docId, true, user);
+                    //}
                 }
             }
 
