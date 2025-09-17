@@ -350,17 +350,6 @@ function setupEventListeners() {
             // --- Logic for Sale Types Grid ---
             if (grid.id === 'sale-types-grid') {
                 const isActivate = gridButton.classList.contains('btn-activate');
-
-
-                if (await showModal('confirm', `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 'Are you sure?')) {
-                    await setSaleTypeStatus(docId, isActivate, user);
-                }
-                return; // Stop after handling
-            }
-
-            // --- Logic for Sale Types Grid ---
-            if (grid.id === 'sale-types-grid') {
-                const isActivate = gridButton.classList.contains('btn-activate');
                 try {
                     await setSaleTypeStatus(docId, isActivate, user);
                 } catch (error) {
