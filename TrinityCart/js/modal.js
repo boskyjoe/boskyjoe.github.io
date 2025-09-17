@@ -36,6 +36,8 @@ export function showModal(type, title, message) {
         }
     }
 
+     console.log('[showModal]');
+
     return new Promise((resolve) => {
         modalTitle.textContent = title;
         modalMessage.innerHTML = message;
