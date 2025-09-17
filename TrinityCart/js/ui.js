@@ -390,11 +390,6 @@ export async function showCategoriesView() {
             unsubscribeCategoriesListener = db.collection(CATEGORIES_COLLECTION_PATH)
                 .orderBy('categoryName')
                 .onSnapshot(snapshot => {
-                    if (appState.isLocalUpdateInProgress) {
-                        console.log("[Firestore] Ignoring categories update due to local operation.");
-                        categoriesGridApi.setGridOption('loading', false);
-                        return; // Do nothing.
-                    }
                     console.log("[Firestore] Received real-time update for categories.");
                     const categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     categoriesGridApi.setGridOption('rowData', categories);
