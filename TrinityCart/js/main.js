@@ -323,25 +323,15 @@ function setupEventListeners() {
             // --- Logic for Categories Grid ---
             if (grid.id === 'categories-grid') {
                 const isActivate = gridButton.classList.contains('btn-activate');
-                console.log('[categories-grid is action]:', isActivate);
+                console.log(`[categories-grid] Button clicked. User wants to activate: ${isActivate}`);
 
-                if (isActivate) {
-                    console.log('[categories-grid] set to false ');
-                    await setCategoryStatus(docId, false, user);
-                    //const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this product category?`);
-                    //console.log('[categories-grid is confirmed]:', confirmed);
-                    //if (confirmed) {
-                    //    await setCategoryStatus(docId, false, user);
-                    //}
-                } else  {
-                    await setCategoryStatus(docId, true, user);
-                    console.log('[categories-grid] set to true ');
-
-                    //const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this product category?`);
-                    //console.log('[categories-grid is confirmed]:', confirmed);
-                    //if (confirmed) {
-                    //    await setCategoryStatus(docId, true, user);
-                    //}
+                try {
+                    await setCategoryStatus(docId, isActivate, user);
+                    console.log(`Category ${docId} status set to ${isActivate}`);
+                    await showModal('success', 'Success', 'Category updated successfully.');
+                } catch (error) {
+                    console.error("Error updating category status:", error);
+                    await showModal('error', 'Update Failed', 'The category status could not be updated.');
                 }
             }
 
