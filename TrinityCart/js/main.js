@@ -326,7 +326,7 @@ function setupEventListeners() {
                 console.log('[categories-grid is action] app state:', appState.isLocalUpdateInProgress);
                 console.log('[categories-grid is action]:', isActivate);
                 try {
-                    await showModal('sucess',`Category has been ${isActivate ? 'activated' : 'deactivated'}.`)
+                    //await showModal('sucess',`Category has been ${isActivate ? 'activated' : 'deactivated'}.`)
                     await setCategoryStatus(docId, isActivate, user);
                 } catch (error) {
                     console.error("Error updating category status:", error);
