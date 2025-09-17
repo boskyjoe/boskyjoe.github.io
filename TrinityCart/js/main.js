@@ -331,7 +331,7 @@ function setupEventListeners() {
                 } catch (error) {
                     console.error("Error updating category status:", error);
                     await showModal('error', 'Update Failed', 'The status could not be updated.');
-                }                 }
+                }                 
                 return ;
             }
 
