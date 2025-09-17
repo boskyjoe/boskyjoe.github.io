@@ -323,11 +323,10 @@ function setupEventListeners() {
             // --- Logic for Categories Grid ---
             if (grid.id === 'categories-grid') {
                 const isActivate = gridButton.classList.contains('btn-activate');
-                console.log('[categories-grid is action] app state:', appState.isLocalUpdateInProgress);
                 console.log('[categories-grid is action]:', isActivate);
 
                 if (isActivate) {
-
+                    console.log('[categories-grid] set to false ');
                     await setCategoryStatus(docId, false, user);
                     //const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this product category?`);
                     //console.log('[categories-grid is confirmed]:', confirmed);
@@ -336,7 +335,8 @@ function setupEventListeners() {
                     //}
                 } else  {
                     await setCategoryStatus(docId, true, user);
-                    
+                    console.log('[categories-grid] set to true ');
+
                     //const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this product category?`);
                     //console.log('[categories-grid is confirmed]:', confirmed);
                     //if (confirmed) {
