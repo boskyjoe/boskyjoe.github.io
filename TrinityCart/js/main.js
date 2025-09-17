@@ -350,6 +350,8 @@ function setupEventListeners() {
             // --- Logic for Sale Types Grid ---
             if (grid.id === 'sale-types-grid') {
                 const isActivate = gridButton.classList.contains('btn-activate');
+
+
                 if (await showModal('confirm', `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 'Are you sure?')) {
                     await setSaleTypeStatus(docId, isActivate, user);
                 }
@@ -359,12 +361,49 @@ function setupEventListeners() {
             // --- Logic for Sale Types Grid ---
             if (grid.id === 'sale-types-grid') {
                 const isActivate = gridButton.classList.contains('btn-activate');
-                if (await showModal('confirm', `Confirm ${isActivate ? 'Activation' : 'Deactivation'}`, 'Are you sure?')) {
+                try {
                     await setSaleTypeStatus(docId, isActivate, user);
+                } catch (error) {
+                    console.error("Error updating sales type status:", error);
+                    await showModal('error', 'Update Failed', 'The sales type status could not be updated.');
                 }
-                return; // Stop after handling
             }
-            return;
+
+            // --- Logic for seasons Grid ---
+            if(grid.id === 'seasons-grid') {
+                const isActivate = gridButton.classList.contains('btn-activate');
+                try {
+                    await setSeasonStatus(docId, isActivate, user);
+                } catch (error) {
+                    console.error("Error updating sales seasons status:", error);
+                    await showModal('error', 'Update Failed', 'The sales seasons status could not be updated.');
+                }
+            }
+            
+            // --- Logic for sales events Grid ---
+            if(grid.id === 'sales-events-grid') {
+                const isActivate = gridButton.classList.contains('btn-activate');
+                try {
+                    await setSalesEventStatus(docId, isActivate, user);
+                } catch (error) {
+                    console.error("Error updating sales events status:", error);
+                    await showModal('error', 'Update Failed', 'The sales events status could not be updated.');
+                }
+            }
+
+            // --- Logic for users Grid ---
+            if(grid.id === 'users-grid') {
+                const isActivate = gridButton.classList.contains('btn-activate');
+                const uid = docId; 
+                try {
+                    await setUserActiveStatus(uid, isActivate, user);
+                } catch (error) {
+                    console.error("Error updating user status:", error);
+                    await showModal('error', 'Update Failed', 'The users status could not be updated.');
+                }
+            }
+
+
         }
 
         // --- Handle Other Standalone Buttons ---
