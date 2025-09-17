@@ -329,6 +329,7 @@ function setupEventListeners() {
                     appState.isLocalUpdateInProgress = true;
                     await setCategoryStatus(docId, isActivate, user);
                     await showModal('sucess',`Category has been ${isActivate ? 'activated' : 'deactivated'}.`)
+                    appState.isLocalUpdateInProgress = false;
                 } catch (error) {
                     console.error("Error updating category status:", error);
                     await showModal('error', 'Update Failed', 'The status could not be updated.');
