@@ -326,16 +326,13 @@ function setupEventListeners() {
                 console.log('[categories-grid is action] app state:', appState.isLocalUpdateInProgress);
                 console.log('[categories-grid is action]:', isActivate);
 
-                const button = e.target.closest('button');
-                if (!button) return;
-
-                if (button.classList.contains('btn-deactivate')) {
+                if (isActivate) {
                     const confirmed = await showModal('confirm', 'Confirm Deactivation ', `Are you sure you want to DeActivate this product category?`);
                     console.log('[categories-grid is confirmed]:', confirmed);
                     if (confirmed) {
                         await setCategoryStatus(docId, false, user);
                     }
-                } else if (button.classList.contains('btn-activate')) {
+                } else  {
                     const confirmed = await showModal('confirm', 'Confirm Activation', `Are you sure you want to Activate this product category?`);
                     console.log('[categories-grid is confirmed]:', confirmed);
                     if (confirmed) {
