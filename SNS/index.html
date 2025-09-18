@@ -2200,6 +2200,18 @@
                             }
                         });
 
+                        // --- START OF DEBUGGING BLOCK ---
+                        // Change 'SSC123' to an ID you are having trouble with.
+                        if (snsId === 'SSC02') { 
+                            console.log("--- DEBUGGING SNS_ID:", snsId, "---");
+                            console.log("1. Raw value from Sheet:", sheetRowData['isActive']);
+                            console.log("2. Type of raw value:", typeof sheetRowData['isActive']);
+                            const normalizedIsActive = !(sheetRowData['isActive'] === false || String(sheetRowData['isActive']).toUpperCase() === 'FALSE');
+                            console.log("3. Result of normalization:", normalizedIsActive);
+                            console.log("------------------------------------");
+                        }
+                        // --- END OF DEBUGGING BLOCK ---
+
                         const snsId = String(sheetRowData['SNS_ID']);
                         if (!snsId) continue;
 
