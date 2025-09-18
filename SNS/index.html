@@ -2188,14 +2188,21 @@
                             for (const row of rows) {
                                 const rowData = {};
                                 row.c.forEach((cell, index) => {
-                                    rowData[columns[index]] = cell?.v || null;
+                                    const columnName = columns[index];
+                                    if (columnName && columnName.trim() !== '') {
+                                        rowData[columnName] = cell?.v || null;
+                                    }
                                 });
+
 
                                 if (rowData['SNS_ID']) {
                                     const newDocRef = doc(membersCollection, String(rowData['SNS_ID']));
+                                    const sheetIsActive = rowData['isActive'];
+                                    const normalizedIsActive = !(sheetIsActive === false || String(sheetIsActive).toUpperCase() === 'FALSE');
+
                                     const memberData = {
                                         ...rowData,
-                                        isActive: true, // Set as active by default
+                                        isActive: normalizedIsActive, // Set as active by default
                                         createdBy: auth.currentUser.uid,
                                         createdDate: serverTimestamp(),
                                     };
