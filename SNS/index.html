@@ -2218,6 +2218,8 @@
                             String(rawIsActive).toUpperCase() === 'INACTIVE' ||
                             String(rawIsActive) === '0') {
                             normalizedIsActive = false;
+                        } else {
+                            normalizedIsActive = true;
                         }
 
                         if (rawIsActive === null) {
