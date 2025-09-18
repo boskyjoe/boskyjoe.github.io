@@ -2166,7 +2166,7 @@
                 showStatusMessage("Syncing member data with Google Sheets...", 'progress');
 
                 try {
-                    // --- Phase 1: Fetch Data from Both Sources ---
+                    // --- Phase 1: Fetch Data ---
                     const response = await fetch(GOOGLE_SHEET_URL);
                     if (!response.ok) throw new Error(`Failed to load Google Sheet data. Status: ${response.status}`);
 
@@ -2196,28 +2196,35 @@
                         row.c.forEach((cell, index) => {
                             const columnName = sheetColumns[index];
                             if (columnName && columnName.trim() !== '') {
-                                sheetRowData[columnName] = cell?.v || null;
+                                // Because of the quirk, cell can be null.
+                                // The 'v' property exists on the cell object, if the cell object exists.
+                                sheetRowData[columnName] = cell ? cell.v : null;
                             }
                         });
 
                         const snsId = String(sheetRowData['SNS_ID']);
                         if (!snsId) continue;
                         
-                        // --- START OF DEBUGGING BLOCK ---
-                        // Change 'SSC123' to an ID you are having trouble with.
-                        if (snsId === 'SSC02') { 
-                            console.log("--- DEBUGGING SNS_ID:", snsId, "---");
-                            console.log("1. Raw value from Sheet:", sheetRowData['isActive']);
-                            console.log("2. Type of raw value:", typeof sheetRowData['isActive']);
-                            const normalizedIsActive = !(sheetRowData['isActive'] === false || String(sheetRowData['isActive']).toUpperCase() === 'FALSE');
-                            console.log("3. Result of normalization:", normalizedIsActive);
-                            console.log("------------------------------------");
-                        }
-                        // --- END OF DEBUGGING BLOCK ---
-
                         sheetSnsIds.add(snsId);
-                        const normalizedIsActive = !(sheetRowData['isActive'] === false || String(sheetRowData['isActive']).toUpperCase() === 'FALSE');
                         const docRef = doc(membersCollection, snsId);
+
+                        // --- NEW, BULLETPROOF NORMALIZATION LOGIC ---
+                        // This correctly handles the Google Sheet quirk where FALSE becomes null.
+                        const rawIsActive = sheetRowData['isActive'];
+                        let normalizedIsActive = true; // Default to active
+
+                        if (rawIsActive === false || 
+                            String(rawIsActive).toUpperCase() === 'FALSE' ||
+                            String(rawIsActive).toUpperCase() === 'INACTIVE' ||
+                            String(rawIsActive) === '0') {
+                            normalizedIsActive = false;
+                        }
+
+                        if (rawIsActive === null) {
+                            // We assume a null from the sheet's 'isActive' column means FALSE,
+                            // as per the API's strange behavior.
+                            normalizedIsActive = false;
+                        }
 
                         if (existingMembersMap.has(snsId)) {
                             // --- UPDATE PATH ---
@@ -2231,14 +2238,13 @@
                             });
                             updateCount++;
                         } else {
-                            // --- INSERT PATH (CORRECTED) ---
-                            // We now use the 'normalizedIsActive' value here instead of hardcoding 'true'.
+                            // --- INSERT PATH ---
                             batch.set(docRef, {
                                 SNS_ID: snsId,
                                 SNSMemberName: sheetRowData.SNSMemberName || "",
                                 ChurchContactName: sheetRowData.ChurchContactName || "",
-                                ChurchContactPhone: sheetRowData.ChurchContactPhone || "",
-                                isActive: normalizedIsActive, // This is the fix
+                                ChurchContactPhone: sheetRowAData.ChurchContactPhone || "",
+                                isActive: normalizedIsActive,
                                 createdBy: auth.currentUser.uid,
                                 createdDate: serverTimestamp()
                             });
@@ -2250,11 +2256,7 @@
                     for (const [memberId, memberData] of existingMembersMap.entries()) {
                         if (!sheetSnsIds.has(memberId) && memberData.isActive !== false) {
                             const docRef = doc(membersCollection, memberId);
-                            batch.update(docRef, {
-                                isActive: false,
-                                updatedBy: auth.currentUser.uid,
-                                updatedDate: serverTimestamp()
-                            });
+                            batch.update(docRef, { isActive: false, updatedBy: auth.currentUser.uid, updatedDate: serverTimestamp() });
                             deactivatedCount++;
                         }
                     }
