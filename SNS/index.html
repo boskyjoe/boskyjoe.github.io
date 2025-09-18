@@ -2217,6 +2217,9 @@
                             const sheetContactPhone = sheetRowData.ChurchContactPhone || "";
                             const firestoreContactPhone = existingDoc.ChurchContactPhone || "";
 
+                            
+                            console.log("Winner and member details saved to Firestore successfully.",normalizedSheetIsActive,firestoreIsActive);
+                            
                             // 3. Check if an update is actually needed.
                             if (firestoreMemberName !== sheetMemberName ||
                                 firestoreContactName !== sheetContactName ||
