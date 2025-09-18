@@ -2152,8 +2152,8 @@
             }
 
             /**
-             * Synchronizes the Firestore members collection with a Google Sheet, performing an "upsert" operation.
-             * Then, it gathers all necessary data to build the draw eligibility pools.
+             * Efficiently synchronizes the Firestore members collection with a Google Sheet,
+             * performing a robust "upsert" that only writes to documents that have actually changed.
              * @returns {Promise<object>} An object containing all active members and sets of previous winners.
              */
             async function importMembersFromGoogleSheets() {
@@ -2177,11 +2177,13 @@
 
                     const membersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
                     const existingMembersSnapshot = await getDocs(membersCollection);
-                    const existingMemberIds = new Set(existingMembersSnapshot.docs.map(doc => doc.id));
+                    // Use a Map to store existing data for fast lookups
+                    const existingMembersMap = new Map();
+                    existingMembersSnapshot.docs.forEach(doc => {
+                        existingMembersMap.set(doc.id, doc.data());
+                    });
 
-
-
-                    // --- Phase 2: Perform the Upsert Logic ---
+                    // --- Phase 2: Perform the EFFICIENT and CORRECT Upsert Logic ---
                     const batch = writeBatch(db);
                     let newCount = 0;
                     let updateCount = 0;
@@ -2196,26 +2198,46 @@
                         });
 
                         const snsId = String(sheetRowData['SNS_ID']);
-                        if (!snsId) continue;
+                        if (!snsId) continue; // Skip rows without an ID
 
-                        const docRef = doc(membersCollection, snsId);
-                        const normalizedIsActive = !(sheetRowData['isActive'] === false || String(sheetRowData['isActive']).toUpperCase() === 'FALSE');
+                        const existingDocData = existingMembersMap.get(snsId);
 
-                        if (existingMemberIds.has(snsId)) {
-                            // --- UPDATE PATH (CORRECTED) ---
-                            // The "smart" check has been removed. We now always update the document
-                            // to ensure its state perfectly matches the Google Sheet.
-                            batch.update(docRef, {
-                                SNSMemberName: sheetRowData.SNSMemberName || "",
-                                ChurchContactName: sheetRowData.ChurchContactName || "",
-                                ChurchContactPhone: sheetRowData.ChurchContactPhone || "",
-                                isActive: normalizedIsActive,
-                                updatedBy: auth.currentUser.uid,
-                                updatedDate: serverTimestamp()
-                            });
-                            updateCount++;
+                        if (existingDocData) {
+                            // --- UPDATE PATH (with "Smart" Check) ---
+                            
+                            // 1. Normalize values from BOTH the sheet and Firestore before comparing.
+                            const normalizedSheetIsActive = !(sheetRowData['isActive'] === false || String(sheetRowData['isActive']).toUpperCase() === 'FALSE');
+                            const normalizedFirestoreIsActive = existingDocData.isActive === false ? false : true;
+
+                            const sheetMemberName = sheetRowData.SNSMemberName || "";
+                            const firestoreMemberName = existingDocData.SNSMemberName || "";
+                            const sheetContactName = sheetRowData.ChurchContactName || "";
+                            const firestoreContactName = existingDocData.ChurchContactName || "";
+                            const sheetContactPhone = sheetRowData.ChurchContactPhone || "";
+                            const firestoreContactPhone = existingDocData.ChurchContactPhone || "";
+                            
+                            // 2. Compare the clean, normalized values.
+                            if (firestoreMemberName !== sheetMemberName ||
+                                firestoreContactName !== sheetContactName ||
+                                firestoreContactPhone !== sheetContactPhone ||
+                                normalizedFirestoreIsActive !== normalizedSheetIsActive) 
+                            {
+                                // If any value is different, schedule an update.
+                                const docRef = doc(membersCollection, snsId);
+                                batch.update(docRef, {
+                                    SNSMemberName: sheetMemberName,
+                                    ChurchContactName: sheetContactName,
+                                    ChurchContactPhone: sheetContactPhone,
+                                    isActive: normalizedSheetIsActive,
+                                    updatedBy: auth.currentUser.uid,
+                                    updatedDate: serverTimestamp()
+                                });
+                                updateCount++;
+                            }
                         } else {
                             // --- INSERT PATH ---
+                            const docRef = doc(membersCollection, snsId);
+                            const normalizedIsActive = !(sheetRowData['isActive'] === false || String(sheetRowData['isActive']).toUpperCase() === 'FALSE');
                             batch.set(docRef, {
                                 SNS_ID: snsId,
                                 SNSMemberName: sheetRowData.SNSMemberName || "",
@@ -2229,7 +2251,6 @@
                         }
                     }
 
-
                     if (newCount > 0 || updateCount > 0) {
                         await batch.commit();
                         showModal("Sync Complete", `Successfully added ${newCount} new members and updated ${updateCount} existing members.`);
@@ -2237,7 +2258,7 @@
                         showModal("No Changes", "The database is already in sync with the Google Sheet.");
                     }
 
-                     // --- Phase 3: Data Gathering (remains the same) ---
+                    // --- Phase 3: Data Gathering (remains the same) ---
                     showStatusMessage("Loading members and previous winners...", 'progress');
                     const updatedMembersSnapshot = await getDocs(membersCollection);
                     const allActiveMembers = updatedMembersSnapshot.docs
@@ -2246,20 +2267,12 @@
 
                     const winnersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`);
                     const winnersSnapshot = await getDocs(winnersCollection);
-
                     const previousChitWinners = new Set();
                     const previousConsolationWinners = new Set();
-                    winnersSnapshot.forEach(drawDoc => { /* ... (your existing winner categorization logic) ... */ });
-
-                    console.log(`Found ${previousChitWinners.size} previous Chit Winners.`);
-                    console.log(`Found ${previousConsolationWinners.size} previous Consolation Winners.`);
+                    winnersSnapshot.forEach(drawDoc => { /* ... your winner categorization logic ... */ });
 
                     hideStatusMessage();
-                    return {
-                        allActiveMembers,
-                        previousChitWinners,
-                        previousConsolationWinners
-                    };
+                    return { allActiveMembers, previousChitWinners, previousConsolationWinners };
 
                 } catch (error) {
                     console.error("ERROR: Failed to import or process data:", error);
@@ -2269,7 +2282,6 @@
                     return Promise.reject(error);
                 }
             }
-
 
             async function checkForExistingWinner() {
                 if (!db) {
