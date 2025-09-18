@@ -2152,8 +2152,9 @@
             }
 
             /**
-             * Performs a full synchronization between the Google Sheet and the Firestore members collection.
-             * It will UPDATE existing members, INSERT new members, and DEACTIVATE members removed from the sheet.
+             * Performs a full and correct synchronization between the Google Sheet and Firestore.
+             * It UPDATES existing members, INSERTS new members, and DEACTIVATES members removed from the sheet.
+             * It now correctly respects the 'isActive' column from the sheet for INSERTS.
              * @returns {Promise<object>} An object containing all active members and sets of previous winners.
              */
             async function importMembersFromGoogleSheets() {
@@ -2200,16 +2201,14 @@
                         });
 
                         const snsId = String(sheetRowData['SNS_ID']);
-                        if (!snsId) continue; // Skip rows without an ID
+                        if (!snsId) continue;
 
-                        sheetSnsIds.add(snsId); // Keep track of all IDs present in the sheet
+                        sheetSnsIds.add(snsId);
                         const normalizedIsActive = !(sheetRowData['isActive'] === false || String(sheetRowData['isActive']).toUpperCase() === 'FALSE');
                         const docRef = doc(membersCollection, snsId);
 
                         if (existingMembersMap.has(snsId)) {
                             // --- UPDATE PATH ---
-                            // We always update to ensure the sheet is the source of truth.
-                            // This fixes the bug where isActive was not updating.
                             batch.update(docRef, {
                                 SNSMemberName: sheetRowData.SNSMemberName || "",
                                 ChurchContactName: sheetRowData.ChurchContactName || "",
@@ -2220,13 +2219,14 @@
                             });
                             updateCount++;
                         } else {
-                            // --- INSERT PATH ---
+                            // --- INSERT PATH (CORRECTED) ---
+                            // We now use the 'normalizedIsActive' value here instead of hardcoding 'true'.
                             batch.set(docRef, {
                                 SNS_ID: snsId,
                                 SNSMemberName: sheetRowData.SNSMemberName || "",
                                 ChurchContactName: sheetRowData.ChurchContactName || "",
                                 ChurchContactPhone: sheetRowData.ChurchContactPhone || "",
-                                isActive: normalizedIsActive,
+                                isActive: normalizedIsActive, // This is the fix
                                 createdBy: auth.currentUser.uid,
                                 createdDate: serverTimestamp()
                             });
@@ -2235,11 +2235,8 @@
                     }
 
                     // --- Part B: Handle Deactivations ---
-                    // Iterate through all members currently in Firestore.
                     for (const [memberId, memberData] of existingMembersMap.entries()) {
-                        // If a member from Firestore is NOT in the sheet AND is currently active...
                         if (!sheetSnsIds.has(memberId) && memberData.isActive !== false) {
-                            // ...then deactivate them.
                             const docRef = doc(membersCollection, memberId);
                             batch.update(docRef, {
                                 isActive: false,
