@@ -2217,10 +2217,11 @@
                             String(rawIsActive).toUpperCase() === 'FALSE' ||
                             String(rawIsActive).toUpperCase() === 'INACTIVE' ||
                             String(rawIsActive) === '0') {
-                            console.log("Waht is the rawflag if",rawIsActive);
+                        const snsId = String(sheetRowData['SNS_ID']);
+                            console.log(snsId,"Waht is the rawflag if",rawIsActive);
                             normalizedIsActive = false;
                         } else {
-                            console.log("Waht is the rawflag else ",rawIsActive);
+                            console.log(snsId,"Waht is the rawflag else ",rawIsActive);
                             normalizedIsActive = true;
                         }
 
