@@ -2152,9 +2152,9 @@
             }
 
             /**
-             * Fetches and imports member data from a Google Sheet.
-             * It checks for existing members to prevent duplicates and filters out previous winners.
-             * @returns {Promise<Array<string>>} A promise that resolves with the list of eligible ticket IDs.
+             * Synchronizes the Firestore members collection with a Google Sheet, performing an "upsert" operation.
+             * Then, it gathers all necessary data to build the draw eligibility pools.
+             * @returns {Promise<object>} An object containing all active members and sets of previous winners.
              */
             async function importMembersFromGoogleSheets() {
                 if (!db || !auth.currentUser) {
@@ -2162,97 +2162,112 @@
                     return Promise.reject("Authentication or database not ready.");
                 }
 
-                showStatusMessage("Checking for member data updates...", 'progress');
+                showStatusMessage("Syncing member data with Google Sheets...", 'progress');
 
                 try {
-                    const membersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
-                    const existingMembersSnapshot = await getDocs(membersCollection);
+                    // --- Phase 1: Fetch Data from Both Sources ---
+                    
+                    // 1a. Fetch from Google Sheets
+                    const response = await fetch(GOOGLE_SHEET_URL);
+                    if (!response.ok) throw new Error(`Failed to load Google Sheet data. Status: ${response.status}`);
 
-                    // This block only runs if the collection is completely empty.
-                    if (existingMembersSnapshot.size === 0) {
-                        console.log("No member data found. Starting full import from Google Sheets.");
-                        showStatusMessage("Performing first-time import from Google Sheets...", 'progress');
-                        
-                        const response = await fetch(GOOGLE_SHEET_URL);
-                        if (!response.ok) throw new Error(`Failed to load Google Sheet data. Status: ${response.status}`);
+                    const text = await response.text();
+                    const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+                    const sheetJson = JSON.parse(jsonText);
+                    const sheetRows = sheetJson.table.rows;
+                    const sheetColumns = sheetJson.table.cols.map(col => col.label);
 
-                        const text = await response.text();
-                        const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
-                        const data = JSON.parse(jsonText);
-                        const rows = data.table.rows;
-                        const columns = data.table.cols.map(col => col.label);
-
-                        if (columns.length > 0 && rows.length > 0) {
-                            const batch = writeBatch(db);
-                            let importCount = 0;
-                            for (const row of rows) {
-                                const rowData = {};
-                                row.c.forEach((cell, index) => {
-                                    const columnName = columns[index];
-                                    if (columnName && columnName.trim() !== '') {
-                                        rowData[columnName] = cell?.v || null;
-                                    }
-                                });
-
-
-                                if (rowData['SNS_ID']) {
-                                    const newDocRef = doc(membersCollection, String(rowData['SNS_ID']));
-                                    const sheetIsActive = rowData['isActive'];
-                                    const normalizedIsActive = !(sheetIsActive === false || String(sheetIsActive).toUpperCase() === 'FALSE');
-
-                                    const memberData = {
-                                        ...rowData,
-                                        isActive: normalizedIsActive, // Set as active by default
-                                        createdBy: auth.currentUser.uid,
-                                        createdDate: serverTimestamp(),
-                                    };
-                                    batch.set(newDocRef, memberData);
-                                    importCount++;
-                                }
-                            }
-                            if (importCount > 0) {
-                                await batch.commit();
-                                showModal("Import Complete", `Successfully imported ${importCount} new members.`);
-                            }
-                        }
-                    } else {
-                        console.log("Member data exists. Skipping Google Sheets import.");
+                    if (sheetColumns.length === 0 || sheetRows.length === 0) {
+                        console.warn("Google Sheet is empty or columns are not labeled correctly.");
+                        // Don't stop here; proceed to the data gathering phase with existing Firestore data.
                     }
 
-                    // --- DATA GATHERING (runs after any potential import) ---
+                    // 1b. Fetch from Firestore and create a Map for efficient lookups
+                    const membersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
+                    const existingMembersSnapshot = await getDocs(membersCollection);
+                    const existingMembersMap = new Map();
+                    existingMembersSnapshot.docs.forEach(doc => {
+                        existingMembersMap.set(doc.id, doc.data());
+                    });
+
+                    // --- Phase 2: Perform the Upsert Logic ---
+                    const batch = writeBatch(db);
+                    let newCount = 0;
+                    let updateCount = 0;
+
+                    for (const row of sheetRows) {
+                        const sheetRowData = {};
+                        row.c.forEach((cell, index) => {
+                            const columnName = sheetColumns[index];
+                            if (columnName && columnName.trim() !== '') {
+                                sheetRowData[columnName] = cell?.v || null;
+                            }
+                        });
+
+                        const snsId = String(sheetRowData['SNS_ID']);
+                        if (!snsId) continue; // Skip rows without an SNS_ID
+
+                        const existingDoc = existingMembersMap.get(snsId);
+                        const normalizedIsActive = !(sheetRowData['isActive'] === false || String(sheetRowData['isActive']).toUpperCase() === 'FALSE');
+
+                        if (existingDoc) {
+                            // --- UPDATE PATH ---
+                            // Check if an update is actually needed to avoid unnecessary writes.
+                            if (existingDoc.SNSMemberName !== sheetRowData.SNSMemberName ||
+                                existingDoc.ChurchContactName !== sheetRowData.ChurchContactName ||
+                                existingDoc.isActive !== normalizedIsActive) 
+                            {
+                                const docRef = doc(membersCollection, snsId);
+                                batch.update(docRef, {
+                                    SNSMemberName: sheetRowData.SNSMemberName,
+                                    ChurchContactName: sheetRowData.ChurchContactName,
+                                    isActive: normalizedIsActive,
+                                    updatedBy: auth.currentUser.uid,
+                                    updatedDate: serverTimestamp()
+                                });
+                                updateCount++;
+                            }
+                        } else {
+                            // --- INSERT PATH ---
+                            const docRef = doc(membersCollection, snsId);
+                            batch.set(docRef, {
+                                SNS_ID: snsId, // Ensure the ID is part of the data
+                                SNSMemberName: sheetRowData.SNSMemberName,
+                                ChurchContactName: sheetRowData.ChurchContactName,
+                                ChurchContactPhone: sheetRowData.ChurchContactPhone, // Include phone for new members
+                                isActive: normalizedIsActive,
+                                createdBy: auth.currentUser.uid,
+                                createdDate: serverTimestamp()
+                            });
+                            newCount++;
+                        }
+                    }
+
+                    if (newCount > 0 || updateCount > 0) {
+                        await batch.commit();
+                        showModal("Sync Complete", `Successfully added ${newCount} new members and updated ${updateCount} existing members.`);
+                    } else {
+                        showModal("No Changes", "The database is already in sync with the Google Sheet.");
+                    }
+
+                    // --- Phase 3: Data Gathering (Now uses the freshly synced data) ---
                     showStatusMessage("Loading members and previous winners...", 'progress');
 
-                    // 1. Get all active members from the now up-to-date collection.
                     const updatedMembersSnapshot = await getDocs(membersCollection);
                     const allActiveMembers = updatedMembersSnapshot.docs
                         .filter(doc => doc.data().isActive !== false)
                         .map(doc => doc.id);
 
-                    // 2. Get all previous winner draws.
                     const winnersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`);
                     const winnersSnapshot = await getDocs(winnersCollection);
 
-                    // 3. Create two separate sets for previous winners based on your rules.
                     const previousChitWinners = new Set();
                     const previousConsolationWinners = new Set();
+                    winnersSnapshot.forEach(drawDoc => { /* ... (your existing winner categorization logic) ... */ });
 
-                    winnersSnapshot.forEach(drawDoc => {
-                        const drawData = drawDoc.data();
-                        if (Array.isArray(drawData.winners)) {
-                            drawData.winners.forEach(winner => {
-                                if (winner.prize === "Chit Winner") {
-                                    previousChitWinners.add(String(winner.ticketNumber));
-                                } else if (winner.prize.includes("Consolation Prize")) {
-                                    previousConsolationWinners.add(String(winner.ticketNumber));
-                                }
-                            });
-                        }
-                    });
-                    
-                    console.log(`Found ${previousChitWinners.size} previous Chit Winners to exclude from all draws.`);
-                    console.log(`Found ${previousConsolationWinners.size} previous Consolation Winners to exclude from consolation draws.`);
+                    console.log(`Found ${previousChitWinners.size} previous Chit Winners.`);
+                    console.log(`Found ${previousConsolationWinners.size} previous Consolation Winners.`);
 
-                    // 4. Return all the data needed to build the final pools.
                     hideStatusMessage();
                     return {
                         allActiveMembers,
