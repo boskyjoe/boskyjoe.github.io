@@ -2201,8 +2201,10 @@
                         });
 
                         const snsId = String(sheetRowData['SNS_ID']);
+                        console.log("--- DEBUGGING SNS_ID:", snsId, "---");
                         if (!snsId) continue;
-
+                        
+                        console.log("--- DEBUGGING SNS_ID:", snsId, "---");
                         // --- START OF DEBUGGING BLOCK ---
                         // Change 'SSC123' to an ID you are having trouble with.
                         if (snsId === 'SSC02') { 
