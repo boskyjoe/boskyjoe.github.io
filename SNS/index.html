@@ -2177,10 +2177,8 @@
 
                     const membersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
                     const existingMembersSnapshot = await getDocs(membersCollection);
-                    const existingMembersMap = new Map();
-                    existingMembersSnapshot.docs.forEach(doc => {
-                        existingMembersMap.set(doc.id, doc.data());
-                    });
+                    const existingMemberIds = new Set(existingMembersSnapshot.docs.map(doc => doc.id));
+
 
 
                     // --- Phase 2: Perform the Upsert Logic ---
@@ -2198,49 +2196,26 @@
                         });
 
                         const snsId = String(sheetRowData['SNS_ID']);
-                        if (!snsId) continue; // Skip rows without an SNS_ID
+                        if (!snsId) continue;
 
-                        const existingDoc = existingMembersMap.get(snsId);
+                        const docRef = doc(membersCollection, snsId);
+                        const normalizedIsActive = !(sheetRowData['isActive'] === false || String(sheetRowData['isActive']).toUpperCase() === 'FALSE');
 
-                        if (existingDoc) {
-                            // --- UPDATE PATH (with "Smart" Check) ---
-                            
-                            // 1. Normalize both the sheet value and the Firestore value before comparing.
-                            const normalizedSheetIsActive = !(sheetRowData['isActive'] === false || String(sheetRowData['isActive']).toUpperCase() === 'FALSE');
-                            const firestoreIsActive = existingDoc.isActive === false ? false : true;
-
-                            // 2. Normalize string fields to handle null/undefined consistently.
-                            const sheetMemberName = sheetRowData.SNSMemberName || "";
-                            const firestoreMemberName = existingDoc.SNSMemberName || "";
-                            const sheetContactName = sheetRowData.ChurchContactName || "";
-                            const firestoreContactName = existingDoc.ChurchContactName || "";
-                            const sheetContactPhone = sheetRowData.ChurchContactPhone || "";
-                            const firestoreContactPhone = existingDoc.ChurchContactPhone || "";
-
-                            
-                            console.log("Winner and member details saved to Firestore successfully.",normalizedSheetIsActive,firestoreIsActive);
-                            
-                            // 3. Check if an update is actually needed.
-                            if (firestoreMemberName !== sheetMemberName ||
-                                firestoreContactName !== sheetContactName ||
-                                firestoreContactPhone !== sheetContactPhone ||
-                                firestoreIsActive !== normalizedSheetIsActive) 
-                            {
-                                const docRef = doc(membersCollection, snsId);
-                                batch.update(docRef, {
-                                    SNSMemberName: sheetMemberName,
-                                    ChurchContactName: sheetContactName,
-                                    ChurchContactPhone: sheetContactPhone,
-                                    isActive: normalizedSheetIsActive,
-                                    updatedBy: auth.currentUser.uid,
-                                    updatedDate: serverTimestamp()
-                                });
-                                updateCount++;
-                            }
+                        if (existingMemberIds.has(snsId)) {
+                            // --- UPDATE PATH (CORRECTED) ---
+                            // The "smart" check has been removed. We now always update the document
+                            // to ensure its state perfectly matches the Google Sheet.
+                            batch.update(docRef, {
+                                SNSMemberName: sheetRowData.SNSMemberName || "",
+                                ChurchContactName: sheetRowData.ChurchContactName || "",
+                                ChurchContactPhone: sheetRowData.ChurchContactPhone || "",
+                                isActive: normalizedIsActive,
+                                updatedBy: auth.currentUser.uid,
+                                updatedDate: serverTimestamp()
+                            });
+                            updateCount++;
                         } else {
-                            // --- INSERT PATH (No change needed here) ---
-                            const docRef = doc(membersCollection, snsId);
-                            const normalizedIsActive = !(sheetRowData['isActive'] === false || String(sheetRowData['isActive']).toUpperCase() === 'FALSE');
+                            // --- INSERT PATH ---
                             batch.set(docRef, {
                                 SNS_ID: snsId,
                                 SNSMemberName: sheetRowData.SNSMemberName || "",
@@ -2254,6 +2229,7 @@
                         }
                     }
 
+
                     if (newCount > 0 || updateCount > 0) {
                         await batch.commit();
                         showModal("Sync Complete", `Successfully added ${newCount} new members and updated ${updateCount} existing members.`);
@@ -2261,9 +2237,8 @@
                         showModal("No Changes", "The database is already in sync with the Google Sheet.");
                     }
 
-                    // --- Phase 3: Data Gathering (Now uses the freshly synced data) ---
+                     // --- Phase 3: Data Gathering (remains the same) ---
                     showStatusMessage("Loading members and previous winners...", 'progress');
-
                     const updatedMembersSnapshot = await getDocs(membersCollection);
                     const allActiveMembers = updatedMembersSnapshot.docs
                         .filter(doc => doc.data().isActive !== false)
