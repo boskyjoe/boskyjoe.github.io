@@ -1080,41 +1080,18 @@
 
 
             // Firebase configuration hardcoded as requested
-            const firebaseConfigs = {
-                primary: { 
-                    apiKey: "AIzaSyCcuFTwygQ5-KujxUdv45b2TPY5yQXVVTo",
-                    authDomain: "snehanidhi-74ff0.firebaseapp.com",
-                    projectId: "snehanidhi-74ff0",
-                    storageBucket: "snehanidhi-74ff0.firebase-storage.app",
-                    messagingSenderId: "726238156431",
-                    appId: "1:726238156431:web:e60b0b5ed66f2d628342fa",
-                    measurementId: "G-7ZW0ZSQGLZ"
-                 },
-                secondary: { 
-                    apiKey: "AIzaSyCIIdANTJkdX1boUdPTlarU_WO3ajJbJOs",
-                    authDomain: "snehanidhi2-8e0da.firebaseapp.com",
-                    projectId: "snehanidhi2-8e0da",
-                    storageBucket: "snehanidhi2-8e0da.firebasestorage.app",
-                    messagingSenderId: "639212943665",
-                    appId: "1:639212943665:web:dcea8590ad8412aef01810",
-                    measurementId: "G-QXT1N7GWBJ"
-                }
+            const firebaseConfig = {
+                apiKey: "AIzaSyCcuFTwygQ5-KujxUdv45b2TPY5yQXVVTo",
+                authDomain: "snehanidhi-74ff0.firebaseapp.com",
+                projectId: "snehanidhi-74ff0",
+                storageBucket: "snehanidhi-74ff0.firebase-storage.app",
+                messagingSenderId: "726238156431",
+                appId: "1:726238156431:web:e60b0b5ed66f2d628342fa",
+                measurementId: "G-7ZW0ZSQGLZ"
             };
-
-            //const firebaseConfig = {
-             //   apiKey: "AIzaSyCcuFTwygQ5-KujxUdv45b2TPY5yQXVVTo",
-              //  authDomain: "snehanidhi-74ff0.firebaseapp.com",
-              //  projectId: "snehanidhi-74ff0",
-              //  storageBucket: "snehanidhi-74ff0.firebase-storage.app",
-             //   messagingSenderId: "726238156431",
-            //    appId: "1:726238156431:web:e60b0b5ed66f2d628342fa",
-            //    measurementId: "G-7ZW0ZSQGLZ"
-            //};
-
 
             // Use a default app ID if the provided variable is not defined
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'snehanidhi-default-app-id';
-            let currentAppName = 'primary';
 
             // TODO: Replace this with your Google Sheets ID
             // To find your Sheet ID, look in the URL:
@@ -1735,84 +1712,6 @@
                 }
             }
 
-
-            /**
-             * Sets up the authentication listener for the currently active 'auth' instance.
-             */
-            function setupAuthListener() {
-                onAuthStateChanged(auth, async (user) => {
-                    let role = 'Guest';
-                    if (user) {
-                        // This getUserRole must now use the active 'db' instance.
-                        role = await getUserRole(db, user.uid);
-                    }
-                    AppState.currentUserRole = role;
-                    updateUIForAuthState(user, role);
-                });
-            }
-
-
-
-
-            
-
-            /**
-             * Initializes Firebase with a failover mechanism.
-             * Tries the primary config, and if a specific error occurs,
-             * it will attempt to initialize with the secondary config.
-             * WARNING: This is not a recommended pattern for client-side apps.
-             */
-
-            async function initializeFirebaseWithFailover() {
-                let config = firebaseConfigs[currentAppName];
-                let appName = currentAppName;
-
-                try {
-                    console.log(`Attempting to initialize Firebase with '${appName}' config...`);
-                    
-                    // Initialize the app with a unique name to avoid conflicts
-                    const firebaseApp = initializeApp(config, appName);
-                    db = getFirestore(firebaseApp);
-                    auth = getAuth(firebaseApp);
-
-                    // --- Perform a simple test read to trigger a potential quota error ---
-                    // We check a non-critical document.
-                    const testDocRef = doc(db, `/artifacts/${appId}/public/data`, 'health_check');
-                    await getDoc(testDocRef); // This is the line that will likely throw the error
-
-                    // If we get here, the connection is good. Set up the listeners.
-                    setupAuthListener();
-
-                } catch (error) {
-                    console.error(`Failed to initialize with '${appName}' config. Error:`, error.code);
-
-                    // --- THIS IS THE FAILOVER LOGIC ---
-                    // Check for the specific quota error and if we haven't already tried the secondary.
-                    if (error.code === 'resource-exhausted' && appName === 'primary') {
-                        console.warn("Primary project quota exceeded. Attempting to failover to secondary project...");
-                        showModal("Service Notice", "The primary service is currently at capacity. Attempting to connect to a backup service...");
-                        
-                        // Switch to the secondary config and try again by calling the function recursively.
-                        currentAppName = 'secondary';
-                        await initializeFirebaseWithFailover(); // Recursive call with the new config name
-
-                    } else {
-                        // Handle all other errors (network, invalid config, etc.)
-                        showModal("Initialization Failed", `Could not connect to Firebase. Please check your network and try again. Error: ${error.message}`);
-                        disableAllButtons();
-                    }
-                }
-            }
-
-
-
-
-
-
-
-
-
-
             /**
              * Signs in the user with Google.
              */
@@ -2371,7 +2270,7 @@
                         showModal("No Changes", "The database is already in sync with the Google Sheet.");
                     }
 
-                    // --- Phase 3: Data Gathering (remains the same) ---
+                    // --- Phase 3: Data Gathering  ---
                     showStatusMessage("Loading members and previous winners...", 'progress');
                     const updatedMembersSnapshot = await getDocs(membersCollection);
                     const allActiveMembers = updatedMembersSnapshot.docs
@@ -2407,34 +2306,6 @@
                     return Promise.reject(error);
                 }
             }
-
-            async function checkForExistingWinner() {
-                if (!db) {
-                    console.error("Firestore not initialized. Cannot check for existing winner.");
-                    return false;
-                }
-                const currentDate = new Date();
-                const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-                const docId = monthAndYear.replace(/\s/g, '');
-                const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`, docId);
-
-                try {
-                    const docSnap = await getDoc(docRef);
-                    if (docSnap.exists()) {
-                        currentWinnerData = docSnap.data();
-                        console.log("DEBUG: Winner for this month already exists.");
-                        return true;
-                    } else {
-                        console.log("DEBUG: No winner for this month yet.");
-                        return false;
-                    }
-                } catch (error) {
-                    console.error("ERROR: Failed to check for existing winner:", error);
-                    showModal("Database Error", "Failed to check for existing winner. Please check your network connection.");
-                    return false;
-                }
-            }
-
 
             /**
              * Initializes all data for the Sneha Nidhi draw, creating separate eligibility pools
@@ -3286,8 +3157,7 @@
             document.addEventListener('DOMContentLoaded', async () => {
 
 
-                //await initializeFirebase(firebaseConfig);
-                initializeFirebaseWithFailover();
+                await initializeFirebase(firebaseConfig);
 
                 const bulkToggleStatusBtn = document.getElementById('bulk-toggle-status-btn');
 
