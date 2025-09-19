@@ -1080,15 +1080,37 @@
 
 
             // Firebase configuration hardcoded as requested
-            const firebaseConfig = {
-                apiKey: "AIzaSyCcuFTwygQ5-KujxUdv45b2TPY5yQXVVTo",
-                authDomain: "snehanidhi-74ff0.firebaseapp.com",
-                projectId: "snehanidhi-74ff0",
-                storageBucket: "snehanidhi-74ff0.firebase-storage.app",
-                messagingSenderId: "726238156431",
-                appId: "1:726238156431:web:e60b0b5ed66f2d628342fa",
-                measurementId: "G-7ZW0ZSQGLZ"
+            const firebaseConfigs = {
+                primary: { 
+                    apiKey: "AIzaSyCcuFTwygQ5-KujxUdv45b2TPY5yQXVVTo",
+                    authDomain: "snehanidhi-74ff0.firebaseapp.com",
+                    projectId: "snehanidhi-74ff0",
+                    storageBucket: "snehanidhi-74ff0.firebase-storage.app",
+                    messagingSenderId: "726238156431",
+                    appId: "1:726238156431:web:e60b0b5ed66f2d628342fa",
+                    measurementId: "G-7ZW0ZSQGLZ"
+                 },
+                secondary: { 
+                    apiKey: "AIzaSyCIIdANTJkdX1boUdPTlarU_WO3ajJbJOs",
+                    authDomain: "snehanidhi2-8e0da.firebaseapp.com",
+                    projectId: "snehanidhi2-8e0da",
+                    storageBucket: "snehanidhi2-8e0da.firebasestorage.app",
+                    messagingSenderId: "639212943665",
+                    appId: "1:639212943665:web:dcea8590ad8412aef01810",
+                    measurementId: "G-QXT1N7GWBJ"
+                }
             };
+
+            //const firebaseConfig = {
+             //   apiKey: "AIzaSyCcuFTwygQ5-KujxUdv45b2TPY5yQXVVTo",
+              //  authDomain: "snehanidhi-74ff0.firebaseapp.com",
+              //  projectId: "snehanidhi-74ff0",
+              //  storageBucket: "snehanidhi-74ff0.firebase-storage.app",
+             //   messagingSenderId: "726238156431",
+            //    appId: "1:726238156431:web:e60b0b5ed66f2d628342fa",
+            //    measurementId: "G-7ZW0ZSQGLZ"
+            //};
+
 
             // Use a default app ID if the provided variable is not defined
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'snehanidhi-default-app-id';
@@ -1712,6 +1734,84 @@
                 }
             }
 
+
+            /**
+             * Sets up the authentication listener for the currently active 'auth' instance.
+             */
+            function setupAuthListener() {
+                onAuthStateChanged(auth, async (user) => {
+                    let role = 'Guest';
+                    if (user) {
+                        // This getUserRole must now use the active 'db' instance.
+                        role = await getUserRole(db, user.uid);
+                    }
+                    AppState.currentUserRole = role;
+                    updateUIForAuthState(user, role);
+                });
+            }
+
+
+
+
+            let currentAppName = 'primary';
+
+            /**
+             * Initializes Firebase with a failover mechanism.
+             * Tries the primary config, and if a specific error occurs,
+             * it will attempt to initialize with the secondary config.
+             * WARNING: This is not a recommended pattern for client-side apps.
+             */
+
+            async function initializeFirebaseWithFailover() {
+                let config = firebaseConfigs[currentAppName];
+                let appName = currentAppName;
+
+                try {
+                    console.log(`Attempting to initialize Firebase with '${appName}' config...`);
+                    
+                    // Initialize the app with a unique name to avoid conflicts
+                    const firebaseApp = initializeApp(config, appName);
+                    db = getFirestore(firebaseApp);
+                    auth = getAuth(firebaseApp);
+
+                    // --- Perform a simple test read to trigger a potential quota error ---
+                    // We check a non-critical document.
+                    const testDocRef = doc(db, `/artifacts/${appId}/public/data`, 'health_check');
+                    await getDoc(testDocRef); // This is the line that will likely throw the error
+
+                    // If we get here, the connection is good. Set up the listeners.
+                    setupAuthListener();
+
+                } catch (error) {
+                    console.error(`Failed to initialize with '${appName}' config. Error:`, error.code);
+
+                    // --- THIS IS THE FAILOVER LOGIC ---
+                    // Check for the specific quota error and if we haven't already tried the secondary.
+                    if (error.code === 'resource-exhausted' && appName === 'primary') {
+                        console.warn("Primary project quota exceeded. Attempting to failover to secondary project...");
+                        showModal("Service Notice", "The primary service is currently at capacity. Attempting to connect to a backup service...");
+                        
+                        // Switch to the secondary config and try again by calling the function recursively.
+                        currentAppName = 'secondary';
+                        await initializeFirebaseWithFailover(); // Recursive call with the new config name
+
+                    } else {
+                        // Handle all other errors (network, invalid config, etc.)
+                        showModal("Initialization Failed", `Could not connect to Firebase. Please check your network and try again. Error: ${error.message}`);
+                        disableAllButtons();
+                    }
+                }
+            }
+
+
+
+
+
+
+
+
+
+
             /**
              * Signs in the user with Google.
              */
@@ -2166,7 +2266,7 @@
                 showStatusMessage("Syncing member data with Google Sheets...", 'progress');
 
                 try {
-                    // --- Phase 1: Fetch Data ---
+                    // --- Phase 1: Fetch Data from Both Sources ---
                     const response = await fetch(GOOGLE_SHEET_URL);
                     if (!response.ok) throw new Error(`Failed to load Google Sheet data. Status: ${response.status}`);
 
@@ -2183,73 +2283,69 @@
                         existingMembersMap.set(doc.id, doc.data());
                     });
 
-                    // --- Phase 2: Perform the Full Upsert and Deactivation Logic ---
+                    // --- Phase 2: In-Memory Comparison and Batch Creation ---
                     const batch = writeBatch(db);
                     let newCount = 0;
                     let updateCount = 0;
                     let deactivatedCount = 0;
                     const sheetSnsIds = new Set();
 
-                    // --- Part A: Handle Inserts and Updates ---
+                    // Helper function to robustly normalize the 'isActive' value from the sheet
+                    const normalizeSheetIsActive = (val) => {
+                        // The Google Sheet API quirk sends boolean FALSE as null.
+                        if (val === null || val === false || String(val).toUpperCase() === 'FALSE' || String(val).toUpperCase() === 'INACTIVE' || String(val) === '0') {
+                            return false;
+                        }
+                        return true;
+                    };
+
+                    // --- Part A: In memory comparision 
+
                     for (const row of sheetRows) {
                         const sheetRowData = {};
                         row.c.forEach((cell, index) => {
                             const columnName = sheetColumns[index];
                             if (columnName && columnName.trim() !== '') {
-                                // Because of the quirk, cell can be null.
-                                // The 'v' property exists on the cell object, if the cell object exists.
                                 sheetRowData[columnName] = cell ? cell.v : null;
                             }
                         });
 
                         const snsId = String(sheetRowData['SNS_ID']);
                         if (!snsId) continue;
-                        
+
                         sheetSnsIds.add(snsId);
-                        const docRef = doc(membersCollection, snsId);
+                        const existingDocData = existingMembersMap.get(snsId);
 
-                        // --- NEW, BULLETPROOF NORMALIZATION LOGIC ---
-                        // This correctly handles the Google Sheet quirk where FALSE becomes null.
-                        const rawIsActive = sheetRowData['isActive'];
-                        let normalizedIsActive = true; // Default to active
+                        if (existingDocData) {
+                            // --- UPDATE PATH (with "Smart" Check) ---
+                            const sheetIsActiveBool = normalizeSheetIsActive(sheetRowData['isActive']);
+                            const firestoreIsActiveBool = existingDocData.isActive === false ? false : true;
 
-                        if (rawIsActive === false || 
-                            String(rawIsActive).toUpperCase() === 'FALSE' ||
-                            String(rawIsActive).toUpperCase() === 'INACTIVE' ||
-                            String(rawIsActive) === '0') {
-                        const snsId = String(sheetRowData['SNS_ID']);
-                            console.log(snsId,"Waht is the rawflag if",rawIsActive);
-                            normalizedIsActive = false;
-                        } else {
-                            console.log(snsId,"Waht is the rawflag else ",rawIsActive);
-                            normalizedIsActive = true;
-                        }
-
-                        if (rawIsActive === null) {
-                            // We assume a null from the sheet's 'isActive' column means FALSE,
-                            // as per the API's strange behavior.
-                            normalizedIsActive = false;
-                        }
-
-                        if (existingMembersMap.has(snsId)) {
-                            // --- UPDATE PATH ---
-                            batch.update(docRef, {
-                                SNSMemberName: sheetRowData.SNSMemberName || "",
-                                ChurchContactName: sheetRowData.ChurchContactName || "",
-                                ChurchContactPhone: sheetRowData.ChurchContactPhone || "",
-                                isActive: normalizedIsActive,
-                                updatedBy: auth.currentUser.uid,
-                                updatedDate: serverTimestamp()
-                            });
-                            updateCount++;
+                            if ((existingDocData.SNSMemberName || "") !== (sheetRowData.SNSMemberName || "") ||
+                                (existingDocData.ChurchContactName || "") !== (sheetRowData.ChurchContactName || "") ||
+                                (existingDocData.ChurchContactPhone || "") !== (sheetRowData.ChurchContactPhone || "") ||
+                                firestoreIsActiveBool !== sheetIsActiveBool) {
+                                
+                                const docRef = doc(membersCollection, snsId);
+                                batch.update(docRef, {
+                                    SNSMemberName: sheetRowData.SNSMemberName || "",
+                                    ChurchContactName: sheetRowData.ChurchContactName || "",
+                                    ChurchContactPhone: sheetRowData.ChurchContactPhone || "",
+                                    isActive: sheetIsActiveBool,
+                                    updatedBy: auth.currentUser.uid,
+                                    updatedDate: serverTimestamp()
+                                });
+                                updateCount++;
+                            }
                         } else {
                             // --- INSERT PATH ---
+                            const docRef = doc(membersCollection, snsId);
                             batch.set(docRef, {
                                 SNS_ID: snsId,
                                 SNSMemberName: sheetRowData.SNSMemberName || "",
                                 ChurchContactName: sheetRowData.ChurchContactName || "",
-                                ChurchContactPhone: sheetRowAData.ChurchContactPhone || "",
-                                isActive: normalizedIsActive,
+                                ChurchContactPhone: sheetRowData.ChurchContactPhone || "",
+                                isActive: normalizeSheetIsActive(sheetRowData['isActive']),
                                 createdBy: auth.currentUser.uid,
                                 createdDate: serverTimestamp()
                             });
@@ -2257,7 +2353,7 @@
                         }
                     }
 
-                    // --- Part B: Handle Deactivations ---
+                    // Handle Deactivations
                     for (const [memberId, memberData] of existingMembersMap.entries()) {
                         if (!sheetSnsIds.has(memberId) && memberData.isActive !== false) {
                             const docRef = doc(membersCollection, memberId);
@@ -2266,6 +2362,7 @@
                         }
                     }
 
+                    // --- Single Write Operation ---
                     if (newCount > 0 || updateCount > 0 || deactivatedCount > 0) {
                         await batch.commit();
                         showModal("Sync Complete", `Sync finished: ${newCount} added, ${updateCount} updated, and ${deactivatedCount} deactivated.`);
@@ -2284,7 +2381,19 @@
                     const winnersSnapshot = await getDocs(winnersCollection);
                     const previousChitWinners = new Set();
                     const previousConsolationWinners = new Set();
-                    winnersSnapshot.forEach(drawDoc => { /* ... your winner categorization logic ... */ });
+
+                    winnersSnapshot.forEach(drawDoc => {
+                        const drawData = drawDoc.data();
+                        if (Array.isArray(drawData.winners)) {
+                            drawData.winners.forEach(winner => {
+                                if (winner.prize === "Chit Winner") {
+                                    previousChitWinners.add(String(winner.ticketNumber));
+                                } else if (winner.prize.includes("Consolation Prize")) {
+                                    previousConsolationWinners.add(String(winner.ticketNumber));
+                                }
+                            });
+                        }
+                    });
 
                     hideStatusMessage();
                     return { allActiveMembers, previousChitWinners, previousConsolationWinners };
