@@ -1793,7 +1793,7 @@
                         showModal("Service Notice", "The primary service is currently at capacity. Attempting to connect to a backup service...");
                         
                         // Switch to the secondary config and try again by calling the function recursively.
-                        currentAppName = 'secondary';
+                        currentAppName = 'primary';
                         await initializeFirebaseWithFailover(); // Recursive call with the new config name
 
                     } else {
