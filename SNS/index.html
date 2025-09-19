@@ -2169,7 +2169,6 @@
                     // --- Phase 1: Fetch Data from Both Sources ---
                     const response = await fetch(GOOGLE_SHEET_URL);
                     if (!response.ok) throw new Error(`Failed to load Google Sheet data. Status: ${response.status}`);
-
                     const text = await response.text();
                     const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
                     const sheetJson = JSON.parse(jsonText);
@@ -2192,7 +2191,6 @@
 
                     // Helper function to robustly normalize the 'isActive' value from the sheet
                     const normalizeSheetIsActive = (val) => {
-                        // The Google Sheet API quirk sends boolean FALSE as null.
                         if (val === null || val === false || String(val).toUpperCase() === 'FALSE' || String(val).toUpperCase() === 'INACTIVE' || String(val) === '0') {
                             return false;
                         }
@@ -2216,22 +2214,29 @@
                         sheetSnsIds.add(snsId);
                         const existingDocData = existingMembersMap.get(snsId);
 
-                        if (existingDocData) {
-                            // --- UPDATE PATH (with "Smart" Check) ---
-                            const sheetIsActiveBool = normalizeSheetIsActive(sheetRowData['isActive']);
-                            const firestoreIsActiveBool = existingDocData.isActive === false ? false : true;
+                        // 1. Create ONE clean, normalized data object from the sheet data.
+                        const finalMemberData = {
+                            SNSMemberName: sheetRowData.SNSMemberName || "",
+                            ChurchContactName: sheetRowData.ChurchContactName || "",
+                            ChurchContactPhone: sheetRowData.ChurchContactPhone || "",
+                            isActive: normalizeSheetIsActive(sheetRowData['isActive'])
+                        };
 
-                            if ((existingDocData.SNSMemberName || "") !== (sheetRowData.SNSMemberName || "") ||
-                                (existingDocData.ChurchContactName || "") !== (sheetRowData.ChurchContactName || "") ||
-                                (existingDocData.ChurchContactPhone || "") !== (sheetRowData.ChurchContactPhone || "") ||
-                                firestoreIsActiveBool !== sheetIsActiveBool) {
-                                
+                        if (existingDocData) {
+                            // --- UPDATE PATH ---
+                            const firestoreIsActiveBool = existingDocData.isActive === false ? false : true;
+                
+
+                            // 2. Compare the clean object to the existing data.
+                            if ((existingDocData.SNSMemberName || "") !== finalMemberData.SNSMemberName ||
+                                (existingDocData.ChurchContactName || "") !== finalMemberData.ChurchContactName ||
+                                (existingDocData.ChurchContactPhone || "") !== finalMemberData.ChurchContactPhone ||
+                                firestoreIsActiveBool !== finalMemberData.isActive) 
+                            {
                                 const docRef = doc(membersCollection, snsId);
+                                // 3. Pass the SAME clean object to the update call.
                                 batch.update(docRef, {
-                                    SNSMemberName: sheetRowData.SNSMemberName || "",
-                                    ChurchContactName: sheetRowData.ChurchContactName || "",
-                                    ChurchContactPhone: sheetRowData.ChurchContactPhone || "",
-                                    isActive: sheetIsActiveBool,
+                                    ...finalMemberData,
                                     updatedBy: auth.currentUser.uid,
                                     updatedDate: serverTimestamp()
                                 });
@@ -2242,10 +2247,7 @@
                             const docRef = doc(membersCollection, snsId);
                             batch.set(docRef, {
                                 SNS_ID: snsId,
-                                SNSMemberName: sheetRowData.SNSMemberName || "",
-                                ChurchContactName: sheetRowData.ChurchContactName || "",
-                                ChurchContactPhone: sheetRowData.ChurchContactPhone || "",
-                                isActive: normalizeSheetIsActive(sheetRowData['isActive']),
+                                ...finalMemberData,
                                 createdBy: auth.currentUser.uid,
                                 createdDate: serverTimestamp()
                             });
@@ -2253,7 +2255,7 @@
                         }
                     }
 
-                    // Handle Deactivations
+                    // --- Part B: Handle Deactivations ---
                     for (const [memberId, memberData] of existingMembersMap.entries()) {
                         if (!sheetSnsIds.has(memberId) && memberData.isActive !== false) {
                             const docRef = doc(membersCollection, memberId);
@@ -2270,7 +2272,7 @@
                         showModal("No Changes", "The database is already in sync with the Google Sheet.");
                     }
 
-                    // --- Phase 3: Data Gathering  ---
+                    // --- Phase 3: Data Gathering (Your Preferred, Cleaner Approach) ---
                     showStatusMessage("Loading members and previous winners...", 'progress');
                     const updatedMembersSnapshot = await getDocs(membersCollection);
                     const allActiveMembers = updatedMembersSnapshot.docs
