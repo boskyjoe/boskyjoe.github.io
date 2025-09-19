@@ -2307,6 +2307,34 @@
                 }
             }
 
+
+            async function checkForExistingWinner() {
+                if (!db) {
+                    console.error("Firestore not initialized. Cannot check for existing winner.");
+                    return false;
+                }
+                const currentDate = new Date();
+                const monthAndYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+                const docId = monthAndYear.replace(/\s/g, '');
+                const docRef = doc(db, `/artifacts/${appId}/public/data/SnehaNidhiWinners`, docId);
+
+                try {
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        currentWinnerData = docSnap.data();
+                        console.log("DEBUG: Winner for this month already exists.");
+                        return true;
+                    } else {
+                        console.log("DEBUG: No winner for this month yet.");
+                        return false;
+                    }
+                } catch (error) {
+                    console.error("ERROR: Failed to check for existing winner:", error);
+                    showModal("Database Error", "Failed to check for existing winner. Please check your network connection.");
+                    return false;
+                }
+            }
+
             /**
              * Initializes all data for the Sneha Nidhi draw, creating separate eligibility pools
              * for the Chit Winner and Consolation prizes based on the new rules.
