@@ -3285,7 +3285,8 @@
             document.addEventListener('DOMContentLoaded', async () => {
 
 
-                await initializeFirebase(firebaseConfig);
+                //await initializeFirebase(firebaseConfig);
+                initializeFirebaseWithFailover();
 
                 const bulkToggleStatusBtn = document.getElementById('bulk-toggle-status-btn');
 
