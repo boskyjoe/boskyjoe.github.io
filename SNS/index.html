@@ -2226,6 +2226,12 @@
                             // --- UPDATE PATH ---
                             const firestoreIsActiveBool = existingDocData.isActive === false ? false : true;
                 
+                            if (snsId === 'SSC02') {
+                                console.log("DEBUG: SSC.",snsId);
+                                console.log("DEBUG: firestoremis active.",firestoreIsActiveBool);
+                                console.log("DEBUG: finalMemberData active.",finalMemberData.isActive);
+
+                            }
 
                             // 2. Compare the clean object to the existing data.
                             if ((existingDocData.SNSMemberName || "") !== finalMemberData.SNSMemberName ||
