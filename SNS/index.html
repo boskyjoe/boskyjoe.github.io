@@ -2192,6 +2192,9 @@
                     // Helper function to robustly normalize the 'isActive' value from the sheet
                     const normalizeSheetIsActive = (val) => {
                         if (val === null || val === false || String(val).toUpperCase() === 'FALSE' || String(val).toUpperCase() === 'INACTIVE' || String(val) === '0') {
+                            if (snsId === 'SSC02') {
+                                console.log("normalizeSheetIsActive if loop");
+                            }
                             return false;
                         }
                         return true;
@@ -2226,7 +2229,7 @@
                             // --- UPDATE PATH ---
                             const firestoreIsActiveBool = existingDocData.isActive === false ? false : true;
                 
-                            if (snsId === 'SSC02') {
+                            if (snsId === 'SSC03') {
                                 console.log("DEBUG: SSC.",snsId);
                                 console.log("DEBUG: final memeber.",finalMemberData);
                                 console.log("DEBUG: final firestoreIsActiveBool.",firestoreIsActiveBool);
