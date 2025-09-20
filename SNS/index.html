@@ -2191,7 +2191,7 @@
 
                     // Helper function to robustly normalize the 'isActive' value from the sheet
                     const normalizeSheetIsActive = (val) => {
-                        if (val === null || val === false || String(val).toUpperCase() === 'FALSE' || String(val).toUpperCase() === 'INACTIVE' || String(val) === '0') 
+                        if (val === null || val === false || String(val).toUpperCase() === 'FALSE' || String(val).toUpperCase() === 'INACTIVE' || String(val) === '0') {
                             return false;
                         }
                         return true;
