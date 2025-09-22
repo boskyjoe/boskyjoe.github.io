@@ -637,3 +637,57 @@ export async function addSupplierPayment(paymentData, user) {
         }
     });
 }
+
+/**
+ * Records a new supplier payment AND updates the corresponding purchase invoice
+ * within a single, atomic transaction.
+ * @param {object} paymentData - The data for the new payment document.
+ * @param {object} user - The currently authenticated user object.
+ * @returns {Promise<void>}
+ */
+export async function recordPaymentAndUpdateInvoice(paymentData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+
+    // 1. Get references to the two documents we need to work with.
+    const invoiceRef = db.collection(PURCHASE_INVOICES_COLLECTION_PATH).doc(paymentData.relatedInvoiceId);
+    const newPaymentRef = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH).doc(); // Creates a ref with a new auto-generated ID
+
+    // 2. Run the transaction.
+    return db.runTransaction(async (transaction) => {
+        // READ: Get the current state of the invoice first.
+        const invoiceDoc = await transaction.get(invoiceRef);
+        if (!invoiceDoc.exists) {
+            throw new Error("Invoice document does not exist!");
+        }
+
+        const invoiceData = invoiceDoc.data();
+        const amountBeingPaid = paymentData.amountPaid;
+
+        // CALCULATE: Determine the new totals and status.
+        const newAmountPaid = (invoiceData.amountPaid || 0) + amountBeingPaid;
+        const newBalanceDue = invoiceData.invoiceTotal - newAmountPaid;
+        let newPaymentStatus = "Partially Paid";
+        if (newBalanceDue <= 0) {
+            newPaymentStatus = "Paid";
+        }
+
+        // WRITE 1: Update the invoice document.
+        transaction.update(invoiceRef, {
+            amountPaid: newAmountPaid,
+            balanceDue: newBalanceDue,
+            paymentStatus: newPaymentStatus,
+            'audit.updatedBy': user.email, // Also update the audit trail
+            'audit.updatedOn': now,
+        });
+
+        // WRITE 2: Create the new payment ledger document.
+        transaction.set(newPaymentRef, {
+            ...paymentData,
+            audit: {
+                createdBy: user.email,
+                createdOn: now,
+            }
+        });
+    });
+}
