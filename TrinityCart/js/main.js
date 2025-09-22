@@ -38,6 +38,8 @@ import { addPurchaseInvoice, getPurchaseInvoiceById, updatePurchaseInvoice } fro
 import { addLineItem, calculateAllTotals, showPurchasesView,switchPurchaseTab, loadPaymentsForSelectedInvoice,resetPurchaseForm, loadInvoiceDataIntoForm } from './ui.js';
 import { addSupplierPayment } from './api.js';
 import { recordPaymentAndUpdateInvoice } from './api.js';
+import { deletePaymentAndUpdateInvoice } from './api.js';
+import { getPaymentDataFromGridById } from './ui.js';
 
 import { showPaymentModal, closePaymentModal,getInvoiceDataFromGridById, initializeModals } from './ui.js';
 
@@ -302,12 +304,40 @@ function setupEventListeners() {
                         console.error("Error fetching invoice for payment:", error);
                         showModal('error', 'Error', 'Failed to load invoice data for payment.');
                     }
-                } else if (gridButton.classList.contains('action-btn-delete')) {
-                    if (await showModal('confirm', 'Confirm Deletion', 'Are you sure you want to permanently delete this invoice?')) {
-                        // await deletePurchaseInvoice(docId); // Call the delete API
+                } else if (gridButton.classList.contains('action-btn-delete-payment')) {
+                    const paymentData = getPaymentDataFromGridById(docId);
+                    if (!paymentData) {
+                        return showModal('error', 'Error', 'Could not find payment data in the grid.');
+                    }
+                    // Confirm with the user before deleting
+                    const confirmed = await showModal(
+                        'confirm', 
+                        'Confirm Deletion', 
+                        `Are you sure you want to delete the payment of <strong>$${paymentData.amountPaid.toFixed(2)}</strong>? This will update the invoice balance and cannot be undone.`
+                    );
+
+                    if (confirmed) {
+                        try {
+                            await deletePaymentAndUpdateInvoice(docId, user);
+                            await showModal('success', 'Success', 'The payment has been deleted and the invoice balance has been updated.');
+                            // The real-time listeners will handle updating both grids automatically!
+                        } catch (error) {
+                            console.error("Error deleting payment:", error);
+                            await showModal('error', 'Delete Failed', `The payment could not be deleted. Reason: ${error.message}`);
+                        }
                     }
                 }
             } 
+
+
+
+
+
+
+
+
+
+            
             // Logic for ALL other master data grids (Suppliers, Categories, etc.)
         
 
