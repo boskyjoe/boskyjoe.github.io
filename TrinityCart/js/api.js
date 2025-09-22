@@ -691,3 +691,61 @@ export async function recordPaymentAndUpdateInvoice(paymentData, user) {
         });
     });
 }
+
+
+/**
+ * Deletes a supplier payment AND reverses the amount on the corresponding invoice
+ * within a single, atomic transaction.
+ * @param {string} paymentId - The document ID of the payment to delete.
+ * @param {object} user - The currently authenticated user object.
+ * @returns {Promise<void>}
+ */
+export async function deletePaymentAndUpdateInvoice(paymentId, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+
+    // 1. Get a reference to the payment document we intend to delete.
+    const paymentRef = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId);
+
+    // 2. Run the transaction.
+    return db.runTransaction(async (transaction) => {
+        // READ 1: Get the payment document to find out how much was paid and which invoice it belongs to.
+        const paymentDoc = await transaction.get(paymentRef);
+        if (!paymentDoc.exists) {
+            throw new Error("Payment document not found. It may have already been deleted.");
+        }
+        const paymentData = paymentDoc.data();
+        const amountToDelete = paymentData.amountPaid;
+        const relatedInvoiceId = paymentData.relatedInvoiceId;
+
+        // READ 2: Get the corresponding invoice document.
+        const invoiceRef = db.collection(PURCHASE_INVOICES_COLLECTION_PATH).doc(relatedInvoiceId);
+        const invoiceDoc = await transaction.get(invoiceRef);
+        if (!invoiceDoc.exists) {
+            throw new Error(`Related invoice document ${relatedInvoiceId} does not exist!`);
+        }
+        const invoiceData = invoiceDoc.data();
+
+        // CALCULATE: Determine the new totals and status by reversing the payment.
+        const newAmountPaid = invoiceData.amountPaid - amountToDelete;
+        const newBalanceDue = invoiceData.balanceDue + amountToDelete;
+        let newPaymentStatus = "Partially Paid";
+        if (newAmountPaid <= 0) {
+            newPaymentStatus = "Unpaid";
+        } else if (newBalanceDue <= 0) {
+            newPaymentStatus = "Paid";
+        }
+
+        // WRITE 1: Update the invoice with the reversed amounts.
+        transaction.update(invoiceRef, {
+            amountPaid: newAmountPaid,
+            balanceDue: newBalanceDue,
+            paymentStatus: newPaymentStatus,
+            'audit.updatedBy': user.email,
+            'audit.updatedOn': now,
+        });
+
+        // WRITE 2: Delete the actual payment document.
+        transaction.delete(paymentRef);
+    });
+}
