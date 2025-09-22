@@ -289,7 +289,6 @@ function setupEventListeners() {
             console.log('[what is the grid]:', grid.id);
             // Logic for Purchase Invoices Grid
             if (grid.id === 'purchase-invoices-grid') {
-                console.log('[what is the grid] what button:', gridButton.classList.contains('action-btn-delete-payment'));
                 if (gridButton.classList.contains('action-btn-edit')) {
                     const invoiceData = await getPurchaseInvoiceById(docId);
                     if (invoiceData) loadInvoiceDataIntoForm(invoiceData);
@@ -305,32 +304,37 @@ function setupEventListeners() {
                         console.error("Error fetching invoice for payment:", error);
                         showModal('error', 'Error', 'Failed to load invoice data for payment.');
                     }
-                } else if (gridButton.classList.contains('action-btn-delete-payment')) {
-                    console.log("[main.js:action-btn-delete-payment] clicked the delete payemnt icon");
+                } else if (gridButton.classList.contains('action-btn-delete')) {
+                    // This is for deleting the ENTIRE invoice, which we can add later
+                    console.log("Delete entire invoice button clicked for:", docId);
+                }
+            } // --- Logic for Purchase Payments Grid ---
+            else if (grid.id === 'purchase-payments-grid') {
+                if (gridButton.classList.contains('action-btn-delete-payment')) {
+                    console.log("[main.js] Correctly detected click on action-btn-delete-payment for docId:", docId);
                     const paymentData = getPaymentDataFromGridById(docId);
                     if (!paymentData) {
                         return showModal('error', 'Error', 'Could not find payment data in the grid.');
                     }
+
                     // Confirm with the user before deleting
                     const confirmed = await showModal(
-                        'confirm', 
-                        'Confirm Deletion', 
+                        'confirm',
+                        'Confirm Deletion',
                         `Are you sure you want to delete the payment of <strong>$${paymentData.amountPaid.toFixed(2)}</strong>? This will update the invoice balance and cannot be undone.`
                     );
 
-                    console.log("[main.js:action-btn-delete-payment] value of confirmed:",confirmed);
                     if (confirmed) {
                         try {
                             await deletePaymentAndUpdateInvoice(docId, user);
                             await showModal('success', 'Success', 'The payment has been deleted and the invoice balance has been updated.');
-                            // The real-time listeners will handle updating both grids automatically!
                         } catch (error) {
                             console.error("Error deleting payment:", error);
                             await showModal('error', 'Delete Failed', `The payment could not be deleted. Reason: ${error.message}`);
                         }
                     }
                 }
-            } 
+            }
 
 
 
