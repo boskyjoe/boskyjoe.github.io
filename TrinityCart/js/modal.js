@@ -26,8 +26,7 @@ export function showModal(type, title, message) {
 
     // Safety check in case the modal HTML is missing from index.html
     if (!modalElement || !modalTitle || !modalMessage || !modalIcon || !modalButtons) {
-        console.error("Modal elements not found in the DOM! Falling back to standard confirm/alert.");
-        // Fallback to the browser's default for critical confirmations
+        console.error("Modal elements not found! Falling back to standard confirm/alert.");
         if (type === 'confirm') {
             return Promise.resolve(confirm(`${title}\n\n${message}`));
         } else {
@@ -44,17 +43,14 @@ export function showModal(type, title, message) {
         modalIcon.innerHTML = iconMap[type] || iconMap.info;
         modalButtons.innerHTML = '';
 
-        modalElement.style.display = 'flex';
-        modalElement.classList.add('visible');
+        modalElement.style.display = 'flex'; // Set display first
+        setTimeout(() => modalElement.classList.add('visible'), 10); // Then add class to trigger animation
+
 
         const createButton = (text, primary = false, value = false) => {
             const button = document.createElement('button');
             button.textContent = text;
             button.className = primary ? 'modal-btn modal-btn-primary' : 'modal-btn modal-btn-secondary';
-            //button.onclick = () => {
-              //  modalElement.classList.remove('visible');
-               // resolve(value);
-           // };
 
             button.onclick = () => {
                 modalElement.classList.remove('visible');
@@ -73,8 +69,6 @@ export function showModal(type, title, message) {
         } else {
             modalButtons.appendChild(createButton('OK', true, true));
         }
-
-        modalElement.classList.add('visible');
         
         // Also, ensure the first button is focused for accessibility
         const firstButton = modalButtons.querySelector('button');
