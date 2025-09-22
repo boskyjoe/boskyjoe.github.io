@@ -1551,8 +1551,11 @@ export function showPaymentModal(invoice) {
     });
 
     // Show the modal
-    paymentModal.classList.remove('hidden');
-    // --- THE FOCUS MANAGEMENT FIX ---
+    paymentModal.style.display = 'flex'; // Make it take up space
+    setTimeout(() => { // Allow the browser to render the display change
+        paymentModal.classList.add('visible');
+    }, 10); // A tiny delay is all that's needed
+
     // Find the first input in the form and give it focus.
     const firstInput = paymentModal.querySelector('input, select');
     if (firstInput) {
@@ -1562,7 +1565,10 @@ export function showPaymentModal(invoice) {
 
 export function closePaymentModal() {
     if (!paymentModal) return;
-    paymentModal.classList.add('hidden');
+    paymentModal.classList.remove('visible');
+    setTimeout(() => {
+        paymentModal.style.display = 'none';
+    }, 300);
 }
 
 // --- NEW EXPORTED HELPER FUNCTION ---
@@ -1577,21 +1583,32 @@ export function getInvoiceDataFromGridById(rowId) {
 
 export function initializeModals() {
     document.addEventListener('click', (e) => {
-        // If the user clicks an element with the close trigger class...
         if (e.target.closest('.modal-close-trigger')) {
-            // ...find the parent modal and close it.
-            const modalToClose = e.target.closest('#record-payment-modal, #custom-modal');
-            if (modalToClose) {
-                modalToClose.classList.add('hidden');
+            // This now correctly closes EITHER modal
+            if (e.target.closest('#record-payment-modal')) {
+                closePaymentModal();
             }
+            // Add similar logic for other modals if needed
         }
     });
 
-    // Also close modals with the Escape key
+    // --- ESCAPE KEY HANDLER ---
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            closePaymentModal();
-            // close other modals if needed
+            // When Escape is pressed, try to close ALL possible modals.
+
+            // 1. Close the Payment Modal
+            closePaymentModal(); // This function already has the correct logic.
+
+            // 2. Also close the Custom Modal (for success/error/confirm)
+            const customModal = document.getElementById('custom-modal');
+            if (customModal && customModal.classList.contains('visible')) {
+                customModal.classList.remove('visible');
+                // Wait for the animation to finish before hiding it completely
+                setTimeout(() => {
+                    customModal.style.display = 'none';
+                }, 300); // 300ms matches the CSS transition time
+            }
         }
     });
 }
