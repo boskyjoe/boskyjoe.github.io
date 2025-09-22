@@ -1184,6 +1184,7 @@ const purchaseInvoicesGridOptions = {
 
 // Grid for the payments of a selected invoice
 const purchasePaymentsGridOptions = {
+    getRowId: params => params.data.id, 
     columnDefs: [
         { field: "paymentDate", headerName: "Payment Date", flex: 1, valueFormatter: p => p.value.toDate().toLocaleDateString() },
         { field: "amountPaid", headerName: "Amount Paid", flex: 1, valueFormatter: p => `$${p.value.toFixed(2)}` },
