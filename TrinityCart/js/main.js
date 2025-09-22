@@ -305,6 +305,7 @@ function setupEventListeners() {
                         showModal('error', 'Error', 'Failed to load invoice data for payment.');
                     }
                 } else if (gridButton.classList.contains('action-btn-delete-payment')) {
+                    console.log("[main.js:action-btn-delete-payment] clicked the delete payemnt icon");
                     const paymentData = getPaymentDataFromGridById(docId);
                     if (!paymentData) {
                         return showModal('error', 'Error', 'Could not find payment data in the grid.');
@@ -316,6 +317,7 @@ function setupEventListeners() {
                         `Are you sure you want to delete the payment of <strong>$${paymentData.amountPaid.toFixed(2)}</strong>? This will update the invoice balance and cannot be undone.`
                     );
 
+                    console.log("[main.js:action-btn-delete-payment] value of confirmed:",confirmed);
                     if (confirmed) {
                         try {
                             await deletePaymentAndUpdateInvoice(docId, user);
@@ -337,7 +339,7 @@ function setupEventListeners() {
 
 
 
-            
+
             // Logic for ALL other master data grids (Suppliers, Categories, etc.)
         
 
