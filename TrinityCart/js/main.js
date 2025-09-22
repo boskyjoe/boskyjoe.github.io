@@ -314,25 +314,46 @@ function setupEventListeners() {
                     console.log("[main.js] Correctly detected click on action-btn-delete-payment for docId:", docId);
                     const paymentData = getPaymentDataFromGridById(docId);
                     if (!paymentData) {
-                        return showModal('error', 'Error', 'Could not find payment data in the grid.');
+                        //return showModal('error', 'Error', 'Could not find payment data in the grid.');
+                        alert('Error: Could not find payment data in the grid.');
+                        return; 
                     }
 
                     // Confirm with the user before deleting
-                    const confirmed = await showModal(
-                        'confirm',
-                        'Confirm Deletion',
-                        `Are you sure you want to delete the payment of <strong>$${paymentData.amountPaid.toFixed(2)}</strong>? This will update the invoice balance and cannot be undone.`
-                    );
+                  //  const confirmed = await showModal(
+                   ///     'confirm',
+                    //    'Confirm Deletion',
+                    //    `Are you sure you want to delete the payment of <strong>$${paymentData.amountPaid.toFixed(2)}</strong>? This will update the invoice balance and cannot be undone.`
+                    //);
 
+                    //if (confirmed) {
+                    //    try {
+                   //         await deletePaymentAndUpdateInvoice(docId, user);
+                   //         await showModal('success', 'Success', 'The payment has been deleted and the invoice balance has been updated.');
+                   //     } catch (error) {
+                   //         console.error("Error deleting payment:", error);
+                   //         await showModal('error', 'Delete Failed', `The payment could not be deleted. Reason: ${error.message}`);
+                  //      }
+                  //  }
+
+                    const confirmed = confirm(
+                        `Are you sure you want to delete the payment of $${paymentData.amountPaid.toFixed(2)}? This will update the invoice balance and cannot be undone.`
+                    );
                     if (confirmed) {
                         try {
                             await deletePaymentAndUpdateInvoice(docId, user);
-                            await showModal('success', 'Success', 'The payment has been deleted and the invoice balance has been updated.');
+                            
+                            // CHANGED: Replaced showModal with standard alert()
+                            alert('Success: The payment has been deleted and the invoice balance has been updated.');
+
                         } catch (error) {
                             console.error("Error deleting payment:", error);
-                            await showModal('error', 'Delete Failed', `The payment could not be deleted. Reason: ${error.message}`);
+                            
+                            // CHANGED: Replaced showModal with standard alert()
+                            alert(`Delete Failed: The payment could not be deleted. Reason: ${error.message}`);
                         }
                     }
+
                 }
             }
 
