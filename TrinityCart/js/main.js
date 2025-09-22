@@ -37,6 +37,8 @@ import { initializeMasterDataListeners } from './masterData.js';
 import { addPurchaseInvoice, getPurchaseInvoiceById, updatePurchaseInvoice } from './api.js';
 import { addLineItem, calculateAllTotals, showPurchasesView,switchPurchaseTab, loadPaymentsForSelectedInvoice,resetPurchaseForm, loadInvoiceDataIntoForm } from './ui.js';
 import { addSupplierPayment } from './api.js';
+import { recordPaymentAndUpdateInvoice } from './api.js';
+
 import { showPaymentModal, closePaymentModal,getInvoiceDataFromGridById, initializeModals } from './ui.js';
 
 
@@ -532,7 +534,8 @@ function setupEventListeners() {
             }
 
             try {
-                await addSupplierPayment(paymentData, user);
+                //await addSupplierPayment(paymentData, user);
+                await recordPaymentAndUpdateInvoice(paymentData, user);
                 await showModal('success', 'Success', 'Payment has been recorded successfully.');
                 closePaymentModal();
                 // The real-time listener will automatically update the grid!
