@@ -289,6 +289,7 @@ function setupEventListeners() {
             console.log('[what is the grid]:', grid.id);
             // Logic for Purchase Invoices Grid
             if (grid.id === 'purchase-invoices-grid') {
+                console.log('[what is the grid] what button:', gridButton.classList.contains('action-btn-delete-payment'));
                 if (gridButton.classList.contains('action-btn-edit')) {
                     const invoiceData = await getPurchaseInvoiceById(docId);
                     if (invoiceData) loadInvoiceDataIntoForm(invoiceData);
