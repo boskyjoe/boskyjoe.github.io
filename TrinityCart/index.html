@@ -243,9 +243,86 @@
 
 
 
-                <div id="sales-catalogue-view" class="view">
-                    <h2 class="text-2xl font-semibold">Sales Catalogue Management</h2>
+                <!-- =================================== -->
+                <!--   VIEW: SALES CATALOGUE MANAGEMENT  -->
+                <!-- =================================== -->
+                <div id="sales-catalogue-view" class="view space-y-8">
+                    
+                    <!-- Card 1: Catalogue Header Form -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <!-- Card Header -->
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 id="catalogue-form-title" class="text-lg font-semibold text-gray-800">Create New Sales Catalogue</h3>
+                        </div>
+
+                        <!-- Card Body -->
+                        <div class="p-6">
+                            <form id="sales-catalogue-form" class="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                                <input type="hidden" id="sales-catalogue-doc-id"> <!-- For editing -->
+
+                                <!-- Catalogue Name -->
+                                <div class="md:col-span-2">
+                                    <label for="catalogue-name-input" class="form-label">Catalogue Name</label>
+                                    <input type="text" id="catalogue-name-input" placeholder="e.g., Christmas Bake Sale 2025" class="form-input w-full" required>
+                                </div>
+
+                                <!-- Sales Season Dropdown -->
+                                <div>
+                                    <label for="catalogue-season-select" class="form-label">Sales Season</label>
+                                    <select id="catalogue-season-select" class="form-input w-full" required>
+                                        <option value="">Select a season...</option>
+                                        <!-- Options will be populated by JS -->
+                                    </select>
+                                </div>
+
+                                <!-- Form Actions / Submit Button -->
+                                <div class="flex justify-start space-x-3">
+                                    <button type="submit" id="catalogue-form-submit-btn" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
+                                        Save Catalogue
+                                    </button>
+                                    <button type="button" id="catalogue-form-cancel-btn" class="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 font-semibold" style="display: none;">
+                                        Cancel Edit
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Dual Grid System for Product Selection -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                
+                                <!-- Left Side: Available Products -->
+                                <div>
+                                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Available Products in Master Catalogue</h4>
+                                    <div id="available-products-grid" class="ag-theme-alpine" style="height: 600px; width: 100%;"></div>
+                                </div>
+
+                                <!-- Right Side: Items in this Catalogue -->
+                                <div>
+                                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Items in this Sales Catalogue</h4>
+                                    <div id="catalogue-items-grid" class="ag-theme-alpine" style="height: 600px; width: 100%;"></div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Existing Sales Catalogues Grid -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Existing Sales Catalogues</h3>
+                        </div>
+                        <div class="p-2">
+                            <div id="existing-catalogues-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+                        </div>
+                    </div>
+
                 </div>
+
+
+
 
 
                 
@@ -779,12 +856,6 @@
                         </div>
                     </div>
                 </div>
-
-
-
-
-
-
 
             </main>
         </div>
