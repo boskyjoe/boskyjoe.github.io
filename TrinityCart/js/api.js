@@ -10,6 +10,10 @@ import { EVENTS_COLLECTION_PATH } from './config.js';
 
 import { PURCHASE_INVOICES_COLLECTION_PATH, SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH } from './config.js';
 
+import { SALES_CATALOGUES_COLLECTION_PATH } from './config.js';
+
+
+
 
 
 // This file will contain all functions that interact with the backend.
@@ -749,3 +753,147 @@ export async function deletePaymentAndUpdateInvoice(paymentId, user) {
         transaction.delete(paymentRef);
     });
 }
+
+
+// =======================================================
+// --- SALES CATALOGUE API FUNCTIONS ---
+// =======================================================
+
+/**
+ * Finds the most recent purchase price for a given product ID using an
+ * efficient, indexed query.
+ * @param {string} productId - The document ID of the product from the productCatalogue.
+ * @returns {Promise<number|null>} The latest price, or null if no purchase history is found.
+ */
+
+export async function getLatestPurchasePrice(productId) {
+    const db = firebase.firestore();
+
+    // This is the highly efficient query.
+    // It finds only invoices containing the product, sorts by newest first, and gets only the top one.
+    const invoicesQuery = db.collection(PURCHASE_INVOICES_COLLECTION_PATH)
+                            .where('lineItems', 'array-contains', { masterProductId: productId }) // This requires an index!
+                            .orderBy('purchaseDate', 'desc')
+                            .limit(1);
+    try {
+        const snapshot = await invoicesQuery.get();
+
+        if (snapshot.empty) {
+            // No purchase history found for this product.
+            console.warn(`No purchase history found for product ID: ${productId}`);
+            return null;
+        }
+
+        // We only have one document in the snapshot.
+        const latestInvoice = snapshot.docs[0].data();
+        
+        // Find the specific line item within that one invoice.
+        const foundItem = latestInvoice.lineItems.find(item => item.masterProductId === productId);
+
+        if (foundItem) {
+            console.log(`Found latest price for ${productId} in invoice ${latestInvoice.invoiceId}: ${foundItem.unitPurchasePrice}`);
+            return foundItem.unitPurchasePrice;
+        } else {
+            // This case is unlikely but possible if data is inconsistent.
+            return null;
+        }
+
+    } catch (error) {
+        // IMPORTANT: The first time you run this, Firestore will log an error
+        // with a link to create the required composite index. You MUST click that link.
+        console.error("Error in getLatestPurchasePrice. This may be an indexing issue.", error);
+        console.error("If the error message includes a link to create an index, please click it in the Firebase console.");
+        throw error; // Re-throw the error so the calling function knows something went wrong.
+    }
+}
+
+/**
+ * Creates a new Sales Catalogue document.
+ * @param {object} catalogueData - Data for the new catalogue (name, seasonId, etc.).
+ * @param {object} user - The currently authenticated user.
+ */
+
+export async function addSalesCatalogue(catalogueData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const catalogueId = `SC-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+
+    // This is a single write operation. (Cost: 1 write)
+    return db.collection(SALES_CATALOGUES_COLLECTION_PATH).add({
+        ...catalogueData,
+        catalogueId: catalogueId,
+        isActive: true,
+        audit: { createdBy: user.email, createdOn: now, updatedBy: user.email, updatedOn: now }
+    });
+}
+
+/**
+ * [NEWLY ADDED] Updates the top-level data for an existing Sales Catalogue document.
+ * @param {string} docId - The Firestore document ID of the catalogue to update.
+ * @param {object} updatedData - The fields to update (e.g., { catalogueName, seasonId }).
+ * @param {object} user - The currently authenticated user.
+ */
+
+export async function updateSalesCatalogue(docId, updatedData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const catalogueRef = db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(docId);
+
+    // This is a single, efficient write operation.
+    return catalogueRef.update({
+        ...updatedData,
+        'audit.updatedBy': user.email,
+        'audit.updatedOn': now,
+    });
+}
+
+
+
+/**
+ * Adds a single product item to a specific sales catalogue's 'items' sub-collection.
+ * @param {string} catalogueId - The Firestore document ID of the parent catalogue.
+ * @param {object} itemData - The complete data for the item to be added.
+ */
+
+export async function addItemToCatalogue(catalogueId, itemData) {
+    const db = firebase.firestore();
+    // This is a single write operation to a sub-collection. (Cost: 1 write)
+    return db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(catalogueId).collection('items').add(itemData);
+}
+
+/**
+ * Updates a specific item within a sales catalogue (e.g., when a price is overridden).
+ * @param {string} catalogueId - The ID of the parent catalogue.
+ * @param {string} itemId - The ID of the item document in the sub-collection.
+ * @param {object} updatedData - The fields to update (e.g., { sellingPrice, isOverridden: true }).
+ * @param {object} user - The currently authenticated user.
+ */
+
+export async function updateCatalogueItem(catalogueId, itemId, updatedData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const itemRef = db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(catalogueId).collection('items').doc(itemId);
+
+    // This is a single write operation. (Cost: 1 write)
+    return itemRef.update({
+        ...updatedData,
+        'audit.updatedBy': user.email,
+        'audit.updatedOn': now
+    });
+}
+
+
+/**
+ * Removes a single product item from a sales catalogue.
+ * @param {string} catalogueId - The ID of the parent catalogue.
+ * @param {string} itemId - The ID of the item document to delete.
+ */
+export async function removeItemFromCatalogue(catalogueId, itemId) {
+    const db = firebase.firestore();
+    // This is a single delete operation. (Cost: 1 delete)
+    return db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(catalogueId).collection('items').doc(itemId).delete();
+}
+
+
+
+
