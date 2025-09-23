@@ -44,6 +44,15 @@ import { getPaymentDataFromGridById } from './ui.js';
 import { showPaymentModal, closePaymentModal,getInvoiceDataFromGridById, initializeModals } from './ui.js';
 
 
+import { showSalesCatalogueView } from './ui.js';
+import { 
+    getLatestPurchasePrice,
+    addSalesCatalogue,
+    updateSalesCatalogue,
+    addItemToCatalogue,
+    updateCatalogueItem,
+    removeItemFromCatalogue 
+} from './api.js';
 
 // --- FIREBASE INITIALIZATION ---
 firebase.initializeApp(firebaseConfig);
@@ -266,6 +275,7 @@ function setupEventListeners() {
             switch (viewId) {
                 case 'suppliers-view': showSuppliersView(); break;
                 case 'products-view': showProductsView(); break;
+                case 'sales-catalogue-view': showSalesCatalogueView(); break;
                 case 'categories-view': showCategoriesView(); break;
                 case 'payment-modes-view': showPaymentModesView(); break;
                 case 'sale-types-view': showSaleTypesView(); break;
@@ -313,6 +323,7 @@ function setupEventListeners() {
                 if (gridButton.classList.contains('action-btn-delete-payment')) {
                     console.log("[main.js] Correctly detected click on action-btn-delete-payment for docId:", docId);
                     const paymentData = getPaymentDataFromGridById(docId);
+                    console.log("[main.js] paymentData", paymentData);
                     if (!paymentData) {
                         //return showModal('error', 'Error', 'Could not find payment data in the grid.');
                         alert('Error: Could not find payment data in the grid.');
@@ -653,6 +664,136 @@ function setupEventListeners() {
             }
         });
     }
+
+
+    // ==========================================================
+    // --- EVENT LISTENERS FOR SALES CATALOGUE MODULE ---
+    // ==========================================================
+
+    // --- Form Submission (Create/Update Catalogue) ---
+
+    const salesCatalogueForm = document.getElementById('sales-catalogue-form');
+    if (salesCatalogueForm) {
+        salesCatalogueForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const docId = document.getElementById('sales-catalogue-doc-id').value;
+            const isEditMode = !!docId;
+
+            const seasonSelect = document.getElementById('catalogue-season-select');
+            const catalogueData = {
+                catalogueName: document.getElementById('catalogue-name-input').value,
+                seasonId: seasonSelect.value,
+                seasonName: seasonSelect.options[seasonSelect.selectedIndex].text // Denormalize for easier display
+            };
+
+            try {
+                if (isEditMode) {
+                    await updateSalesCatalogue(docId, catalogueData, user);
+                    await showModal('success', 'Success', 'Catalogue details have been updated.');
+                } else {
+                    await addSalesCatalogue(catalogueData, user);
+                    await showModal('success', 'Success', 'New sales catalogue has been created.');
+                }
+                // We will add logic to refresh the "Existing Catalogues" grid here later.
+                salesCatalogueForm.reset();
+            } catch (error) {
+                console.error("Error saving sales catalogue:", error);
+                await showModal('error', 'Save Failed', 'There was an error saving the catalogue.');
+            }
+        });
+    }
+
+
+    // --- Grid Action Clicks (Add/Remove/Edit) ---
+    document.addEventListener('click', async (e) => {
+        const target = e.target;
+        const user = appState.currentUser;
+        const gridButton = target.closest('button[data-id]');
+        if (!gridButton || !user) return;
+
+        const grid = gridButton.closest('.ag-theme-alpine');
+        if (!grid) return;
+
+        // --- ADD ITEM to catalogue ---
+        if (grid.id === 'available-products-grid' && gridButton.classList.contains('action-btn-add-item')) {
+            const productId = gridButton.dataset.id;
+            const catalogueId = document.getElementById('sales-catalogue-doc-id').value;
+
+            if (!catalogueId) {
+                return showModal('error', 'No Catalogue Selected', 'Please save a new catalogue or select an existing one to edit before adding items.');
+            }
+
+            try {
+                const costPrice = await getLatestPurchasePrice(productId);
+                if (costPrice === null) {
+                    return showModal('info', 'Cannot Add Product', 'This product cannot be added because it has no purchase history. Please create a purchase invoice for it first.');
+                }
+
+                const productMaster = masterData.products.find(p => p.id === productId);
+                const margin = productMaster.unitMarginPercentage || 0;
+                const sellingPrice = costPrice * (1 + margin / 100);
+
+                const itemData = {
+                    productId: productId,
+                    productName: productMaster.itemName,
+                    costPrice: costPrice,
+                    marginPercentage: margin,
+                    sellingPrice: sellingPrice,
+                    isOverridden: false,
+                    catalogueId: catalogueId // Store parent ID for easier updates
+                };
+
+                await addItemToCatalogue(catalogueId, itemData);
+                // The real-time listener on the right grid will handle the UI update.
+
+            } catch (error) {
+                console.error("Error adding item to catalogue:", error);
+                await showModal('error', 'Error', 'An error occurred while adding the product.');
+            }
+        }
+
+        // --- REMOVE ITEM from catalogue ---
+        if (grid.id === 'catalogue-items-grid' && gridButton.classList.contains('action-btn-remove-item')) {
+            const itemId = gridButton.dataset.id;
+            const catalogueId = document.getElementById('sales-catalogue-doc-id').value;
+
+            if (await confirm('Are you sure you want to remove this item from the catalogue?')) {
+                try {
+                    await removeItemFromCatalogue(catalogueId, itemId);
+                } catch (error) {
+                    console.error("Error removing item:", error);
+                    await showModal('error', 'Error', 'Failed to remove the item.');
+                }
+            }
+        }
+    });
+
+
+    // --- Custom Event for Price Override ---
+    document.addEventListener('updateCatalogueItemPrice', async (e) => {
+        const { catalogueId, itemId, newPrice } = e.detail;
+        const user = appState.currentUser;
+        if (!user) return;
+
+        const updatedData = {
+            sellingPrice: parseFloat(newPrice),
+            isOverridden: true // Mark that this price was manually set
+        };
+
+        try {
+            await updateCatalogueItem(catalogueId, itemId, updatedData, user);
+            // The grid's real-time listener will reflect the change.
+        } catch (error) {
+            console.error("Failed to update catalogue item price:", error);
+            await showModal('error', 'Update Failed', 'The price could not be updated.');
+        }
+    });
+
+
+
 
 
 
