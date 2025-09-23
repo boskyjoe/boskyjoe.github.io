@@ -77,48 +77,6 @@
     @apply bg-green-100 text-green-800 hover:bg-green-200;
 }
 
-/* --- NEW, ROBUST MODAL VISIBILITY STYLES --- */
-.modal-container {
-    /* Starts invisible and unclickable */
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease-in-out;
-}
-
-.modal-container.visible {
-    /* Becomes visible and clickable */
-    opacity: 1;
-    pointer-events: auto;
-}
-
-/* Animate the panel when it becomes visible */
-.modal-container.visible .modal-panel-centered {
-    animation: slideUp 0.4s ease-out;
-}
-
-#custom-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    display: none; /* Hidden by default */
-}
-
-#custom-modal.visible {
-    display: flex; /* Show when visible class is added */
-}
-
-/* Animate the overlay */
-#modal-overlay {
-    animation: fadeIn 0.3s ease-out;
-}
-
-/* Animate the panel */
-#modal-panel {
-    animation: slideUp 0.4s ease-out;
-}
 
 @keyframes slideUp {
     from { opacity: 0; transform: translateY(20px); }
@@ -176,26 +134,33 @@
     @apply bg-red-100 text-red-600;
 }
 
-/* --- NEW ROBUST MODAL STYLES --- */
 
-.modal-panel-centered {
-    position: relative; /* For stacking context */
-    margin: auto; /* Helps with centering */
-    max-height: 90vh; /* Prevent modal from being too tall */
+/* --- THE ONLY MODAL SYSTEM YOU NEED --- */
+
+.modal-container {
+    /* Hidden by default, takes up no space, and is not interactive. */
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+
+    /* These will animate when the 'visible' class is added. */
+    transition: opacity 0.3s ease-in-out;
+}
+
+.modal-container.visible {
+    /* When visible, it becomes a flex container and is interactive. */
     display: flex;
-    flex-direction: column;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* This targets the panel inside the container to give it a slide-up animation. */
+.modal-container.visible .modal-panel,
+.modal-container.visible .modal-panel-centered {
     animation: slideUp 0.4s ease-out;
 }
 
-/* The form inside should handle its own scrolling if content is too long */
-.modal-panel-centered form {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-.modal-panel-centered form > .p-6 { /* The main body content */
-    overflow-y: auto;
-}
+
 
 /* --- NEW: Style for the selected/highlighted row in ag-Grid --- */
 .ag-theme-alpine .ag-row-selected {
