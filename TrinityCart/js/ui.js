@@ -1616,6 +1616,167 @@ export function initializeModals() {
 
 
 
+// =======================================================
+// --- SALES CATALOGUE MANAGEMENT UI ---
+// =======================================================
+
+// 1. Define variables for the new grid APIs and initialization flags
+let availableProductsGridApi = null;
+let catalogueItemsGridApi = null;
+let isSalesCatalogueGridsInitialized = false;
+let unsubscribeCatalogueItemsListener = null; // For the right-side grid
+
+
+
+// 2. Define the AG-Grid options for the LEFT grid (Available Products)
+const availableProductsGridOptions = {
+    columnDefs: [
+        { field: "itemName", headerName: "Product Name", flex: 1, filter: 'agTextColumnFilter' },
+        { 
+            field: "categoryId", 
+            headerName: "Category", 
+            flex: 1,
+            valueFormatter: params => {
+                const category = masterData.categories.find(c => c.id === params.value);
+                return category ? category.categoryName : 'Unknown';
+            }
+        },
+        {
+            headerName: "Add",
+            width: 80,
+            cellClass: 'flex items-center justify-center',
+            cellRenderer: params => {
+                const productId = params.data.id;
+                const addIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5z" /></svg>`;
+                return `<button class="action-btn-icon action-btn-add-item" data-id="${productId}" title="Add to Catalogue">${addIcon}</button>`;
+            }
+        }
+    ],
+    defaultColDef: { resizable: true, sortable: true },
+    onGridReady: (params) => {
+        availableProductsGridApi = params.api;
+    }
+};
+
+
+// 3. Define the AG-Grid options for the RIGHT grid (Catalogue Items)
+const catalogueItemsGridOptions = {
+    getRowId: params => params.data.id, // Crucial for finding and updating rows
+    columnDefs: [
+        { field: "productName", headerName: "Product Name", flex: 1 },
+        { field: "costPrice", headerName: "Cost Price", width: 120, valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : '' },
+        { field: "marginPercentage", headerName: "Margin %", width: 110, valueFormatter: p => p.value ? `${p.value}%` : '' },
+        { 
+            field: "sellingPrice", 
+            headerName: "Selling Price", 
+            width: 130, 
+            editable: true, // This makes the cell editable!
+            valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : '',
+            valueParser: p => parseFloat(p.newValue.replace('$', '')) // Clean up input
+        },
+        {
+            headerName: "Remove",
+            width: 80,
+            cellClass: 'flex items-center justify-center',
+            cellRenderer: params => {
+                const itemId = params.data.id;
+                const deleteIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5z" clip-rule="evenodd" /></svg>`;
+                return `<button class="action-btn-icon action-btn-delete action-btn-remove-item" data-id="${itemId}" title="Remove from Catalogue">${deleteIcon}</button>`;
+            }
+        }
+    ],
+    defaultColDef: { resizable: true, sortable: true },
+    onCellValueChanged: (params) => {
+        // This event fires when the user edits the selling price.
+        // We dispatch a custom event for main.js to handle.
+        document.dispatchEvent(new CustomEvent('updateCatalogueItemPrice', {
+            detail: {
+                catalogueId: params.data.catalogueId, // The parent catalogue's ID
+                itemId: params.data.id,              // The item's own ID
+                newPrice: params.newValue
+            }
+        }));
+    },
+    onGridReady: (params) => {
+        catalogueItemsGridApi = params.api;
+    }
+};
+
+// Add a variable for the new grid
+let existingCataloguesGridApi = null;
+
+// Define its options
+const existingCataloguesGridOptions = {
+    columnDefs: [
+        { field: "catalogueName", headerName: "Catalogue Name", flex: 1 },
+        { field: "seasonName", headerName: "Season", flex: 1 },
+        { field: "isActive", headerName: "Status", width: 100, cellRenderer: p => p.value ? 'Active' : 'Inactive' },
+        {
+            headerName: "Actions", width: 100, cellClass: 'flex items-center justify-center',
+            cellRenderer: params => {
+                const editIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="m2.695 14.763-1.262 3.154a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.885L17.5 5.5a2.121 2.121 0 0 0-3-3L3.58 13.42a4 4 0 0 0-.885 1.343z" /></svg>`;
+                return `<button class="action-btn-icon action-btn-edit-catalogue" data-id="${params.data.id}" title="Edit Catalogue">${editIcon}</button>`;
+            }
+        }
+    ],
+    onGridReady: params => { existingCataloguesGridApi = params.api; }
+};
+
+
+// 4. Create the initialization function
+export function initializeSalesCatalogueGrids() {
+    if (isSalesCatalogueGridsInitialized) return;
+    
+    const availableGridDiv = document.getElementById('available-products-grid');
+    const itemsGridDiv = document.getElementById('catalogue-items-grid');
+    const existingGridDiv = document.getElementById('existing-catalogues-grid'); // Get the new grid
+
+    if (availableGridDiv && itemsGridDiv && existingGridDiv) { // Check for all three
+        console.log("[ui.js] Initializing Sales Catalogue grids for the first time.");
+        createGrid(availableGridDiv, availableProductsGridOptions);
+        createGrid(itemsGridDiv, catalogueItemsGridOptions);
+        createGrid(existingGridDiv, existingCataloguesGridOptions); // Create the new grid
+        isSalesCatalogueGridsInitialized = true;
+    }
+}
+
+
+// 5. Create the main view function
+export function showSalesCatalogueView() {
+    // Standard view setup
+    showView('sales-catalogue-view');
+    initializeSalesCatalogueGrids();
+
+    // Populate the Sales Season dropdown from our master data cache
+    const seasonSelect = document.getElementById('catalogue-season-select');
+    seasonSelect.innerHTML = '<option value="">Select a season...</option>';
+    masterData.seasons.forEach(season => {
+        const option = document.createElement('option');
+        option.value = season.id;
+        option.textContent = season.seasonName;
+        seasonSelect.appendChild(option);
+    });
+
+    // Wait for the grids to be ready before populating them
+    const waitForGrids = setInterval(() => {
+        if (availableProductsGridApi && catalogueItemsGridApi) {
+            clearInterval(waitForGrids);
+
+            // Populate the LEFT grid with all active products from the master data cache
+            // This is very fast as it uses data already in memory.
+            const activeProducts = masterData.products.filter(p => p.isActive);
+            availableProductsGridApi.setGridOption('rowData', activeProducts);
+
+            // The RIGHT grid will be populated when a user selects a catalogue to edit.
+            // For now, we ensure it's empty.
+            catalogueItemsGridApi.setGridOption('rowData', []);
+        }
+    }, 50);
+}
+
+
+
+
 
 
 
