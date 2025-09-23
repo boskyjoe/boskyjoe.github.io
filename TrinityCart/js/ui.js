@@ -256,7 +256,11 @@ export function detachAllRealtimeListeners() {
         unsubscribePaymentsListener = null;
     }
 
-
+    if (unsubscribeExistingCataloguesListener) {
+        console.log("[ui.js] Detaching real-time existing catalogues listener.");
+        unsubscribeExistingCataloguesListener();
+        unsubscribeExistingCataloguesListener = null;
+    }
 
 
 }
@@ -1625,7 +1629,7 @@ let availableProductsGridApi = null;
 let catalogueItemsGridApi = null;
 let isSalesCatalogueGridsInitialized = false;
 let unsubscribeCatalogueItemsListener = null; // For the right-side grid
-
+let unsubscribeExistingCataloguesListener = null;
 
 
 // 2. Define the AG-Grid options for the LEFT grid (Available Products)
@@ -1770,6 +1774,28 @@ export function showSalesCatalogueView() {
             // The RIGHT grid will be populated when a user selects a catalogue to edit.
             // For now, we ensure it's empty.
             catalogueItemsGridApi.setGridOption('rowData', []);
+
+            console.log("[ui.js] Attaching real-time listener for existing catalogues.");
+            const db = firebase.firestore();
+            existingCataloguesGridApi.setGridOption('loading', true); // Show loading overlay
+
+            // Attach the listener
+            unsubscribeExistingCataloguesListener = db.collection(SALES_CATALOGUES_COLLECTION_PATH)
+                .orderBy('audit.createdOn', 'desc')
+                .onSnapshot(snapshot => {
+                    console.log("[Firestore] Received real-time update for existing sales catalogues.");
+                    const catalogues = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    
+                    // Feed the data to the grid
+                    existingCataloguesGridApi.setGridOption('rowData', catalogues);
+                    
+                    // IMPORTANT: Hide the loading overlay
+                    existingCataloguesGridApi.setGridOption('loading', false);
+                }, error => {
+                    console.error("Error with existing catalogues listener:", error);
+                    // Also hide the overlay on error
+                    existingCataloguesGridApi.setGridOption('loading', false);
+                });
         }
     }, 50);
 }
