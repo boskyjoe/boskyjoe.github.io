@@ -827,6 +827,12 @@ export async function addSalesCatalogue(catalogueData, user) {
     });
 }
 
+export async function getSalesCatalogues() {
+    const db = firebase.firestore();
+    const snapshot = await db.collection(SALES_CATALOGUES_COLLECTION_PATH).orderBy('catalogueName').get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
 /**
  * [NEWLY ADDED] Updates the top-level data for an existing Sales Catalogue document.
  * @param {string} docId - The Firestore document ID of the catalogue to update.
