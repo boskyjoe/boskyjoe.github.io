@@ -1950,7 +1950,7 @@ export function renderSidebar(role) {
 export function showView(viewId) {
 
 
-    / =================================================================
+    // =================================================================
     // --- Close any open modals on navigation ---
     // =================================================================
     const customModal = document.getElementById('custom-modal');
