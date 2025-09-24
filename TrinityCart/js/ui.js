@@ -1949,6 +1949,24 @@ export function renderSidebar(role) {
 
 export function showView(viewId) {
 
+
+    / =================================================================
+    // --- Close any open modals on navigation ---
+    // =================================================================
+    const customModal = document.getElementById('custom-modal');
+    const paymentModal = document.getElementById('record-payment-modal');
+
+    if (customModal && customModal.classList.contains('visible')) {
+        console.log("[ui.js] Force-closing custom modal during navigation.");
+        customModal.classList.remove('visible');
+        customModal.style.display = 'none';
+    }
+    if (paymentModal && paymentModal.classList.contains('visible')) {
+        console.log("[ui.js] Force-closing payment modal during navigation.");
+        paymentModal.classList.remove('visible');
+        paymentModal.style.display = 'none';
+    }
+
     detachAllRealtimeListeners();
 
     appState.activeView = viewId;
