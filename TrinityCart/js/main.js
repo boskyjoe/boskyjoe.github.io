@@ -51,7 +51,7 @@ import {
     updateSalesCatalogue,
     addItemToCatalogue,
     updateCatalogueItem,
-    removeItemFromCatalogue 
+    removeItemFromCatalogue,getCatalogueDataFromGridById
 } from './api.js';
 
 // --- FIREBASE INITIALIZATION ---
