@@ -1630,6 +1630,26 @@ export function initializeModals() {
 // --- SALES CATALOGUE MANAGEMENT UI ---
 // =======================================================
 
+function syncAvailableProductsGrid() {
+    if (!catalogueItemsGridApi || !availableProductsGridApi) return;
+
+    // 1. Get all items currently in the right grid.
+    const currentItems = [];
+    catalogueItemsGridApi.forEachNode(node => currentItems.push(node.data));
+
+    // 2. Update our Set with the product IDs of these items.
+    currentCatalogueItemIds = new Set(currentItems.map(item => item.productId));
+
+    // 3. Force the left grid to re-render its "Add" buttons.
+    availableProductsGridApi.refreshCells({
+        columns: ['Add'],
+        force: true
+    });
+}
+
+
+
+
 // 1. Define variables for the new grid APIs and initialization flags
 let availableProductsGridApi = null;
 let catalogueItemsGridApi = null;
@@ -1637,6 +1657,7 @@ let isSalesCatalogueGridsInitialized = false;
 let unsubscribeCatalogueItemsListener = null; // For the right-side grid
 let unsubscribeExistingCataloguesListener = null;
 
+let currentCatalogueItemIds = new Set(); // Using a Set for very fast lookups
 
 // 2. Define the AG-Grid options for the LEFT grid (Available Products)
 const availableProductsGridOptions = {
@@ -1658,7 +1679,18 @@ const availableProductsGridOptions = {
             cellRenderer: params => {
                 const productId = params.data.id;
                 const addIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5z" /></svg>`;
-                return `<button class="action-btn-icon action-btn-add-item" data-id="${productId}" title="Add to Catalogue">${addIcon}</button>`;
+                const isDisabled = currentCatalogueItemIds.has(productId);
+                const disabledClass = isDisabled ? 'opacity-50 cursor-not-allowed' : '';
+                const disabledAttribute = isDisabled ? 'disabled' : '';
+                const tooltip = isDisabled ? 'Item is already in this catalogue' : 'Add to Catalogue';
+
+                return `<button 
+                            class="action-btn-icon action-btn-add-item ${disabledClass}" 
+                            data-id="${productId}" 
+                            title="${tooltip}"
+                            ${disabledAttribute}>
+                                ${addIcon}
+                        </button>`;
             }
         }
     ],
@@ -1754,6 +1786,7 @@ export function loadCatalogueForEditing(catalogueData) {
             const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             catalogueItemsGridApi.setGridOption('rowData', items);
             catalogueItemsGridApi.setGridOption('loading', false);
+            syncAvailableProductsGrid();
         }, error => {
             console.error("Error listening to catalogue items:", error);
             catalogueItemsGridApi.setGridOption('loading', false);
