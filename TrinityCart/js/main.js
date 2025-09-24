@@ -371,6 +371,7 @@ function setupEventListeners() {
                 if (gridButton.classList.contains('action-btn-edit-catalogue')) {
                     console.log('[main.js]action-btn-edit-catalogue:');
                     const catalogueData = getCatalogueDataFromGridById(docId);
+                    console.log('[main.js]action-btn-edit-catalogue:catalogueData',catalogueData);
                     if (catalogueData) {
                         loadCatalogueForEditing(catalogueData);
                     }
