@@ -1631,22 +1631,28 @@ export function initializeModals() {
 // =======================================================
 
 function syncAvailableProductsGrid() {
-    console.log("--- SYNCING GRIDS ---");
+    // --- THIS IS THE FIX ---
+    // Add a defensive check at the very beginning. If either grid API is not
+    // ready yet, log it and exit gracefully. This function will be called again
+    // later when things are ready.
     if (!catalogueItemsGridApi || !availableProductsGridApi) {
-        console.error("Sync failed: One or more grid APIs are not ready.");
+        console.warn("Sync called, but one or more grid APIs are not ready. Will try again later.", {
+            catalogueItemsReady: !!catalogueItemsGridApi,
+            availableProductsReady: !!availableProductsGridApi
+        });
         return;
     }
+    // ----------------------------------------
 
-    // 1. Get all items currently in the right grid.
+    console.log("--- SYNCING GRIDS (Both APIs are ready) ---");
+
     const currentItems = [];
     catalogueItemsGridApi.forEachNode(node => currentItems.push(node.data));
     console.log(`Found ${currentItems.length} items in the right-side grid.`);
 
-    // 2. Update our Set with the product IDs of these items.
     currentCatalogueItemProductIds = new Set(currentItems.map(item => item.productId));
     console.log("Updated Set of current product IDs:", currentCatalogueItemProductIds);
 
-    // 3. Force the left grid to re-render its "Add" buttons.
     console.log("Calling refreshCells() on the left-side grid to update buttons...");
     availableProductsGridApi.refreshCells({
         columns: ['Add'],
