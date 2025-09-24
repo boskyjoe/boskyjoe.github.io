@@ -368,65 +368,66 @@ function setupEventListeners() {
                 }
             } // --- Logic for Sales Catalogue Grids ---
             else if (grid.id === 'existing-catalogues-grid') {
-            if (gridButton.classList.contains('action-btn-edit-catalogue')) {
-                // This is where we will add the logic to load a catalogue for editing.
-                // For now, we'll just log it.
-                console.log("EDIT CATALOGUE button clicked for:", docId);
-            }
-        }
-        else if (grid.id === 'available-products-grid') {
-            if (gridButton.classList.contains('action-btn-add-item')) {
-                const productId = gridButton.dataset.id;
-                const catalogueId = document.getElementById('sales-catalogue-doc-id').value;
-
-                if (!catalogueId) {
-                    return alert('No Catalogue Selected. Please save a new catalogue or select an existing one to edit before adding items.');
+                if (gridButton.classList.contains('action-btn-edit-catalogue')) {
+                    const catalogueData = getCatalogueDataFromGridById(docId);
+                    if (catalogueData) {
+                        loadCatalogueForEditing(catalogueData);
+                    }
                 }
+            }
+            else if (grid.id === 'available-products-grid') {
+                if (gridButton.classList.contains('action-btn-add-item')) {
+                    const productId = gridButton.dataset.id;
+                    const catalogueId = document.getElementById('sales-catalogue-doc-id').value;
 
-                try {
-                    const costPrice = await getLatestPurchasePrice(productId);
-                    if (costPrice === null) {
-                        return alert('This product cannot be added because it has no purchase history. Please create a purchase invoice for it first.');
+                    if (!catalogueId) {
+                        return alert('No Catalogue Selected. Please save a new catalogue or select an existing one to edit before adding items.');
                     }
 
-                    const productMaster = masterData.products.find(p => p.id === productId);
-                    const margin = productMaster.unitMarginPercentage || 0;
-                    const sellingPrice = costPrice * (1 + margin / 100);
-
-                    const itemData = {
-                        productId: productId,
-                        productName: productMaster.itemName,
-                        costPrice: costPrice,
-                        marginPercentage: margin,
-                        sellingPrice: sellingPrice,
-                        isOverridden: false,
-                        catalogueId: catalogueId // Store parent ID for easier updates
-                    };
-
-                    await addItemToCatalogue(catalogueId, itemData);
-                    // The real-time listener on the right grid will handle the UI update.
-
-                } catch (error) {
-                    console.error("Error adding item to catalogue:", error);
-                    alert('An error occurred while adding the product.');
-                }
-            }
-        }
-        else if (grid.id === 'catalogue-items-grid') {
-            if (gridButton.classList.contains('action-btn-remove-item')) {
-                const itemId = gridButton.dataset.id;
-                const catalogueId = document.getElementById('sales-catalogue-doc-id').value;
-
-                if (confirm('Are you sure you want to remove this item from the catalogue?')) {
                     try {
-                        await removeItemFromCatalogue(catalogueId, itemId);
+                        const costPrice = await getLatestPurchasePrice(productId);
+                        if (costPrice === null) {
+                            return alert('This product cannot be added because it has no purchase history. Please create a purchase invoice for it first.');
+                        }
+
+                        const productMaster = masterData.products.find(p => p.id === productId);
+                        const margin = productMaster.unitMarginPercentage || 0;
+                        const sellingPrice = costPrice * (1 + margin / 100);
+
+                        const itemData = {
+                            productId: productId,
+                            productName: productMaster.itemName,
+                            costPrice: costPrice,
+                            marginPercentage: margin,
+                            sellingPrice: sellingPrice,
+                            isOverridden: false,
+                            catalogueId: catalogueId // Store parent ID for easier updates
+                        };
+
+                        await addItemToCatalogue(catalogueId, itemData);
+                        // The real-time listener on the right grid will handle the UI update.
+
                     } catch (error) {
-                        console.error("Error removing item:", error);
-                        alert('Failed to remove the item.');
+                        console.error("Error adding item to catalogue:", error);
+                        alert('An error occurred while adding the product.');
                     }
                 }
             }
-        }
+            else if (grid.id === 'catalogue-items-grid') {
+                if (gridButton.classList.contains('action-btn-remove-item')) {
+                    const itemId = gridButton.dataset.id;
+                    const catalogueId = document.getElementById('sales-catalogue-doc-id').value;
+
+                    if (confirm('Are you sure you want to remove this item from the catalogue?')) {
+                        try {
+                            await removeItemFromCatalogue(catalogueId, itemId);
+                        } catch (error) {
+                            console.error("Error removing item:", error);
+                            alert('Failed to remove the item.');
+                        }
+                    }
+                }
+            }
 
 
 
@@ -533,6 +534,10 @@ function setupEventListeners() {
         if (target.closest('#cancel-edit-btn')) { resetPurchaseForm(); return; }
         if (target.closest('#payment-modal-close')) { closePaymentModal(); return; }
 
+        if (target.closest('#catalogue-form-cancel-btn')) {
+            resetCatalogueForm();
+            return;
+        }
 
 
         const tab = target.closest('.tab');
