@@ -772,7 +772,7 @@ export async function getLatestPurchasePrice(productId) {
     // This is the highly efficient query.
     // It finds only invoices containing the product, sorts by newest first, and gets only the top one.
     const invoicesQuery = db.collection(PURCHASE_INVOICES_COLLECTION_PATH)
-                            .where('lineItems', 'array-contains', { masterProductId: productId }) // This requires an index!
+                            .where('productIds', 'array-contains', productId) // Query the new simple array
                             .orderBy('purchaseDate', 'desc')
                             .limit(1);
     try {
