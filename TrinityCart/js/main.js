@@ -762,6 +762,7 @@ function setupEventListeners() {
                 if (isEditMode) {
                     await updateSalesCatalogue(docId, catalogueData, user);
                     alert('Catalogue details have been updated.');
+                    resetCatalogueForm(); 
                 } else {
                     await addSalesCatalogue(catalogueData, user);
                     alert('New sales catalogue has been created.');
