@@ -263,6 +263,11 @@ export function detachAllRealtimeListeners() {
         unsubscribeExistingCataloguesListener = null;
     }
 
+    if (unsubscribeCatalogueItemsListener) {
+        console.log("[ui.js] Detaching real-time catalogue items listener.");
+        unsubscribeCatalogueItemsListener();
+        unsubscribeCatalogueItemsListener = null;
+    }
 
 }
 
@@ -1709,6 +1714,72 @@ const catalogueItemsGridOptions = {
 
 // Add a variable for the new grid
 let existingCataloguesGridApi = null;
+
+export function getCatalogueDataFromGridById(rowId) {
+    if (!existingCataloguesGridApi) return null;
+    const rowNode = existingCataloguesGridApi.getRowNode(rowId);
+    return rowNode ? rowNode.data : null;
+}
+
+
+// [NEW] This function will handle loading the selected catalogue for editing
+export function loadCatalogueForEditing(catalogueData) {
+    if (!catalogueData) return;
+
+    // 1. Populate the form fields
+    document.getElementById('sales-catalogue-doc-id').value = catalogueData.id;
+    document.getElementById('catalogue-name-input').value = catalogueData.catalogueName;
+    document.getElementById('catalogue-season-select').value = catalogueData.seasonId;
+    
+    // 2. Change form to "Edit Mode"
+    document.getElementById('catalogue-form-title').textContent = `Editing: ${catalogueData.catalogueName}`;
+    document.getElementById('catalogue-form-submit-btn').textContent = 'Update Details';
+    document.getElementById('catalogue-form-cancel-btn').style.display = 'inline-block';
+    
+    // 3. Detach any previous item listener to prevent leaks
+    if (unsubscribeCatalogueItemsListener) {
+        unsubscribeCatalogueItemsListener();
+    }
+
+    // 4. Attach a new real-time listener for the items in THIS catalogue
+    const db = firebase.firestore();
+    catalogueItemsGridApi.setGridOption('loading', true);
+    
+    unsubscribeCatalogueItemsListener = db.collection(SALES_CATALOGUES_COLLECTION_PATH)
+        .doc(catalogueData.id)
+        .collection('items')
+        .onSnapshot(snapshot => {
+            console.log(`[Firestore] Received update for items in catalogue ${catalogueData.id}`);
+            const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            catalogueItemsGridApi.setGridOption('rowData', items);
+            catalogueItemsGridApi.setGridOption('loading', false);
+        }, error => {
+            console.error("Error listening to catalogue items:", error);
+            catalogueItemsGridApi.setGridOption('loading', false);
+        });
+
+    // 5. Scroll the form into view
+    document.getElementById('sales-catalogue-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+// [NEW] Function to reset the form back to "Create New" mode
+export function resetCatalogueForm() {
+    document.getElementById('sales-catalogue-form').reset();
+    document.getElementById('sales-catalogue-doc-id').value = '';
+    document.getElementById('catalogue-form-title').textContent = 'Create New Sales Catalogue';
+    document.getElementById('catalogue-form-submit-btn').textContent = 'Save Catalogue';
+    document.getElementById('catalogue-form-cancel-btn').style.display = 'none';
+
+    // Clear the items grid and detach the listener
+    if (catalogueItemsGridApi) {
+        catalogueItemsGridApi.setGridOption('rowData', []);
+    }
+    if (unsubscribeCatalogueItemsListener) {
+        unsubscribeCatalogueItemsListener();
+        unsubscribeCatalogueItemsListener = null;
+    }
+}
+
 
 // Define its options
 const existingCataloguesGridOptions = {
