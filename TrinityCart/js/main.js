@@ -44,7 +44,7 @@ import { getPaymentDataFromGridById } from './ui.js';
 import { showPaymentModal, closePaymentModal,getInvoiceDataFromGridById, initializeModals } from './ui.js';
 
 
-import { showSalesCatalogueView,getCatalogueDataFromGridById } from './ui.js';
+import { showSalesCatalogueView,getCatalogueDataFromGridById,loadCatalogueForEditing } from './ui.js';
 import { 
     getLatestPurchasePrice,
     addSalesCatalogue,
@@ -369,9 +369,7 @@ function setupEventListeners() {
             } // --- Logic for Sales Catalogue Grids ---
             else if (grid.id === 'existing-catalogues-grid') {
                 if (gridButton.classList.contains('action-btn-edit-catalogue')) {
-                    console.log('[main.js]action-btn-edit-catalogue:');
                     const catalogueData = getCatalogueDataFromGridById(docId);
-                    console.log('[main.js]action-btn-edit-catalogue:catalogueData',catalogueData);
                     if (catalogueData) {
                         loadCatalogueForEditing(catalogueData);
                     }
