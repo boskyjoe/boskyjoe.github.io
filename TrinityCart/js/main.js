@@ -196,12 +196,15 @@ async function handleSavePurchaseInvoice() {
     const totalTaxAmount = totalItemLevelTax + invoiceLevelTaxAmount;
     const invoiceTotal = taxableAmountForInvoice + totalTaxAmount;
 
+    const productIds = lineItems.map(item => item.masterProductId);
+
     // 4. Assemble the final invoice object
     const invoiceData = {
         purchaseDate: new Date(purchaseDate), supplierId, supplierName, supplierInvoiceNo,
         lineItems, itemsSubtotal, invoiceDiscountType, invoiceDiscountValue, invoiceDiscountAmount,
         taxableAmountForInvoice, totalItemLevelTax, invoiceTaxPercentage, invoiceLevelTaxAmount,
-        totalTaxAmount, invoiceTotal
+        totalTaxAmount, invoiceTotal,
+        productIds: productIds
     };
 
 
