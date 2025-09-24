@@ -1784,6 +1784,7 @@ export function resetCatalogueForm() {
 
 // Define its options
 const existingCataloguesGridOptions = {
+    getRowId: params => params.data.id,
     columnDefs: [
         { field: "catalogueName", headerName: "Catalogue Name", flex: 1 },
         { field: "seasonName", headerName: "Season", flex: 1 },
