@@ -531,6 +531,31 @@ function setupEventListeners() {
 
         }
 
+
+        // ==========================================================
+        // --- [NEW] MOBILE SIDEBAR LOGIC ---
+        // ==========================================================
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+        if (mobileMenuButton && sidebar && sidebarOverlay) {
+            // Logic to open the sidebar
+            mobileMenuButton.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent click from bubbling up
+                sidebar.classList.add('active');
+                sidebarOverlay.classList.remove('hidden');
+            });
+
+            // Logic to close the sidebar by clicking the overlay
+            sidebarOverlay.addEventListener('click', () => {
+                sidebar.classList.remove('active');
+                sidebarOverlay.classList.add('hidden');
+            });
+        }
+
+
+
         // --- Handle Other Standalone Buttons ---
             
         if (target.closest('#add-line-item-btn')) { addLineItem(); return; }
