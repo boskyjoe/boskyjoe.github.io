@@ -44,14 +44,14 @@ import { getPaymentDataFromGridById } from './ui.js';
 import { showPaymentModal, closePaymentModal,getInvoiceDataFromGridById, initializeModals } from './ui.js';
 
 
-import { showSalesCatalogueView } from './ui.js';
+import { showSalesCatalogueView,getCatalogueDataFromGridById } from './ui.js';
 import { 
     getLatestPurchasePrice,
     addSalesCatalogue,
     updateSalesCatalogue,
     addItemToCatalogue,
     updateCatalogueItem,
-    removeItemFromCatalogue,getCatalogueDataFromGridById
+    removeItemFromCatalogue
 } from './api.js';
 
 // --- FIREBASE INITIALIZATION ---
