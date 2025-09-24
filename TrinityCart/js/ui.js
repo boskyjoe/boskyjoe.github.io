@@ -1631,20 +1631,28 @@ export function initializeModals() {
 // =======================================================
 
 function syncAvailableProductsGrid() {
-    if (!catalogueItemsGridApi || !availableProductsGridApi) return;
+    console.log("--- SYNCING GRIDS ---");
+    if (!catalogueItemsGridApi || !availableProductsGridApi) {
+        console.error("Sync failed: One or more grid APIs are not ready.");
+        return;
+    }
 
     // 1. Get all items currently in the right grid.
     const currentItems = [];
     catalogueItemsGridApi.forEachNode(node => currentItems.push(node.data));
+    console.log(`Found ${currentItems.length} items in the right-side grid.`);
 
     // 2. Update our Set with the product IDs of these items.
-    currentCatalogueItemIds = new Set(currentItems.map(item => item.productId));
+    currentCatalogueItemProductIds = new Set(currentItems.map(item => item.productId));
+    console.log("Updated Set of current product IDs:", currentCatalogueItemProductIds);
 
     // 3. Force the left grid to re-render its "Add" buttons.
+    console.log("Calling refreshCells() on the left-side grid to update buttons...");
     availableProductsGridApi.refreshCells({
         columns: ['Add'],
         force: true
     });
+    console.log("--- SYNC COMPLETE ---");
 }
 
 
@@ -1679,7 +1687,13 @@ const availableProductsGridOptions = {
             cellRenderer: params => {
                 const productId = params.data.id;
                 const addIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5z" /></svg>`;
-                const isDisabled = currentCatalogueItemIds.has(productId);
+                
+                const isDuplicate = currentCatalogueItemProductIds.has(productId);
+                
+                console.log(`Rendering 'Add' button for product ${productId}. Is it a duplicate? ${isDuplicate}`);
+
+                const isDisabled = isDuplicate;
+
                 const disabledClass = isDisabled ? 'opacity-50 cursor-not-allowed' : '';
                 const disabledAttribute = isDisabled ? 'disabled' : '';
                 const tooltip = isDisabled ? 'Item is already in this catalogue' : 'Add to Catalogue';
