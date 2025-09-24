@@ -32,6 +32,7 @@ import { updateUserRole, setUserActiveStatus } from './api.js';
 
 
 import { initializeMasterDataListeners } from './masterData.js';
+import { masterData } from './masterData.js';
 
 
 import { addPurchaseInvoice, getPurchaseInvoiceById, updatePurchaseInvoice } from './api.js';
