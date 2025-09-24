@@ -369,6 +369,7 @@ function setupEventListeners() {
             } // --- Logic for Sales Catalogue Grids ---
             else if (grid.id === 'existing-catalogues-grid') {
                 if (gridButton.classList.contains('action-btn-edit-catalogue')) {
+                    console.log('[main.js]action-btn-edit-catalogue:');
                     const catalogueData = getCatalogueDataFromGridById(docId);
                     if (catalogueData) {
                         loadCatalogueForEditing(catalogueData);
