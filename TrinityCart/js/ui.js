@@ -1724,6 +1724,7 @@ export function getCatalogueDataFromGridById(rowId) {
 
 // [NEW] This function will handle loading the selected catalogue for editing
 export function loadCatalogueForEditing(catalogueData) {
+    console.log('[ui.js]loadCatalogueForEditing:', catalogueData);
     if (!catalogueData) return;
 
     // 1. Populate the form fields
