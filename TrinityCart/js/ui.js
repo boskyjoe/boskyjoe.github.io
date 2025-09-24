@@ -1704,6 +1704,10 @@ const availableProductsGridOptions = {
 // 3. Define the AG-Grid options for the RIGHT grid (Catalogue Items)
 const catalogueItemsGridOptions = {
     getRowId: params => params.data.id, // Crucial for finding and updating rows
+    onRowDataUpdated: (params) => {
+        console.log("[AG-Grid] Right-side grid data has been updated. Syncing available products grid.");
+        syncAvailableProductsGrid();
+    },
     columnDefs: [
         { field: "productName", headerName: "Product Name", flex: 1 },
         { field: "costPrice", headerName: "Cost Price", width: 120, valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : '' },
@@ -1786,7 +1790,6 @@ export function loadCatalogueForEditing(catalogueData) {
             const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             catalogueItemsGridApi.setGridOption('rowData', items);
             catalogueItemsGridApi.setGridOption('loading', false);
-            syncAvailableProductsGrid();
         }, error => {
             console.error("Error listening to catalogue items:", error);
             catalogueItemsGridApi.setGridOption('loading', false);
@@ -1808,6 +1811,8 @@ export function resetCatalogueForm() {
     if (catalogueItemsGridApi) {
         catalogueItemsGridApi.setGridOption('rowData', []);
     }
+    currentCatalogueItemIds.clear();
+
     if (unsubscribeCatalogueItemsListener) {
         unsubscribeCatalogueItemsListener();
         unsubscribeCatalogueItemsListener = null;
