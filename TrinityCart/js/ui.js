@@ -1967,6 +1967,13 @@ export function showView(viewId) {
         paymentModal.style.display = 'none';
     }
 
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    if (sidebar && sidebar.classList.contains('active')) {
+        sidebar.classList.remove('active');
+        sidebarOverlay.classList.add('hidden');
+    }
+
     detachAllRealtimeListeners();
 
     appState.activeView = viewId;
