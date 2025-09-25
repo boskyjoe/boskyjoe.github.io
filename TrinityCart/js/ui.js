@@ -1642,13 +1642,13 @@ function syncAvailableProductsGrid() {
     console.log(`Found ${currentItems.length} items in the right-side grid.`);
 
     // 1. Clear the contents of the *original* Set.
-    currentCatalogueItemProductIds.clear();
+    currentCatalogueItemIds.clear();
     
     // 2. Get the new IDs.
     const newProductIds = currentItems.map(item => item.productId);
 
     // 3. Add the new IDs one by one into the *original* Set.
-    newProductIds.forEach(id => currentCatalogueItemProductIds.add(id));
+    newProductIds.forEach(id => currentCatalogueItemIds.add(id));
     // -----------------------
 
     console.log("MUTATED Set of current product IDs:", currentCatalogueItemProductIds);
