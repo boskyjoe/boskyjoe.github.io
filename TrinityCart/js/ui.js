@@ -1651,7 +1651,7 @@ function syncAvailableProductsGrid() {
     newProductIds.forEach(id => currentCatalogueItemIds.add(id));
     // -----------------------
 
-    console.log("MUTATED Set of current product IDs:", currentCatalogueItemProductIds);
+    console.log("MUTATED Set of current product IDs:", currentCatalogueItemIds);
 
     console.log("Calling refreshCells() on the left-side grid to update buttons...");
     availableProductsGridApi.refreshCells({
