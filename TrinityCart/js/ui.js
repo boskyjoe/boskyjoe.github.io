@@ -929,6 +929,7 @@ let isProductsGridInitialized = false;
 let unsubscribeProductsListener = null;
 
 const productsGridOptions = {
+    getRowId: params => params.data.id,
     columnDefs: [
         { field: "itemId", headerName: "ID", width: 150 },
         { field: "itemName", headerName: "Item Name", flex: 2, editable: true },
@@ -955,6 +956,13 @@ const productsGridOptions = {
             }
         },
         { 
+            field: "inventoryCount", 
+            headerName: "Stock On Hand", 
+            width: 150, 
+            editable: false, // This is system-managed
+            cellStyle: { 'background-color': '#f3f4f6', 'font-weight': 'bold' }
+        },
+        { 
             field: "unitPrice", 
             headerName: "Unit Price", 
             flex: 1, 
@@ -968,30 +976,6 @@ const productsGridOptions = {
             flex: 1, 
             editable: true,
             valueParser: p => parseFloat(p.newValue)
-        },
-        { 
-            field: "sellingPrice", 
-            headerName: "Selling Price", 
-            flex: 1, 
-            editable: false,
-            valueFormatter: p => (typeof p.value === 'number') ? p.value.toFixed(2) : '',
-            cellStyle: { 'background-color': '#f3f4f6' }
-        },
-        { 
-            field: "isReadyForSale", 
-            headerName: "Ready for Sale?", 
-            width: 150, 
-            editable: true,
-            cellEditor: 'agSelectCellEditor',
-            cellEditorParams: {
-                values: [true, false] // Simple boolean options
-            },
-            // Custom renderer to make it look nice
-            cellRenderer: p => {
-                return p.value ? 
-                    '<span class="text-green-600 font-semibold">Yes</span>' : 
-                    '<span class="text-gray-500 font-semibold">No</span>';
-            }
         },
         { 
             field: "isActive", headerName: "Status", width: 120,
