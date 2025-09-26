@@ -605,7 +605,7 @@ export async function createPurchaseInvoiceAndUpdateInventory(invoiceData, user)
             
             // Atomically increment the inventory count for this product.
             transaction.update(productRef, {
-                inventoryCount: admin.firestore.FieldValue.increment(quantityPurchased)
+                inventoryCount: firebase.firestore.FieldValue.increment(quantityPurchased)
             });
         });
     });
@@ -682,7 +682,7 @@ export async function updatePurchaseInvoiceAndInventory(docId, newInvoiceData, u
             if (delta !== 0) { // Only update if there's an actual change
                 const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(productId);
                 transaction.update(productRef, {
-                    inventoryCount: admin.firestore.FieldValue.increment(delta)
+                    inventoryCount: firebase.firestore.FieldValue.increment(delta)
                 });
             }
         }
