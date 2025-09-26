@@ -2209,8 +2209,13 @@
                             }
                         });
 
-                        const snsId = String(sheetRowData['SNS_ID']);
-                        if (!snsId) continue;
+                        const rawSnsId = sheetRowData['SNS_ID'];
+                        if (!rawSnsId) {
+                            console.warn("Skipping a row because it has no SNS_ID value.", sheetRowData);
+                            continue; 
+                        }
+
+                        const snsId = String(rawSnsId);
 
                         sheetSnsIds.add(snsId);
                         const existingDocData = existingMembersMap.get(snsId);
