@@ -408,8 +408,16 @@ function setupEventListeners() {
                             catalogueId: catalogueId // Store parent ID for easier updates
                         };
 
-                        await addItemToCatalogue(catalogueId, itemData);
+                        //await addItemToCatalogue(catalogueId, itemData);
                         // The real-time listener on the right grid will handle the UI update.
+
+                        // Add to the in-memory draft array
+                        appState.draftCatalogueItems.push(newItem);
+                        
+                        // Manually update the right grid and re-sync the left grid
+                        catalogueItemsGridApi.setGridOption('rowData', appState.draftCatalogueItems);
+                        syncAvailableProductsGrid();
+
 
                     } catch (error) {
                         console.error("Error adding item to catalogue:", error);
@@ -789,8 +797,12 @@ function setupEventListeners() {
                     alert('Catalogue details have been updated.');
                     resetCatalogueForm(); 
                 } else {
+                    if (appState.draftCatalogueItems.length === 0) {
+                        return alert('Please add at least one item to the catalogue before saving.');
+                    }
                     await addSalesCatalogue(catalogueData, user);
                     alert('New sales catalogue has been created.');
+                    resetCatalogueForm();
                 }
                 // We will add logic to refresh the "Existing Catalogues" grid here later.
                 salesCatalogueForm.reset();
