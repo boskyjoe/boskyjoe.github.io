@@ -384,9 +384,10 @@ function setupEventListeners() {
                     const productId = gridButton.dataset.id;
                     const catalogueId = document.getElementById('sales-catalogue-doc-id').value;
 
-                    if (!catalogueId) {
-                        return alert('No Catalogue Selected. Please save a new catalogue or select an existing one to edit before adding items.');
-                    }
+                    const docId = document.getElementById('sales-catalogue-doc-id').value;
+                    const isEditMode = !!docId;
+
+                    
 
                     try {
                         const costPrice = await getLatestPurchasePrice(productId);
@@ -404,19 +405,21 @@ function setupEventListeners() {
                             costPrice: costPrice,
                             marginPercentage: margin,
                             sellingPrice: sellingPrice,
-                            isOverridden: false,
-                            catalogueId: catalogueId // Store parent ID for easier updates
+                            isOverridden: false
                         };
 
-                        //await addItemToCatalogue(catalogueId, itemData);
-                        // The real-time listener on the right grid will handle the UI update.
-
-                        // Add to the in-memory draft array
-                        appState.draftCatalogueItems.push(newItem);
-                        
-                        // Manually update the right grid and re-sync the left grid
-                        catalogueItemsGridApi.setGridOption('rowData', appState.draftCatalogueItems);
-                        syncAvailableProductsGrid();
+                        if (isEditMode) {
+                            // In Edit Mode, save the item directly to the database.
+                            // The real-time listener will then update the UI.
+                            itemData.catalogueId = docId; // Add the parent ID
+                            await addItemToCatalogue(docId, itemData);
+                        } else {
+                            appState.draftCatalogueItems.push(itemData);
+                            
+                            // Manually update the right grid and re-sync the left grid
+                            catalogueItemsGridApi.setGridOption('rowData', appState.draftCatalogueItems);
+                            syncAvailableProductsGrid();
+                        }
 
 
                     } catch (error) {
