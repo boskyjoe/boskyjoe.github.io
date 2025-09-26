@@ -2158,6 +2158,7 @@
              * @returns {Promise<object>} An object containing all active members and sets of previous winners.
              */
             async function importMembersFromGoogleSheets() {
+
                 if (!db || !auth.currentUser) {
                     console.error("Firestore not initialized or user not authenticated. Cannot import data.");
                     return Promise.reject("Authentication or database not ready.");
@@ -2194,9 +2195,20 @@
 
                     // Helper function to robustly normalize the 'isActive' value from the sheet
                     const normalizeSheetIsActive = (val) => {
-                        if (val === null || val === false || String(val).toUpperCase() === 'FALSE' || String(val).toUpperCase() === 'INACTIVE' || String(val) === '0') {
+                        // The Google Sheet API sends a cell with boolean FALSE as null.
+                        // Therefore, if we get null, it means inactive.
+                        if (val === null) return false;
+
+                        // It also might send the boolean false directly.
+                        if (val === false) return false;
+
+                        // It might send a string version.
+                        const upperVal = String(val).toUpperCase();
+                        if (upperVal === 'FALSE' || upperVal === 'INACTIVE' || upperVal === '0') {
                             return false;
                         }
+
+                        // Everything else (TRUE, "TRUE", empty cell which becomes undefined, etc.) is active.
                         return true;
                     };
 
