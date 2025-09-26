@@ -1743,7 +1743,7 @@ const availableProductsGridOptions = {
 
 // 3. Define the AG-Grid options for the RIGHT grid (Catalogue Items)
 const catalogueItemsGridOptions = {
-    getRowId: params => params.data.id, // Crucial for finding and updating rows
+    getRowId: params => params.data.id || params.data.tempId, // Crucial for finding and updating rows
     
     columnDefs: [
         { field: "productName", headerName: "Product Name", flex: 1 },
