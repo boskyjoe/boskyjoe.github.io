@@ -2158,7 +2158,6 @@
              * @returns {Promise<object>} An object containing all active members and sets of previous winners.
              */
             async function importMembersFromGoogleSheets() {
-
                 if (!db || !auth.currentUser) {
                     console.error("Firestore not initialized or user not authenticated. Cannot import data.");
                     return Promise.reject("Authentication or database not ready.");
@@ -2167,7 +2166,7 @@
                 showStatusMessage("Syncing member data with Google Sheets...", 'progress');
 
                 try {
-                    // --- Phase 1: Fetch Data from Both Sources ---
+                    // --- Phase 1: Fetch Data ---
                     const response = await fetch(GOOGLE_SHEET_URL);
                     if (!response.ok) throw new Error(`Failed to load Google Sheet data. Status: ${response.status}`);
                     const text = await response.text();
@@ -2190,10 +2189,8 @@
                     let deactivatedCount = 0;
                     const sheetSnsIds = new Set();
 
-                    // Generate ONE timestamp on the client to use for the entire batch.
-                    const syncTimestamp = new Date();
-
-                    // Helper function to robustly normalize the 'isActive' value from the sheet
+                    // --- THIS IS THE CRITICAL FIX ---
+                    // A new, bulletproof normalization function based on your unambiguous string strategy.
                     const normalizeSheetIsActive = (val) => {
                         // A member is ONLY inactive if the cell explicitly says "INACTIVE".
                         if (String(val).toUpperCase() === 'INACTIVE') {
@@ -2202,8 +2199,6 @@
                         // In ALL other cases (empty/null, "ACTIVE", or any other text), we default to active.
                         return true;
                     };
-
-                    // --- Part A: In memory comparision 
 
                     for (const row of sheetRows) {
                         const sheetRowData = {};
@@ -2220,7 +2215,6 @@
                         sheetSnsIds.add(snsId);
                         const existingDocData = existingMembersMap.get(snsId);
 
-                        // 1. Create ONE clean, normalized data object from the sheet data.
                         const finalMemberData = {
                             SNSMemberName: sheetRowData.SNSMemberName || "",
                             ChurchContactName: sheetRowData.ChurchContactName || "",
@@ -2229,33 +2223,22 @@
                         };
 
                         if (existingDocData) {
-                            // --- UPDATE PATH ---
+                            // --- UPDATE PATH (with "Smart" Check) ---
                             const firestoreIsActiveBool = existingDocData.isActive !== false;
 
-                            // 2. Compare the clean object to the existing data.
                             if ((existingDocData.SNSMemberName || "") !== finalMemberData.SNSMemberName ||
                                 (existingDocData.ChurchContactName || "") !== finalMemberData.ChurchContactName ||
                                 (existingDocData.ChurchContactPhone || "") !== finalMemberData.ChurchContactPhone ||
-                                firestoreIsActiveBool !== finalMemberData.isActive) 
-                            {
+                                firestoreIsActiveBool !== finalMemberData.isActive) {
+                                
                                 const docRef = doc(membersCollection, snsId);
-                                // 3. Pass the SAME clean object to the update call.
-                                batch.update(docRef, {
-                                    ...finalMemberData,
-                                    updatedBy: auth.currentUser.uid,
-                                    updatedDate: syncTimestamp
-                                });
+                                batch.update(docRef, { ...finalMemberData, updatedBy: auth.currentUser.uid, updatedDate: new Date() });
                                 updateCount++;
                             }
                         } else {
                             // --- INSERT PATH ---
                             const docRef = doc(membersCollection, snsId);
-                            batch.set(docRef, {
-                                SNS_ID: snsId,
-                                ...finalMemberData,
-                                createdBy: auth.currentUser.uid,
-                                createdDate: syncTimestamp
-                            });
+                            batch.set(docRef, { SNS_ID: snsId, ...finalMemberData, createdBy: auth.currentUser.uid, createdDate: new Date() });
                             newCount++;
                         }
                     }
@@ -2264,7 +2247,7 @@
                     for (const [memberId, memberData] of existingMembersMap.entries()) {
                         if (!sheetSnsIds.has(memberId) && memberData.isActive !== false) {
                             const docRef = doc(membersCollection, memberId);
-                            batch.update(docRef, { isActive: false, updatedBy: auth.currentUser.uid, updatedDate: syncTimestamp });
+                            batch.update(docRef, { isActive: false, updatedBy: auth.currentUser.uid, updatedDate: new Date() });
                             deactivatedCount++;
                         }
                     }
