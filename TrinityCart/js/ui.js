@@ -1729,10 +1729,7 @@ const availableProductsGridOptions = {
 // 3. Define the AG-Grid options for the RIGHT grid (Catalogue Items)
 const catalogueItemsGridOptions = {
     getRowId: params => params.data.id, // Crucial for finding and updating rows
-    onRowDataUpdated: (params) => {
-        console.log("[AG-Grid] Right-side grid data has been updated. Syncing available products grid.");
-        syncAvailableProductsGrid();
-    },
+    
     columnDefs: [
         { field: "productName", headerName: "Product Name", flex: 1 },
         { field: "costPrice", headerName: "Cost Price", width: 120, valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : '' },
@@ -1813,8 +1810,14 @@ export function loadCatalogueForEditing(catalogueData) {
         .onSnapshot(snapshot => {
             console.log(`[Firestore] Received update for items in catalogue ${catalogueData.id}`);
             const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Populate the draft state AND the grid
+            appState.draftCatalogueItems = items;
+            
             catalogueItemsGridApi.setGridOption('rowData', items);
             catalogueItemsGridApi.setGridOption('loading', false);
+
+            syncAvailableProductsGrid();
         }, error => {
             console.error("Error listening to catalogue items:", error);
             catalogueItemsGridApi.setGridOption('loading', false);
@@ -1831,6 +1834,9 @@ export function resetCatalogueForm() {
     document.getElementById('catalogue-form-title').textContent = 'Create New Sales Catalogue';
     document.getElementById('catalogue-form-submit-btn').textContent = 'Save Catalogue';
     document.getElementById('catalogue-form-cancel-btn').style.display = 'none';
+
+    // Also clear the draft state in memory
+    appState.draftCatalogueItems = [];
 
     // Clear the items grid and detach the listener
     if (catalogueItemsGridApi) {
