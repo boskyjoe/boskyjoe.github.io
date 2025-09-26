@@ -1663,7 +1663,22 @@ function syncAvailableProductsGrid() {
     console.log("--- SYNC COMPLETE ---");
 }
 
+/**
+ * [NEW] Takes the current draft items from the appState and updates the UI.
+ * This includes setting the grid data and re-syncing the "Add" buttons.
+ */
+export function updateDraftItemsGrid() {
+    if (!catalogueItemsGridApi) {
+        console.error("Cannot update draft grid: catalogueItemsGridApi is not ready.");
+        return;
+    }
 
+    // 1. Set the right-side grid's data from the draft state.
+    catalogueItemsGridApi.setGridOption('rowData', appState.draftCatalogueItems);
+
+    // 2. Re-sync the left-side grid to disable the correct "Add" buttons.
+    syncAvailableProductsGrid();
+}
 
 
 // 1. Define variables for the new grid APIs and initialization flags
