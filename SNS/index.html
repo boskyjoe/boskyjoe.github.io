@@ -2230,7 +2230,7 @@
 
                         if (existingDocData) {
                             // --- UPDATE PATH ---
-                            const firestoreIsActiveBool = existingDocData.isActive === false ? false : true;
+                            const firestoreIsActiveBool = existingDocData.isActive !== false;
 
                             // 2. Compare the clean object to the existing data.
                             if ((existingDocData.SNSMemberName || "") !== finalMemberData.SNSMemberName ||
