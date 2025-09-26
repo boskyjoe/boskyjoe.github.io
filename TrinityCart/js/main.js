@@ -45,7 +45,7 @@ import { getPaymentDataFromGridById } from './ui.js';
 import { showPaymentModal, closePaymentModal,getInvoiceDataFromGridById, initializeModals } from './ui.js';
 
 
-import { showSalesCatalogueView,getCatalogueDataFromGridById,loadCatalogueForEditing,resetCatalogueForm, updateDraftItemsGrid } from './ui.js';
+import { showSalesCatalogueView,getCatalogueDataFromGridById,loadCatalogueForEditing,resetCatalogueForm, updateDraftItemsGrid, syncAvailableProductsGrid } from './ui.js';
 import { 
     getLatestPurchasePrice,
     addSalesCatalogue,
