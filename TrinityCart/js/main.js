@@ -414,6 +414,8 @@ function setupEventListeners() {
                             itemData.catalogueId = docId; // Add the parent ID
                             await addItemToCatalogue(docId, itemData);
                         } else {
+                            itemData.tempId = `draft_${Date.now()}`;
+
                             appState.draftCatalogueItems.push(itemData);
                             
                             updateDraftItemsGrid();
@@ -801,8 +803,12 @@ function setupEventListeners() {
                     if (appState.draftCatalogueItems.length === 0) {
                         return alert('Please add at least one item to the catalogue before saving.');
                     }
-                    await addSalesCatalogue(catalogueData, user);
-                    alert('New sales catalogue has been created.');
+                    // 1. Create a "clean" version of the items without the tempId.
+                    const itemsToSave = appState.draftCatalogueItems.map(({ tempId, ...rest }) => rest);
+
+                    // 2. Pass the clean data to the API function.
+                    await createCatalogueWithItems(catalogueData, itemsToSave, user);
+                    alert('New sales catalogue and its items have been saved successfully.');
                     resetCatalogueForm();
                 }
                 // We will add logic to refresh the "Existing Catalogues" grid here later.
