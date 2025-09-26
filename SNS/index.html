@@ -2195,20 +2195,11 @@
 
                     // Helper function to robustly normalize the 'isActive' value from the sheet
                     const normalizeSheetIsActive = (val) => {
-                        // The Google Sheet API sends a cell with boolean FALSE as null.
-                        // Therefore, if we get null, it means inactive.
-                        if (val === null) return false;
-
-                        // It also might send the boolean false directly.
-                        if (val === false) return false;
-
-                        // It might send a string version.
-                        const upperVal = String(val).toUpperCase();
-                        if (upperVal === 'FALSE' || upperVal === 'INACTIVE' || upperVal === '0') {
+                        // A member is ONLY inactive if the cell explicitly says "INACTIVE".
+                        if (String(val).toUpperCase() === 'INACTIVE') {
                             return false;
                         }
-
-                        // Everything else (TRUE, "TRUE", empty cell which becomes undefined, etc.) is active.
+                        // In ALL other cases (empty/null, "ACTIVE", or any other text), we default to active.
                         return true;
                     };
 
