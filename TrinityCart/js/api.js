@@ -807,6 +807,44 @@ export async function getLatestPurchasePrice(productId) {
     }
 }
 
+
+/**
+ * [NEW] Creates a new sales catalogue and all its items in a single atomic batch.
+ * @param {object} catalogueData - The header data for the catalogue.
+ * @param {Array<object>} itemsData - An array of item objects to add.
+ * @param {object} user - The currently authenticated user.
+ */
+export async function createCatalogueWithItems(catalogueData, itemsData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    
+    // 1. Create a new WriteBatch
+    const batch = db.batch();
+
+    // 2. Create a reference for the new main catalogue document
+    const catalogueRef = db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(); // Auto-generates an ID
+    const catalogueId = `SC-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+
+    // 3. Add the main catalogue creation to the batch
+    batch.set(catalogueRef, {
+        ...catalogueData,
+        catalogueId: catalogueId,
+        isActive: true,
+        audit: { createdBy: user.email, createdOn: now, updatedBy: user.email, updatedOn: now }
+    });
+
+    // 4. Loop through the draft items and add each one to the batch
+    itemsData.forEach(item => {
+        const itemRef = catalogueRef.collection('items').doc(); // New doc in the sub-collection
+        batch.set(itemRef, { ...item, catalogueId: catalogueRef.id }); // Add catalogueId for consistency
+    });
+
+    // 5. Commit the batch. This is atomic.
+    return batch.commit();
+}
+
+
+
 /**
  * Creates a new Sales Catalogue document.
  * @param {object} catalogueData - Data for the new catalogue (name, seasonId, etc.).
