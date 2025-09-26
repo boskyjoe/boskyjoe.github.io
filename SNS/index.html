@@ -2189,6 +2189,9 @@
                     let deactivatedCount = 0;
                     const sheetSnsIds = new Set();
 
+                    // Generate ONE timestamp on the client to use for the entire batch.
+                    const syncTimestamp = new Date();
+
                     // Helper function to robustly normalize the 'isActive' value from the sheet
                     const normalizeSheetIsActive = (val) => {
                         if (val === null || val === false || String(val).toUpperCase() === 'FALSE' || String(val).toUpperCase() === 'INACTIVE' || String(val) === '0') {
@@ -2225,13 +2228,6 @@
                         if (existingDocData) {
                             // --- UPDATE PATH ---
                             const firestoreIsActiveBool = existingDocData.isActive === false ? false : true;
-                
-                            if (snsId === 'SSC03') {
-                                console.log("DEBUG: SSC.",snsId);
-                                console.log("DEBUG: final memeber.",finalMemberData);
-                                console.log("DEBUG: final firestoreIsActiveBool.",firestoreIsActiveBool);
-
-                            }
 
                             // 2. Compare the clean object to the existing data.
                             if ((existingDocData.SNSMemberName || "") !== finalMemberData.SNSMemberName ||
@@ -2244,7 +2240,7 @@
                                 batch.update(docRef, {
                                     ...finalMemberData,
                                     updatedBy: auth.currentUser.uid,
-                                    updatedDate: serverTimestamp()
+                                    updatedDate: syncTimestamp
                                 });
                                 updateCount++;
                             }
@@ -2255,7 +2251,7 @@
                                 SNS_ID: snsId,
                                 ...finalMemberData,
                                 createdBy: auth.currentUser.uid,
-                                createdDate: serverTimestamp()
+                                createdDate: syncTimestamp
                             });
                             newCount++;
                         }
@@ -2265,7 +2261,7 @@
                     for (const [memberId, memberData] of existingMembersMap.entries()) {
                         if (!sheetSnsIds.has(memberId) && memberData.isActive !== false) {
                             const docRef = doc(membersCollection, memberId);
-                            batch.update(docRef, { isActive: false, updatedBy: auth.currentUser.uid, updatedDate: serverTimestamp() });
+                            batch.update(docRef, { isActive: false, updatedBy: auth.currentUser.uid, updatedDate: syncTimestamp });
                             deactivatedCount++;
                         }
                     }
