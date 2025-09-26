@@ -5,4 +5,5 @@ export const appState = {
     // ADD THIS NEW STATE VARIABLE
     selectedPurchaseInvoiceId: null, 
     isLocalUpdateInProgress:null,
+    draftCatalogueItems: [],
 };
