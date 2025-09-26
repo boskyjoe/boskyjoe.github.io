@@ -52,7 +52,9 @@ import {
     updateSalesCatalogue,
     addItemToCatalogue,
     updateCatalogueItem,
-    removeItemFromCatalogue,createCatalogueWithItems
+    removeItemFromCatalogue,createCatalogueWithItems,
+    createPurchaseInvoiceAndUpdateInventory,
+    updatePurchaseInvoiceAndInventory
 } from './api.js';
 
 // --- FIREBASE INITIALIZATION ---
@@ -221,17 +223,16 @@ async function handleSavePurchaseInvoice() {
         appState.isLocalUpdateInProgress = true; 
         if (isEditMode) {
             // UPDATE existing invoice
-            console.log("Update Invoice");
-            await updatePurchaseInvoice(docId, invoiceData, user);
-            successMessage = 'Purchase Invoice has been updated successfully.';
+            await updatePurchaseInvoiceAndInventory(docId, invoiceData, user);
+            successMessage = 'Purchase Invoice has been updated and inventory is now correct.';
         } else {
             console.log("Simulating add new invoice.");
-            await addPurchaseInvoice(invoiceData, user);
+            await createPurchaseInvoiceAndUpdateInventory(invoiceData, user);
             document.getElementById('purchase-invoice-form').reset();
             document.getElementById('purchase-line-items-container').innerHTML = '';
             addLineItem();
             calculateAllTotals();
-            successMessage = 'Purchase Invoice has been saved successfully.';
+            successMessage = 'Purchase Invoice has been saved successfully. and inventory is now correct.';
         }
         console.log("Database call skipped. Attempting to show modal...");
         success = true;
