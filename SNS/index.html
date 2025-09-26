@@ -2172,8 +2172,27 @@
                     const text = await response.text();
                     const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
                     const sheetJson = JSON.parse(jsonText);
-                    const sheetRows = sheetJson.table.rows;
-                    const sheetColumns = sheetJson.table.cols.map(col => col.label);
+
+                    // --- THIS IS THE NEW, ROBUST HEADER LOGIC ---
+                    let sheetColumns = sheetJson.table.cols.map(col => col.label).filter(label => label && label.trim() !== '');
+                    let sheetRows = sheetJson.table.rows;
+
+                    // Check if the primary method failed (which happens with frozen rows).
+                    if (sheetColumns.length === 0 && sheetRows.length > 0) {
+                        console.warn("Column labels not found in 'cols' array. Assuming first row contains headers (frozen row).");
+                        // Extract headers from the first row's cells.
+                        sheetColumns = sheetRows[0].c.map(cell => cell ? cell.v : "").filter(header => header && header.trim() !== '');
+                        // Remove the header row from the data rows.
+                        sheetRows = sheetRows.slice(1);
+                    }
+                    console.log("DEBUG: Final headers being used:", sheetColumns);
+                    // --- END OF NEW HEADER LOGIC ---
+
+                    if (sheetColumns.length === 0 || sheetRows.length === 0) {
+                        showModal("Sheet Error", "Could not find any valid data or headers in the Google Sheet.");
+                        hideStatusMessage();
+                        return; // Stop execution if no data can be processed.
+                    }
 
                     const membersCollection = collection(db, `/artifacts/${appId}/public/data/SnehaNidhiSchemeMembers`);
                     const existingMembersSnapshot = await getDocs(membersCollection);
@@ -2209,6 +2228,7 @@
                             }
                         });
 
+                        console.log("Sheet Data (Raw):", sheetRowData);
                         const rawSnsId = sheetRowData['SNS_ID'];
                         if (!rawSnsId) {
                             console.warn("Skipping a row because it has no SNS_ID value.", sheetRowData);
