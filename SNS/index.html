@@ -2226,10 +2226,28 @@
                             // --- UPDATE PATH (with "Smart" Check) ---
                             const firestoreIsActiveBool = existingDocData.isActive !== false;
 
-                            if ((existingDocData.SNSMemberName || "") !== finalMemberData.SNSMemberName ||
-                                (existingDocData.ChurchContactName || "") !== finalMemberData.ChurchContactName ||
-                                (existingDocData.ChurchContactPhone || "") !== finalMemberData.ChurchContactPhone ||
-                                firestoreIsActiveBool !== finalMemberData.isActive) {
+                            const hasNameChanged = (existingDocData.SNSMemberName || "") !== finalMemberData.SNSMemberName;
+                            const hasContactChanged = (existingDocData.ChurchContactName || "") !== finalMemberData.ChurchContactName;
+                            const hasPhoneChanged = (existingDocData.ChurchContactPhone || "") !== finalMemberData.ChurchContactPhone;
+                            const hasStatusChanged = firestoreIsActiveBool !== finalMemberData.isActive;
+
+                             if (snsId === 'SSC001') {
+                                console.group(`--- DEBUGGING SNS_ID: ${snsId} ---`);
+                                console.log("Sheet Data (Raw):", sheetRowData);
+                                console.log("Firestore Data (Raw):", existingDocData);
+                                console.log("------------------------------------");
+                                console.log("Normalized Sheet 'isActive':", finalMemberData.isActive);
+                                console.log("Normalized Firestore 'isActive':", firestoreIsActiveBool);
+                                console.log("------------------------------------");
+                                console.log("Change detected in Name?", hasNameChanged);
+                                console.log("Change detected in Contact?", hasContactChanged);
+                                console.log("Change detected in Phone?", hasPhoneChanged);
+                                console.log("Change detected in Status?", hasStatusChanged);
+                                console.groupEnd();
+                            }
+                            // --- END OF DEBUGGING BLOCK --
+                            
+                            if (hasNameChanged || hasContactChanged || hasPhoneChanged || hasStatusChanged) {
                                 
                                 const docRef = doc(membersCollection, snsId);
                                 batch.update(docRef, { ...finalMemberData, updatedBy: auth.currentUser.uid, updatedDate: new Date() });
