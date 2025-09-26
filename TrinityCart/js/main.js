@@ -45,7 +45,7 @@ import { getPaymentDataFromGridById } from './ui.js';
 import { showPaymentModal, closePaymentModal,getInvoiceDataFromGridById, initializeModals } from './ui.js';
 
 
-import { showSalesCatalogueView,getCatalogueDataFromGridById,loadCatalogueForEditing,resetCatalogueForm,catalogueItemsGridApi } from './ui.js';
+import { showSalesCatalogueView,getCatalogueDataFromGridById,loadCatalogueForEditing,resetCatalogueForm, updateDraftItemsGrid } from './ui.js';
 import { 
     getLatestPurchasePrice,
     addSalesCatalogue,
@@ -416,8 +416,7 @@ function setupEventListeners() {
                         } else {
                             appState.draftCatalogueItems.push(itemData);
                             
-                            // Manually update the right grid and re-sync the left grid
-                            catalogueItemsGridApi.setGridOption('rowData', appState.draftCatalogueItems);
+                            updateDraftItemsGrid();
                             syncAvailableProductsGrid();
                         }
 
