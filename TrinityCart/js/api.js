@@ -570,25 +570,49 @@ export async function setProductStatus(docId, field, newStatus, user) {
 
 // --- PURCHASE INVOICE API FUNCTION ---
 
-export async function addPurchaseInvoice(invoiceData, user) {
+
+/**
+ * [NEW] Creates a new Purchase Invoice and atomically increments the inventory
+ * for all products within a single transaction.
+ * @param {object} invoiceData - The complete data for the new invoice.
+ * @param {object} user - The currently authenticated user.
+ */
+export async function createPurchaseInvoiceAndUpdateInventory(invoiceData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
-    const invoiceId = `PI-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
 
-    return db.collection(PURCHASE_INVOICES_COLLECTION_PATH).add({
-        ...invoiceData,
-        invoiceId: invoiceId,
-        amountPaid: 0, // Invoices always start as unpaid
-        balanceDue: invoiceData.invoiceTotal,
-        paymentStatus: 'Unpaid',
-        audit: {
-            createdBy: user.email,
-            createdOn: now,
-            updatedBy: user.email,
-            updatedOn: now,
-        }
+    // 1. Get a reference for the new invoice document.
+    const invoiceRef = db.collection(PURCHASE_INVOICES_COLLECTION_PATH).doc();
+
+    // 2. Run the transaction.
+    return db.runTransaction(async (transaction) => {
+        // --- Write Operations ---
+
+        // A. Add the new purchase invoice to the transaction.
+        transaction.set(invoiceRef, {
+            ...invoiceData,
+            invoiceId: `PI-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`,
+            amountPaid: 0,
+            balanceDue: invoiceData.invoiceTotal,
+            paymentStatus: 'Unpaid',
+            audit: { createdBy: user.email, createdOn: now, updatedBy: user.email, updatedOn: now }
+        });
+
+        // B. Loop through the line items and add inventory increments to the transaction.
+        invoiceData.lineItems.forEach(item => {
+            const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.masterProductId);
+            const quantityPurchased = Number(item.quantity);
+            
+            // Atomically increment the inventory count for this product.
+            transaction.update(productRef, {
+                inventoryCount: admin.firestore.FieldValue.increment(quantityPurchased)
+            });
+        });
     });
 }
+
+
+
 
 export async function getPurchaseInvoices() {
     const db = firebase.firestore();
@@ -616,16 +640,64 @@ export async function getPurchaseInvoiceById(docId) {
     }
 }
 
-// We also need an `updatePurchaseInvoice` function
-export async function updatePurchaseInvoice(docId, invoiceData, user) {
+/**
+ * [NEW] Updates an existing Purchase Invoice and atomically updates inventory
+ * based on the "delta" (difference) of line item quantities.
+ * @param {string} docId - The ID of the invoice document to update.
+ * @param {object} newInvoiceData - The complete new data for the invoice from the form.
+ * @param {object} user - The currently authenticated user.
+ */
+export async function updatePurchaseInvoiceAndInventory(docId, newInvoiceData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
-    return db.collection(PURCHASE_INVOICES_COLLECTION_PATH).doc(docId).update({
-        ...invoiceData,
-        'audit.updatedBy': user.email,
-        'audit.updatedOn': now,
+    const invoiceRef = db.collection(PURCHASE_INVOICES_COLLECTION_PATH).doc(docId);
+
+    return db.runTransaction(async (transaction) => {
+        // 1. READ the original invoice document from the database.
+        const originalInvoiceDoc = await transaction.get(invoiceRef);
+        if (!originalInvoiceDoc.exists) {
+            throw new Error("Invoice to update does not exist.");
+        }
+        const originalInvoiceData = originalInvoiceDoc.data();
+
+        // 2. CALCULATE THE DELTA
+        const inventoryDelta = new Map(); // Use a Map to store the changes for each product ID.
+
+        // A. Process original items (as subtractions)
+        originalInvoiceData.lineItems.forEach(item => {
+            const currentDelta = inventoryDelta.get(item.masterProductId) || 0;
+            inventoryDelta.set(item.masterProductId, currentDelta - Number(item.quantity));
+        });
+
+        // B. Process new items (as additions)
+        newInvoiceData.lineItems.forEach(item => {
+            const currentDelta = inventoryDelta.get(item.masterProductId) || 0;
+            inventoryDelta.set(item.masterProductId, currentDelta + Number(item.quantity));
+        });
+
+        // 3. APPLY THE WRITES
+
+        // A. Update the inventory for every product that had a change.
+        for (const [productId, delta] of inventoryDelta.entries()) {
+            if (delta !== 0) { // Only update if there's an actual change
+                const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(productId);
+                transaction.update(productRef, {
+                    inventoryCount: admin.firestore.FieldValue.increment(delta)
+                });
+            }
+        }
+
+        // B. Update the main purchase invoice document with the new data.
+        transaction.update(invoiceRef, {
+            ...newInvoiceData,
+            'audit.updatedBy': user.email,
+            'audit.updatedOn': now,
+        });
     });
 }
+
+
+
 
 // --- SUPPLIER PAYMENT API FUNCTION ---
 
@@ -937,7 +1009,6 @@ export async function removeItemFromCatalogue(catalogueId, itemId) {
     // This is a single delete operation. (Cost: 1 delete)
     return db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(catalogueId).collection('items').doc(itemId).delete();
 }
-
 
 
 
