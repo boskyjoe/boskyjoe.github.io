@@ -1507,7 +1507,10 @@ export async function loadInvoiceDataIntoForm(invoiceData) {
     document.getElementById('invoice-tax-percentage').value = invoiceData.invoiceLevelTaxPercentage || 0;
 
     // Recalculate all totals to ensure UI is consistent
-    calculateAllTotals();
+    setTimeout(() => {
+        calculateAllTotals();
+        console.log("Totals recalculated after DOM update."); // For debugging
+    }, 0);
 
     // Scroll the form into view for a better user experience
     document.getElementById('purchase-invoice-form').scrollIntoView({ behavior: 'smooth' });
@@ -1562,7 +1565,7 @@ export function showPaymentModal(invoice) {
 export function closePaymentModal() {
     const paymentModal = document.getElementById('record-payment-modal');
     if (!paymentModal) return;
-    
+
     paymentModal.classList.remove('visible');
     setTimeout(() => {
         paymentModal.style.display = 'none';
