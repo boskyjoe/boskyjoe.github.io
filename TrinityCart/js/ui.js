@@ -1524,6 +1524,7 @@ const paymentSupplierIdInput = document.getElementById('payment-supplier-id');
 const paymentModeSelect = document.getElementById('payment-mode-select');
 
 export function showPaymentModal(invoice) {
+    const paymentModal = document.getElementById('record-payment-modal');
     if (!paymentModal) return;
 
     // Populate hidden fields
@@ -1559,7 +1560,9 @@ export function showPaymentModal(invoice) {
 }
 
 export function closePaymentModal() {
+    const paymentModal = document.getElementById('record-payment-modal');
     if (!paymentModal) return;
+    
     paymentModal.classList.remove('visible');
     setTimeout(() => {
         paymentModal.style.display = 'none';
