@@ -675,7 +675,19 @@ export async function updatePurchaseInvoiceAndInventory(docId, newInvoiceData, u
             inventoryDelta.set(item.masterProductId, currentDelta + Number(item.quantity));
         });
 
-        // 3. APPLY THE WRITES
+        // 3. CALCULATE THE NEW FINANCIAL STATE
+        const amountPaid = originalInvoiceData.amountPaid || 0; // Get the authoritative amount paid
+        const newBalanceDue = newInvoiceData.invoiceTotal - amountPaid; // Recalculate the balance
+
+        // Determine the new payment status based on the recalculated balance
+        let newPaymentStatus = "Unpaid";
+        if (newBalanceDue <= 0) {
+            newPaymentStatus = "Paid";
+        } else if (amountPaid > 0) {
+            newPaymentStatus = "Partially Paid";
+        }
+
+        // 4. APPLY THE WRITES
 
         // A. Update the inventory for every product that had a change.
         for (const [productId, delta] of inventoryDelta.entries()) {
@@ -690,6 +702,8 @@ export async function updatePurchaseInvoiceAndInventory(docId, newInvoiceData, u
         // B. Update the main purchase invoice document with the new data.
         transaction.update(invoiceRef, {
             ...newInvoiceData,
+            balanceDue: newBalanceDue, // Overwrites with the correctly recalculated balance
+            paymentStatus: newPaymentStatus,
             'audit.updatedBy': user.email,
             'audit.updatedOn': now,
         });
