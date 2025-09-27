@@ -869,18 +869,24 @@
 
 
 
-    <!-- ======================= -->
+   <!-- ======================= -->
     <!--  RECORD PAYMENT MODAL   -->
     <!-- ======================= -->
-    <div id="record-payment-modal" class="modal-container fixed inset-0 z-50">
-        <!-- Modal Overlay -->
-        <div class="absolute inset-0 bg-black bg-opacity-60 modal-close-trigger"></div>
-        <div class="modal-panel-centered bg-white rounded-lg shadow-xl w-full max-w-lg">
-        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-lg mx-auto z-10">
+    <div id="record-payment-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
+        <!-- Modal Overlay - This is just the background. It has a lower z-index. -->
+        <div class="fixed inset-0 bg-black bg-opacity-60 modal-close-trigger" style="z-index: 50;"></div>
+
+        <!-- Modal Panel - This is the content. It has a HIGHER z-index so it's on top and clickable. -->
+        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-lg mx-auto" style="z-index: 51;">
             <!-- Modal Header -->
-            <div class="px-6 py-4 border-b border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                 <h3 id="payment-modal-title" class="text-lg font-bold text-gray-900">Record Payment for Invoice</h3>
+                <!-- Add a close 'X' button for better UX -->
+                <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
             </div>
+            
             <!-- Modal Body -->
             <form id="record-payment-form">
                 <input type="hidden" id="payment-invoice-id">
@@ -916,6 +922,7 @@
                         <textarea id="payment-notes-input" class="form-input w-full" rows="2"></textarea>
                     </div>
                 </div>
+                
                 <!-- Modal Footer -->
                 <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
                     <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">Cancel</button>
