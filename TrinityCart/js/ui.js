@@ -1178,38 +1178,38 @@ const purchaseInvoicesGridOptions = {
 
 // Grid for the payments of a selected invoice
 const purchasePaymentsGridOptions = {
+
     getRowId: params => params.data.id, 
-    autoGroupColumnDef: {
-        headerName: "Invoice", // The header for the grouping column
-        flex: 2,
-        cellRendererParams: {
-            // This makes the group rows look nice
-            suppressCount: true, // Don't show "(2)" next to the group name
-        },
-        // We can add more info to the group row if needed later
-    },
-    groupDefaultExpanded: 1,
     columnDefs: [
         { 
             field: "relatedInvoiceId", 
-            rowGroup: true, // This is the magic property that enables grouping
-            hide: true      // We hide it because the group row itself will display the info
+            headerName: "Invoice ID", 
+            width: 150,
+            pinned: 'left' // This "freezes" the column to the left
+        },
+        { 
+            headerName: "Supplier", 
+            width: 200,
+            pinned: 'left', // This also freezes the column
+            // Use a valueGetter to look up the supplier name from masterData
+            valueGetter: params => {
+                if (!params.data) return '';
+                const supplier = masterData.suppliers.find(s => s.id === params.data.supplierId);
+                return supplier ? supplier.supplierName : 'Unknown Supplier';
+            }
         },
         { field: "paymentDate", headerName: "Payment Date", flex: 1, valueFormatter: p => p.value.toDate().toLocaleDateString() },
         { 
             field: "amountPaid", 
             headerName: "Amount Paid", 
             flex: 1, 
-            valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : '',
-            // --- NEW: Enable aggregation ---
-            aggFunc: 'sum' // This will sum the values for each group
+            valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : ''
         },
         { field: "paymentMode", headerName: "Mode", flex: 1 },
         { field: "transactionRef", headerName: "Reference #", flex: 2 },
         {
             headerName: "Actions", width: 80, cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
-                if (params.node.group) { return ''; }
                 // Re-use the same trash can icon from other grids for consistency
                 const deleteIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5z" clip-rule="evenodd" /></svg>`;
 
