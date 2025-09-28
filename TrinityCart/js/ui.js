@@ -1153,21 +1153,21 @@ const purchaseInvoicesGridOptions = {
     ],
     defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
     rowSelection: {
-        mode: 'singleRow'
+        mode: 'multiple'
     },
+    rowMultiSelectWithClick: true,
     rowClassRules: {
         'ag-row-selected-custom': params => params.data && params.data.id === appState.selectedPurchaseInvoiceId,
     },
     onRowSelected: (event) => {
-        // This event fires whenever a row is selected OR deselected.
-        const selectedNode = event.node;
-        
-        if (selectedNode.isSelected()) {
-            console.log(`[ui.js] Invoice row ${selectedNode.data.id} selected.`);
-            appState.selectedPurchaseInvoiceId = selectedNode.data.id;
-            
-            // Enable the payments tab
-            document.getElementById('tab-payments').classList.remove('tab-disabled');
+        const paymentsTab = document.getElementById('tab-payments');
+        if (paymentsTab.classList.contains('tab-disabled')) {
+            paymentsTab.classList.remove('tab-disabled');
+        }
+
+        // If we are currently viewing the payments tab, refresh its data.
+        if (document.getElementById('panel-payments').classList.contains('active')) {
+            loadPaymentsForSelectedInvoice();
         }
     },
     onGridReady: (params) => {
@@ -1255,26 +1255,46 @@ export function initializePurchaseGrids() {
 
 // NEW FUNCTION: This function will be called when the payments tab is clicked.
 export async function loadPaymentsForSelectedInvoice() {
-    const invoiceId = appState.selectedPurchaseInvoiceId;
-    if (!invoiceId) {
-        console.warn("No invoice selected to load payments for.");
-        // Optionally show a message in the payments grid
-        if (purchasePaymentsGridApi) {
-            purchasePaymentsGridApi.setGridOption('rowData', []);
-            purchasePaymentsGridApi.showNoRowsOverlay();
-        }
+
+    if (!purchasePaymentsGridApi || !purchaseInvoicesGridApi) {
+        console.error("Cannot load payments: One or more grid APIs are not ready.");
         return;
     }
 
-    if (!purchasePaymentsGridApi) return;
+    // 1. Get the currently selected rows from the top grid.
+    const selectedInvoiceNodes = purchaseInvoicesGridApi.getSelectedNodes();
+
+    purchasePaymentsGridApi.setGridOption('loading', true);
+    let paymentsToShow = [];
 
     try {
-        purchasePaymentsGridApi.setGridOption('loading', true);
-        const payments = await getPaymentsForInvoice(invoiceId);
-        purchasePaymentsGridApi.setGridOption('rowData', payments);
+        if (selectedInvoiceNodes.length > 0) {
+            // --- FILTERED MODE ---
+            console.log(`[ui.js] Filtered Mode: Loading payments for ${selectedInvoiceNodes.length} selected invoice(s).`);
+            
+            // Create an array of promises, one for each selected invoice.
+            const fetchPromises = selectedInvoiceNodes.map(node => getPaymentsForInvoice(node.data.id));
+            
+            // Wait for all fetch operations to complete.
+            const paymentGroups = await Promise.all(fetchPromises);
+            
+            // Flatten the array of arrays into a single list of payments.
+            paymentsToShow = paymentGroups.flat();
+
+        } else {
+            // --- GLOBAL MODE ---
+            console.log("[ui.js] Global Mode: No invoices selected. Loading all payments.");
+            
+            // Call our new API function to get all payments.
+            paymentsToShow = await getAllSupplierPayments();
+        }
+
+        // 2. Update the payments grid with the final list of payments.
+        purchasePaymentsGridApi.setGridOption('rowData', paymentsToShow);
         purchasePaymentsGridApi.setGridOption('loading', false);
+
     } catch (error) {
-        console.error("Error loading payments for invoice:", error);
+        console.error("Error loading payments:", error);
         purchasePaymentsGridApi.setGridOption('loading', false);
         purchasePaymentsGridApi.showNoRowsOverlay();
     }
