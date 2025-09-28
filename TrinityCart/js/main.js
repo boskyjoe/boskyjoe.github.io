@@ -2,7 +2,7 @@
 
 import { 
     ModuleRegistry, 
-    AllCommunityModule // This is the all-in-one module we need
+    AllCommunityModule 
 } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
 
 
