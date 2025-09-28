@@ -1,7 +1,8 @@
 // js/main.js
+
 import { 
     ModuleRegistry, 
-    ClientSideRowModelModule // This is the module we need
+    AllCommunityModule // This is the all-in-one module we need
 } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
 
 
@@ -1079,7 +1080,7 @@ document.addEventListener('DOMContentLoaded', () => {
    
     // Add the RowGroupingModule to the array of modules to be registered.
     ModuleRegistry.registerModules([
-        ClientSideRowModelModule
+        AllCommunityModule
     ]);
 
     initializeMasterDataListeners();
