@@ -1,9 +1,10 @@
 // js/main.js
 import { 
     ModuleRegistry, 
-    AllCommunityModule, // You might already have this
-    RowGroupingModule // --- ADD THIS IMPORT ---
+    ClientSideRowModelModule // This is the module we need
 } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
+
+
 import { appState } from './state.js';
 import { firebaseConfig, USERS_COLLECTION_PATH } from './config.js';
 
@@ -1078,8 +1079,7 @@ document.addEventListener('DOMContentLoaded', () => {
    
     // Add the RowGroupingModule to the array of modules to be registered.
     ModuleRegistry.registerModules([
-        AllCommunityModule, // This provides all standard features
-        RowGroupingModule   // This specifically enables row grouping and aggregation
+        ClientSideRowModelModule
     ]);
 
     initializeMasterDataListeners();
