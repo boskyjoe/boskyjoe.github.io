@@ -1117,6 +1117,7 @@ let unsubscribePaymentsListener = null;
 
 // Grid for the main list of invoices
 const purchaseInvoicesGridOptions = {
+    getRowId: params => params.data.id,
     columnDefs: [
         { field: "invoiceId", headerName: "Invoice ID", width: 150 },
         { field: "supplierInvoiceNo", headerName: "Supplier Invoice #", width: 150 },
@@ -1182,10 +1183,26 @@ const purchasePaymentsGridOptions = {
     getRowId: params => params.data.id, 
     columnDefs: [
         { 
-            field: "relatedInvoiceId", 
-            headerName: "Invoice ID", 
+            headerName: "Supplier Invoice #", 
             width: 150,
-            pinned: 'left' // This "freezes" the column to the left
+            pinned: 'left', // This "freezes" the column to the left
+            // This valueGetter now uses the correct fields.
+            valueGetter: params => {
+                // Safety check: ensure the payment data and the invoices grid API are available.
+                if (!params.data || !purchaseInvoicesGridApi) {
+                    return ''; 
+                }
+
+                // 1. Get the ID of the parent invoice from the current payment row's data.
+                const parentInvoiceDocId = params.data.relatedInvoiceId;
+
+                // 2. Use that ID to look up the corresponding row node in the top grid.
+                const invoiceNode = purchaseInvoicesGridApi.getRowNode(parentInvoiceDocId);
+
+                // 3. If the invoice row is found, return its 'supplierInvoiceNo' property.
+                //    If not found, show the raw ID as a fallback so data is never lost.
+                return invoiceNode ? invoiceNode.data.supplierInvoiceNo : parentInvoiceDocId;
+            }
         },
         { 
             headerName: "Supplier", 
