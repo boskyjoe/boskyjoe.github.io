@@ -641,6 +641,18 @@ export async function getPurchaseInvoiceById(docId) {
 }
 
 /**
+ * Fetches all supplier payments from the ledger, ordered by date.
+ * @returns {Promise<Array<object>>} A promise that resolves to an array of all payment documents.
+ */
+export async function getAllSupplierPayments() {
+    const db = firebase.firestore();
+    const snapshot = await db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH)
+        .orderBy('paymentDate', 'desc')
+        .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+/**
  * [NEW] Updates an existing Purchase Invoice and atomically updates inventory
  * based on the "delta" (difference) of line item quantities.
  * @param {string} docId - The ID of the invoice document to update.
