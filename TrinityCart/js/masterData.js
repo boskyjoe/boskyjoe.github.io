@@ -1,6 +1,9 @@
 // js/masterData.js
 
-import { CATEGORIES_COLLECTION_PATH, SEASONS_COLLECTION_PATH,PRODUCTS_CATALOGUE_COLLECTION_PATH, SUPPLIERS_COLLECTION_PATH,PAYMENT_MODES_COLLECTION_PATH } from './config.js';
+import { CATEGORIES_COLLECTION_PATH, SEASONS_COLLECTION_PATH,
+    PRODUCTS_CATALOGUE_COLLECTION_PATH, SUPPLIERS_COLLECTION_PATH,
+    PAYMENT_MODES_COLLECTION_PATH,
+SALES_CATALOGUES_COLLECTION_PATH } from './config.js';
 
 // This object will be our local, always-up-to-date cache of master data.
 export const masterData = {
@@ -9,6 +12,7 @@ export const masterData = {
     products: [],
     suppliers: [],
     paymentModes: [],
+    salesCatalogues: [],
 };
 
 /**
@@ -68,6 +72,17 @@ export function initializeMasterDataListeners() {
         document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'paymentModes' } }));
     }, error => {
         console.error("Error listening to paymentModes collection:", error);
+    });
+
+    // Listener for Sales Catalogues
+    db.collection(SALES_CATALOGUES_COLLECTION_PATH).onSnapshot(snapshot => {
+        const catalogues = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        masterData.salesCatalogues = catalogues.filter(sc => sc.isActive); // Store only active ones
+        console.log("Master data updated: Sales Catalogues", masterData.salesCatalogues);
+        
+        document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'salesCatalogues' } }));
+    }, error => {
+        console.error("Error listening to salesCatalogues collection:", error);
     });
 
 
