@@ -269,6 +269,17 @@ export function detachAllRealtimeListeners() {
         unsubscribeCatalogueItemsListener = null;
     }
 
+    if (unsubscribeChurchTeamsListener) {
+        console.log("[ui.js] Detaching real-time church teams listener.");
+        unsubscribeChurchTeamsListener();
+        unsubscribeChurchTeamsListener = null;
+    }
+    if (unsubscribeTeamMembersListener) {
+        console.log("[ui.js] Detaching real-time team members listener.");
+        unsubscribeTeamMembersListener();
+        unsubscribeTeamMembersListener = null;
+    }
+
 }
 
 
@@ -1059,21 +1070,6 @@ export function showChurchTeamsView() {
         });
 }
 
-// 7. Add new listeners to the main cleanup function
-export function detachAllRealtimeListeners() {
-    // ... (all your existing unsubscribe calls)
-    
-    if (unsubscribeChurchTeamsListener) {
-        console.log("[ui.js] Detaching real-time church teams listener.");
-        unsubscribeChurchTeamsListener();
-        unsubscribeChurchTeamsListener = null;
-    }
-    if (unsubscribeTeamMembersListener) {
-        console.log("[ui.js] Detaching real-time team members listener.");
-        unsubscribeTeamMembersListener();
-        unsubscribeTeamMembersListener = null;
-    }
-}
 
 // 8. Create functions to manage the Add/Edit Member modal
 export function showMemberModal(memberData = null) {
