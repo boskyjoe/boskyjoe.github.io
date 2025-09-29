@@ -810,6 +810,8 @@ function setupEventListeners() {
         });
     }
 
+
+
     // --- Form Submission for "Add/Edit Member" Modal ---
     const memberForm = document.getElementById('member-form');
     if (memberForm) {
@@ -877,7 +879,23 @@ function setupEventListeners() {
         }
     });
 
-    
+    // --- In-Grid Update for Church Team Name ---
+    document.addEventListener('updateChurchTeam', async (e) => {
+        const { teamId, updatedData } = e.detail;
+        const user = appState.currentUser;
+        if (!user) return;
+
+        try {
+            await updateChurchTeam(teamId, updatedData, user);
+            // Optionally, show a temporary success message, though the real-time
+            // listener already confirms the change visually.
+            console.log(`Team ${teamId} name updated successfully.`);
+        } catch (error) {
+            console.error("Error updating team name:", error);
+            alert('Failed to update team name.');
+            // We should add logic here to refresh the grid to revert the failed change.
+        }
+    });
 
     // --- Other Listeners ---
     const purchaseFormContainer = document.getElementById('purchases-view');
