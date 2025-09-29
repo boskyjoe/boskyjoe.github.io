@@ -63,6 +63,16 @@ import {
     updatePurchaseInvoiceAndInventory
 } from './api.js';
 
+import { 
+    addChurchTeam, 
+    updateChurchTeam,
+    addTeamMember,
+    updateTeamMember,
+    removeTeamMember
+} from './api.js';
+
+
+
 // --- FIREBASE INITIALIZATION ---
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -293,6 +303,7 @@ function setupEventListeners() {
                 case 'sales-events-view': showSalesEventsView(); break;
                 case 'users-view': showUsersView(); break;
                 case 'purchases-view': showPurchasesView(); break;
+                case 'church-teams-view': showChurchTeamsView(); break;
                 default: showView(viewId);
             }
             return; // Stop processing after handling navigation
@@ -449,7 +460,33 @@ function setupEventListeners() {
                     }
                 }
             }
-
+            else if (grid.id === 'church-teams-grid') {
+                if (gridButton.classList.contains('action-btn-toggle-team-status')) {
+                    // This logic requires fetching the team data first to know the current status
+                    // For simplicity, we can handle this via a custom event later if needed.
+                    // Example: document.dispatchEvent(new CustomEvent('toggleTeamStatus', { detail: { teamId: docId } }));
+                }
+            }
+            else if (grid.id === 'team-members-grid') {
+                const teamId = document.getElementById('member-team-id').value; // Get the parent team ID
+                if (gridButton.classList.contains('action-btn-edit-member')) {
+                    // We need to get the member data to pre-fill the form
+                    const memberNode = teamMembersGridApi.getRowNode(docId);
+                    if (memberNode) {
+                        showMemberModal(memberNode.data);
+                    }
+                } else if (gridButton.classList.contains('action-btn-remove-member')) {
+                    if (confirm('Are you sure you want to remove this member from the team?')) {
+                        try {
+                            await removeTeamMember(teamId, docId);
+                            alert('Member removed successfully.');
+                        } catch (error) {
+                            console.error("Error removing member:", error);
+                            alert('Failed to remove member.');
+                        }
+                    }
+                }
+            }
 
 
 
@@ -579,6 +616,10 @@ function setupEventListeners() {
         if (target.closest('.remove-line-item-btn')) { target.closest('.grid').remove(); calculateAllTotals(); return; }
         if (target.closest('#cancel-edit-btn')) { resetPurchaseForm(); return; }
         if (target.closest('#payment-modal-close')) { closePaymentModal(); return; }
+        if (target.closest('#add-member-btn')) {
+            showMemberModal(); // Call with no data to open in "Add New" mode
+            return;
+        }
 
         if (target.closest('#catalogue-form-cancel-btn')) {
             resetCatalogueForm();
@@ -726,6 +767,70 @@ function setupEventListeners() {
             }
         });
     }
+
+
+    // --- Form Submission for "Create New Team" ---
+    const addTeamForm = document.getElementById('add-team-form');
+    if (addTeamForm) {
+        addTeamForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const teamData = {
+                teamName: document.getElementById('team-name-input').value,
+                churchName: appState.ChurchName
+            };
+
+            try {
+                await addChurchTeam(teamData, user);
+                alert('New team created successfully.');
+                addTeamForm.reset();
+            } catch (error) {
+                console.error("Error creating team:", error);
+                alert('Failed to create team.');
+            }
+        });
+    }
+
+    // --- Form Submission for "Add/Edit Member" Modal ---
+    const memberForm = document.getElementById('member-form');
+    if (memberForm) {
+        memberForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const teamId = document.getElementById('member-team-id').value;
+            const memberId = document.getElementById('member-doc-id').value;
+            const isEditMode = !!memberId;
+
+            const memberData = {
+                name: document.getElementById('member-name-input').value,
+                email: document.getElementById('member-email-input').value,
+                phone: document.getElementById('member-phone-input').value,
+                role: document.getElementById('member-role-select').value,
+            };
+
+            try {
+                if (isEditMode) {
+                    await updateTeamMember(teamId, memberId, memberData);
+                    alert('Member details updated successfully.');
+                } else {
+                    await addTeamMember(teamId, memberData, user);
+                    alert('New member added successfully.');
+                }
+                closeMemberModal();
+            } catch (error) {
+                console.error("Error saving member:", error);
+                alert('Failed to save member details.');
+            }
+        });
+    }
+
+
+
+
 
     // --- In-Grid Update Custom Event Listeners ---
 
