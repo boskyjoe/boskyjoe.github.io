@@ -947,7 +947,9 @@ const churchTeamsGridOptions = {
             field: "isActive", 
             headerName: "Status", 
             width: 120,
-            cellRenderer: p => p.value ? 'Active' : 'Inactive'
+            cellRenderer: p => p.value ? 
+                '<span class="text-green-600 font-semibold">Active</span>' : 
+                '<span class="text-red-600 font-semibold">Inactive</span>'
         },
         {
             headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center space-x-2',
