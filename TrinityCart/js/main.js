@@ -661,6 +661,7 @@ function setupEventListeners() {
                 unitPrice: unitPrice,
                 unitMarginPercentage: unitMarginPercentage,
                 sellingPrice: sellingPrice,
+                inventoryCount: parseInt(document.getElementById('initialStock-input').value, 10) || 0
             };
 
             if (!productData.categoryId) {
