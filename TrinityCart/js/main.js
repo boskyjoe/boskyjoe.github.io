@@ -60,7 +60,7 @@ import {
     updateCatalogueItem,
     removeItemFromCatalogue,createCatalogueWithItems,
     createPurchaseInvoiceAndUpdateInventory,
-    updatePurchaseInvoiceAndInventory,getUserMembershipInfo
+    updatePurchaseInvoiceAndInventory
 } from './api.js';
 
 import { showChurchTeamsView, showMemberModal, closeMemberModal,getMemberDataFromGridById } from './ui.js';
@@ -72,6 +72,19 @@ import {
     updateTeamMember,
     removeTeamMember
 } from './api.js';
+
+import { 
+    showConsignmentView, 
+    showConsignmentRequestModal, 
+    closeConsignmentRequestModal 
+} from './ui.js';
+
+import { 
+    getUserMembershipInfo,
+    createConsignmentRequest,
+    fulfillConsignmentAndUpdateInventory
+} from './api.js';
+
 
 
 
@@ -271,6 +284,106 @@ async function handleSavePurchaseInvoice() {
 
 
 
+/**
+ * [NEW] Handles the logic when a user clicks "Request New Consignment".
+ * It determines the user's role and teams, then configures and shows the request modal.
+ */
+async function handleRequestConsignmentClick() {
+    const user = appState.currentUser;
+    if (!user) return alert("Please log in.");
+
+    // Show the modal first, with a loading state
+    showConsignmentRequestModal();
+    // We will add logic here to show a spinner inside the modal
+
+    const membershipInfo = await getUserMembershipInfo(user.email);
+    
+    const adminTeamSelect = document.getElementById('admin-select-team');
+    const userTeamSelect = document.getElementById('user-select-team');
+    const adminTeamDiv = document.getElementById('admin-team-selection');
+    const userTeamDiv = document.getElementById('user-team-selection');
+
+    // Reset all selection divs
+    adminTeamDiv.classList.add('hidden');
+    userTeamDiv.classList.add('hidden');
+
+    if (user.role === 'admin') {
+        // Admin can select from any team
+        adminTeamDiv.classList.remove('hidden');
+        adminTeamSelect.innerHTML = '<option value="">Select a team...</option>';
+        // We need a way to get all teams here, let's assume it's in masterData
+        masterData.teams.forEach(team => {
+            const option = document.createElement('option');
+            option.value = team.id;
+            option.textContent = team.teamName;
+            adminTeamSelect.appendChild(option);
+        });
+    } else {
+        // For non-admins, check their memberships
+        if (!membershipInfo || !membershipInfo.teams) {
+            closeConsignmentRequestModal();
+            return alert("You are not a member of any team. Please contact an admin.");
+        }
+
+        const userTeams = Object.entries(membershipInfo.teams).map(([id, data]) => ({ id, ...data }));
+
+        if (userTeams.length === 1) {
+            // Auto-select if user is in only one team
+            userTeamDiv.classList.remove('hidden');
+            userTeamSelect.innerHTML = `<option value="${userTeams[0].id}">${userTeams[0].teamName}</option>`;
+            userTeamSelect.disabled = true;
+        } else {
+            // Let the user choose if they are in multiple teams
+            userTeamDiv.classList.remove('hidden');
+            userTeamSelect.innerHTML = '<option value="">Select your team...</option>';
+            userTeams.forEach(team => {
+                const option = document.createElement('option');
+                option.value = team.id;
+                option.textContent = team.teamName;
+                userTeamSelect.appendChild(option);
+            });
+            userTeamSelect.disabled = false;
+        }
+    }
+    // We will add logic for the "Next" button and form submission later.
+}
+
+/**
+ * [NEW] Handles the "Fulfill & Check Out" button click.
+ * Gathers data from the fulfillment grid and calls the transactional API function.
+ */
+async function handleFulfillConsignmentClick() {
+    const user = appState.currentUser;
+    if (user.role !== 'admin') return alert("Only admins can fulfill orders.");
+
+    const orderId = selectedConsignmentId; // Assumes selectedConsignmentId is set in ui.js
+    if (!orderId) return alert("No consignment order selected.");
+
+    if (!confirm("This will decrement main store inventory and activate the consignment. Are you sure?")) {
+        return;
+    }
+
+    // Get the final, admin-approved quantities from the fulfillment grid
+    const finalItems = [];
+    fulfillmentItemsGridApi.forEachNode(node => finalItems.push(node.data));
+
+    if (finalItems.length === 0) {
+        return alert("There are no items to fulfill in this order.");
+    }
+
+    try {
+        await fulfillConsignmentAndUpdateInventory(orderId, finalItems, user);
+        alert("Success! Consignment is now active and inventory has been updated.");
+        // The UI will automatically update via the real-time listeners.
+    } catch (error) {
+        console.error("Fulfillment failed:", error);
+        alert(`Fulfillment failed: ${error.message}`);
+    }
+}
+
+
+
+
 function setupEventListeners() {
     
     // ==================================================================
@@ -306,6 +419,7 @@ function setupEventListeners() {
                 case 'users-view': showUsersView(); break;
                 case 'purchases-view': showPurchasesView(); break;
                 case 'church-teams-view': showChurchTeamsView(); break;
+                case 'consignment-view': showConsignmentView(); break;
                 default: showView(viewId);
             }
             return; // Stop processing after handling navigation
@@ -639,6 +753,18 @@ function setupEventListeners() {
         if (target.closest('#payment-modal-close')) { closePaymentModal(); return; }
         if (target.closest('#add-member-btn')) {
             showMemberModal(); // Call with no data to open in "Add New" mode
+            return;
+        }
+
+        const requestBtn = target.closest('#request-consignment-btn');
+        if (requestBtn) {
+            handleRequestConsignmentClick(); // Call a dedicated handler function
+            return;
+        }
+
+        const fulfillBtn = target.closest('#fulfill-checkout-btn');
+        if (fulfillBtn) {
+            handleFulfillConsignmentClick(); // Call a dedicated handler function
             return;
         }
 
