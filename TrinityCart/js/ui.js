@@ -1014,6 +1014,20 @@ const teamMembersGridOptions = {
     onGridReady: params => { teamMembersGridApi = params.api; }
 };
 
+/**
+ * [NEW] Gets the data for a specific member row from the team members grid.
+ * @param {string} memberId - The document ID of the member.
+ * @returns {object|null} The member's data object or null if not found.
+ */
+export function getMemberDataFromGridById(memberId) {
+    if (!teamMembersGridApi) {
+        console.error("Cannot get member data: teamMembersGridApi is not ready.");
+        return null;
+    }
+    const rowNode = teamMembersGridApi.getRowNode(memberId);
+    return rowNode ? rowNode.data : null;
+}
+
 // 4. Create the initialization function
 export function initializeChurchTeamsGrids() {
     if (isChurchTeamsGridsInitialized) return;
