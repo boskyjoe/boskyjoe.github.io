@@ -1,4 +1,6 @@
 // In js/state.js
+
+
 export const appState = {
     currentUser: null,
     activeView: 'login-view',
@@ -6,4 +8,5 @@ export const appState = {
     selectedPurchaseInvoiceId: null, 
     isLocalUpdateInProgress:null,
     draftCatalogueItems: [],
+    ChurchName: 'St. Thomas Church Indiranagar',
 };
