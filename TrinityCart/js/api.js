@@ -1,3 +1,6 @@
+// js/api.js
+
+
 import { SUPPLIERS_COLLECTION_PATH } from './config.js';
 import { CATEGORIES_COLLECTION_PATH } from './config.js';
 import { SALE_TYPES_COLLECTION_PATH } from './config.js';
@@ -543,6 +546,7 @@ export async function addProduct(productData, user) {
         itemId: itemId,
         isActive: true,
         isReadyForSale: true, 
+        inventoryCount: productData.inventoryCount || 0,
         createdBy: user.email,
         createdOn: now,
         updatedBy: user.email,
