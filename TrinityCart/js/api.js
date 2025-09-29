@@ -450,6 +450,20 @@ export async function setSalesEventStatus(docId, newStatus, user) {
 // =======================================================
 
 /**
+ * [NEW] Fetches all member documents for a specific team.
+ * @param {string} teamId - The Firestore document ID of the parent team.
+ * @returns {Promise<Array<object>>} An array of member documents.
+ */
+export async function getMembersForTeam(teamId) {
+    if (!teamId) return []; // Return empty if no teamId is provided
+    const db = firebase.firestore();
+    const membersRef = db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).collection('members');
+    const snapshot = await membersRef.orderBy('name').get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+
+/**
  * [NEW & EFFICIENT] Gets a user's team memberships from their dedicated record.
  * @param {string} userEmail - The email of the user to look up.
  * @returns {Promise<object|null>} The user's team membership document or null if not found.
