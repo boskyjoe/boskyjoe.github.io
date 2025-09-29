@@ -33,7 +33,7 @@ import { EVENTS_COLLECTION_PATH } from './config.js';
 import { PRODUCTS_CATALOGUE_COLLECTION_PATH } from './config.js';
 
 import { PURCHASE_INVOICES_COLLECTION_PATH, INVENTORY_LEDGER_COLLECTION_PATH, SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH   } from './config.js';
-import { SALES_CATALOGUES_COLLECTION_PATH } from './config.js';
+import { SALES_CATALOGUES_COLLECTION_PATH, CHURCH_TEAMS_COLLECTION_PATH } from './config.js';
 
 
 // --- DOM ELEMENT REFERENCES ---
@@ -906,6 +906,213 @@ export async function refreshUsersGrid() {
         usersGridApi.showNoRowsOverlay();
     }
 }
+
+
+
+// =======================================================
+// --- CHURCH TEAM MANAGEMENT UI ---
+// =======================================================
+
+// 1. Define variables for the new grid APIs and state
+let churchTeamsGridApi = null;
+let teamMembersGridApi = null;
+let isChurchTeamsGridsInitialized = false;
+let unsubscribeChurchTeamsListener = null;
+let unsubscribeTeamMembersListener = null;
+let selectedTeamId = null; // To track the currently selected team
+
+// 2. Define the AG-Grid options for the MASTER grid (All Teams)
+const churchTeamsGridOptions = {
+    getRowId: params => params.data.id,
+    columnDefs: [
+        { field: "teamName", headerName: "Team Name", flex: 1, editable: true },
+        { 
+            headerName: "Team Lead", 
+            flex: 1,
+            // This will be populated later once we can identify the lead
+            valueGetter: params => params.data.teamLeadName || 'Not Assigned'
+        },
+        { 
+            field: "isActive", 
+            headerName: "Status", 
+            width: 120,
+            cellRenderer: p => p.value ? 'Active' : 'Inactive'
+        },
+        {
+            headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center space-x-2',
+            cellRenderer: params => {
+                const docId = params.data.id;
+                const editIcon = `<svg>...</svg>`; // Your edit icon SVG
+                const statusIcon = params.data.isActive ? `<svg>...</svg>` : `<svg>...</svg>`; // Your activate/deactivate icons
+                return `
+                    <button class="action-btn-icon action-btn-edit-team" data-id="${docId}" title="Edit Team Name">${editIcon}</button>
+                    <button class="action-btn-icon action-btn-toggle-team-status" data-id="${docId}" title="${params.data.isActive ? 'Deactivate' : 'Activate'}">${statusIcon}</button>
+                `;
+            }
+        }
+    ],
+    rowSelection: 'single',
+    onGridReady: params => { churchTeamsGridApi = params.api; },
+    onCellValueChanged: params => {
+        // Handle inline editing of the team name
+        document.dispatchEvent(new CustomEvent('updateChurchTeam', {
+            detail: { teamId: params.data.id, updatedData: { teamName: params.newValue } }
+        }));
+    },
+    onRowSelected: event => {
+        const selectedNode = event.node;
+        if (selectedNode.isSelected()) {
+            // A team has been selected in the master grid
+            const teamData = selectedNode.data;
+            selectedTeamId = teamData.id;
+            document.getElementById('selected-team-name').textContent = teamData.teamName;
+            document.getElementById('add-member-btn').disabled = false; // Enable the "Add Member" button
+            loadMembersForTeam(teamData.id); // Load the members for this team
+        }
+    }
+};
+
+// 3. Define the AG-Grid options for the DETAIL grid (Team Members)
+const teamMembersGridOptions = {
+    getRowId: params => params.data.id,
+    columnDefs: [
+        { field: "name", headerName: "Name", flex: 1 },
+        { field: "email", headerName: "Email", flex: 1 },
+        { field: "phone", headerName: "Phone", flex: 1 },
+        { field: "role", headerName: "Role", width: 150 },
+        {
+            headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center space-x-2',
+            cellRenderer: params => {
+                const docId = params.data.id;
+                const editIcon = `<svg>...</svg>`; // Your edit icon SVG
+                const removeIcon = `<svg>...</svg>`; // Your remove icon SVG
+                return `
+                    <button class="action-btn-icon action-btn-edit-member" data-id="${docId}" title="Edit Member">${editIcon}</button>
+                    <button class="action-btn-icon action-btn-delete action-btn-remove-member" data-id="${docId}" title="Remove Member">${removeIcon}</button>
+                `;
+            }
+        }
+    ],
+    onGridReady: params => { teamMembersGridApi = params.api; }
+};
+
+// 4. Create the initialization function
+export function initializeChurchTeamsGrids() {
+    if (isChurchTeamsGridsInitialized) return;
+    
+    const teamsGridDiv = document.getElementById('church-teams-grid');
+    const membersGridDiv = document.getElementById('team-members-grid');
+
+    if (teamsGridDiv && membersGridDiv) {
+        createGrid(teamsGridDiv, churchTeamsGridOptions);
+        createGrid(membersGridDiv, teamMembersGridOptions);
+        isChurchTeamsGridsInitialized = true;
+    }
+}
+
+// 5. Create the function to load members for a selected team
+function loadMembersForTeam(teamId) {
+    if (unsubscribeTeamMembersListener) {
+        unsubscribeTeamMembersListener(); // Detach listener from any previously selected team
+    }
+    if (!teamMembersGridApi) return;
+
+    const db = firebase.firestore();
+    teamMembersGridApi.setGridOption('loading', true);
+    
+    unsubscribeTeamMembersListener = db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).collection('members')
+        .orderBy('name')
+        .onSnapshot(snapshot => {
+            const members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            teamMembersGridApi.setGridOption('rowData', members);
+            teamMembersGridApi.setGridOption('loading', false);
+        }, error => {
+            console.error(`Error listening to members for team ${teamId}:`, error);
+            teamMembersGridApi.setGridOption('loading', false);
+        });
+}
+
+// 6. Create the main view function
+export function showChurchTeamsView() {
+    showView('church-teams-view');
+    initializeChurchTeamsGrids();
+
+    // Populate the read-only church name field from the app state
+    document.getElementById('team-churchName-input').value = appState.ChurchName;
+    
+    // Reset detail view
+    document.getElementById('selected-team-name').textContent = '...';
+    document.getElementById('add-member-btn').disabled = true;
+    if (teamMembersGridApi) teamMembersGridApi.setGridOption('rowData', []);
+    selectedTeamId = null;
+
+    // Attach the real-time listener for the master grid
+    const db = firebase.firestore();
+    unsubscribeChurchTeamsListener = db.collection(CHURCH_TEAMS_COLLECTION_PATH)
+        .orderBy('teamName')
+        .onSnapshot(snapshot => {
+            const teams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // We can add logic here to find the team lead name and count members later
+            if (churchTeamsGridApi) {
+                churchTeamsGridApi.setGridOption('rowData', teams);
+            }
+        });
+}
+
+// 7. Add new listeners to the main cleanup function
+export function detachAllRealtimeListeners() {
+    // ... (all your existing unsubscribe calls)
+    
+    if (unsubscribeChurchTeamsListener) {
+        console.log("[ui.js] Detaching real-time church teams listener.");
+        unsubscribeChurchTeamsListener();
+        unsubscribeChurchTeamsListener = null;
+    }
+    if (unsubscribeTeamMembersListener) {
+        console.log("[ui.js] Detaching real-time team members listener.");
+        unsubscribeTeamMembersListener();
+        unsubscribeTeamMembersListener = null;
+    }
+}
+
+// 8. Create functions to manage the Add/Edit Member modal
+export function showMemberModal(memberData = null) {
+    const modal = document.getElementById('member-modal');
+    const form = document.getElementById('member-form');
+    const title = document.getElementById('member-modal-title');
+    const submitBtn = document.getElementById('member-form-submit-btn');
+
+    form.reset();
+    document.getElementById('member-team-id').value = selectedTeamId;
+
+    if (memberData) { // Editing existing member
+        title.textContent = 'Edit Team Member';
+        submitBtn.textContent = 'Update Member';
+        document.getElementById('member-doc-id').value = memberData.id;
+        document.getElementById('member-name-input').value = memberData.name;
+        document.getElementById('member-email-input').value = memberData.email;
+        document.getElementById('member-phone-input').value = memberData.phone;
+        document.getElementById('member-role-select').value = memberData.role;
+    } else { // Adding new member
+        title.textContent = 'Add New Member';
+        submitBtn.textContent = 'Add Member';
+        document.getElementById('member-doc-id').value = '';
+    }
+
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+}
+
+export function closeMemberModal() {
+    const modal = document.getElementById('member-modal');
+    modal.classList.remove('visible');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
+
+
+
+
+
 
 
 
