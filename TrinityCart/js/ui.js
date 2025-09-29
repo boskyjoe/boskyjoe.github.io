@@ -932,6 +932,32 @@ let unsubscribeChurchTeamsListener = null;
 let unsubscribeTeamMembersListener = null;
 let selectedTeamId = null; // To track the currently selected team
 
+/**
+ * Resets the team detail panel to its initial, empty state.
+ */
+function resetTeamDetailView() {
+    console.log("[ui.js] Resetting team detail view.");
+    
+    // 1. Clear the selected team ID from the state.
+    selectedTeamId = null;
+    
+    // 2. Reset the UI elements.
+    document.getElementById('selected-team-name').textContent = '...';
+    document.getElementById('add-member-btn').disabled = true;
+    
+    // 3. Clear the members grid.
+    if (teamMembersGridApi) {
+        teamMembersGridApi.setGridOption('rowData', []);
+    }
+    
+    // 4. Detach the listener for the members sub-collection to prevent memory leaks.
+    if (unsubscribeTeamMembersListener) {
+        unsubscribeTeamMembersListener();
+        unsubscribeTeamMembersListener = null;
+    }
+}
+
+
 // 2. Define the AG-Grid options for the MASTER grid (All Teams)
 const churchTeamsGridOptions = {
     getRowId: params => params.data.id,
@@ -984,6 +1010,11 @@ const churchTeamsGridOptions = {
             document.getElementById('selected-team-name').textContent = teamData.teamName;
             document.getElementById('add-member-btn').disabled = false; // Enable the "Add Member" button
             loadMembersForTeam(teamData.id); // Load the members for this team
+        } else {
+            // --- A ROW WAS UNCHECKED (DESELECTED) ---
+            // This is the new logic that fixes the bug.
+            // We will call a helper function to reset the detail panel.
+            resetTeamDetailView();
         }
     }
 };
