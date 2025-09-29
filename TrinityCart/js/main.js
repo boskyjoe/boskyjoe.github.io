@@ -997,6 +997,44 @@ function setupEventListeners() {
 
 
 
+    // --- [NEW] Listener for Admin's Team Selection in Consignment Modal ---
+    const adminTeamSelect = document.getElementById('admin-select-team');
+    if (adminTeamSelect) {
+        adminTeamSelect.addEventListener('change', async (e) => {
+            const teamId = e.target.value;
+            const memberSelect = document.getElementById('admin-select-member'); // We need to add this to the HTML
+            
+            memberSelect.innerHTML = '<option value="">Loading members...</option>';
+            memberSelect.disabled = true;
+
+            if (!teamId) {
+                memberSelect.innerHTML = '<option value="">Select a team first</option>';
+                return;
+            }
+
+            try {
+                const members = await getMembersForTeam(teamId);
+                memberSelect.innerHTML = '<option value="">Select a team member...</option>';
+                
+                if (members.length === 0) {
+                    memberSelect.innerHTML = '<option value="">No members in this team</option>';
+                } else {
+                    members.forEach(member => {
+                        const option = document.createElement('option');
+                        option.value = member.id; // Or member.userId if that's what you need to store
+                        option.textContent = member.name;
+                        memberSelect.appendChild(option);
+                    });
+                    memberSelect.disabled = false;
+                }
+            } catch (error) {
+                console.error("Error fetching team members:", error);
+                memberSelect.innerHTML = '<option value="">Error loading members</option>';
+            }
+        });
+    }
+
+
 
 
     // --- In-Grid Update Custom Event Listeners ---
