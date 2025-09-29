@@ -35,6 +35,10 @@ import { PRODUCTS_CATALOGUE_COLLECTION_PATH } from './config.js';
 import { PURCHASE_INVOICES_COLLECTION_PATH, INVENTORY_LEDGER_COLLECTION_PATH, SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH   } from './config.js';
 import { SALES_CATALOGUES_COLLECTION_PATH, CHURCH_TEAMS_COLLECTION_PATH } from './config.js';
 
+import { 
+    CONSIGNMENT_ORDERS_COLLECTION_PATH
+} from './config.js';
+
 
 // --- DOM ELEMENT REFERENCES ---
 const views = document.querySelectorAll('.view');
@@ -2268,6 +2272,220 @@ export function showSalesCatalogueView() {
         }
     }, 50);
 }
+
+
+
+// =======================================================
+// --- CONSIGNMENT MANAGEMENT UI ---
+// =======================================================
+
+// 1. Define variables for all the new grid APIs and state
+let consignmentOrdersGridApi = null;
+let fulfillmentItemsGridApi = null;
+let consignmentItemsGridApi = null;
+let consignmentActivityGridApi = null;
+let consignmentPaymentsGridApi = null;
+let requestProductsGridApi = null;
+let isConsignmentGridsInitialized = false;
+
+let unsubscribeConsignmentOrdersListener = null;
+let unsubscribeConsignmentDetailsListeners = []; // Array to hold multiple detail listeners
+
+let selectedConsignmentId = null; // To track the currently selected order
+
+// 2. Define AG-Grid Options for each grid
+
+// MASTER GRID: All Consignment Orders
+const consignmentOrdersGridOptions = {
+    getRowId: params => params.data.id,
+    columnDefs: [
+        { field: "consignmentId", headerName: "Order ID", width: 180 },
+        { field: "requestDate", headerName: "Request Date", width: 140, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
+        { field: "teamName", headerName: "Team", flex: 1 },
+        { field: "requestingMemberName", headerName: "Requested By", flex: 1 },
+        { field: "status", headerName: "Status", width: 120, cellRenderer: p => {
+            const status = p.value;
+            if (status === 'Active') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
+            if (status === 'Pending') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">${status}</span>`;
+            if (status === 'Settled') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-gray-600 bg-gray-200">${status}</span>`;
+            return status;
+        }},
+        { field: "balanceDue", headerName: "Balance Due", width: 140, valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : '$0.00' }
+    ],
+    rowSelection: { mode: 'singleRow' },
+    onGridReady: params => { consignmentOrdersGridApi = params.api; },
+    onRowSelected: event => {
+        const selectedNode = event.node;
+        if (selectedNode && selectedNode.isSelected()) {
+            showConsignmentDetailPanel(selectedNode.data);
+        } else {
+            hideConsignmentDetailPanel();
+        }
+    }
+};
+
+// DETAIL GRID 1: Fulfillment (for Pending orders)
+const fulfillmentItemsGridOptions = {
+    getRowId: params => params.data.id,
+    columnDefs: [
+        { field: "productName", headerName: "Product", flex: 1 },
+        { field: "quantityRequested", headerName: "Qty Requested", width: 150 },
+        { 
+            field: "quantityCheckedOut", 
+            headerName: "Qty to Fulfill", 
+            width: 150, 
+            editable: true, // Admin can edit this
+            valueParser: p => parseInt(p.newValue, 10) || 0
+        }
+    ],
+    onGridReady: params => { fulfillmentItemsGridApi = params.api; }
+};
+
+// DETAIL GRID 2: Items on Hand (for Active orders)
+const consignmentItemsGridOptions = {
+    getRowId: params => params.data.id,
+    columnDefs: [
+        { field: "productName", headerName: "Product", flex: 1 },
+        { field: "quantityCheckedOut", headerName: "Checked Out", width: 120 },
+        { field: "quantitySold", headerName: "Sold", width: 100 },
+        { field: "quantityReturned", headerName: "Returned", width: 100 },
+        { field: "quantityDamaged", headerName: "Damaged", width: 100 },
+        { 
+            headerName: "On Hand", 
+            width: 100,
+            cellStyle: { 'font-weight': 'bold' },
+            valueGetter: p => p.data.quantityCheckedOut - (p.data.quantitySold + p.data.quantityReturned + p.data.quantityDamaged)
+        }
+    ],
+    onGridReady: params => { consignmentItemsGridApi = params.api; }
+};
+
+// ... We will define the options for activity and payment grids later ...
+
+// 3. Create Initialization and Helper Functions
+
+export function initializeConsignmentGrids() {
+    if (isConsignmentGridsInitialized) return;
+    const orderGridDiv = document.getElementById('consignment-orders-grid');
+    const fulfillGridDiv = document.getElementById('fulfillment-items-grid');
+    const itemsGridDiv = document.getElementById('consignment-items-grid');
+    // ... get other grid divs ...
+
+    if (orderGridDiv && fulfillGridDiv && itemsGridDiv) {
+        createGrid(orderGridDiv, consignmentOrdersGridOptions);
+        createGrid(fulfillGridDiv, fulfillmentItemsGridOptions);
+        createGrid(itemsGridDiv, consignmentItemsGridOptions);
+        // ... create other grids ...
+        isConsignmentGridsInitialized = true;
+    }
+}
+
+function hideConsignmentDetailPanel() {
+    document.getElementById('consignment-detail-panel').classList.add('hidden');
+    selectedConsignmentId = null;
+    // Detach all detail listeners
+    unsubscribeConsignmentDetailsListeners.forEach(unsub => unsub());
+    unsubscribeConsignmentDetailsListeners = [];
+}
+
+function showConsignmentDetailPanel(orderData) {
+    selectedConsignmentId = orderData.id;
+    const detailPanel = document.getElementById('consignment-detail-panel');
+    const fulfillmentView = document.getElementById('fulfillment-view');
+    const activeOrderView = document.getElementById('active-order-view');
+
+    // Populate header
+    document.getElementById('selected-consignment-id').textContent = orderData.consignmentId;
+    document.getElementById('selected-consignment-member').textContent = orderData.requestingMemberName;
+    document.getElementById('selected-consignment-team').textContent = orderData.teamName;
+
+    // Detach any old listeners first
+    unsubscribeConsignmentDetailsListeners.forEach(unsub => unsub());
+    unsubscribeConsignmentDetailsListeners = [];
+
+    const db = firebase.firestore();
+
+    if (orderData.status === 'Pending') {
+        fulfillmentView.classList.remove('hidden');
+        activeOrderView.classList.add('hidden');
+        
+        // Load items for fulfillment
+        const itemsRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderData.id).collection('items');
+        itemsRef.get().then(snapshot => {
+            const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Pre-fill "Qty to Fulfill" with the requested amount
+            const itemsToFulfill = items.map(item => ({ ...item, quantityCheckedOut: item.quantityRequested }));
+            fulfillmentItemsGridApi.setGridOption('rowData', itemsToFulfill);
+        });
+
+    } else if (orderData.status === 'Active') {
+        fulfillmentView.classList.add('hidden');
+        activeOrderView.classList.remove('hidden');
+
+        // Setup real-time listeners for all three detail grids
+        const itemsRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderData.id).collection('items');
+        const itemsUnsub = itemsRef.onSnapshot(snapshot => {
+            const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            consignmentItemsGridApi.setGridOption('rowData', items);
+        });
+        unsubscribeConsignmentDetailsListeners.push(itemsUnsub);
+        
+        // ... Add listeners for activityLog and payments grids here later ...
+    }
+
+    detailPanel.classList.remove('hidden');
+}
+
+// 4. Create the main view function
+export function showConsignmentView() {
+    showView('consignment-view');
+    initializeConsignmentGrids();
+    hideConsignmentDetailPanel(); // Ensure a clean state on view load
+
+    const db = firebase.firestore();
+    if (unsubscribeConsignmentOrdersListener) unsubscribeConsignmentOrdersListener();
+
+    // Attach listener for the master grid
+    unsubscribeConsignmentOrdersListener = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
+        .orderBy('requestDate', 'desc')
+        .onSnapshot(snapshot => {
+            const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (consignmentOrdersGridApi) {
+                consignmentOrdersGridApi.setGridOption('rowData', orders);
+            }
+        });
+}
+
+// 5. Add new listeners to the main cleanup function
+export function detachAllRealtimeListeners() {
+    // ... (all your existing unsubscribe calls)
+    
+    if (unsubscribeConsignmentOrdersListener) {
+        unsubscribeConsignmentOrdersListener();
+        unsubscribeConsignmentOrdersListener = null;
+    }
+    // Also detach any active detail listeners
+    unsubscribeConsignmentDetailsListeners.forEach(unsub => unsub());
+    unsubscribeConsignmentDetailsListeners = [];
+}
+
+// 6. Create functions to manage the Request Modal
+export async function showConsignmentRequestModal() {
+    // This function will contain the complex role-based logic we designed.
+    // For now, it just shows the modal.
+    const modal = document.getElementById('consignment-request-modal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+}
+
+export function closeConsignmentRequestModal() {
+    const modal = document.getElementById('consignment-request-modal');
+    modal.classList.remove('visible');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
+
+
+
 
 
 
