@@ -13,7 +13,13 @@ import { EVENTS_COLLECTION_PATH } from './config.js';
 
 import { PURCHASE_INVOICES_COLLECTION_PATH, SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH } from './config.js';
 
-import { SALES_CATALOGUES_COLLECTION_PATH,CHURCH_TEAMS_COLLECTION_PATH } from './config.js';
+import { SALES_CATALOGUES_COLLECTION_PATH,
+        CHURCH_TEAMS_COLLECTION_PATH,USER_TEAM_MEMBERSHIPS_COLLECTION_PATH,
+        CONSIGNMENT_ORDERS_COLLECTION_PATH,
+        CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH
+} from './config.js';
+
+
 
 
 
@@ -444,6 +450,26 @@ export async function setSalesEventStatus(docId, newStatus, user) {
 // =======================================================
 
 /**
+ * [NEW & EFFICIENT] Gets a user's team memberships from their dedicated record.
+ * @param {string} userEmail - The email of the user to look up.
+ * @returns {Promise<object|null>} The user's team membership document or null if not found.
+ */
+export async function getTeamsForUser(userEmail) {
+    const db = firebase.firestore();
+    const membershipDocId = userEmail.toLowerCase();
+    const membershipRef = db.collection(USER_TEAM_MEMBERSHIPS_COLLECTION_PATH).doc(membershipDocId);
+    
+    const doc = await membershipRef.get();
+
+    if (doc.exists) {
+        return doc.data();
+    } else {
+        return null; // This user is not a member of any team.
+    }
+}
+
+
+/**
  * Fetches all documents from the churchTeams collection.
  * @returns {Promise<Array<object>>} An array of team documents.
  */
@@ -476,6 +502,8 @@ export async function addChurchTeam(teamData, user) {
     });
 }
 
+
+
 /**
  * Updates a church team's main properties (e.g., name or active status).
  * @param {string} teamId - The Firestore document ID of the team to update.
@@ -506,46 +534,86 @@ export async function getTeamMembers(teamId) {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
+
 /**
- * Adds a new member to a specific team's sub-collection.
+ * [NEW & TRANSACTIONAL] Adds a member to a team and updates that
+ * user's profile to reflect their new team membership.
  * @param {string} teamId - The ID of the parent team.
- * @param {object} memberData - The data for the new member.
- * @param {object} user - The currently authenticated user.
+ * @param {string} teamName - The name of the parent team.
+ * @param {object} memberData - Data for the new member { name, email, phone, role }.
+ * @param {object} user - The admin performing the action.
  */
-export async function addTeamMember(teamId, memberData, user) {
+export async function addTeamMember(teamId, teamName, memberData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
+    const membershipDocId = memberData.email.toLowerCase();
+    const membershipRef = db.collection(USER_TEAM_MEMBERSHIPS_COLLECTION_PATH).doc(membershipDocId);
 
-    return db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).collection('members').add({
-        ...memberData,
-        audit: {
-            addedBy: user.email,
-            addedOn: now,
-        }
+    return db.runTransaction(async (transaction) => {
+        const newMemberRef = db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).collection('members').doc();
+        transaction.set(newMemberRef, {
+            ...memberData,
+            audit: { addedBy: user.email, addedOn: now }
+        });
+
+        const teamInfoPath = `teams.${teamId}`;
+        transaction.set(membershipRef, {
+            displayName: memberData.name,
+            email: memberData.email,
+            [teamInfoPath]: {
+                teamName: teamName,
+                role: memberData.role
+            }
+        }, { merge: true });
     });
 }
 
 /**
- * Updates an existing member's details within a team.
+ * [NEW & TRANSACTIONAL] Updates an existing member's details and syncs the changes
+ * to the user's central membership record.
  * @param {string} teamId - The ID of the parent team.
  * @param {string} memberId - The ID of the member document to update.
- * @param {object} updatedData - The fields to update.
+ * @param {object} updatedData - The fields to update { name, email, phone, role }.
  */
 export async function updateTeamMember(teamId, memberId, updatedData) {
     const db = firebase.firestore();
-    return db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).collection('members').doc(memberId).update(updatedData);
+    const membershipDocId = updatedData.email.toLowerCase();
+    const membershipRef = db.collection(USER_TEAM_MEMBERSHIPS_COLLECTION_PATH).doc(membershipDocId);
+
+    return db.runTransaction(async (transaction) => {
+        const memberRef = db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).collection('members').doc(memberId);
+        transaction.update(memberRef, updatedData);
+
+        const teamInfoPath = `teams.${teamId}.role`; // Path to update the role
+        transaction.update(membershipRef, {
+            displayName: updatedData.name,
+            [teamInfoPath]: updatedData.role
+        });
+    });
 }
 
 /**
- * Removes a member from a team's sub-collection.
+ * [NEW & TRANSACTIONAL] Removes a member from a team and from the user's
+ * central membership record.
  * @param {string} teamId - The ID of the parent team.
  * @param {string} memberId - The ID of the member document to delete.
+ * @param {string} memberEmail - The email of the member being removed.
  */
-export async function removeTeamMember(teamId, memberId) {
+export async function removeTeamMember(teamId, memberId, memberEmail) {
     const db = firebase.firestore();
-    return db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).collection('members').doc(memberId).delete();
-}
+    const membershipDocId = memberEmail.toLowerCase();
+    const membershipRef = db.collection(USER_TEAM_MEMBERSHIPS_COLLECTION_PATH).doc(membershipDocId);
 
+    return db.runTransaction(async (transaction) => {
+        const memberRef = db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).collection('members').doc(memberId);
+        transaction.delete(memberRef);
+
+        const teamInfoPath = `teams.${teamId}`;
+        transaction.update(membershipRef, {
+            [teamInfoPath]: firebase.firestore.FieldValue.delete()
+        });
+    });
+}
 
 
 
@@ -1144,6 +1212,122 @@ export async function removeItemFromCatalogue(catalogueId, itemId) {
     // This is a single delete operation. (Cost: 1 delete)
     return db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(catalogueId).collection('items').doc(itemId).delete();
 }
+
+
+// =======================================================
+// --- CONSIGNMENT MANAGEMENT API FUNCTIONS ---
+// =======================================================
+
+/**
+ * [NEW] A complex query to find all teams a user belongs to.
+ * This is a challenging query for Firestore and may be slow on a large dataset.
+ * @param {string} userId - The UID of the user to search for.
+ * @returns {Promise<Array<object>>} An array of team objects the user is part of.
+ */
+export async function getTeamsForUser(userId) {
+    const db = firebase.firestore();
+    const teamsRef = db.collection(CHURCH_TEAMS_COLLECTION_PATH);
+    const allTeamsSnapshot = await teamsRef.get();
+
+    const userTeams = [];
+    
+    // This requires iterating through each team and checking its sub-collection.
+    for (const teamDoc of allTeamsSnapshot.docs) {
+        const membersRef = teamDoc.ref.collection('members');
+        // We assume the user's UID might be used as the document ID in the members sub-collection.
+        // If not, a different query strategy is needed. This is a placeholder.
+        // A more scalable approach would be to store a user's teams on their user profile.
+        const memberDoc = await membersRef.doc(userId).get(); 
+        if (memberDoc.exists) {
+            userTeams.push({
+                teamId: teamDoc.id,
+                teamName: teamDoc.data().teamName,
+                userRoleInTeam: memberDoc.data().role
+            });
+        }
+    }
+    return userTeams;
+}
+
+/**
+ * [NEW] Creates a new Consignment Request (status: "Pending").
+ * @param {object} requestData - Header data for the order.
+ * @param {Array<object>} items - The list of items being requested.
+ * @param {object} user - The currently authenticated user.
+ */
+export async function createConsignmentRequest(requestData, items, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const batch = db.batch();
+
+    const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc();
+    const consignmentId = `CON-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+
+    batch.set(orderRef, {
+        ...requestData,
+        consignmentId: consignmentId,
+        status: 'Pending',
+        requestDate: now,
+        requestingMemberId: user.uid,
+        requestingMemberName: user.displayName,
+        audit: { createdBy: user.email, createdOn: now }
+    });
+
+    items.forEach(item => {
+        const itemRef = orderRef.collection('items').doc();
+        batch.set(itemRef, item);
+    });
+
+    return batch.commit();
+}
+
+/**
+ * [NEW] Fulfills a consignment order and atomically decrements inventory.
+ * @param {string} orderId - The ID of the consignment order to fulfill.
+ * @param {Array<object>} finalItems - The final list of items with admin-approved quantities.
+ * @param {object} user - The admin performing the action.
+ */
+export async function fulfillConsignmentAndUpdateInventory(orderId, finalItems, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId);
+
+    return db.runTransaction(async (transaction) => {
+        const productRefs = finalItems.map(item => db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.productId));
+        const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
+
+        // Validation Loop
+        for (let i = 0; i < finalItems.length; i++) {
+            const item = finalItems[i];
+            const productDoc = productDocs[i];
+            const currentStock = productDoc.data().inventoryCount || 0;
+            if (currentStock < item.quantityCheckedOut) {
+                throw new Error(`Not enough stock for ${item.productName}. Available: ${currentStock}, Requested: ${item.quantityCheckedOut}.`);
+            }
+        }
+
+        // Update Loop
+        for (let i = 0; i < finalItems.length; i++) {
+            const item = finalItems[i];
+            const productRef = productRefs[i];
+            transaction.update(productRef, {
+                inventoryCount: firebase.firestore.FieldValue.increment(-Number(item.quantityCheckedOut))
+            });
+            // Also update the item in the sub-collection with the final fulfilled quantity
+            const itemRef = orderRef.collection('items').doc(item.id); // Assumes item has its own doc ID
+            transaction.update(itemRef, { quantityCheckedOut: item.quantityCheckedOut });
+        }
+
+        // Update the main order status
+        transaction.update(orderRef, { 
+            status: 'Active', 
+            checkoutDate: now,
+            'audit.updatedBy': user.email,
+            'audit.updatedOn': now
+        });
+    });
+}
+
 
 
 
