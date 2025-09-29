@@ -3,7 +3,7 @@
 import { CATEGORIES_COLLECTION_PATH, SEASONS_COLLECTION_PATH,
     PRODUCTS_CATALOGUE_COLLECTION_PATH, SUPPLIERS_COLLECTION_PATH,
     PAYMENT_MODES_COLLECTION_PATH,
-SALES_CATALOGUES_COLLECTION_PATH } from './config.js';
+SALES_CATALOGUES_COLLECTION_PATH,CHURCH_TEAMS_COLLECTION_PATH } from './config.js';
 
 // This object will be our local, always-up-to-date cache of master data.
 export const masterData = {
@@ -13,6 +13,7 @@ export const masterData = {
     suppliers: [],
     paymentModes: [],
     salesCatalogues: [],
+    teams: [],
 };
 
 /**
@@ -85,7 +86,19 @@ export function initializeMasterDataListeners() {
         console.error("Error listening to salesCatalogues collection:", error);
     });
 
-
+    // Listener for Church Teams
+    db.collection(CHURCH_TEAMS_COLLECTION_PATH).onSnapshot(snapshot => {
+        const teams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // For teams, we might want to show all of them, not just active ones,
+        // so the admin can see and reactivate them. We'll filter in the UI if needed.
+        masterData.teams = teams; 
+        console.log("Master data updated: Teams", masterData.teams);
+        
+        // Dispatch an event in case any UI component needs to react to team changes.
+        document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'teams' } }));
+    }, error => {
+        console.error("Error listening to churchTeams collection:", error);
+    });
 
 
 
