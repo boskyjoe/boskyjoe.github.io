@@ -936,7 +936,7 @@ let selectedTeamId = null; // To track the currently selected team
 const churchTeamsGridOptions = {
     getRowId: params => params.data.id,
     columnDefs: [
-        { field: "teamName", headerName: "Team Name", flex: 1, editable: true, checkboxSelection: false  },
+        { field: "teamName", headerName: "Team Name", flex: 1, editable: true},
         { 
             headerName: "Team Lead", 
             flex: 1,
@@ -966,7 +966,8 @@ const churchTeamsGridOptions = {
         }
     ],
     rowSelection: {
-        mode: 'singleRow'
+        mode: 'singleRow',
+        checkboxes: false 
     },
     onGridReady: params => { churchTeamsGridApi = params.api; },
     onCellValueChanged: params => {
