@@ -1239,8 +1239,8 @@ export async function getUserMembershipInfo(userEmail) { // <-- RENAMED
 }
 
 /**
- * [NEW] Creates a new Consignment Request (status: "Pending").
- * @param {object} requestData - Header data for the order.
+ * Creates a new "Pending" Consignment Request using a batch write.
+ * @param {object} requestData - Header data for the order { teamId, teamName, etc. }.
  * @param {Array<object>} items - The list of items being requested.
  * @param {object} user - The currently authenticated user.
  */
@@ -1264,14 +1264,26 @@ export async function createConsignmentRequest(requestData, items, user) {
 
     items.forEach(item => {
         const itemRef = orderRef.collection('items').doc();
-        batch.set(itemRef, item);
+        // We only store the requested quantity at this stage.
+        batch.set(itemRef, {
+            productId: item.productId,
+            productName: item.productName,
+            sellingPrice: item.sellingPrice,
+            quantityRequested: item.quantity,
+            quantityCheckedOut: 0, // Will be set during fulfillment
+            quantitySold: 0,
+            quantityReturned: 0,
+            quantityDamaged: 0
+        });
     });
 
     return batch.commit();
 }
 
+
 /**
- * [NEW] Fulfills a consignment order and atomically decrements inventory.
+ * Fulfills a consignment order and atomically decrements inventory.
+ * This is a critical transaction to prevent race conditions.
  * @param {string} orderId - The ID of the consignment order to fulfill.
  * @param {Array<object>} finalItems - The final list of items with admin-approved quantities.
  * @param {object} user - The admin performing the action.
@@ -1285,38 +1297,95 @@ export async function fulfillConsignmentAndUpdateInventory(orderId, finalItems, 
         const productRefs = finalItems.map(item => db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.productId));
         const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
 
-        // Validation Loop
+        // Validation Loop: Check stock for all items before making any changes.
         for (let i = 0; i < finalItems.length; i++) {
             const item = finalItems[i];
             const productDoc = productDocs[i];
             const currentStock = productDoc.data().inventoryCount || 0;
             if (currentStock < item.quantityCheckedOut) {
-                throw new Error(`Not enough stock for ${item.productName}. Available: ${currentStock}, Requested: ${item.quantityCheckedOut}.`);
+                throw new Error(`Not enough stock for "${item.productName}". Available: ${currentStock}, Requested: ${item.quantityCheckedOut}.`);
             }
         }
 
-        // Update Loop
+        // Update Loop: If validation passes, commit all changes.
+        let totalValueCheckedOut = 0;
         for (let i = 0; i < finalItems.length; i++) {
             const item = finalItems[i];
             const productRef = productRefs[i];
+            const quantityToDecrement = Number(item.quantityCheckedOut);
+            
+            // Decrement main store inventory
             transaction.update(productRef, {
-                inventoryCount: firebase.firestore.FieldValue.increment(-Number(item.quantityCheckedOut))
+                inventoryCount: firebase.firestore.FieldValue.increment(-quantityToDecrement)
             });
-            // Also update the item in the sub-collection with the final fulfilled quantity
-            const itemRef = orderRef.collection('items').doc(item.id); // Assumes item has its own doc ID
-            transaction.update(itemRef, { quantityCheckedOut: item.quantityCheckedOut });
+
+            // Update the item in the sub-collection with the final fulfilled quantity
+            const itemRef = orderRef.collection('items').doc(item.id); // Assumes item has its own doc ID from the fulfillment grid
+            transaction.update(itemRef, { quantityCheckedOut: quantityToDecrement });
+
+            totalValueCheckedOut += item.sellingPrice * quantityToDecrement;
         }
 
-        // Update the main order status
+        // Finally, update the main order to "Active".
         transaction.update(orderRef, { 
             status: 'Active', 
             checkoutDate: now,
+            totalValueCheckedOut: totalValueCheckedOut,
+            balanceDue: totalValueCheckedOut, // Initially, balance due is the full value
+            totalAmountPaid: 0,
             'audit.updatedBy': user.email,
             'audit.updatedOn': now
         });
     });
 }
 
+/**
+ * Logs an activity (Sale, Return, Damage) and updates inventory if necessary.
+ * @param {string} orderId - The ID of the parent consignment order.
+ * @param {string} itemId - The ID of the item document in the 'items' sub-collection.
+ * @param {object} activityData - The data for the new activity log entry.
+ * @param {object} user - The user logging the activity.
+ */
+export async function logActivityAndUpdateConsignment(orderId, itemId, activityData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId);
+    const itemRef = orderRef.collection('items').doc(itemId);
+    const activityRef = orderRef.collection('activityLog').doc();
+
+    return db.runTransaction(async (transaction) => {
+        // 1. Create the immutable activity log entry.
+        transaction.set(activityRef, {
+            ...activityData,
+            recordedBy: user.email,
+            activityDate: now
+        });
+
+        // 2. Update the running totals on the consignment item.
+        const fieldToUpdate = `quantity${activityData.activityType}`; // e.g., 'quantitySale', 'quantityReturn'
+        transaction.update(itemRef, {
+            [fieldToUpdate]: firebase.firestore.FieldValue.increment(Number(activityData.quantity))
+        });
+
+        // 3. If it's a SALE, update the main order's financial totals.
+        if (activityData.activityType === 'Sale') {
+            const itemDoc = await transaction.get(itemRef);
+            const saleValue = (itemDoc.data().sellingPrice || 0) * Number(activityData.quantity);
+            transaction.update(orderRef, {
+                totalValueSold: firebase.firestore.FieldValue.increment(saleValue),
+                balanceDue: firebase.firestore.FieldValue.increment(saleValue)
+            });
+        }
+
+        // 4. If it's a RETURN, put the items back into the main store inventory.
+        if (activityData.activityType === 'Return') {
+            const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(activityData.productId);
+            transaction.update(productRef, {
+                inventoryCount: firebase.firestore.FieldValue.increment(Number(activityData.quantity))
+            });
+        }
+    });
+}
 
 
 
