@@ -13,7 +13,7 @@ import { EVENTS_COLLECTION_PATH } from './config.js';
 
 import { PURCHASE_INVOICES_COLLECTION_PATH, SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH } from './config.js';
 
-import { SALES_CATALOGUES_COLLECTION_PATH } from './config.js';
+import { SALES_CATALOGUES_COLLECTION_PATH,CHURCH_TEAMS_COLLECTION_PATH } from './config.js';
 
 
 
@@ -439,7 +439,112 @@ export async function setSalesEventStatus(docId, newStatus, user) {
 }
 
 
+// =======================================================
+// --- CHURCH TEAM MANAGEMENT API FUNCTIONS ---
+// =======================================================
 
+/**
+ * Fetches all documents from the churchTeams collection.
+ * @returns {Promise<Array<object>>} An array of team documents.
+ */
+export async function getChurchTeams() {
+    const db = firebase.firestore();
+    const snapshot = await db.collection(CHURCH_TEAMS_COLLECTION_PATH).orderBy('teamName').get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+/**
+ * Creates a new church team document.
+ * @param {object} teamData - The data for the new team (e.g., { teamName, churchName }).
+ * @param {object} user - The currently authenticated user.
+ */
+export async function addChurchTeam(teamData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const teamId = `TEAM-${Date.now()}`;
+
+    return db.collection(CHURCH_TEAMS_COLLECTION_PATH).add({
+        ...teamData,
+        teamId: teamId,
+        isActive: true, // Teams are active by default
+        audit: {
+            createdBy: user.email,
+            createdOn: now,
+            updatedBy: user.email,
+            updatedOn: now,
+        }
+    });
+}
+
+/**
+ * Updates a church team's main properties (e.g., name or active status).
+ * @param {string} teamId - The Firestore document ID of the team to update.
+ * @param {object} updatedData - The fields to update.
+ * @param {object} user - The currently authenticated user.
+ */
+export async function updateChurchTeam(teamId, updatedData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+
+    return db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).update({
+        ...updatedData,
+        'audit.updatedBy': user.email,
+        'audit.updatedOn': now,
+    });
+}
+
+// --- Team Member Sub-collection Functions ---
+
+/**
+ * Fetches all members for a specific team.
+ * @param {string} teamId - The Firestore document ID of the parent team.
+ * @returns {Promise<Array<object>>} An array of member documents.
+ */
+export async function getTeamMembers(teamId) {
+    const db = firebase.firestore();
+    const snapshot = await db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).collection('members').orderBy('name').get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+/**
+ * Adds a new member to a specific team's sub-collection.
+ * @param {string} teamId - The ID of the parent team.
+ * @param {object} memberData - The data for the new member.
+ * @param {object} user - The currently authenticated user.
+ */
+export async function addTeamMember(teamId, memberData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+
+    return db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).collection('members').add({
+        ...memberData,
+        audit: {
+            addedBy: user.email,
+            addedOn: now,
+        }
+    });
+}
+
+/**
+ * Updates an existing member's details within a team.
+ * @param {string} teamId - The ID of the parent team.
+ * @param {string} memberId - The ID of the member document to update.
+ * @param {object} updatedData - The fields to update.
+ */
+export async function updateTeamMember(teamId, memberId, updatedData) {
+    const db = firebase.firestore();
+    return db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).collection('members').doc(memberId).update(updatedData);
+}
+
+/**
+ * Removes a member from a team's sub-collection.
+ * @param {string} teamId - The ID of the parent team.
+ * @param {string} memberId - The ID of the member document to delete.
+ */
+export async function removeTeamMember(teamId, memberId) {
+    const db = firebase.firestore();
+    return db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).collection('members').doc(memberId).delete();
+}
 
 
 
