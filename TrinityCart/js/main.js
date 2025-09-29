@@ -81,6 +81,7 @@ import {
 
 import { 
     getUserMembershipInfo,
+    getMembersForTeam,
     createConsignmentRequest,
     fulfillConsignmentAndUpdateInventory
 } from './api.js';
