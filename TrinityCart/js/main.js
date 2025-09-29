@@ -51,7 +51,7 @@ import { getPaymentDataFromGridById } from './ui.js';
 import { showPaymentModal, closePaymentModal,getInvoiceDataFromGridById, initializeModals } from './ui.js';
 
 
-import { showSalesCatalogueView,getCatalogueDataFromGridById,loadCatalogueForEditing,resetCatalogueForm, updateDraftItemsGrid, getTeamDataFromGridById } from './ui.js';
+import { showSalesCatalogueView,getCatalogueDataFromGridById,loadCatalogueForEditing,resetCatalogueForm, updateDraftItemsGrid, getTeamDataFromGridById, getTeamsForUser } from './ui.js';
 import { 
     getLatestPurchasePrice,
     addSalesCatalogue,
@@ -495,7 +495,11 @@ function setupEventListeners() {
                 } else if (gridButton.classList.contains('action-btn-remove-member')) {
                     if (confirm('Are you sure you want to remove this member from the team?')) {
                         try {
-                            await removeTeamMember(teamId, docId);
+                            // We need the member's email to find their membership record.
+                            const memberData = getMemberDataFromGridById(docId);
+                            if (!memberData) throw new Error("Could not find member data to delete.");
+                            
+                            await removeTeamMember(teamId, docId, memberData.email);
                             alert('Member removed successfully.');
                         } catch (error) {
                             console.error("Error removing member:", error);
@@ -824,6 +828,13 @@ function setupEventListeners() {
             const memberId = document.getElementById('member-doc-id').value;
             const isEditMode = !!memberId;
 
+
+            // We need the team name to denormalize it.
+            const teamData = getTeamDataFromGridById(teamId);
+            if (!teamData) return alert("Error: Could not find parent team data.");
+            const teamName = teamData.teamName;
+
+
             const memberData = {
                 name: document.getElementById('member-name-input').value,
                 email: document.getElementById('member-email-input').value,
@@ -836,7 +847,7 @@ function setupEventListeners() {
                     await updateTeamMember(teamId, memberId, memberData);
                     alert('Member details updated successfully.');
                 } else {
-                    await addTeamMember(teamId, memberData, user);
+                    await addTeamMember(teamId, teamName, memberData, user);
                     alert('New member added successfully.');
                 }
                 // After saving the member, check if they are the new Team Lead.
