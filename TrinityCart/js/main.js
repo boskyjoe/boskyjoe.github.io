@@ -839,6 +839,17 @@ function setupEventListeners() {
                     await addTeamMember(teamId, memberData, user);
                     alert('New member added successfully.');
                 }
+                // After saving the member, check if they are the new Team Lead.
+                if (memberData.role === 'Team Lead') {
+                    // If so, update the parent team document with their name and ID.
+                    const parentTeamUpdateData = {
+                        teamLeadId: memberId, // The ID of the member document
+                        teamLeadName: memberData.name
+                    };
+                    await updateChurchTeam(teamId, parentTeamUpdateData, user);
+                    console.log(`Parent team ${teamId} updated with new lead: ${memberData.name}`);
+                }
+                
                 closeMemberModal();
             } catch (error) {
                 console.error("Error saving member:", error);
