@@ -63,6 +63,8 @@ import {
     updatePurchaseInvoiceAndInventory
 } from './api.js';
 
+import { showChurchTeamsView, showMemberModal, closeMemberModal } from './ui.js';
+
 import { 
     addChurchTeam, 
     updateChurchTeam,
