@@ -814,6 +814,69 @@
                 </div>
 
 
+              
+                <!-- =================================== -->
+                <!--      VIEW: TEAM MANAGEMENT          -->
+                <!-- =================================== -->
+                <div id="church-teams-view" class="view space-y-8">
+                    <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
+
+                    <!-- Card 1: Create New Team Form -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Create New Church Team</h3>
+                        </div>
+                        <div class="p-6">
+                            <form id="add-team-form" class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                                <!-- Church Name (Read-only) -->
+                                <div>
+                                    <label for="team-churchName-input" class="form-label">Church Name</label>
+                                    <input type="text" id="team-churchName-input" class="form-input w-full bg-gray-200" readonly>
+                                </div>
+                                <!-- Team Name -->
+                                <div>
+                                    <label for="team-name-input" class="form-label">Team Name</label>
+                                    <input type="text" id="team-name-input" placeholder="e.g., Ushering Team" class="form-input w-full" required>
+                                </div>
+                                <!-- Form Actions -->
+                                <div>
+                                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
+                                        Save Team
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Master-Detail Grids -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <!-- Master Grid: All Teams -->
+                        <div class="p-6 border-b">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">All Church Teams</h3>
+                            <div id="church-teams-grid" class="ag-theme-alpine" style="height: 300px; width: 100%;"></div>
+                        </div>
+                        
+                        <!-- Detail Grid: Team Members -->
+                        <div class="p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-semibold text-gray-800">Team Members for <span id="selected-team-name" class="text-blue-600">...</span></h3>
+                                <button id="add-member-btn" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold" disabled>
+                                    + Add Member
+                                </button>
+                            </div>
+                            <div id="team-members-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+
+
+
+
+
+
+
+
                 <!-- View: Manage Users -->
                 <div id="users-view" class="view space-y-8">
                     <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
@@ -938,6 +1001,63 @@
             </form>
         </div>
     </div>
+
+
+
+    <!-- ======================= -->
+    <!--  ADD/EDIT MEMBER MODAL  -->
+    <!-- ======================= -->
+    <div id="member-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black bg-opacity-60 modal-close-trigger" style="z-index: 50;"></div>
+        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-lg mx-auto" style="z-index: 51;">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 id="member-modal-title" class="text-lg font-bold text-gray-900">Add New Member</h3>
+                <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <form id="member-form">
+                <input type="hidden" id="member-team-id">
+                <input type="hidden" id="member-doc-id">
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Member Name -->
+                    <div class="md:col-span-2">
+                        <label for="member-name-input" class="form-label">Member Name</label>
+                        <input type="text" id="member-name-input" class="form-input w-full" required>
+                    </div>
+                    <!-- Member Email -->
+                    <div>
+                        <label for="member-email-input" class="form-label">Email</label>
+                        <input type="email" id="member-email-input" class="form-input w-full">
+                    </div>
+                    <!-- Member Phone -->
+                    <div>
+                        <label for="member-phone-input" class="form-label">Phone Number</label>
+                        <input type="tel" id="member-phone-input" class="form-input w-full">
+                    </div>
+                    <!-- Member Role -->
+                    <div class="md:col-span-2">
+                        <label for="member-role-select" class="form-label">Role in Team</label>
+                        <select id="member-role-select" class="form-input w-full" required>
+                            <option value="Team Member">Team Member</option>
+                            <option value="Team Lead">Team Lead</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
+                    <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">Cancel</button>
+                    <button type="submit" id="member-form-submit-btn" class="modal-btn modal-btn-primary">Add Member</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+
+
+
+
+
 
 
 
