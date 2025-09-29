@@ -51,7 +51,7 @@ import { getPaymentDataFromGridById } from './ui.js';
 import { showPaymentModal, closePaymentModal,getInvoiceDataFromGridById, initializeModals } from './ui.js';
 
 
-import { showSalesCatalogueView,getCatalogueDataFromGridById,loadCatalogueForEditing,resetCatalogueForm, updateDraftItemsGrid, getTeamDataFromGridById, getTeamsForUser } from './ui.js';
+import { showSalesCatalogueView,getCatalogueDataFromGridById,loadCatalogueForEditing,resetCatalogueForm, updateDraftItemsGrid, getTeamDataFromGridById, getUserMembershipInfo } from './ui.js';
 import { 
     getLatestPurchasePrice,
     addSalesCatalogue,
