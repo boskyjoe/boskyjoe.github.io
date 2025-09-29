@@ -38,6 +38,12 @@ export const SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH = `${BASE_DOC_PATH}/suppli
 export const SALES_CATALOGUES_COLLECTION_PATH = `${BASE_DOC_PATH}/salesCatalogues`;
 
 export const CHURCH_TEAMS_COLLECTION_PATH = `${BASE_DOC_PATH}/churchTeams`;
+export const USER_TEAM_MEMBERSHIPS_COLLECTION_PATH = `${BASE_DOC_PATH}/userTeamMemberships`;
+
+export const CONSIGNMENT_ORDERS_COLLECTION_PATH = `${BASE_DOC_PATH}/consignmentOrders`;
+export const CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH = `${BASE_DOC_PATH}/consignmentPaymentsLedger`;
+
+
 
 
 
@@ -68,13 +74,6 @@ export const navConfig = [
         viewId: "sales-catalogue-view",
         roles: ["admin", "inventory_manager"]
     },
-    {
-        type: "link",
-        label: "Consignment Mgmt",
-        icon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" /><path fill-rule="evenodd" d="M1.5 5.25a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v9.5a3 3 0 0 1-3 3h-11a3 3 0 0 1-3-3v-9.5Zm1.5 1.25a1.5 1.5 0 0 1 1.5-1.5h11a1.5 1.5 0 0 1 1.5 1.5v9.5a1.5 1.5 0 0 1-1.5 1.5h-11a1.5 1.5 0 0 1-1.5-1.5v-9.5Z" clip-rule="evenodd" /></svg>`,
-        viewId: "consignment-view", // We will create this view in index.html
-        roles: ["admin", "team_lead"] // Only visible to these roles
-    },
     // 3. Purchase Management
     {
         type: "link",
@@ -90,6 +89,13 @@ export const navConfig = [
         icon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" /></svg>`,
         viewId: "sales-view",
         roles: ["admin", "sales_staff", "team_lead"]
+    },
+    {
+        type: "link",
+        label: "Consignment Mgmt",
+        icon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" /><path fill-rule="evenodd" d="M1.5 5.25a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v9.5a3 3 0 0 1-3 3h-11a3 3 0 0 1-3-3v-9.5Zm1.5 1.25a1.5 1.5 0 0 1 1.5-1.5h11a1.5 1.5 0 0 1 1.5 1.5v9.5a1.5 1.5 0 0 1-1.5 1.5h-11a1.5 1.5 0 0 1-1.5-1.5v-9.5Z" clip-rule="evenodd" /></svg>`,
+        viewId: "consignment-view", // We will create this view in index.html
+        roles: ["admin", "team_lead", "sales_staff", "finance", "guest"]
     },
     // 5. Supplier Management
     {
