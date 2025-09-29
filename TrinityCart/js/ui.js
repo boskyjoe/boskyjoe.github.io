@@ -284,6 +284,14 @@ export function detachAllRealtimeListeners() {
         unsubscribeTeamMembersListener = null;
     }
 
+    if (unsubscribeConsignmentOrdersListener) {
+        unsubscribeConsignmentOrdersListener();
+        unsubscribeConsignmentOrdersListener = null;
+    }
+    // Also detach any active detail listeners
+    unsubscribeConsignmentDetailsListeners.forEach(unsub => unsub());
+    unsubscribeConsignmentDetailsListeners = [];
+
 }
 
 
@@ -2457,17 +2465,7 @@ export function showConsignmentView() {
 }
 
 // 5. Add new listeners to the main cleanup function
-export function detachAllRealtimeListeners() {
-    // ... (all your existing unsubscribe calls)
-    
-    if (unsubscribeConsignmentOrdersListener) {
-        unsubscribeConsignmentOrdersListener();
-        unsubscribeConsignmentOrdersListener = null;
-    }
-    // Also detach any active detail listeners
-    unsubscribeConsignmentDetailsListeners.forEach(unsub => unsub());
-    unsubscribeConsignmentDetailsListeners = [];
-}
+//detachAllRealtimeListeners() 
 
 // 6. Create functions to manage the Request Modal
 export async function showConsignmentRequestModal() {
