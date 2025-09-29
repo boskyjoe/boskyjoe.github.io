@@ -966,8 +966,7 @@ const churchTeamsGridOptions = {
         }
     ],
     rowSelection: {
-        mode: 'singleRow',
-        checkboxes: false 
+        mode: 'singleRow'
     },
     onGridReady: params => { churchTeamsGridApi = params.api; },
     onCellValueChanged: params => {
