@@ -51,7 +51,7 @@ import { getPaymentDataFromGridById } from './ui.js';
 import { showPaymentModal, closePaymentModal,getInvoiceDataFromGridById, initializeModals } from './ui.js';
 
 
-import { showSalesCatalogueView,getCatalogueDataFromGridById,loadCatalogueForEditing,resetCatalogueForm, updateDraftItemsGrid } from './ui.js';
+import { showSalesCatalogueView,getCatalogueDataFromGridById,loadCatalogueForEditing,resetCatalogueForm, updateDraftItemsGrid, getTeamDataFromGridById } from './ui.js';
 import { 
     getLatestPurchasePrice,
     addSalesCatalogue,
@@ -464,9 +464,24 @@ function setupEventListeners() {
             }
             else if (grid.id === 'church-teams-grid') {
                 if (gridButton.classList.contains('action-btn-toggle-team-status')) {
-                    // This logic requires fetching the team data first to know the current status
-                    // For simplicity, we can handle this via a custom event later if needed.
-                    // Example: document.dispatchEvent(new CustomEvent('toggleTeamStatus', { detail: { teamId: docId } }));
+                    // We need to know the current status to toggle it.
+                    // We can get this by looking up the row data in the grid.
+                    const teamData = getTeamDataFromGridById(docId);
+                    if (teamData) {
+                        const newStatus = !teamData.isActive;
+                        const actionText = newStatus ? 'activate' : 'deactivate';
+                        
+                        if (confirm(`Are you sure you want to ${actionText} the team "${teamData.teamName}"?`)) {
+                            try {
+                                await updateChurchTeam(docId, { isActive: newStatus }, user);
+                                alert('Team status updated successfully.');
+                            } catch (error) {
+                                console.error("Error updating team status:", error);
+                                alert('Failed to update team status.');
+                            }
+                        }
+                    }
+                    
                 }
             }
             else if (grid.id === 'team-members-grid') {
