@@ -959,8 +959,9 @@ const productsGridOptions = {
             field: "inventoryCount", 
             headerName: "Stock On Hand", 
             width: 150, 
-            editable: false, // This is system-managed
-            cellStyle: { 'background-color': '#f3f4f6', 'font-weight': 'bold' }
+            editable: false, // This field is system-managed
+            // Style it to look read-only and important
+            cellStyle: { 'background-color': '#f3f4f6', 'font-weight': 'bold', 'text-align': 'center' }
         },
         { 
             field: "unitPrice", 
