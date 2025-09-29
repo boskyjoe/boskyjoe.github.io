@@ -960,7 +960,6 @@ const churchTeamsGridOptions = {
                         ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
                         : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
                 return `
-                    <button class="action-btn-icon action-btn-edit-team" data-id="${docId}" title="Edit Team Name">${editIcon}</button>
                     <button class="action-btn-icon action-btn-toggle-team-status" data-id="${docId}" title="${params.data.isActive ? 'Deactivate' : 'Activate'}">${statusIcon}</button>
                 `;
             }
@@ -1025,6 +1024,12 @@ export function getMemberDataFromGridById(memberId) {
         return null;
     }
     const rowNode = teamMembersGridApi.getRowNode(memberId);
+    return rowNode ? rowNode.data : null;
+}
+
+export function getTeamDataFromGridById(teamId) {
+    if (!churchTeamsGridApi) return null;
+    const rowNode = churchTeamsGridApi.getRowNode(teamId);
     return rowNode ? rowNode.data : null;
 }
 
