@@ -1219,34 +1219,23 @@ export async function removeItemFromCatalogue(catalogueId, itemId) {
 // =======================================================
 
 /**
- * [NEW] A complex query to find all teams a user belongs to.
- * This is a challenging query for Firestore and may be slow on a large dataset.
- * @param {string} userId - The UID of the user to search for.
- * @returns {Promise<Array<object>>} An array of team objects the user is part of.
+ * [RENAMED & EFFICIENT] Gets a user's complete team membership info
+ * from their dedicated record by using their email.
+ * @param {string} userEmail - The email of the user to look up.
+ * @returns {Promise<object|null>} The user's membership document or null.
  */
-export async function getTeamsForUser(userId) {
+export async function getUserMembershipInfo(userEmail) { // <-- RENAMED
     const db = firebase.firestore();
-    const teamsRef = db.collection(CHURCH_TEAMS_COLLECTION_PATH);
-    const allTeamsSnapshot = await teamsRef.get();
-
-    const userTeams = [];
+    const membershipDocId = userEmail.toLowerCase();
+    const membershipRef = db.collection(USER_TEAM_MEMBERSHIPS_COLLECTION_PATH).doc(membershipDocId);
     
-    // This requires iterating through each team and checking its sub-collection.
-    for (const teamDoc of allTeamsSnapshot.docs) {
-        const membersRef = teamDoc.ref.collection('members');
-        // We assume the user's UID might be used as the document ID in the members sub-collection.
-        // If not, a different query strategy is needed. This is a placeholder.
-        // A more scalable approach would be to store a user's teams on their user profile.
-        const memberDoc = await membersRef.doc(userId).get(); 
-        if (memberDoc.exists) {
-            userTeams.push({
-                teamId: teamDoc.id,
-                teamName: teamDoc.data().teamName,
-                userRoleInTeam: memberDoc.data().role
-            });
-        }
+    const doc = await membershipRef.get();
+
+    if (doc.exists) {
+        return doc.data();
+    } else {
+        return null;
     }
-    return userTeams;
 }
 
 /**
