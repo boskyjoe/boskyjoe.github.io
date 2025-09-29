@@ -964,7 +964,9 @@ const churchTeamsGridOptions = {
             }
         }
     ],
-    rowSelection: 'single',
+    rowSelection: {
+        mode: 'singleRow'
+    },
     onGridReady: params => { churchTeamsGridApi = params.api; },
     onCellValueChanged: params => {
         // Handle inline editing of the team name
