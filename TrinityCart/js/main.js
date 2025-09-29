@@ -63,7 +63,7 @@ import {
     updatePurchaseInvoiceAndInventory
 } from './api.js';
 
-import { showChurchTeamsView, showMemberModal, closeMemberModal } from './ui.js';
+import { showChurchTeamsView, showMemberModal, closeMemberModal,getMemberDataFromGridById } from './ui.js';
 
 import { 
     addChurchTeam, 
@@ -473,9 +473,9 @@ function setupEventListeners() {
                 const teamId = document.getElementById('member-team-id').value; // Get the parent team ID
                 if (gridButton.classList.contains('action-btn-edit-member')) {
                     // We need to get the member data to pre-fill the form
-                    const memberNode = teamMembersGridApi.getRowNode(docId);
-                    if (memberNode) {
-                        showMemberModal(memberNode.data);
+                    const memberData = getMemberDataFromGridById(docId);
+                    if (memberData) {
+                        showMemberModal(memberData);
                     }
                 } else if (gridButton.classList.contains('action-btn-remove-member')) {
                     if (confirm('Are you sure you want to remove this member from the team?')) {
