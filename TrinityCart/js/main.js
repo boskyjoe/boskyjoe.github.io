@@ -84,7 +84,8 @@ import {
     getUserMembershipInfo,
     getMembersForTeam,
     createConsignmentRequest,
-    fulfillConsignmentAndUpdateInventory
+    fulfillConsignmentAndUpdateInventory,
+    getItemsForCatalogue
 } from './api.js';
 
 
@@ -788,6 +789,11 @@ function setupEventListeners() {
             return;
         }
 
+        // Handler for "Fulfill & Check Out" button
+        if (target.closest('#fulfill-checkout-btn')) {
+            handleFulfillConsignmentClick();
+        }
+
         const consignmentNextBtn = target.closest('#consignment-next-btn');
         if (consignmentNextBtn) {
             const catalogueId = document.getElementById('request-catalogue-select').value;
@@ -1073,7 +1079,7 @@ function setupEventListeners() {
     }
 
 
-
+    
 
     // --- In-Grid Update Custom Event Listeners ---
 
@@ -1248,6 +1254,56 @@ function setupEventListeners() {
             } else {
                 eventSelect.innerHTML = '<option value="">No events for this season</option>';
                 eventSelect.disabled = true; // Keep it disabled
+            }
+        });
+    }
+
+
+    // --- Form Submission for the Request Modal ---
+    const consignmentRequestForm = document.getElementById('consignment-request-form');
+    if (consignmentRequestForm) {
+        consignmentRequestForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            
+            // Gather all the selected data
+            const teamSelect = document.getElementById(user.role === 'admin' ? 'admin-select-team' : 'user-select-team');
+            const catalogueSelect = document.getElementById('request-catalogue-select');
+            const eventSelect = document.getElementById('request-event-select');
+
+            const requestData = {
+                teamId: teamSelect.value,
+                teamName: teamSelect.options[teamSelect.selectedIndex].text,
+                salesCatalogueId: catalogueSelect.value,
+                salesCatalogueName: catalogueSelect.options[catalogueSelect.selectedIndex].text,
+                salesEventId: eventSelect.value || null,
+                salesEventName: eventSelect.value ? eventSelect.options[eventSelect.selectedIndex].text : null,
+            };
+
+            // Get the items with quantities from the request grid
+            const requestedItems = [];
+            requestProductsGridApi.forEachNode(node => {
+                if (node.data.quantity > 0) {
+                    requestedItems.push({
+                        productId: node.data.productId,
+                        productName: node.data.productName,
+                        sellingPrice: node.data.sellingPrice,
+                        quantityRequested: node.data.quantity
+                    });
+                }
+            });
+
+            if (requestedItems.length === 0) {
+                return alert("Please request a quantity of at least one item.");
+            }
+
+            try {
+                await createConsignmentRequest(requestData, requestedItems, user);
+                alert("Consignment request submitted successfully!");
+                closeConsignmentRequestModal();
+            } catch (error) {
+                console.error("Error creating consignment request:", error);
+                alert(`Failed to submit request: ${error.message}`);
             }
         });
     }
