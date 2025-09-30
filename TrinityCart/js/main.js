@@ -77,7 +77,8 @@ import {
     showConsignmentView, 
     showConsignmentRequestModal, 
     closeConsignmentRequestModal, 
-    showConsignmentRequestStep2
+    showConsignmentRequestStep2,
+    getRequestedConsignmentItems
 } from './ui.js';
 
 import { 
@@ -1281,17 +1282,7 @@ function setupEventListeners() {
             };
 
             // Get the items with quantities from the request grid
-            const requestedItems = [];
-            requestProductsGridApi.forEachNode(node => {
-                if (node.data.quantity > 0) {
-                    requestedItems.push({
-                        productId: node.data.productId,
-                        productName: node.data.productName,
-                        sellingPrice: node.data.sellingPrice,
-                        quantityRequested: node.data.quantity
-                    });
-                }
-            });
+            const requestedItems = getRequestedConsignmentItems();
 
             if (requestedItems.length === 0) {
                 return alert("Please request a quantity of at least one item.");
