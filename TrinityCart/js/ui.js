@@ -2377,12 +2377,14 @@ export function initializeConsignmentGrids() {
     const orderGridDiv = document.getElementById('consignment-orders-grid');
     const fulfillGridDiv = document.getElementById('fulfillment-items-grid');
     const itemsGridDiv = document.getElementById('consignment-items-grid');
+    const requestGridDiv = document.getElementById('request-products-grid');
     // ... get other grid divs ...
 
-    if (orderGridDiv && fulfillGridDiv && itemsGridDiv) {
+    if (orderGridDiv && fulfillGridDiv && itemsGridDiv && requestGridDiv) {
         createGrid(orderGridDiv, consignmentOrdersGridOptions);
         createGrid(fulfillGridDiv, fulfillmentItemsGridOptions);
         createGrid(itemsGridDiv, consignmentItemsGridOptions);
+        createGrid(requestGridDiv, requestProductsGridOptions); 
         // ... create other grids ...
         isConsignmentGridsInitialized = true;
     }
@@ -2482,8 +2484,70 @@ export function closeConsignmentRequestModal() {
     setTimeout(() => { modal.style.display = 'none'; }, 300);
 }
 
+/**
+ * [NEW] Hides Step 1 and shows Step 2 of the consignment request modal.
+ * Populates the product selection grid.
+ * @param {string} catalogueId - The ID of the selected sales catalogue.
+ */
+export function showConsignmentRequestStep2(catalogueId) {
+    // 1. Switch visibility of the steps and buttons
+    document.getElementById('consignment-step-1').classList.add('hidden');
+    document.getElementById('consignment-step-2').classList.remove('hidden');
+    document.getElementById('consignment-next-btn').classList.add('hidden');
+    document.getElementById('consignment-submit-request-btn').classList.remove('hidden');
+
+    // 2. Fetch the items for the selected catalogue
+    // We need a new API function for this. For now, we'll assume it exists.
+    // Let's call it getItemsForCatalogue(catalogueId)
+    const db = firebase.firestore();
+    const itemsRef = db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(catalogueId).collection('items');
+    
+    if (requestProductsGridApi) {
+        requestProductsGridApi.setGridOption('loading', true);
+        itemsRef.get().then(snapshot => {
+            const catalogueItems = snapshot.docs.map(doc => ({ ...doc.data(), quantity: 0 })); // Default qty to 0
+            requestProductsGridApi.setGridOption('rowData', catalogueItems);
+            requestProductsGridApi.setGridOption('loading', false);
+        });
+    }
+}
 
 
+// [NEW] Grid for the Product Selection step in the Request Modal
+const requestProductsGridOptions = {
+    getRowId: params => params.data.productId,
+    columnDefs: [
+        { field: "productName", headerName: "Product", flex: 1 },
+        { 
+            field: "inventoryCount", 
+            headerName: "Qty Available", 
+            width: 140,
+            // We'll look this up from the master product list
+            valueGetter: params => {
+                const product = masterData.products.find(p => p.id === params.data.productId);
+                return product ? product.inventoryCount : 'N/A';
+            }
+        },
+        { 
+            field: "sellingPrice", 
+            headerName: "Selling Price", 
+            width: 140,
+            valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : ''
+        },
+        {
+            field: "quantity",
+            headerName: "Qty to Request",
+            width: 150,
+            editable: true,
+            cellEditor: 'agNumberCellEditor',
+            cellEditorParams: {
+                min: 0,
+                precision: 0 // Only whole numbers
+            }
+        }
+    ],
+    onGridReady: params => { requestProductsGridApi = params.api; }
+};
 
 
 
