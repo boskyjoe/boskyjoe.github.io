@@ -76,7 +76,8 @@ import {
 import { 
     showConsignmentView, 
     showConsignmentRequestModal, 
-    closeConsignmentRequestModal 
+    closeConsignmentRequestModal, 
+    showConsignmentRequestStep2
 } from './ui.js';
 
 import { 
