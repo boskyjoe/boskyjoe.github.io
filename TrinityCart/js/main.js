@@ -345,7 +345,31 @@ async function handleRequestConsignmentClick() {
             });
             userTeamSelect.disabled = false;
         }
+        
     }
+
+    const catalogueSelect = document.getElementById('request-catalogue-select');
+    const eventSelect = document.getElementById('request-event-select');
+
+    // 1. Clear any old options from previous times the modal was opened.
+    catalogueSelect.innerHTML = '<option value="">Select a catalogue...</option>';
+    eventSelect.innerHTML = '<option value="">Select an event (optional)...</option>';
+    eventSelect.disabled = true; // Events are disabled until a catalogue is chosen.
+
+    // 2. Populate the Sales Catalogue dropdown from the masterData cache.
+    if (masterData.salesCatalogues && masterData.salesCatalogues.length > 0) {
+        masterData.salesCatalogues.forEach(catalogue => {
+            const option = document.createElement('option');
+            option.value = catalogue.id;
+            option.textContent = catalogue.catalogueName;
+            catalogueSelect.appendChild(option);
+        });
+    } else {
+        // Provide helpful feedback if no catalogues are available.
+        catalogueSelect.innerHTML = '<option value="">No active catalogues found</option>';
+        catalogueSelect.disabled = true;
+    }
+    
     // We will add logic for the "Next" button and form submission later.
 }
 
