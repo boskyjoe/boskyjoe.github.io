@@ -369,7 +369,7 @@ async function handleRequestConsignmentClick() {
         catalogueSelect.innerHTML = '<option value="">No active catalogues found</option>';
         catalogueSelect.disabled = true;
     }
-    
+
     // We will add logic for the "Next" button and form submission later.
 }
 
@@ -1197,6 +1197,47 @@ function setupEventListeners() {
         }
     });
 
+
+    // --- [NEW] Listener for Catalogue Selection in Consignment Modal ---
+    const requestCatalogueSelect = document.getElementById('request-catalogue-select');
+    if (requestCatalogueSelect) {
+        requestCatalogueSelect.addEventListener('change', (e) => {
+            const catalogueId = e.target.value;
+            const eventSelect = document.getElementById('request-event-select');
+
+            // Reset the event dropdown
+            eventSelect.innerHTML = '<option value="">Select an event (optional)...</option>';
+            
+            if (!catalogueId) {
+                eventSelect.disabled = true;
+                return;
+            }
+
+            // Find the selected catalogue from masterData to get its seasonId
+            const selectedCatalogue = masterData.salesCatalogues.find(sc => sc.id === catalogueId);
+            if (!selectedCatalogue) {
+                eventSelect.disabled = true;
+                return;
+            }
+            const parentSeasonId = selectedCatalogue.seasonId;
+
+            // Filter the master list of all events to find ones matching the season
+            const relevantEvents = masterData.salesEvents.filter(event => event.seasonId === parentSeasonId);
+
+            if (relevantEvents.length > 0) {
+                relevantEvents.forEach(event => {
+                    const option = document.createElement('option');
+                    option.value = event.id;
+                    option.textContent = event.eventName;
+                    eventSelect.appendChild(option);
+                });
+                eventSelect.disabled = false; // Enable the dropdown
+            } else {
+                eventSelect.innerHTML = '<option value="">No events for this season</option>';
+                eventSelect.disabled = true; // Keep it disabled
+            }
+        });
+    }
 
 
 
