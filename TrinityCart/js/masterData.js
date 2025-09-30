@@ -14,6 +14,7 @@ export const masterData = {
     paymentModes: [],
     salesCatalogues: [],
     teams: [],
+    salesEvents: [],
 };
 
 /**
@@ -98,6 +99,15 @@ export function initializeMasterDataListeners() {
         document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'teams' } }));
     }, error => {
         console.error("Error listening to churchTeams collection:", error);
+    });
+
+    // Listener for events
+    db.collection(EVENTS_COLLECTION_PATH).onSnapshot(snapshot => {
+        masterData.salesEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log("Master data updated: Sales Events", masterData.salesEvents);
+        document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'salesEvents' } }));
+    }, error => {
+        console.error("Error listening to salesEvents collection:", error);
     });
 
 
