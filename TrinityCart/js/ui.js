@@ -2485,6 +2485,33 @@ export function closeConsignmentRequestModal() {
 }
 
 /**
+ * [NEW] Retrieves the items with requested quantities from the product request grid.
+ * @returns {Array<object>} An array of item objects where quantity > 0.
+ */
+export function getRequestedConsignmentItems() {
+    if (!requestProductsGridApi) {
+        console.error("Cannot get requested items: requestProductsGridApi is not ready.");
+        return [];
+    }
+
+    const requestedItems = [];
+    // Use the grid's own API to iterate through the rows.
+    requestProductsGridApi.forEachNode(node => {
+        // Only include items where the user has requested a quantity greater than 0.
+        if (node.data && node.data.quantity > 0) {
+            requestedItems.push({
+                productId: node.data.productId,
+                productName: node.data.productName,
+                sellingPrice: node.data.sellingPrice,
+                quantityRequested: node.data.quantity
+            });
+        }
+    });
+
+    return requestedItems;
+}
+
+/**
  * [NEW] Hides Step 1 and shows Step 2 of the consignment request modal.
  * Populates the product selection grid.
  * @param {string} catalogueId - The ID of the selected sales catalogue.
