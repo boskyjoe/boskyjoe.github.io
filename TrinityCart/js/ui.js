@@ -2498,11 +2498,21 @@ export function getRequestedConsignmentItems() {
     // Use the grid's own API to iterate through the rows.
     requestProductsGridApi.forEachNode(node => {
         // Only include items where the user has requested a quantity greater than 0.
-        if (node.data && node.data.quantityRequested > 0) {
-            requestedItems.push(node.data);
+        // 1. Explicitly read the quantity and default it to 0 if it's undefined or invalid.
+        const quantity = parseInt(node.data.quantityRequested, 10) || 0;
+        // 2. Only include items where the user has requested a quantity greater than 0.
+        if (quantity > 0) {
+                // 3. Build a brand new, clean object with only the fields we need.
+            requestedItems.push({
+                    productId: node.data.productId,
+                    productName: node.data.productName,
+                    sellingPrice: node.data.sellingPrice,
+                    quantityRequested: quantity // Use the sanitized quantity
+                });
         }
     });
 
+    console.log("Cleaned items to be saved:", requestedItems);
     return requestedItems;
 }
 
