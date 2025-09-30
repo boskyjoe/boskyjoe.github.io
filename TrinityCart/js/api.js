@@ -45,6 +45,17 @@ export async function fetchMemberConsignments() {
     ];
 }
 
+/**
+ * [NEW] Fetches all items for a specific sales catalogue.
+ * @param {string} catalogueId - The ID of the parent sales catalogue.
+ */
+export async function getItemsForCatalogue(catalogueId) {
+    const db = firebase.firestore();
+    const itemsRef = db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(catalogueId).collection('items');
+    const snapshot = await itemsRef.get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
 // Add these new functions to js/api.js
 
 export async function getVendors() {
