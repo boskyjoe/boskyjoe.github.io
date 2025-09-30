@@ -2498,13 +2498,8 @@ export function getRequestedConsignmentItems() {
     // Use the grid's own API to iterate through the rows.
     requestProductsGridApi.forEachNode(node => {
         // Only include items where the user has requested a quantity greater than 0.
-        if (node.data && node.data.quantity > 0) {
-            requestedItems.push({
-                productId: node.data.productId,
-                productName: node.data.productName,
-                sellingPrice: node.data.sellingPrice,
-                quantityRequested: node.data.quantity
-            });
+        if (node.data && node.data.quantityRequested > 0) {
+            requestedItems.push(node.data);
         }
     });
 
@@ -2532,7 +2527,7 @@ export function showConsignmentRequestStep2(catalogueId) {
     if (requestProductsGridApi) {
         requestProductsGridApi.setGridOption('loading', true);
         itemsRef.get().then(snapshot => {
-            const catalogueItems = snapshot.docs.map(doc => ({ ...doc.data(), quantity: 0 })); // Default qty to 0
+            const catalogueItems = snapshot.docs.map(doc => ({ ...doc.data(), quantityRequested: 0 })); // Default qty to 0
             requestProductsGridApi.setGridOption('rowData', catalogueItems);
             requestProductsGridApi.setGridOption('loading', false);
         });
@@ -2562,7 +2557,7 @@ const requestProductsGridOptions = {
             valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : ''
         },
         {
-            field: "quantity",
+            field: "quantityRequested",
             headerName: "Qty to Request",
             width: 150,
             editable: true,
