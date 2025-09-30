@@ -1294,7 +1294,7 @@ export async function createConsignmentRequest(requestData, items, user) {
             productId: item.productId,
             productName: item.productName,
             sellingPrice: item.sellingPrice,
-            quantityRequested: item.quantity,
+            quantityRequested: item.quantityRequested,
             quantityCheckedOut: 0, // Will be set during fulfillment
             quantitySold: 0,
             quantityReturned: 0,
