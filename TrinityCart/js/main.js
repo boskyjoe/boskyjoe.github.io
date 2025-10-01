@@ -380,7 +380,14 @@ async function handleRequestConsignmentClick() {
  * [NEW] Handles the "Fulfill & Check Out" button click.
  * Gathers data from the fulfillment grid and calls the transactional API function.
  */
+let isFulfilling = false;
 async function handleFulfillConsignmentClick() {
+
+    if (isFulfilling) {
+        console.warn("Fulfillment is already in progress. Ignoring duplicate click.");
+        return;
+    }
+
 
     const user = appState.currentUser;
     if (user.role !== 'admin') return alert("Only admins can fulfill orders.");
@@ -396,11 +403,25 @@ async function handleFulfillConsignmentClick() {
         return;
     }
 
+    isFulfilling = true;
+    const fulfillButton = document.getElementById('fulfill-checkout-btn');
+    if (fulfillButton) {
+        fulfillButton.disabled = true;
+        fulfillButton.textContent = 'Fulfilling...';
+    }
+
+
     // Use our new helper function to get the final data from the UI
     const finalItems = getFulfillmentItems();
 
     if (finalItems.length === 0) {
-        return alert("There are no items with a quantity greater than zero to fulfill in this order.");
+        alert("There are no items with a quantity greater than zero to fulfill in this order.");
+        isFulfilling = false;
+        if (fulfillButton) {
+            fulfillButton.disabled = false;
+            fulfillButton.textContent = 'Fulfill & Check Out';
+        }
+        return ;
     }
     
 
@@ -414,6 +435,13 @@ async function handleFulfillConsignmentClick() {
     } catch (error) {
         console.error("Fulfillment failed:", error);
         alert(`Fulfillment failed: ${error.message}`);
+    } finally {
+        
+        isFulfilling = false;
+        if (fulfillButton) {
+            fulfillButton.disabled = false;
+            fulfillButton.textContent = 'Fulfill & Check Out';
+        }
     }
 }
 
