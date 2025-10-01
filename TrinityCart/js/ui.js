@@ -2299,7 +2299,6 @@ let isConsignmentGridsInitialized = false;
 let unsubscribeConsignmentOrdersListener = null;
 let unsubscribeConsignmentDetailsListeners = []; // Array to hold multiple detail listeners
 
-let selectedConsignmentId = null; // To track the currently selected order
 
 // 2. Define AG-Grid Options for each grid
 
@@ -2325,6 +2324,7 @@ const consignmentOrdersGridOptions = {
     onRowSelected: event => {
         const selectedNode = event.node;
         if (selectedNode && selectedNode.isSelected()) {
+            appState.selectedConsignmentId = selectedNode.data.id;
             showConsignmentDetailPanel(selectedNode.data);
         } else {
             hideConsignmentDetailPanel();
@@ -2392,7 +2392,7 @@ export function initializeConsignmentGrids() {
 
 function hideConsignmentDetailPanel() {
     document.getElementById('consignment-detail-panel').classList.add('hidden');
-    selectedConsignmentId = null;
+    appState.selectedConsignmentId = null;
     // Detach all detail listeners
     unsubscribeConsignmentDetailsListeners.forEach(unsub => unsub());
     unsubscribeConsignmentDetailsListeners = [];
