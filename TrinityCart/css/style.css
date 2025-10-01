@@ -1,4 +1,4 @@
-/* General view handling */
+/* General view handling style.css*/
 .view {
     display: none;
 }
@@ -171,4 +171,25 @@
 }
 .ag-header-cell-label .ag-header-cell-text {
     white-space: normal !important;
+}
+
+
+.consignment-tab-panel {
+    /* All panels are stacked in the same spot, but are invisible and non-interactive */
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.consignment-tab-panel.active {
+    /* The active panel becomes visible, interactive, and returns to its normal position */
+    position: relative;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* We need a parent container to establish the stacking context */
+#active-order-view .p-6 {
+    position: relative;
 }
