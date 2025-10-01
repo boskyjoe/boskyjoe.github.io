@@ -794,11 +794,7 @@ function setupEventListeners() {
             return;
         }
 
-        // Handler for "Fulfill & Check Out" button
-        if (target.closest('#fulfill-checkout-btn')) {
-            handleFulfillConsignmentClick();
-        }
-
+    
         const consignmentNextBtn = target.closest('#consignment-next-btn');
         if (consignmentNextBtn) {
             const catalogueId = document.getElementById('request-catalogue-select').value;
