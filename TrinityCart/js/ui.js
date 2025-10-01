@@ -2682,6 +2682,37 @@ export function showReportActivityModal() {
         }
     });
 
+    const eventContainer = document.getElementById('activity-event-container');
+    const eventSelect = document.getElementById('activity-event-select');
+    eventContainer.classList.add('hidden'); // Hide it by default
+    eventSelect.innerHTML = '<option value="">None</option>';
+
+    // 1. Find the full data for the currently selected consignment order from the master grid.
+    const orderNode = consignmentOrdersGridApi.getRowNode(appState.selectedConsignmentId);
+    if (orderNode && orderNode.data) {
+        const orderData = orderNode.data;
+        
+        // 2. Find the catalogue and its seasonId from the order data.
+        const catalogue = masterData.salesCatalogues.find(sc => sc.id === orderData.salesCatalogueId);
+        if (catalogue) {
+            const parentSeasonId = catalogue.seasonId;
+
+            // 3. Filter all master sales events to find ones matching that season.
+            const relevantEvents = masterData.salesEvents.filter(event => event.seasonId === parentSeasonId);
+
+            // 4. Populate the dropdown with the found events.
+            if (relevantEvents.length > 0) {
+                relevantEvents.forEach(event => {
+                    const option = document.createElement('option');
+                    option.value = event.id;
+                    option.textContent = event.eventName;
+                    eventSelect.appendChild(option);
+                });
+            }
+        }
+    }
+
+
     modal.style.display = 'flex';
     setTimeout(() => modal.classList.add('visible'), 10);
 }
