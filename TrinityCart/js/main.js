@@ -385,7 +385,9 @@ async function handleFulfillConsignmentClick() {
     if (user.role !== 'admin') return alert("Only admins can fulfill orders.");
 
     // selectedConsignmentId is a global variable set by the UI when a row is selected
-    if (!selectedConsignmentId) {
+    const orderId = appState.selectedConsignmentId;
+
+    if (!orderId) {
         return alert("No consignment order selected.");
     }
 
