@@ -1151,19 +1151,19 @@ export async function createCatalogueWithItems(catalogueData, itemsData, user) {
  * @param {object} user - The currently authenticated user.
  */
 
-//export async function addSalesCatalogue(catalogueData, user) {
- //   const db = firebase.firestore();
-//    const now = firebase.firestore.FieldValue.serverTimestamp();
-//    const catalogueId = `SC-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+export async function addSalesCatalogue(catalogueData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const catalogueId = `SC-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
 
     // This is a single write operation. (Cost: 1 write)
- //   return db.collection(SALES_CATALOGUES_COLLECTION_PATH).add({
-//        ...catalogueData,
-//        catalogueId: catalogueId,
-//////        isActive: true,
-//        audit: { createdBy: user.email, createdOn: now, updatedBy: user.email, updatedOn: now }
-//    });
-//}
+    return db.collection(SALES_CATALOGUES_COLLECTION_PATH).add({
+        ...catalogueData,
+        catalogueId: catalogueId,
+        isActive: true,
+        audit: { createdBy: user.email, createdOn: now, updatedBy: user.email, updatedOn: now }
+    });
+}
 
 export async function getSalesCatalogues() {
     const db = firebase.firestore();
