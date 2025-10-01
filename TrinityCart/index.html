@@ -1214,6 +1214,13 @@
                             <option value="Damage">Report Damaged/Lost</option>
                         </select>
                     </div>
+                    <div id="activity-event-container" class="hidden">
+                        <label for="activity-event-select" class="form-label">Sales Event (Optional)</label>
+                        <select id="activity-event-select" class="form-input w-full">
+                            <option value="">None</option>
+                            <!-- Options will be populated by JS -->
+                        </select>
+                    </div>
                     <div>
                         <label for="activity-quantity-input" class="form-label">Quantity</label>
                         <input type="number" id="activity-quantity-input" class="form-input w-full" required min="1">
