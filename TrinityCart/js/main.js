@@ -78,7 +78,7 @@ import {
     showConsignmentRequestModal, 
     closeConsignmentRequestModal, 
     showConsignmentRequestStep2,
-    getRequestedConsignmentItems,getFulfillmentItems
+    getRequestedConsignmentItems,getFulfillmentItems,refreshConsignmentDetailPanel
 } from './ui.js';
 
 import { 
@@ -381,6 +381,12 @@ async function handleRequestConsignmentClick() {
  * Gathers data from the fulfillment grid and calls the transactional API function.
  */
 async function handleFulfillConsignmentClick() {
+
+    if (isFulfilling) {
+        console.warn("Fulfillment is already in progress. Ignoring duplicate click.");
+        return;
+    }
+
     const user = appState.currentUser;
     if (user.role !== 'admin') return alert("Only admins can fulfill orders.");
 
@@ -406,7 +412,10 @@ async function handleFulfillConsignmentClick() {
     try {
         await fulfillConsignmentAndUpdateInventory(orderId, finalItems, user);
         alert("Success! Consignment is now active and inventory has been updated.");
-        // The UI will automatically update via the real-time listeners.
+
+        refreshConsignmentDetailPanel(orderId);
+        
+
     } catch (error) {
         console.error("Fulfillment failed:", error);
         alert(`Fulfillment failed: ${error.message}`);
