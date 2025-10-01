@@ -2581,7 +2581,24 @@ const requestProductsGridOptions = {
     onGridReady: params => { requestProductsGridApi = params.api; }
 };
 
-
+/**
+ * [NEW] Retrieves the final list of items and their fulfillment quantities
+ * from the fulfillment grid.
+ * @returns {Array<object>} An array of item objects with their final quantities.
+ */
+export function getFulfillmentItems() {
+    if (!fulfillmentItemsGridApi) {
+        console.error("Cannot get fulfillment items: fulfillmentItemsGridApi is not ready.");
+        return [];
+    }
+    const finalItems = [];
+    fulfillmentItemsGridApi.forEachNode(node => {
+        if (node.data && node.data.quantityCheckedOut > 0) {
+            finalItems.push(node.data);
+        }
+    });
+    return finalItems;
+}
 
 
 
