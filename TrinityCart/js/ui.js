@@ -2600,6 +2600,28 @@ export function getFulfillmentItems() {
     return finalItems;
 }
 
+/**
+ * [NEW] Refreshes the consignment detail panel for a given order ID.
+ * It finds the latest data from the master grid and re-renders the panel.
+ * @param {string} orderId - The ID of the order to refresh.
+ */
+export function refreshConsignmentDetailPanel(orderId) {
+    if (!consignmentOrdersGridApi) {
+        console.error("Cannot refresh detail panel: master grid API not ready.");
+        hideConsignmentDetailPanel();
+        return;
+    }
+
+    const updatedOrderNode = consignmentOrdersGridApi.getRowNode(orderId);
+    if (updatedOrderNode) {
+        // This re-runs the logic to show either the "Fulfillment" or "Active" view
+        // based on the new, updated status of the order.
+        showConsignmentDetailPanel(updatedOrderNode.data);
+    } else {
+        // If the order somehow disappeared, hide the panel.
+        hideConsignmentDetailPanel();
+    }
+}
 
 
 
