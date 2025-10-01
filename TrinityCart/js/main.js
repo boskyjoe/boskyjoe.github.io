@@ -382,11 +382,6 @@ async function handleRequestConsignmentClick() {
  */
 async function handleFulfillConsignmentClick() {
 
-    if (isFulfilling) {
-        console.warn("Fulfillment is already in progress. Ignoring duplicate click.");
-        return;
-    }
-
     const user = appState.currentUser;
     if (user.role !== 'admin') return alert("Only admins can fulfill orders.");
 
