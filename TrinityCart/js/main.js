@@ -851,6 +851,18 @@ function setupEventListeners() {
         }
 
 
+        // --- Handler for Consignment Detail Tabs ---
+        const consignmentTab = target.closest('.consignment-tab');
+        if (consignmentTab) {
+            e.preventDefault();
+            
+            // Call a new UI helper function to handle the switching logic
+            switchConsignmentTab(consignmentTab.id);
+            return;
+        }
+
+
+
         const tab = target.closest('.tab');
         if (tab) {
             e.preventDefault();
