@@ -78,7 +78,8 @@ import {
     showConsignmentRequestModal, 
     closeConsignmentRequestModal, 
     showConsignmentRequestStep2,
-    getRequestedConsignmentItems,getFulfillmentItems,refreshConsignmentDetailPanel
+    getRequestedConsignmentItems,getFulfillmentItems,refreshConsignmentDetailPanel,
+    showReportActivityModal, closeReportActivityModal
 } from './ui.js';
 
 import { 
@@ -86,7 +87,7 @@ import {
     getMembersForTeam,
     createConsignmentRequest,
     fulfillConsignmentAndUpdateInventory,
-    getItemsForCatalogue
+    getItemsForCatalogue,logActivityAndUpdateConsignment
 } from './api.js';
 
 
@@ -862,6 +863,11 @@ function setupEventListeners() {
         }
 
 
+        if (target.closest('#report-activity-btn')) {
+            showReportActivityModal();
+            return;
+        }
+
 
         const tab = target.closest('.tab');
         if (tab) {
@@ -1339,6 +1345,48 @@ function setupEventListeners() {
             } catch (error) {
                 console.error("Error creating consignment request:", error);
                 alert(`Failed to submit request: ${error.message}`);
+            }
+        });
+    }
+
+
+
+    // --- Add this new form submission handler ---
+    const reportActivityForm = document.getElementById('report-activity-form');
+    if (reportActivityForm) {
+        reportActivityForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const orderId = document.getElementById('activity-order-id').value;
+            const productValue = document.getElementById('activity-product-select').value;
+            
+            if (!orderId || !productValue) {
+                return alert("Missing order or product information.");
+            }
+
+            // Parse the complex value from the dropdown
+            const { itemId, productId } = JSON.parse(productValue);
+
+            const activityData = {
+                activityType: document.getElementById('activity-type-select').value,
+                quantity: parseInt(document.getElementById('activity-quantity-input').value, 10),
+                notes: document.getElementById('activity-notes-input').value,
+                productId: productId // Pass the master product ID for the log
+            };
+
+            if (!activityData.quantity || activityData.quantity <= 0) {
+                return alert("Please enter a valid quantity greater than zero.");
+            }
+
+            try {
+                await logActivityAndUpdateConsignment(orderId, itemId, activityData, user);
+                alert("Activity logged successfully!");
+                closeReportActivityModal();
+            } catch (error) {
+                console.error("Error logging activity:", error);
+                alert(`Failed to log activity: ${error.message}`);
             }
         });
     }
