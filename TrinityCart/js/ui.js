@@ -1180,34 +1180,23 @@ export function closeMemberModal() {
  * @param {string} tabId - The ID of the tab that was clicked (e.g., 'tab-items-on-hand').
  */
 export function switchConsignmentTab(tabId) {
-    // Get all tabs and panels
-    const tabs = document.querySelectorAll('.consignment-tab');
-    const panels = document.querySelectorAll('.consignment-tab-panel');
+    // --- 1. Handle Tab Visuals ---
+    document.querySelectorAll('.consignment-tab').forEach(tab => {
+        tab.classList.toggle('tab-active', tab.id === tabId);
+    });
 
-    // First, remove 'active' class from all tabs and panels
-    tabs.forEach(tab => tab.classList.remove('tab-active'));
-    panels.forEach(panel => panel.classList.remove('active'));
+    // --- 2. Handle Panel Visibility ---
+    document.querySelectorAll('.consignment-tab-panel').forEach(panel => {
+        // Determine if this panel should be the active one
+        const shouldBeActive = panel.id.includes(tabId.replace('tab-', ''));
+        panel.classList.toggle('active', shouldBeActive);
+    });
 
-    // Then, add the 'active' class to the clicked tab and its corresponding panel
-    const activeTab = document.getElementById(tabId);
-    if (activeTab) {
-        activeTab.classList.add('tab-active');
-    }
-
-    // Determine which panel to show
-    let panelIdToShow = '';
-    if (tabId === 'tab-items-on-hand') {
-        panelIdToShow = 'panel-items-on-hand';
-    } else if (tabId === 'tab-activity-log') {
-        panelIdToShow = 'panel-activity-log';
-    } else if (tabId === 'tab-consignment-payments') {
-        panelIdToShow = 'panel-consignment-payments';
-    }
-
-    const activePanel = document.getElementById(panelIdToShow);
-    if (activePanel) {
-        activePanel.classList.add('active');
-    }
+    // --- 3. Handle Button Visibility ---
+    const isPaymentsTab = (tabId === 'tab-consignment-payments');
+    document.getElementById('report-activity-btn').classList.toggle('hidden', isPaymentsTab);
+    document.getElementById('make-payment-btn').classList.toggle('hidden', !isPaymentsTab);
+    document.getElementById('verify-payment-btn').classList.toggle('hidden', !isPaymentsTab);
 }
 
 
