@@ -1130,6 +1130,9 @@ function setupEventListeners() {
     }
 
 
+
+
+
     
 
     // --- In-Grid Update Custom Event Listeners ---
@@ -1373,7 +1376,10 @@ function setupEventListeners() {
                 activityType: document.getElementById('activity-type-select').value,
                 quantity: parseInt(document.getElementById('activity-quantity-input').value, 10),
                 notes: document.getElementById('activity-notes-input').value,
-                productId: productId // Pass the master product ID for the log
+                productId: productId,// Pass the master product ID for the log
+                salesEventId: document.getElementById('activity-type-select').value === 'Sale' 
+                    ? document.getElementById('activity-event-select').value || null 
+                    : null
             };
 
             if (!activityData.quantity || activityData.quantity <= 0) {
@@ -1391,6 +1397,17 @@ function setupEventListeners() {
         });
     }
 
+    // --- [NEW] Listener for Activity Type change in Report Modal ---
+    const activityTypeSelect = document.getElementById('activity-type-select');
+    if (activityTypeSelect) {
+        activityTypeSelect.addEventListener('change', (e) => {
+            const eventContainer = document.getElementById('activity-event-container');
+            // Show the event dropdown only if the selected activity is "Sale"
+            const showEvents = (e.target.value === 'Sale');
+            eventContainer.classList.toggle('hidden', !showEvents);
+        });
+    }
+    
 
 
 
