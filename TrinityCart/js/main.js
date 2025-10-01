@@ -78,7 +78,7 @@ import {
     showConsignmentRequestModal, 
     closeConsignmentRequestModal, 
     showConsignmentRequestStep2,
-    getRequestedConsignmentItems
+    getRequestedConsignmentItems,getFulfillmentItems
 } from './ui.js';
 
 import { 
@@ -384,23 +384,25 @@ async function handleFulfillConsignmentClick() {
     const user = appState.currentUser;
     if (user.role !== 'admin') return alert("Only admins can fulfill orders.");
 
-    const orderId = selectedConsignmentId; // Assumes selectedConsignmentId is set in ui.js
-    if (!orderId) return alert("No consignment order selected.");
+    // selectedConsignmentId is a global variable set by the UI when a row is selected
+    if (!selectedConsignmentId) {
+        return alert("No consignment order selected.");
+    }
 
-    if (!confirm("This will decrement main store inventory and activate the consignment. Are you sure?")) {
+    if (!confirm("This will decrement main store inventory and activate the consignment. This action cannot be undone. Are you sure?")) {
         return;
     }
 
-    // Get the final, admin-approved quantities from the fulfillment grid
-    const finalItems = [];
-    fulfillmentItemsGridApi.forEachNode(node => finalItems.push(node.data));
+    // Use our new helper function to get the final data from the UI
+    const finalItems = getFulfillmentItems();
 
     if (finalItems.length === 0) {
-        return alert("There are no items to fulfill in this order.");
+        return alert("There are no items with a quantity greater than zero to fulfill in this order.");
     }
+    
 
     try {
-        await fulfillConsignmentAndUpdateInventory(orderId, finalItems, user);
+        await fulfillConsignmentAndUpdateInventory(selectedConsignmentId, finalItems, user);
         alert("Success! Consignment is now active and inventory has been updated.");
         // The UI will automatically update via the real-time listeners.
     } catch (error) {
