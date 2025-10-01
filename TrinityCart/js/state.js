@@ -4,9 +4,9 @@
 export const appState = {
     currentUser: null,
     activeView: 'login-view',
-    // ADD THIS NEW STATE VARIABLE
     selectedPurchaseInvoiceId: null, 
     isLocalUpdateInProgress:null,
     draftCatalogueItems: [],
+    selectedConsignmentId: null,
     ChurchName: 'St. Thomas Church Indiranagar',
 };
