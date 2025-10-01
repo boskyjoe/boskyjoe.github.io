@@ -404,7 +404,7 @@ async function handleFulfillConsignmentClick() {
     
 
     try {
-        await fulfillConsignmentAndUpdateInventory(selectedConsignmentId, finalItems, user);
+        await fulfillConsignmentAndUpdateInventory(orderId, finalItems, user);
         alert("Success! Consignment is now active and inventory has been updated.");
         // The UI will automatically update via the real-time listeners.
     } catch (error) {
