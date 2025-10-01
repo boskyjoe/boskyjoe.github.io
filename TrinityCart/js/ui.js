@@ -2399,7 +2399,7 @@ function hideConsignmentDetailPanel() {
 }
 
 function showConsignmentDetailPanel(orderData) {
-    selectedConsignmentId = orderData.id;
+
     const detailPanel = document.getElementById('consignment-detail-panel');
     const fulfillmentView = document.getElementById('fulfillment-view');
     const activeOrderView = document.getElementById('active-order-view');
