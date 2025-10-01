@@ -2658,6 +2658,8 @@ export function showReportActivityModal() {
     const form = document.getElementById('report-activity-form');
     form.reset();
 
+    document.getElementById('activity-event-container').classList.add('hidden');
+    
     // Store the current order ID in a hidden field for the form submission
     document.getElementById('activity-order-id').value = appState.selectedConsignmentId;
 
