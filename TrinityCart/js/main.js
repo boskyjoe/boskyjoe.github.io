@@ -79,7 +79,7 @@ import {
     closeConsignmentRequestModal, 
     showConsignmentRequestStep2,
     getRequestedConsignmentItems,getFulfillmentItems,refreshConsignmentDetailPanel,
-    showReportActivityModal, closeReportActivityModal
+    showReportActivityModal, closeReportActivityModal,switchConsignmentTab
 } from './ui.js';
 
 import { 
