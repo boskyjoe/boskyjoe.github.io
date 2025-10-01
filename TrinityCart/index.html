@@ -1188,7 +1188,47 @@
     <!--   REPORT ACTIVITY MODAL             -->
     <!-- =================================== -->
     <div id="report-activity-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
-        <!-- We will fill this in later -->
+        <div class="fixed inset-0 bg-black bg-opacity-60 modal-close-trigger" style="z-index: 50;"></div>
+        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-lg mx-auto" style="z-index: 51;">
+            <div class="px-6 py-4 border-b flex justify-between items-center">
+                <h3 class="text-lg font-bold text-gray-900">Report Consignment Activity</h3>
+                <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <form id="report-activity-form">
+                <input type="hidden" id="activity-order-id">
+                <div class="p-6 space-y-6">
+                    <div>
+                        <label for="activity-product-select" class="form-label">Product</label>
+                        <select id="activity-product-select" class="form-input w-full" required>
+                            <option value="">Select a product...</option>
+                            <!-- Options will be populated by JS -->
+                        </select>
+                    </div>
+                    <div>
+                        <label for="activity-type-select" class="form-label">Activity Type</label>
+                        <select id="activity-type-select" class="form-input w-full" required>
+                            <option value="Sale">Sale (Item was sold)</option>
+                            <option value="Return">Return to Store (Item is unsold)</option>
+                            <option value="Damage">Report Damaged/Lost</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="activity-quantity-input" class="form-label">Quantity</label>
+                        <input type="number" id="activity-quantity-input" class="form-input w-full" required min="1">
+                    </div>
+                    <div>
+                        <label for="activity-notes-input" class="form-label">Notes (Optional)</label>
+                        <textarea id="activity-notes-input" class="form-input w-full" rows="3" placeholder="e.g., Customer name, reason for damage, etc."></textarea>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
+                    <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">Cancel</button>
+                    <button type="submit" class="modal-btn modal-btn-primary">Log Activity</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- =================================== -->
