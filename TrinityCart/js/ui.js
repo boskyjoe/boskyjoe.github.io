@@ -1175,7 +1175,40 @@ export function closeMemberModal() {
 }
 
 
+/**
+ * [NEW] Handles switching between the tabs in the consignment detail view.
+ * @param {string} tabId - The ID of the tab that was clicked (e.g., 'tab-items-on-hand').
+ */
+export function switchConsignmentTab(tabId) {
+    // Get all tabs and panels
+    const tabs = document.querySelectorAll('.consignment-tab');
+    const panels = document.querySelectorAll('.consignment-tab-panel');
 
+    // First, remove 'active' class from all tabs and panels
+    tabs.forEach(tab => tab.classList.remove('tab-active'));
+    panels.forEach(panel => panel.classList.remove('active'));
+
+    // Then, add the 'active' class to the clicked tab and its corresponding panel
+    const activeTab = document.getElementById(tabId);
+    if (activeTab) {
+        activeTab.classList.add('tab-active');
+    }
+
+    // Determine which panel to show
+    let panelIdToShow = '';
+    if (tabId === 'tab-items-on-hand') {
+        panelIdToShow = 'panel-items-on-hand';
+    } else if (tabId === 'tab-activity-log') {
+        panelIdToShow = 'panel-activity-log';
+    } else if (tabId === 'tab-consignment-payments') {
+        panelIdToShow = 'panel-consignment-payments';
+    }
+
+    const activePanel = document.getElementById(panelIdToShow);
+    if (activePanel) {
+        activePanel.classList.add('active');
+    }
+}
 
 
 
