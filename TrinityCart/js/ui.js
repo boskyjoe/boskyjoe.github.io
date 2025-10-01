@@ -2647,8 +2647,54 @@ export function refreshConsignmentDetailPanel(orderId) {
 
 
 
+/**
+ * [NEW] Opens the modal for reporting activity on a consignment.
+ * It intelligently populates the product list with only items that are on hand.
+ */
+export function showReportActivityModal() {
+    const modal = document.getElementById('report-activity-modal');
+    if (!modal) return;
 
+    const form = document.getElementById('report-activity-form');
+    form.reset();
 
+    // Store the current order ID in a hidden field for the form submission
+    document.getElementById('activity-order-id').value = appState.selectedConsignmentId;
+
+    const productSelect = document.getElementById('activity-product-select');
+    productSelect.innerHTML = '<option value="">Select a product...</option>';
+
+    // Iterate through the "Items on Hand" grid to find available products
+    consignmentItemsGridApi.forEachNode(node => {
+        const item = node.data;
+        const onHand = item.quantityCheckedOut - (item.quantitySold + item.quantityReturned + item.quantityDamaged);
+        
+        // Only add products to the dropdown if the team lead has one or more on hand
+        if (onHand > 0) {
+            const option = document.createElement('option');
+            // We need to store multiple pieces of data, so we'll use a JSON string
+            option.value = JSON.stringify({ 
+                itemId: item.id, // The ID of the document in the 'items' sub-collection
+                productId: item.productId // The ID of the master product
+            });
+            option.textContent = `${item.productName} (${onHand} on hand)`;
+            productSelect.appendChild(option);
+        }
+    });
+
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+}
+
+/**
+ * [NEW] Closes the report activity modal.
+ */
+export function closeReportActivityModal() {
+    const modal = document.getElementById('report-activity-modal');
+    if (!modal) return;
+    modal.classList.remove('visible');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
 
 
 
