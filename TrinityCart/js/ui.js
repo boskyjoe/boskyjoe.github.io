@@ -2356,7 +2356,7 @@ const consignmentOrdersGridOptions = {
         const selectedNode = event.node;
         if (selectedNode && selectedNode.isSelected()) {
             appState.selectedConsignmentId = selectedNode.data.id;
-            showConsignmentDetailPanel(selectedNode.data);
+            renderConsignmentDetail(selectedNode ? selectedNode.data : null);
         } else {
             hideConsignmentDetailPanel();
         }
@@ -2429,7 +2429,24 @@ function hideConsignmentDetailPanel() {
     unsubscribeConsignmentDetailsListeners = [];
 }
 
-function showConsignmentDetailPanel(orderData) {
+//function showConsignmentDetailPanel(orderData) {
+
+
+/**
+ * [NEW & SUPERIOR] The single authoritative function for rendering the detail panel.
+ * If orderData is provided, it shows and populates the panel.
+ * If orderData is null, it hides the panel.
+ * @param {object|null} orderData - The data for the order to display, or null to hide.
+ */
+export function renderConsignmentDetail(orderData) {
+
+
+    if (!orderData) {
+        hideConsignmentDetailPanel();
+        return;
+    }
+
+    appState.selectedConsignmentId = orderData.id; // Set the state here
 
     const detailPanel = document.getElementById('consignment-detail-panel');
     const fulfillmentView = document.getElementById('fulfillment-view');
@@ -2680,12 +2697,15 @@ export function refreshConsignmentDetailPanel(orderId) {
     if (updatedOrderNode) {
         // This re-runs the logic to show either the "Fulfillment" or "Active" view
         // based on the new, updated status of the order.
-        showConsignmentDetailPanel(updatedOrderNode.data);
+        renderConsignmentDetail(updatedOrderNode.data);
     } else {
         // If the order somehow disappeared, hide the panel.
         hideConsignmentDetailPanel();
     }
 }
+
+
+
 
 
 
