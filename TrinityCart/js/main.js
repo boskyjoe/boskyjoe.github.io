@@ -1369,8 +1369,9 @@ function setupEventListeners() {
                 return alert("Missing order or product information.");
             }
 
+            
             // Parse the complex value from the dropdown
-            const { itemId, productId } = JSON.parse(productValue);
+            const { itemId, productId, sellingPrice } = JSON.parse(productValue); // <-- Get sellingPrice here
 
             const activityData = {
                 activityType: document.getElementById('activity-type-select').value,
@@ -1387,7 +1388,7 @@ function setupEventListeners() {
             }
 
             try {
-                await logActivityAndUpdateConsignment(orderId, itemId, activityData, user);
+                await logActivityAndUpdateConsignment(orderId, itemId, activityData, sellingPrice, user);
                 alert("Activity logged successfully!");
                 closeReportActivityModal();
             } catch (error) {
