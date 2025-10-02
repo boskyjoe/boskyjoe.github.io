@@ -2462,6 +2462,9 @@ function showConsignmentDetailPanel(orderData) {
         fulfillmentView.classList.add('hidden');
         activeOrderView.classList.remove('hidden');
 
+        switchConsignmentTab('tab-items-on-hand');
+
+        // 1. Listener for the "Items on Hand" grid
         const itemsUnsub = orderRef.collection('items').orderBy('productName').onSnapshot(snapshot => {
             console.log("[Firestore] Received update for consignment items.");
             const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -2470,6 +2473,16 @@ function showConsignmentDetailPanel(orderData) {
             }
         });
 
+        // 2. Listener for the "Activity Log" grid
+        const activityUnsub = orderRef.collection('activityLog').orderBy('activityDate', 'desc').onSnapshot(snapshot => {
+            console.log("[Firestore] Received update for activity log.");
+            const activities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (consignmentActivityGridApi) {
+                consignmentActivityGridApi.setGridOption('rowData', activities);
+            }
+        });
+        
+        // 3. Listener for the "Payments" grid
         const paymentsUnsub = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
             .where('teamLeadId', '==', orderData.requestingMemberId) // Or however you link payments
             .onSnapshot(snapshot => {
@@ -2479,7 +2492,7 @@ function showConsignmentDetailPanel(orderData) {
                     consignmentPaymentsGridApi.setGridOption('rowData', payments);
                 }
             });
-        
+            
         // Store all three unsubscribe functions for later cleanup
         unsubscribeConsignmentDetailsListeners.push(itemsUnsub, activityUnsub, paymentsUnsub);
     }
