@@ -1381,74 +1381,81 @@ export async function fulfillConsignmentAndUpdateInventory(orderId, finalItems, 
     });
 }
 
-
 /**
- * [CORRECTED] Logs an activity based on a delta and atomically
+ * [CORRECTED & FINAL] Logs an activity based on a delta and atomically
  * updates all related documents in a single transaction.
  * @param {object} activityData - An object containing all necessary data.
  * @param {object} user - The user logging the activity.
  */
-
 export async function logActivityAndUpdateConsignment(activityData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
     
     // Destructure all needed variables from the single activityData object.
     const { orderId, itemId, productId, activityType, quantityDelta, sellingPrice, correctionDetails } = activityData;
-    
 
-    // Now we can safely get references to the documents.
     const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId);
     const itemRef = orderRef.collection('items').doc(itemId);
     const activityRef = orderRef.collection('activityLog').doc();
 
-
     return db.runTransaction(async (transaction) => {
+        // --- ALL WRITES HAPPEN AT ONCE ---
 
-        // 1. WRITE: Create the immutable activity log entry with the delta.
-        const totalSaleValueDelta = activityType === 'Sale' || (activityType === 'Correction' && activityData.correctionDetails?.correctedField === 'quantitySold')
+        // 1. WRITE: Create the immutable activity log entry.
+        const totalSaleValueDelta = (activityType === 'Sale' || (activityType === 'Correction' && correctionDetails?.correctedField === 'quantitySold'))
             ? sellingPrice * quantityDelta 
             : 0;
 
         transaction.set(activityRef, {
             activityType: activityType,
-            quantity: quantityDelta, // Log the delta itself for a perfect audit trail
+            quantity: quantityDelta,
             totalSaleValue: totalSaleValueDelta,
             correctionDetails: correctionDetails || null,
-            paymentStatus: activityType === 'Sale' ? 'Unpaid' : null,
+            paymentStatus: (activityType === 'Sale' && quantityDelta > 0) ? 'Unpaid' : null,
             recordedBy: user.email,
             activityDate: now,
-            productId: productId, // Store for reference
+            productId: productId,
         });
 
-        // 2. WRITE: Atomically update the running totals on the consignment item.
-        const fieldToUpdate = (activityType === 'Correction')
-            ? activityData.correctionDetails.correctedField
-            : `quantity${activityType}`;
-            
-        transaction.update(itemRef, {
-            [fieldToUpdate]: firebase.firestore.FieldValue.increment(quantityDelta)
-        });
+        // --- THIS IS THE FIX ---
+        // 2. WRITE: Determine the correct field to update and then atomically increment it.
+        let fieldToUpdate = '';
+        if (activityType === 'Correction') {
+            // For corrections, get the field name from the details.
+            fieldToUpdate = correctionDetails.correctedField;
+        } else if (activityType === 'Sale') {
+            fieldToUpdate = 'quantitySold';
+        } else if (activityType === 'Return') {
+            fieldToUpdate = 'quantityReturned';
+        } else if (activityType === 'Damage') {
+            fieldToUpdate = 'quantityDamaged';
+        }
 
+        // Only perform the update if we have a valid field name.
+        if (fieldToUpdate) {
+            transaction.update(itemRef, {
+                [fieldToUpdate]: firebase.firestore.FieldValue.increment(quantityDelta)
+            });
+        } else {
+            throw new Error(`Unknown activity type or invalid correction: ${activityType}`);
+        }
+        // -----------------------
 
-        // 3. WRITE: If it's a SALE, atomically update the main order's financial totals.
-        if (activityType === 'Sale') {
+        // 3. WRITE: If it's a SALE or a correction to a SALE, update financial totals.
+        if (activityType === 'Sale' || (activityType === 'Correction' && correctionDetails?.correctedField === 'quantitySold')) {
             transaction.update(orderRef, {
                 totalValueSold: firebase.firestore.FieldValue.increment(totalSaleValueDelta),
                 balanceDue: firebase.firestore.FieldValue.increment(totalSaleValueDelta)
             });
         }
 
-        // 4. WRITE: If it's a RETURN, atomically update the main store inventory.
-        if (activityType === 'Return' && quantityDelta > 0) { // Only increment stock on positive returns
+        // 4. WRITE: If it's a RETURN (or a correction to a RETURN), update main inventory.
+        if (activityType === 'Return' || (activityType === 'Correction' && correctionDetails?.correctedField === 'quantityReturned')) {
             const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(productId);
             transaction.update(productRef, {
-                inventoryCount: firebase.firestore.FieldValue.increment(quantityDelta)
+                inventoryCount: firebase.firestore.FieldValue.increment(quantityDelta) // Delta is positive for returns, negative for return-corrections
             });
         }
-
     });
 }
-
-
 
