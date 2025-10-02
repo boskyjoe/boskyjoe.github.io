@@ -2445,16 +2445,15 @@ function showConsignmentDetailPanel(orderData) {
     unsubscribeConsignmentDetailsListeners = [];
 
     const db = firebase.firestore();
+    const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderData.id);
 
     if (orderData.status === 'Pending') {
         fulfillmentView.classList.remove('hidden');
         activeOrderView.classList.add('hidden');
         
-        // Load items for fulfillment
-        const itemsRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderData.id).collection('items');
-        itemsRef.get().then(snapshot => {
+        /// Load items ONCE for fulfillment (no listener needed here)
+        orderRef.collection('items').get().then(snapshot => {
             const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            // Pre-fill "Qty to Fulfill" with the requested amount
             const itemsToFulfill = items.map(item => ({ ...item, quantityCheckedOut: item.quantityRequested }));
             fulfillmentItemsGridApi.setGridOption('rowData', itemsToFulfill);
         });
@@ -2463,15 +2462,26 @@ function showConsignmentDetailPanel(orderData) {
         fulfillmentView.classList.add('hidden');
         activeOrderView.classList.remove('hidden');
 
-        // Setup real-time listeners for all three detail grids
-        const itemsRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderData.id).collection('items');
-        const itemsUnsub = itemsRef.onSnapshot(snapshot => {
+        const itemsUnsub = orderRef.collection('items').orderBy('productName').onSnapshot(snapshot => {
+            console.log("[Firestore] Received update for consignment items.");
             const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            consignmentItemsGridApi.setGridOption('rowData', items);
+            if (consignmentItemsGridApi) {
+                consignmentItemsGridApi.setGridOption('rowData', items);
+            }
         });
-        unsubscribeConsignmentDetailsListeners.push(itemsUnsub);
+
+        const paymentsUnsub = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
+            .where('teamLeadId', '==', orderData.requestingMemberId) // Or however you link payments
+            .onSnapshot(snapshot => {
+                console.log("[Firestore] Received update for payments.");
+                const payments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (consignmentPaymentsGridApi) {
+                    consignmentPaymentsGridApi.setGridOption('rowData', payments);
+                }
+            });
         
-        // ... Add listeners for activityLog and payments grids here later ...
+        // Store all three unsubscribe functions for later cleanup
+        unsubscribeConsignmentDetailsListeners.push(itemsUnsub, activityUnsub, paymentsUnsub);
     }
 
     detailPanel.classList.remove('hidden');
