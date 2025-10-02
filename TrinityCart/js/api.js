@@ -1380,25 +1380,27 @@ export async function logActivityAndUpdateConsignment(orderId, itemId, activityD
 
     return db.runTransaction(async (transaction) => {
         // 1. Create the immutable activity log entry.
+        const totalSaleValue = activityData.activityType === 'Sale' ? sellingPrice * Number(activityData.quantity) : 0;
         transaction.set(activityRef, {
             ...activityData,
+            totalSaleValue: totalSaleValue,
+            paymentStatus: activityData.activityType === 'Sale' ? 'Unpaid' : null,
             recordedBy: user.email,
             activityDate: now
         });
 
         // 2. Update the running totals on the consignment item.
-        const fieldToUpdate = `quantity${activityData.activityType}`; // e.g., 'quantitySale', 'quantityReturn'
+        const fieldToUpdate = `quantity${activityData.activityType}`; // e.g., 'quantitySale'
         transaction.update(itemRef, {
             [fieldToUpdate]: firebase.firestore.FieldValue.increment(Number(activityData.quantity))
         });
 
+
         // 3. If it's a SALE, update the main order's financial totals.
         if (activityData.activityType === 'Sale') {
-            const itemDoc = await transaction.get(itemRef);
-            const saleValue = (itemDoc.data().sellingPrice || 0) * Number(activityData.quantity);
             transaction.update(orderRef, {
-                totalValueSold: firebase.firestore.FieldValue.increment(saleValue),
-                balanceDue: firebase.firestore.FieldValue.increment(saleValue)
+                totalValueSold: firebase.firestore.FieldValue.increment(totalSaleValue),
+                balanceDue: firebase.firestore.FieldValue.increment(totalSaleValue)
             });
         }
 
