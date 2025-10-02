@@ -285,10 +285,10 @@ export function detachAllRealtimeListeners() {
     }
 
     if (unsubscribeConsignmentOrdersListener) {
+        console.log("[ui.js] Detaching real-time consignment orders listener.");
         unsubscribeConsignmentOrdersListener();
         unsubscribeConsignmentOrdersListener = null;
     }
-    // Also detach any active detail listeners
     unsubscribeConsignmentDetailsListeners.forEach(unsub => unsub());
     unsubscribeConsignmentDetailsListeners = [];
 
@@ -2739,6 +2739,50 @@ export function refreshConsignmentDetailPanel(orderId) {
         // If the order somehow disappeared, hide the panel.
         hideConsignmentDetailPanel();
     }
+}
+
+
+/**
+ * [NEW] The main function to display the Consignment Management view.
+ */
+export function showConsignmentView() {
+    // 1. Show the main view container and initialize all its grids.
+    showView('consignment-view');
+    initializeConsignmentGrids();
+    
+    // 2. Ensure the detail panel is hidden by default every time we enter the view.
+    hideConsignmentDetailPanel();
+
+    const db = firebase.firestore();
+    
+    // 3. Clean up any previous listener for the master grid before attaching a new one.
+    if (unsubscribeConsignmentOrdersListener) {
+        unsubscribeConsignmentOrdersListener();
+    }
+
+    // 4. Attach the real-time listener for the master "All Consignment Orders" grid.
+    if (consignmentOrdersGridApi) {
+        consignmentOrdersGridApi.setGridOption('loading', true);
+    }
+    
+    unsubscribeConsignmentOrdersListener = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
+        .orderBy('requestDate', 'desc')
+        .onSnapshot(snapshot => {
+            console.log("[Firestore] Received update for master consignment orders list.");
+            const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            if (consignmentOrdersGridApi) {
+                // We use setGridOption here as it's the most robust way to handle
+                // the full list of orders.
+                consignmentOrdersGridApi.setGridOption('rowData', orders);
+                consignmentOrdersGridApi.setGridOption('loading', false);
+            }
+        }, error => {
+            console.error("Error listening to consignment orders:", error);
+            if (consignmentOrdersGridApi) {
+                consignmentOrdersGridApi.setGridOption('loading', false);
+            }
+        });
 }
 
 
