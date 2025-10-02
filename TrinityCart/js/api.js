@@ -1399,7 +1399,25 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
     const activityRef = orderRef.collection('activityLog').doc();
 
     return db.runTransaction(async (transaction) => {
-        // --- ALL WRITES HAPPEN AT ONCE ---
+
+        const itemDoc = await transaction.get(itemRef);
+        if (!itemDoc.exists) {
+            throw new Error("The item you are trying to update does not exist.");
+        }
+        const currentItemData = itemDoc.data();
+
+        // --- [NEW & BETTER] VALIDATION PHASE ---
+        const newSold = (currentItemData.quantitySold || 0) + (activityType === 'Sale' || correctionDetails?.correctedField === 'quantitySold' ? quantityDelta : 0);
+        const newReturned = (currentItemData.quantityReturned || 0) + (activityType === 'Return' || correctionDetails?.correctedField === 'quantityReturned' ? quantityDelta : 0);
+        const newDamaged = (currentItemData.quantityDamaged || 0) + (activityType === 'Damage' || correctionDetails?.correctedField === 'quantityDamaged' ? quantityDelta : 0);
+
+        const totalAccountedFor = newSold + newReturned + newDamaged;
+
+        if (totalAccountedFor > currentItemData.quantityCheckedOut) {
+            // If the new total exceeds what was checked out, abort the transaction.
+            throw new Error(`Invalid quantity. The total accounted for (${totalAccountedFor}) cannot exceed the checked out quantity of ${currentItemData.quantityCheckedOut}.`);
+        }
+        
 
         // 1. WRITE: Create the immutable activity log entry.
         const totalSaleValueDelta = (activityType === 'Sale' || (activityType === 'Correction' && correctionDetails?.correctedField === 'quantitySold'))
