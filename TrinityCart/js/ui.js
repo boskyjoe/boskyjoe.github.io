@@ -2384,19 +2384,76 @@ const fulfillmentItemsGridOptions = {
 const consignmentItemsGridOptions = {
     getRowId: params => params.data.id,
     columnDefs: [
-        { field: "productName", headerName: "Product", flex: 1 },
-        { field: "quantityCheckedOut", headerName: "Checked Out", width: 120 },
-        { field: "quantitySold", headerName: "Sold", width: 100 },
-        { field: "quantityReturned", headerName: "Returned", width: 100 },
-        { field: "quantityDamaged", headerName: "Damaged", width: 100 },
+        { field: "productName", headerName: "Product", flex: 1, suppressMovable: true },
+        { field: "quantityCheckedOut", headerName: "Checked Out", width: 120, suppressMovable: true },
         { 
-            headerName: "On Hand", 
+            field: "quantitySold", 
+            headerName: "Sold Qty", 
+            width: 100, 
+            editable: true, // Make this column editable
+            cellEditor: 'agNumberCellEditor',
+            cellEditorParams: { min: 0, precision: 0 }
+        },
+        { 
+            field: "quantityReturned", 
+            headerName: "Returned Qty", 
+            width: 100, 
+            editable: true, // Make this column editable
+            cellEditor: 'agNumberCellEditor',
+            cellEditorParams: { min: 0, precision: 0 }
+        },
+        { 
+            field: "quantityDamaged", 
+            headerName: "Damaged Qty", 
+            width: 100, 
+            editable: true, // Make this column editable
+            cellEditor: 'agNumberCellEditor',
+            cellEditorParams: { min: 0, precision: 0 }
+        },
+        { 
+            headerName: "On Hand Qty", 
             width: 100,
             cellStyle: { 'font-weight': 'bold' },
+            // The valueGetter remains the same and will auto-recalculate
             valueGetter: p => p.data.quantityCheckedOut - (p.data.quantitySold + p.data.quantityReturned + p.data.quantityDamaged)
         }
     ],
-    onGridReady: params => { consignmentItemsGridApi = params.api; }
+    onGridReady: params => { consignmentItemsGridApi = params.api; },
+    
+    // --- THIS IS THE NEW, CRITICAL HANDLER ---
+    onCellValueChanged: (params) => {
+        // This event fires whenever a user edits a cell.
+        const colId = params.column.getColId();
+        const oldValue = params.oldValue;
+        const newValue = params.newValue;
+
+        // Calculate the difference (the "delta")
+        const delta = newValue - oldValue;
+
+        // If nothing actually changed, do nothing.
+        if (delta === 0) {
+            return;
+        }
+
+        // Determine the activity type based on which column was edited
+        let activityType = '';
+        if (colId === 'quantitySold') activityType = 'Sale';
+        else if (colId === 'quantityReturned') activityType = 'Return';
+        else if (colId === 'quantityDamaged') activityType = 'Damage';
+        else return; // Exit if a non-quantity column was somehow edited
+
+        // Dispatch a custom event with all the data our controller needs
+        document.dispatchEvent(new CustomEvent('logConsignmentActivity', {
+            detail: {
+                orderId: appState.selectedConsignmentId,
+                itemId: params.data.id,
+                productId: params.data.productId,
+                activityType: activityType,
+                quantityDelta: delta,
+                sellingPrice: params.data.sellingPrice
+            }
+        }));
+    }
 };
 
 // ... We will define the options for activity and payment grids later ...
@@ -2711,7 +2768,7 @@ export function refreshConsignmentDetailPanel(orderId) {
 
 /**
  * [NEW] Opens the modal for reporting activity on a consignment.
- * It intelligently populates the product list with only items that are on hand.
+ * It intelligently populates the product list with only items that are on hand. -- [NEED TO DELETE THIS]
  */
 export function showReportActivityModal() {
     const modal = document.getElementById('report-activity-modal');
@@ -2783,7 +2840,7 @@ export function showReportActivityModal() {
 }
 
 /**
- * [NEW] Closes the report activity modal.
+ * [NEW] Closes the report activity modal. [NEED TO DELETE THIS]
  */
 export function closeReportActivityModal() {
     const modal = document.getElementById('report-activity-modal');
