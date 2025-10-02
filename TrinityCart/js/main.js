@@ -79,7 +79,7 @@ import {
     closeConsignmentRequestModal, 
     showConsignmentRequestStep2,
     getRequestedConsignmentItems,getFulfillmentItems,refreshConsignmentDetailPanel,
-    showReportActivityModal, closeReportActivityModal,switchConsignmentTab,showConsignmentDetailPanel,hideConsignmentDetailPanel
+    showReportActivityModal, closeReportActivityModal,switchConsignmentTab,renderConsignmentDetail
 } from './ui.js';
 
 import { 
@@ -444,7 +444,7 @@ async function handleFulfillConsignmentClick() {
 
         // 2. If the data was fetched successfully, call the UI function to render the panel.
         if (updatedOrderData) {
-            showConsignmentDetailPanel(updatedOrderData);
+            renderConsignmentDetail(updatedOrderData);
         } else {
             // If something went wrong, just hide the panel to be safe.
             hideConsignmentDetailPanel();
