@@ -1365,13 +1365,14 @@ export async function fulfillConsignmentAndUpdateInventory(orderId, finalItems, 
 }
 
 /**
- * Logs an activity (Sale, Return, Damage) and updates inventory if necessary.
+ * [CORRECTED] Logs an activity and updates all related documents in a single transaction.
  * @param {string} orderId - The ID of the parent consignment order.
  * @param {string} itemId - The ID of the item document in the 'items' sub-collection.
  * @param {object} activityData - The data for the new activity log entry.
+ * @param {number} sellingPrice - [NEW] The selling price of the item, needed for sale calculations.
  * @param {object} user - The user logging the activity.
  */
-export async function logActivityAndUpdateConsignment(orderId, itemId, activityData, user) {
+export async function logActivityAndUpdateConsignment(orderId, itemId, activityData, sellingPrice, user) { 
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
     const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId);
