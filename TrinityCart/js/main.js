@@ -325,25 +325,34 @@ async function handleRequestConsignmentClick() {
         });
     } else {
         // For non-admins, check their memberships
+        const membershipInfo = await getUserMembershipInfo(user.email);
+
         if (!membershipInfo || !membershipInfo.teams) {
             closeConsignmentRequestModal();
             return alert("You are not a member of any team. Please contact an admin.");
         }
 
-        const userTeams = Object.entries(membershipInfo.teams).map(([id, data]) => ({ id, ...data }));
+        // Filter for teams where the user is a Team Lead
+        const leadTeams = Object.entries(membershipInfo.teams)
+            .filter(([id, data]) => data.role === 'Team Lead')
+            .map(([id, data]) => ({ teamId: id, teamName: data.teamName }));
+            
+        if (leadTeams.length === 0) {
+            closeConsignmentRequestModal();
+            return alert("You do not have Team Lead permissions for any team. This action is restricted to Team Leads.");
+        }
 
-        if (userTeams.length === 1) {
-            // Auto-select if user is in only one team
-            userTeamDiv.classList.remove('hidden');
-            userTeamSelect.innerHTML = `<option value="${userTeams[0].id}">${userTeams[0].teamName}</option>`;
+        
+        if (leadTeams.length === 1) {
+            // Auto-select if they lead only one team
+            userTeamSelect.innerHTML = `<option value="${leadTeams[0].teamId}">${leadTeams[0].teamName}</option>`;
             userTeamSelect.disabled = true;
         } else {
-            // Let the user choose if they are in multiple teams
-            userTeamDiv.classList.remove('hidden');
+            // Let them choose if they lead multiple teams
             userTeamSelect.innerHTML = '<option value="">Select your team...</option>';
-            userTeams.forEach(team => {
+            leadTeams.forEach(team => {
                 const option = document.createElement('option');
-                option.value = team.id;
+                option.value = team.teamId;
                 option.textContent = team.teamName;
                 userTeamSelect.appendChild(option);
             });
@@ -1109,22 +1118,24 @@ function setupEventListeners() {
 
             try {
                 const members = await getMembersForTeam(teamId);
-                memberSelect.innerHTML = '<option value="">Select a team member...</option>';
+                memberSelect.innerHTML = '<option value="">Select a team lead...</option>';
+
+                const teamLeads = members.filter(m => m.role === 'Team Lead');
                 
-                if (members.length === 0) {
-                    memberSelect.innerHTML = '<option value="">No members in this team</option>';
+                if (teamLeads.length === 0) {
+                    memberSelect.innerHTML = '<option value="">No leads in this team</option>';
                 } else {
-                    members.forEach(member => {
+                    teamLeads.forEach(lead => {
                         const option = document.createElement('option');
-                        option.value = member.id; // Or member.userId if that's what you need to store
-                        option.textContent = member.name;
+                        option.value = lead.id; // The member's document ID
+                        option.textContent = lead.name;
                         memberSelect.appendChild(option);
                     });
                     memberSelect.disabled = false;
                 }
             } catch (error) {
-                console.error("Error fetching team members:", error);
-                memberSelect.innerHTML = '<option value="">Error loading members</option>';
+                console.error("Error fetching team lead:", error);
+                memberSelect.innerHTML = '<option value="">Error loading Team lead</option>';
             }
         });
     }
