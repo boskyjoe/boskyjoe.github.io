@@ -2469,7 +2469,12 @@ function showConsignmentDetailPanel(orderData) {
             console.log("[Firestore] Received update for consignment items.");
             const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             if (consignmentItemsGridApi) {
-                consignmentItemsGridApi.setGridOption('rowData', items);
+                // 1. Apply the new data using a transaction for better performance.
+                consignmentItemsGridApi.applyTransaction({ update: items });
+
+                // 2. Force the grid to re-run all valueGetters and cellRenderers.
+                // This will make the "On Hand" column recalculate its value.
+                consignmentItemsGridApi.refreshCells({ force: true });
             }
         });
 
@@ -2492,7 +2497,7 @@ function showConsignmentDetailPanel(orderData) {
                     consignmentPaymentsGridApi.setGridOption('rowData', payments);
                 }
             });
-            
+
         // Store all three unsubscribe functions for later cleanup
         unsubscribeConsignmentDetailsListeners.push(itemsUnsub, activityUnsub, paymentsUnsub);
     }
