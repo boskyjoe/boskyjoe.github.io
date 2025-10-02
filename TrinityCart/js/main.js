@@ -79,7 +79,7 @@ import {
     closeConsignmentRequestModal, 
     showConsignmentRequestStep2,
     getRequestedConsignmentItems,getFulfillmentItems,refreshConsignmentDetailPanel,
-    showReportActivityModal, closeReportActivityModal,switchConsignmentTab
+    showReportActivityModal, closeReportActivityModal,switchConsignmentTab,showConsignmentDetailPanel,hideConsignmentDetailPanel
 } from './ui.js';
 
 import { 
@@ -87,7 +87,7 @@ import {
     getMembersForTeam,
     createConsignmentRequest,
     fulfillConsignmentAndUpdateInventory,
-    getItemsForCatalogue,logActivityAndUpdateConsignment
+    getItemsForCatalogue,logActivityAndUpdateConsignment,getConsignmentOrderById
 } from './api.js';
 
 
@@ -438,6 +438,18 @@ async function handleFulfillConsignmentClick() {
     try {
         await fulfillConsignmentAndUpdateInventory(orderId, finalItems, user);
         alert("Success! Consignment is now active and inventory has been updated.");
+
+        // 1. Directly fetch the fresh, updated order data from the database.
+        const updatedOrderData = await getConsignmentOrderById(orderId);
+
+        // 2. If the data was fetched successfully, call the UI function to render the panel.
+        if (updatedOrderData) {
+            showConsignmentDetailPanel(updatedOrderData);
+        } else {
+            // If something went wrong, just hide the panel to be safe.
+            hideConsignmentDetailPanel();
+        }
+
 
         refreshConsignmentDetailPanel(orderId);
         
