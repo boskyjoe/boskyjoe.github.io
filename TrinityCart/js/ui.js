@@ -2495,25 +2495,25 @@ function hideConsignmentDetailPanel() {
  * @param {object|null} orderData - The data for the order to display, or null to hide.
  */
 export function renderConsignmentDetail(orderData) {
-
-
+    // If no data is provided, hide the panel and stop.
     if (!orderData) {
         hideConsignmentDetailPanel();
         return;
     }
 
-    appState.selectedConsignmentId = orderData.id; // Set the state here
+    // Set the global state for other parts of the app to use
+    appState.selectedConsignmentId = orderData.id;
 
     const detailPanel = document.getElementById('consignment-detail-panel');
     const fulfillmentView = document.getElementById('fulfillment-view');
     const activeOrderView = document.getElementById('active-order-view');
 
-    // Populate header
+    // Populate header with the new order's data
     document.getElementById('selected-consignment-id').textContent = orderData.consignmentId;
     document.getElementById('selected-consignment-member').textContent = orderData.requestingMemberName;
     document.getElementById('selected-consignment-team').textContent = orderData.teamName;
 
-    // Detach any old listeners first
+    // Detach any listeners from a previously selected order to prevent memory leaks
     unsubscribeConsignmentDetailsListeners.forEach(unsub => unsub());
     unsubscribeConsignmentDetailsListeners = [];
 
@@ -2521,49 +2521,42 @@ export function renderConsignmentDetail(orderData) {
     const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderData.id);
 
     if (orderData.status === 'Pending') {
+        // --- HANDLE "PENDING" STATE ---
         fulfillmentView.classList.remove('hidden');
         activeOrderView.classList.add('hidden');
         
-        // Load items for fulfillment
-        const itemsRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderData.id).collection('items');
-
-        /// Load items ONCE for fulfillment (no listener needed here)
-        itemsRef.get().then(snapshot => {
-            // 1. Explicitly map the document ID to an 'id' property on each item object.
+        // Perform a one-time fetch to populate the fulfillment grid
+        if (fulfillmentItemsGridApi) fulfillmentItemsGridApi.setGridOption('loading', true);
+        orderRef.collection('items').get().then(snapshot => {
             const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            // 2. Pre-fill "Qty to Fulfill" with the requested amount.
             const itemsToFulfill = items.map(item => ({ ...item, quantityCheckedOut: item.quantityRequested }));
             
-            // 3. Load this complete data into the fulfillment grid.
             if (fulfillmentItemsGridApi) {
                 fulfillmentItemsGridApi.setGridOption('rowData', itemsToFulfill);
+                fulfillmentItemsGridApi.setGridOption('loading', false);
             }
         });
 
     } else if (orderData.status === 'Active') {
+        // --- HANDLE "ACTIVE" STATE ---
         fulfillmentView.classList.add('hidden');
         activeOrderView.classList.remove('hidden');
 
+        // Default to the first tab
         switchConsignmentTab('tab-items-on-hand');
 
-        // 1. Listener for the "Items on Hand" grid
+        // 1. Set up the real-time listener for the "Items on Hand" grid
         const itemsUnsub = orderRef.collection('items').orderBy('productName').onSnapshot(snapshot => {
             console.log("[Firestore] Received update for consignment items.");
             const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
             if (consignmentItemsGridApi) {
-                // --- THIS IS THE FIX ---
-                // Use setGridOption('rowData', ...) to simply replace all data in the grid.
-                // This is simpler and avoids the "row not found" error when the grid
-                // is first populated or transitions from another state.
-                // The grid will automatically re-render and run all valueGetters.
+                // Use setGridOption to robustly replace the data. This forces a full
+                // re-render, which correctly recalculates the "On Hand" valueGetter.
                 consignmentItemsGridApi.setGridOption('rowData', items);
-                // -----------------------
             }
         });
 
-        // 2. Listener for the "Activity Log" grid
+        // 2. Set up the real-time listener for the "Activity Log" grid
         const activityUnsub = orderRef.collection('activityLog').orderBy('activityDate', 'desc').onSnapshot(snapshot => {
             console.log("[Firestore] Received update for activity log.");
             const activities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -2572,9 +2565,9 @@ export function renderConsignmentDetail(orderData) {
             }
         });
         
-        // 3. Listener for the "Payments" grid
+        // 3. Set up the real-time listener for the "Payments" grid
         const paymentsUnsub = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
-            .where('teamLeadId', '==', orderData.requestingMemberId) // Or however you link payments
+            .where('orderId', '==', orderData.id) // We should link payments directly to the order
             .onSnapshot(snapshot => {
                 console.log("[Firestore] Received update for payments.");
                 const payments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -2587,27 +2580,8 @@ export function renderConsignmentDetail(orderData) {
         unsubscribeConsignmentDetailsListeners.push(itemsUnsub, activityUnsub, paymentsUnsub);
     }
 
+    // Finally, make the entire detail panel visible
     detailPanel.classList.remove('hidden');
-}
-
-// 4. Create the main view function
-export function showConsignmentView() {
-    showView('consignment-view');
-    initializeConsignmentGrids();
-    hideConsignmentDetailPanel(); // Ensure a clean state on view load
-
-    const db = firebase.firestore();
-    if (unsubscribeConsignmentOrdersListener) unsubscribeConsignmentOrdersListener();
-
-    // Attach listener for the master grid
-    unsubscribeConsignmentOrdersListener = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
-        .orderBy('requestDate', 'desc')
-        .onSnapshot(snapshot => {
-            const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            if (consignmentOrdersGridApi) {
-                consignmentOrdersGridApi.setGridOption('rowData', orders);
-            }
-        });
 }
 
 // 5. Add new listeners to the main cleanup function
