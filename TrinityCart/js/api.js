@@ -1305,6 +1305,23 @@ export async function createConsignmentRequest(requestData, items, user) {
     return batch.commit();
 }
 
+/**
+ * [NEW] Fetches a single consignment order document by its ID.
+ * @param {string} orderId - The Firestore document ID of the order.
+ * @returns {Promise<object|null>} The order data or null if not found.
+ */
+export async function getConsignmentOrderById(orderId) {
+    const db = firebase.firestore();
+    const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId);
+    const docSnap = await orderRef.get();
+    if (docSnap.exists) {
+        return { id: docSnap.id, ...docSnap.data() };
+    } else {
+        console.error(`Consignment order with ID ${orderId} not found.`);
+        return null;
+    }
+}
+
 
 /**
  * Fulfills a consignment order and atomically decrements inventory.
