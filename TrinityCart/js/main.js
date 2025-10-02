@@ -74,6 +74,7 @@ import {
 } from './api.js';
 
 import { 
+    showConsignmentView, 
     showConsignmentRequestModal, 
     closeConsignmentRequestModal, 
     showConsignmentRequestStep2,
