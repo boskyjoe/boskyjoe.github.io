@@ -912,6 +912,9 @@ function setupEventListeners() {
 
     });
 
+
+
+
     
      // ==================================================================
     // --- 2. ISOLATED FORM SUBMISSION & OTHER EVENT HANDLERS ---
@@ -1442,6 +1445,34 @@ function setupEventListeners() {
     
 
 
+    // ==========================================================
+    // --- IN-GRID UPDATE & CUSTOM EVENT LISTENERS ---
+    // ==========================================================
+
+    // --- [NEW] Listener for In-Grid Consignment Activity Logging ---
+    document.addEventListener('logConsignmentActivity', async (e) => {
+        const activityData = e.detail;
+        const user = appState.currentUser;
+        if (!user) return;
+
+        console.log("Logging consignment activity with delta:", activityData);
+
+        try {
+            // Call the new, powerful transactional API function
+            await logActivityAndUpdateConsignment(activityData, user);
+            
+            // The UI will update automatically via the onSnapshot listener.
+            // We don't need to show a success alert here as it would be annoying
+            // for every single cell change. The UI updating is the confirmation.
+
+        } catch (error) {
+            console.error("Error logging consignment activity:", error);
+            alert(`Failed to save activity: ${error.message}`);
+            // Here, we should ideally refresh the grid to revert the user's failed edit.
+            refreshConsignmentDetailPanel(activityData.orderId);
+        }
+    });
+    
 
 
 
