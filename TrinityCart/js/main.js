@@ -1121,13 +1121,21 @@ function setupEventListeners() {
                 memberSelect.innerHTML = '<option value="">Select a team lead...</option>';
 
                 const teamLeads = members.filter(m => m.role === 'Team Lead');
-                
+
                 if (teamLeads.length === 0) {
                     memberSelect.innerHTML = '<option value="">No leads in this team</option>';
+                    memberSelect.disabled = true;
+                } else if (teamLeads.length === 1) {
+                    // If there's only one lead, auto-select them.
+                    const lead = teamLeads[0];
+                    memberSelect.innerHTML = `<option value="${lead.id}">${lead.name}</option>`;
+                    memberSelect.disabled = true; // Disable as there are no other choices
                 } else {
+                    // If there are multiple leads, let the admin choose.
+                    memberSelect.innerHTML = '<option value="">Select a team lead...</option>';
                     teamLeads.forEach(lead => {
                         const option = document.createElement('option');
-                        option.value = lead.id; // The member's document ID
+                        option.value = lead.id;
                         option.textContent = lead.name;
                         memberSelect.appendChild(option);
                     });
