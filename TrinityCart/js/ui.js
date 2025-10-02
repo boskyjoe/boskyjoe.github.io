@@ -2423,6 +2423,23 @@ const consignmentItemsGridOptions = {
 
         if (delta === 0) return;
 
+
+        const data = params.data;
+        const newSold = colId === 'quantitySold' ? newValue : data.quantitySold;
+        const newReturned = colId === 'quantityReturned' ? newValue : data.quantityReturned;
+        const newDamaged = colId === 'quantityDamaged' ? newValue : data.quantityDamaged;
+
+        const totalAccountedFor = newSold + newReturned + newDamaged;
+
+        if (totalAccountedFor > data.quantityCheckedOut) {
+            alert(`Error: Invalid quantity. The total of Sold (${newSold}), Returned (${newReturned}), and Damaged (${newDamaged}) cannot exceed the Checked Out quantity of ${data.quantityCheckedOut}.`);
+            
+            // Revert the change in the UI to prevent confusion.
+            params.node.setDataValue(colId, oldValue);
+            return; // Stop processing and do not dispatch the event.
+        }
+
+
         let activityType = '';
         if (colId === 'quantitySold') activityType = 'Sale';
         else if (colId === 'quantityReturned') activityType = 'Return';
