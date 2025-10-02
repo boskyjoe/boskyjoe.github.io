@@ -1381,23 +1381,27 @@ export async function fulfillConsignmentAndUpdateInventory(orderId, finalItems, 
     });
 }
 
+
 /**
- * [CORRECTED] Logs an activity and updates all related documents in a single transaction.
- * @param {string} orderId - The ID of the parent consignment order.
- * @param {string} itemId - The ID of the item document in the 'items' sub-collection.
- * @param {object} activityData - The data for the new activity log entry.
- * @param {number} sellingPrice - [NEW] The selling price of the item, needed for sale calculations.
+ * [CORRECTED] Logs an activity based on a delta and atomically
+ * updates all related documents in a single transaction.
+ * @param {object} activityData - An object containing all necessary data.
  * @param {object} user - The user logging the activity.
  */
-export async function logActivityAndUpdateConsignment(orderId, itemId, activityData, sellingPrice, user) { 
+
+export async function logActivityAndUpdateConsignment(activityData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
     
+    // Destructure all needed variables from the single activityData object.
     const { orderId, itemId, productId, activityType, quantityDelta, sellingPrice } = activityData;
+    
 
+    // Now we can safely get references to the documents.
     const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId);
     const itemRef = orderRef.collection('items').doc(itemId);
     const activityRef = orderRef.collection('activityLog').doc();
+
 
     return db.runTransaction(async (transaction) => {
 
