@@ -1394,7 +1394,7 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
     const now = firebase.firestore.FieldValue.serverTimestamp();
     
     // Destructure all needed variables from the single activityData object.
-    const { orderId, itemId, productId, activityType, quantityDelta, sellingPrice } = activityData;
+    const { orderId, itemId, productId, activityType, quantityDelta, sellingPrice, correctionDetails } = activityData;
     
 
     // Now we can safely get references to the documents.
@@ -1406,11 +1406,15 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
     return db.runTransaction(async (transaction) => {
 
         // 1. WRITE: Create the immutable activity log entry with the delta.
-        const totalSaleValueDelta = activityType === 'Sale' ? sellingPrice * quantityDelta : 0;
+        const totalSaleValueDelta = activityType === 'Sale' || (activityType === 'Correction' && activityData.correctionDetails?.correctedField === 'quantitySold')
+            ? sellingPrice * quantityDelta 
+            : 0;
+
         transaction.set(activityRef, {
             activityType: activityType,
             quantity: quantityDelta, // Log the delta itself for a perfect audit trail
             totalSaleValue: totalSaleValueDelta,
+            correctionDetails: correctionDetails || null,
             paymentStatus: activityType === 'Sale' ? 'Unpaid' : null,
             recordedBy: user.email,
             activityDate: now,
@@ -1418,7 +1422,10 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
         });
 
         // 2. WRITE: Atomically update the running totals on the consignment item.
-        const fieldToUpdate = `quantity${activityType}`; // e.g., "quantitySale"
+        const fieldToUpdate = (activityType === 'Correction')
+            ? activityData.correctionDetails.correctedField
+            : `quantity${activityType}`;
+            
         transaction.update(itemRef, {
             [fieldToUpdate]: firebase.firestore.FieldValue.increment(quantityDelta)
         });
