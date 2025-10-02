@@ -1174,10 +1174,9 @@ export function closeMemberModal() {
     setTimeout(() => { modal.style.display = 'none'; }, 300);
 }
 
-
 /**
- * [NEW] Handles switching between the tabs in the consignment detail view.
- * @param {string} tabId - The ID of the tab that was clicked (e.g., 'tab-items-on-hand').
+ * [SIMPLIFIED] Handles switching between the tabs in the consignment detail view.
+ * @param {string} tabId - The ID of the tab that was clicked.
  */
 export function switchConsignmentTab(tabId) {
     // --- 1. Handle Tab Visuals ---
@@ -1187,16 +1186,11 @@ export function switchConsignmentTab(tabId) {
 
     // --- 2. Handle Panel Visibility ---
     document.querySelectorAll('.consignment-tab-panel').forEach(panel => {
-        // Determine if this panel should be the active one
         const shouldBeActive = panel.id.includes(tabId.replace('tab-', ''));
         panel.classList.toggle('active', shouldBeActive);
     });
 
-    // --- 3. Handle Button Visibility ---
-    const isPaymentsTab = (tabId === 'tab-consignment-payments');
-    document.getElementById('report-activity-btn').classList.toggle('hidden', isPaymentsTab);
-    document.getElementById('make-payment-btn').classList.toggle('hidden', !isPaymentsTab);
-    document.getElementById('verify-payment-btn').classList.toggle('hidden', !isPaymentsTab);
+    
 }
 
 
