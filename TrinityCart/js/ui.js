@@ -2550,30 +2550,16 @@ export function renderConsignmentDetail(orderData) {
         // 1. Listener for the "Items on Hand" grid
         const itemsUnsub = orderRef.collection('items').orderBy('productName').onSnapshot(snapshot => {
             console.log("[Firestore] Received update for consignment items.");
+            const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
             if (consignmentItemsGridApi) {
-                // --- THIS IS THE DEFINITIVE FIX ---
-                
-                // We will process the changes from Firestore (added, modified, removed)
-                // and apply them as a transaction to the grid.
-                const updates = [];
-                snapshot.docChanges().forEach(change => {
-                    if (change.type === 'added' || change.type === 'modified') {
-                        updates.push({ id: change.doc.id, ...change.doc.data() });
-                    }
-                    // We can handle 'removed' later if needed.
-                });
-
-                if (updates.length > 0) {
-                    // 1. Apply only the changes to the grid. This is more efficient.
-                    consignmentItemsGridApi.applyTransaction({ update: updates });
-
-                    // 2. Force the grid to re-run all valueGetters and cellRenderers for all visible rows.
-                    // This is the crucial step that makes the "On Hand" column recalculate.
-                    consignmentItemsGridApi.refreshCells({ force: true });
-
-                    console.log(`Applied ${updates.length} updates and refreshed cells.`);
-                }
+                // --- THIS IS THE FIX ---
+                // Use setGridOption('rowData', ...) to simply replace all data in the grid.
+                // This is simpler and avoids the "row not found" error when the grid
+                // is first populated or transitions from another state.
+                // The grid will automatically re-render and run all valueGetters.
+                consignmentItemsGridApi.setGridOption('rowData', items);
+                // -----------------------
             }
         });
 
