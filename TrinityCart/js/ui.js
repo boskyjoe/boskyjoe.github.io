@@ -1940,9 +1940,18 @@ export function getInvoiceDataFromGridById(rowId) {
 export function initializeModals() {
     document.addEventListener('click', (e) => {
         if (e.target.closest('.modal-close-trigger')) {
+            const modalToClose = e.target.closest('.modal-container');
+            if (!modalToClose) return;
+
             // This now correctly closes EITHER modal
             if (e.target.closest('#record-payment-modal')) {
                 closePaymentModal();
+            } else if (modalToClose.id === 'member-modal') {
+                closeMemberModal();
+            } else if (modalToClose.id === 'consignment-request-modal') {
+                closeConsignmentRequestModal();
+            } else if (modalToClose.id === 'report-activity-modal') {
+                closeReportActivityModal();
             }
             // Add similar logic for other modals if needed
         }
@@ -2659,7 +2668,7 @@ export function showReportActivityModal() {
     form.reset();
 
     document.getElementById('activity-event-container').classList.add('hidden');
-    
+
     // Store the current order ID in a hidden field for the form submission
     document.getElementById('activity-order-id').value = appState.selectedConsignmentId;
 
@@ -2676,8 +2685,9 @@ export function showReportActivityModal() {
             const option = document.createElement('option');
             // We need to store multiple pieces of data, so we'll use a JSON string
             option.value = JSON.stringify({ 
-                itemId: item.id, // The ID of the document in the 'items' sub-collection
-                productId: item.productId // The ID of the master product
+                itemId: item.id,
+                productId: item.productId,
+                sellingPrice: item.sellingPrice // <-- Add this
             });
             option.textContent = `${item.productName} (${onHand} on hand)`;
             productSelect.appendChild(option);
