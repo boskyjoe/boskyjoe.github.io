@@ -2451,11 +2451,21 @@ function showConsignmentDetailPanel(orderData) {
         fulfillmentView.classList.remove('hidden');
         activeOrderView.classList.add('hidden');
         
+        // Load items for fulfillment
+        const itemsRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderData.id).collection('items');
+
         /// Load items ONCE for fulfillment (no listener needed here)
-        orderRef.collection('items').get().then(snapshot => {
+        itemsRef.get().then(snapshot => {
+            // 1. Explicitly map the document ID to an 'id' property on each item object.
             const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            // 2. Pre-fill "Qty to Fulfill" with the requested amount.
             const itemsToFulfill = items.map(item => ({ ...item, quantityCheckedOut: item.quantityRequested }));
-            fulfillmentItemsGridApi.setGridOption('rowData', itemsToFulfill);
+            
+            // 3. Load this complete data into the fulfillment grid.
+            if (fulfillmentItemsGridApi) {
+                fulfillmentItemsGridApi.setGridOption('rowData', itemsToFulfill);
+            }
         });
 
     } else if (orderData.status === 'Active') {
