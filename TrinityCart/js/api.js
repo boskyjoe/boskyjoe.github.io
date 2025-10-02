@@ -1392,43 +1392,50 @@ export async function fulfillConsignmentAndUpdateInventory(orderId, finalItems, 
 export async function logActivityAndUpdateConsignment(orderId, itemId, activityData, sellingPrice, user) { 
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
+    
+    const { orderId, itemId, productId, activityType, quantityDelta, sellingPrice } = activityData;
+
     const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId);
     const itemRef = orderRef.collection('items').doc(itemId);
     const activityRef = orderRef.collection('activityLog').doc();
 
     return db.runTransaction(async (transaction) => {
-        // 1. Create the immutable activity log entry.
-        const totalSaleValue = activityData.activityType === 'Sale' ? sellingPrice * Number(activityData.quantity) : 0;
+
+        // 1. WRITE: Create the immutable activity log entry with the delta.
+        const totalSaleValueDelta = activityType === 'Sale' ? sellingPrice * quantityDelta : 0;
         transaction.set(activityRef, {
-            ...activityData,
-            totalSaleValue: totalSaleValue,
-            paymentStatus: activityData.activityType === 'Sale' ? 'Unpaid' : null,
+            activityType: activityType,
+            quantity: quantityDelta, // Log the delta itself for a perfect audit trail
+            totalSaleValue: totalSaleValueDelta,
+            paymentStatus: activityType === 'Sale' ? 'Unpaid' : null,
             recordedBy: user.email,
-            activityDate: now
+            activityDate: now,
+            productId: productId, // Store for reference
         });
 
-        // 2. Update the running totals on the consignment item.
-        const fieldToUpdate = `quantity${activityData.activityType}`; // e.g., 'quantitySale'
+        // 2. WRITE: Atomically update the running totals on the consignment item.
+        const fieldToUpdate = `quantity${activityType}`; // e.g., "quantitySale"
         transaction.update(itemRef, {
-            [fieldToUpdate]: firebase.firestore.FieldValue.increment(Number(activityData.quantity))
+            [fieldToUpdate]: firebase.firestore.FieldValue.increment(quantityDelta)
         });
 
 
-        // 3. If it's a SALE, update the main order's financial totals.
-        if (activityData.activityType === 'Sale') {
+        // 3. WRITE: If it's a SALE, atomically update the main order's financial totals.
+        if (activityType === 'Sale') {
             transaction.update(orderRef, {
-                totalValueSold: firebase.firestore.FieldValue.increment(totalSaleValue),
-                balanceDue: firebase.firestore.FieldValue.increment(totalSaleValue)
+                totalValueSold: firebase.firestore.FieldValue.increment(totalSaleValueDelta),
+                balanceDue: firebase.firestore.FieldValue.increment(totalSaleValueDelta)
             });
         }
 
-        // 4. If it's a RETURN, put the items back into the main store inventory.
-        if (activityData.activityType === 'Return') {
-            const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(activityData.productId);
+        // 4. WRITE: If it's a RETURN, atomically update the main store inventory.
+        if (activityType === 'Return' && quantityDelta > 0) { // Only increment stock on positive returns
+            const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(productId);
             transaction.update(productRef, {
-                inventoryCount: firebase.firestore.FieldValue.increment(Number(activityData.quantity))
+                inventoryCount: firebase.firestore.FieldValue.increment(quantityDelta)
             });
         }
+
     });
 }
 
