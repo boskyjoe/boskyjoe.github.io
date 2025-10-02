@@ -2416,35 +2416,40 @@ const consignmentItemsGridOptions = {
     
     // --- THIS IS THE NEW, CRITICAL HANDLER ---
     onCellValueChanged: (params) => {
-        // This event fires whenever a user edits a cell.
         const colId = params.column.getColId();
-        const oldValue = params.oldValue;
-        const newValue = params.newValue;
-
-        // Calculate the difference (the "delta")
+        const oldValue = Number(params.oldValue) || 0;
+        const newValue = Number(params.newValue) || 0;
         const delta = newValue - oldValue;
 
-        // If nothing actually changed, do nothing.
-        if (delta === 0) {
-            return;
-        }
+        if (delta === 0) return;
 
-        // Determine the activity type based on which column was edited
         let activityType = '';
         if (colId === 'quantitySold') activityType = 'Sale';
         else if (colId === 'quantityReturned') activityType = 'Return';
         else if (colId === 'quantityDamaged') activityType = 'Damage';
-        else return; // Exit if a non-quantity column was somehow edited
+        else return;
 
-        // Dispatch a custom event with all the data our controller needs
+        
+        // If the delta is negative, it's a correction.
+        // We will log it as a special activity type.
+        const isCorrection = delta < 0;
+        const finalActivityType = isCorrection ? 'Correction' : activityType;
+
+        // Dispatch the event with all the necessary data.
         document.dispatchEvent(new CustomEvent('logConsignmentActivity', {
             detail: {
                 orderId: appState.selectedConsignmentId,
                 itemId: params.data.id,
                 productId: params.data.productId,
-                activityType: activityType,
-                quantityDelta: delta,
-                sellingPrice: params.data.sellingPrice
+                activityType: finalActivityType,
+                quantityDelta: delta, // We still send the delta (-1, +2, etc.)
+                sellingPrice: params.data.sellingPrice,
+                // [NEW] Add extra context for corrections
+                correctionDetails: isCorrection ? {
+                    correctedField: colId, // e.g., "quantitySold"
+                    from: oldValue,
+                    to: newValue
+                } : null
             }
         }));
     }
@@ -2545,9 +2550,30 @@ export function renderConsignmentDetail(orderData) {
         // 1. Listener for the "Items on Hand" grid
         const itemsUnsub = orderRef.collection('items').orderBy('productName').onSnapshot(snapshot => {
             console.log("[Firestore] Received update for consignment items.");
-            const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
             if (consignmentItemsGridApi) {
-                consignmentItemsGridApi.setGridOption('rowData', items);
+                // --- THIS IS THE DEFINITIVE FIX ---
+                
+                // We will process the changes from Firestore (added, modified, removed)
+                // and apply them as a transaction to the grid.
+                const updates = [];
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === 'added' || change.type === 'modified') {
+                        updates.push({ id: change.doc.id, ...change.doc.data() });
+                    }
+                    // We can handle 'removed' later if needed.
+                });
+
+                if (updates.length > 0) {
+                    // 1. Apply only the changes to the grid. This is more efficient.
+                    consignmentItemsGridApi.applyTransaction({ update: updates });
+
+                    // 2. Force the grid to re-run all valueGetters and cellRenderers for all visible rows.
+                    // This is the crucial step that makes the "On Hand" column recalculate.
+                    consignmentItemsGridApi.refreshCells({ force: true });
+
+                    console.log(`Applied ${updates.length} updates and refreshed cells.`);
+                }
             }
         });
 
