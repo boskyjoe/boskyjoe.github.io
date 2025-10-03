@@ -1392,7 +1392,7 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
     const now = firebase.firestore.FieldValue.serverTimestamp();
     
     // Destructure all needed variables from the single activityData object.
-    const { orderId, itemId, productId, activityType, quantityDelta, sellingPrice, correctionDetails } = activityData;
+    const { orderId, itemId, productId, productName, activityType, quantityDelta, sellingPrice, correctionDetails } = activityData;
 
     const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId);
     const itemRef = orderRef.collection('items').doc(itemId);
@@ -1454,6 +1454,7 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
             recordedBy: user.email,
             activityDate: now,
             productId: productId,
+            productName: productName,
         });
 
         // 3. Update the Consignment Item.
