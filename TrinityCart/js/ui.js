@@ -2416,6 +2416,10 @@ const consignmentItemsGridOptions = {
     
     // --- THIS IS THE NEW, CRITICAL HANDLER ---
     onCellValueChanged: (params) => {
+
+        if (params.source !== 'user') {
+            return;
+        }
         const colId = params.column.getColId();
         const oldValue = Number(params.oldValue) || 0;
         const newValue = Number(params.newValue) || 0;
