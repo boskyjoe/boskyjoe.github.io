@@ -2493,13 +2493,15 @@ export function initializeConsignmentGrids() {
     const fulfillGridDiv = document.getElementById('fulfillment-items-grid');
     const itemsGridDiv = document.getElementById('consignment-items-grid');
     const requestGridDiv = document.getElementById('request-products-grid');
+    const activityGridDiv = document.getElementById('consignment-activity-grid');
     // ... get other grid divs ...
 
-    if (orderGridDiv && fulfillGridDiv && itemsGridDiv && requestGridDiv) {
+    if (orderGridDiv && fulfillGridDiv && itemsGridDiv && requestGridDiv && activityGridDiv) {
         createGrid(orderGridDiv, consignmentOrdersGridOptions);
         createGrid(fulfillGridDiv, fulfillmentItemsGridOptions);
         createGrid(itemsGridDiv, consignmentItemsGridOptions);
         createGrid(requestGridDiv, requestProductsGridOptions); 
+        createGrid(activityGridDiv, consignmentActivityGridOptions);
         // ... create other grids ...
         isConsignmentGridsInitialized = true;
     }
@@ -2924,6 +2926,64 @@ export function closeReportActivityModal() {
     modal.classList.remove('visible');
     setTimeout(() => { modal.style.display = 'none'; }, 300);
 }
+
+
+
+// 2. Add the new grid options object
+const consignmentActivityGridOptions = {
+    getRowId: params => params.data.id,
+    columnDefs: [
+        { 
+            field: "activityDate", 
+            headerName: "Date", 
+            width: 160, 
+            valueFormatter: p => p.value ? p.value.toDate().toLocaleString() : '' 
+        },
+        { 
+            field: "activityType", 
+            headerName: "Activity", 
+            width: 120,
+            cellRenderer: p => {
+                const type = p.value;
+                if (type === 'Sale') return `<span class="font-semibold text-green-700">${type}</span>`;
+                if (type === 'Return') return `<span class="font-semibold text-blue-700">${type}</span>`;
+                if (type === 'Damage') return `<span class="font-semibold text-orange-700">${type}</span>`;
+                if (type === 'Correction') return `<span class="font-semibold text-gray-700">${type}</span>`;
+                return type;
+            }
+        },
+        { 
+            field: "productName", 
+            headerName: "Product", 
+            flex: 1,
+            // We need to get the product name from the log entry
+            valueGetter: params => {
+                if (!params.data) return '';
+                const itemNode = consignmentItemsGridApi?.getRowNode(params.data.itemId);
+                return itemNode ? itemNode.data.productName : 'Unknown Product';
+            }
+        },
+        { 
+            field: "quantity", 
+            headerName: "Qty Change", 
+            width: 120,
+            cellStyle: params => {
+                return params.value > 0 ? { color: 'green' } : { color: 'red' };
+            },
+            valueFormatter: p => {
+                return p.value > 0 ? `+${p.value}` : p.value;
+            }
+        },
+        { field: "notes", headerName: "Notes", flex: 2 },
+        { field: "recordedBy", headerName: "Recorded By", flex: 1 }
+    ],
+    defaultColDef: { resizable: true, sortable: true },
+    onGridReady: params => { consignmentActivityGridApi = params.api; }
+};
+
+
+
+
 
 
 
