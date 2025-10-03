@@ -2469,6 +2469,7 @@ const consignmentItemsGridOptions = {
                 orderId: appState.selectedConsignmentId,
                 itemId: params.data.id,
                 productId: params.data.productId,
+                productName: params.data.productName,
                 activityType: finalActivityType,
                 quantityDelta: delta,
                 sellingPrice: params.data.sellingPrice,
@@ -2936,7 +2937,7 @@ const consignmentActivityGridOptions = {
         { 
             field: "activityDate", 
             headerName: "Date", 
-            width: 160, 
+            width: 200, 
             valueFormatter: p => p.value ? p.value.toDate().toLocaleString() : '' 
         },
         { 
@@ -2955,13 +2956,7 @@ const consignmentActivityGridOptions = {
         { 
             field: "productName", 
             headerName: "Product", 
-            flex: 1,
-            // We need to get the product name from the log entry
-            valueGetter: params => {
-                if (!params.data) return '';
-                const itemNode = consignmentItemsGridApi?.getRowNode(params.data.itemId);
-                return itemNode ? itemNode.data.productName : 'Unknown Product';
-            }
+            flex: 1
         },
         { 
             field: "quantity", 
