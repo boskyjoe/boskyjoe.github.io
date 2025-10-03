@@ -2417,7 +2417,10 @@ const consignmentItemsGridOptions = {
     // --- THIS IS THE NEW, CRITICAL HANDLER ---
     onCellValueChanged: (params) => {
 
-        
+        if (params.source !== 'user') {
+            return;
+        }
+
         const colId = params.column.getColId();
         const oldValue = Number(params.oldValue) || 0;
         const newValue = Number(params.newValue) || 0;
@@ -2428,22 +2431,21 @@ const consignmentItemsGridOptions = {
         // Get the original, unchanged data from the row node.
         const originalData = params.node.data;
 
-        // Calculate the new total by starting with the old total and adding the delta.
-        const oldSold = originalData.quantitySold || 0;
-        const oldReturned = originalData.quantityReturned || 0;
-        const oldDamaged = originalData.quantityDamaged || 0;
-        
-        const oldTotalAccountedFor = oldSold + oldReturned + oldDamaged;
-        
-        // The new total is simply the old total plus the change the user just made.
-        const newTotalAccountedFor = oldTotalAccountedFor + delta;
+        // Calculate the total of the *other* fields, excluding the one being changed.
+        let otherFieldsTotal = 0;
+        if (colId !== 'quantitySold') otherFieldsTotal += (originalData.quantitySold || 0);
+        if (colId !== 'quantityReturned') otherFieldsTotal += (originalData.quantityReturned || 0);
+        if (colId !== 'quantityDamaged') otherFieldsTotal += (originalData.quantityDamaged || 0);
+
+        // The new total is the sum of the other fields plus the new value the user just typed.
+        const newTotalAccountedFor = otherFieldsTotal + newValue;
 
         if (newTotalAccountedFor > originalData.quantityCheckedOut) {
             alert(`Error: Invalid quantity. The total accounted for (${newTotalAccountedFor}) cannot exceed the Checked Out quantity of ${originalData.quantityCheckedOut}.`);
             
-            // Revert the change in the UI.
+            // Revert the change. This will fire another event, but our guard clause will stop it.
             params.node.setDataValue(colId, oldValue);
-            return; // Stop processing.
+            return;
         }
 
 
