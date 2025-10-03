@@ -2418,12 +2418,10 @@ const consignmentItemsGridOptions = {
         const oldValue = Number(params.oldValue) || 0;
         const newValue = Number(params.newValue) || 0;
 
-        // Only validate if the value actually changed
         if (oldValue === newValue) {
-            return;
+            return; // No change, nothing to validate.
         }
 
-        // Get the current state of the other columns from the node data
         const data = params.node.data;
         let otherFieldsTotal = 0;
         if (colId !== 'quantitySold') otherFieldsTotal += (data.quantitySold || 0);
@@ -2433,19 +2431,23 @@ const consignmentItemsGridOptions = {
         const newTotalAccountedFor = otherFieldsTotal + newValue;
 
         if (newTotalAccountedFor > data.quantityCheckedOut) {
+            // 1. Inform the user of the error.
             alert(`Error: Invalid quantity. The total accounted for (${newTotalAccountedFor}) cannot exceed the Checked Out quantity of ${data.quantityCheckedOut}.`);
             
-            // This is how you stop the edit.
-            // We do NOT revert the value here. The grid does it automatically
-            // because onCellValueChanged will not be called.
-            params.api.stopEditing(true); // true = cancel the edit
-        } else {
-            // If validation passes, allow the edit to be saved.
-            params.api.stopEditing(false); // false = save the edit
+            // 2. Manually revert the data in the grid's model. This is the crucial step.
+            params.node.setDataValue(colId, oldValue);
+            
+            // 3. Stop the editing process.
+            params.api.stopEditing(true); // Cancel any remaining edit state.
+            
+            return; // Stop further processing.
         }
     },
-    // --- THIS IS THE NEW, CRITICAL HANDLER ---
+    // --- This onCellValueChanged handler is now only called for VALID changes ---
     onCellValueChanged: (params) => {
+        // This guard prevents the revert action from causing a dispatch.
+        if (params.oldValue === params.newValue) return;
+
         const colId = params.column.getColId();
         const oldValue = Number(params.oldValue) || 0;
         const newValue = Number(params.newValue) || 0;
@@ -2453,20 +2455,15 @@ const consignmentItemsGridOptions = {
 
         if (delta === 0) return;
 
-        // Determine activity type
         let activityType = '';
         if (colId === 'quantitySold') activityType = 'Sale';
         else if (colId === 'quantityReturned') activityType = 'Return';
         else if (colId === 'quantityDamaged') activityType = 'Damage';
         else return;
 
-        // If the delta is negative, it's a correction.
-        // We will log it as a special activity type.
         const isCorrection = delta < 0;
         const finalActivityType = isCorrection ? 'Correction' : activityType;
 
-        // Dispatch the event with the correct finalActivityType.
-        // Dispatch the event. This is its only job.
         document.dispatchEvent(new CustomEvent('logConsignmentActivity', {
             detail: {
                 orderId: appState.selectedConsignmentId,
