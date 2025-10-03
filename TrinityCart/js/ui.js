@@ -2413,14 +2413,39 @@ const consignmentItemsGridOptions = {
         }
     ],
     onGridReady: params => { consignmentItemsGridApi = params.api; },
-    
-    // --- THIS IS THE NEW, CRITICAL HANDLER ---
-    onCellValueChanged: (params) => {
+    onCellEditingStopped: (params) => {
+        const colId = params.column.getColId();
+        const oldValue = Number(params.oldValue) || 0;
+        const newValue = Number(params.newValue) || 0;
 
-        if (params.source !== 'user') {
+        // Only validate if the value actually changed
+        if (oldValue === newValue) {
             return;
         }
 
+        // Get the current state of the other columns from the node data
+        const data = params.node.data;
+        let otherFieldsTotal = 0;
+        if (colId !== 'quantitySold') otherFieldsTotal += (data.quantitySold || 0);
+        if (colId !== 'quantityReturned') otherFieldsTotal += (data.quantityReturned || 0);
+        if (colId !== 'quantityDamaged') otherFieldsTotal += (data.quantityDamaged || 0);
+
+        const newTotalAccountedFor = otherFieldsTotal + newValue;
+
+        if (newTotalAccountedFor > data.quantityCheckedOut) {
+            alert(`Error: Invalid quantity. The total accounted for (${newTotalAccountedFor}) cannot exceed the Checked Out quantity of ${data.quantityCheckedOut}.`);
+            
+            // This is how you stop the edit.
+            // We do NOT revert the value here. The grid does it automatically
+            // because onCellValueChanged will not be called.
+            params.api.stopEditing(true); // true = cancel the edit
+        } else {
+            // If validation passes, allow the edit to be saved.
+            params.api.stopEditing(false); // false = save the edit
+        }
+    },
+    // --- THIS IS THE NEW, CRITICAL HANDLER ---
+    onCellValueChanged: (params) => {
         const colId = params.column.getColId();
         const oldValue = Number(params.oldValue) || 0;
         const newValue = Number(params.newValue) || 0;
@@ -2428,48 +2453,28 @@ const consignmentItemsGridOptions = {
 
         if (delta === 0) return;
 
-        // Get the original, unchanged data from the row node.
-        const originalData = params.node.data;
-
-        // Calculate the total of the *other* fields, excluding the one being changed.
-        let otherFieldsTotal = 0;
-        if (colId !== 'quantitySold') otherFieldsTotal += (originalData.quantitySold || 0);
-        if (colId !== 'quantityReturned') otherFieldsTotal += (originalData.quantityReturned || 0);
-        if (colId !== 'quantityDamaged') otherFieldsTotal += (originalData.quantityDamaged || 0);
-
-        // The new total is the sum of the other fields plus the new value the user just typed.
-        const newTotalAccountedFor = otherFieldsTotal + newValue;
-
-        if (newTotalAccountedFor > originalData.quantityCheckedOut) {
-            alert(`Error: Invalid quantity. The total accounted for (${newTotalAccountedFor}) cannot exceed the Checked Out quantity of ${originalData.quantityCheckedOut}.`);
-            
-            // Revert the change. This will fire another event, but our guard clause will stop it.
-            params.node.setDataValue(colId, oldValue);
-            return;
-        }
-
-
+        // Determine activity type
         let activityType = '';
         if (colId === 'quantitySold') activityType = 'Sale';
         else if (colId === 'quantityReturned') activityType = 'Return';
         else if (colId === 'quantityDamaged') activityType = 'Damage';
         else return;
 
-        
         // If the delta is negative, it's a correction.
         // We will log it as a special activity type.
         const isCorrection = delta < 0;
         const finalActivityType = isCorrection ? 'Correction' : activityType;
 
         // Dispatch the event with the correct finalActivityType.
+        // Dispatch the event. This is its only job.
         document.dispatchEvent(new CustomEvent('logConsignmentActivity', {
             detail: {
                 orderId: appState.selectedConsignmentId,
-                itemId: originalData.id,
-                productId: originalData.productId,
-                activityType: finalActivityType, // Use the correct final type
+                itemId: params.data.id,
+                productId: params.data.productId,
+                activityType: finalActivityType,
                 quantityDelta: delta,
-                sellingPrice: originalData.sellingPrice,
+                sellingPrice: params.data.sellingPrice,
                 correctionDetails: isCorrection ? {
                     correctedField: colId,
                     from: oldValue,
@@ -2478,6 +2483,7 @@ const consignmentItemsGridOptions = {
             }
         }));
     }
+
 };
 
 // ... We will define the options for activity and payment grids later ...
