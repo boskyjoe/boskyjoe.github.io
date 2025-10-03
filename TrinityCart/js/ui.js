@@ -2334,11 +2334,11 @@ const consignmentOrdersGridOptions = {
     paginationPageSize: 100, // You can adjust this default value if you like
     paginationPageSizeSelector: [25, 50, 100], 
     columnDefs: [
-        { field: "consignmentId", headerName: "Order ID", width: 180 },
-        { field: "requestDate", headerName: "Request Date", width: 140, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
-        { field: "teamName", headerName: "Team", flex: 1 },
-        { field: "requestingMemberName", headerName: "Requested By", flex: 1 },
-        { field: "status", headerName: "Status", width: 120, cellRenderer: p => {
+        { field: "consignmentId", headerName: "Order ID", width: 180,filter: 'agTextColumnFilter' },
+        { field: "requestDate", headerName: "Request Date", filter: 'agDateColumnFilter', width: 140, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
+        { field: "teamName", headerName: "Team", flex: 1 , filter: 'agTextColumnFilter'},
+        { field: "requestingMemberName", headerName: "Requested By", flex: 1, filter: 'agTextColumnFilter' },
+        { field: "status", headerName: "Status", filter: 'agTextColumnFilter', width: 120, cellRenderer: p => {
             const status = p.value;
             if (status === 'Active') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
             if (status === 'Pending') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">${status}</span>`;
