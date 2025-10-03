@@ -2417,9 +2417,7 @@ const consignmentItemsGridOptions = {
     // --- THIS IS THE NEW, CRITICAL HANDLER ---
     onCellValueChanged: (params) => {
 
-        if (params.source !== 'user') {
-            return;
-        }
+        
         const colId = params.column.getColId();
         const oldValue = Number(params.oldValue) || 0;
         const newValue = Number(params.newValue) || 0;
@@ -2570,14 +2568,38 @@ export function renderConsignmentDetail(orderData) {
         // Default to the first tab
         switchConsignmentTab('tab-items-on-hand');
 
+        let isFirstItemsLoad = true;
+
         // 1. Set up the real-time listener for the "Items on Hand" grid
         const itemsUnsub = orderRef.collection('items').orderBy('productName').onSnapshot(snapshot => {
             console.log("[Firestore] Received update for consignment items.");
             const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             if (consignmentItemsGridApi) {
-                // Use setGridOption to robustly replace the data. This forces a full
-                // re-render, which correctly recalculates the "On Hand" valueGetter.
-                consignmentItemsGridApi.setGridOption('rowData', items);
+                if (isFirstItemsLoad) {
+                    // --- ON FIRST LOAD ---
+                    // Use setGridOption to safely populate the initially empty grid.
+                    const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    consignmentItemsGridApi.setGridOption('rowData', items);
+                    isFirstItemsLoad = false; // Set the flag so we don't do this again.
+                    console.log("Performed initial grid load with setGridOption.");
+                } else {
+                    // --- ON ALL SUBSEQUENT UPDATES ---
+                    // Process only the documents that have changed.
+                    const updates = [];
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === 'modified') {
+                            updates.push({ id: change.doc.id, ...change.doc.data() });
+                        }
+                    });
+
+                    if (updates.length > 0) {
+                        // Use applyTransaction for efficient, in-place updates.
+                        consignmentItemsGridApi.applyTransaction({ update: updates });
+                        // Force a refresh to recalculate the "On Hand" column.
+                        consignmentItemsGridApi.refreshCells({ force: true });
+                        console.log(`Applied ${updates.length} updates and refreshed cells.`);
+                    }
+                }
             }
         });
 
