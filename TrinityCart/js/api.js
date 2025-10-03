@@ -1399,31 +1399,36 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
     const activityRef = orderRef.collection('activityLog').doc();
 
     return db.runTransaction(async (transaction) => {
-
+        // --- READ PHASE: Get the current, authoritative state of the item. ---
         const itemDoc = await transaction.get(itemRef);
         if (!itemDoc.exists) {
             throw new Error("The item you are trying to update does not exist.");
         }
         const currentItemData = itemDoc.data();
 
-        // --- [NEW & BETTER] VALIDATION PHASE ---
-        const newSold = (currentItemData.quantitySold || 0) + (activityType === 'Sale' || correctionDetails?.correctedField === 'quantitySold' ? quantityDelta : 0);
-        const newReturned = (currentItemData.quantityReturned || 0) + (activityType === 'Return' || correctionDetails?.correctedField === 'quantityReturned' ? quantityDelta : 0);
-        const newDamaged = (currentItemData.quantityDamaged || 0) + (activityType === 'Damage' || correctionDetails?.correctedField === 'quantityDamaged' ? quantityDelta : 0);
+
+        // --- [NEW & BETTER] AUTHORITATIVE VALIDATION PHASE ---
+        const fieldBeingChanged = correctionDetails ? correctionDetails.correctedField : `quantity${activityType}`;
+
+        const currentSold = currentItemData.quantitySold || 0;
+        const currentReturned = currentItemData.quantityReturned || 0;
+        const currentDamaged = currentItemData.quantityDamaged || 0;
+
+        // Calculate what the new totals would be after this change.
+        const newSold = fieldBeingChanged === 'quantitySold' ? currentSold + quantityDelta : currentSold;
+        const newReturned = fieldBeingChanged === 'quantityReturned' ? currentReturned + quantityDelta : currentReturned;
+        const newDamaged = fieldBeingChanged === 'quantityDamaged' ? currentDamaged + quantityDelta : currentDamaged;
 
         const totalAccountedFor = newSold + newReturned + newDamaged;
 
         if (totalAccountedFor > currentItemData.quantityCheckedOut) {
-            // If the new total exceeds what was checked out, abort the transaction.
+            // If the new total exceeds what was checked out, abort the entire transaction.
             throw new Error(`Invalid quantity. The total accounted for (${totalAccountedFor}) cannot exceed the checked out quantity of ${currentItemData.quantityCheckedOut}.`);
         }
         
 
         // 1. WRITE: Create the immutable activity log entry.
-        const totalSaleValueDelta = (activityType === 'Sale' || (activityType === 'Correction' && correctionDetails?.correctedField === 'quantitySold'))
-            ? sellingPrice * quantityDelta 
-            : 0;
-
+        const totalSaleValueDelta = (fieldBeingChanged === 'quantitySold') ? sellingPrice * quantityDelta : 0;
         transaction.set(activityRef, {
             activityType: activityType,
             quantity: quantityDelta,
@@ -1435,7 +1440,6 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
             productId: productId,
         });
 
-        // --- THIS IS THE FIX ---
         // 2. WRITE: Determine the correct field to update and then atomically increment it.
         let fieldToUpdate = '';
         if (activityType === 'Correction') {
