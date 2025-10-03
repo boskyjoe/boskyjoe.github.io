@@ -1428,7 +1428,10 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
         
 
         // 1. WRITE: Create the immutable activity log entry.
-        const totalSaleValueDelta = (fieldBeingChanged === 'quantitySold') ? sellingPrice * quantityDelta : 0;
+        const totalSaleValueDelta = (activityType === 'Sale' || (activityType === 'Correction' && correctionDetails?.correctedField === 'quantitySold'))
+            ? sellingPrice * quantityDelta 
+            : 0;
+
         transaction.set(activityRef, {
             activityType: activityType,
             quantity: quantityDelta,
@@ -1443,39 +1446,38 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
         // 2. WRITE: Determine the correct field to update and then atomically increment it.
         let fieldToUpdate = '';
         if (activityType === 'Correction') {
-            // For corrections, get the field name from the details.
+            // For corrections, get the field name directly from the details object.
             fieldToUpdate = correctionDetails.correctedField;
-        } else if (activityType === 'Sale') {
-            fieldToUpdate = 'quantitySold';
-        } else if (activityType === 'Return') {
-            fieldToUpdate = 'quantityReturned';
-        } else if (activityType === 'Damage') {
-            fieldToUpdate = 'quantityDamaged';
+        } else {
+            // For new activities, determine it from the activityType.
+            if (activityType === 'Sale') fieldToUpdate = 'quantitySold';
+            else if (activityType === 'Return') fieldToUpdate = 'quantityReturned';
+            else if (activityType === 'Damage') fieldToUpdate = 'quantityDamaged';
         }
 
-        // Only perform the update if we have a valid field name.
-        if (fieldToUpdate) {
-            transaction.update(itemRef, {
-                [fieldToUpdate]: firebase.firestore.FieldValue.increment(quantityDelta)
-            });
-        } else {
-            throw new Error(`Unknown activity type or invalid correction: ${activityType}`);
+        if (!fieldToUpdate) {
+            throw new Error(`Could not determine field to update for activity type: ${activityType}`);
         }
+
+        // Atomically update the determined field.
+        transaction.update(itemRef, {
+            [fieldToUpdate]: firebase.firestore.FieldValue.increment(quantityDelta)
+        });
+
         // -----------------------
 
-        // 3. WRITE: If it's a SALE or a correction to a SALE, update financial totals.
-        if (activityType === 'Sale' || (activityType === 'Correction' && correctionDetails?.correctedField === 'quantitySold')) {
+        // 3. WRITE: Update financial totals.
+        if (fieldToUpdate === 'quantitySold') {
             transaction.update(orderRef, {
                 totalValueSold: firebase.firestore.FieldValue.increment(totalSaleValueDelta),
                 balanceDue: firebase.firestore.FieldValue.increment(totalSaleValueDelta)
             });
         }
 
-        // 4. WRITE: If it's a RETURN (or a correction to a RETURN), update main inventory.
-        if (activityType === 'Return' || (activityType === 'Correction' && correctionDetails?.correctedField === 'quantityReturned')) {
-            const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(productId);
+        // 4. WRITE: Update main inventory.
+        if (fieldToUpdate === 'quantityReturned') {
             transaction.update(productRef, {
-                inventoryCount: firebase.firestore.FieldValue.increment(quantityDelta) // Delta is positive for returns, negative for return-corrections
+                inventoryCount: firebase.firestore.FieldValue.increment(quantityDelta)
             });
         }
     });
