@@ -2427,22 +2427,25 @@ const consignmentItemsGridOptions = {
 
         if (delta === 0) return;
 
+        // Get the original, unchanged data from the row node.
+        const originalData = params.node.data;
 
-        const data = params.node.data;
-        // Re-calculate the totals using the live data.
-        const newSold = colId === 'quantitySold' ? newValue : data.quantitySold;
-        const newReturned = colId === 'quantityReturned' ? newValue : data.quantityReturned;
-        const newDamaged = colId === 'quantityDamaged' ? newValue : data.quantityDamaged;
+        // Calculate the new total by starting with the old total and adding the delta.
+        const oldSold = originalData.quantitySold || 0;
+        const oldReturned = originalData.quantityReturned || 0;
+        const oldDamaged = originalData.quantityDamaged || 0;
+        
+        const oldTotalAccountedFor = oldSold + oldReturned + oldDamaged;
+        
+        // The new total is simply the old total plus the change the user just made.
+        const newTotalAccountedFor = oldTotalAccountedFor + delta;
 
-
-        const totalAccountedFor = newSold + newReturned + newDamaged;
-
-        if (totalAccountedFor > data.quantityCheckedOut) {
-            alert(`Error: Invalid quantity. The total of Sold (${newSold}), Returned (${newReturned}), and Damaged (${newDamaged}) cannot exceed the Checked Out quantity of ${data.quantityCheckedOut}.`);
+        if (newTotalAccountedFor > originalData.quantityCheckedOut) {
+            alert(`Error: Invalid quantity. The total accounted for (${newTotalAccountedFor}) cannot exceed the Checked Out quantity of ${originalData.quantityCheckedOut}.`);
             
-            // Revert the change in the UI to prevent confusion.
+            // Revert the change in the UI.
             params.node.setDataValue(colId, oldValue);
-            return; // Stop processing and do not dispatch the event.
+            return; // Stop processing.
         }
 
 
@@ -2458,16 +2461,16 @@ const consignmentItemsGridOptions = {
         const isCorrection = delta < 0;
         const finalActivityType = isCorrection ? 'Correction' : activityType;
 
-        // Dispatch the event with all the necessary data.
+        // Dispatch the event with the correct finalActivityType.
         document.dispatchEvent(new CustomEvent('logConsignmentActivity', {
             detail: {
                 orderId: appState.selectedConsignmentId,
-                itemId: data.id,
-                productId: data.productId,
-                activityType: activityType,
+                itemId: originalData.id,
+                productId: originalData.productId,
+                activityType: finalActivityType, // Use the correct final type
                 quantityDelta: delta,
-                sellingPrice: data.sellingPrice,
-                correctionDetails: delta < 0 ? {
+                sellingPrice: originalData.sellingPrice,
+                correctionDetails: isCorrection ? {
                     correctedField: colId,
                     from: oldValue,
                     to: newValue
