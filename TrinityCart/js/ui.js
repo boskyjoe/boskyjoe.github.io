@@ -2330,6 +2330,9 @@ let unsubscribeConsignmentDetailsListeners = []; // Array to hold multiple detai
 // MASTER GRID: All Consignment Orders
 const consignmentOrdersGridOptions = {
     getRowId: params => params.data.id,
+    pagination: true,
+    paginationPageSize: 100, // You can adjust this default value if you like
+    paginationPageSizeSelector: [25, 50, 100], 
     columnDefs: [
         { field: "consignmentId", headerName: "Order ID", width: 180 },
         { field: "requestDate", headerName: "Request Date", width: 140, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
