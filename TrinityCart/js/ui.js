@@ -2424,10 +2424,12 @@ const consignmentItemsGridOptions = {
         if (delta === 0) return;
 
 
-        const data = params.data;
+        const data = params.node.data;
+        // Re-calculate the totals using the live data.
         const newSold = colId === 'quantitySold' ? newValue : data.quantitySold;
         const newReturned = colId === 'quantityReturned' ? newValue : data.quantityReturned;
         const newDamaged = colId === 'quantityDamaged' ? newValue : data.quantityDamaged;
+
 
         const totalAccountedFor = newSold + newReturned + newDamaged;
 
@@ -2456,14 +2458,13 @@ const consignmentItemsGridOptions = {
         document.dispatchEvent(new CustomEvent('logConsignmentActivity', {
             detail: {
                 orderId: appState.selectedConsignmentId,
-                itemId: params.data.id,
-                productId: params.data.productId,
-                activityType: finalActivityType,
-                quantityDelta: delta, // We still send the delta (-1, +2, etc.)
-                sellingPrice: params.data.sellingPrice,
-                // [NEW] Add extra context for corrections
-                correctionDetails: isCorrection ? {
-                    correctedField: colId, // e.g., "quantitySold"
+                itemId: data.id,
+                productId: data.productId,
+                activityType: activityType,
+                quantityDelta: delta,
+                sellingPrice: data.sellingPrice,
+                correctionDetails: delta < 0 ? {
+                    correctedField: colId,
                     from: oldValue,
                     to: newValue
                 } : null
