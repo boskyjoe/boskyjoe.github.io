@@ -1398,6 +1398,8 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
     const itemRef = orderRef.collection('items').doc(itemId);
     const activityRef = orderRef.collection('activityLog').doc();
 
+    const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(productId);
+
     return db.runTransaction(async (transaction) => {
         // --- READ PHASE: Get the current, authoritative state of the item. ---
         const itemDoc = await transaction.get(itemRef);
@@ -1427,11 +1429,22 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
         }
         
 
-        // 1. WRITE: Create the immutable activity log entry.
-        const totalSaleValueDelta = (activityType === 'Sale' || (activityType === 'Correction' && correctionDetails?.correctedField === 'quantitySold'))
-            ? sellingPrice * quantityDelta 
-            : 0;
+        // 1. Determine the field to update.
+        let fieldToUpdate = '';
+        if (activityType === 'Correction') {
+            fieldToUpdate = correctionDetails.correctedField;
+        } else if (activityType === 'Sale') {
+            fieldToUpdate = 'quantitySold';
+        } else if (activityType === 'Return') {
+            fieldToUpdate = 'quantityReturned';
+        } else if (activityType === 'Damage') {
+            fieldToUpdate = 'quantityDamaged';
+        }
+        if (!fieldToUpdate) throw new Error(`Invalid activity type: ${activityType}`);
 
+
+        // 2. Create the Activity Log Entry.
+        const totalSaleValueDelta = (fieldToUpdate === 'quantitySold') ? sellingPrice * quantityDelta : 0;
         transaction.set(activityRef, {
             activityType: activityType,
             quantity: quantityDelta,
@@ -1443,30 +1456,12 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
             productId: productId,
         });
 
-        // 2. WRITE: Determine the correct field to update and then atomically increment it.
-        let fieldToUpdate = '';
-        if (activityType === 'Correction') {
-            // For corrections, get the field name directly from the details object.
-            fieldToUpdate = correctionDetails.correctedField;
-        } else {
-            // For new activities, determine it from the activityType.
-            if (activityType === 'Sale') fieldToUpdate = 'quantitySold';
-            else if (activityType === 'Return') fieldToUpdate = 'quantityReturned';
-            else if (activityType === 'Damage') fieldToUpdate = 'quantityDamaged';
-        }
-
-        if (!fieldToUpdate) {
-            throw new Error(`Could not determine field to update for activity type: ${activityType}`);
-        }
-
-        // Atomically update the determined field.
+        // 3. Update the Consignment Item.
         transaction.update(itemRef, {
             [fieldToUpdate]: firebase.firestore.FieldValue.increment(quantityDelta)
         });
 
-        // -----------------------
-
-        // 3. WRITE: Update financial totals.
+        // 4. Update the Main Order's Financials (if applicable).
         if (fieldToUpdate === 'quantitySold') {
             transaction.update(orderRef, {
                 totalValueSold: firebase.firestore.FieldValue.increment(totalSaleValueDelta),
@@ -1474,7 +1469,7 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
             });
         }
 
-        // 4. WRITE: Update main inventory.
+        // 5. Update the Main Store Inventory (if applicable).
         if (fieldToUpdate === 'quantityReturned') {
             transaction.update(productRef, {
                 inventoryCount: firebase.firestore.FieldValue.increment(quantityDelta)
