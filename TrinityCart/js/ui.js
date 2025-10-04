@@ -2728,7 +2728,7 @@ export function showConsignmentRequestStep2(catalogueId) {
 const requestProductsGridOptions = {
     getRowId: params => params.data.productId,
     columnDefs: [
-        { field: "productName", headerName: "Product", flex: 1 },
+        { field: "productName", headerName: "Product", flex: 1,filter: 'agDateColumnFilter' },
         { 
             field: "inventoryCount", 
             headerName: "Qty Available", 
