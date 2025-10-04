@@ -2757,6 +2757,12 @@ export function resetConsignmentRequestModal() {
     if (requestProductsGridApi) {
         requestProductsGridApi.setGridOption('rowData', []);
     }
+
+    const nextButton = document.getElementById('consignment-next-btn');
+    if (nextButton) {
+        nextButton.disabled = true;
+    }
+
 }
 
 // [NEW] Grid for the Product Selection step in the Request Modal
