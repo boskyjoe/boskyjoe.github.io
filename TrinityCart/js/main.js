@@ -1125,6 +1125,7 @@ function setupEventListeners() {
             
             memberSelect.innerHTML = '<option value="">Loading members...</option>';
             memberSelect.disabled = true;
+            nextButton.disabled = true;
 
             if (!teamId) {
                 memberSelect.innerHTML = '<option value="">Select a team first</option>';
@@ -1147,6 +1148,7 @@ function setupEventListeners() {
                     const leadData = JSON.stringify({ id: lead.id, name: lead.name, email: lead.email });
                     memberSelect.innerHTML = `<option value='${leadData}'>${lead.name}</option>`;
                     memberSelect.disabled = true; // Correctly disabled as there's only one choice.
+                    nextButton.disabled = false;
                 } else {
                     // --- MULTIPLE CHOICE FIX ---
                     memberSelect.innerHTML = '<option value="">Select a team lead...</option>';
