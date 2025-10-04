@@ -2384,7 +2384,7 @@ const consignmentItemsGridOptions = {
     paginationPageSize: 100,
     paginationPageSizeSelector: [10, 50, 100, 200],
     columnDefs: [
-        { field: "productName", headerName: "Product", flex: 1, suppressMovable: true },
+        { field: "productName", headerName: "Product", flex: 1, filter: 'agTextColumnFilter', suppressMovable: true },
         { field: "quantityCheckedOut", headerName: "Checked Out", width: 120, suppressMovable: true },
         { 
             field: "quantitySold", 
