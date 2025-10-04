@@ -2653,14 +2653,26 @@ export async function showConsignmentRequestModal() {
     // This function will contain the complex role-based logic we designed.
     // For now, it just shows the modal.
     const modal = document.getElementById('consignment-request-modal');
+
+    if (!modal) return;
+
+    resetConsignmentRequestModal();
+
     modal.style.display = 'flex';
     setTimeout(() => modal.classList.add('visible'), 10);
 }
 
 export function closeConsignmentRequestModal() {
     const modal = document.getElementById('consignment-request-modal');
+    if (!modal) return;
+
     modal.classList.remove('visible');
-    setTimeout(() => { modal.style.display = 'none'; }, 300);
+    setTimeout(() => {
+        modal.style.display = 'none';
+        
+        // Also reset its internal state when closing.
+        resetConsignmentRequestModal(); 
+    }, 300);
 }
 
 /**
@@ -2723,6 +2735,29 @@ export function showConsignmentRequestStep2(catalogueId) {
     }
 }
 
+/**
+ * [NEW] Resets the multi-step consignment request modal to its initial state (Step 1).
+ */
+export function resetConsignmentRequestModal() {
+    const form = document.getElementById('consignment-request-form');
+    if (!form) return;
+
+    // 1. Reset the entire form, which clears all dropdowns and inputs.
+    form.reset();
+
+    // 2. Explicitly show Step 1 and hide Step 2.
+    document.getElementById('consignment-step-1').classList.remove('hidden');
+    document.getElementById('consignment-step-2').classList.add('hidden');
+
+    // 3. Explicitly show the "Next" button and hide the "Submit" button.
+    document.getElementById('consignment-next-btn').classList.remove('hidden');
+    document.getElementById('consignment-submit-request-btn').classList.add('hidden');
+
+    // 4. Clear any data in the product request grid.
+    if (requestProductsGridApi) {
+        requestProductsGridApi.setGridOption('rowData', []);
+    }
+}
 
 // [NEW] Grid for the Product Selection step in the Request Modal
 const requestProductsGridOptions = {
