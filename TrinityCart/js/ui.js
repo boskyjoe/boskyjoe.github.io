@@ -2364,7 +2364,7 @@ const consignmentOrdersGridOptions = {
 const fulfillmentItemsGridOptions = {
     getRowId: params => params.data.id,
     columnDefs: [
-        { field: "productName", headerName: "Product", flex: 1 },
+        { field: "productName", headerName: "Product", flex: 1, filter: 'agDateColumnFilter' },
         { field: "quantityRequested", headerName: "Qty Requested", width: 150 },
         { 
             field: "quantityCheckedOut", 
@@ -2807,39 +2807,58 @@ export function refreshConsignmentDetailPanel(orderId) {
  * [NEW] The main function to display the Consignment Management view.
  */
 export function showConsignmentView() {
-    // 1. Show the main view container and initialize all its grids.
+    // 1. Standard view setup
     showView('consignment-view');
     initializeConsignmentGrids();
-    
-    // 2. Ensure the detail panel is hidden by default every time we enter the view.
-    hideConsignmentDetailPanel();
+    hideConsignmentDetailPanel(); // Ensure a clean state on view load
 
     const db = firebase.firestore();
-    
-    // 3. Clean up any previous listener for the master grid before attaching a new one.
+    const user = appState.currentUser;
+
+    // Safety check in case the view is accessed before user state is ready
+    if (!user) {
+        console.error("Cannot show consignment view: no user is logged in.");
+        // Optionally, clear the grid if it had old data
+        if (consignmentOrdersGridApi) {
+            consignmentOrdersGridApi.setGridOption('rowData', []);
+        }
+        return;
+    }
+
+    // 2. Clean up any previous listener before attaching a new one
     if (unsubscribeConsignmentOrdersListener) {
         unsubscribeConsignmentOrdersListener();
     }
 
-    // 4. Attach the real-time listener for the master "All Consignment Orders" grid.
+    // --- THIS IS THE NEW, ROLE-BASED LOGIC ---
+
+    // 3. Start with a base query reference.
+    let ordersQuery = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH);
+
+    // 4. If the user is NOT an admin, add a 'where' clause to filter the query.
+    if (user.role !== 'admin') {
+        // This filters the documents to only those where the 'requestingMemberId'
+        // field matches the logged-in user's unique ID.
+        ordersQuery = ordersQuery.where('requestingMemberId', '==', user.uid);
+    }
+
+    // 5. Apply the ordering to the final query and attach the listener.
     if (consignmentOrdersGridApi) {
         consignmentOrdersGridApi.setGridOption('loading', true);
     }
     
-    unsubscribeConsignmentOrdersListener = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
-        .orderBy('requestDate', 'desc')
+    unsubscribeConsignmentOrdersListener = ordersQuery.orderBy('requestDate', 'desc')
         .onSnapshot(snapshot => {
             console.log("[Firestore] Received update for master consignment orders list.");
             const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
             if (consignmentOrdersGridApi) {
-                // We use setGridOption here as it's the most robust way to handle
-                // the full list of orders.
                 consignmentOrdersGridApi.setGridOption('rowData', orders);
                 consignmentOrdersGridApi.setGridOption('loading', false);
             }
         }, error => {
             console.error("Error listening to consignment orders:", error);
+            // IMPORTANT: Check the console for an indexing error message!
             if (consignmentOrdersGridApi) {
                 consignmentOrdersGridApi.setGridOption('loading', false);
             }
