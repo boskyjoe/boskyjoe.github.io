@@ -1121,7 +1121,7 @@ function setupEventListeners() {
     if (adminTeamSelect) {
         adminTeamSelect.addEventListener('change', async (e) => {
             const teamId = e.target.value;
-            const memberSelect = document.getElementById('admin-select-member'); // We need to add this to the HTML
+            const memberSelect = document.getElementById('admin-select-member');
             
             memberSelect.innerHTML = '<option value="">Loading members...</option>';
             memberSelect.disabled = true;
@@ -1133,32 +1133,33 @@ function setupEventListeners() {
 
             try {
                 const members = await getMembersForTeam(teamId);
-                memberSelect.innerHTML = '<option value="">Select a team lead...</option>';
-
                 const teamLeads = members.filter(m => m.role === 'Team Lead');
 
                 if (teamLeads.length === 0) {
                     memberSelect.innerHTML = '<option value="">No leads in this team</option>';
                     memberSelect.disabled = true;
                 } else if (teamLeads.length === 1) {
-                    // If there's only one lead, auto-select them.
+                    // --- AUTO-SELECTION FIX ---
                     const lead = teamLeads[0];
-                    memberSelect.innerHTML = `<option value="${lead.id}">${lead.name}</option>`;
-                    memberSelect.disabled = true; // Disable as there are no other choices
+                    // Store a JSON string with id, name, AND email.
+                    const leadData = JSON.stringify({ id: lead.id, name: lead.name, email: lead.email });
+                    memberSelect.innerHTML = `<option value='${leadData}'>${lead.name}</option>`;
+                    memberSelect.disabled = true; // Correctly disabled as there's only one choice.
                 } else {
-                    // If there are multiple leads, let the admin choose.
+                    // --- MULTIPLE CHOICE FIX ---
                     memberSelect.innerHTML = '<option value="">Select a team lead...</option>';
                     teamLeads.forEach(lead => {
                         const option = document.createElement('option');
-                        option.value = lead.id;
+                        // Store a JSON string with id, name, AND email.
+                        option.value = JSON.stringify({ id: lead.id, name: lead.name, email: lead.email });
                         option.textContent = lead.name;
                         memberSelect.appendChild(option);
                     });
                     memberSelect.disabled = false;
                 }
             } catch (error) {
-                console.error("Error fetching team lead:", error);
-                memberSelect.innerHTML = '<option value="">Error loading Team lead</option>';
+                console.error("Error fetching team leads:", error);
+                memberSelect.innerHTML = '<option value="">Error loading leads</option>';
             }
         });
     }
@@ -1353,12 +1354,38 @@ function setupEventListeners() {
         consignmentRequestForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const user = appState.currentUser;
+
+            if (!user) return;
             
-            // Gather all the selected data
+            // 1. Get the common form elements
             const teamSelect = document.getElementById(user.role === 'admin' ? 'admin-select-team' : 'user-select-team');
             const catalogueSelect = document.getElementById('request-catalogue-select');
             const eventSelect = document.getElementById('request-event-select');
 
+
+            // 2. Determine the "requesting member" based on user role
+            let requestingMemberId;
+            let requestingMemberName;
+            let requestingMemberEmail;
+
+            if (user.role === 'admin') {
+                const memberSelect = document.getElementById('admin-select-member');
+                if (!memberSelect.value) {
+                    return alert("Please select a Team Lead.");
+                }
+                // Parse the complete lead object from the dropdown's value
+                const selectedLead = JSON.parse(memberSelect.value);
+                requestingMemberId = selectedLead.id; // This is the member's document ID from the sub-collection
+                requestingMemberName = selectedLead.name;
+                requestingMemberEmail = selectedLead.email;
+            } else {
+                // For non-admins (team leads), the request is always for themselves.
+                requestingMemberId = user.uid; // Their main user auth ID
+                requestingMemberName = user.displayName;
+                requestingMemberEmail = user.email;
+            }
+
+            // 3. Assemble the final requestData object
             const requestData = {
                 teamId: teamSelect.value,
                 teamName: teamSelect.options[teamSelect.selectedIndex].text,
@@ -1366,9 +1393,14 @@ function setupEventListeners() {
                 salesCatalogueName: catalogueSelect.options[catalogueSelect.selectedIndex].text,
                 salesEventId: eventSelect.value || null,
                 salesEventName: eventSelect.value ? eventSelect.options[eventSelect.selectedIndex].text : null,
+                
+                // Add the correctly determined member info
+                requestingMemberId: requestingMemberId,
+                requestingMemberName: requestingMemberName,
+                requestingMemberEmail: requestingMemberEmail,
             };
 
-            // Get the items with quantities from the request grid
+            // 4. Get items and submit
             const requestedItems = getRequestedConsignmentItems();
 
             if (requestedItems.length === 0) {
@@ -1376,6 +1408,7 @@ function setupEventListeners() {
             }
 
             try {
+                // The API function now receives the correct data
                 await createConsignmentRequest(requestData, requestedItems, user);
                 alert("Consignment request submitted successfully!");
                 closeConsignmentRequestModal();
