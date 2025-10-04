@@ -1138,6 +1138,8 @@ function setupEventListeners() {
                 if (teamLeads.length === 0) {
                     memberSelect.innerHTML = '<option value="">No leads in this team</option>';
                     memberSelect.disabled = true;
+                    alert("This team has no designated Team Lead. Please add a lead to this team in the Team Management module before creating a consignment.");
+                    return ;
                 } else if (teamLeads.length === 1) {
                     // --- AUTO-SELECTION FIX ---
                     const lead = teamLeads[0];
