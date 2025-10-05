@@ -1,23 +1,10 @@
 // js/main.js
 
-//import { 
-//    ModuleRegistry, 
-    // CHANGE IS HERE: Use AllCommunityModule (Singular)
- //////   AllCommunityModule 
-//} from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm'; 
+import { 
+    ModuleRegistry, 
+    AllCommunityModule 
+} from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
 
-
-// Import the core registry from the main community package on unpkg
-import { ModuleRegistry } from 'https://unpkg.com/ag-grid-community@31.3.2/dist/ag-grid-community.esm.js';
-
-// Import the Client-Side Row Model module from unpkg
-import { ClientSideRowModelModule } from 'https://unpkg.com/@ag-grid-community/client-side-row-model@31.3.2/dist/client-side-row-model.esm.js';
-
-// Import the Set Filter module explicitly from unpkg
-import { SetFilterModule } from 'https://unpkg.com/@ag-grid-community/set-filter@31.3.2/dist/set-filter.esm.js';
-
-// Import the CSV Export module from unpkg
-import { CsvExportModule } from 'https://unpkg.com/@ag-grid-community/csv-export@31.3.2/dist/csv-export.esm.js';
 
 
 
@@ -1758,10 +1745,9 @@ document.addEventListener('DOMContentLoaded', () => {
    
     // Add the RowGroupingModule to the array of modules to be registered.
     ModuleRegistry.registerModules([
-        ClientSideRowModelModule,
-        SetFilterModule,
-        CsvExportModule
+        AllCommunityModule
     ]);
+
 
     initializeMasterDataListeners();
 
