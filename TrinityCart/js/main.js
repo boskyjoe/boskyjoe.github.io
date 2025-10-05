@@ -1,10 +1,23 @@
 // js/main.js
 
-import { 
-    ModuleRegistry, 
+//import { 
+//    ModuleRegistry, 
     // CHANGE IS HERE: Use AllCommunityModule (Singular)
-    AllCommunityModule 
-} from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm'; 
+ //////   AllCommunityModule 
+//} from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm'; 
+
+
+// Import the core registry from the main community package
+import { ModuleRegistry } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
+
+// Import the Client-Side Row Model, which provides grouping, sorting, and basic filters
+import { ClientSideRowModelModule } from 'https://cdn.jsdelivr.net/npm/@ag-grid-community/client-side-row-model@latest/+esm';
+
+// Import the Set Filter module explicitly
+import { SetFilterModule } from 'https://cdn.jsdelivr.net/npm/@ag-grid-community/set-filter@latest/+esm';
+
+// Import the CSV Export module, as it's a common requirement
+import { CsvExportModule } from 'https://cdn.jsdelivr.net/npm/@ag-grid-community/csv-export@latest/+esm';
 
 
 import { appState } from './state.js';
@@ -1743,7 +1756,11 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("Application Initializing...");
    
     // Add the RowGroupingModule to the array of modules to be registered.
-    ModuleRegistry.registerModules([AllCommunityModule]);
+    ModuleRegistry.registerModules([
+        ClientSideRowModelModule,
+        SetFilterModule,
+        CsvExportModule
+    ]);
 
     initializeMasterDataListeners();
 
