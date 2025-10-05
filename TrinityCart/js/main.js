@@ -2,8 +2,9 @@
 
 import { 
     ModuleRegistry, 
-    AllCommunityModules 
-} from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
+    // CHANGE IS HERE: Use AllCommunityModule (Singular)
+    AllCommunityModule 
+} from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm'; 
 
 
 import { appState } from './state.js';
@@ -1742,7 +1743,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("Application Initializing...");
    
     // Add the RowGroupingModule to the array of modules to be registered.
-    ModuleRegistry.registerModules(AllCommunityModules);
+    ModuleRegistry.registerModules([AllCommunityModule]);
 
     initializeMasterDataListeners();
 
