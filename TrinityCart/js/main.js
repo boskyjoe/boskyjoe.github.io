@@ -1122,6 +1122,7 @@ function setupEventListeners() {
         adminTeamSelect.addEventListener('change', async (e) => {
             const teamId = e.target.value;
             const memberSelect = document.getElementById('admin-select-member');
+            const nextButton = document.getElementById('consignment-next-btn');
             
             memberSelect.innerHTML = '<option value="">Loading members...</option>';
             memberSelect.disabled = true;
