@@ -3061,7 +3061,6 @@ const consignmentActivityGridOptions = {
             field: "paymentStatus",
             headerName: "Payment Status",
             width: 150,
-            filter: 'agSetColumnFilter', // [NEW] Enable Set Filter
             cellRenderer: p => {
                 const status = p.value;
                 if (status === 'Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
