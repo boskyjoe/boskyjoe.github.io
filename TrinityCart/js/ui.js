@@ -2994,11 +2994,7 @@ export function closeReportActivityModal() {
     setTimeout(() => { modal.style.display = 'none'; }, 300);
 }
 
-ilter: 'agTextColumnFilter' },
-        { field: "requestDate", headerName: "Request Date", filter: 'agDateColumnFilter', width: 140, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
-        { field: "teamName", headerName: "Team", flex: 1 , filter: 'agTextColumnFilter'},
-        { field: "requestingMemberName", headerName: "Requested By", flex: 1, filter: 'agTextColumnFilter' },
-        { field: "status", headerName: "Status", filter: 'agTextColumnFilter', width: 120, cellRenderer: p => {
+
 
 
 
