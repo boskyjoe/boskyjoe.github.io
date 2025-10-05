@@ -2,7 +2,8 @@
 
 import { 
     ModuleRegistry, 
-    AllCommunityModule 
+    AllCommunityModule ,
+    SetFilterModule
 } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
 
 
@@ -1743,7 +1744,8 @@ document.addEventListener('DOMContentLoaded', () => {
    
     // Add the RowGroupingModule to the array of modules to be registered.
     ModuleRegistry.registerModules([
-        AllCommunityModule
+        AllCommunityModulem,
+        SetFilterModule
     ]);
 
     initializeMasterDataListeners();
