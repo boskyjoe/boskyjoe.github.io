@@ -2994,6 +2994,13 @@ export function closeReportActivityModal() {
     setTimeout(() => { modal.style.display = 'none'; }, 300);
 }
 
+ilter: 'agTextColumnFilter' },
+        { field: "requestDate", headerName: "Request Date", filter: 'agDateColumnFilter', width: 140, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
+        { field: "teamName", headerName: "Team", flex: 1 , filter: 'agTextColumnFilter'},
+        { field: "requestingMemberName", headerName: "Requested By", flex: 1, filter: 'agTextColumnFilter' },
+        { field: "status", headerName: "Status", filter: 'agTextColumnFilter', width: 120, cellRenderer: p => {
+
+
 
 
 // 2. Add the new grid options object
@@ -3015,12 +3022,14 @@ const consignmentActivityGridOptions = {
             field: "activityDate", 
             headerName: "Date", 
             width: 200, 
+            filter: 'agDateColumnFilter',
             valueFormatter: p => p.value ? p.value.toDate().toLocaleString() : '' 
         },
         { 
             field: "activityType", 
             headerName: "Activity", 
             width: 120,
+            filter: 'agTextColumnFilter',
             cellRenderer: p => {
                 const type = p.value;
                 if (type === 'Sale') return `<span class="font-semibold text-green-700">${type}</span>`;
@@ -3033,6 +3042,7 @@ const consignmentActivityGridOptions = {
         { 
             field: "productName", 
             headerName: "Product", 
+            filter: 'agTextColumnFilter',
             width: 200,
             flex: 1
         },
@@ -3058,6 +3068,7 @@ const consignmentActivityGridOptions = {
             field: "paymentStatus",
             headerName: "Payment Status",
             width: 150,
+            filter: 'agTextColumnFilter',
             cellRenderer: p => {
                 const status = p.value;
                 if (status === 'Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
