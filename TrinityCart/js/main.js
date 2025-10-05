@@ -2,11 +2,8 @@
 
 import { 
     ModuleRegistry, 
-    ClientSideRowModelModule, // For data handling, grouping, and aggregation
-    SetFilterModule,            // For the checklist filter
-    CsvExportModule             // Good to have for exporting data
+    AllCommunityModules 
 } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
-
 
 
 import { appState } from './state.js';
@@ -1745,11 +1742,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("Application Initializing...");
    
     // Add the RowGroupingModule to the array of modules to be registered.
-    ModuleRegistry.registerModules([
-        ClientSideRowModelModule,
-        SetFilterModule,
-        CsvExportModule
-    ]);
+    ModuleRegistry.registerModules(AllCommunityModules);
 
     initializeMasterDataListeners();
 
