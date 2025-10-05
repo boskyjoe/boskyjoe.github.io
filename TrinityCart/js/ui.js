@@ -3002,17 +3002,27 @@ const consignmentActivityGridOptions = {
     pagination: true,
     paginationPageSize: 100,
     paginationPageSizeSelector: [10, 50, 100, 200],
+    defaultColDef: { 
+        resizable: true, 
+        sortable: true, 
+        wrapText: true,      // Wrap cell content
+        autoHeight: true,    // Adjust row height automatically
+        wrapHeaderText: true, // Wrap header text
+        autoHeaderHeight: true // Adjust header height automatically
+    },
     columnDefs: [
         { 
             field: "activityDate", 
             headerName: "Date", 
             width: 200, 
+            filter: 'agDateColumnFilter' ,
             valueFormatter: p => p.value ? p.value.toDate().toLocaleString() : '' 
         },
         { 
             field: "activityType", 
             headerName: "Activity", 
             width: 120,
+            filter: 'agSetColumnFilter',
             cellRenderer: p => {
                 const type = p.value;
                 if (type === 'Sale') return `<span class="font-semibold text-green-700">${type}</span>`;
@@ -3025,6 +3035,8 @@ const consignmentActivityGridOptions = {
         { 
             field: "productName", 
             headerName: "Product", 
+            width: 200,
+            filter: 'agSetColumnFilter',
             flex: 1
         },
         { 
@@ -3038,7 +3050,25 @@ const consignmentActivityGridOptions = {
                 return p.value > 0 ? `+${p.value}` : p.value;
             }
         },
-        { field: "notes", headerName: "Notes", flex: 2 },
+        {
+            field: "totalSaleValue",
+            headerName: "Sale Value",
+            width: 130,
+            valueFormatter: p => (p.value && p.value !== 0) ? `$${p.value.toFixed(2)}` : '',
+            cellStyle: { 'font-weight': 'bold' }
+        },
+        {
+            field: "paymentStatus",
+            headerName: "Payment Status",
+            width: 150,
+            filter: 'agSetColumnFilter', // [NEW] Enable Set Filter
+            cellRenderer: p => {
+                const status = p.value;
+                if (status === 'Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
+                if (status === 'Unpaid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">${status}</span>`;
+                return ''; // Return empty for non-sale activities
+            }
+        },
         { field: "recordedBy", headerName: "Recorded By", flex: 1 }
     ],
     defaultColDef: { resizable: true, sortable: true },
