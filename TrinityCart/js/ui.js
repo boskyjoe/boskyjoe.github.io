@@ -3015,14 +3015,12 @@ const consignmentActivityGridOptions = {
             field: "activityDate", 
             headerName: "Date", 
             width: 200, 
-            filter: 'agDateColumnFilter' ,
             valueFormatter: p => p.value ? p.value.toDate().toLocaleString() : '' 
         },
         { 
             field: "activityType", 
             headerName: "Activity", 
             width: 120,
-            filter: 'agSetColumnFilter',
             cellRenderer: p => {
                 const type = p.value;
                 if (type === 'Sale') return `<span class="font-semibold text-green-700">${type}</span>`;
@@ -3036,7 +3034,6 @@ const consignmentActivityGridOptions = {
             field: "productName", 
             headerName: "Product", 
             width: 200,
-            filter: 'agSetColumnFilter',
             flex: 1
         },
         { 
