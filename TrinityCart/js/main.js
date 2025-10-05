@@ -7,17 +7,18 @@
 //} from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm'; 
 
 
-// Import the core registry from the main community package
-import { ModuleRegistry } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
+// Import the core registry from the main community package on unpkg
+import { ModuleRegistry } from 'https://unpkg.com/ag-grid-community@31.3.2/dist/ag-grid-community.esm.js';
 
-// Import the Client-Side Row Model, which provides grouping, sorting, and basic filters
-import { ClientSideRowModelModule } from 'https://cdn.jsdelivr.net/npm/@ag-grid-community/client-side-row-model@latest/+esm';
+// Import the Client-Side Row Model module from unpkg
+import { ClientSideRowModelModule } from 'https://unpkg.com/@ag-grid-community/client-side-row-model@31.3.2/dist/client-side-row-model.esm.js';
 
-// Import the Set Filter module explicitly
-import { SetFilterModule } from 'https://cdn.jsdelivr.net/npm/@ag-grid-community/set-filter@latest/+esm';
+// Import the Set Filter module explicitly from unpkg
+import { SetFilterModule } from 'https://unpkg.com/@ag-grid-community/set-filter@31.3.2/dist/set-filter.esm.js';
 
-// Import the CSV Export module, as it's a common requirement
-import { CsvExportModule } from 'https://cdn.jsdelivr.net/npm/@ag-grid-community/csv-export@latest/+esm';
+// Import the CSV Export module from unpkg
+import { CsvExportModule } from 'https://unpkg.com/@ag-grid-community/csv-export@31.3.2/dist/csv-export.esm.js';
+
 
 
 import { appState } from './state.js';
