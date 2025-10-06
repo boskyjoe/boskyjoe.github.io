@@ -3101,19 +3101,22 @@ const consignmentActivityGridOptions = {
 // [NEW] Grid for the "Unpaid Sales" panel
 const unpaidSalesGridOptions = {
     getRowId: params => params.data.id,
+    rowSelection: {
+        mode: 'multiRow',                   
+        checkboxes: true,                 
+        headerCheckbox: true,             
+        enableSelectionWithoutKeys: true, 
+    },
     columnDefs: [
         { 
             headerName: 'Select', 
-            width: 70, 
-            checkboxSelection: true, // Enable checkboxes
-            headerCheckboxSelection: true // Add a "select all" checkbox
+            width: 70,
         },
         { field: "activityDate", headerName: "Sale Date", width: 120, valueFormatter: p => p.value.toDate().toLocaleDateString() },
         { field: "productName", headerName: "Product", flex: 1 },
         { field: "quantity", headerName: "Qty", width: 80 },
         { field: "totalSaleValue", headerName: "Value", width: 100, valueFormatter: p => `$${p.value.toFixed(2)}` }
     ],
-    rowSelection: 'multiple', // Allow multiple rows to be selected
     onSelectionChanged: () => {
         // This event fires whenever a checkbox is ticked or unticked
         updatePaymentFormFromSelection();
