@@ -3116,7 +3116,7 @@ const consignmentActivityGridOptions = {
             }
         },
         {
-            field: "totalValue",
+            field: "totalSaleValue",
             headerName: "Sale Value",
             width: 130,
             valueFormatter: p => (p.value && p.value !== 0) ? `$${p.value.toFixed(2)}` : '',
