@@ -3188,14 +3188,6 @@ export function resetPaymentForm() {
 }
 
 
-/**
- * [NEW] Gets the data for a specific payment row from the payment history grid.
- */
-export function getPaymentDataFromGridById(paymentId) {
-    if (!consignmentPaymentsGridApi) return null;
-    const rowNode = consignmentPaymentsGridApi.getRowNode(paymentId);
-    return rowNode ? rowNode.data : null;
-}
 
 /**
  * [NEW] Loads an existing pending payment record into the form for editing.
