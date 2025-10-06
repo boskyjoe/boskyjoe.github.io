@@ -3262,6 +3262,11 @@ export function resetPaymentForm() {
     document.getElementById('cancel-payment-edit-btn').classList.add('hidden');
     document.getElementById('payment-amount-input').readOnly = true; // Make it read-only for new payments
     if (unpaidSalesGridApi) unpaidSalesGridApi.deselectAll();
+
+    // [NEW] Explicitly set the initial disabled state
+    const paymentFormContainer = document.getElementById('payment-form-container');
+    paymentFormContainer.classList.add('opacity-50', 'pointer-events-none');
+    document.getElementById('submit-payment-record-btn').disabled = true;
 }
 
 
