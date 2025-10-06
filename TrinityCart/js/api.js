@@ -1408,6 +1408,9 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
         }
         const currentItemData = itemDoc.data();
 
+        const orderDoc = await transaction.get(orderRef);
+        if (!orderDoc.exists) throw new Error("Consignment order does not exist.");
+        const currentOrderData = orderDoc.data();
 
         // --- [NEW & BETTER] AUTHORITATIVE VALIDATION PHASE ---
         const fieldBeingChanged = correctionDetails ? correctionDetails.correctedField : `quantity${activityType}`;
@@ -1464,9 +1467,14 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
 
         // 4. Update the Main Order's Financials (if applicable).
         if (fieldToUpdate === 'quantitySold') {
+            // Calculate the new total based on the authoritative value from the database read.
+            const newTotalValueSold = (currentOrderData.totalValueSold || 0) + totalSaleValueDelta;
+            const newBalanceDue = (currentOrderData.balanceDue || 0) + totalSaleValueDelta;
+
+            // Set the absolute new values instead of incrementing.
             transaction.update(orderRef, {
-                totalValueSold: firebase.firestore.FieldValue.increment(totalSaleValueDelta),
-                balanceDue: firebase.firestore.FieldValue.increment(totalSaleValueDelta)
+                totalValueSold: newTotalValueSold,
+                balanceDue: newBalanceDue
             });
         }
 
