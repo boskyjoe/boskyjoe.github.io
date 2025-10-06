@@ -3116,6 +3116,12 @@ const consignmentActivityGridOptions = {
             }
         },
         {
+            field: "unitSellingPrice",
+            headerName: "Unit Price",
+            width: 110,
+            valueFormatter: p => (p.value && p.value !== 0) ? `$${p.value.toFixed(2)}` : ''
+        },
+        {
             field: "totalSaleValue",
             headerName: "Sale Value",
             width: 130,
@@ -3165,6 +3171,12 @@ const unpaidSalesGridOptions = {
         { field: "activityDate", headerName: "Sale Date", width: 120,filter: 'agDateColumnFilter', valueFormatter: p => p.value.toDate().toLocaleDateString() },
         { field: "productName", headerName: "Product", filter: 'agTextColumnFilter', flex: 1 },
         { field: "quantity", headerName: "Qty", width: 80 },
+        { 
+            field: "unitSellingPrice", 
+            headerName: "Unit Price", 
+            width: 110,
+            valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : ''
+        },
         { field: "totalSaleValue", headerName: "Value", width: 100, valueFormatter: p => `$${p.value.toFixed(2)}` }
     ],
     onSelectionChanged: () => {
@@ -3227,6 +3239,17 @@ function updatePaymentFormFromSelection() {
     
     // Also update the total display
     document.getElementById('total-selected-for-payment').textContent = `$${totalSelectedValue.toFixed(2)}`;
+
+    const hasSelection = selectedNodes.length > 0;
+    
+    if (hasSelection) {
+        paymentFormContainer.classList.remove('opacity-50', 'pointer-events-none');
+    } else {
+        paymentFormContainer.classList.add('opacity-50', 'pointer-events-none');
+    }
+    
+    // Also disable the submit button directly for extra safety
+    document.getElementById('submit-payment-record-btn').disabled = !hasSelection;
 }
 
 /**
