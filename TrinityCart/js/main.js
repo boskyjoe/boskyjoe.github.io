@@ -81,7 +81,8 @@ import {
     closeConsignmentRequestModal, 
     showConsignmentRequestStep2,
     getRequestedConsignmentItems,getFulfillmentItems,refreshConsignmentDetailPanel,
-    showReportActivityModal, closeReportActivityModal,switchConsignmentTab,renderConsignmentDetail
+    showReportActivityModal, closeReportActivityModal,switchConsignmentTab,renderConsignmentDetail,
+    resetPaymentForm
 } from './ui.js';
 
 import { 
@@ -89,7 +90,9 @@ import {
     getMembersForTeam,
     createConsignmentRequest,
     fulfillConsignmentAndUpdateInventory,
-    getItemsForCatalogue,logActivityAndUpdateConsignment,getConsignmentOrderById
+    getItemsForCatalogue,logActivityAndUpdateConsignment,getConsignmentOrderById,
+    submitPaymentRecord,updatePaymentRecord,
+    verifyConsignmentPayment
 } from './api.js';
 
 
@@ -709,6 +712,33 @@ function setupEventListeners() {
                         }
                     }
                 }
+            } 
+            else if (grid.id === 'consignment-payments-grid') {
+                const paymentData = getPaymentDataFromGridById(docId); // Assuming you create this helper
+                if (!paymentData) return;
+
+                if (gridButton.classList.contains('action-btn-edit-payment')) {
+                    // Call a new UI function to load the data into the form
+                    loadPaymentRecordForEditing(paymentData);
+                } 
+                else if (gridButton.classList.contains('action-btn-cancel-payment')) {
+                    if (confirm("Are you sure you want to cancel this pending payment record?")) {
+                        // We need a 'deletePaymentRecord' API function for this
+                        // await deletePaymentRecord(docId);
+                        alert("Payment record cancelled.");
+                    }
+                } 
+                else if (gridButton.classList.contains('action-btn-verify-payment')) {
+                    if (confirm(`Are you sure you want to verify this payment of $${paymentData.amountPaid.toFixed(2)}?`)) {
+                        try {
+                            await verifyConsignmentPayment(docId, user);
+                            alert("Payment successfully verified!");
+                        } catch (error) {
+                            console.error("Error verifying payment:", error);
+                            alert(`Payment verification failed: ${error.message}`);
+                        }
+                    }
+                }
             }
 
 
@@ -890,6 +920,13 @@ function setupEventListeners() {
             showReportActivityModal();
             return;
         }
+
+        // --- [NEW] Handler for the "Cancel Edit" button on the payment form ---
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#cancel-payment-edit-btn')) {
+                resetPaymentForm();
+            }
+        });
 
 
         const tab = target.closest('.tab');
@@ -1483,6 +1520,62 @@ function setupEventListeners() {
         });
     }
     
+
+    // --- [NEW] Form Submission for "Make Payment" Form ---
+    const makePaymentForm = document.getElementById('make-payment-form');
+    if (makePaymentForm) {
+        makePaymentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            if (!user) return;
+
+            const docId = document.getElementById('payment-ledger-doc-id').value;
+            const isEditMode = !!docId;
+
+            // Get the IDs of the selected unpaid sales from the left-hand grid
+            const selectedSaleNodes = unpaidSalesGridApi.getSelectedNodes();
+            const relatedActivityIds = selectedNodes.map(node => node.data.id);
+
+            const paymentData = {
+                orderId: appState.selectedConsignmentId,
+                teamLeadId: user.uid, // Or get from order data if admin is submitting
+                teamLeadName: user.displayName,
+                amountPaid: parseFloat(document.getElementById('payment-amount-input').value),
+                paymentDate: new Date(document.getElementById('payment-date-input').value),
+                paymentMode: document.getElementById('payment-mode-select').value,
+                transactionRef: document.getElementById('payment-ref-input').value,
+                notes: document.getElementById('payment-notes-input').value,
+                paymentReason: 'Sales Revenue', // Or get from a dropdown if you add one
+                relatedActivityIds: relatedActivityIds
+            };
+
+            if (isNaN(paymentData.amountPaid) || paymentData.amountPaid <= 0) {
+                return alert("Amount to pay must be greater than zero. Please select one or more unpaid sales.");
+            }
+
+            try {
+                if (isEditMode) {
+                    await updatePaymentRecord(docId, paymentData, user);
+                    alert("Pending payment record updated successfully.");
+                } else {
+                    await submitPaymentRecord(paymentData, user);
+                    alert("Payment record submitted for verification.");
+                }
+                resetPaymentForm(); // Reset the form on success
+            } catch (error) {
+                console.error("Error submitting payment record:", error);
+                alert(`Failed to submit payment record: ${error.message}`);
+            }
+        });
+    }
+
+    
+
+
+
+
+
+
 
 
     // ==========================================================
