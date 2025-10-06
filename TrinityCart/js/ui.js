@@ -1190,6 +1190,43 @@ export function switchConsignmentTab(tabId) {
         panel.classList.toggle('active', shouldBeActive);
     });
 
+     const orderId = appState.selectedConsignmentId;
+    if (!orderId) return;
+
+    const db = firebase.firestore();
+    const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId);
+
+    // 3. If the "Payments" tab was just made active, attach its listeners.
+    if (tabId === 'tab-consignment-payments') {
+        // A. Listener for the "Payment History" grid (bottom grid)
+        if (consignmentPaymentsGridApi) consignmentPaymentsGridApi.setGridOption('loading', true);
+        const paymentsUnsub = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
+            .where('orderId', '==', orderId)
+            .orderBy('paymentDate', 'desc')
+            .onSnapshot(snapshot => {
+                const payments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (consignmentPaymentsGridApi) {
+                    consignmentPaymentsGridApi.setGridOption('rowData', payments);
+                    consignmentPaymentsGridApi.setGridOption('loading', false);
+                }
+            });
+
+        // B. Listener for the "Unpaid Sales" grid (top-left grid)
+        if (unpaidSalesGridApi) unpaidSalesGridApi.setGridOption('loading', true);
+        const unpaidUnsub = orderRef.collection('activityLog')
+            .where('activityType', '==', 'Sale')
+            .where('paymentStatus', '==', 'Unpaid')
+            .onSnapshot(snapshot => {
+                const unpaidSales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (unpaidSalesGridApi) {
+                    unpaidSalesGridApi.setGridOption('rowData', unpaidSales);
+                    unpaidSalesGridApi.setGridOption('loading', false);
+                }
+            });
+
+        // Store these listeners so they can be cleaned up later.
+        unsubscribeConsignmentDetailsListeners.push(paymentsUnsub, unpaidUnsub);
+    }
     
 }
 
@@ -3120,7 +3157,8 @@ const unpaidSalesGridOptions = {
     onSelectionChanged: () => {
         // This event fires whenever a checkbox is ticked or unticked
         updatePaymentFormFromSelection();
-    }
+    },
+    onGridReady: params => { unpaidSalesGridApi = params.api; }
 };
 
 // [NEW] Grid for the "Payment History" panel
