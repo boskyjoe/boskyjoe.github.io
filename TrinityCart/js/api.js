@@ -1375,6 +1375,10 @@ export async function fulfillConsignmentAndUpdateInventory(orderId, finalItems, 
             totalValueCheckedOut: totalValueCheckedOut,
             balanceDue: totalValueCheckedOut, // Initially, balance due is the full value
             totalAmountPaid: 0,
+            totalValueSold: 0,
+            totalValueReturned: 0,
+            totalValueDamaged: 0,
+            totalAmountPaid: 0,
             'audit.updatedBy': user.email,
             'audit.updatedOn': now
         });
@@ -1412,7 +1416,7 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
         if (!orderDoc.exists) throw new Error("Consignment order does not exist.");
         const currentOrderData = orderDoc.data();
 
-        // --- [NEW & BETTER] AUTHORITATIVE VALIDATION PHASE ---
+        // --- 2. VALIDATION PHASE ---
         const fieldBeingChanged = correctionDetails ? correctionDetails.correctedField : `quantity${activityType}`;
 
         const currentSold = currentItemData.quantitySold || 0;
@@ -1432,7 +1436,9 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
         }
         
 
-        // 1. Determine the field to update.
+        // --- 3. WRITE PHASE (only runs if validation passes) ---
+
+        // Determine the field to update on the item document
         let fieldToUpdate = '';
         if (activityType === 'Correction') {
             fieldToUpdate = correctionDetails.correctedField;
@@ -1445,13 +1451,15 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
         }
         if (!fieldToUpdate) throw new Error(`Invalid activity type: ${activityType}`);
 
+        const activityValueDelta = sellingPrice * quantityDelta;
 
-        // 2. Create the Activity Log Entry.
-        const totalSaleValueDelta = (fieldToUpdate === 'quantitySold') ? sellingPrice * quantityDelta : 0;
+
+
+        // A. Create the immutable Activity Log entry
         transaction.set(activityRef, {
             activityType: activityType,
             quantity: quantityDelta,
-            totalSaleValue: totalSaleValueDelta,
+            totalValue: activityValueDelta,
             correctionDetails: correctionDetails || null,
             paymentStatus: (activityType === 'Sale' && quantityDelta > 0) ? 'Unpaid' : null,
             recordedBy: user.email,
@@ -1460,28 +1468,29 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
             productName: productName,
         });
 
-        // 3. Update the Consignment Item.
+        // B. Atomically update the quantity counter on the consignment item
         transaction.update(itemRef, {
             [fieldToUpdate]: firebase.firestore.FieldValue.increment(quantityDelta)
         });
 
-        // 4. Update the Main Order's Financials (if applicable).
+        // C. Atomically update the main order totals based on the Asset-Liability model
         if (fieldToUpdate === 'quantitySold') {
-            // Calculate the new total based on the authoritative value from the database read.
-            const newTotalValueSold = (currentOrderData.totalValueSold || 0) + totalSaleValueDelta;
-            const newBalanceDue = (currentOrderData.balanceDue || 0) + totalSaleValueDelta;
-
-            // Set the absolute new values instead of incrementing.
             transaction.update(orderRef, {
-                totalValueSold: newTotalValueSold,
-                balanceDue: newBalanceDue
+                totalValueSold: firebase.firestore.FieldValue.increment(activityValueDelta)
             });
-        }
-
-        // 5. Update the Main Store Inventory (if applicable).
-        if (fieldToUpdate === 'quantityReturned') {
+        } else if (fieldToUpdate === 'quantityReturned') {
+            transaction.update(orderRef, {
+                totalValueReturned: firebase.firestore.FieldValue.increment(activityValueDelta),
+                balanceDue: firebase.firestore.FieldValue.increment(-activityValueDelta)
+            });
+            // Also update main store inventory for returns
             transaction.update(productRef, {
                 inventoryCount: firebase.firestore.FieldValue.increment(quantityDelta)
+            });
+        } else if (fieldToUpdate === 'quantityDamaged') {
+            transaction.update(orderRef, {
+                totalValueDamaged: firebase.firestore.FieldValue.increment(activityValueDelta),
+                balanceDue: firebase.firestore.FieldValue.increment(-activityValueDelta)
             });
         }
     });
