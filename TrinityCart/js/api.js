@@ -1499,8 +1499,7 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
 
 
 /**
- * [NEW] Updates a pending payment record.
- * This can be used by a team lead to correct a mistake before admin verification.
+ * [REFACTORED] Updates a pending payment record.
  * @param {string} paymentId - The document ID of the payment in the ledger.
  * @param {object} updatedData - The new data for the payment.
  * @param {object} user - The user making the update.
@@ -1510,8 +1509,7 @@ export async function updatePaymentRecord(paymentId, updatedData, user) {
     const now = firebase.firestore.FieldValue.serverTimestamp();
     const paymentRef = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId);
 
-    // We can add a security rule later to ensure only the user who submitted
-    // this payment can edit it, and only if the status is "Pending Verification".
+    // The updatedData object is now simpler, without relatedActivityIds.
     return paymentRef.update({
         ...updatedData,
         'audit.updatedBy': user.email,
@@ -1520,8 +1518,8 @@ export async function updatePaymentRecord(paymentId, updatedData, user) {
 }
 
 /**
- * Creates a new "Pending Verification" payment record in the ledger.
- * @param {object} paymentData - The complete data for the payment.
+ * [REFACTORED] Creates a new "Pending Verification" payment record in the ledger.
+ * @param {object} paymentData - The payment data from the form.
  * @param {object} user - The team lead submitting the record.
  */
 export async function submitPaymentRecord(paymentData, user) {
@@ -1529,8 +1527,10 @@ export async function submitPaymentRecord(paymentData, user) {
     const now = firebase.firestore.FieldValue.serverTimestamp();
     const paymentId = `CPAY-${Date.now()}`;
 
+    // The paymentData object no longer contains 'relatedActivityIds'.
+    // It's just a simple record of a payment being made against the order balance.
     return db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH).add({
-        ...paymentData, // This will include orderId, amountPaid, relatedActivityIds, etc.
+        ...paymentData,
         paymentId: paymentId,
         paymentStatus: 'Pending Verification',
         submittedBy: user.email,
@@ -1539,7 +1539,7 @@ export async function submitPaymentRecord(paymentData, user) {
 }
 
 /**
- * Verifies a payment, updating all related documents in a single transaction.
+ * [REFACTORED] Verifies a payment and atomically updates the parent order's balance.
  * @param {string} paymentId - The ID of the payment document in the ledger.
  * @param {object} adminUser - The admin verifying the payment.
  */
@@ -1557,25 +1557,19 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
         const paymentData = paymentDoc.data();
         const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(paymentData.orderId);
 
-        // 2. WRITE: Update the payment document to "Verified".
+        // 2. WRITE: Update the payment document itself to "Verified".
         transaction.update(paymentRef, {
             paymentStatus: 'Verified',
             verifiedBy: adminUser.email,
             verifiedOn: now
         });
 
-        // 3. WRITE: Update the main consignment order's financial totals.
+        // 3. WRITE: Atomically update the main consignment order's financial totals.
         transaction.update(orderRef, {
             totalAmountPaid: firebase.firestore.FieldValue.increment(paymentData.amountPaid),
             balanceDue: firebase.firestore.FieldValue.increment(-paymentData.amountPaid)
         });
 
-        // 4. WRITE: If this payment was for specific sales, update their status to "Paid".
-        if (paymentData.relatedActivityIds && paymentData.relatedActivityIds.length > 0) {
-            paymentData.relatedActivityIds.forEach(activityId => {
-                const activityRef = orderRef.collection('activityLog').doc(activityId);
-                transaction.update(activityRef, { paymentStatus: 'Paid' });
-            });
-        }
+        // The logic to loop through relatedActivityIds has been completely removed.
     });
 }
