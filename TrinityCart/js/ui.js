@@ -1219,8 +1219,11 @@ export function switchConsignmentTab(tabId) {
             .onSnapshot(snapshot => {
                 const unpaidSales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (unpaidSalesGridApi) {
-                    unpaidSalesGridApi.setGridOption('rowData', unpaidSales);
-                    unpaidSalesGridApi.setGridOption('loading', false);
+                    setTimeout(() => {
+                        unpaidSalesGridApi.setGridOption('rowData', unpaidSales);
+                        unpaidSalesGridApi.setGridOption('loading', false);
+                        console.log("Unpaid sales grid updated via timeout.");
+                    }, 0);
                 }
             });
 
@@ -2689,7 +2692,10 @@ export function renderConsignmentDetail(orderData) {
                 console.log("[Firestore] Received update for unpaid sales.");
                 const unpaidSales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (unpaidSalesGridApi) {
-                    unpaidSalesGridApi.setGridOption('rowData', unpaidSales);
+                    setTimeout(() => {
+                        unpaidSalesGridApi.setGridOption('rowData', unpaidSales);
+                        console.log("Unpaid sales grid updated via timeout.");
+                    }, 0);
                 }
             });
 
