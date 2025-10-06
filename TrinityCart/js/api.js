@@ -1479,3 +1479,85 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
     });
 }
 
+
+/**
+ * [NEW] Updates a pending payment record.
+ * This can be used by a team lead to correct a mistake before admin verification.
+ * @param {string} paymentId - The document ID of the payment in the ledger.
+ * @param {object} updatedData - The new data for the payment.
+ * @param {object} user - The user making the update.
+ */
+export async function updatePaymentRecord(paymentId, updatedData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const paymentRef = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId);
+
+    // We can add a security rule later to ensure only the user who submitted
+    // this payment can edit it, and only if the status is "Pending Verification".
+    return paymentRef.update({
+        ...updatedData,
+        'audit.updatedBy': user.email,
+        'audit.updatedOn': now
+    });
+}
+
+/**
+ * Creates a new "Pending Verification" payment record in the ledger.
+ * @param {object} paymentData - The complete data for the payment.
+ * @param {object} user - The team lead submitting the record.
+ */
+export async function submitPaymentRecord(paymentData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const paymentId = `CPAY-${Date.now()}`;
+
+    return db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH).add({
+        ...paymentData, // This will include orderId, amountPaid, relatedActivityIds, etc.
+        paymentId: paymentId,
+        paymentStatus: 'Pending Verification',
+        submittedBy: user.email,
+        submittedOn: now,
+    });
+}
+
+/**
+ * Verifies a payment, updating all related documents in a single transaction.
+ * @param {string} paymentId - The ID of the payment document in the ledger.
+ * @param {object} adminUser - The admin verifying the payment.
+ */
+export async function verifyConsignmentPayment(paymentId, adminUser) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const paymentRef = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId);
+
+    return db.runTransaction(async (transaction) => {
+        // 1. READ the payment document.
+        const paymentDoc = await transaction.get(paymentRef);
+        if (!paymentDoc.exists || paymentDoc.data().paymentStatus !== 'Pending Verification') {
+            throw new Error("Payment not found or is not pending verification.");
+        }
+        const paymentData = paymentDoc.data();
+        const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(paymentData.orderId);
+
+        // 2. WRITE: Update the payment document to "Verified".
+        transaction.update(paymentRef, {
+            paymentStatus: 'Verified',
+            verifiedBy: adminUser.email,
+            verifiedOn: now
+        });
+
+        // 3. WRITE: Update the main consignment order's financial totals.
+        transaction.update(orderRef, {
+            totalAmountPaid: firebase.firestore.FieldValue.increment(paymentData.amountPaid),
+            balanceDue: firebase.firestore.FieldValue.increment(-paymentData.amountPaid)
+        });
+
+        // 4. WRITE: If this payment was for specific sales, update their status to "Paid".
+        if (paymentData.relatedActivityIds && paymentData.relatedActivityIds.length > 0) {
+            paymentData.relatedActivityIds.forEach(activityId => {
+                const activityRef = orderRef.collection('activityLog').doc(activityId);
+                transaction.update(activityRef, { paymentStatus: 'Paid' });
+            });
+        }
+    });
+}
