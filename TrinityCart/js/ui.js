@@ -3231,6 +3231,9 @@ const consignmentPaymentsGridOptions = {
 function updatePaymentFormFromSelection() {
     if (!unpaidSalesGridApi) return;
     
+    const paymentFormContainer = document.getElementById('payment-form-container');
+    if (!paymentFormContainer) return;
+    
     const selectedNodes = unpaidSalesGridApi.getSelectedNodes();
     const totalSelectedValue = selectedNodes.reduce((sum, node) => sum + node.data.totalSaleValue, 0);
     
@@ -3239,6 +3242,7 @@ function updatePaymentFormFromSelection() {
     
     // Also update the total display
     document.getElementById('total-selected-for-payment').textContent = `$${totalSelectedValue.toFixed(2)}`;
+
 
     const hasSelection = selectedNodes.length > 0;
     
