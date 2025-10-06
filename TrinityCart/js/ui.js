@@ -11,7 +11,7 @@ import { getPaymentModes } from './api.js';
 import { getProducts, getCategories } from './api.js';
 import { getUsersWithRoles } from './api.js';
 import { getSalesEvents, getSeasons } from './api.js';
-import { getPaymentsForInvoice,getAllSupplierPayments } from './api.js';
+import { getPaymentsForInvoice } from './api.js';
 import { showModal } from './modal.js';
 
 
@@ -2361,8 +2361,6 @@ let consignmentPaymentsGridApi = null;
 let requestProductsGridApi = null;
 let isConsignmentGridsInitialized = false;
 
-let unpaidSalesGridApi = null;
-
 
 let unsubscribeConsignmentOrdersListener = null;
 let unsubscribeConsignmentDetailsListeners = []; // Array to hold multiple detail listeners
@@ -2539,25 +2537,22 @@ const consignmentItemsGridOptions = {
 
 export function initializeConsignmentGrids() {
     if (isConsignmentGridsInitialized) return;
+
     const orderGridDiv = document.getElementById('consignment-orders-grid');
     const fulfillGridDiv = document.getElementById('fulfillment-items-grid');
     const itemsGridDiv = document.getElementById('consignment-items-grid');
-    const requestGridDiv = document.getElementById('request-products-grid');
     const activityGridDiv = document.getElementById('consignment-activity-grid');
-
-    const unpaidSalesGridDiv = document.getElementById('unpaid-sales-grid');
     const paymentsGridDiv = document.getElementById('consignment-payments-grid');
+    const requestGridDiv = document.getElementById('request-products-grid');
     // ... get other grid divs ...
 
-    if (orderGridDiv && fulfillGridDiv && itemsGridDiv && requestGridDiv && activityGridDiv && unpaidSalesGridDiv && paymentsGridDiv) {
+    if (orderGridDiv && fulfillGridDiv && itemsGridDiv && requestGridDiv && activityGridDiv && paymentsGridDiv) {
         createGrid(orderGridDiv, consignmentOrdersGridOptions);
         createGrid(fulfillGridDiv, fulfillmentItemsGridOptions);
         createGrid(itemsGridDiv, consignmentItemsGridOptions);
-        createGrid(requestGridDiv, requestProductsGridOptions); 
+        createGrid(requestGridDiv, requestProductsGridOptions);
         createGrid(activityGridDiv, consignmentActivityGridOptions);
-        createGrid(unpaidSalesGridDiv, unpaidSalesGridOptions);
         createGrid(paymentsGridDiv, consignmentPaymentsGridOptions);
-        // ... create other grids ...
         isConsignmentGridsInitialized = true;
     }
 }
@@ -2593,6 +2588,12 @@ export function renderConsignmentDetail(orderData) {
     const fulfillmentView = document.getElementById('fulfillment-view');
     const activeOrderView = document.getElementById('active-order-view');
 
+
+    // --- [NEW] Populate the Financial Summary panel every time ---
+    document.getElementById('summary-total-sold').textContent = `$${(orderData.totalValueSold || 0).toFixed(2)}`;
+    document.getElementById('summary-total-paid').textContent = `$${(orderData.totalAmountPaid || 0).toFixed(2)}`;
+    document.getElementById('summary-balance-due').textContent = `$${(orderData.balanceDue || 0).toFixed(2)}`;
+   
     // Populate header with the new order's data
     document.getElementById('selected-consignment-id').textContent = orderData.consignmentId;
     document.getElementById('selected-consignment-member').textContent = orderData.requestingMemberName;
@@ -2629,6 +2630,18 @@ export function renderConsignmentDetail(orderData) {
 
         // Default to the first tab
         switchConsignmentTab('tab-items-on-hand');
+
+        // --- [NEW] We need a listener on the main order document itself ---
+        // This will keep the financial summary panel updated in real-time.
+        const orderUnsub = orderRef.onSnapshot(doc => {
+            console.log("[Firestore] Received update for main consignment order document.");
+            const updatedOrderData = doc.data();
+            if (updatedOrderData) {
+                document.getElementById('summary-total-sold').textContent = `$${(updatedOrderData.totalValueSold || 0).toFixed(2)}`;
+                document.getElementById('summary-total-paid').textContent = `$${(updatedOrderData.totalAmountPaid || 0).toFixed(2)}`;
+                document.getElementById('summary-balance-due').textContent = `$${(updatedOrderData.balanceDue || 0).toFixed(2)}`;
+            }
+        });
 
         let isFirstItemsLoad = true;
 
@@ -2685,22 +2698,10 @@ export function renderConsignmentDetail(orderData) {
                 }
             });
 
-        const unpaidUnsub = orderRef.collection('activityLog')
-            .where('activityType', '==', 'Sale')
-            .where('paymentStatus', '==', 'Unpaid')
-            .onSnapshot(snapshot => {
-                console.log("[Firestore] Received update for unpaid sales.");
-                const unpaidSales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (unpaidSalesGridApi) {
-                    setTimeout(() => {
-                        unpaidSalesGridApi.setGridOption('rowData', unpaidSales);
-                        console.log("Unpaid sales grid updated via timeout.");
-                    }, 0);
-                }
-            });
-
-        // Store all three unsubscribe functions for later cleanup
-        unsubscribeConsignmentDetailsListeners.push(itemsUnsub, activityUnsub, paymentsUnsub);
+        
+        // Store all FOUR unsubscribe functions for later cleanup
+        unsubscribeConsignmentDetailsListeners.push(orderUnsub, itemsUnsub, activityUnsub, paymentsUnsub);
+        
     }
 
     // Finally, make the entire detail panel visible
@@ -3147,44 +3148,6 @@ const consignmentActivityGridOptions = {
 };
 
 
-// [NEW] Grid for the "Unpaid Sales" panel
-const unpaidSalesGridOptions = {
-    getRowId: params => params.data.id,
-    rowSelection: {
-        mode: 'multiRow',                   
-        checkboxes: true,                 
-        headerCheckbox: true,             
-        enableSelectionWithoutKeys: true, 
-    },
-    defaultColDef: { 
-        resizable: true, 
-        sortable: true, 
-        wrapText: true,      // Wrap cell content
-        autoHeight: true,    // Adjust row height to fit wrapped text
-        wrapHeaderText: true, // Wrap header text if it's too long
-        autoHeaderHeight: true // Adjust header height to fit wrapped text
-    },
-    columnDefs: [
-        { 
-            width: 50,
-        },
-        { field: "activityDate", headerName: "Sale Date", width: 120,filter: 'agDateColumnFilter', valueFormatter: p => p.value.toDate().toLocaleDateString() },
-        { field: "productName", headerName: "Product", filter: 'agTextColumnFilter', flex: 1 },
-        { field: "quantity", headerName: "Qty", width: 80 },
-        { 
-            field: "unitSellingPrice", 
-            headerName: "Unit Price", 
-            width: 110,
-            valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : ''
-        },
-        { field: "totalSaleValue", headerName: "Value", width: 100, valueFormatter: p => `$${p.value.toFixed(2)}` }
-    ],
-    onSelectionChanged: () => {
-        // This event fires whenever a checkbox is ticked or unticked
-        updatePaymentFormFromSelection();
-    },
-    onGridReady: params => { unpaidSalesGridApi = params.api; }
-};
 
 // [NEW] Grid for the "Payment History" panel
 const consignmentPaymentsGridOptions = {
@@ -3224,37 +3187,7 @@ const consignmentPaymentsGridOptions = {
     onGridReady: params => { consignmentPaymentsGridApi = params.api; }
 };
 
-/**
- * [NEW] Calculates the total value of selected rows in the unpaid sales grid
- * and updates the payment form.
- */
-function updatePaymentFormFromSelection() {
-    if (!unpaidSalesGridApi) return;
-    
-    const paymentFormContainer = document.getElementById('payment-form-container');
-    if (!paymentFormContainer) return;
 
-    const selectedNodes = unpaidSalesGridApi.getSelectedNodes();
-    const totalSelectedValue = selectedNodes.reduce((sum, node) => sum + node.data.totalSaleValue, 0);
-    
-    const amountInput = document.getElementById('payment-amount-input');
-    amountInput.value = totalSelectedValue.toFixed(2);
-    
-    // Also update the total display
-    document.getElementById('payment-amount-input').value = totalSelectedValue.toFixed(2);
-    document.getElementById('total-selected-for-payment').textContent = `$${totalSelectedValue.toFixed(2)}`;
-
-
-
-    const hasSelection = selectedNodes.length > 0;
-    
-    // Toggle the visual "disabled" state of the entire form container
-    paymentFormContainer.classList.toggle('opacity-50', !hasSelection);
-    paymentFormContainer.classList.toggle('pointer-events-none', !hasSelection);
-    
-    // Also disable the submit button directly for extra safety
-    document.getElementById('submit-payment-record-btn').disabled = !hasSelection;
-}
 
 /**
  * [NEW] Resets the payment reconciliation form to its default "create" state.
@@ -3264,8 +3197,7 @@ export function resetPaymentForm() {
     document.getElementById('payment-ledger-doc-id').value = '';
     document.getElementById('submit-payment-record-btn').textContent = 'Submit Payment Record';
     document.getElementById('cancel-payment-edit-btn').classList.add('hidden');
-    document.getElementById('payment-amount-input').readOnly = true; // Make it read-only for new payments
-    if (unpaidSalesGridApi) unpaidSalesGridApi.deselectAll();
+
 
     // --- [NEW] EXPLICITLY SET INITIAL DISABLED STATE ---
     const paymentFormContainer = document.getElementById('payment-form-container');
