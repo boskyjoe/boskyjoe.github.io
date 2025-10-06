@@ -80,9 +80,9 @@ import {
     showConsignmentRequestModal, 
     closeConsignmentRequestModal, 
     showConsignmentRequestStep2,
-    getRequestedConsignmentItems,getFulfillmentItems,refreshConsignmentDetailPanel,
+    getFulfillmentItems,refreshConsignmentDetailPanel,
     showReportActivityModal, closeReportActivityModal,switchConsignmentTab,renderConsignmentDetail,
-    resetPaymentForm
+    resetPaymentForm,getRequestedConsignmentItems
 } from './ui.js';
 
 import { 
@@ -90,7 +90,7 @@ import {
     getMembersForTeam,
     createConsignmentRequest,
     fulfillConsignmentAndUpdateInventory,
-    getItemsForCatalogue,logActivityAndUpdateConsignment,getConsignmentOrderById,
+    logActivityAndUpdateConsignment,getConsignmentOrderById,
     submitPaymentRecord,updatePaymentRecord,
     verifyConsignmentPayment
 } from './api.js';
@@ -714,16 +714,16 @@ function setupEventListeners() {
                 }
             } 
             else if (grid.id === 'consignment-payments-grid') {
-                const paymentData = getPaymentDataFromGridById(docId); // Assuming you create this helper
+                const paymentData = getPaymentDataFromGridById(docId);
                 if (!paymentData) return;
 
                 if (gridButton.classList.contains('action-btn-edit-payment')) {
-                    // Call a new UI function to load the data into the form
+                    // Delegate the UI work to the 'loadPaymentRecordForEditing' function in ui.js
                     loadPaymentRecordForEditing(paymentData);
                 } 
                 else if (gridButton.classList.contains('action-btn-cancel-payment')) {
-                    if (confirm("Are you sure you want to cancel this pending payment record?")) {
-                        // We need a 'deletePaymentRecord' API function for this
+                    if (confirm("Are you sure you want to cancel this pending payment record? This cannot be undone.")) {
+                        // We still need a 'deletePaymentRecord' API function for this.
                         // await deletePaymentRecord(docId);
                         alert("Payment record cancelled.");
                     }
@@ -733,6 +733,7 @@ function setupEventListeners() {
                         try {
                             await verifyConsignmentPayment(docId, user);
                             alert("Payment successfully verified!");
+                            // The real-time listeners will automatically update the summary and grid.
                         } catch (error) {
                             console.error("Error verifying payment:", error);
                             alert(`Payment verification failed: ${error.message}`);
@@ -1532,25 +1533,19 @@ function setupEventListeners() {
             const docId = document.getElementById('payment-ledger-doc-id').value;
             const isEditMode = !!docId;
 
-            // Get the IDs of the selected unpaid sales from the left-hand grid
-            const selectedSaleNodes = unpaidSalesGridApi.getSelectedNodes();
-            const relatedActivityIds = selectedNodes.map(node => node.data.id);
-
+            // --- NEW, SIMPLIFIED DATA GATHERING ---
             const paymentData = {
                 orderId: appState.selectedConsignmentId,
-                teamLeadId: user.uid, // Or get from order data if admin is submitting
+                teamLeadId: user.uid, // This assumes the team lead is submitting.
                 teamLeadName: user.displayName,
                 amountPaid: parseFloat(document.getElementById('payment-amount-input').value),
                 paymentDate: new Date(document.getElementById('payment-date-input').value),
                 paymentMode: document.getElementById('payment-mode-select').value,
                 transactionRef: document.getElementById('payment-ref-input').value,
-                notes: document.getElementById('payment-notes-input').value,
-                paymentReason: 'Sales Revenue', // Or get from a dropdown if you add one
-                relatedActivityIds: relatedActivityIds
             };
 
             if (isNaN(paymentData.amountPaid) || paymentData.amountPaid <= 0) {
-                return alert("Amount to pay must be greater than zero. Please select one or more unpaid sales.");
+                return alert("Amount paid must be a number greater than zero.");
             }
 
             try {
