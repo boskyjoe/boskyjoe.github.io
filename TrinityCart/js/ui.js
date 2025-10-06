@@ -3144,13 +3144,20 @@ const unpaidSalesGridOptions = {
         headerCheckbox: true,             
         enableSelectionWithoutKeys: true, 
     },
+    defaultColDef: { 
+        resizable: true, 
+        sortable: true, 
+        wrapText: true,      // Wrap cell content
+        autoHeight: true,    // Adjust row height to fit wrapped text
+        wrapHeaderText: true, // Wrap header text if it's too long
+        autoHeaderHeight: true // Adjust header height to fit wrapped text
+    },
     columnDefs: [
         { 
-            headerName: 'Select', 
-            width: 70,
+            width: 50,
         },
-        { field: "activityDate", headerName: "Sale Date", width: 120, valueFormatter: p => p.value.toDate().toLocaleDateString() },
-        { field: "productName", headerName: "Product", flex: 1 },
+        { field: "activityDate", headerName: "Sale Date", width: 120,filter: 'agDateColumnFilter', valueFormatter: p => p.value.toDate().toLocaleDateString() },
+        { field: "productName", headerName: "Product", filter: 'agTextColumnFilter', flex: 1 },
         { field: "quantity", headerName: "Qty", width: 80 },
         { field: "totalSaleValue", headerName: "Value", width: 100, valueFormatter: p => `$${p.value.toFixed(2)}` }
     ],
