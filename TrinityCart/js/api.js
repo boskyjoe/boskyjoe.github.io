@@ -1460,7 +1460,7 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
             activityType: activityType,
             quantity: quantityDelta,
             unitSellingPrice: sellingPrice,
-            totalValue: activityValueDelta,
+            totalSaleValue: activityValueDelta,
             correctionDetails: correctionDetails || null,
             paymentStatus: (activityType === 'Sale' && quantityDelta > 0) ? 'Unpaid' : null,
             recordedBy: user.email,
