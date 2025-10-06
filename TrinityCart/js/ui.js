@@ -3188,6 +3188,45 @@ export function resetPaymentForm() {
 }
 
 
+/**
+ * [NEW] Gets the data for a specific payment row from the payment history grid.
+ */
+export function getPaymentDataFromGridById(paymentId) {
+    if (!consignmentPaymentsGridApi) return null;
+    const rowNode = consignmentPaymentsGridApi.getRowNode(paymentId);
+    return rowNode ? rowNode.data : null;
+}
+
+/**
+ * [NEW] Loads an existing pending payment record into the form for editing.
+ */
+export function loadPaymentRecordForEditing(paymentData) {
+    const form = document.getElementById('make-payment-form');
+    if (!form) return;
+
+    // Switch to "Edit Mode"
+    document.getElementById('payment-ledger-doc-id').value = paymentData.id;
+    document.getElementById('payment-form-title').textContent = "Edit Pending Payment";
+    document.getElementById('submit-payment-record-btn').textContent = 'Update Payment Record';
+    document.getElementById('cancel-payment-edit-btn').classList.remove('hidden');
+
+    // Populate fields
+    document.getElementById('payment-amount-input').value = paymentData.amountPaid.toFixed(2);
+    document.getElementById('payment-amount-input').readOnly = false; // Allow editing amount in edit mode
+    document.getElementById('payment-date-input').valueAsDate = paymentData.paymentDate.toDate();
+    document.getElementById('payment-mode-select').value = paymentData.paymentMode;
+    document.getElementById('payment-ref-input').value = paymentData.transactionRef;
+    document.getElementById('payment-notes-input').value = paymentData.notes;
+
+    // Pre-select the rows in the unpaid sales grid
+    if (unpaidSalesGridApi && paymentData.relatedActivityIds) {
+        unpaidSalesGridApi.forEachNode(node => {
+            if (paymentData.relatedActivityIds.includes(node.data.id)) {
+                node.setSelected(true);
+            }
+        });
+    }
+}
 
 
 
