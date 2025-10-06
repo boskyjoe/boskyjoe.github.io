@@ -516,33 +516,41 @@
                                     <div id="consignment-activity-grid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
                                 </div>
                                 
-                                <!-- Panel 3: Payments (New Three-Part Layout) -->
+                                <!-- Panel 3: Payments (New Ledger Model Layout) -->
                                 <div id="panel-consignment-payments" class="consignment-tab-panel space-y-8">
                                     
-                                    <!-- Section 1: Top Two Panels (Unpaid Sales & New Payment Form) -->
-                                    <div class="grid grid-cols-12 gap-8">
+                                    <!-- Section 1: Top Two Panels (Financial Summary & Payment Form) -->
+                                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                         
-                                        <!-- Top-Left: Unpaid Sales Activity (Takes up 8 of 12 columns on large screens) -->
-                                        <div class="bg-gray-50 p-4 rounded-lg border col-span-12 lg:col-span-8">
-                                            <h4 class="font-semibold text-gray-700 mb-2">1. Select Unpaid Sales to Pay</h4>
-                                            <div id="unpaid-sales-grid" class="ag-theme-alpine" style="height: 250px; width: 100%;"></div>
-                                            <div class="mt-2 text-right font-bold text-lg">
-                                                Total Selected: <span id="total-selected-for-payment" class="text-blue-600">$0.00</span>
+                                        <!-- Top-Left: Financial Summary -->
+                                        <div class="bg-gray-50 p-6 rounded-lg border lg:col-span-1 space-y-4">
+                                            <h4 class="font-semibold text-gray-700 text-lg border-b pb-2">Order Summary</h4>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">Total Value Sold:</span>
+                                                <span id="summary-total-sold" class="font-bold text-gray-800">$0.00</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">Total Paid:</span>
+                                                <span id="summary-total-paid" class="font-bold text-green-600">$0.00</span>
+                                            </div>
+                                            <hr>
+                                            <div class="flex justify-between text-xl">
+                                                <span class="font-bold text-gray-800">Balance Due:</span>
+                                                <span id="summary-balance-due" class="font-bold text-red-600">$0.00</span>
                                             </div>
                                         </div>
 
                                         <!-- Top-Right: New Payment Record Form -->
-                                        <!--<div class="bg-gray-50 p-4 rounded-lg border">-->
-                                        <div id="payment-form-container" class="bg-gray-50 p-4 rounded-lg border col-span-12 lg:col-span-4">
-                                            <h4 id="payment-form-title" class="font-semibold text-gray-700 mb-2">2. Record Your Payment</h4>
+                                        <div id="payment-form-container" class="bg-white p-6 rounded-lg shadow-md lg:col-span-2">
+                                            <h4 id="payment-form-title" class="font-semibold text-gray-700 mb-4 text-lg">Make a Payment</h4>
                                             <form id="make-payment-form" class="space-y-4">
                                                 <input type="hidden" id="payment-ledger-doc-id"> <!-- For editing -->
                                                 
-                                                <div>
-                                                    <label for="payment-amount-input" class="form-label">Amount to Pay</label>
-                                                    <input type="text" id="payment-amount-input" class="form-input w-full bg-gray-200" readonly>
-                                                </div>
-                                                <div class="grid grid-cols-2 gap-4">
+                                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    <div>
+                                                        <label for="payment-amount-input" class="form-label">Amount Paid <span class="text-red-500">*</span></label>
+                                                        <input type="number" id="payment-amount-input" class="form-input w-full" required step="0.01" min="0.01" placeholder="0.00">
+                                                    </div>
                                                     <div>
                                                         <label for="payment-mode-select" class="form-label">Payment Mode <span class="text-red-500">*</span></label>
                                                         <select id="payment-mode-select" class="form-input w-full" required></select>
@@ -553,7 +561,7 @@
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <label for="payment-ref-input" class="form-label">Reference # (Optional)</label>
+                                                    <label for="payment-ref-input" class="form-label">Reference # or Notes (Optional)</label>
                                                     <input type="text" id="payment-ref-input" class="form-input w-full">
                                                 </div>
                                                 <div class="flex justify-end pt-2 space-x-3">
@@ -567,10 +575,7 @@
                                     <!-- Section 2: Bottom Panel (Payment History) -->
                                     <div class="bg-white rounded-lg shadow-lg">
                                         <div class="p-6">
-                                            <div class="flex justify-between items-center mb-4">
-                                                <h3 class="text-lg font-semibold text-gray-800">Payment History</h3>
-                                                <!-- Placeholder for future actions like exporting -->
-                                            </div>
+                                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Payment History</h3>
                                             <div id="consignment-payments-grid" class="ag-theme-alpine" style="height: 300px; width: 100%;"></div>
                                         </div>
                                     </div>
