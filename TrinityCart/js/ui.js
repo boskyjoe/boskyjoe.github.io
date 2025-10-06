@@ -3233,7 +3233,7 @@ function updatePaymentFormFromSelection() {
     
     const paymentFormContainer = document.getElementById('payment-form-container');
     if (!paymentFormContainer) return;
-    
+
     const selectedNodes = unpaidSalesGridApi.getSelectedNodes();
     const totalSelectedValue = selectedNodes.reduce((sum, node) => sum + node.data.totalSaleValue, 0);
     
@@ -3241,16 +3241,16 @@ function updatePaymentFormFromSelection() {
     amountInput.value = totalSelectedValue.toFixed(2);
     
     // Also update the total display
+    document.getElementById('payment-amount-input').value = totalSelectedValue.toFixed(2);
     document.getElementById('total-selected-for-payment').textContent = `$${totalSelectedValue.toFixed(2)}`;
+
 
 
     const hasSelection = selectedNodes.length > 0;
     
-    if (hasSelection) {
-        paymentFormContainer.classList.remove('opacity-50', 'pointer-events-none');
-    } else {
-        paymentFormContainer.classList.add('opacity-50', 'pointer-events-none');
-    }
+    // Toggle the visual "disabled" state of the entire form container
+    paymentFormContainer.classList.toggle('opacity-50', !hasSelection);
+    paymentFormContainer.classList.toggle('pointer-events-none', !hasSelection);
     
     // Also disable the submit button directly for extra safety
     document.getElementById('submit-payment-record-btn').disabled = !hasSelection;
@@ -3267,9 +3267,11 @@ export function resetPaymentForm() {
     document.getElementById('payment-amount-input').readOnly = true; // Make it read-only for new payments
     if (unpaidSalesGridApi) unpaidSalesGridApi.deselectAll();
 
-    // [NEW] Explicitly set the initial disabled state
+    // --- [NEW] EXPLICITLY SET INITIAL DISABLED STATE ---
     const paymentFormContainer = document.getElementById('payment-form-container');
-    paymentFormContainer.classList.add('opacity-50', 'pointer-events-none');
+    if (paymentFormContainer) {
+        paymentFormContainer.classList.add('opacity-50', 'pointer-events-none');
+    }
     document.getElementById('submit-payment-record-btn').disabled = true;
 }
 
