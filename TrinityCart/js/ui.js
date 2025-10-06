@@ -2321,6 +2321,9 @@ let consignmentPaymentsGridApi = null;
 let requestProductsGridApi = null;
 let isConsignmentGridsInitialized = false;
 
+let unpaidSalesGridApi = null;
+
+
 let unsubscribeConsignmentOrdersListener = null;
 let unsubscribeConsignmentDetailsListeners = []; // Array to hold multiple detail listeners
 
@@ -2501,14 +2504,19 @@ export function initializeConsignmentGrids() {
     const itemsGridDiv = document.getElementById('consignment-items-grid');
     const requestGridDiv = document.getElementById('request-products-grid');
     const activityGridDiv = document.getElementById('consignment-activity-grid');
+
+    const unpaidSalesGridDiv = document.getElementById('unpaid-sales-grid');
+    const paymentsGridDiv = document.getElementById('consignment-payments-grid');
     // ... get other grid divs ...
 
-    if (orderGridDiv && fulfillGridDiv && itemsGridDiv && requestGridDiv && activityGridDiv) {
+    if (orderGridDiv && fulfillGridDiv && itemsGridDiv && requestGridDiv && activityGridDiv && unpaidSalesGridDiv && paymentsGridDiv) {
         createGrid(orderGridDiv, consignmentOrdersGridOptions);
         createGrid(fulfillGridDiv, fulfillmentItemsGridOptions);
         createGrid(itemsGridDiv, consignmentItemsGridOptions);
         createGrid(requestGridDiv, requestProductsGridOptions); 
         createGrid(activityGridDiv, consignmentActivityGridOptions);
+        createGrid(unpaidSalesGridDiv, unpaidSalesGridOptions);
+        createGrid(paymentsGridDiv, consignmentPaymentsGridOptions);
         // ... create other grids ...
         isConsignmentGridsInitialized = true;
     }
@@ -2634,6 +2642,17 @@ export function renderConsignmentDetail(orderData) {
                 const payments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (consignmentPaymentsGridApi) {
                     consignmentPaymentsGridApi.setGridOption('rowData', payments);
+                }
+            });
+
+        const unpaidUnsub = orderRef.collection('activityLog')
+            .where('activityType', '==', 'Sale')
+            .where('paymentStatus', '==', 'Unpaid')
+            .onSnapshot(snapshot => {
+                console.log("[Firestore] Received update for unpaid sales.");
+                const unpaidSales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (unpaidSalesGridApi) {
+                    unpaidSalesGridApi.setGridOption('rowData', unpaidSales);
                 }
             });
 
@@ -3077,6 +3096,98 @@ const consignmentActivityGridOptions = {
     defaultColDef: { resizable: true, sortable: true },
     onGridReady: params => { consignmentActivityGridApi = params.api; }
 };
+
+
+// [NEW] Grid for the "Unpaid Sales" panel
+const unpaidSalesGridOptions = {
+    getRowId: params => params.data.id,
+    columnDefs: [
+        { 
+            headerName: 'Select', 
+            width: 70, 
+            checkboxSelection: true, // Enable checkboxes
+            headerCheckboxSelection: true // Add a "select all" checkbox
+        },
+        { field: "activityDate", headerName: "Sale Date", width: 120, valueFormatter: p => p.value.toDate().toLocaleDateString() },
+        { field: "productName", headerName: "Product", flex: 1 },
+        { field: "quantity", headerName: "Qty", width: 80 },
+        { field: "totalSaleValue", headerName: "Value", width: 100, valueFormatter: p => `$${p.value.toFixed(2)}` }
+    ],
+    rowSelection: 'multiple', // Allow multiple rows to be selected
+    onSelectionChanged: () => {
+        // This event fires whenever a checkbox is ticked or unticked
+        updatePaymentFormFromSelection();
+    }
+};
+
+// [NEW] Grid for the "Payment History" panel
+const consignmentPaymentsGridOptions = {
+    getRowId: params => params.data.id,
+    columnDefs: [
+        { field: "paymentDate", headerName: "Payment Date", width: 140, valueFormatter: p => p.value.toDate().toLocaleDateString() },
+        { field: "amountPaid", headerName: "Amount", width: 120, valueFormatter: p => `$${p.value.toFixed(2)}` },
+        { field: "paymentMode", headerName: "Mode", flex: 1 },
+        { field: "transactionRef", headerName: "Reference #", flex: 1 },
+        { field: "paymentStatus", headerName: "Status", width: 180, cellRenderer: p => {
+            const status = p.value;
+            if (status === 'Verified') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
+            if (status === 'Pending Verification') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">${status}</span>`;
+            if (status === 'Rejected') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">${status}</span>`;
+            return status;
+        }},
+        {
+            headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center space-x-2',
+            cellRenderer: params => {
+                const data = params.data;
+                if (!data) return '';
+                
+                let buttons = '';
+                // Show Edit/Cancel for pending payments, if the user is the one who submitted it
+                if (data.paymentStatus === 'Pending Verification' && data.submittedBy === appState.currentUser.email) {
+                    buttons += `<button class="action-btn-icon action-btn-edit-payment" data-id="${data.id}" title="Edit Payment Record">...</button>`;
+                    buttons += `<button class="action-btn-icon action-btn-delete action-btn-cancel-payment" data-id="${data.id}" title="Cancel Payment Record">...</button>`;
+                }
+                // Show Verify for pending payments, if the user is an admin
+                if (data.paymentStatus === 'Pending Verification' && appState.currentUser.role === 'admin') {
+                    buttons += `<button class="action-btn-icon action-btn-verify-payment" data-id="${data.id}" title="Verify Payment">...</button>`;
+                }
+                return buttons;
+            }
+        }
+    ],
+    onGridReady: params => { consignmentPaymentsGridApi = params.api; }
+};
+
+/**
+ * [NEW] Calculates the total value of selected rows in the unpaid sales grid
+ * and updates the payment form.
+ */
+function updatePaymentFormFromSelection() {
+    if (!unpaidSalesGridApi) return;
+    
+    const selectedNodes = unpaidSalesGridApi.getSelectedNodes();
+    const totalSelectedValue = selectedNodes.reduce((sum, node) => sum + node.data.totalSaleValue, 0);
+    
+    const amountInput = document.getElementById('payment-amount-input');
+    amountInput.value = totalSelectedValue.toFixed(2);
+    
+    // Also update the total display
+    document.getElementById('total-selected-for-payment').textContent = `$${totalSelectedValue.toFixed(2)}`;
+}
+
+/**
+ * [NEW] Resets the payment reconciliation form to its default "create" state.
+ */
+export function resetPaymentForm() {
+    document.getElementById('make-payment-form').reset();
+    document.getElementById('payment-ledger-doc-id').value = '';
+    document.getElementById('submit-payment-record-btn').textContent = 'Submit Payment Record';
+    document.getElementById('cancel-payment-edit-btn').classList.add('hidden');
+    document.getElementById('payment-amount-input').readOnly = true; // Make it read-only for new payments
+    if (unpaidSalesGridApi) unpaidSalesGridApi.deselectAll();
+}
+
+
 
 
 
