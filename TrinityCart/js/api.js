@@ -1573,3 +1573,13 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
         // The logic to loop through relatedActivityIds has been completely removed.
     });
 }
+
+
+/**
+ * [NEW] Deletes a pending payment record from the ledger.
+ * @param {string} paymentId - The document ID of the payment to delete.
+ */
+export async function cancelPaymentRecord(paymentId) {
+    const db = firebase.firestore();
+    return db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId).delete();
+}
