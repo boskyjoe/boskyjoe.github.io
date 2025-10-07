@@ -1561,12 +1561,16 @@ const purchasePaymentsGridOptions = {
 };
 
 
-export function getPaymentDataFromGridById(rowId) {
-    if (!purchasePaymentsGridApi) {
-        console.error("Cannot get row data: Purchase Payments Grid API not available.");
+export function getPaymentDataFromGridById(paymentId) {
+    // --- THIS IS THE FIX ---
+    // Use the correct grid API variable for the consignment payments grid.
+    if (!consignmentPaymentsGridApi) {
+        console.error("Cannot get row data: Consignment Payments Grid API not available.");
         return null;
     }
-    const rowNode = purchasePaymentsGridApi.getRowNode(rowId);
+    const rowNode = consignmentPaymentsGridApi.getRowNode(paymentId);
+    // -----------------------
+    
     return rowNode ? rowNode.data : null;
 }
 
