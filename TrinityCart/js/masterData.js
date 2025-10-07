@@ -3,7 +3,7 @@
 import { CATEGORIES_COLLECTION_PATH, SEASONS_COLLECTION_PATH,
     PRODUCTS_CATALOGUE_COLLECTION_PATH, SUPPLIERS_COLLECTION_PATH,
     PAYMENT_MODES_COLLECTION_PATH,
-SALES_CATALOGUES_COLLECTION_PATH,CHURCH_TEAMS_COLLECTION_PATH,EVENTS_COLLECTION_PATH } from './config.js';
+SALES_CATALOGUES_COLLECTION_PATH,CHURCH_TEAMS_COLLECTION_PATH,EVENTS_COLLECTION_PATH,SYSTEM_SETUPS_COLLECTION_PATH } from './config.js';
 
 // This object will be our local, always-up-to-date cache of master data.
 export const masterData = {
@@ -15,6 +15,7 @@ export const masterData = {
     salesCatalogues: [],
     teams: [],
     salesEvents: [],
+    systemSetups: {},
 };
 
 /**
@@ -110,6 +111,21 @@ export function initializeMasterDataListeners() {
         console.error("Error listening to salesEvents collection:", error);
     });
 
+    // [NEW] Listener for System Setups
+    db.collection(SYSTEM_SETUPS_COLLECTION_PATH).doc('mainConfig').onSnapshot(doc => {
+        if (doc.exists) {
+            masterData.systemSetups = doc.data();
+            console.log("Master data updated: System Setups", masterData.systemSetups);
+            
+            // Dispatch a general event so any part of the app can react if needed
+            document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'systemSetups' } }));
+        } else {
+            console.warn("System Setups document ('mainConfig') not found in Firestore!");
+            masterData.systemSetups = {}; // Reset to empty if document is deleted
+        }
+    }, error => {
+        console.error("Error listening to systemSetups document:", error);
+    });
 
 
     // Add more listeners here for payment modes, banks, etc.
