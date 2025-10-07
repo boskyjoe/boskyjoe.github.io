@@ -3431,6 +3431,31 @@ export function showSalesView() {
 }
 
 
+/**
+ * [NEW] Adds a single product item to the sales cart grid.
+ * @param {object} itemData - The product item to add.
+ */
+export function addItemToCart(itemData) {
+    if (!salesCartGridApi) {
+        console.error("Cannot add item to cart: salesCartGridApi is not ready.");
+        return;
+    }
+    // Use applyTransaction to add the new row.
+    salesCartGridApi.applyTransaction({ add: [itemData] });
+    
+    // After adding, immediately recalculate the totals.
+    calculateSalesTotals();
+}
+
+export function removeItemFromCart(productId) {
+    if (!salesCartGridApi) return;
+    const rowNode = salesCartGridApi.getRowNode(productId);
+    if (rowNode) {
+        salesCartGridApi.applyTransaction({ remove: [rowNode.data] });
+        calculateSalesTotals();
+    }
+}
+
 
 
 
@@ -3466,6 +3491,8 @@ export function renderSidebar(role) {
             sidebarNav.appendChild(li);
         }
     });
+
+    
 }
 
 export function showView(viewId) {
