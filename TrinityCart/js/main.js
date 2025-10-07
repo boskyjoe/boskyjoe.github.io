@@ -86,7 +86,7 @@ import {
     showSalesView,
     showAddProductModal,
     closeAddProductModal,
-    calculateSalesTotals,
+    calculateSalesTotals,addItemToCart,
 } from './ui.js';
 
 import { 
@@ -947,8 +947,7 @@ function setupEventListeners() {
                     unitPrice: product.sellingPrice || 0, // Use default selling price
                 };
                 // Add the new item to the cart grid
-                salesCartGridApi.applyTransaction({ add: [newItem] });
-                calculateSalesTotals();
+                addItemToCart(newItem);
             }
             closeAddProductModal();
         }
@@ -958,8 +957,7 @@ function setupEventListeners() {
             const productId = target.closest('.action-btn-remove-from-cart').dataset.id;
             const rowNode = salesCartGridApi.getRowNode(productId);
             if (rowNode) {
-                salesCartGridApi.applyTransaction({ remove: [rowNode.data] });
-                calculateSalesTotals();
+                removeItemFromCart(productId);
             }
         }
 
