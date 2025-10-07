@@ -3186,18 +3186,22 @@ const consignmentPaymentsGridOptions = {
  * [NEW] Resets the payment reconciliation form to its default "create" state.
  */
 export function resetPaymentForm() {
-    document.getElementById('make-payment-form').reset();
+
+    const form = document.getElementById('make-payment-form');
+    if (!form) return;
+
+    // 1. Reset the form fields and buttons to their default "Create" state.
+    form.reset();
+
     document.getElementById('payment-ledger-doc-id').value = '';
+    document.getElementById('payment-form-title').textContent = "Make a Payment"; // Or "2. Record Your Payment"
     document.getElementById('submit-payment-record-btn').textContent = 'Submit Payment Record';
     document.getElementById('cancel-payment-edit-btn').classList.add('hidden');
 
 
-    // --- [NEW] EXPLICITLY SET INITIAL DISABLED STATE ---
-    const paymentFormContainer = document.getElementById('payment-form-container');
-    if (paymentFormContainer) {
-        paymentFormContainer.classList.add('opacity-50', 'pointer-events-none');
+    if (consignmentPaymentsGridApi) {
+        consignmentPaymentsGridApi.deselectAll();
     }
-    document.getElementById('submit-payment-record-btn').disabled = true;
 }
 
 
