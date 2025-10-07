@@ -16,7 +16,8 @@ import { PURCHASE_INVOICES_COLLECTION_PATH, SUPPLIER_PAYMENTS_LEDGER_COLLECTION_
 import { SALES_CATALOGUES_COLLECTION_PATH,
         CHURCH_TEAMS_COLLECTION_PATH,USER_TEAM_MEMBERSHIPS_COLLECTION_PATH,
         CONSIGNMENT_ORDERS_COLLECTION_PATH,
-        CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH
+        CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH,SALES_COLLECTION_PATH,
+    SALES_PAYMENTS_LEDGER_COLLECTION_PATH
 } from './config.js';
 
 
@@ -1581,4 +1582,89 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
 export async function cancelPaymentRecord(paymentId) {
     const db = firebase.firestore();
     return db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId).delete();
+}
+
+// =======================================================
+// --- SALES MANAGEMENT API FUNCTIONS ---
+// =======================================================
+
+/**
+ * [NEW & TRANSACTIONAL] Creates a new Sales Invoice, decrements inventory,
+ * and optionally records an initial payment, all in one atomic operation.
+ * @param {object} saleData - The complete data object for the new sale.
+ * @param {object|null} initialPaymentData - Data for an initial payment, or null if none.
+ * @param {object} user - The user creating the sale.
+ */
+export async function createSaleAndUpdateInventory(saleData, initialPaymentData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+
+    return db.runTransaction(async (transaction) => {
+        // --- 1. READ & VALIDATION PHASE ---
+        const productRefs = saleData.lineItems.map(item => db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.productId));
+        const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
+
+        for (let i = 0; i < saleData.lineItems.length; i++) {
+            const item = saleData.lineItems[i];
+            const productDoc = productDocs[i];
+            if (!productDoc.exists) {
+                throw new Error(`Product "${item.productName}" not found in the catalogue.`);
+            }
+            const currentStock = productDoc.data().inventoryCount || 0;
+            if (currentStock < item.quantity) {
+                throw new Error(`Not enough stock for "${item.productName}". Only ${currentStock} available.`);
+            }
+        }
+
+        // --- 2. WRITE PHASE (only runs if validation passes) ---
+
+        // A. Create the main Sales Invoice document
+        const saleRef = db.collection(SALES_COLLECTION_PATH).doc();
+
+        let prefix = 'SALE-'; // A fallback default
+        if (saleData.store === 'Church Store') {
+            prefix = 'CS-';
+        } else if (saleData.store === 'Tasty Treats') {
+            prefix = 'TT-';
+        }
+        const saleId = `SALE-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+        
+        let totalAmountPaid = 0;
+        if (initialPaymentData) {
+            totalAmountPaid = initialPaymentData.amountPaid;
+        }
+        const balanceDue = saleData.financials.totalAmount - totalAmountPaid;
+        const paymentStatus = balanceDue <= 0 ? 'Paid' : (totalAmountPaid > 0 ? 'Partially Paid' : 'Unpaid');
+
+        transaction.set(saleRef, {
+            ...saleData,
+            saleId: saleId,
+            totalAmountPaid: totalAmountPaid,
+            balanceDue: balanceDue,
+            paymentStatus: paymentStatus,
+            audit: { createdBy: user.email, createdOn: now }
+        });
+
+        // B. Create the initial payment record if one was made
+        if (initialPaymentData) {
+            const paymentRef = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).doc();
+            transaction.set(paymentRef, {
+                ...initialPaymentData,
+                invoiceId: saleRef.id, // Link the payment to the new sale invoice
+                paymentId: `SPAY-${Date.now()}`,
+                paymentDate: now, // Or use the date from the form
+                status: 'Verified', // Initial payments are implicitly verified
+                recordedBy: user.email
+            });
+        }
+
+        // C. Decrement inventory for each product sold
+        for (let i = 0; i < saleData.lineItems.length; i++) {
+            const item = saleData.lineItems[i];
+            const productRef = productRefs[i];
+            transaction.update(productRef, {
+                inventoryCount: firebase.firestore.FieldValue.increment(-Number(item.quantity))
+            });
+        }
+    });
 }
