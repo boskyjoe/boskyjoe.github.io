@@ -82,7 +82,7 @@ import {
     showConsignmentRequestStep2,
     getFulfillmentItems,refreshConsignmentDetailPanel,
     showReportActivityModal, closeReportActivityModal,switchConsignmentTab,renderConsignmentDetail,
-    resetPaymentForm,getRequestedConsignmentItems
+    resetPaymentForm,getRequestedConsignmentItems,loadPaymentRecordForEditing
 } from './ui.js';
 
 import { 
