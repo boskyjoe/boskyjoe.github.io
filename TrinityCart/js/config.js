@@ -20,7 +20,7 @@ export const USERS_COLLECTION_PATH = `${BASE_DOC_PATH}/users`;
 export const SUPPLIERS_COLLECTION_PATH = `${BASE_DOC_PATH}/suppliers`;
 export const PRODUCTS_COLLECTION_PATH = `${BASE_DOC_PATH}/products`;
 export const PURCHASES_COLLECTION_PATH = `${BASE_DOC_PATH}/purchaseInvoices`;
-export const SALES_COLLECTION_PATH = `${BASE_DOC_PATH}/salesInvoices`;
+
 
 
 export const CATEGORIES_COLLECTION_PATH = `${BASE_DOC_PATH}/productCategories`;
@@ -42,6 +42,13 @@ export const USER_TEAM_MEMBERSHIPS_COLLECTION_PATH = `${BASE_DOC_PATH}/userTeamM
 
 export const CONSIGNMENT_ORDERS_COLLECTION_PATH = `${BASE_DOC_PATH}/consignmentOrders`;
 export const CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH = `${BASE_DOC_PATH}/consignmentPaymentsLedger`;
+
+export const SYSTEM_SETUPS_COLLECTION_PATH = `${BASE_DOC_PATH}/systemSetups`;
+
+export const SALES_PAYMENTS_LEDGER_COLLECTION_PATH = `${BASE_DOC_PATH}/salesPaymentsLedger`;
+export const SALES_COLLECTION_PATH = `${BASE_DOC_PATH}/salesInvoices`;
+
+
 
 
 
