@@ -3201,36 +3201,33 @@ export function resetPaymentForm() {
 }
 
 
-
 /**
- * [NEW] Loads an existing pending payment record into the form for editing.
+ * [CORRECTED & SIMPLIFIED] Loads an existing pending payment record into the form for editing.
  */
 export function loadPaymentRecordForEditing(paymentData) {
     const form = document.getElementById('make-payment-form');
     if (!form) return;
 
-    // Switch to "Edit Mode"
+    // 1. Switch the form to "Edit Mode"
     document.getElementById('payment-ledger-doc-id').value = paymentData.id;
     document.getElementById('payment-form-title').textContent = "Edit Pending Payment";
     document.getElementById('submit-payment-record-btn').textContent = 'Update Payment Record';
     document.getElementById('cancel-payment-edit-btn').classList.remove('hidden');
 
-    // Populate fields
+    // 2. Populate the form fields with the data from the selected payment.
     document.getElementById('payment-amount-input').value = paymentData.amountPaid.toFixed(2);
-    document.getElementById('payment-amount-input').readOnly = false; // Allow editing amount in edit mode
     document.getElementById('payment-date-input').valueAsDate = paymentData.paymentDate.toDate();
     document.getElementById('payment-mode-select').value = paymentData.paymentMode;
     document.getElementById('payment-ref-input').value = paymentData.transactionRef;
-    document.getElementById('payment-notes-input').value = paymentData.notes;
-
-    // Pre-select the rows in the unpaid sales grid
-    if (unpaidSalesGridApi && paymentData.relatedActivityIds) {
-        unpaidSalesGridApi.forEachNode(node => {
-            if (paymentData.relatedActivityIds.includes(node.data.id)) {
-                node.setSelected(true);
-            }
-        });
+    
+    // The 'notes' field might not exist on your form, but if it does, this is correct.
+    // If you removed it, you can remove this line.
+    const notesInput = document.getElementById('payment-notes-input');
+    if (notesInput) {
+        notesInput.value = paymentData.notes || '';
     }
+
+    
 }
 
 
