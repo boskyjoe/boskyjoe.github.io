@@ -3135,18 +3135,6 @@ const consignmentActivityGridOptions = {
             valueFormatter: p => (p.value && p.value !== 0) ? `$${p.value.toFixed(2)}` : '',
             cellStyle: { 'font-weight': 'bold' }
         },
-        {
-            field: "paymentStatus",
-            headerName: "Payment Status",
-            width: 150,
-            filter: 'agTextColumnFilter',
-            cellRenderer: p => {
-                const status = p.value;
-                if (status === 'Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
-                if (status === 'Unpaid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">${status}</span>`;
-                return ''; // Return empty for non-sale activities
-            }
-        },
         { field: "recordedBy", headerName: "Recorded By", flex: 1 }
     ],
     defaultColDef: { resizable: true, sortable: true },
@@ -3158,6 +3146,17 @@ const consignmentActivityGridOptions = {
 // [NEW] Grid for the "Payment History" panel
 const consignmentPaymentsGridOptions = {
     getRowId: params => params.data.id,
+    pagination: true,
+    paginationPageSize: 100,
+    paginationPageSizeSelector: [10, 50, 100, 200],
+    defaultColDef: { 
+        resizable: true, 
+        sortable: true, 
+        wrapText: true,      // Wrap cell content
+        autoHeight: true,    // Adjust row height automatically
+        wrapHeaderText: true, // Wrap header text
+        autoHeaderHeight: true // Adjust header height automatically
+    },
     columnDefs: [
         { field: "paymentDate", headerName: "Payment Date", width: 140, valueFormatter: p => p.value.toDate().toLocaleDateString() },
         { field: "amountPaid", headerName: "Amount", width: 120, valueFormatter: p => `$${p.value.toFixed(2)}` },
