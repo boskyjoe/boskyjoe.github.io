@@ -82,7 +82,11 @@ import {
     showConsignmentRequestStep2,
     getFulfillmentItems,refreshConsignmentDetailPanel,
     showReportActivityModal, closeReportActivityModal,switchConsignmentTab,renderConsignmentDetail,
-    resetPaymentForm,getRequestedConsignmentItems,loadPaymentRecordForEditing
+    resetPaymentForm,getRequestedConsignmentItems,loadPaymentRecordForEditing,
+    showSalesView,
+    showAddProductModal,
+    closeAddProductModal,
+    calculateSalesTotals,
 } from './ui.js';
 
 import { 
@@ -92,7 +96,8 @@ import {
     fulfillConsignmentAndUpdateInventory,
     logActivityAndUpdateConsignment,getConsignmentOrderById,
     submitPaymentRecord,updatePaymentRecord,
-    verifyConsignmentPayment,cancelPaymentRecord
+    verifyConsignmentPayment,cancelPaymentRecord,
+    createSaleAndUpdateInventory
 } from './api.js';
 
 
@@ -511,6 +516,7 @@ function setupEventListeners() {
                 case 'purchases-view': showPurchasesView(); break;
                 case 'church-teams-view': showChurchTeamsView(); break;
                 case 'consignment-view': showConsignmentView(); break;
+                case 'sales-view': showSalesView(); break;
                 default: showView(viewId);
             }
             return; // Stop processing after handling navigation
@@ -917,6 +923,53 @@ function setupEventListeners() {
                 resetPaymentForm();
             }
         });
+
+        // Handler for "+ Add Product" button on the main form
+        if (target.closest('#add-product-to-cart-btn')) {
+            showAddProductModal();
+        }
+
+        // Handler for closing modals
+        if (target.closest('#add-product-modal .modal-close-trigger')) {
+            closeAddProductModal();
+        }
+
+
+        // Handler for the "Add" button INSIDE the product modal
+        if (target.closest('.action-btn-add-to-cart')) {
+            const productId = target.closest('.action-btn-add-to-cart').dataset.id;
+            const product = masterData.products.find(p => p.id === productId);
+            if (product) {
+                const newItem = {
+                    productId: product.id,
+                    productName: product.itemName,
+                    quantity: 1, // Default to 1
+                    unitPrice: product.sellingPrice || 0, // Use default selling price
+                };
+                // Add the new item to the cart grid
+                salesCartGridApi.applyTransaction({ add: [newItem] });
+                calculateSalesTotals();
+            }
+            closeAddProductModal();
+        }
+
+        // Handler for the "Remove" button in the shopping cart grid
+        if (target.closest('.action-btn-remove-from-cart')) {
+            const productId = target.closest('.action-btn-remove-from-cart').dataset.id;
+            const rowNode = salesCartGridApi.getRowNode(productId);
+            if (rowNode) {
+                salesCartGridApi.applyTransaction({ remove: [rowNode.data] });
+                calculateSalesTotals();
+            }
+        }
+
+
+
+
+
+
+
+
 
 
         const tab = target.closest('.tab');
@@ -1562,13 +1615,6 @@ function setupEventListeners() {
 
     
 
-
-
-
-
-
-
-
     // ==========================================================
     // --- IN-GRID UPDATE & CUSTOM EVENT LISTENERS ---
     // ==========================================================
@@ -1597,6 +1643,85 @@ function setupEventListeners() {
         }
     });
     
+
+    // --- Form and Input Listeners ---
+
+    // Listener for the "Payment Type" dropdown
+    const salePaymentTypeSelect = document.getElementById('sale-payment-type');
+    if (salePaymentTypeSelect) {
+        salePaymentTypeSelect.addEventListener('change', (e) => {
+            const payNowContainer = document.getElementById('sale-pay-now-container');
+            const showPayNow = e.target.value === 'Pay Now';
+            payNowContainer.classList.toggle('hidden', !showPayNow);
+        });
+    }
+
+    // Listener to recalculate change due when amount received is typed
+    const amountReceivedInput = document.getElementById('sale-amount-received');
+    if (amountReceivedInput) {
+        amountReceivedInput.addEventListener('input', calculateSalesTotals);
+    }
+
+    // --- Main Form Submission Handler ---
+    const newSaleForm = document.getElementById('new-sale-form');
+    if (newSaleForm) {
+        newSaleForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            
+            const cartItems = [];
+            salesCartGridApi.forEachNode(node => cartItems.push(node.data));
+
+            if (cartItems.length === 0) {
+                return alert("Please add at least one product to the cart.");
+            }
+
+            // Gather all data from the form
+            const subtotal = parseFloat(document.getElementById('sale-subtotal').textContent.replace('$', ''));
+            const tax = parseFloat(document.getElementById('sale-tax').textContent.replace('$', ''));
+            const totalAmount = parseFloat(document.getElementById('sale-grand-total').textContent.replace('$', ''));
+            
+            const saleData = {
+                store: document.getElementById('sale-store-select').value,
+                customerInfo: { name: document.getElementById('sale-customer-name').value },
+                lineItems: cartItems,
+                financials: {
+                    subtotal: subtotal,
+                    tax: tax,
+                    totalAmount: totalAmount,
+                }
+            };
+
+            let initialPaymentData = null;
+            if (document.getElementById('sale-payment-type').value === 'Pay Now') {
+                const amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
+                if (amountReceived < totalAmount) {
+                    if (!confirm("The amount received is less than the total. Do you want to create a partially paid invoice?")) {
+                        return;
+                    }
+                }
+                initialPaymentData = {
+                    amountPaid: amountReceived > totalAmount ? totalAmount : amountReceived,
+                    paymentMode: document.getElementById('sale-payment-mode').value,
+                };
+                saleData.financials.amountTendered = amountReceived;
+                saleData.financials.changeDue = amountReceived - totalAmount > 0 ? amountReceived - totalAmount : 0;
+            }
+
+            try {
+                await createSaleAndUpdateInventory(saleData, initialPaymentData, user);
+                alert("Sale completed successfully!");
+                // Reset the form for the next sale
+                showSalesView();
+            } catch (error) {
+                console.error("Error completing sale:", error);
+                alert(`Sale failed: ${error.message}`);
+            }
+        });
+    }
+
+
+
 
 
 
