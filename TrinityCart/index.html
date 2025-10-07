@@ -1218,28 +1218,37 @@
             <form id="consignment-request-form">
                 <!-- Step 1: Context Selection -->
                 <div id="consignment-step-1" class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 border-b">
+    
+                    <!-- [FIX] This is the corrected container for the admin's two dropdowns -->
                     <div id="admin-team-selection" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <label for="admin-select-team" class="form-label">Select Team<span class="text-red-500">*</span></label></label>
-                        <select id="admin-select-team" class="form-input w-full"></select>
+                        <div>
+                            <label for="admin-select-team" class="form-label">Select Team <span class="text-red-500">*</span></label>
+                            <select id="admin-select-team" class="form-input w-full"></select>
+                        </div>
+                        <div>
+                            <label for="admin-select-member" class="form-label">Select Team Lead <span class="text-red-500">*</span></label>
+                            <select id="admin-select-member" class="form-input w-full" disabled>
+                                <option value="">Select a team first</option>
+                            </select>
+                        </div>
                     </div>
+
+                    <!-- This section for non-admins is correct -->
                     <div id="user-team-selection" class="hidden">
                         <label for="user-select-team" class="form-label">Select Your Team</label>
                         <select id="user-select-team" class="form-input w-full"></select>
                     </div>
+
+                    <!-- These are correct -->
                     <div>
-                        <label for="admin-select-member" class="form-label">Select Team Lead<span class="text-red-500">*</span></label></label>
-                        <select id="admin-select-member" class="form-input w-full" disabled>
-                            <option value="">Select a team first</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="request-catalogue-select" class="form-label">Sales Catalogue<span class="text-red-500">*</span></label></label>
+                        <label for="request-catalogue-select" class="form-label">Sales Catalogue <span class="text-red-500">*</span></label>
                         <select id="request-catalogue-select" class="form-input w-full" required></select>
                     </div>
                     <div>
                         <label for="request-event-select" class="form-label">Sales Event (Optional)</label>
                         <select id="request-event-select" class="form-input w-full"></select>
                     </div>
+
                 </div>
                 <!-- Step 2: Product Selection -->
                 <div id="consignment-step-2" class="p-6 hidden">
