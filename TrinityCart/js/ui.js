@@ -1211,24 +1211,8 @@ export function switchConsignmentTab(tabId) {
                 }
             });
 
-        // B. Listener for the "Unpaid Sales" grid (top-left grid)
-        if (unpaidSalesGridApi) unpaidSalesGridApi.setGridOption('loading', true);
-        const unpaidUnsub = orderRef.collection('activityLog')
-            .where('activityType', '==', 'Sale')
-            .where('paymentStatus', '==', 'Unpaid')
-            .onSnapshot(snapshot => {
-                const unpaidSales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (unpaidSalesGridApi) {
-                    setTimeout(() => {
-                        unpaidSalesGridApi.setGridOption('rowData', unpaidSales);
-                        unpaidSalesGridApi.setGridOption('loading', false);
-                        console.log("Unpaid sales grid updated via timeout.");
-                    }, 0);
-                }
-            });
-
         // Store these listeners so they can be cleaned up later.
-        unsubscribeConsignmentDetailsListeners.push(paymentsUnsub, unpaidUnsub);
+        unsubscribeConsignmentDetailsListeners.push(paymentsUnsub);
     }
     
 }
