@@ -82,7 +82,7 @@ import {
     showConsignmentRequestStep2,
     getFulfillmentItems,refreshConsignmentDetailPanel,
     showReportActivityModal, closeReportActivityModal,switchConsignmentTab,renderConsignmentDetail,
-    resetPaymentForm,getRequestedConsignmentItems,loadPaymentRecordForEditing,cancelPaymentRecord
+    resetPaymentForm,getRequestedConsignmentItems,loadPaymentRecordForEditing
 } from './ui.js';
 
 import { 
@@ -92,7 +92,7 @@ import {
     fulfillConsignmentAndUpdateInventory,
     logActivityAndUpdateConsignment,getConsignmentOrderById,
     submitPaymentRecord,updatePaymentRecord,
-    verifyConsignmentPayment
+    verifyConsignmentPayment,cancelPaymentRecord
 } from './api.js';
 
 
