@@ -1531,7 +1531,13 @@ function setupEventListeners() {
                 paymentDate: new Date(document.getElementById('payment-date-input').value),
                 paymentMode: document.getElementById('payment-mode-select').value,
                 transactionRef: document.getElementById('payment-ref-input').value,
+                notes: document.getElementById('payment-notes-input').value,
+                paymentReason: document.getElementById('payment-reason-select').value,
             };
+
+            if (!paymentData.transactionRef) {
+                return alert("Please enter a Reference # for this payment.");
+            }
 
             if (isNaN(paymentData.amountPaid) || paymentData.amountPaid <= 0) {
                 return alert("Amount paid must be a number greater than zero.");
