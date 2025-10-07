@@ -561,8 +561,20 @@
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <label for="payment-ref-input" class="form-label">Reference # or Notes (Optional)</label>
-                                                    <input type="text" id="payment-ref-input" class="form-input w-full">
+                                                    <label for="payment-reason-select" class="form-label">Reason for Payment <span class="text-red-500">*</span></label>
+                                                    <select id="payment-reason-select" class="form-input w-full" required>
+                                                        <option value="Sales Revenue">Sales Revenue</option>
+                                                        <option value="Donation">Donation</option>
+                                                        <option value="Other">Other</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label for="payment-ref-input" class="form-label">Reference # <span class="text-red-500">*</span></label>
+                                                    <input type="text" id="payment-ref-input" class="form-input w-full" required placeholder="e.g., Bank transaction ID, Check #">
+                                                </div>
+                                                <div>
+                                                    <label for="payment-notes-input" class="form-label">Notes (Optional)</label>
+                                                    <textarea id="payment-notes-input" class="form-input w-full" rows="2" placeholder="e.g., Additional details about the payment"></textarea>
                                                 </div>
                                                 <div class="flex justify-end pt-2 space-x-3">
                                                     <button type="button" id="cancel-payment-edit-btn" class="modal-btn modal-btn-secondary hidden">Cancel Edit</button>
