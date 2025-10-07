@@ -3222,7 +3222,9 @@ export function loadPaymentRecordForEditing(paymentData) {
     document.getElementById('payment-amount-input').value = paymentData.amountPaid.toFixed(2);
     document.getElementById('payment-date-input').valueAsDate = paymentData.paymentDate.toDate();
     document.getElementById('payment-mode-select').value = paymentData.paymentMode;
+    document.getElementById('payment-reason-select').value = paymentData.paymentReason;
     document.getElementById('payment-ref-input').value = paymentData.transactionRef;
+    document.getElementById('payment-notes-input').value = paymentData.notes || '';
     
     // The 'notes' field might not exist on your form, but if it does, this is correct.
     // If you removed it, you can remove this line.
