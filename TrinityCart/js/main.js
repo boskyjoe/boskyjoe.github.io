@@ -1540,12 +1540,13 @@ function setupEventListeners() {
             try {
                 if (isEditMode) {
                     await updatePaymentRecord(docId, paymentData, user);
+                    resetPaymentForm(); 
                     alert("Pending payment record updated successfully.");
                 } else {
                     await submitPaymentRecord(paymentData, user);
+                    resetPaymentForm(); 
                     alert("Payment record submitted for verification.");
                 }
-                resetPaymentForm(); // Reset the form on success
             } catch (error) {
                 console.error("Error submitting payment record:", error);
                 alert(`Failed to submit payment record: ${error.message}`);
