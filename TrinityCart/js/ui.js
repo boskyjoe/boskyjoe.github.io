@@ -1178,7 +1178,7 @@ export function closeMemberModal() {
  * [SIMPLIFIED] Handles switching between the tabs in the consignment detail view.
  * @param {string} tabId - The ID of the tab that was clicked.
  */
-export function switchConsignmentTab(tabId) {
+export function switchConsignmentTab_bk(tabId) {
     // --- 1. Handle Tab Visuals ---
     document.querySelectorAll('.consignment-tab').forEach(tab => {
         tab.classList.toggle('tab-active', tab.id === tabId);
@@ -1216,6 +1216,24 @@ export function switchConsignmentTab(tabId) {
     }
     
 }
+
+/**
+ * [CORRECTED & SIMPLIFIED] Handles switching the visual state of tabs and panels.
+ * It no longer loads data, as that is handled by renderConsignmentDetail.
+ */
+export function switchConsignmentTab(tabId) {
+    // 1. Handle Tab Visuals
+    document.querySelectorAll('.consignment-tab').forEach(tab => {
+        tab.classList.toggle('tab-active', tab.id === tabId);
+    });
+
+    // 2. Handle Panel Visibility
+    document.querySelectorAll('.consignment-tab-panel').forEach(panel => {
+        const shouldBeActive = panel.id.includes(tabId.replace('tab-', ''));
+        panel.classList.toggle('active', shouldBeActive);
+    });
+}
+
 
 
 
