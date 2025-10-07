@@ -82,7 +82,8 @@ import {
     showConsignmentRequestStep2,
     getFulfillmentItems,refreshConsignmentDetailPanel,
     showReportActivityModal, closeReportActivityModal,switchConsignmentTab,renderConsignmentDetail,
-    resetPaymentForm,getRequestedConsignmentItems,loadPaymentRecordForEditing
+    resetPaymentForm,getRequestedConsignmentItems,loadPaymentRecordForEditing,cancelPaymentRecord,
+    verifyConsignmentPayment 
 } from './ui.js';
 
 import { 
@@ -558,23 +559,7 @@ function setupEventListeners() {
                         return; 
                     }
 
-                    // Confirm with the user before deleting
-                  //  const confirmed = await showModal(
-                   ///     'confirm',
-                    //    'Confirm Deletion',
-                    //    `Are you sure you want to delete the payment of <strong>$${paymentData.amountPaid.toFixed(2)}</strong>? This will update the invoice balance and cannot be undone.`
-                    //);
-
-                    //if (confirmed) {
-                    //    try {
-                   //         await deletePaymentAndUpdateInvoice(docId, user);
-                   //         await showModal('success', 'Success', 'The payment has been deleted and the invoice balance has been updated.');
-                   //     } catch (error) {
-                   //         console.error("Error deleting payment:", error);
-                   //         await showModal('error', 'Delete Failed', `The payment could not be deleted. Reason: ${error.message}`);
-                  //      }
-                  //  }
-
+        
                     const confirmed = confirm(
                         `Are you sure you want to delete the payment of $${paymentData.amountPaid.toFixed(2)}? This will update the invoice balance and cannot be undone.`
                     );
@@ -722,18 +707,23 @@ function setupEventListeners() {
                     loadPaymentRecordForEditing(paymentData);
                 } 
                 else if (gridButton.classList.contains('action-btn-cancel-payment')) {
-                    if (confirm("Are you sure you want to cancel this pending payment record? This cannot be undone.")) {
-                        // We still need a 'deletePaymentRecord' API function for this.
-                        // await deletePaymentRecord(docId);
-                        alert("Payment record cancelled.");
+                    if (confirm("Are you sure you want to cancel and delete this pending payment record? This action cannot be undone.")) {
+                        try {
+                            await cancelPaymentRecord(docId);
+                            alert("Payment record has been cancelled.");
+                            // The real-time listener on the grid will automatically remove the row.
+                        } catch (error) {
+                            console.error("Error cancelling payment record:", error);
+                            alert(`Failed to cancel payment record: ${error.message}`);
+                        }
                     }
-                } 
+                }  
                 else if (gridButton.classList.contains('action-btn-verify-payment')) {
-                    if (confirm(`Are you sure you want to verify this payment of $${paymentData.amountPaid.toFixed(2)}?`)) {
+                    if (confirm(`Are you sure you want to verify this payment of $${paymentData.amountPaid.toFixed(2)}? This will update the order balance.`)) {
                         try {
                             await verifyConsignmentPayment(docId, user);
                             alert("Payment successfully verified!");
-                            // The real-time listeners will automatically update the summary and grid.
+                            // The real-time listeners will automatically update the order summary and this grid.
                         } catch (error) {
                             console.error("Error verifying payment:", error);
                             alert(`Payment verification failed: ${error.message}`);
