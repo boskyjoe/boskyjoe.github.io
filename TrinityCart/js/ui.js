@@ -36,7 +36,7 @@ import { PURCHASE_INVOICES_COLLECTION_PATH, INVENTORY_LEDGER_COLLECTION_PATH, SU
 import { SALES_CATALOGUES_COLLECTION_PATH, CHURCH_TEAMS_COLLECTION_PATH } from './config.js';
 
 import { 
-    CONSIGNMENT_ORDERS_COLLECTION_PATH,CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH
+    CONSIGNMENT_ORDERS_COLLECTION_PATH,CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH,SALES_COLLECTION_PATH
 } from './config.js';
 
 
@@ -3252,6 +3252,185 @@ export function loadPaymentRecordForEditing(paymentData) {
 
     
 }
+
+
+// =======================================================
+// --- SALES MANAGEMENT UI ---
+// =======================================================
+
+// 1. Define variables for the new grids and modals
+let salesCartGridApi = null;
+let salesHistoryGridApi = null;
+let addProductModalGridApi = null; // For the grid inside the modal
+let isSalesGridsInitialized = false;
+let unsubscribeSalesHistoryListener = null;
+
+// 2. Define AG-Grid Options
+
+// Grid for the "Shopping Cart"
+const salesCartGridOptions = {
+    getRowId: params => params.data.productId,
+    columnDefs: [
+        { field: "productName", headerName: "Product", flex: 1 },
+        { 
+            field: "quantity", 
+            headerName: "Qty", 
+            width: 100, 
+            editable: true,
+            valueParser: p => parseInt(p.newValue, 10) || 0
+        },
+        { 
+            field: "unitPrice", 
+            headerName: "Unit Price", 
+            width: 120, 
+            editable: true,
+            valueFormatter: p => `$${p.value.toFixed(2)}`,
+            valueParser: p => parseFloat(p.newValue) || 0
+        },
+        {
+            headerName: "Remove",
+            width: 80,
+            cellClass: 'flex items-center justify-center',
+            cellRenderer: params => {
+                const removeIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5z" clip-rule="evenodd" /></svg>`;
+                return `<button class="action-btn-icon action-btn-delete action-btn-remove-from-cart" data-id="${params.data.productId}" title="Remove Item">${removeIcon}</button>`;
+            }
+        }
+    ],
+    onCellValueChanged: () => {
+        // Recalculate totals whenever a cell in the cart is edited
+        calculateSalesTotals();
+    },
+    onGridReady: (params) => {
+        console.log("[ui.js] Sales Cart Grid is now ready.");
+        salesCartGridApi = params.api;
+    }
+};
+
+// Grid for the "Add Product" modal
+const addProductModalGridOptions = {
+    getRowId: params => params.data.id,
+    columnDefs: [
+        { field: "itemName", headerName: "Product Name", flex: 1, filter: 'agTextColumnFilter' },
+        { field: "inventoryCount", headerName: "Stock", width: 100 },
+        { 
+            headerName: "Add",
+            width: 80,
+            cellClass: 'flex items-center justify-center',
+            cellRenderer: params => {
+                const addIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5z" /></svg>`;
+                return `<button class="action-btn-icon action-btn-add-to-cart" data-id="${params.data.id}" title="Add to Cart">${addIcon}</button>`;
+            }
+        }
+    ],
+    onGridReady: params => { addProductModalGridApi = params.api; }
+};
+
+// Grid for the "Sales History"
+const salesHistoryGridOptions = {
+    // We will define this later when we build the full invoice management
+};
+
+// 3. Create Initialization and Helper Functions
+
+export function initializeSalesGrids() {
+    if (isSalesGridsInitialized) return;
+    
+    const cartGridDiv = document.getElementById('sales-cart-grid');
+    const historyGridDiv = document.getElementById('sales-history-grid');
+    const addProductModalGridDiv = document.getElementById('add-product-modal-grid'); // We need to add this ID to the modal in index.html
+
+    if (cartGridDiv && historyGridDiv && addProductModalGridDiv) {
+        salesCartGridApi = createGrid(cartGridDiv, salesCartGridOptions);
+        salesHistoryGridApi = createGrid(historyGridDiv, salesHistoryGridOptions);
+        addProductModalGridApi = createGrid(addProductModalGridDiv, addProductModalGridOptions);
+        isSalesGridsInitialized = true;
+    }
+}
+
+// The crucial function for real-time calculations
+export function calculateSalesTotals() {
+    if (!salesCartGridApi) return;
+
+    let subtotal = 0;
+    salesCartGridApi.forEachNode(node => {
+        const item = node.data;
+        const lineTotal = (item.quantity || 0) * (item.unitPrice || 0);
+        subtotal += lineTotal;
+    });
+
+    // For now, we are not handling taxes or discounts, but this is where they would go.
+    const tax = 0;
+    const grandTotal = subtotal + tax;
+
+    document.getElementById('sale-subtotal').textContent = `$${subtotal.toFixed(2)}`;
+    document.getElementById('sale-tax').textContent = `$${tax.toFixed(2)}`;
+    document.getElementById('sale-grand-total').textContent = `$${grandTotal.toFixed(2)}`;
+
+    // Also update the change due
+    const amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
+    const changeDue = amountReceived - grandTotal;
+    document.getElementById('sale-change-due').textContent = `$${(changeDue > 0 ? changeDue : 0).toFixed(2)}`;
+}
+
+// Functions to manage the "Add Product" modal
+export function showAddProductModal() {
+    const modal = document.getElementById('add-product-modal');
+    if (!modal) return;
+
+    // Populate the grid inside the modal with available products
+    if (addProductModalGridApi) {
+        const availableProducts = masterData.products.filter(p => p.isActive && p.inventoryCount > 0);
+        addProductModalGridApi.setGridOption('rowData', availableProducts);
+    }
+
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+}
+
+export function closeAddProductModal() {
+    const modal = document.getElementById('add-product-modal');
+    if (!modal) return;
+    modal.classList.remove('visible');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
+
+// 4. Create the main view function
+export function showSalesView() {
+    showView('sales-view');
+    initializeSalesGrids();
+
+    // Reset the form and cart
+    document.getElementById('new-sale-form').reset();
+    if (salesCartGridApi) salesCartGridApi.setGridOption('rowData', []);
+    calculateSalesTotals();
+
+    // Populate dropdowns from masterData
+    const storeSelect = document.getElementById('sale-store-select');
+    storeSelect.innerHTML = '<option value="">Select a store...</option>';
+    if (masterData.systemSetups && masterData.systemSetups.Stores) {
+        masterData.systemSetups.Stores.forEach(store => {
+            const option = document.createElement('option');
+            option.value = store;
+            option.textContent = store;
+            storeSelect.appendChild(option);
+        });
+    }
+
+    const paymentModeSelect = document.getElementById('sale-payment-mode');
+    paymentModeSelect.innerHTML = '<option value="">Select mode...</option>';
+    masterData.paymentModes.forEach(mode => {
+        const option = document.createElement('option');
+        option.value = mode.paymentMode;
+        option.textContent = mode.paymentMode;
+        paymentModeSelect.appendChild(option);
+    });
+
+    // Attach real-time listener for sales history
+    // ... (We will add this logic later)
+}
+
+
 
 
 
