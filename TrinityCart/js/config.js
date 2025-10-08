@@ -48,6 +48,9 @@ export const SYSTEM_SETUPS_COLLECTION_PATH = `${BASE_DOC_PATH}/systemSetups`;
 export const SALES_PAYMENTS_LEDGER_COLLECTION_PATH = `${BASE_DOC_PATH}/salesPaymentsLedger`;
 export const SALES_COLLECTION_PATH = `${BASE_DOC_PATH}/salesInvoices`;
 
+export const DONATIONS_COLLECTION_PATH = `${BASE_DOC_PATH}/donations`;
+
+
 
 
 
