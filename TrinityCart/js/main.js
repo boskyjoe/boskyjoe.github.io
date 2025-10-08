@@ -1695,10 +1695,10 @@ function setupEventListeners() {
         newSaleForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const user = appState.currentUser;
+            if (!user) return;
             
             const cartItems = [];
             salesCartGridApi.forEachNode(node => {
-                // [NEW] We need to capture all the fields for a complete record
                 cartItems.push({
                     productId: node.data.productId,
                     productName: node.data.productName,
@@ -1709,14 +1709,14 @@ function setupEventListeners() {
                 });
             });
 
+
             if (cartItems.length === 0) {
                 return alert("Please add at least one product to the cart.");
             }
 
-        
-        
-
+            const totalAmount = parseFloat(document.getElementById('sale-grand-total').textContent.replace('$', ''));
             const store = document.getElementById('sale-store-select').value;
+
             
             const saleData = {
                 store: store,
@@ -1731,7 +1731,6 @@ function setupEventListeners() {
                 financials: {
                     subtotal: parseFloat(document.getElementById('sale-subtotal').textContent.replace('$', '')),
                     orderDiscountPercentage: parseFloat(document.getElementById('sale-order-discount').value) || 0,
-                    // [NEW] Save the order-level tax percentage
                     orderTaxPercentage: parseFloat(document.getElementById('sale-order-tax').value) || 0,
                     tax: parseFloat(document.getElementById('sale-tax').textContent.replace('$', '')),
                     totalAmount: totalAmount,
@@ -1739,21 +1738,38 @@ function setupEventListeners() {
             };
 
             let initialPaymentData = null;
+            let donationAmount = 0;
+
             if (document.getElementById('sale-payment-type').value === 'Pay Now') {
                 const amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
+
                 if (amountReceived < totalAmount) {
                     if (!confirm("The amount received is less than the total. Do you want to create a partially paid invoice?")) {
                         return;
                     }
                 }
+
+                if (!document.getElementById('sale-payment-ref').value) {
+                    return alert("Please enter a Reference # for the payment.");
+                }
+
+                // Calculate overpayment and the actual amount to apply to the invoice
+                if (amountReceived > totalAmount) {
+                    donationAmount = amountReceived - totalAmount;
+                }
+                const amountToApplyToInvoice = Math.min(amountReceived, totalAmount);
+
+                // Assemble the payment data object
                 initialPaymentData = {
-                    amountPaid: document.getElementById('sale-amount-received').value ? parseFloat(document.getElementById('sale-amount-received').value) : 0,
+                    amountPaid: amountToApplyToInvoice,
                     paymentMode: document.getElementById('sale-payment-mode').value,
                     transactionRef: document.getElementById('sale-payment-ref').value,
                     notes: document.getElementById('sale-payment-notes').value
                 };
+
+                // Update the main sale's financial record
                 saleData.financials.amountTendered = amountReceived;
-                saleData.financials.changeDue = amountReceived - totalAmount > 0 ? amountReceived - totalAmount : 0;
+                saleData.financials.changeDue = 0;
 
                 if (!initialPaymentData.transactionRef) {
                     return alert("Please enter a Reference # for the payment.");
@@ -1761,10 +1777,11 @@ function setupEventListeners() {
             }
 
             try {
-                await createSaleAndUpdateInventory(saleData, initialPaymentData, user);
+                await createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, user);
+                
                 alert("Sale completed successfully!");
-                // Reset the form for the next sale
-                showSalesView();
+                showSalesView(); // Reset the form for the next sale
+                
             } catch (error) {
                 console.error("Error completing sale:", error);
                 alert(`Sale failed: ${error.message}`);
