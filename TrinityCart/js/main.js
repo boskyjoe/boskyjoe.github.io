@@ -1686,16 +1686,24 @@ function setupEventListeners() {
             const user = appState.currentUser;
             
             const cartItems = [];
-            salesCartGridApi.forEachNode(node => cartItems.push(node.data));
+            salesCartGridApi.forEachNode(node => {
+                // [NEW] We need to capture all the fields for a complete record
+                cartItems.push({
+                    productId: node.data.productId,
+                    productName: node.data.productName,
+                    quantity: node.data.quantity || 0,
+                    unitPrice: node.data.unitPrice || 0,
+                    discountPercentage: node.data.discountPercentage || 0,
+                    taxPercentage: node.data.taxPercentage || 0,
+                });
+            });
 
             if (cartItems.length === 0) {
                 return alert("Please add at least one product to the cart.");
             }
 
-            // Gather all data from the form
-            const subtotal = parseFloat(document.getElementById('sale-subtotal').textContent.replace('$', ''));
-            const tax = parseFloat(document.getElementById('sale-tax').textContent.replace('$', ''));
-            const totalAmount = parseFloat(document.getElementById('sale-grand-total').textContent.replace('$', ''));
+        
+        
 
             const store = document.getElementById('sale-store-select').value;
             
@@ -1710,8 +1718,10 @@ function setupEventListeners() {
                 },
                 lineItems: cartItems,
                 financials: {
-                    subtotal: subtotal,
-                    tax: tax,
+                    subtotal: parseFloat(document.getElementById('sale-subtotal').textContent.replace('$', '')),
+                    // [SIMPLIFIED] Save the discount as a percentage
+                    orderDiscountPercentage: parseFloat(document.getElementById('sale-order-discount').value) || 0,
+                    tax: parseFloat(document.getElementById('sale-tax').textContent.replace('$', '')),
                     totalAmount: totalAmount,
                 }
             };
