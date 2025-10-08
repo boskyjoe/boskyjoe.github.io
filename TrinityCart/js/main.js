@@ -1678,6 +1678,17 @@ function setupEventListeners() {
         amountReceivedInput.addEventListener('input', calculateSalesTotals);
     }
 
+    // [NEW] Listener for the order discount input to trigger recalculation
+    const orderDiscountInput = document.getElementById('sale-order-discount');
+    if (orderDiscountInput) {
+        orderDiscountInput.addEventListener('input', calculateSalesTotals);
+    }
+
+    const orderTaxInput = document.getElementById('sale-order-tax');
+    if (orderTaxInput) {
+        orderTaxInput.addEventListener('input', calculateSalesTotals);
+    }
+
     // --- Main Form Submission Handler ---
     const newSaleForm = document.getElementById('new-sale-form');
     if (newSaleForm) {
@@ -1719,8 +1730,9 @@ function setupEventListeners() {
                 lineItems: cartItems,
                 financials: {
                     subtotal: parseFloat(document.getElementById('sale-subtotal').textContent.replace('$', '')),
-                    // [SIMPLIFIED] Save the discount as a percentage
                     orderDiscountPercentage: parseFloat(document.getElementById('sale-order-discount').value) || 0,
+                    // [NEW] Save the order-level tax percentage
+                    orderTaxPercentage: parseFloat(document.getElementById('sale-order-tax').value) || 0,
                     tax: parseFloat(document.getElementById('sale-tax').textContent.replace('$', '')),
                     totalAmount: totalAmount,
                 }
