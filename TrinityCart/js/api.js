@@ -1589,13 +1589,14 @@ export async function cancelPaymentRecord(paymentId) {
 // =======================================================
 
 /**
- * [NEW & TRANSACTIONAL] Creates a new Sales Invoice, decrements inventory,
- * and optionally records an initial payment, all in one atomic operation.
+ * [CORRECTED & FINAL] Creates a new Sales Invoice, decrements inventory,
+ * and optionally records an initial payment and a donation, all in one atomic operation.
  * @param {object} saleData - The complete data object for the new sale.
  * @param {object|null} initialPaymentData - Data for an initial payment, or null if none.
- * @param {object} user - The user creating the sale.
+ * @param {number} donationAmount - The amount of any overpayment to be logged as a donation.
+ * @param {string} userEmail - The email of the user creating the sale.
  */
-export async function createSaleAndUpdateInventory(saleData, initialPaymentData, userEmail) {
+export async function createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, userEmail) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
 
@@ -1616,18 +1617,15 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
             }
         }
 
-        // --- 2. WRITE PHASE (only runs if validation passes) ---
+        // --- 2. WRITE PHASE ---
 
         // A. Create the main Sales Invoice document
         const saleRef = db.collection(SALES_COLLECTION_PATH).doc();
-
-        let prefix = 'SALE-'; // A fallback default
-        if (saleData.store === 'Church Store') {
-            prefix = 'CS-';
-        } else if (saleData.store === 'Tasty Treats') {
-            prefix = 'TT-';
-        }
-        const saleId = `SALE-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+        
+        let prefix = 'SALE-';
+        if (saleData.store === 'Church Store') prefix = 'CS-';
+        else if (saleData.store === 'Tasty Treats') prefix = 'TT-';
+        const saleId = `${prefix}${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
         
         let totalAmountPaid = 0;
         if (initialPaymentData) {
@@ -1650,26 +1648,17 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
             const paymentRef = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).doc();
             transaction.set(paymentRef, {
                 ...initialPaymentData,
-                invoiceId: saleRef.id, // Link the payment to the new sale invoice
+                invoiceId: saleRef.id,
                 paymentId: `SPAY-${Date.now()}`,
-                paymentDate: now, // Or use the date from the form
-                status: 'Verified', // Initial payments are implicitly verified
+                paymentDate: now,
+                status: 'Verified',
                 recordedBy: userEmail
             });
         }
 
-        // C. Decrement inventory for each product sold
-        for (let i = 0; i < saleData.lineItems.length; i++) {
-            const item = saleData.lineItems[i];
-            const productRef = productRefs[i];
-            transaction.update(productRef, {
-                inventoryCount: firebase.firestore.FieldValue.increment(-Number(item.quantity))
-            });
-        }
-
-        // [NEW] If there is a donation amount, create a donation record.
+        // C. Create the donation record if there was an overpayment
         if (donationAmount > 0) {
-            const donationRef = db.collection('donations').doc();
+            const donationRef = db.collection('donations').doc(); // Assumes a top-level 'donations' collection
             transaction.set(donationRef, {
                 amount: donationAmount,
                 donationDate: now,
@@ -1680,6 +1669,13 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
             });
         }
 
-
+        // D. Decrement inventory for each product sold
+        for (let i = 0; i < saleData.lineItems.length; i++) {
+            const item = saleData.lineItems[i];
+            const productRef = productRefs[i];
+            transaction.update(productRef, {
+                inventoryCount: firebase.firestore.FieldValue.increment(-Number(item.quantity))
+            });
+        }
     });
 }
