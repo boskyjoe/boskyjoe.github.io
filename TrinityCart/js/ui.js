@@ -289,6 +289,13 @@ export function detachAllRealtimeListeners() {
         unsubscribeConsignmentOrdersListener();
         unsubscribeConsignmentOrdersListener = null;
     }
+
+    if (unsubscribeSalesHistoryListener) {
+        console.log("[ui.js] Detaching real-time sales history listener.");
+        unsubscribeSalesHistoryListener();
+        unsubscribeSalesHistoryListener = null;
+    }
+    
     unsubscribeConsignmentDetailsListeners.forEach(unsub => unsub());
     unsubscribeConsignmentDetailsListeners = [];
 
@@ -3365,6 +3372,25 @@ const addProductModalGridOptions = {
 // Grid for the "Sales History"
 const salesHistoryGridOptions = {
     // We will define this later when we build the full invoice management
+    getRowId: params => params.data.id,
+    pagination: true,
+    paginationPageSize: 50,
+    columnDefs: [
+        { field: "saleId", headerName: "Invoice ID", width: 180, filter: 'agTextColumnFilter' },
+        { field: "saleDate", headerName: "Date", width: 140, valueFormatter: p => p.value.toDate().toLocaleDateString(), filter: 'agDateColumnFilter' },
+        { field: "customerInfo.name", headerName: "Customer", flex: 1, filter: 'agTextColumnFilter' },
+        { field: "store", headerName: "Store", width: 150, filter: 'agSetColumnFilter' },
+        { field: "financials.totalAmount", headerName: "Total", width: 120, valueFormatter: p => `$${p.value.toFixed(2)}` },
+        { field: "balanceDue", headerName: "Balance Due", width: 120, valueFormatter: p => `$${p.value.toFixed(2)}` },
+        { field: "paymentStatus", headerName: "Status", width: 140, cellRenderer: p => {
+            const status = p.value;
+            if (status === 'Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
+            if (status === 'Partially Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">${status}</span>`;
+            return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">${status}</span>`;
+        }},
+        { field: "audit.createdBy", headerName: "Created By", flex: 1 }
+    ],
+    onGridReady: params => { salesHistoryGridApi = params.api; }
 };
 
 // 3. Create Initialization and Helper Functions
@@ -3478,15 +3504,17 @@ export function closeAddProductModal() {
 
 // 4. Create the main view function
 export function showSalesView() {
+    // 1. Standard view setup
     showView('sales-view');
     initializeSalesGrids();
 
-    // Reset the form and cart
+    // 2. Reset the form and cart for a new sale
     document.getElementById('new-sale-form').reset();
     if (salesCartGridApi) salesCartGridApi.setGridOption('rowData', []);
     calculateSalesTotals();
+    document.getElementById('sale-pay-now-container').classList.add('hidden'); // Ensure payment details are hidden initially
 
-    // Populate dropdowns from masterData
+    // 3. Populate dropdowns from masterData
     const storeSelect = document.getElementById('sale-store-select');
     storeSelect.innerHTML = '<option value="">Select a store...</option>';
     if (masterData.systemSetups && masterData.systemSetups.Stores) {
@@ -3501,16 +3529,47 @@ export function showSalesView() {
     const paymentModeSelect = document.getElementById('sale-payment-mode');
     paymentModeSelect.innerHTML = '<option value="">Select mode...</option>';
     masterData.paymentModes.forEach(mode => {
-        const option = document.createElement('option');
-        option.value = mode.paymentMode;
-        option.textContent = mode.paymentMode;
-        paymentModeSelect.appendChild(option);
+        if (mode.isActive) { // Only show active payment modes
+            const option = document.createElement('option');
+            option.value = mode.paymentMode;
+            option.textContent = mode.paymentMode;
+            paymentModeSelect.appendChild(option);
+        }
     });
 
-    // Attach real-time listener for sales history
-    // ... (We will add this logic later)
-}
+    // --- [NEW] 4. Attach the real-time listener for the Sales History grid ---
+    const db = firebase.firestore();
+    const user = appState.currentUser;
+    if (!user) return;
 
+    // Clean up any previous listener
+    if (unsubscribeSalesHistoryListener) {
+        unsubscribeSalesHistoryListener();
+    }
+
+    // Build the query based on user role
+    let salesQuery = db.collection(SALES_COLLECTION_PATH);
+    if (user.role !== 'admin') {
+        salesQuery = salesQuery.where('audit.createdBy', '==', user.email);
+    }
+
+    // Attach the listener
+    if (salesHistoryGridApi) salesHistoryGridApi.setGridOption('loading', true);
+    unsubscribeSalesHistoryListener = salesQuery.orderBy('saleDate', 'desc')
+        .onSnapshot(snapshot => {
+            console.log("[Firestore] Received update for sales history.");
+            const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (salesHistoryGridApi) {
+                salesHistoryGridApi.setGridOption('rowData', sales);
+                salesHistoryGridApi.setGridOption('loading', false);
+            }
+        }, error => {
+            console.error("Error listening to sales history:", error);
+            if (salesHistoryGridApi) {
+                salesHistoryGridApi.setGridOption('loading', false);
+            }
+        });
+}
 
 /**
  * [NEW] Adds a single product item to the sales cart grid.
