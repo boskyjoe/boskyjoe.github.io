@@ -888,6 +888,8 @@ function setupEventListeners() {
             showConsignmentRequestStep2(catalogueId);
             return;
         }
+
+
         
         const fulfillBtn = target.closest('#fulfill-checkout-btn');
         if (fulfillBtn) {
@@ -911,6 +913,22 @@ function setupEventListeners() {
             return;
         }
 
+
+        // --- [NEW] Listener for the Store selection dropdown ---
+        const saleStoreSelect = document.getElementById('sale-store-select');
+        if (saleStoreSelect) {
+            saleStoreSelect.addEventListener('change', (e) => {
+                const addressContainer = document.getElementById('tasty-treats-address-container');
+                const addressInput = document.getElementById('sale-customer-address');
+                
+                // Show the address field only if "Tasty Treats" is selected
+                const showAddress = e.target.value === 'Tasty Treats';
+                
+                addressContainer.classList.toggle('hidden', !showAddress);
+                // Also make the address input required only when it's visible
+                addressInput.required = showAddress;
+            });
+        }
 
         if (target.closest('#report-activity-btn')) {
             showReportActivityModal();
@@ -1678,10 +1696,18 @@ function setupEventListeners() {
             const subtotal = parseFloat(document.getElementById('sale-subtotal').textContent.replace('$', ''));
             const tax = parseFloat(document.getElementById('sale-tax').textContent.replace('$', ''));
             const totalAmount = parseFloat(document.getElementById('sale-grand-total').textContent.replace('$', ''));
+
+            const store = document.getElementById('sale-store-select').value;
             
             const saleData = {
-                store: document.getElementById('sale-store-select').value,
-                customerInfo: { name: document.getElementById('sale-customer-name').value },
+                store: store,
+                customerInfo: {
+                    name: document.getElementById('sale-customer-name').value,
+                    email: document.getElementById('sale-customer-email').value,
+                    phone: document.getElementById('sale-customer-phone').value,
+                    // Only include the address if the store is Tasty Treats
+                    address: store === 'Tasty Treats' ? document.getElementById('sale-customer-address').value : null
+                },
                 lineItems: cartItems,
                 financials: {
                     subtotal: subtotal,
