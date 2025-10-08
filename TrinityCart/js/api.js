@@ -17,7 +17,7 @@ import { SALES_CATALOGUES_COLLECTION_PATH,
         CHURCH_TEAMS_COLLECTION_PATH,USER_TEAM_MEMBERSHIPS_COLLECTION_PATH,
         CONSIGNMENT_ORDERS_COLLECTION_PATH,
         CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH,SALES_COLLECTION_PATH,
-    SALES_PAYMENTS_LEDGER_COLLECTION_PATH
+    SALES_PAYMENTS_LEDGER_COLLECTION_PATH,DONATIONS_COLLECTION_PATH
 } from './config.js';
 
 
@@ -1658,7 +1658,7 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
 
         // C. Create the donation record if there was an overpayment
         if (donationAmount > 0) {
-            const donationRef = db.collection('donations').doc(); // Assumes a top-level 'donations' collection
+            const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc(); // Assumes a top-level 'donations' collection
             transaction.set(donationRef, {
                 amount: donationAmount,
                 donationDate: now,
