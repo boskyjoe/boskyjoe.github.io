@@ -3389,7 +3389,7 @@ export function calculateSalesTotals() {
     if (!salesCartGridApi) return;
 
     let itemsSubtotal = 0;
-    let totalTax = 0;
+    let totalItemLevelTax = 0;
 
     let subtotal = 0;
 
@@ -3401,31 +3401,33 @@ export function calculateSalesTotals() {
         const lineDiscPercent = item.discountPercentage || 0;
         const lineTaxPercent = item.taxPercentage || 0;
 
-        // Calculate the price after the line-item discount
         const discountedLinePrice = (qty * price) * (1 - lineDiscPercent / 100);
-        
-        // Calculate the tax based on the discounted price
         const lineTax = discountedLinePrice * (lineTaxPercent / 100);
         
         itemsSubtotal += discountedLinePrice;
-        totalTax += lineTax;
+        totalItemLevelTax += lineTax;
     });
 
 
-    // 2. Get the order-level discount percentage
+    // 2. Get order-level adjustments
     const orderDiscPercent = parseFloat(document.getElementById('sale-order-discount').value) || 0;
+    const orderTaxPercent = parseFloat(document.getElementById('sale-order-tax').value) || 0;
 
-    // 3. Calculate the order-level discount amount based on the items subtotal
+    // 3. Calculate final totals
     const orderDiscountAmount = itemsSubtotal * (orderDiscPercent / 100);
+    const taxableAmount = itemsSubtotal - orderDiscountAmount;
+    const orderLevelTaxAmount = taxableAmount * (orderTaxPercent / 100);
+    
+    const finalTotalTax = totalItemLevelTax + orderLevelTaxAmount;
+    const grandTotal = taxableAmount + finalTotalTax;
 
-    // 4. Calculate final grand total
-    const grandTotal = itemsSubtotal - orderDiscountAmount + totalTax;
-
+   
 
     // 5. Update the UI
     document.getElementById('sale-subtotal').textContent = `$${itemsSubtotal.toFixed(2)}`;
-    document.getElementById('sale-tax').textContent = `$${totalTax.toFixed(2)}`;
+    document.getElementById('sale-tax').textContent = `$${finalTotalTax.toFixed(2)}`; 
     document.getElementById('sale-grand-total').textContent = `$${grandTotal.toFixed(2)}`;
+
 
     // 6. Update change due
     const amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
