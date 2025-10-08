@@ -1747,11 +1747,17 @@ function setupEventListeners() {
                     }
                 }
                 initialPaymentData = {
-                    amountPaid: amountReceived > totalAmount ? totalAmount : amountReceived,
+                    amountPaid: document.getElementById('sale-amount-received').value ? parseFloat(document.getElementById('sale-amount-received').value) : 0,
                     paymentMode: document.getElementById('sale-payment-mode').value,
+                    transactionRef: document.getElementById('sale-payment-ref').value,
+                    notes: document.getElementById('sale-payment-notes').value
                 };
                 saleData.financials.amountTendered = amountReceived;
                 saleData.financials.changeDue = amountReceived - totalAmount > 0 ? amountReceived - totalAmount : 0;
+
+                if (!initialPaymentData.transactionRef) {
+                    return alert("Please enter a Reference # for the payment.");
+                }
             }
 
             try {
