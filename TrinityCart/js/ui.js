@@ -3391,8 +3391,6 @@ export function calculateSalesTotals() {
     let itemsSubtotal = 0;
     let totalItemLevelTax = 0;
 
-    let subtotal = 0;
-
     // 1. Calculate totals from the grid rows
     salesCartGridApi.forEachNode(node => {
         const item = node.data;
@@ -3431,8 +3429,29 @@ export function calculateSalesTotals() {
 
     // 6. Update change due
     const amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
-    const changeDue = amountReceived - grandTotal;
-    document.getElementById('sale-change-due').textContent = `$${(changeDue > 0 ? changeDue : 0).toFixed(2)}`;
+    const paymentStatusDisplay = document.getElementById('payment-status-display');
+
+    // --- [NEW] DYNAMIC STATUS LOGIC ---
+    if (document.getElementById('sale-payment-type').value === 'Pay Later (Invoice)') {
+        // If it's an invoice, there's no payment yet.
+        paymentStatusDisplay.innerHTML = `Balance Due: <span class="text-red-600">$${grandTotal.toFixed(2)}</span>`;
+    } else if (amountReceived === 0) {
+        // If paying now, but no amount entered yet.
+        paymentStatusDisplay.innerHTML = '';
+    } else if (amountReceived > grandTotal) {
+        // Overpayment / Donation scenario
+        const overpayment = amountReceived - grandTotal;
+        paymentStatusDisplay.innerHTML = `Change/Donation: <span class="text-green-600">$${overpayment.toFixed(2)}</span>`;
+    } else if (amountReceived < grandTotal) {
+        // Partial payment / Underpayment scenario
+        const balanceRemaining = grandTotal - amountReceived;
+        paymentStatusDisplay.innerHTML = `Balance Due: <span class="text-red-600">$${balanceRemaining.toFixed(2)}</span>`;
+    } else {
+        // Exact payment
+        paymentStatusDisplay.innerHTML = `Change Due: <span class="text-green-600">$0.00</span>`;
+    }
+
+
 }
 
 // Functions to manage the "Add Product" modal
