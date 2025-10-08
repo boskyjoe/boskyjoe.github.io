@@ -642,12 +642,13 @@
                                     <label for="sale-customer-phone" class="form-label">Customer Phone <span class="text-red-500">*</span></label>
                                     <input type="tel" id="sale-customer-phone" class="form-input w-full" placeholder="e.g., 555-123-4567" required>
                                 </div>
+                                <!-- [NEW] Address field, initially hidden -->
+                                <div id="tasty-treats-address-container" class="md:col-span-3 hidden">
+                                    <label for="sale-customer-address" class="form-label">Delivery Address <span class="text-red-500">*</span></label>
+                                    <textarea id="sale-customer-address" class="form-input w-full" rows="3" placeholder="Enter full delivery address for Tasty Treats order"></textarea>
+                                </div>
                             </div>
-                            <!-- [NEW] Address field, initially hidden -->
-                            <div id="tasty-treats-address-container" class="md:col-span-3 hidden">
-                                <label for="sale-customer-address" class="form-label">Delivery Address <span class="text-red-500">*</span></label>
-                                <textarea id="sale-customer-address" class="form-input w-full" rows="3" placeholder="Enter full delivery address for Tasty Treats order"></textarea>
-                            </div>
+                            
 
                             <!-- Part 2: Shopping Cart Grid -->
                             <div class="p-6">
