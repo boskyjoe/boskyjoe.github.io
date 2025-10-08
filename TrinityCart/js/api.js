@@ -1595,7 +1595,7 @@ export async function cancelPaymentRecord(paymentId) {
  * @param {object|null} initialPaymentData - Data for an initial payment, or null if none.
  * @param {object} user - The user creating the sale.
  */
-export async function createSaleAndUpdateInventory(saleData, initialPaymentData, user) {
+export async function createSaleAndUpdateInventory(saleData, initialPaymentData, userEmail) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
 
@@ -1642,7 +1642,7 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
             totalAmountPaid: totalAmountPaid,
             balanceDue: balanceDue,
             paymentStatus: paymentStatus,
-            audit: { createdBy: user.email, createdOn: now }
+            audit: { createdBy: userEmail, createdOn: now }
         });
 
         // B. Create the initial payment record if one was made
@@ -1654,7 +1654,7 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
                 paymentId: `SPAY-${Date.now()}`,
                 paymentDate: now, // Or use the date from the form
                 status: 'Verified', // Initial payments are implicitly verified
-                recordedBy: user.email
+                recordedBy: userEmail
             });
         }
 
@@ -1676,7 +1676,7 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
                 source: 'POS Overpayment',
                 relatedSaleId: saleRef.id,
                 customerName: saleData.customerInfo.name,
-                recordedBy: user.email,
+                recordedBy: userEmail,
             });
         }
 
