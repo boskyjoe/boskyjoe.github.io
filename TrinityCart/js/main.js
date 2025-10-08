@@ -86,7 +86,8 @@ import {
     showSalesView,
     showAddProductModal,
     closeAddProductModal,
-    calculateSalesTotals,addItemToCart,
+    calculateSalesTotals,addItemToCart,getSalesCartItems, 
+    removeItemFromCart
 } from './ui.js';
 
 import { 
@@ -972,11 +973,7 @@ function setupEventListeners() {
 
         // Handler for the "Remove" button in the shopping cart grid
         if (target.closest('.action-btn-remove-from-cart')) {
-            const productId = target.closest('.action-btn-remove-from-cart').dataset.id;
-            const rowNode = salesCartGridApi.getRowNode(productId);
-            if (rowNode) {
-                removeItemFromCart(productId);
-            }
+            removeItemFromCart(productId);
         }
 
 
@@ -1697,17 +1694,7 @@ function setupEventListeners() {
             const user = appState.currentUser;
             if (!user) return;
             
-            const cartItems = [];
-            salesCartGridApi.forEachNode(node => {
-                cartItems.push({
-                    productId: node.data.productId,
-                    productName: node.data.productName,
-                    quantity: node.data.quantity || 0,
-                    unitPrice: node.data.unitPrice || 0,
-                    discountPercentage: node.data.discountPercentage || 0,
-                    taxPercentage: node.data.taxPercentage || 0,
-                });
-            });
+            const cartItems = getSalesCartItems();
 
 
             if (cartItems.length === 0) {
