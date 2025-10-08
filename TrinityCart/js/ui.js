@@ -3528,11 +3528,32 @@ export function addItemToCart(itemData) {
     calculateSalesTotals();
 }
 
+
+/**
+ * [NEW] Retrieves all items currently in the sales cart grid.
+ * @returns {Array<object>} An array of all item objects in the cart.
+ */
+export function getSalesCartItems() {
+    if (!salesCartGridApi) {
+        console.error("Cannot get cart items: salesCartGridApi is not ready.");
+        return [];
+    }
+    const items = [];
+    salesCartGridApi.forEachNode(node => items.push(node.data));
+    return items;
+}
+
+
+/**
+ * [REFACTORED] Removes an item from the sales cart grid by its product ID.
+ * @param {string} productId - The ID of the product to remove.
+ */
 export function removeItemFromCart(productId) {
     if (!salesCartGridApi) return;
     const rowNode = salesCartGridApi.getRowNode(productId);
     if (rowNode) {
         salesCartGridApi.applyTransaction({ remove: [rowNode.data] });
+        // After removing, immediately recalculate the totals.
         calculateSalesTotals();
     }
 }
