@@ -1764,7 +1764,7 @@ function setupEventListeners() {
             }
 
             try {
-                await createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, user);
+                await createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, user.email);
                 
                 alert("Sale completed successfully!");
                 showSalesView(); // Reset the form for the next sale
