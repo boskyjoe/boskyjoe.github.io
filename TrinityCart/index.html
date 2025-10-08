@@ -630,10 +630,23 @@
                                     <label for="sale-store-select" class="form-label">Sell From Store <span class="text-red-500">*</span></label>
                                     <select id="sale-store-select" class="form-input w-full" required></select>
                                 </div>
-                                <div class="md:col-span-2">
-                                    <label for="sale-customer-name" class="form-label">Customer Name (Optional)</label>
-                                    <input type="text" id="sale-customer-name" class="form-input w-full" placeholder="e.g., John Doe">
+                                <div>
+                                    <label for="sale-customer-name" class="form-label">Customer Name <span class="text-red-500">*</span></label>
+                                    <input type="text" id="sale-customer-name" class="form-input w-full" placeholder="e.g., John Doe" required>
                                 </div>
+                                <div>
+                                    <label for="sale-customer-email" class="form-label">Customer Email <span class="text-red-500">*</span></label>
+                                    <input type="email" id="sale-customer-email" class="form-input w-full" placeholder="e.g., john@example.com" required>
+                                </div>
+                                <div>
+                                    <label for="sale-customer-phone" class="form-label">Customer Phone <span class="text-red-500">*</span></label>
+                                    <input type="tel" id="sale-customer-phone" class="form-input w-full" placeholder="e.g., 555-123-4567" required>
+                                </div>
+                            </div>
+                            <!-- [NEW] Address field, initially hidden -->
+                            <div id="tasty-treats-address-container" class="md:col-span-3 hidden">
+                                <label for="sale-customer-address" class="form-label">Delivery Address <span class="text-red-500">*</span></label>
+                                <textarea id="sale-customer-address" class="form-input w-full" rows="3" placeholder="Enter full delivery address for Tasty Treats order"></textarea>
                             </div>
 
                             <!-- Part 2: Shopping Cart Grid -->
