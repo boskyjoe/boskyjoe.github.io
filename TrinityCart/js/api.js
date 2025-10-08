@@ -1666,5 +1666,20 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
                 inventoryCount: firebase.firestore.FieldValue.increment(-Number(item.quantity))
             });
         }
+
+        // [NEW] If there is a donation amount, create a donation record.
+        if (donationAmount > 0) {
+            const donationRef = db.collection('donations').doc();
+            transaction.set(donationRef, {
+                amount: donationAmount,
+                donationDate: now,
+                source: 'POS Overpayment',
+                relatedSaleId: saleRef.id,
+                customerName: saleData.customerInfo.name,
+                recordedBy: user.email,
+            });
+        }
+
+
     });
 }
