@@ -3288,8 +3288,44 @@ const salesCartGridOptions = {
             valueParser: p => parseFloat(p.newValue) || 0
         },
         {
+            field: "discountPercentage",
+            headerName: "Disc. %",
+            width: 90,
+            editable: true,
+            valueParser: p => parseFloat(p.newValue) || 0,
+            // [SIMPLIFIED] Formatter to always show a percentage
+            valueFormatter: p => `${p.value || 0}%`
+        },
+        // --- [NEW] Line Item Tax Column ---
+        {
+            field: "taxPercentage",
+            headerName: "Tax %",
+            width: 90,
+            editable: true,
+            valueParser: p => parseFloat(p.newValue) || 0,
+            // [SIMPLIFIED] Formatter to always show a percentage
+            valueFormatter: p => `${p.value || 0}%`
+        },
+        // --- [NEW] Calculated Line Total Column ---
+        {
+            headerName: "Line Total",
+            width: 120,
+            editable: false,
+            cellStyle: { 'font-weight': 'bold' },
+            valueGetter: params => {
+                const qty = params.data.quantity || 0;
+                const price = params.data.unitPrice || 0;
+                const disc = params.data.discountPercentage || 0;
+                const tax = params.data.taxPercentage || 0;
+                const lineSubtotal = (qty * price) * (1 - disc / 100);
+                const lineTotal = lineSubtotal * (1 + tax / 100);
+                return lineTotal;
+            },
+            valueFormatter: p => `$${p.value.toFixed(2)}`
+        },
+        {
             headerName: "Remove",
-            width: 80,
+            width: 90,
             cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
                 const removeIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5z" clip-rule="evenodd" /></svg>`;
@@ -3352,22 +3388,46 @@ export function initializeSalesGrids() {
 export function calculateSalesTotals() {
     if (!salesCartGridApi) return;
 
+    let itemsSubtotal = 0;
+    let totalTax = 0;
+
     let subtotal = 0;
+
+    // 1. Calculate totals from the grid rows
     salesCartGridApi.forEachNode(node => {
         const item = node.data;
-        const lineTotal = (item.quantity || 0) * (item.unitPrice || 0);
-        subtotal += lineTotal;
+        const qty = item.quantity || 0;
+        const price = item.unitPrice || 0;
+        const lineDiscPercent = item.discountPercentage || 0;
+        const lineTaxPercent = item.taxPercentage || 0;
+
+        // Calculate the price after the line-item discount
+        const discountedLinePrice = (qty * price) * (1 - lineDiscPercent / 100);
+        
+        // Calculate the tax based on the discounted price
+        const lineTax = discountedLinePrice * (lineTaxPercent / 100);
+        
+        itemsSubtotal += discountedLinePrice;
+        totalTax += lineTax;
     });
 
-    // For now, we are not handling taxes or discounts, but this is where they would go.
-    const tax = 0;
-    const grandTotal = subtotal + tax;
 
-    document.getElementById('sale-subtotal').textContent = `$${subtotal.toFixed(2)}`;
-    document.getElementById('sale-tax').textContent = `$${tax.toFixed(2)}`;
+    // 2. Get the order-level discount percentage
+    const orderDiscPercent = parseFloat(document.getElementById('sale-order-discount').value) || 0;
+
+    // 3. Calculate the order-level discount amount based on the items subtotal
+    const orderDiscountAmount = itemsSubtotal * (orderDiscPercent / 100);
+
+    // 4. Calculate final grand total
+    const grandTotal = itemsSubtotal - orderDiscountAmount + totalTax;
+
+
+    // 5. Update the UI
+    document.getElementById('sale-subtotal').textContent = `$${itemsSubtotal.toFixed(2)}`;
+    document.getElementById('sale-tax').textContent = `$${totalTax.toFixed(2)}`;
     document.getElementById('sale-grand-total').textContent = `$${grandTotal.toFixed(2)}`;
 
-    // Also update the change due
+    // 6. Update change due
     const amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
     const changeDue = amountReceived - grandTotal;
     document.getElementById('sale-change-due').textContent = `$${(changeDue > 0 ? changeDue : 0).toFixed(2)}`;
@@ -3514,6 +3574,8 @@ export function showView(viewId) {
         paymentModal.classList.remove('visible');
         paymentModal.style.display = 'none';
     }
+
+    
 
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebar-overlay');
