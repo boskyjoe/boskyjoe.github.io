@@ -3609,13 +3609,21 @@ export function showSalesView() {
                     console.log("[Firestore] Received update for sales history.");
                     const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     
-                    // Now we are certain the grid API exists
-                    salesHistoryGridApi.setGridOption('rowData', sales);
-                    salesHistoryGridApi.setGridOption('loading', false);
-                    
+                    if (salesHistoryGridApi) {
+                        // --- THIS IS THE FIX ---
+                        // Use the dedicated 'setRowData' method instead of the generic 'setGridOption'.
+                        // This is a more direct and reliable way to tell the grid to redraw everything.
+                        salesHistoryGridApi.setRowData(sales);
+                        // -----------------------
+
+                        // Hiding the overlay is still correct.
+                        salesHistoryGridApi.hideOverlay();
+                    }
                 }, error => {
                     console.error("Error listening to sales history:", error);
-                    salesHistoryGridApi.setGridOption('loading', false);
+                    if (salesHistoryGridApi) {
+                        salesHistoryGridApi.hideOverlay();
+                    }
                 });
         }
     }, 50);
