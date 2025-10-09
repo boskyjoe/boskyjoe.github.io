@@ -3543,7 +3543,7 @@ export function showSalesView() {
     document.getElementById('new-sale-form').reset();
     if (salesCartGridApi) salesCartGridApi.setGridOption('rowData', []);
     calculateSalesTotals();
-    document.getElementById('sale-pay-now-container').classList.add('hidden'); // Ensure payment details are hidden initially
+    //document.getElementById('sale-pay-now-container').classList.add('hidden'); // Ensure payment details are hidden initially
 
     // 3. Populate dropdowns from masterData
     const storeSelect = document.getElementById('sale-store-select');
