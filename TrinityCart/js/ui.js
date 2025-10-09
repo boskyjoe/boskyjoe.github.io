@@ -3583,6 +3583,9 @@ export function showSalesView() {
 
     // 2. Reset the "New Sale" form to its default state.
     document.getElementById('new-sale-form').reset();
+
+    document.getElementById('sale-date').valueAsDate = new Date();
+    
     if (salesCartGridApi) salesCartGridApi.setGridOption('rowData', []);
     calculateSalesTotals();
     //document.getElementById('sale-pay-now-container').classList.add('hidden');
