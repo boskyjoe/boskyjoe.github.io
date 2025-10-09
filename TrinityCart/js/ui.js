@@ -32,11 +32,11 @@ import { SEASONS_COLLECTION_PATH } from './config.js';
 import { EVENTS_COLLECTION_PATH } from './config.js';
 import { PRODUCTS_CATALOGUE_COLLECTION_PATH } from './config.js';
 
-import { PURCHASE_INVOICES_COLLECTION_PATH, INVENTORY_LEDGER_COLLECTION_PATH, SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH   } from './config.js';
+import { PURCHASE_INVOICES_COLLECTION_PATH, INVENTORY_LEDGER_COLLECTION_PATH, SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH } from './config.js';
 import { SALES_CATALOGUES_COLLECTION_PATH, CHURCH_TEAMS_COLLECTION_PATH } from './config.js';
 
-import { 
-    CONSIGNMENT_ORDERS_COLLECTION_PATH,CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH,SALES_COLLECTION_PATH
+import {
+    CONSIGNMENT_ORDERS_COLLECTION_PATH, CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH, SALES_COLLECTION_PATH
 } from './config.js';
 
 
@@ -118,12 +118,12 @@ const suppliersGridOptions = {
         { field: "contactNo", headerName: "Contact No", flex: 1, editable: true, minWidth: 120 },
         { field: "contactEmail", headerName: "Email", flex: 1, editable: true, minWidth: 150 },
         { field: "creditTerm", headerName: "Credit Term", flex: 1, editable: true, minWidth: 100 },
-        { 
-            field: "isActive", 
-            headerName: "Status", 
+        {
+            field: "isActive",
+            headerName: "Status",
             width: 120,
-            cellRenderer: params => params.value ? 
-                '<span class="text-green-600 font-semibold">Active</span>' : 
+            cellRenderer: params => params.value ?
+                '<span class="text-green-600 font-semibold">Active</span>' :
                 '<span class="text-red-600 font-semibold">Inactive</span>'
         },
         {
@@ -131,7 +131,7 @@ const suppliersGridOptions = {
             width: 120,
             cellClass: 'flex items-center justify-center space-x-2',
             cellRenderer: (params) => {
-                if (!params.data) return ''; 
+                if (!params.data) return '';
                 const docId = params.data.id;
                 const isActive = params.data.isActive;
                 const hasActivePurchases = params.data.hasActivePurchases;
@@ -186,8 +186,8 @@ const suppliersGridOptions = {
         const docId = params.data.id;
         const field = params.colDef.field;
         const newValue = params.newValue;
-        document.dispatchEvent(new CustomEvent('updateSupplier', { 
-            detail: { docId, updatedData: { [field]: newValue } } 
+        document.dispatchEvent(new CustomEvent('updateSupplier', {
+            detail: { docId, updatedData: { [field]: newValue } }
         }));
     }
 };
@@ -341,23 +341,23 @@ export async function showSuppliersView() {
 
 let categoriesGridApi = null;
 let isCategoriesGridInitialized = false;
-let unsubscribeCategoriesListener = null; 
+let unsubscribeCategoriesListener = null;
 
 const categoriesGridOptions = {
     columnDefs: [
         { field: "categoryId", headerName: "ID", width: 150 },
         { field: "categoryName", headerName: "Category Name", flex: 1, editable: true },
-        { 
+        {
             field: "isActive", headerName: "Status", width: 120,
-            cellRenderer: p => p.value ? 
-                '<span class="text-green-600 font-semibold">Active</span>' : 
+            cellRenderer: p => p.value ?
+                '<span class="text-green-600 font-semibold">Active</span>' :
                 '<span class="text-red-600 font-semibold">Inactive</span>'
         },
         {
             headerName: "Actions", width: 120,
             cellClass: 'flex items-center justify-center space-x-2',
             cellRenderer: params => {
-                if (!params.data) return ''; 
+                if (!params.data) return '';
                 const docId = params.data.id;
                 const isActive = params.data.isActive;
 
@@ -389,8 +389,8 @@ const categoriesGridOptions = {
     defaultColDef: { resizable: true, sortable: true, filter: true },
     rowData: [],
     onCellValueChanged: (params) => {
-        document.dispatchEvent(new CustomEvent('updateCategory', { 
-            detail: { docId: params.data.id, updatedData: { categoryName: params.newValue } } 
+        document.dispatchEvent(new CustomEvent('updateCategory', {
+            detail: { docId: params.data.id, updatedData: { categoryName: params.newValue } }
         }));
     },
     onGridReady: async (params) => {
@@ -452,16 +452,16 @@ const saleTypesGridOptions = {
     columnDefs: [
         { field: "saleTypeId", headerName: "ID", width: 150 },
         { field: "saleTypeName", headerName: "Sale Type Name", flex: 1, editable: true },
-        { 
+        {
             field: "isActive", headerName: "Status", width: 120,
-            cellRenderer: p => p.value ? 
-                '<span class="text-green-600 font-semibold">Active</span>' : 
+            cellRenderer: p => p.value ?
+                '<span class="text-green-600 font-semibold">Active</span>' :
                 '<span class="text-red-600 font-semibold">Inactive</span>'
         },
         {
             headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
-                const icon = params.data.isActive 
+                const icon = params.data.isActive
                     ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
                     : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
                 const buttonClass = params.data.isActive ? 'btn-deactivate' : 'btn-activate';
@@ -472,8 +472,8 @@ const saleTypesGridOptions = {
     ],
     defaultColDef: { resizable: true, sortable: true, filter: true },
     onCellValueChanged: (params) => {
-        document.dispatchEvent(new CustomEvent('updateSaleType', { 
-            detail: { docId: params.data.id, updatedData: { saleTypeName: params.newValue } } 
+        document.dispatchEvent(new CustomEvent('updateSaleType', {
+            detail: { docId: params.data.id, updatedData: { saleTypeName: params.newValue } }
         }));
     },
     onGridReady: async (params) => {
@@ -521,7 +521,7 @@ export async function showSaleTypesView() {
                 });
         }
     }, 50);
-    
+
 }
 
 
@@ -535,16 +535,16 @@ const paymentModesGridOptions = {
     columnDefs: [
         { field: "paymentTypeId", headerName: "ID", width: 150 },
         { field: "paymentMode", headerName: "Payment Mode", flex: 1, editable: true },
-        { 
+        {
             field: "isActive", headerName: "Status", width: 120,
-            cellRenderer: p => p.value ? 
-                '<span class="text-green-600 font-semibold">Active</span>' : 
+            cellRenderer: p => p.value ?
+                '<span class="text-green-600 font-semibold">Active</span>' :
                 '<span class="text-red-600 font-semibold">Inactive</span>'
         },
         {
             headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
-                const icon = params.data.isActive 
+                const icon = params.data.isActive
                     ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
                     : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
                 const buttonClass = params.data.isActive ? 'btn-deactivate' : 'btn-activate';
@@ -555,8 +555,8 @@ const paymentModesGridOptions = {
     ],
     defaultColDef: { resizable: true, sortable: true, filter: true },
     onCellValueChanged: (params) => {
-        document.dispatchEvent(new CustomEvent('updatePaymentMode', { 
-            detail: { docId: params.data.id, updatedData: { paymentMode: params.newValue } } 
+        document.dispatchEvent(new CustomEvent('updatePaymentMode', {
+            detail: { docId: params.data.id, updatedData: { paymentMode: params.newValue } }
         }));
     },
     onGridReady: async (params) => {
@@ -578,7 +578,7 @@ export function initializePaymentModesGrid() {
 }
 
 export async function showPaymentModesView() {
-    console.log("ui.js: initializePaymentModesGrid") ;
+    console.log("ui.js: initializePaymentModesGrid");
     showView('payment-modes-view');
     initializePaymentModesGrid();
     const waitForGrid = setInterval(() => {
@@ -615,29 +615,29 @@ const seasonsGridOptions = {
     columnDefs: [
         { field: "seasonId", headerName: "ID", width: 180 },
         { field: "seasonName", headerName: "Season Name", flex: 2, editable: true },
-        { 
+        {
             field: "startDate", headerName: "Start Date", flex: 1,
             valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : ''
         },
-        { 
+        {
             field: "endDate", headerName: "End Date", flex: 1,
             valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : ''
         },
-        { 
+        {
             field: "status", headerName: "Status", flex: 1, editable: true,
             cellEditor: 'agSelectCellEditor',
             cellEditorParams: { values: ['Upcoming', 'Active', 'Archived'] }
         },
-        { 
+        {
             field: "isActive", headerName: "Active", width: 120,
-            cellRenderer: p => p.value ? 
-                '<span class="text-green-600 font-semibold">Active</span>' : 
+            cellRenderer: p => p.value ?
+                '<span class="text-green-600 font-semibold">Active</span>' :
                 '<span class="text-red-600 font-semibold">Inactive</span>'
         },
         {
             headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
-                const icon = params.data.isActive 
+                const icon = params.data.isActive
                     ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
                     : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
                 const buttonClass = params.data.isActive ? 'btn-deactivate' : 'btn-activate';
@@ -651,8 +651,8 @@ const seasonsGridOptions = {
         const { id } = params.data;
         const field = params.colDef.field;
         const newValue = params.newValue;
-        document.dispatchEvent(new CustomEvent('updateSeason', { 
-            detail: { docId: id, updatedData: { [field]: newValue } } 
+        document.dispatchEvent(new CustomEvent('updateSeason', {
+            detail: { docId: id, updatedData: { [field]: newValue } }
         }));
     },
     onGridReady: async (params) => {
@@ -662,19 +662,19 @@ const seasonsGridOptions = {
 };
 
 export function initializeSeasonsGrid() {
-    if (isSeasonsGridInitialized) return ;
+    if (isSeasonsGridInitialized) return;
     const seasonsGridDiv = document.getElementById('seasons-grid');
 
-    if (seasonsGridDiv) { 
+    if (seasonsGridDiv) {
         console.log("[ui.js] Initializing Seasons Grid for the first time.");
         createGrid(seasonsGridDiv, seasonsGridOptions);
         isSeasonsGridInitialized = true;
     }
-   
+
 }
 
 export async function showSeasonsView() {
-    console.log("ui.js: initializeSeasonsGrid") ;
+    console.log("ui.js: initializeSeasonsGrid");
     showView('seasons-view');
     initializeSeasonsGrid();
 
@@ -707,7 +707,7 @@ export async function showSeasonsView() {
 
 let salesEventsGridApi = null;
 let isSalesEventsGridInitialized = false;
-let unsubscribeSalesEventsListener = null; 
+let unsubscribeSalesEventsListener = null;
 
 
 
@@ -715,10 +715,10 @@ const salesEventsGridOptions = {
     columnDefs: [
         { field: "eventId", headerName: "ID", width: 180 },
         { field: "eventName", headerName: "Event Name", flex: 2, editable: true },
-        { 
+        {
             field: "seasonId", // The field in our data is the ID
-            headerName: "Parent Season", 
-            flex: 1, 
+            headerName: "Parent Season",
+            flex: 1,
             editable: true,
             cellEditor: 'agSelectCellEditor',
             cellEditorParams: (params) => {
@@ -738,24 +738,24 @@ const salesEventsGridOptions = {
                 return season ? season.seasonName : params.value;
             }
         },
-        { 
+        {
             field: "eventStartDate", headerName: "Start Date", flex: 1,
             valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : ''
         },
-        { 
+        {
             field: "eventEndDate", headerName: "End Date", flex: 1,
             valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : ''
         },
-        { 
+        {
             field: "isActive", headerName: "Active", width: 120,
-            cellRenderer: p => p.value ? 
-                '<span class="text-green-600 font-semibold">Active</span>' : 
+            cellRenderer: p => p.value ?
+                '<span class="text-green-600 font-semibold">Active</span>' :
                 '<span class="text-red-600 font-semibold">Inactive</span>'
         },
         {
             headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
-                const icon = params.data.isActive 
+                const icon = params.data.isActive
                     ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
                     : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
                 const buttonClass = params.data.isActive ? 'btn-deactivate' : 'btn-activate';
@@ -778,8 +778,8 @@ const salesEventsGridOptions = {
                 updatedData.seasonName = season.seasonName;
             }
         }
-        document.dispatchEvent(new CustomEvent('updateSalesEvent', { 
-            detail: { docId, updatedData }  
+        document.dispatchEvent(new CustomEvent('updateSalesEvent', {
+            detail: { docId, updatedData }
         }));
     },
     onGridReady: async (params) => {
@@ -790,21 +790,21 @@ const salesEventsGridOptions = {
 
 // --- UI FUNCTIONS ---
 export function initializeSalesEventsGrid() {
-    if (isSalesEventsGridInitialized) return ;
+    if (isSalesEventsGridInitialized) return;
     const salesEventsGridDiv = document.getElementById('sales-events-grid');
 
-    if(salesEventsGridDiv) {
+    if (salesEventsGridDiv) {
         console.log("[ui.js] Initializing Sales Events Grid for the first time.");
         createGrid(salesEventsGridDiv, salesEventsGridOptions);
         isSalesEventsGridInitialized = true;
-    }   
+    }
 }
 
 
 export async function showSalesEventsView() {
     showView('sales-events-view');
     initializeSalesEventsGrid();
-    
+
     const parentSeasonSelect = document.getElementById('parentSeason-select');
     parentSeasonSelect.innerHTML = '<option value="">Select a parent season...</option>';
     masterData.seasons.forEach(season => {
@@ -838,8 +838,8 @@ export async function showSalesEventsView() {
                 });
         }
     }, 50);
-    
-    
+
+
 }
 
 
@@ -854,15 +854,15 @@ const usersGridOptions = {
     columnDefs: [
         { field: "displayName", headerName: "Name", flex: 2 },
         { field: "email", headerName: "Email", flex: 2 },
-        { 
-            field: "role", 
-            headerName: "Role", 
-            flex: 1, 
+        {
+            field: "role",
+            headerName: "Role",
+            flex: 1,
             editable: true,
             cellEditor: 'agSelectCellEditor',
             cellEditorParams: { values: rolesList }
         },
-        { 
+        {
             field: "isActive", headerName: "Status", width: 120,
             cellRenderer: p => p.value ? 'Active' : 'Inactive'
         },
@@ -878,14 +878,14 @@ const usersGridOptions = {
     defaultColDef: { resizable: true, sortable: true, filter: true },
     onCellValueChanged: (params) => {
         // This event handles role changes from the dropdown
-        document.dispatchEvent(new CustomEvent('updateUserRole', { 
-            detail: { uid: params.data.id, newRole: params.newValue } 
+        document.dispatchEvent(new CustomEvent('updateUserRole', {
+            detail: { uid: params.data.id, newRole: params.newValue }
         }));
     },
     onGridReady: async (params) => {
         console.log("[ui.js] User Grid is now ready.");
         usersGridApi = params.api;
-        
+
         try {
             usersGridApi.setGridOption('loading', true);
             const users = await getUsersWithRoles();
@@ -910,14 +910,14 @@ export function initializeUsersGrid() {
     const usersGridDiv = document.getElementById('users-grid');
 
     if (usersGridDiv) {
-         console.log("[ui.js] Initializing User Grid for the first time.");
+        console.log("[ui.js] Initializing User Grid for the first time.");
         usersGridApi = createGrid(usersGridDiv, usersGridOptions);
         isUsersGridInitialized = true;
     }
 }
 
 export async function showUsersView() {
-    console.log("ui.js: initializeUsersGrid") ;
+    console.log("ui.js: initializeUsersGrid");
     showView('users-view');
     initializeUsersGrid();
 }
@@ -930,8 +930,8 @@ export async function refreshUsersGrid() {
         const users = await getUsersWithRoles();
         usersGridApi.setGridOption('rowData', users);
         usersGridApi.setGridOption('loading', false);
-    } catch (error) { 
-        console.error("Error refreshing users:", error); 
+    } catch (error) {
+        console.error("Error refreshing users:", error);
         usersGridApi.setGridOption('loading', false);
         usersGridApi.showNoRowsOverlay();
     }
@@ -956,19 +956,19 @@ let selectedTeamId = null; // To track the currently selected team
  */
 function resetTeamDetailView() {
     console.log("[ui.js] Resetting team detail view.");
-    
+
     // 1. Clear the selected team ID from the state.
     selectedTeamId = null;
-    
+
     // 2. Reset the UI elements.
     document.getElementById('selected-team-name').textContent = '...';
     document.getElementById('add-member-btn').disabled = true;
-    
+
     // 3. Clear the members grid.
     if (teamMembersGridApi) {
         teamMembersGridApi.setGridOption('rowData', []);
     }
-    
+
     // 4. Detach the listener for the members sub-collection to prevent memory leaks.
     if (unsubscribeTeamMembersListener) {
         unsubscribeTeamMembersListener();
@@ -981,19 +981,19 @@ function resetTeamDetailView() {
 const churchTeamsGridOptions = {
     getRowId: params => params.data.id,
     columnDefs: [
-        { field: "teamName", headerName: "Team Name", flex: 1, editable: true},
-        { 
-            headerName: "Team Lead", 
+        { field: "teamName", headerName: "Team Name", flex: 1, editable: true },
+        {
+            headerName: "Team Lead",
             flex: 1,
             // This will be populated later once we can identify the lead
             valueGetter: params => params.data.teamLeadName || 'Not Assigned'
         },
-        { 
-            field: "isActive", 
-            headerName: "Status", 
+        {
+            field: "isActive",
+            headerName: "Status",
             width: 120,
-            cellRenderer: p => p.value ? 
-                '<span class="text-green-600 font-semibold">Active</span>' : 
+            cellRenderer: p => p.value ?
+                '<span class="text-green-600 font-semibold">Active</span>' :
                 '<span class="text-red-600 font-semibold">Inactive</span>'
         },
         {
@@ -1001,9 +1001,9 @@ const churchTeamsGridOptions = {
             cellRenderer: params => {
                 const docId = params.data.id;
                 const editIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="m2.695 14.763-1.262 3.154a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.885L17.5 5.5a2.121 2.121 0 0 0-3-3L3.58 13.42a4 4 0 0 0-.885 1.343Z" /></svg>`; // Your edit icon SVG
-                const statusIcon = params.data.isActive 
-                        ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
-                        : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
+                const statusIcon = params.data.isActive
+                    ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
+                    : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
                 return `
                     <button class="action-btn-icon action-btn-toggle-team-status" data-id="${docId}" title="${params.data.isActive ? 'Deactivate' : 'Activate'}">${statusIcon}</button>
                 `;
@@ -1086,7 +1086,7 @@ export function getTeamDataFromGridById(teamId) {
 // 4. Create the initialization function
 export function initializeChurchTeamsGrids() {
     if (isChurchTeamsGridsInitialized) return;
-    
+
     const teamsGridDiv = document.getElementById('church-teams-grid');
     const membersGridDiv = document.getElementById('team-members-grid');
 
@@ -1106,7 +1106,7 @@ function loadMembersForTeam(teamId) {
 
     const db = firebase.firestore();
     teamMembersGridApi.setGridOption('loading', true);
-    
+
     unsubscribeTeamMembersListener = db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).collection('members')
         .orderBy('name')
         .onSnapshot(snapshot => {
@@ -1126,7 +1126,7 @@ export function showChurchTeamsView() {
 
     // Populate the read-only church name field from the app state
     document.getElementById('team-churchName-input').value = appState.ChurchName;
-    
+
     // Reset detail view
     document.getElementById('selected-team-name').textContent = '...';
     document.getElementById('add-member-btn').disabled = true;
@@ -1197,7 +1197,7 @@ export function switchConsignmentTab_bk(tabId) {
         panel.classList.toggle('active', shouldBeActive);
     });
 
-     const orderId = appState.selectedConsignmentId;
+    const orderId = appState.selectedConsignmentId;
     if (!orderId) return;
 
     const db = firebase.firestore();
@@ -1221,7 +1221,7 @@ export function switchConsignmentTab_bk(tabId) {
         // Store these listeners so they can be cleaned up later.
         unsubscribeConsignmentDetailsListeners.push(paymentsUnsub);
     }
-    
+
 }
 
 /**
@@ -1270,10 +1270,10 @@ const productsGridOptions = {
     columnDefs: [
         { field: "itemId", headerName: "ID", width: 150 },
         { field: "itemName", headerName: "Item Name", flex: 2, editable: true },
-        { 
-            field: "categoryId", 
-            headerName: "Category", 
-            flex: 1, 
+        {
+            field: "categoryId",
+            headerName: "Category",
+            flex: 1,
             cellEditor: 'agSelectCellEditor',
             cellEditorParams: (params) => {
                 const categoryIds = masterData.categories.map(c => c.id);
@@ -1292,39 +1292,39 @@ const productsGridOptions = {
                 return category ? category.categoryName : params.value;
             }
         },
-        { 
-            field: "inventoryCount", 
-            headerName: "Stock On Hand", 
-            width: 150, 
+        {
+            field: "inventoryCount",
+            headerName: "Stock On Hand",
+            width: 150,
             editable: false, // This field is system-managed
             // Style it to look read-only and important
             cellStyle: { 'background-color': '#f3f4f6', 'font-weight': 'bold', 'text-align': 'center' }
         },
-        { 
-            field: "unitPrice", 
-            headerName: "Unit Price", 
-            flex: 1, 
-            editable: true, 
+        {
+            field: "unitPrice",
+            headerName: "Unit Price",
+            flex: 1,
+            editable: true,
             valueFormatter: p => (typeof p.value === 'number') ? p.value.toFixed(2) : '',
             valueParser: p => parseFloat(p.newValue) // Ensure the edited value is a number
         },
-        { 
-            field: "unitMarginPercentage", 
-            headerName: "Margin %", 
-            flex: 1, 
+        {
+            field: "unitMarginPercentage",
+            headerName: "Margin %",
+            flex: 1,
             editable: true,
             valueParser: p => parseFloat(p.newValue)
         },
-        { 
+        {
             field: "isActive", headerName: "Status", width: 120,
-            cellRenderer: p => p.value ? 
-                '<span class="text-green-600 font-semibold">Active</span>' : 
+            cellRenderer: p => p.value ?
+                '<span class="text-green-600 font-semibold">Active</span>' :
                 '<span class="text-red-600 font-semibold">Inactive</span>'
         },
         {
             headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
-            cellRenderer: params => { 
-                const icon = params.data.isActive 
+            cellRenderer: params => {
+                const icon = params.data.isActive
                     ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
                     : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
                 const buttonClass = params.data.isActive ? 'btn-deactivate' : 'btn-activate';
@@ -1341,7 +1341,7 @@ const productsGridOptions = {
     rowClassRules: {
         'opacity-50': params => !params.data.isActive,
     },
-     onGridReady: (params) => {
+    onGridReady: (params) => {
         console.log("[ui.js] Products Grid is now ready.");
         productsGridApi = params.api;
     },
@@ -1460,15 +1460,17 @@ const purchaseInvoicesGridOptions = {
         { field: "invoiceId", headerName: "Invoice ID", width: 150 },
         { field: "supplierInvoiceNo", headerName: "Supplier Invoice #", width: 150 },
         { field: "supplierName", headerName: "Supplier", flex: 1, width: 150 },
-        { field: "purchaseDate", headerName: "Date", valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' ,width: 100},
+        { field: "purchaseDate", headerName: "Date", valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '', width: 100 },
         { field: "invoiceTotal", headerName: "Total", valueFormatter: p => `$${p.value.toFixed(2)}` },
         { field: "balanceDue", headerName: "Balance", valueFormatter: p => `$${p.value.toFixed(2)}` },
-        { field: "paymentStatus", headerName: "Status", width: 100, cellRenderer: p => {
-            const status = p.value;
-            if (status === 'Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">Paid</span>`;
-            if (status === 'Partially Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">Partial</span>`;
-            return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">Unpaid</span>`;
-        }},
+        {
+            field: "paymentStatus", headerName: "Status", width: 100, cellRenderer: p => {
+                const status = p.value;
+                if (status === 'Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">Paid</span>`;
+                if (status === 'Partially Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">Partial</span>`;
+                return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">Unpaid</span>`;
+            }
+        },
         {
             headerName: "Actions",
             width: 150,
@@ -1493,7 +1495,7 @@ const purchaseInvoicesGridOptions = {
     defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
     rowSelection: {
         mode: 'multiRow',
-        enableSelectionWithoutKeys: true 
+        enableSelectionWithoutKeys: true
     },
     rowClassRules: {
         'ag-row-selected-custom': params => params.data && params.data.id === appState.selectedPurchaseInvoiceId,
@@ -1518,17 +1520,17 @@ const purchaseInvoicesGridOptions = {
 // Grid for the payments of a selected invoice
 const purchasePaymentsGridOptions = {
 
-    getRowId: params => params.data.id, 
+    getRowId: params => params.data.id,
     columnDefs: [
-        { 
-            headerName: "Supplier Invoice #", 
+        {
+            headerName: "Supplier Invoice #",
             width: 150,
             pinned: 'left', // This "freezes" the column to the left
             // This valueGetter now uses the correct fields.
             valueGetter: params => {
                 // Safety check: ensure the payment data and the invoices grid API are available.
                 if (!params.data || !purchaseInvoicesGridApi) {
-                    return ''; 
+                    return '';
                 }
 
                 // 1. Get the ID of the parent invoice from the current payment row's data.
@@ -1542,8 +1544,8 @@ const purchasePaymentsGridOptions = {
                 return invoiceNode ? invoiceNode.data.supplierInvoiceNo : parentInvoiceDocId;
             }
         },
-        { 
-            headerName: "Supplier", 
+        {
+            headerName: "Supplier",
             width: 200,
             pinned: 'left', // This also freezes the column
             // Use a valueGetter to look up the supplier name from masterData
@@ -1554,10 +1556,10 @@ const purchasePaymentsGridOptions = {
             }
         },
         { field: "paymentDate", headerName: "Payment Date", flex: 1, valueFormatter: p => p.value.toDate().toLocaleDateString() },
-        { 
-            field: "amountPaid", 
-            headerName: "Amount Paid", 
-            flex: 1, 
+        {
+            field: "amountPaid",
+            headerName: "Amount Paid",
+            flex: 1,
             valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : ''
         },
         { field: "paymentMode", headerName: "Mode", flex: 1 },
@@ -1595,7 +1597,7 @@ export function getPaymentDataFromGridById(paymentId) {
     }
     const rowNode = consignmentPaymentsGridApi.getRowNode(paymentId);
     // -----------------------
-    
+
     return rowNode ? rowNode.data : null;
 }
 
@@ -1630,20 +1632,20 @@ export async function loadPaymentsForSelectedInvoice() {
         if (selectedInvoiceNodes.length > 0) {
             // --- FILTERED MODE ---
             console.log(`[ui.js] Filtered Mode: Loading payments for ${selectedInvoiceNodes.length} selected invoice(s).`);
-            
+
             // Create an array of promises, one for each selected invoice.
             const fetchPromises = selectedInvoiceNodes.map(node => getPaymentsForInvoice(node.data.id));
-            
+
             // Wait for all fetch operations to complete.
             const paymentGroups = await Promise.all(fetchPromises);
-            
+
             // Flatten the array of arrays into a single list of payments.
             paymentsToShow = paymentGroups.flat();
 
         } else {
             // --- GLOBAL MODE ---
             console.log("[ui.js] Global Mode: No invoices selected. Loading all payments.");
-            
+
             // Call our new API function to get all payments.
             paymentsToShow = await getAllSupplierPayments();
         }
@@ -1678,7 +1680,7 @@ export function switchPurchaseTab(tabName) {
         invoiceTab.classList.remove('tab-active');
         paymentsTab.classList.add('tab-active');
         // We still want to enable it in case it was disabled
-        paymentsTab.classList.remove('tab-disabled'); 
+        paymentsTab.classList.remove('tab-disabled');
         invoicePanel.classList.remove('active');
         paymentsPanel.classList.add('active');
     }
@@ -1690,7 +1692,7 @@ function createLineItemRow(id) {
     const row = document.createElement('div');
     row.id = `line-item-${id}`;
     row.className = 'grid grid-cols-12 gap-x-2 gap-y-2 items-end p-3 border-b';
-    
+
     row.innerHTML = `
         <div class="col-span-12 md:col-span-4">
             <label class="form-label text-xs">Product</label>
@@ -1745,7 +1747,7 @@ export function addLineItem() {
 
     const productSelect = newRow.querySelector('.line-item-product');
     productSelect.innerHTML = '<option value="">Select product...</option>';
-    
+
     masterData.products.forEach(p => {
         const option = document.createElement('option');
         option.value = p.id;
@@ -1771,12 +1773,12 @@ export function calculateAllTotals() {
 
         const grossPrice = qty * price;
         let discountAmount = 0;
-        if (discountType === 'Percentage') { discountAmount = grossPrice * (discountValue / 100); } 
+        if (discountType === 'Percentage') { discountAmount = grossPrice * (discountValue / 100); }
         else { discountAmount = discountValue; }
 
         const netPrice = grossPrice - discountAmount;
         const taxAmount = netPrice * (taxPercentage / 100);
-        
+
         row.querySelector('.line-item-net-price').value = netPrice.toFixed(2);
 
         itemsSubtotal += netPrice;
@@ -1788,7 +1790,7 @@ export function calculateAllTotals() {
     const invoiceDiscountType = document.getElementById('invoice-discount-type').value;
     const invoiceDiscountValue = parseFloat(document.getElementById('invoice-discount-value').value) || 0;
     let invoiceDiscountAmount = 0;
-    if (invoiceDiscountType === 'Percentage') { invoiceDiscountAmount = itemsSubtotal * (invoiceDiscountValue / 100); } 
+    if (invoiceDiscountType === 'Percentage') { invoiceDiscountAmount = itemsSubtotal * (invoiceDiscountValue / 100); }
     else { invoiceDiscountAmount = invoiceDiscountValue; }
 
     const taxableAmountForInvoice = itemsSubtotal - invoiceDiscountAmount;
@@ -1797,7 +1799,7 @@ export function calculateAllTotals() {
 
     const totalTax = totalItemLevelTax + invoiceLevelTaxAmount;
     const grandTotal = taxableAmountForInvoice + totalTax;
-    
+
     document.getElementById('purchase-grand-total').textContent = `$${grandTotal.toFixed(2)}`;
 }
 
@@ -1806,7 +1808,7 @@ export function showPurchasesView() {
     showView('purchases-view');
     initializePurchaseGrids();
     switchPurchaseTab('invoices');
-    
+
     document.getElementById('tab-payments').classList.add('tab-disabled'); // Start with payments tab disabled
     appState.selectedPurchaseInvoiceId = null; // Clear any previous selection
 
@@ -1827,7 +1829,7 @@ export function showPurchasesView() {
     document.getElementById('purchase-line-items-container').innerHTML = '';
     addLineItem();
     calculateAllTotals();
-    
+
     const waitForGrid = setInterval(() => {
         if (purchaseInvoicesGridApi) {
             clearInterval(waitForGrid);
@@ -1838,7 +1840,7 @@ export function showPurchasesView() {
 
             unsubscribeInvoicesListener = db.collection(PURCHASE_INVOICES_COLLECTION_PATH)
                 .orderBy('purchaseDate', 'desc')
-                .onSnapshot(snapshot => { 
+                .onSnapshot(snapshot => {
                     // This was an update from another user. Just update the grid silently.
                     console.log("[Firestore] Received real-time update for purchase invoices.");
                     const invoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1893,7 +1895,7 @@ export async function loadInvoiceDataIntoForm(invoiceData) {
     invoiceData.lineItems.forEach(item => {
         addLineItem(); // Creates a new blank row
         const newRow = document.getElementById(`line-item-${lineItemCounter}`);
-        
+
         // Populate the fields in the new row
         newRow.querySelector('[data-field="masterProductId"]').value = item.masterProductId;
         newRow.querySelector('[data-field="quantity"]').value = item.quantity;
@@ -2044,7 +2046,7 @@ function syncAvailableProductsGrid() {
 
     // 1. Clear the contents of the *original* Set.
     currentCatalogueItemIds.clear();
-    
+
     // 2. Get the new IDs.
     const newProductIds = currentItems.map(item => item.productId);
 
@@ -2098,9 +2100,9 @@ const availableProductsGridOptions = {
     },
     columnDefs: [
         { field: "itemName", headerName: "Product Name", flex: 1, filter: 'agTextColumnFilter' },
-        { 
-            field: "categoryId", 
-            headerName: "Category", 
+        {
+            field: "categoryId",
+            headerName: "Category",
             flex: 1,
             valueFormatter: params => {
                 const category = masterData.categories.find(c => c.id === params.value);
@@ -2114,9 +2116,9 @@ const availableProductsGridOptions = {
             cellRenderer: params => {
                 const productId = params.data.id;
                 const addIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5z" /></svg>`;
-                
+
                 const isDuplicate = params.context.currentCatalogueItemIds.has(productId);
-                
+
                 console.log(`Rendering 'Add' button for product ${productId}. Is it a duplicate? ${isDuplicate}`);
 
                 const isDisabled = isDuplicate;
@@ -2145,15 +2147,15 @@ const availableProductsGridOptions = {
 // 3. Define the AG-Grid options for the RIGHT grid (Catalogue Items)
 const catalogueItemsGridOptions = {
     getRowId: params => params.data.id || params.data.tempId, // Crucial for finding and updating rows
-    
+
     columnDefs: [
         { field: "productName", headerName: "Product Name", flex: 1 },
         { field: "costPrice", headerName: "Cost Price", width: 120, valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : '' },
         { field: "marginPercentage", headerName: "Margin %", width: 110, valueFormatter: p => p.value ? `${p.value}%` : '' },
-        { 
-            field: "sellingPrice", 
-            headerName: "Selling Price", 
-            width: 130, 
+        {
+            field: "sellingPrice",
+            headerName: "Selling Price",
+            width: 130,
             editable: true, // This makes the cell editable!
             valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : '',
             valueParser: p => parseFloat(p.newValue.replace('$', '')) // Clean up input
@@ -2205,12 +2207,12 @@ export function loadCatalogueForEditing(catalogueData) {
     document.getElementById('sales-catalogue-doc-id').value = catalogueData.id;
     document.getElementById('catalogue-name-input').value = catalogueData.catalogueName;
     document.getElementById('catalogue-season-select').value = catalogueData.seasonId;
-    
+
     // 2. Change form to "Edit Mode"
     document.getElementById('catalogue-form-title').textContent = `Editing: ${catalogueData.catalogueName}`;
     document.getElementById('catalogue-form-submit-btn').textContent = 'Update Details';
     document.getElementById('catalogue-form-cancel-btn').style.display = 'inline-block';
-    
+
     // 3. Detach any previous item listener to prevent leaks
     if (unsubscribeCatalogueItemsListener) {
         unsubscribeCatalogueItemsListener();
@@ -2219,7 +2221,7 @@ export function loadCatalogueForEditing(catalogueData) {
     // 4. Attach a new real-time listener for the items in THIS catalogue
     const db = firebase.firestore();
     catalogueItemsGridApi.setGridOption('loading', true);
-    
+
     unsubscribeCatalogueItemsListener = db.collection(SALES_CATALOGUES_COLLECTION_PATH)
         .doc(catalogueData.id)
         .collection('items')
@@ -2229,7 +2231,7 @@ export function loadCatalogueForEditing(catalogueData) {
 
             // Populate the draft state AND the grid
             appState.draftCatalogueItems = items;
-            
+
             catalogueItemsGridApi.setGridOption('rowData', items);
             catalogueItemsGridApi.setGridOption('loading', false);
 
@@ -2289,7 +2291,7 @@ const existingCataloguesGridOptions = {
 // 4. Create the initialization function
 export function initializeSalesCatalogueGrids() {
     if (isSalesCatalogueGridsInitialized) return;
-    
+
     const availableGridDiv = document.getElementById('available-products-grid');
     const itemsGridDiv = document.getElementById('catalogue-items-grid');
     const existingGridDiv = document.getElementById('existing-catalogues-grid'); // Get the new grid
@@ -2344,10 +2346,10 @@ export function showSalesCatalogueView() {
                 .onSnapshot(snapshot => {
                     console.log("[Firestore] Received real-time update for existing sales catalogues.");
                     const catalogues = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    
+
                     // Feed the data to the grid
                     existingCataloguesGridApi.setGridOption('rowData', catalogues);
-                    
+
                     // IMPORTANT: Hide the loading overlay
                     existingCataloguesGridApi.setGridOption('loading', false);
                 }, error => {
@@ -2386,19 +2388,21 @@ const consignmentOrdersGridOptions = {
     getRowId: params => params.data.id,
     pagination: true,
     paginationPageSize: 100, // You can adjust this default value if you like
-    paginationPageSizeSelector: [25, 50, 100], 
+    paginationPageSizeSelector: [25, 50, 100],
     columnDefs: [
-        { field: "consignmentId", headerName: "Order ID", width: 180,filter: 'agTextColumnFilter' },
+        { field: "consignmentId", headerName: "Order ID", width: 180, filter: 'agTextColumnFilter' },
         { field: "requestDate", headerName: "Request Date", filter: 'agDateColumnFilter', width: 140, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
-        { field: "teamName", headerName: "Team", flex: 1 , filter: 'agTextColumnFilter'},
+        { field: "teamName", headerName: "Team", flex: 1, filter: 'agTextColumnFilter' },
         { field: "requestingMemberName", headerName: "Requested By", flex: 1, filter: 'agTextColumnFilter' },
-        { field: "status", headerName: "Status", filter: 'agTextColumnFilter', width: 120, cellRenderer: p => {
-            const status = p.value;
-            if (status === 'Active') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
-            if (status === 'Pending') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">${status}</span>`;
-            if (status === 'Settled') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-gray-600 bg-gray-200">${status}</span>`;
-            return status;
-        }},
+        {
+            field: "status", headerName: "Status", filter: 'agTextColumnFilter', width: 120, cellRenderer: p => {
+                const status = p.value;
+                if (status === 'Active') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
+                if (status === 'Pending') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">${status}</span>`;
+                if (status === 'Settled') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-gray-600 bg-gray-200">${status}</span>`;
+                return status;
+            }
+        },
         { field: "balanceDue", headerName: "Balance Due", width: 140, valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : '$0.00' }
     ],
     rowSelection: { mode: 'singleRow' },
@@ -2420,10 +2424,10 @@ const fulfillmentItemsGridOptions = {
     columnDefs: [
         { field: "productName", headerName: "Product", flex: 1, filter: 'agDateColumnFilter' },
         { field: "quantityRequested", headerName: "Qty Requested", width: 150 },
-        { 
-            field: "quantityCheckedOut", 
-            headerName: "Qty to Fulfill", 
-            width: 150, 
+        {
+            field: "quantityCheckedOut",
+            headerName: "Qty to Fulfill",
+            width: 150,
             editable: true, // Admin can edit this
             valueParser: p => parseInt(p.newValue, 10) || 0
         }
@@ -2440,32 +2444,32 @@ const consignmentItemsGridOptions = {
     columnDefs: [
         { field: "productName", headerName: "Product", flex: 1, filter: 'agTextColumnFilter', suppressMovable: true },
         { field: "quantityCheckedOut", headerName: "Checked Out", width: 120, suppressMovable: true },
-        { 
-            field: "quantitySold", 
-            headerName: "Sold Qty", 
-            width: 100, 
+        {
+            field: "quantitySold",
+            headerName: "Sold Qty",
+            width: 100,
             editable: true, // Make this column editable
             cellEditor: 'agNumberCellEditor',
             cellEditorParams: { min: 0, precision: 0 }
         },
-        { 
-            field: "quantityReturned", 
-            headerName: "Returned Qty", 
-            width: 100, 
+        {
+            field: "quantityReturned",
+            headerName: "Returned Qty",
+            width: 100,
             editable: true, // Make this column editable
             cellEditor: 'agNumberCellEditor',
             cellEditorParams: { min: 0, precision: 0 }
         },
-        { 
-            field: "quantityDamaged", 
-            headerName: "Damaged Qty", 
-            width: 100, 
+        {
+            field: "quantityDamaged",
+            headerName: "Damaged Qty",
+            width: 100,
             editable: true, // Make this column editable
             cellEditor: 'agNumberCellEditor',
             cellEditorParams: { min: 0, precision: 0 }
         },
-        { 
-            headerName: "On Hand Qty", 
+        {
+            headerName: "On Hand Qty",
             width: 100,
             cellStyle: { 'font-weight': 'bold' },
             // The valueGetter remains the same and will auto-recalculate
@@ -2493,13 +2497,13 @@ const consignmentItemsGridOptions = {
         if (newTotalAccountedFor > data.quantityCheckedOut) {
             // 1. Inform the user of the error.
             alert(`Error: Invalid quantity. The total accounted for (${newTotalAccountedFor}) cannot exceed the Checked Out quantity of ${data.quantityCheckedOut}.`);
-            
+
             // 2. Manually revert the data in the grid's model. This is the crucial step.
             params.node.setDataValue(colId, oldValue);
-            
+
             // 3. Stop the editing process.
             params.api.stopEditing(true); // Cancel any remaining edit state.
-            
+
             return; // Stop further processing.
         }
     },
@@ -2606,7 +2610,7 @@ export function renderConsignmentDetail(orderData) {
     document.getElementById('summary-total-sold').textContent = `$${(orderData.totalValueSold || 0).toFixed(2)}`;
     document.getElementById('summary-total-paid').textContent = `$${(orderData.totalAmountPaid || 0).toFixed(2)}`;
     document.getElementById('summary-balance-due').textContent = `$${(orderData.balanceDue || 0).toFixed(2)}`;
-   
+
     // Populate header with the new order's data
     document.getElementById('selected-consignment-id').textContent = orderData.consignmentId;
     document.getElementById('selected-consignment-member').textContent = orderData.requestingMemberName;
@@ -2623,13 +2627,13 @@ export function renderConsignmentDetail(orderData) {
         // --- HANDLE "PENDING" STATE ---
         fulfillmentView.classList.remove('hidden');
         activeOrderView.classList.add('hidden');
-        
+
         // Perform a one-time fetch to populate the fulfillment grid
         if (fulfillmentItemsGridApi) fulfillmentItemsGridApi.setGridOption('loading', true);
         orderRef.collection('items').get().then(snapshot => {
             const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             const itemsToFulfill = items.map(item => ({ ...item, quantityCheckedOut: item.quantityRequested }));
-            
+
             if (fulfillmentItemsGridApi) {
                 fulfillmentItemsGridApi.setGridOption('rowData', itemsToFulfill);
                 fulfillmentItemsGridApi.setGridOption('loading', false);
@@ -2699,7 +2703,7 @@ export function renderConsignmentDetail(orderData) {
                 consignmentActivityGridApi.setGridOption('rowData', activities);
             }
         });
-        
+
         // 3. Set up the real-time listener for the "Payments" grid
         const paymentsUnsub = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
             .where('orderId', '==', orderData.id) // We should link payments directly to the order
@@ -2711,10 +2715,10 @@ export function renderConsignmentDetail(orderData) {
                 }
             });
 
-        
+
         // Store all FOUR unsubscribe functions for later cleanup
         unsubscribeConsignmentDetailsListeners.push(orderUnsub, itemsUnsub, activityUnsub, paymentsUnsub);
-        
+
     }
 
     // Finally, make the entire detail panel visible
@@ -2745,9 +2749,9 @@ export function closeConsignmentRequestModal() {
     modal.classList.remove('visible');
     setTimeout(() => {
         modal.style.display = 'none';
-        
+
         // Also reset its internal state when closing.
-        resetConsignmentRequestModal(); 
+        resetConsignmentRequestModal();
     }, 300);
 }
 
@@ -2769,13 +2773,13 @@ export function getRequestedConsignmentItems() {
         const quantity = parseInt(node.data.quantityRequested, 10) || 0;
         // 2. Only include items where the user has requested a quantity greater than 0.
         if (quantity > 0) {
-                // 3. Build a brand new, clean object with only the fields we need.
+            // 3. Build a brand new, clean object with only the fields we need.
             requestedItems.push({
-                    productId: node.data.productId,
-                    productName: node.data.productName,
-                    sellingPrice: node.data.sellingPrice,
-                    quantityRequested: quantity // Use the sanitized quantity
-                });
+                productId: node.data.productId,
+                productName: node.data.productName,
+                sellingPrice: node.data.sellingPrice,
+                quantityRequested: quantity // Use the sanitized quantity
+            });
         }
     });
 
@@ -2800,7 +2804,7 @@ export function showConsignmentRequestStep2(catalogueId) {
     // Let's call it getItemsForCatalogue(catalogueId)
     const db = firebase.firestore();
     const itemsRef = db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(catalogueId).collection('items');
-    
+
     if (requestProductsGridApi) {
         requestProductsGridApi.setGridOption('loading', true);
         itemsRef.get().then(snapshot => {
@@ -2845,10 +2849,10 @@ export function resetConsignmentRequestModal() {
 const requestProductsGridOptions = {
     getRowId: params => params.data.productId,
     columnDefs: [
-        { field: "productName", headerName: "Product", flex: 1,filter: 'agDateColumnFilter' },
-        { 
-            field: "inventoryCount", 
-            headerName: "Qty Available", 
+        { field: "productName", headerName: "Product", flex: 1, filter: 'agDateColumnFilter' },
+        {
+            field: "inventoryCount",
+            headerName: "Qty Available",
             width: 140,
             // We'll look this up from the master product list
             valueGetter: params => {
@@ -2856,9 +2860,9 @@ const requestProductsGridOptions = {
                 return product ? product.inventoryCount : 'N/A';
             }
         },
-        { 
-            field: "sellingPrice", 
-            headerName: "Selling Price", 
+        {
+            field: "sellingPrice",
+            headerName: "Selling Price",
             width: 140,
             valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : ''
         },
@@ -2963,12 +2967,12 @@ export function showConsignmentView() {
     if (consignmentOrdersGridApi) {
         consignmentOrdersGridApi.setGridOption('loading', true);
     }
-    
+
     unsubscribeConsignmentOrdersListener = ordersQuery.orderBy('requestDate', 'desc')
         .onSnapshot(snapshot => {
             console.log("[Firestore] Received update for master consignment orders list.");
             const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
+
             if (consignmentOrdersGridApi) {
                 consignmentOrdersGridApi.setGridOption('rowData', orders);
                 consignmentOrdersGridApi.setGridOption('loading', false);
@@ -3010,12 +3014,12 @@ export function showReportActivityModal() {
     consignmentItemsGridApi.forEachNode(node => {
         const item = node.data;
         const onHand = item.quantityCheckedOut - (item.quantitySold + item.quantityReturned + item.quantityDamaged);
-        
+
         // Only add products to the dropdown if the team lead has one or more on hand
         if (onHand > 0) {
             const option = document.createElement('option');
             // We need to store multiple pieces of data, so we'll use a JSON string
-            option.value = JSON.stringify({ 
+            option.value = JSON.stringify({
                 itemId: item.id,
                 productId: item.productId,
                 sellingPrice: item.sellingPrice // <-- Add this
@@ -3034,7 +3038,7 @@ export function showReportActivityModal() {
     const orderNode = consignmentOrdersGridApi.getRowNode(appState.selectedConsignmentId);
     if (orderNode && orderNode.data) {
         const orderData = orderNode.data;
-        
+
         // 2. Find the catalogue and its seasonId from the order data.
         const catalogue = masterData.salesCatalogues.find(sc => sc.id === orderData.salesCatalogueId);
         if (catalogue) {
@@ -3081,25 +3085,25 @@ const consignmentActivityGridOptions = {
     pagination: true,
     paginationPageSize: 100,
     paginationPageSizeSelector: [10, 50, 100, 200],
-    defaultColDef: { 
-        resizable: true, 
-        sortable: true, 
+    defaultColDef: {
+        resizable: true,
+        sortable: true,
         wrapText: true,      // Wrap cell content
         autoHeight: true,    // Adjust row height automatically
         wrapHeaderText: true, // Wrap header text
         autoHeaderHeight: true // Adjust header height automatically
     },
     columnDefs: [
-        { 
-            field: "activityDate", 
-            headerName: "Date", 
-            width: 200, 
+        {
+            field: "activityDate",
+            headerName: "Date",
+            width: 200,
             filter: 'agDateColumnFilter',
-            valueFormatter: p => p.value ? p.value.toDate().toLocaleString() : '' 
+            valueFormatter: p => p.value ? p.value.toDate().toLocaleString() : ''
         },
-        { 
-            field: "activityType", 
-            headerName: "Activity", 
+        {
+            field: "activityType",
+            headerName: "Activity",
             width: 120,
             filter: 'agTextColumnFilter',
             cellRenderer: p => {
@@ -3111,16 +3115,16 @@ const consignmentActivityGridOptions = {
                 return type;
             }
         },
-        { 
-            field: "productName", 
-            headerName: "Product", 
+        {
+            field: "productName",
+            headerName: "Product",
             filter: 'agTextColumnFilter',
             width: 200,
             flex: 1
         },
-        { 
-            field: "quantity", 
-            headerName: "Qty Change", 
+        {
+            field: "quantity",
+            headerName: "Qty Change",
             width: 120,
             cellStyle: params => {
                 return params.value > 0 ? { color: 'green' } : { color: 'red' };
@@ -3156,9 +3160,9 @@ const consignmentPaymentsGridOptions = {
     pagination: true,
     paginationPageSize: 100,
     paginationPageSizeSelector: [10, 50, 100, 200],
-    defaultColDef: { 
-        resizable: true, 
-        sortable: true, 
+    defaultColDef: {
+        resizable: true,
+        sortable: true,
         wrapText: true,      // Wrap cell content
         autoHeight: true,    // Adjust row height automatically
         wrapHeaderText: true, // Wrap header text
@@ -3169,31 +3173,33 @@ const consignmentPaymentsGridOptions = {
         { field: "amountPaid", headerName: "Amount", width: 120, valueFormatter: p => `$${p.value.toFixed(2)}` },
         { field: "paymentMode", headerName: "Mode", flex: 1 },
         { field: "transactionRef", headerName: "Reference #", flex: 1 },
-        { field: "paymentStatus", headerName: "Status", width: 180, cellRenderer: p => {
-            const status = p.value;
-            if (status === 'Verified') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
-            if (status === 'Pending Verification') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">${status}</span>`;
-            if (status === 'Rejected') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">${status}</span>`;
-            return status;
-        }},
+        {
+            field: "paymentStatus", headerName: "Status", width: 180, cellRenderer: p => {
+                const status = p.value;
+                if (status === 'Verified') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
+                if (status === 'Pending Verification') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">${status}</span>`;
+                if (status === 'Rejected') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">${status}</span>`;
+                return status;
+            }
+        },
         {
             headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center space-x-2',
             cellRenderer: params => {
                 const data = params.data;
                 if (!data) return '';
-                
+
                 // Define the icons
                 const editIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="m2.695 14.763-1.262 3.154a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.885L17.5 5.5a2.121 2.121 0 0 0-3-3L3.58 13.42a4 4 0 0 0-.885 1.343Z" /></svg>`;
                 const cancelIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5z" clip-rule="evenodd" /></svg>`;
                 const verifyIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.06 0l4-5.5Z" clip-rule="evenodd" /></svg>`;
-                
+
                 let buttons = '';
                 // Show Edit/Cancel for pending payments, if the user is the one who submitted it
                 if (data.paymentStatus === 'Pending Verification' && data.submittedBy === appState.currentUser.email) {
                     buttons += `<button class="action-btn-icon action-btn-edit-payment" data-id="${data.id}" title="Edit Payment Record">${editIcon}</button>`;
                     buttons += `<button class="action-btn-icon action-btn-delete action-btn-cancel-payment" data-id="${data.id}" title="Cancel Payment Record">${cancelIcon}</button>`;
                 }
-                
+
                 if (data.paymentStatus === 'Pending Verification' && appState.currentUser.role === 'admin') {
                     buttons += `<button class="action-btn-icon action-btn-verify-payment" data-id="${data.id}" title="Verify Payment">${verifyIcon}</button>`;
                 }
@@ -3249,7 +3255,7 @@ export function loadPaymentRecordForEditing(paymentData) {
     document.getElementById('payment-reason-select').value = paymentData.paymentReason;
     document.getElementById('payment-ref-input').value = paymentData.transactionRef;
     document.getElementById('payment-notes-input').value = paymentData.notes || '';
-    
+
     // The 'notes' field might not exist on your form, but if it does, this is correct.
     // If you removed it, you can remove this line.
     const notesInput = document.getElementById('payment-notes-input');
@@ -3257,7 +3263,7 @@ export function loadPaymentRecordForEditing(paymentData) {
         notesInput.value = paymentData.notes || '';
     }
 
-    
+
 }
 
 
@@ -3279,17 +3285,17 @@ const salesCartGridOptions = {
     getRowId: params => params.data.productId,
     columnDefs: [
         { field: "productName", headerName: "Product", flex: 1 },
-        { 
-            field: "quantity", 
-            headerName: "Qty", 
-            width: 100, 
+        {
+            field: "quantity",
+            headerName: "Qty",
+            width: 100,
             editable: true,
             valueParser: p => parseInt(p.newValue, 10) || 0
         },
-        { 
-            field: "unitPrice", 
-            headerName: "Unit Price", 
-            width: 120, 
+        {
+            field: "unitPrice",
+            headerName: "Unit Price",
+            width: 120,
             editable: true,
             valueFormatter: p => `$${p.value.toFixed(2)}`,
             valueParser: p => parseFloat(p.newValue) || 0
@@ -3356,7 +3362,7 @@ const addProductModalGridOptions = {
     columnDefs: [
         { field: "itemName", headerName: "Product Name", flex: 1, filter: 'agTextColumnFilter' },
         { field: "inventoryCount", headerName: "Stock", width: 100 },
-        { 
+        {
             headerName: "Add",
             width: 80,
             cellClass: 'flex items-center justify-center',
@@ -3384,33 +3390,33 @@ const salesHistoryGridOptions = {
 
     columnDefs: [
         { field: "saleId", headerName: "Invoice ID", width: 180, filter: 'agTextColumnFilter' },
-        { 
-            field: "saleDate", 
-            headerName: "Date", 
-            width: 140, 
-            valueFormatter: p => p.value.toDate().toLocaleDateString(), 
-            filter: 'agDateColumnFilter' 
+        {
+            field: "saleDate",
+            headerName: "Date",
+            width: 140,
+            valueFormatter: p => p.value.toDate().toLocaleDateString(),
+            filter: 'agDateColumnFilter'
         },
         { field: "customerInfo.name", headerName: "Customer", flex: 1, filter: 'agTextColumnFilter' },
         { field: "store", headerName: "Store", width: 150, filter: 'agSetColumnFilter' },
-        { 
-            field: "financials.totalAmount", 
-            headerName: "Total", 
-            width: 120, 
+        {
+            field: "financials.totalAmount",
+            headerName: "Total",
+            width: 120,
             valueFormatter: p => `$${p.value.toFixed(2)}`,
             filter: 'agNumberColumnFilter'
         },
-        { 
-            field: "balanceDue", 
-            headerName: "Balance Due", 
-            width: 120, 
+        {
+            field: "balanceDue",
+            headerName: "Balance Due",
+            width: 120,
             valueFormatter: p => `$${p.value.toFixed(2)}`,
             filter: 'agNumberColumnFilter'
         },
-        { 
-            field: "paymentStatus", 
-            headerName: "Status", 
-            width: 140, 
+        {
+            field: "paymentStatus",
+            headerName: "Status",
+            width: 140,
             filter: 'agSetColumnFilter',
             cellRenderer: p => {
                 const status = p.value;
@@ -3428,7 +3434,7 @@ const salesHistoryGridOptions = {
 
 export function initializeSalesGrids() {
     if (isSalesGridsInitialized) return;
-    
+
     const cartGridDiv = document.getElementById('sales-cart-grid');
     const historyGridDiv = document.getElementById('sales-history-grid');
     const addProductModalGridDiv = document.getElementById('add-product-modal-grid'); // We need to add this ID to the modal in index.html
@@ -3458,7 +3464,7 @@ export function calculateSalesTotals() {
 
         const discountedLinePrice = (qty * price) * (1 - lineDiscPercent / 100);
         const lineTax = discountedLinePrice * (lineTaxPercent / 100);
-        
+
         itemsSubtotal += discountedLinePrice;
         totalItemLevelTax += lineTax;
     });
@@ -3472,15 +3478,15 @@ export function calculateSalesTotals() {
     const orderDiscountAmount = itemsSubtotal * (orderDiscPercent / 100);
     const taxableAmount = itemsSubtotal - orderDiscountAmount;
     const orderLevelTaxAmount = taxableAmount * (orderTaxPercent / 100);
-    
+
     const finalTotalTax = totalItemLevelTax + orderLevelTaxAmount;
     const grandTotal = taxableAmount + finalTotalTax;
 
-   
+
 
     // 5. Update the UI
     document.getElementById('sale-subtotal').textContent = `$${itemsSubtotal.toFixed(2)}`;
-    document.getElementById('sale-tax').textContent = `$${finalTotalTax.toFixed(2)}`; 
+    document.getElementById('sale-tax').textContent = `$${finalTotalTax.toFixed(2)}`;
     document.getElementById('sale-grand-total').textContent = `$${grandTotal.toFixed(2)}`;
 
 
@@ -3587,53 +3593,29 @@ export function showSalesView() {
     if (salesHistoryGridApi) {
         salesHistoryGridApi.showLoadingOverlay();
     }
-    
-    console.log("[ui.js] query sales view.");
-    const waitForGrid = setInterval(() => {
-        // Keep checking until the salesHistoryGridApi is available
-        if (salesHistoryGridApi) {
-            clearInterval(waitForGrid); // Stop checking
 
-            console.log("[ui.js] Sales History Grid is ready. Attaching listener.");
-            const db = firebase.firestore();
-            const user = appState.currentUser;
-            if (!user) return;
 
-            // Clean up any previous listener
-            if (unsubscribeSalesHistoryListener) {
-                unsubscribeSalesHistoryListener();
+    salesQuery.orderBy('saleDate', 'desc').get()
+        .then(snapshot => {
+            console.log("[Firestore] Received update for sales history.");
+            const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log("[Firestore] Received update for sales history.", sales);
+
+            const waitForGrid = setInterval(() => {
+                if (salesHistoryGridApi) {
+                    clearInterval(waitForGrid);
+
+                    // Now that we are SURE the grid is ready, call setRowData.
+                    salesHistoryGridApi.setRowData(sales);
+                    salesHistoryGridApi.hideOverlay();
+                }
+            }, 50);
+        }, error => {
+            console.error("Error listening to sales history:", error);
+            if (salesHistoryGridApi) {
+                salesHistoryGridApi.hideOverlay();
             }
-
-            // Build the query based on user role
-            let salesQuery = db.collection(SALES_COLLECTION_PATH);
-            if (user.role !== 'admin') {
-                salesQuery = salesQuery.where('audit.createdBy', '==', user.email);
-            }
-
-            salesQuery.orderBy('saleDate', 'desc').get()
-                .then(snapshot => {
-                    const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                    // 5. Use a 'waitForGrid' interval to ensure the API is ready
-                    //    before we try to set the data.
-                    const waitForGrid = setInterval(() => {
-                        if (salesHistoryGridApi) {
-                            clearInterval(waitForGrid);
-                            
-                            // Now that we are SURE the grid is ready, call setRowData.
-                            salesHistoryGridApi.setRowData(sales);
-                            salesHistoryGridApi.hideOverlay();
-                        }
-                    }, 50);
-                })
-                .catch(error => {
-                    console.error("Error fetching initial sales history:", error);
-                    if (salesHistoryGridApi) {
-                        salesHistoryGridApi.hideOverlay();
-                    }
-                });
-        }
-    }
+        });
 }
 
 /**
@@ -3647,7 +3629,7 @@ export function addItemToCart(itemData) {
     }
     // Use applyTransaction to add the new row.
     salesCartGridApi.applyTransaction({ add: [itemData] });
-    
+
     // After adding, immediately recalculate the totals.
     calculateSalesTotals();
 }
@@ -3699,13 +3681,13 @@ export function renderSidebar(role) {
     navConfig.forEach(item => {
         // Check if the user's role is allowed to see this item
         if (item.roles.includes(role)) {
-            
+
             const li = document.createElement('li');
 
             if (item.type === 'heading') {
                 li.className = 'nav-heading';
                 li.textContent = item.label;
-            } 
+            }
             else if (item.type === 'link') {
                 const link = document.createElement('a');
                 link.href = '#';
@@ -3718,7 +3700,7 @@ export function renderSidebar(role) {
         }
     });
 
-    
+
 }
 
 export function showView(viewId) {
@@ -3741,7 +3723,7 @@ export function showView(viewId) {
         paymentModal.style.display = 'none';
     }
 
-    
+
 
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebar-overlay');
@@ -3766,7 +3748,7 @@ export function showView(viewId) {
         link.classList.toggle('active', link.dataset.viewId === viewId);
     });
 
-    
+
 }
 
 export function renderUserProfile(user) {
