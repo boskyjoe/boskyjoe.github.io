@@ -3573,11 +3573,20 @@ export function showSalesView() {
     const user = appState.currentUser;
     if (!user) return;
 
+    let salesQuery = db.collection(SALES_COLLECTION_PATH);
+    if (user.role !== 'admin') {
+        salesQuery = salesQuery.where('audit.createdBy', '==', user.email);
+    }
+
     // Clean up any previous listener
     if (unsubscribeSalesHistoryListener) {
         unsubscribeSalesHistoryListener();
     }
 
+    // Show loading overlay immediately
+    if (salesHistoryGridApi) {
+        salesHistoryGridApi.showLoadingOverlay();
+    }
     
     console.log("[ui.js] query sales view.");
     const waitForGrid = setInterval(() => {
@@ -3601,33 +3610,30 @@ export function showSalesView() {
                 salesQuery = salesQuery.where('audit.createdBy', '==', user.email);
             }
 
-            // Attach the listener
-            salesHistoryGridApi.setGridOption('loading', true);
-            
-            unsubscribeSalesHistoryListener = salesQuery.orderBy('saleDate', 'desc')
-                .onSnapshot(snapshot => {
-                    console.log("[Firestore] Received update for sales history.");
+            salesQuery.orderBy('saleDate', 'desc').get()
+                .then(snapshot => {
                     const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    
-                    if (salesHistoryGridApi) {
-                        // --- THIS IS THE FIX ---
-                        // Use the dedicated 'setRowData' method instead of the generic 'setGridOption'.
-                        // This is a more direct and reliable way to tell the grid to redraw everything.
-                        salesHistoryGridApi.setRowData(sales);
-                        // -----------------------
 
-                        // Hiding the overlay is still correct.
-                        salesHistoryGridApi.hideOverlay();
-                    }
-                }, error => {
-                    console.error("Error listening to sales history:", error);
+                    // 5. Use a 'waitForGrid' interval to ensure the API is ready
+                    //    before we try to set the data.
+                    const waitForGrid = setInterval(() => {
+                        if (salesHistoryGridApi) {
+                            clearInterval(waitForGrid);
+                            
+                            // Now that we are SURE the grid is ready, call setRowData.
+                            salesHistoryGridApi.setRowData(sales);
+                            salesHistoryGridApi.hideOverlay();
+                        }
+                    }, 50);
+                })
+                .catch(error => {
+                    console.error("Error fetching initial sales history:", error);
                     if (salesHistoryGridApi) {
                         salesHistoryGridApi.hideOverlay();
                     }
                 });
         }
-    }, 50);
-
+    }
 }
 
 /**
