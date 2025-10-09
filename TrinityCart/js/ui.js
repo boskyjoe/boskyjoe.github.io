@@ -3427,7 +3427,41 @@ const salesHistoryGridOptions = {
         },
         { field: "audit.createdBy", headerName: "Created By", flex: 1, filter: 'agTextColumnFilter' }
     ],
-    onGridReady: params => { salesHistoryGridApi = params.api; }
+    onGridReady: (params) => {
+        console.log("[ui.js] Sales History Grid is now ready.");
+        salesHistoryGridApi = params.api;
+
+        // When the grid is ready, NOW we attach the listener.
+        // This completely avoids any race conditions.
+        const db = firebase.firestore();
+        const user = appState.currentUser;
+        if (!user) return;
+
+        // Clean up any old listener first.
+        if (unsubscribeSalesHistoryListener) {
+            unsubscribeSalesHistoryListener();
+        }
+
+        let salesQuery = db.collection(SALES_COLLECTION_PATH);
+        if (user.role !== 'admin') {
+            salesQuery = salesQuery.where('audit.createdBy', '==', user.email);
+        }
+
+        salesHistoryGridApi.showLoadingOverlay();
+        
+        unsubscribeSalesHistoryListener = salesQuery.orderBy('saleDate', 'desc')
+            .onSnapshot(snapshot => {
+                console.log("[Firestore] Sales history listener received update.");
+                const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Use setRowData, which is the most reliable method.
+                salesHistoryGridApi.setRowData(sales);
+                salesHistoryGridApi.hideOverlay();
+            }, error => {
+                console.error("Error with sales history listener:", error);
+                salesHistoryGridApi.hideOverlay();
+            });
+    }
 };
 
 // 3. Create Initialization and Helper Functions
@@ -3545,11 +3579,11 @@ export function showSalesView() {
     showView('sales-view');
     initializeSalesGrids();
 
-    // 2. Reset the form and cart for a new sale
+    // 2. Reset the form for a new sale
     document.getElementById('new-sale-form').reset();
     if (salesCartGridApi) salesCartGridApi.setGridOption('rowData', []);
     calculateSalesTotals();
-    //document.getElementById('sale-pay-now-container').classList.add('hidden'); // Ensure payment details are hidden initially
+    document.getElementById('sale-pay-now-container').classList.add('hidden');
 
     // 3. Populate dropdowns from masterData
     const storeSelect = document.getElementById('sale-store-select');
