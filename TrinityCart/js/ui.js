@@ -3428,8 +3428,38 @@ const salesHistoryGridOptions = {
         { field: "audit.createdBy", headerName: "Created By", flex: 1, filter: 'agTextColumnFilter' }
     ],
     onGridReady: (params) => {
-        console.log("[ui.js] Sales History Grid is now ready.");
+        console.log("[ui.js] Sales History Grid is now ready. Attaching listener.");
         salesHistoryGridApi = params.api;
+
+        const db = firebase.firestore();
+        const user = appState.currentUser;
+        if (!user) return;
+
+        // Clean up any old listener from a previous grid instance.
+        if (unsubscribeSalesHistoryListener) {
+            unsubscribeSalesHistoryListener();
+        }
+
+        let salesQuery = db.collection(SALES_COLLECTION_PATH);
+        if (user.role !== 'admin') {
+            console.log(`Querying for sales where 'audit.createdBy' is EXACTLY: "${user.email}"`);
+            salesQuery = salesQuery.where('audit.createdBy', '==', user.email);
+        }
+
+        salesHistoryGridApi.setGridOption('loading', true);
+        
+        unsubscribeSalesHistoryListener = salesQuery.orderBy('saleDate', 'desc')
+            .onSnapshot(snapshot => {
+                console.log(`[Firestore] Sales history update. Found ${snapshot.size} documents.`);
+                const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                salesHistoryGridApi.setRowData(sales);
+                
+            }, error => {
+                console.error("Error with sales history listener:", error);
+                // Check console for index error URL!
+                if (salesHistoryGridApi) salesHistoryGridApi.setGridOption('loading', false);
+            });
     }
 };
 
@@ -3577,49 +3607,7 @@ export function showSalesView() {
         }
     });
 
-    const waitForGrid = setInterval(() => {
-        // Keep checking until the grid's onGridReady has fired and set the API variable.
-        if (salesHistoryGridApi) {
-            clearInterval(waitForGrid); // Stop the loop
-
-            const db = firebase.firestore();
-            const user = appState.currentUser;
-            if (!user) return;
-
-            // Clean up any old listener
-            if (unsubscribeSalesHistoryListener) {
-                unsubscribeSalesHistoryListener();
-            }
-
-            // Build the role-based query
-            let salesQuery = db.collection(SALES_COLLECTION_PATH);
-            if (user.role !== 'admin') {
-                console.log(`Querying for sales where 'audit.createdBy' is EXACTLY: "${user.email}"`); // <-- ADD THIS LOG
-                salesQuery = salesQuery.where('audit.createdBy', '==', user.email);
-            }
-
-            // Use the MODERN, CORRECT API calls
-            salesHistoryGridApi.setGridOption('loading', true); // Replaces showLoadingOverlay()
-            
-            unsubscribeSalesHistoryListener = salesQuery.orderBy('saleDate', 'desc')
-                .onSnapshot(snapshot => {
-                    console.log("[Firestore] Sales history listener received update.");
-
-                    console.log(`Snapshot is empty: ${snapshot.empty}. Number of documents found: ${snapshot.size}`);
-
-                    const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    
-                    // Use setGridOption('rowData', ...), which is the correct method
-                    // when the API is retrieved this way.
-                    salesHistoryGridApi.setGridOption('rowData', sales);
-                    salesHistoryGridApi.setGridOption('loading', false); // Replaces hideOverlay()
-                    
-                }, error => {
-                    console.error("Error with sales history listener:", error);
-                    salesHistoryGridApi.setGridOption('loading', false);
-                });
-        }
-    }, 50);
+    
 
 }
 
