@@ -3578,12 +3578,7 @@ export function showSalesView() {
         unsubscribeSalesHistoryListener();
     }
 
-    // Build the query based on user role
-    let salesQuery = db.collection(SALES_COLLECTION_PATH);
-    if (user.role !== 'admin') {
-        salesQuery = salesQuery.where('audit.createdBy', '==', user.email);
-    }
-
+    
     console.log("[ui.js] query sales view.");
     const waitForGrid = setInterval(() => {
         // Keep checking until the salesHistoryGridApi is available
