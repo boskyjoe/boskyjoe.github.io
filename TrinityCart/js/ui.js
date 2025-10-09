@@ -3584,6 +3584,7 @@ export function showSalesView() {
         salesQuery = salesQuery.where('audit.createdBy', '==', user.email);
     }
 
+    console.log("[ui.js] query sales view.");
     // Attach the listener
     if (salesHistoryGridApi) salesHistoryGridApi.setGridOption('loading', true);
     unsubscribeSalesHistoryListener = salesQuery.orderBy('saleDate', 'desc')
@@ -3591,6 +3592,7 @@ export function showSalesView() {
             console.log("[Firestore] Received update for sales history.");
             const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             if (salesHistoryGridApi) {
+                console.log("[ui.js] sales history grid laod data.");
                 salesHistoryGridApi.setGridOption('rowData', sales);
                 salesHistoryGridApi.setGridOption('loading', false);
             }
