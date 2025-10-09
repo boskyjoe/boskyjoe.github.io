@@ -3575,17 +3575,17 @@ export function closeAddProductModal() {
 
 // 4. Create the main view function
 export function showSalesView() {
-    // 1. Standard view setup
+    // 1. Show the main view container and initialize all its grids.
     showView('sales-view');
-    initializeSalesGrids();
+    initializeSalesGrids(); // This will create the grid and trigger its onGridReady event.
 
-    // 2. Reset the form for a new sale
+    // 2. Reset the "New Sale" form to its default state.
     document.getElementById('new-sale-form').reset();
     if (salesCartGridApi) salesCartGridApi.setGridOption('rowData', []);
     calculateSalesTotals();
     document.getElementById('sale-pay-now-container').classList.add('hidden');
 
-    // 3. Populate dropdowns from masterData
+    // 3. Populate the dropdowns on the form.
     const storeSelect = document.getElementById('sale-store-select');
     storeSelect.innerHTML = '<option value="">Select a store...</option>';
     if (masterData.systemSetups && masterData.systemSetups.Stores) {
@@ -3600,7 +3600,7 @@ export function showSalesView() {
     const paymentModeSelect = document.getElementById('sale-payment-mode');
     paymentModeSelect.innerHTML = '<option value="">Select mode...</option>';
     masterData.paymentModes.forEach(mode => {
-        if (mode.isActive) { // Only show active payment modes
+        if (mode.isActive) {
             const option = document.createElement('option');
             option.value = mode.paymentMode;
             option.textContent = mode.paymentMode;
@@ -3608,48 +3608,6 @@ export function showSalesView() {
         }
     });
 
-    // --- [NEW] 4. Attach the real-time listener for the Sales History grid ---
-    const db = firebase.firestore();
-    const user = appState.currentUser;
-    if (!user) return;
-
-    let salesQuery = db.collection(SALES_COLLECTION_PATH);
-    if (user.role !== 'admin') {
-        salesQuery = salesQuery.where('audit.createdBy', '==', user.email);
-    }
-
-    // Clean up any previous listener
-    if (unsubscribeSalesHistoryListener) {
-        unsubscribeSalesHistoryListener();
-    }
-
-    // Show loading overlay immediately
-    if (salesHistoryGridApi) {
-        salesHistoryGridApi.showLoadingOverlay();
-    }
-
-
-    salesQuery.orderBy('saleDate', 'desc').get()
-        .then(snapshot => {
-            console.log("[Firestore] Received update for sales history.");
-            const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            console.log("[Firestore] Received update for sales history.", sales);
-
-            const waitForGrid = setInterval(() => {
-                if (salesHistoryGridApi) {
-                    clearInterval(waitForGrid);
-
-                    // Now that we are SURE the grid is ready, call setRowData.
-                    salesHistoryGridApi.setRowData(sales);
-                    salesHistoryGridApi.hideOverlay();
-                }
-            }, 50);
-        }, error => {
-            console.error("Error listening to sales history:", error);
-            if (salesHistoryGridApi) {
-                salesHistoryGridApi.hideOverlay();
-            }
-        });
 }
 
 /**
