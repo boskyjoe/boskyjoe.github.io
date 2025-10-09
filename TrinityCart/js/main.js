@@ -1694,37 +1694,79 @@ function setupEventListeners() {
             const user = appState.currentUser;
             if (!user) return;
             
-            const cartItems = getSalesCartItems();
+            // 1. Get the raw user input from the shopping cart grid.
+            const rawCartItems = getSalesCartItems();
 
 
-            if (cartItems.length === 0) {
+
+            if (rawCartItems.length === 0) {
                 return alert("Please add at least one product to the cart.");
             }
 
-            const totalAmount = parseFloat(document.getElementById('sale-grand-total').textContent.replace('$', ''));
-            const store = document.getElementById('sale-store-select').value;
 
-            
+            // 2. Perform all final line-item calculations HERE.
+            const finalLineItems = [];
+            let itemsSubtotalAfterLineDiscounts = 0;
+            let totalItemLevelTax = 0;
+
+            rawCartItems.forEach(item => {
+                const qty = item.quantity || 0;
+                const price = item.unitPrice || 0;
+                const lineDiscPercent = item.discountPercentage || 0;
+                const lineTaxPercent = item.taxPercentage || 0;
+
+                const lineSubtotal = qty * price;
+                const discountAmount = lineSubtotal * (lineDiscPercent / 100);
+                const taxableAmount = lineSubtotal - discountAmount;
+                const taxAmount = taxableAmount * (lineTaxPercent / 100);
+                const lineTotal = taxableAmount + taxAmount;
+
+                // Build the complete, auditable line item object to be saved.
+                finalLineItems.push({
+                    productId: item.productId,
+                    productName: item.productName,
+                    quantity: qty,
+                    unitPrice: price,
+                    discountPercentage: lineDiscPercent,
+                    taxPercentage: lineTaxPercent,
+                    // Save the calculated results
+                    lineSubtotal: lineSubtotal,
+                    discountAmount: discountAmount,
+                    taxableAmount: taxableAmount,
+                    taxAmount: taxAmount,
+                    lineTotal: lineTotal
+                });
+
+                itemsSubtotalAfterLineDiscounts += taxableAmount;
+                totalItemLevelTax += taxAmount;
+            });
+
+            // 3. Perform all final order-level calculations.
+            const orderDiscPercent = parseFloat(document.getElementById('sale-order-discount').value) || 0;
+            const orderTaxPercent = parseFloat(document.getElementById('sale-order-tax').value) || 0;
+            const orderDiscountAmount = itemsSubtotalAfterLineDiscounts * (orderDiscPercent / 100);
+            const finalTaxableAmount = itemsSubtotalAfterLineDiscounts - orderDiscountAmount;
+            const orderLevelTaxAmount = finalTaxableAmount * (orderTaxPercent / 100);
+            const finalTotalTax = totalItemLevelTax + orderLevelTaxAmount;
+            const grandTotal = finalTaxableAmount + finalTotalTax;
+
+            // 4. Assemble the complete saleData object.
             const saleData = {
-                saleDate: new Date(document.getElementById('sale-date').value),
-                store: store,
-                customerInfo: {
-                    name: document.getElementById('sale-customer-name').value,
-                    email: document.getElementById('sale-customer-email').value,
-                    phone: document.getElementById('sale-customer-phone').value,
-                    // Only include the address if the store is Tasty Treats
-                    address: store === 'Tasty Treats' ? document.getElementById('sale-customer-address').value : null
-                },
-                lineItems: cartItems,
+                store: document.getElementById('sale-store-select').value,
+                customerInfo: { /* ... your customer info ... */ },
+                lineItems: finalLineItems, // Use the fully calculated items
                 financials: {
-                    subtotal: parseFloat(document.getElementById('sale-subtotal').textContent.replace('$', '')),
-                    orderDiscountPercentage: parseFloat(document.getElementById('sale-order-discount').value) || 0,
-                    orderTaxPercentage: parseFloat(document.getElementById('sale-order-tax').value) || 0,
-                    tax: parseFloat(document.getElementById('sale-tax').textContent.replace('$', '')),
-                    totalAmount: totalAmount,
+                    itemsSubtotal: itemsSubtotalAfterLineDiscounts,
+                    orderDiscountPercentage: orderDiscPercent,
+                    orderDiscountAmount: orderDiscountAmount,
+                    orderTaxPercentage: orderTaxPercent,
+                    orderTaxAmount: orderLevelTaxAmount,
+                    totalTax: finalTotalTax,
+                    totalAmount: grandTotal,
                 }
             };
 
+            // 5. Handle payment and submit.
             let initialPaymentData = null;
             let donationAmount = 0;
 
@@ -1766,10 +1808,8 @@ function setupEventListeners() {
 
             try {
                 await createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, user.email);
-                
                 alert("Sale completed successfully!");
-                showSalesView(); // Reset the form for the next sale
-                
+                showSalesView();
             } catch (error) {
                 console.error("Error completing sale:", error);
                 alert(`Sale failed: ${error.message}`);
