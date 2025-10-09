@@ -3552,7 +3552,7 @@ export function showSalesView() {
     document.getElementById('new-sale-form').reset();
     if (salesCartGridApi) salesCartGridApi.setGridOption('rowData', []);
     calculateSalesTotals();
-    document.getElementById('sale-pay-now-container').classList.add('hidden');
+    //document.getElementById('sale-pay-now-container').classList.add('hidden');
 
     // 3. Populate the dropdowns on the form.
     const storeSelect = document.getElementById('sale-store-select');
