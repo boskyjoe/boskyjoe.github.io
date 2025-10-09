@@ -3594,6 +3594,7 @@ export function showSalesView() {
             // Build the role-based query
             let salesQuery = db.collection(SALES_COLLECTION_PATH);
             if (user.role !== 'admin') {
+                console.log(`Querying for sales where 'audit.createdBy' is EXACTLY: "${user.email}"`); // <-- ADD THIS LOG
                 salesQuery = salesQuery.where('audit.createdBy', '==', user.email);
             }
 
