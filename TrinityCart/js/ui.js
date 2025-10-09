@@ -295,7 +295,7 @@ export function detachAllRealtimeListeners() {
         unsubscribeSalesHistoryListener();
         unsubscribeSalesHistoryListener = null;
     }
-    
+
     unsubscribeConsignmentDetailsListeners.forEach(unsub => unsub());
     unsubscribeConsignmentDetailsListeners = [];
 
@@ -3371,24 +3371,55 @@ const addProductModalGridOptions = {
 
 // Grid for the "Sales History"
 const salesHistoryGridOptions = {
-    // We will define this later when we build the full invoice management
     getRowId: params => params.data.id,
     pagination: true,
-    paginationPageSize: 50,
+    paginationPageSize: 50, // A reasonable default for a history grid
+    paginationPageSizeSelector: [25, 50, 100],
+
+    defaultColDef: {
+        resizable: true,
+        sortable: true,
+        filter: true,
+    },
+
     columnDefs: [
         { field: "saleId", headerName: "Invoice ID", width: 180, filter: 'agTextColumnFilter' },
-        { field: "saleDate", headerName: "Date", width: 140, valueFormatter: p => p.value.toDate().toLocaleDateString(), filter: 'agDateColumnFilter' },
+        { 
+            field: "saleDate", 
+            headerName: "Date", 
+            width: 140, 
+            valueFormatter: p => p.value.toDate().toLocaleDateString(), 
+            filter: 'agDateColumnFilter' 
+        },
         { field: "customerInfo.name", headerName: "Customer", flex: 1, filter: 'agTextColumnFilter' },
         { field: "store", headerName: "Store", width: 150, filter: 'agSetColumnFilter' },
-        { field: "financials.totalAmount", headerName: "Total", width: 120, valueFormatter: p => `$${p.value.toFixed(2)}` },
-        { field: "balanceDue", headerName: "Balance Due", width: 120, valueFormatter: p => `$${p.value.toFixed(2)}` },
-        { field: "paymentStatus", headerName: "Status", width: 140, cellRenderer: p => {
-            const status = p.value;
-            if (status === 'Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
-            if (status === 'Partially Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">${status}</span>`;
-            return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">${status}</span>`;
-        }},
-        { field: "audit.createdBy", headerName: "Created By", flex: 1 }
+        { 
+            field: "financials.totalAmount", 
+            headerName: "Total", 
+            width: 120, 
+            valueFormatter: p => `$${p.value.toFixed(2)}`,
+            filter: 'agNumberColumnFilter'
+        },
+        { 
+            field: "balanceDue", 
+            headerName: "Balance Due", 
+            width: 120, 
+            valueFormatter: p => `$${p.value.toFixed(2)}`,
+            filter: 'agNumberColumnFilter'
+        },
+        { 
+            field: "paymentStatus", 
+            headerName: "Status", 
+            width: 140, 
+            filter: 'agSetColumnFilter',
+            cellRenderer: p => {
+                const status = p.value;
+                if (status === 'Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
+                if (status === 'Partially Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">${status}</span>`;
+                return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">${status}</span>`;
+            }
+        },
+        { field: "audit.createdBy", headerName: "Created By", flex: 1, filter: 'agTextColumnFilter' }
     ],
     onGridReady: params => { salesHistoryGridApi = params.api; }
 };
