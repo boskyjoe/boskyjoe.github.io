@@ -3417,7 +3417,7 @@ const salesHistoryGridOptions = {
             field: "paymentStatus",
             headerName: "Status",
             width: 140,
-            filter: 'agSetColumnFilter',
+            filter: 'agTextColumnFilter',
             cellRenderer: p => {
                 const status = p.value;
                 if (status === 'Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
@@ -3577,6 +3577,7 @@ export function closeAddProductModal() {
 
 // 4. Create the main view function
 export function showSalesView() {
+    
     // 1. Show the main view container and initialize all its grids.
     showView('sales-view');
     initializeSalesGrids(); // This will create the grid and trigger its onGridReady event.
@@ -3584,8 +3585,9 @@ export function showSalesView() {
     // 2. Reset the "New Sale" form to its default state.
     document.getElementById('new-sale-form').reset();
 
+    // Default the sale date to today. This will now work.
     document.getElementById('sale-date').valueAsDate = new Date();
-    
+
     if (salesCartGridApi) salesCartGridApi.setGridOption('rowData', []);
     calculateSalesTotals();
     //document.getElementById('sale-pay-now-container').classList.add('hidden');
