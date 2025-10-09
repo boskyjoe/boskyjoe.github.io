@@ -3580,39 +3580,43 @@ export function showSalesView() {
     showView('sales-view');
     initializeSalesGrids(); // This will create the grid and trigger its onGridReady event.
 
-    // 2. Reset the "New Sale" form to its default state.
-    document.getElementById('new-sale-form').reset();
 
-    // Default the sale date to today. This will now work.
-    document.getElementById('sale-date').valueAsDate = new Date();
+    setTimeout(() => {
 
-    if (salesCartGridApi) salesCartGridApi.setGridOption('rowData', []);
-    calculateSalesTotals();
-    //document.getElementById('sale-pay-now-container').classList.add('hidden');
+        // 2. Reset the "New Sale" form to its default state.
+        document.getElementById('new-sale-form').reset();
 
-    // 3. Populate the dropdowns on the form.
-    const storeSelect = document.getElementById('sale-store-select');
-    storeSelect.innerHTML = '<option value="">Select a store...</option>';
-    if (masterData.systemSetups && masterData.systemSetups.Stores) {
-        masterData.systemSetups.Stores.forEach(store => {
-            const option = document.createElement('option');
-            option.value = store;
-            option.textContent = store;
-            storeSelect.appendChild(option);
-        });
-    }
+        // Default the sale date to today. This will now work.
+        document.getElementById('sale-date').valueAsDate = new Date();
 
-    const paymentModeSelect = document.getElementById('sale-payment-mode');
-    paymentModeSelect.innerHTML = '<option value="">Select mode...</option>';
-    masterData.paymentModes.forEach(mode => {
-        if (mode.isActive) {
-            const option = document.createElement('option');
-            option.value = mode.paymentMode;
-            option.textContent = mode.paymentMode;
-            paymentModeSelect.appendChild(option);
+        if (salesCartGridApi) salesCartGridApi.setGridOption('rowData', []);
+        calculateSalesTotals();
+        //document.getElementById('sale-pay-now-container').classList.add('hidden');
+
+        // 3. Populate the dropdowns on the form.
+        const storeSelect = document.getElementById('sale-store-select');
+        storeSelect.innerHTML = '<option value="">Select a store...</option>';
+        if (masterData.systemSetups && masterData.systemSetups.Stores) {
+            masterData.systemSetups.Stores.forEach(store => {
+                const option = document.createElement('option');
+                option.value = store;
+                option.textContent = store;
+                storeSelect.appendChild(option);
+            });
         }
-    });
 
+        const paymentModeSelect = document.getElementById('sale-payment-mode');
+        paymentModeSelect.innerHTML = '<option value="">Select mode...</option>';
+        masterData.paymentModes.forEach(mode => {
+            if (mode.isActive) {
+                const option = document.createElement('option');
+                option.value = mode.paymentMode;
+                option.textContent = mode.paymentMode;
+                paymentModeSelect.appendChild(option);
+            }
+        });
+        
+    }, 0); 
     
 
 }
