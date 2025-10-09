@@ -3603,6 +3603,9 @@ export function showSalesView() {
             unsubscribeSalesHistoryListener = salesQuery.orderBy('saleDate', 'desc')
                 .onSnapshot(snapshot => {
                     console.log("[Firestore] Sales history listener received update.");
+
+                    console.log(`Snapshot is empty: ${snapshot.empty}. Number of documents found: ${snapshot.size}`);
+
                     const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     
                     // Use setGridOption('rowData', ...), which is the correct method
