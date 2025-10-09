@@ -3483,12 +3483,13 @@ export function initializeSalesGrids() {
 
 // The crucial function for real-time calculations
 export function calculateSalesTotals() {
+
     if (!salesCartGridApi) return;
 
     let itemsSubtotal = 0;
     let totalItemLevelTax = 0;
 
-    // 1. Calculate totals from the grid rows
+    // 1. Calculate totals AND update the grid data in one loop
     salesCartGridApi.forEachNode(node => {
         const item = node.data;
         const qty = item.quantity || 0;
@@ -3496,35 +3497,45 @@ export function calculateSalesTotals() {
         const lineDiscPercent = item.discountPercentage || 0;
         const lineTaxPercent = item.taxPercentage || 0;
 
-        const discountedLinePrice = (qty * price) * (1 - lineDiscPercent / 100);
-        const lineTax = discountedLinePrice * (lineTaxPercent / 100);
+        // --- [NEW] Perform all line-level calculations ---
+        const lineSubtotal = qty * price;
+        const discountAmount = lineSubtotal * (lineDiscPercent / 100);
+        const taxableAmount = lineSubtotal - discountAmount;
+        const taxAmount = taxableAmount * (lineTaxPercent / 100);
+        const lineTotal = taxableAmount + taxAmount;
 
-        itemsSubtotal += discountedLinePrice;
-        totalItemLevelTax += lineTax;
+        // --- [NEW & CRITICAL] Update the row node's data directly in the grid. ---
+        // This saves the calculated values into the grid's data model for later retrieval.
+        // We use 'suppressEvents: true' to prevent this from triggering onCellValueChanged again.
+        node.setDataValue('lineSubtotal', lineSubtotal, true);
+        node.setDataValue('discountAmount', discountAmount, true);
+        node.setDataValue('taxableAmount', taxableAmount, true);
+        node.setDataValue('taxAmount', taxAmount, true);
+        node.setDataValue('lineTotal', lineTotal, true);
+        
+        // The totals for the order summary are based on the discounted price
+        itemsSubtotal += taxableAmount;
+        totalItemLevelTax += taxAmount;
     });
 
-
-    // 2. Get order-level adjustments
+    // 2. Get order-level adjustments (This part is correct and remains)
     const orderDiscPercent = parseFloat(document.getElementById('sale-order-discount').value) || 0;
     const orderTaxPercent = parseFloat(document.getElementById('sale-order-tax').value) || 0;
 
-    // 3. Calculate final totals
+    // 3. Calculate final totals (This part is correct and remains)
     const orderDiscountAmount = itemsSubtotal * (orderDiscPercent / 100);
-    const taxableAmount = itemsSubtotal - orderDiscountAmount;
-    const orderLevelTaxAmount = taxableAmount * (orderTaxPercent / 100);
-
+    const finalTaxableAmount = itemsSubtotal - orderDiscountAmount;
+    const orderLevelTaxAmount = finalTaxableAmount * (orderTaxPercent / 100);
+    
     const finalTotalTax = totalItemLevelTax + orderLevelTaxAmount;
-    const grandTotal = taxableAmount + finalTotalTax;
+    const grandTotal = finalTaxableAmount + finalTotalTax;
 
-
-
-    // 5. Update the UI
+    // 4. Update the UI (This part is correct and remains)
     document.getElementById('sale-subtotal').textContent = `$${itemsSubtotal.toFixed(2)}`;
     document.getElementById('sale-tax').textContent = `$${finalTotalTax.toFixed(2)}`;
     document.getElementById('sale-grand-total').textContent = `$${grandTotal.toFixed(2)}`;
 
-
-    // 6. Update change due
+    // 5. Update change/balance due display (This part is correct and remains)
     const amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
     const paymentStatusDisplay = document.getElementById('payment-status-display');
 
@@ -3615,7 +3626,7 @@ export function showSalesView() {
                 paymentModeSelect.appendChild(option);
             }
         });
-        
+
     }, 0); 
     
 
