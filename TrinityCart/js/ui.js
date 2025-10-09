@@ -3453,7 +3453,10 @@ const salesHistoryGridOptions = {
                 console.log(`[Firestore] Sales history update. Found ${snapshot.size} documents.`);
                 const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 
-                salesHistoryGridApi.setRowData(sales);
+                salesHistoryGridApi.setGridOption('rowData', sales);
+
+                // Also use setGridOption to hide the overlay for consistency.
+                salesHistoryGridApi.setGridOption('loading', false);
                 
             }, error => {
                 console.error("Error with sales history listener:", error);
