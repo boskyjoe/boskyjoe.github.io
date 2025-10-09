@@ -3398,20 +3398,18 @@ const salesHistoryGridOptions = {
             filter: 'agDateColumnFilter'
         },
         { field: "customerInfo.name", headerName: "Customer", flex: 1, filter: 'agTextColumnFilter' },
-        { field: "store", headerName: "Store", width: 150, filter: 'agSetColumnFilter' },
+        { field: "store", headerName: "Store", width: 150, filter: 'agTextColumnFilter' },
         {
             field: "financials.totalAmount",
             headerName: "Total",
             width: 120,
-            valueFormatter: p => `$${p.value.toFixed(2)}`,
-            filter: 'agNumberColumnFilter'
+            valueFormatter: p => `$${p.value.toFixed(2)}`
         },
         {
             field: "balanceDue",
             headerName: "Balance Due",
             width: 120,
-            valueFormatter: p => `$${p.value.toFixed(2)}`,
-            filter: 'agNumberColumnFilter'
+            valueFormatter: p => `$${p.value.toFixed(2)}`
         },
         {
             field: "paymentStatus",
