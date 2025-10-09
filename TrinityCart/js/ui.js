@@ -3585,23 +3585,46 @@ export function showSalesView() {
     }
 
     console.log("[ui.js] query sales view.");
-    // Attach the listener
-    if (salesHistoryGridApi) salesHistoryGridApi.setGridOption('loading', true);
-    unsubscribeSalesHistoryListener = salesQuery.orderBy('saleDate', 'desc')
-        .onSnapshot(snapshot => {
-            console.log("[Firestore] Received update for sales history.");
-            const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            if (salesHistoryGridApi) {
-                console.log("[ui.js] sales history grid laod data.");
-                salesHistoryGridApi.setGridOption('rowData', sales);
-                salesHistoryGridApi.setGridOption('loading', false);
+    const waitForGrid = setInterval(() => {
+        // Keep checking until the salesHistoryGridApi is available
+        if (salesHistoryGridApi) {
+            clearInterval(waitForGrid); // Stop checking
+
+            console.log("[ui.js] Sales History Grid is ready. Attaching listener.");
+            const db = firebase.firestore();
+            const user = appState.currentUser;
+            if (!user) return;
+
+            // Clean up any previous listener
+            if (unsubscribeSalesHistoryListener) {
+                unsubscribeSalesHistoryListener();
             }
-        }, error => {
-            console.error("Error listening to sales history:", error);
-            if (salesHistoryGridApi) {
-                salesHistoryGridApi.setGridOption('loading', false);
+
+            // Build the query based on user role
+            let salesQuery = db.collection(SALES_COLLECTION_PATH);
+            if (user.role !== 'admin') {
+                salesQuery = salesQuery.where('audit.createdBy', '==', user.email);
             }
-        });
+
+            // Attach the listener
+            salesHistoryGridApi.setGridOption('loading', true);
+            
+            unsubscribeSalesHistoryListener = salesQuery.orderBy('saleDate', 'desc')
+                .onSnapshot(snapshot => {
+                    console.log("[Firestore] Received update for sales history.");
+                    const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    
+                    // Now we are certain the grid API exists
+                    salesHistoryGridApi.setGridOption('rowData', sales);
+                    salesHistoryGridApi.setGridOption('loading', false);
+                    
+                }, error => {
+                    console.error("Error listening to sales history:", error);
+                    salesHistoryGridApi.setGridOption('loading', false);
+                });
+        }
+    }, 50);
+
 }
 
 /**
