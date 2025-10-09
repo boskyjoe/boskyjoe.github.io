@@ -1706,6 +1706,7 @@ function setupEventListeners() {
 
             
             const saleData = {
+                saleDate: new Date(document.getElementById('sale-date').value),
                 store: store,
                 customerInfo: {
                     name: document.getElementById('sale-customer-name').value,
