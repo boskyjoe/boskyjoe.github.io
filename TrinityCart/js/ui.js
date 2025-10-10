@@ -1488,7 +1488,7 @@ const purchaseInvoicesGridOptions = {
         { field: "supplierName", headerName: "Supplier", flex: 1, width: 150 },
         { field: "purchaseDate", headerName: "Date", valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '', width: 100 },
         { field: "invoiceTotal", headerName: "Total", valueFormatter: p => formatCurrency(p.value)  },
-        { field: "balanceDue", headerName: "Balance", valueFormatter: p => `$${p.value.toFixed(2)}` },
+        { field: "balanceDue", headerName: "Balance", valueFormatter: p => formatCurrency(p.value) },
         {
             field: "paymentStatus", headerName: "Status", width: 100, cellRenderer: p => {
                 const status = p.value;
