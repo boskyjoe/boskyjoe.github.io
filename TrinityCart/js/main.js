@@ -1848,6 +1848,7 @@ function setupEventListeners() {
                 customerName: originalInvoice.customerInfo.name, // For the donation record
                 paymentMode: document.getElementById('record-sale-mode').value,
                 transactionRef: document.getElementById('record-sale-ref').value,
+                notes: document.getElementById('record-sale-notes').value
             };
 
             // Validation
