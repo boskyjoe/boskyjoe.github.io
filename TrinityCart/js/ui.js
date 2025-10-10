@@ -3303,6 +3303,7 @@ export function loadPaymentRecordForEditing(paymentData) {
 
     // 2. Populate the form fields with the data from the selected payment.
     document.getElementById('payment-amount-input').value = paymentData.amountPaid.toFixed(2);
+    
     document.getElementById('payment-date-input').valueAsDate = paymentData.paymentDate.toDate();
     document.getElementById('payment-mode-select').value = paymentData.paymentMode;
     document.getElementById('payment-reason-select').value = paymentData.paymentReason;
@@ -3596,9 +3597,9 @@ export function calculateSalesTotals() {
     const grandTotal = finalTaxableAmount + finalTotalTax;
 
     // 4. Update the UI (This part is correct)
-    document.getElementById('sale-subtotal').textContent = `$${itemsSubtotal.toFixed(2)}`;
+    document.getElementById('sale-subtotal').textContent = formatCurrency(itemsSubtotal);
     document.getElementById('sale-tax').textContent = `$${finalTotalTax.toFixed(2)}`;
-    document.getElementById('sale-grand-total').textContent = `$${grandTotal.toFixed(2)}`;
+    document.getElementById('sale-grand-total').textContent = formatCurrency(grandTotal);
 
     // 5. Update change/balance due display (This part is correct)
     const amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
@@ -3606,22 +3607,22 @@ export function calculateSalesTotals() {
 
     // --- [NEW] DYNAMIC STATUS LOGIC ---
     if (document.getElementById('sale-payment-type').value === 'Pay Later (Invoice)') {
-        // If it's an invoice, there's no payment yet.
-        paymentStatusDisplay.innerHTML = `Balance Due: <span class="text-red-600">$${grandTotal.toFixed(2)}</span>`;
+        // If it's an invoice, the balance due is the full amount.
+        paymentStatusDisplay.innerHTML = `Balance Due: <span class="text-red-600">${formatCurrency(grandTotal)}</span>`;
     } else if (amountReceived === 0) {
-        // If paying now, but no amount entered yet.
+        // If paying now, but no amount entered yet, show nothing.
         paymentStatusDisplay.innerHTML = '';
     } else if (amountReceived > grandTotal) {
         // Overpayment / Donation scenario
         const overpayment = amountReceived - grandTotal;
-        paymentStatusDisplay.innerHTML = `Change/Donation: <span class="text-green-600">$${overpayment.toFixed(2)}</span>`;
+        paymentStatusDisplay.innerHTML = `Change/Donation: <span class="text-green-600">${formatCurrency(overpayment)}</span>`;
     } else if (amountReceived < grandTotal) {
         // Partial payment / Underpayment scenario
         const balanceRemaining = grandTotal - amountReceived;
-        paymentStatusDisplay.innerHTML = `Balance Due: <span class="text-red-600">$${balanceRemaining.toFixed(2)}</span>`;
+        paymentStatusDisplay.innerHTML = `Balance Due: <span class="text-red-600">${formatCurrency(balanceRemaining)}</span>`;
     } else {
         // Exact payment
-        paymentStatusDisplay.innerHTML = `Change Due: <span class="text-green-600">$0.00</span>`;
+        paymentStatusDisplay.innerHTML = `Change Due: <span class="text-green-600">${formatCurrency(0)}</span>`;
     }
 
 
