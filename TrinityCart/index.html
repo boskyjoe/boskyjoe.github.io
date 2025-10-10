@@ -1489,6 +1489,73 @@
 
 
 
+    <!-- =================================== -->
+    <!--   RECORD SALE PAYMENT MODAL         -->
+    <!-- =================================== -->
+    <div id="record-sale-payment-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black bg-opacity-60 modal-close-trigger" style="z-index: 50;"></div>
+        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-4xl mx-auto" style="z-index: 51;">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b flex justify-between items-center">
+                <h3 id="sale-payment-modal-title" class="text-lg font-bold text-gray-900">Record Payment for Invoice</h3>
+                <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger"></button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="p-6 space-y-6">
+                <!-- Top Section: Invoice Header -->
+                <div class="p-4 bg-gray-50 rounded-lg border grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div><span class="font-semibold">Customer:</span> <span id="payment-modal-customer"></span></div>
+                    <div><span class="font-semibold">Sale Date:</span> <span id="payment-modal-date"></span></div>
+                    <div><span class="font-semibold">Store:</span> <span id="payment-modal-store"></span></div>
+                </div>
+
+                <!-- Middle Section: Items and Financials -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2">
+                        <h4 class="font-semibold mb-2">Invoice Items</h4>
+                        <div id="sale-payment-items-grid" class="ag-theme-alpine" style="height: 200px; width: 100%;"></div>
+                    </div>
+                    <div class="space-y-3 p-4 bg-gray-50 rounded-lg border">
+                        <h4 class="font-semibold border-b pb-2">Financial Summary</h4>
+                        <div class="flex justify-between"><span>Total Amount:</span> <span id="payment-modal-total" class="font-bold"></span></div>
+                        <div class="flex justify-between"><span>Already Paid:</span> <span id="payment-modal-paid" class="font-bold text-green-600"></span></div>
+                        <hr>
+                        <div class="flex justify-between text-lg">
+                            <span class="font-bold">Balance Due:</span> 
+                            <span id="payment-modal-balance" class="font-bold text-red-600"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Section: Payment Form -->
+                <div>
+                    <h4 class="font-semibold mb-2">New Payment Details</h4>
+                    <form id="record-sale-payment-form" class="p-4 bg-gray-50 rounded-lg border space-y-4">
+                        <input type="hidden" id="record-sale-invoice-id">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label for="record-sale-amount" class="form-label">Amount Paid <span class="text-red-500">*</span></label>
+                                <input type="number" id="record-sale-amount" class="form-input w-full" required step="0.01" min="0.01">
+                            </div>
+                            <div>
+                                <label for="record-sale-mode" class="form-label">Payment Mode <span class="text-red-500">*</span></label>
+                                <select id="record-sale-mode" class="form-input w-full" required></select>
+                            </div>
+                            <div>
+                                <label for="record-sale-ref" class="form-label">Reference # <span class="text-red-500">*</span></label>
+                                <input type="text" id="record-sale-ref" class="form-input w-full" required>
+                            </div>
+                        </div>
+                        <div id="sale-payment-overpayment-note" class="text-sm text-green-600 font-semibold hidden"></div>
+                        <div class="flex justify-end">
+                            <button type="submit" class="modal-btn modal-btn-primary">Submit Payment</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
 
 
