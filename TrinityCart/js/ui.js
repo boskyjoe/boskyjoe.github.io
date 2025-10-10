@@ -3753,8 +3753,19 @@ const salePaymentItemsGridOptions = {
     columnDefs: [
         { field: "productName", headerName: "Product", flex: 1 },
         { field: "quantity", headerName: "Qty", width: 80 },
-        { field: "unitPrice", headerName: "Unit Price", width: 120, valueFormatter: p => `$${p.value.toFixed(2)}` },
-        { field: "lineTotal", headerName: "Line Total", width: 120, valueFormatter: p => `$${p.value.toFixed(2)}` }
+        { 
+            field: "unitPrice", 
+            headerName: "Unit Price", 
+            width: 120, 
+            // --- THIS IS THE FIX ---
+            valueFormatter: p => formatCurrency(p.value) 
+        },
+        { 
+            field: "lineTotal", 
+            headerName: "Line Total", 
+            width: 120, 
+            valueFormatter: p => formatCurrency(p.value) 
+        }
     ],
     defaultColDef: { resizable: true, sortable: true },
     onGridReady: params => { salePaymentItemsGridApi = params.api; }
