@@ -1586,7 +1586,7 @@ const purchasePaymentsGridOptions = {
             field: "amountPaid",
             headerName: "Amount Paid",
             flex: 1,
-            valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : ''
+            valueFormatter: p => p.value ? formatCurrency(p.value) : ''
         },
         { field: "paymentMode", headerName: "Mode", flex: 1 },
         { field: "transactionRef", headerName: "Reference #", flex: 2 },
@@ -2186,8 +2186,19 @@ const catalogueItemsGridOptions = {
             headerName: "Selling Price",
             width: 130,
             editable: true, // This makes the cell editable!
-            valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : '',
-            valueParser: p => parseFloat(p.newValue.replace('$', '')) // Clean up input
+            valueFormatter: p => p.value ? formatCurrency(p.value) : '',
+            valueParser: params => {
+                // Get the currency symbol from master data, defaulting to '$'
+                const currencySymbol = masterData.systemSetups?.systemCurrency || '$';
+                
+                // Ensure the newValue is a string before trying to replace
+                const valueAsString = params.newValue ? String(params.newValue) : '';
+                
+                // Remove the currency symbol and any commas before parsing
+                const cleanedValue = valueAsString.replace(currencySymbol, '').replace(/,/g, '');
+                
+                return parseFloat(cleanedValue) || 0;
+            }
         },
         {
             headerName: "Remove",
