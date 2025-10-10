@@ -3397,7 +3397,7 @@ const salesHistoryGridOptions = {
             valueFormatter: p => p.value.toDate().toLocaleDateString(),
             filter: 'agDateColumnFilter'
         },
-        { field: "customerInfo.name", headerName: "Customer", flex: 1, filter: 'agTextColumnFilter' },
+        { field: "customerInfo.name", headerName: "Customer", width: 150, flex: 1, filter: 'agTextColumnFilter' },
         { field: "store", headerName: "Store", width: 150, filter: 'agTextColumnFilter' },
         {
             field: "financials.totalAmount",
@@ -3421,6 +3421,20 @@ const salesHistoryGridOptions = {
                 if (status === 'Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
                 if (status === 'Partially Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">${status}</span>`;
                 return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">${status}</span>`;
+            }
+        },
+        {
+            headerName: "Actions",
+            width: 80,
+            cellClass: 'flex items-center justify-center',
+            cellRenderer: params => {
+                const status = params.data.paymentStatus;
+                // Only show the button if the invoice is not fully paid.
+                if (status === 'Unpaid' || status === 'Partially Paid') {
+                    const paymentIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10 3.75a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5a.75.75 0 0 1 .75-.75z" /><path fill-rule="evenodd" d="M1.5 5.25a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v9.5a3 3 0 0 1-3 3h-11a3 3 0 0 1-3-3v-9.5zM3 6.75a1.5 1.5 0 0 1 1.5-1.5h11a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5h-11a1.5 1.5 0 0 1-1.5-1.5v-8z" clip-rule="evenodd" /></svg>`;
+                    return `<button class="action-btn-icon hover:text-green-600 action-btn-record-sale-payment" data-id="${params.data.id}" title="Record Payment">${paymentIcon}</button>`;
+                }
+                return ''; // Return empty for "Paid" invoices
             }
         },
         { field: "audit.createdBy", headerName: "Created By", flex: 1, filter: 'agTextColumnFilter' }
@@ -3471,17 +3485,19 @@ export function initializeSalesGrids() {
     const cartGridDiv = document.getElementById('sales-cart-grid');
     const historyGridDiv = document.getElementById('sales-history-grid');
     const addProductModalGridDiv = document.getElementById('add-product-modal-grid'); // We need to add this ID to the modal in index.html
+    const salePaymentItemsGridDiv = document.getElementById('sale-payment-items-grid');
 
     // Destroy old grids before creating new ones to prevent memory leaks
     if (cartGridDiv) cartGridDiv.innerHTML = '';
     if (historyGridDiv) historyGridDiv.innerHTML = '';
     if (addProductModalGridDiv) addProductModalGridDiv.innerHTML = '';
 
-    if (cartGridDiv && historyGridDiv && addProductModalGridDiv) {
+    if (cartGridDiv && historyGridDiv && addProductModalGridDiv && salePaymentItemsGridDiv) {
         console.log("[ui.js] Initializing (or re-initializing) Sales grids.");
         salesCartGridApi = createGrid(cartGridDiv, salesCartGridOptions);
         salesHistoryGridApi = createGrid(historyGridDiv, salesHistoryGridOptions);
         addProductModalGridApi = createGrid(addProductModalGridDiv, addProductModalGridOptions);
+        salePaymentItemsGridApi = createGrid(salePaymentItemsGridDiv, salePaymentItemsGridOptions);
     }
 }
 
@@ -3671,7 +3687,80 @@ export function removeItemFromCart(productId) {
     }
 }
 
+let salePaymentItemsGridApi = null;
 
+
+// [NEW] Grid for the items inside the "Record Sale Payment" modal
+const salePaymentItemsGridOptions = {
+    // No getRowId needed as we won't be updating rows directly
+    columnDefs: [
+        { field: "productName", headerName: "Product", flex: 1 },
+        { field: "quantity", headerName: "Qty", width: 80 },
+        { field: "unitPrice", headerName: "Unit Price", width: 120, valueFormatter: p => `$${p.value.toFixed(2)}` },
+        { field: "lineTotal", headerName: "Line Total", width: 120, valueFormatter: p => `$${p.value.toFixed(2)}` }
+    ],
+    defaultColDef: { resizable: true, sortable: true },
+    onGridReady: params => { salePaymentItemsGridApi = params.api; }
+};
+
+
+/**
+ * [NEW] Opens and populates the modal for recording a payment against a sales invoice.
+ * @param {object} invoiceData - The data for the selected sales invoice.
+ */
+export function showRecordSalePaymentModal(invoiceData) {
+    const modal = document.getElementById('record-sale-payment-modal');
+    if (!modal) return;
+
+    const form = document.getElementById('record-sale-payment-form');
+    form.reset();
+
+    // 1. Populate the hidden input with the invoice ID
+    document.getElementById('record-sale-invoice-id').value = invoiceData.id;
+
+    // 2. Populate the modal's header and summary panel
+    document.getElementById('sale-payment-modal-title').textContent = `Record Payment for Invoice #${invoiceData.saleId}`;
+    document.getElementById('payment-modal-customer').textContent = invoiceData.customerInfo.name;
+    document.getElementById('payment-modal-date').textContent = invoiceData.saleDate.toDate().toLocaleDateString();
+    document.getElementById('payment-modal-store').textContent = invoiceData.store;
+    document.getElementById('payment-modal-total').textContent = `$${(invoiceData.financials.totalAmount || 0).toFixed(2)}`;
+    document.getElementById('payment-modal-paid').textContent = `$${(invoiceData.totalAmountPaid || 0).toFixed(2)}`;
+    document.getElementById('payment-modal-balance').textContent = `$${(invoiceData.balanceDue || 0).toFixed(2)}`;
+
+    // 3. Default the payment amount to the remaining balance due
+    document.getElementById('record-sale-amount').value = (invoiceData.balanceDue || 0).toFixed(2);
+
+    // 4. Populate the line items grid inside the modal
+    if (salePaymentItemsGridApi) {
+        salePaymentItemsGridApi.setGridOption('rowData', invoiceData.lineItems);
+    }
+
+    // 5. Populate the Payment Mode dropdown
+    const paymentModeSelect = document.getElementById('record-sale-mode');
+    paymentModeSelect.innerHTML = '<option value="">Select mode...</option>';
+    masterData.paymentModes.forEach(mode => {
+        if (mode.isActive) {
+            const option = document.createElement('option');
+            option.value = mode.paymentMode;
+            option.textContent = mode.paymentMode;
+            paymentModeSelect.appendChild(option);
+        }
+    });
+
+    // 6. Show the modal
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+}
+
+/**
+ * [NEW] Closes the record sale payment modal.
+ */
+export function closeRecordSalePaymentModal() {
+    const modal = document.getElementById('record-sale-payment-modal');
+    if (!modal) return;
+    modal.classList.remove('visible');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
 
 
 
