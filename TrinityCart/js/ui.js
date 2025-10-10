@@ -1811,7 +1811,7 @@ export function calculateAllTotals() {
         totalItemLevelTax += taxAmount;
     });
 
-    document.getElementById('purchase-subtotal').textContent = `$${itemsSubtotal.toFixed(2)}`;
+    document.getElementById('purchase-subtotal').textContent = formatCurrency(itemsSubtotal);
 
     const invoiceDiscountType = document.getElementById('invoice-discount-type').value;
     const invoiceDiscountValue = parseFloat(document.getElementById('invoice-discount-value').value) || 0;
@@ -1826,7 +1826,7 @@ export function calculateAllTotals() {
     const totalTax = totalItemLevelTax + invoiceLevelTaxAmount;
     const grandTotal = taxableAmountForInvoice + totalTax;
 
-    document.getElementById('purchase-grand-total').textContent = `$${grandTotal.toFixed(2)}`;
+    document.getElementById('purchase-grand-total').textContent = formatCurrency(grandTotal);
 }
 
 
