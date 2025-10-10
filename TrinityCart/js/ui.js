@@ -2443,10 +2443,12 @@ const consignmentOrdersGridOptions = {
                 return status;
             }
         },
-        valueFormatter: p => {
-            // If p.value is a truthy number (not 0, null, or undefined), format it.
-            // Otherwise, format the number 0.
-            return formatCurrency(p.value || 0);
+        { 
+            field: "balanceDue", 
+            headerName: "Balance Due", 
+            width: 140, 
+            // The valueFormatter is now correctly inside its parent column definition object.
+            valueFormatter: p => formatCurrency(p.value || 0)
         }
     ],
     rowSelection: { mode: 'singleRow' },
