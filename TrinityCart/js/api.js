@@ -1679,3 +1679,70 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
         }
     });
 }
+
+
+// =======================================================
+// --- SALES PAYMENT API FUNCTIONS ---
+// =======================================================
+
+/**
+ * [NEW & TRANSACTIONAL] Records a payment against a sales invoice, updates the
+ * invoice's balance, and handles any overpayment as a donation.
+ * @param {object} paymentData - An object containing payment details like invoiceId, amountPaid, etc.
+ * @param {object} user - The user recording the payment.
+ */
+export async function recordSalePayment(paymentData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    
+    const { invoiceId, amountPaid, donationAmount, customerName } = paymentData;
+
+    const saleRef = db.collection(SALES_COLLECTION_PATH).doc(invoiceId);
+    const paymentRef = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).doc();
+
+    return db.runTransaction(async (transaction) => {
+        // 1. READ the sales invoice to ensure it exists and to get current totals.
+        const saleDoc = await transaction.get(saleRef);
+        if (!saleDoc.exists) {
+            throw new Error("The invoice you are trying to pay does not exist.");
+        }
+        const currentSaleData = saleDoc.data();
+
+        // 2. VALIDATION (optional but good practice)
+        // You could add a check here to ensure the payment doesn't exceed the balance due + donation
+        // but the UI logic should already prevent this.
+
+        // 3. WRITE: Create the new payment document in the ledger.
+        transaction.set(paymentRef, {
+            ...paymentData,
+            paymentId: `SPAY-${Date.now()}`,
+            paymentDate: now,
+            status: 'Verified', // Payments recorded this way are considered verified
+            recordedBy: user.email
+        });
+
+        // 4. WRITE: Update the main sales invoice's financial totals.
+        const newTotalAmountPaid = (currentSaleData.totalAmountPaid || 0) + amountPaid;
+        const newBalanceDue = currentSaleData.balanceDue - amountPaid;
+        const newPaymentStatus = newBalanceDue <= 0 ? 'Paid' : 'Partially Paid';
+
+        transaction.update(saleRef, {
+            totalAmountPaid: newTotalAmountPaid,
+            balanceDue: newBalanceDue,
+            paymentStatus: newPaymentStatus
+        });
+
+        // 5. WRITE: If there was an overpayment, create a donation record.
+        if (donationAmount > 0) {
+            const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
+            transaction.set(donationRef, {
+                amount: donationAmount,
+                donationDate: now,
+                source: 'Invoice Overpayment',
+                relatedSaleId: saleRef.id,
+                customerName: customerName,
+                recordedBy: user.email,
+            });
+        }
+    });
+}
