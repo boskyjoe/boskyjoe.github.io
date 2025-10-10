@@ -3296,7 +3296,7 @@ const salesCartGridOptions = {
             field: "unitPrice",
             headerName: "Unit Price",
             width: 120,
-            editable: true,
+            editable: false,
             valueFormatter: p => `$${p.value.toFixed(2)}`,
             valueParser: p => parseFloat(p.newValue) || 0
         },
