@@ -3460,13 +3460,13 @@ const salesHistoryGridOptions = {
             field: "financials.totalAmount",
             headerName: "Total",
             width: 120,
-            valueFormatter: p => `$${p.value.toFixed(2)}`
+            valueFormatter: p => formatCurrency(p.value)
         },
         {
             field: "balanceDue",
             headerName: "Balance Due",
             width: 120,
-            valueFormatter: p => `$${p.value.toFixed(2)}`
+            valueFormatter: p => formatCurrency(p.value)
         },
         {
             field: "paymentStatus",
