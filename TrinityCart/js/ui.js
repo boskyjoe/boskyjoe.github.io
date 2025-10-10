@@ -2002,6 +2002,9 @@ export function initializeModals() {
             } else if (modalToClose.id === 'report-activity-modal') {
                 closeReportActivityModal();
             }
+            else if (modalToClose.id === 'record-sale-payment-modal') {
+                closeRecordSalePaymentModal();
+            }
             // Add similar logic for other modals if needed
         }
     });
