@@ -3276,6 +3276,9 @@ export function resetPaymentForm() {
     // 1. Reset the form fields and buttons to their default "Create" state.
     form.reset();
 
+    const currencySymbol = masterData.systemSetups?.systemCurrency || '$';
+    document.getElementById('payment-amount-currency-symbol').textContent = currencySymbol;
+
     document.getElementById('payment-ledger-doc-id').value = '';
     document.getElementById('payment-form-title').textContent = "Make a Payment"; // Or "2. Record Your Payment"
     document.getElementById('submit-payment-record-btn').textContent = 'Submit Payment Record';
@@ -3302,6 +3305,9 @@ export function loadPaymentRecordForEditing(paymentData) {
     document.getElementById('cancel-payment-edit-btn').classList.remove('hidden');
 
     // 2. Populate the form fields with the data from the selected payment.
+    const currencySymbol = masterData.systemSetups?.systemCurrency || '$';
+
+    document.getElementById('payment-amount-currency-symbol').textContent = currencySymbol;
     document.getElementById('payment-amount-input').value = paymentData.amountPaid.toFixed(2);
     
     document.getElementById('payment-date-input').valueAsDate = paymentData.paymentDate.toDate();
