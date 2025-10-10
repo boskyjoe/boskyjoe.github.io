@@ -1767,6 +1767,7 @@ function setupEventListeners() {
 
             // 4. NOW, assemble the final saleData object with all calculated values.
             const saleData = {
+                saleDate: new Date(document.getElementById('sale-date').value),
                 store: document.getElementById('sale-store-select').value,
                 customerInfo: {
                     name: document.getElementById('sale-customer-name').value,
