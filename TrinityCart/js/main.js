@@ -87,7 +87,8 @@ import {
     showAddProductModal,
     closeAddProductModal,
     calculateSalesTotals,addItemToCart,getSalesCartItems, 
-    removeItemFromCart
+    removeItemFromCart,showRecordSalePaymentModal, 
+    closeRecordSalePaymentModal
 } from './ui.js';
 
 import { 
@@ -98,7 +99,7 @@ import {
     logActivityAndUpdateConsignment,getConsignmentOrderById,
     submitPaymentRecord,updatePaymentRecord,
     verifyConsignmentPayment,cancelPaymentRecord,
-    createSaleAndUpdateInventory
+    createSaleAndUpdateInventory,recordSalePayment
 } from './api.js';
 
 
@@ -734,6 +735,17 @@ function setupEventListeners() {
                             console.error("Error verifying payment:", error);
                             alert(`Payment verification failed: ${error.message}`);
                         }
+                    }
+                }
+            }
+            else if (grid.id === 'sales-history-grid') {
+                if (gridButton.classList.contains('action-btn-record-sale-payment')) {
+                    // We need to get the full data for the selected invoice row
+                    const invoiceNode = salesHistoryGridApi.getRowNode(docId);
+                    if (invoiceNode && invoiceNode.data) {
+                        showRecordSalePaymentModal(invoiceNode.data);
+                    } else {
+                        alert("Error: Could not find data for the selected invoice.");
                     }
                 }
             }
@@ -1802,6 +1814,61 @@ function setupEventListeners() {
     }
 
 
+    // --- [NEW] Form Submission for "Record Sale Payment" Modal ---
+    const recordSalePaymentForm = document.getElementById('record-sale-payment-form');
+    if (recordSalePaymentForm) {
+        recordSalePaymentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = appState.currentUser;
+            if (!user) return;
+
+            // Get the invoice ID from the hidden input
+            const invoiceId = document.getElementById('record-sale-invoice-id').value;
+            if (!invoiceId) return alert("Error: No invoice ID found.");
+
+            // Get the original invoice data to calculate overpayment
+            const invoiceNode = salesHistoryGridApi.getRowNode(invoiceId);
+            if (!invoiceNode) return alert("Error: Could not find original invoice data.");
+            const originalInvoice = invoiceNode.data;
+
+            const amountPaid = parseFloat(document.getElementById('record-sale-amount').value);
+            const balanceDue = originalInvoice.balanceDue;
+            
+            let donationAmount = 0;
+            if (amountPaid > balanceDue) {
+                donationAmount = amountPaid - balanceDue;
+            }
+            const amountToApplyToInvoice = Math.min(amountPaid, balanceDue);
+
+            // Assemble the payment data object
+            const paymentData = {
+                invoiceId: invoiceId,
+                amountPaid: amountToApplyToInvoice,
+                donationAmount: donationAmount,
+                customerName: originalInvoice.customerInfo.name, // For the donation record
+                paymentMode: document.getElementById('record-sale-mode').value,
+                transactionRef: document.getElementById('record-sale-ref').value,
+            };
+
+            // Validation
+            if (isNaN(paymentData.amountPaid) || paymentData.amountPaid <= 0) {
+                return alert("Amount paid must be a number greater than zero.");
+            }
+            if (!paymentData.transactionRef) {
+                return alert("Please enter a Reference # for the payment.");
+            }
+
+            try {
+                await recordSalePayment(paymentData, user);
+                alert("Payment recorded successfully!");
+                closeRecordSalePaymentModal();
+                // The real-time listeners will automatically update the sales history grid.
+            } catch (error) {
+                console.error("Error recording sale payment:", error);
+                alert(`Failed to record payment: ${error.message}`);
+            }
+        });
+    }
 
 
 
