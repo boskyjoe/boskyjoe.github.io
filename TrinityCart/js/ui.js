@@ -3780,9 +3780,11 @@ export function showRecordSalePaymentModal(invoiceData) {
     document.getElementById('payment-modal-customer').textContent = invoiceData.customerInfo.name;
     document.getElementById('payment-modal-date').textContent = invoiceData.saleDate.toDate().toLocaleDateString();
     document.getElementById('payment-modal-store').textContent = invoiceData.store;
-    document.getElementById('payment-modal-total').textContent = `$${(invoiceData.financials.totalAmount || 0).toFixed(2)}`;
-    document.getElementById('payment-modal-paid').textContent = `$${(invoiceData.totalAmountPaid || 0).toFixed(2)}`;
-    document.getElementById('payment-modal-balance').textContent = `$${(invoiceData.balanceDue || 0).toFixed(2)}`;
+
+    document.getElementById('payment-modal-total').textContent = formatCurrency(invoiceData.financials.totalAmount);
+    document.getElementById('payment-modal-paid').textContent = formatCurrency(invoiceData.totalAmountPaid);
+    document.getElementById('payment-modal-balance').textContent = formatCurrency(invoiceData.balanceDue);
+    
 
     // 3. Default the payment amount to the remaining balance due
     document.getElementById('record-sale-amount').value = (invoiceData.balanceDue || 0).toFixed(2);
