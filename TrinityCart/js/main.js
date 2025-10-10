@@ -1693,20 +1693,18 @@ function setupEventListeners() {
             e.preventDefault();
             const user = appState.currentUser;
             if (!user) return;
-            
-            // 1. Get the raw user input from the shopping cart grid.
+
+            // --- THIS IS THE CORRECTED, SELF-CONTAINED LOGIC ---
+
+            // 1. Get raw user input from the cart.
             const rawCartItems = getSalesCartItems();
-
-
-
             if (rawCartItems.length === 0) {
                 return alert("Please add at least one product to the cart.");
             }
 
-
-            // 2. Perform all final line-item calculations HERE.
+            // 2. Perform all line-item and order-level calculations first.
             const finalLineItems = [];
-            let itemsSubtotalAfterLineDiscounts = 0;
+            let itemsSubtotal = 0;
             let totalItemLevelTax = 0;
 
             rawCartItems.forEach(item => {
@@ -1721,91 +1719,76 @@ function setupEventListeners() {
                 const taxAmount = taxableAmount * (lineTaxPercent / 100);
                 const lineTotal = taxableAmount + taxAmount;
 
-                // Build the complete, auditable line item object to be saved.
                 finalLineItems.push({
-                    productId: item.productId,
-                    productName: item.productName,
-                    quantity: qty,
-                    unitPrice: price,
-                    discountPercentage: lineDiscPercent,
-                    taxPercentage: lineTaxPercent,
-                    // Save the calculated results
-                    lineSubtotal: lineSubtotal,
-                    discountAmount: discountAmount,
-                    taxableAmount: taxableAmount,
-                    taxAmount: taxAmount,
-                    lineTotal: lineTotal
+                    ...item,
+                    lineSubtotal, discountAmount, taxableAmount, taxAmount, lineTotal
                 });
-
-                itemsSubtotalAfterLineDiscounts += taxableAmount;
+                itemsSubtotal += taxableAmount;
                 totalItemLevelTax += taxAmount;
             });
 
-            // 3. Perform all final order-level calculations.
             const orderDiscPercent = parseFloat(document.getElementById('sale-order-discount').value) || 0;
             const orderTaxPercent = parseFloat(document.getElementById('sale-order-tax').value) || 0;
-            const orderDiscountAmount = itemsSubtotalAfterLineDiscounts * (orderDiscPercent / 100);
-            const finalTaxableAmount = itemsSubtotalAfterLineDiscounts - orderDiscountAmount;
+            const orderDiscountAmount = itemsSubtotal * (orderDiscPercent / 100);
+            const finalTaxableAmount = itemsSubtotal - orderDiscountAmount;
             const orderLevelTaxAmount = finalTaxableAmount * (orderTaxPercent / 100);
             const finalTotalTax = totalItemLevelTax + orderLevelTaxAmount;
-            const grandTotal = finalTaxableAmount + finalTotalTax;
+            const grandTotal = finalTaxableAmount + finalTotalTax; // This is our definitive totalAmount
 
-            // 4. Assemble the complete saleData object.
-            const saleData = {
-                store: document.getElementById('sale-store-select').value,
-                customerInfo: { /* ... your customer info ... */ },
-                lineItems: finalLineItems, // Use the fully calculated items
-                financials: {
-                    itemsSubtotal: itemsSubtotalAfterLineDiscounts,
-                    orderDiscountPercentage: orderDiscPercent,
-                    orderDiscountAmount: orderDiscountAmount,
-                    orderTaxPercentage: orderTaxPercent,
-                    orderTaxAmount: orderLevelTaxAmount,
-                    totalTax: finalTotalTax,
-                    totalAmount: grandTotal,
-                }
-            };
-
-            // 5. Handle payment and submit.
+            // 3. Handle payment logic using the calculated grandTotal.
             let initialPaymentData = null;
             let donationAmount = 0;
+            let amountReceived = 0;
 
             if (document.getElementById('sale-payment-type').value === 'Pay Now') {
-                const amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
+                amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
 
-                if (amountReceived < totalAmount) {
-                    if (!confirm("The amount received is less than the total. Do you want to create a partially paid invoice?")) {
+                if (amountReceived < grandTotal) {
+                    if (!confirm("The amount received is less than the total. This will create a partially paid invoice. Do you want to continue?")) {
                         return;
                     }
                 }
-
                 if (!document.getElementById('sale-payment-ref').value) {
                     return alert("Please enter a Reference # for the payment.");
                 }
 
-                // Calculate overpayment and the actual amount to apply to the invoice
-                if (amountReceived > totalAmount) {
-                    donationAmount = amountReceived - totalAmount;
+                if (amountReceived > grandTotal) {
+                    donationAmount = amountReceived - grandTotal;
                 }
-                const amountToApplyToInvoice = Math.min(amountReceived, totalAmount);
+                const amountToApplyToInvoice = Math.min(amountReceived, grandTotal);
 
-                // Assemble the payment data object
                 initialPaymentData = {
                     amountPaid: amountToApplyToInvoice,
                     paymentMode: document.getElementById('sale-payment-mode').value,
                     transactionRef: document.getElementById('sale-payment-ref').value,
                     notes: document.getElementById('sale-payment-notes').value
                 };
-
-                // Update the main sale's financial record
-                saleData.financials.amountTendered = amountReceived;
-                saleData.financials.changeDue = 0;
-
-                if (!initialPaymentData.transactionRef) {
-                    return alert("Please enter a Reference # for the payment.");
-                }
             }
 
+            // 4. NOW, assemble the final saleData object with all calculated values.
+            const saleData = {
+                store: document.getElementById('sale-store-select').value,
+                customerInfo: {
+                    name: document.getElementById('sale-customer-name').value,
+                    email: document.getElementById('sale-customer-email').value,
+                    phone: document.getElementById('sale-customer-phone').value,
+                    address: document.getElementById('sale-store-select').value === 'Tasty Treats' ? document.getElementById('sale-customer-address').value : null
+                },
+                lineItems: finalLineItems,
+                financials: {
+                    itemsSubtotal: itemsSubtotal,
+                    orderDiscountPercentage: orderDiscPercent,
+                    orderDiscountAmount: orderDiscountAmount,
+                    orderTaxPercentage: orderTaxPercent,
+                    orderTaxAmount: orderLevelTaxAmount,
+                    totalTax: finalTotalTax,
+                    totalAmount: grandTotal,
+                    amountTendered: amountReceived,
+                    changeDue: 0 // Overpayment is a donation
+                }
+            };
+            
+            // 5. Submit to the API.
             try {
                 await createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, user.email);
                 alert("Sale completed successfully!");
@@ -1816,7 +1799,6 @@ function setupEventListeners() {
             }
         });
     }
-
 
 
 
