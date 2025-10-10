@@ -2443,7 +2443,11 @@ const consignmentOrdersGridOptions = {
                 return status;
             }
         },
-        { field: "balanceDue", headerName: "Balance Due", width: 140, valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : '$0.00' }
+        valueFormatter: p => {
+            // If p.value is a truthy number (not 0, null, or undefined), format it.
+            // Otherwise, format the number 0.
+            return formatCurrency(p.value || 0);
+        }
     ],
     rowSelection: { mode: 'singleRow' },
     onGridReady: params => { consignmentOrdersGridApi = params.api; },
@@ -3177,13 +3181,15 @@ const consignmentActivityGridOptions = {
             field: "unitSellingPrice",
             headerName: "Unit Price",
             width: 110,
-            valueFormatter: p => (p.value && p.value !== 0) ? `$${p.value.toFixed(2)}` : ''
+            // --- THIS IS THE FIX ---
+            valueFormatter: p => (p.value && p.value !== 0) ? formatCurrency(p.value) : ''
         },
         {
             field: "totalSaleValue",
             headerName: "Sale Value",
             width: 130,
-            valueFormatter: p => (p.value && p.value !== 0) ? `$${p.value.toFixed(2)}` : '',
+            // --- THIS IS THE FIX ---
+            valueFormatter: p => (p.value && p.value !== 0) ? formatCurrency(p.value) : '',
             cellStyle: { 'font-weight': 'bold' }
         },
         { field: "recordedBy", headerName: "Recorded By", flex: 1 }
@@ -3210,7 +3216,12 @@ const consignmentPaymentsGridOptions = {
     },
     columnDefs: [
         { field: "paymentDate", headerName: "Payment Date", width: 140, valueFormatter: p => p.value.toDate().toLocaleDateString() },
-        { field: "amountPaid", headerName: "Amount", width: 120, valueFormatter: p => `$${p.value.toFixed(2)}` },
+        { 
+            field: "amountPaid", 
+            headerName: "Amount", 
+            width: 120, 
+            valueFormatter: p => formatCurrency(p.value)
+        },
         { field: "paymentMode", headerName: "Mode", flex: 1 },
         { field: "transactionRef", headerName: "Reference #", flex: 1 },
         {
@@ -3336,9 +3347,9 @@ const salesCartGridOptions = {
             field: "unitPrice",
             headerName: "Unit Price",
             width: 120,
-            editable: false,
-            valueFormatter: p => `$${p.value.toFixed(2)}`,
-            valueParser: p => parseFloat(p.newValue) || 0
+            editable: false, // This is correct, the price is not editable here.
+
+            valueFormatter: p => formatCurrency(p.value),
         },
         {
             field: "discountPercentage",
@@ -3365,6 +3376,7 @@ const salesCartGridOptions = {
             width: 120,
             editable: false,
             cellStyle: { 'font-weight': 'bold' },
+            // The valueGetter is correct and remains unchanged.
             valueGetter: params => {
                 const qty = params.data.quantity || 0;
                 const price = params.data.unitPrice || 0;
@@ -3374,7 +3386,9 @@ const salesCartGridOptions = {
                 const lineTotal = lineSubtotal * (1 + tax / 100);
                 return lineTotal;
             },
-            valueFormatter: p => `$${p.value.toFixed(2)}`
+            // --- THIS IS THE FIX ---
+            // Use the centralized formatCurrency helper.
+            valueFormatter: p => formatCurrency(p.value)
         },
         {
             headerName: "Remove",
