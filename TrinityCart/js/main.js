@@ -88,7 +88,7 @@ import {
     closeAddProductModal,
     calculateSalesTotals,addItemToCart,getSalesCartItems, 
     removeItemFromCart,showRecordSalePaymentModal, 
-    closeRecordSalePaymentModal
+    closeRecordSalePaymentModal,getSalesHistoryDataById
 } from './ui.js';
 
 import { 
@@ -480,8 +480,6 @@ async function handleFulfillConsignmentClick() {
 }
 
 
-
-
 function setupEventListeners() {
     
     // ==================================================================
@@ -741,9 +739,10 @@ function setupEventListeners() {
             else if (grid.id === 'sales-history-grid') {
                 if (gridButton.classList.contains('action-btn-record-sale-payment')) {
                     // We need to get the full data for the selected invoice row
-                    const invoiceNode = salesHistoryGridApi.getRowNode(docId);
-                    if (invoiceNode && invoiceNode.data) {
-                        showRecordSalePaymentModal(invoiceNode.data);
+                    const invoiceData = getSalesHistoryDataById(docId);
+                
+                    if (invoiceData) {
+                        showRecordSalePaymentModal(invoiceData);
                     } else {
                         alert("Error: Could not find data for the selected invoice.");
                     }
@@ -1827,9 +1826,10 @@ function setupEventListeners() {
             if (!invoiceId) return alert("Error: No invoice ID found.");
 
             // Get the original invoice data to calculate overpayment
-            const invoiceNode = salesHistoryGridApi.getRowNode(invoiceId);
-            if (!invoiceNode) return alert("Error: Could not find original invoice data.");
-            const originalInvoice = invoiceNode.data;
+            const originalInvoice = getSalesHistoryDataById(invoiceId);
+        
+            if (!originalInvoice) return alert("Error: Could not find original invoice data.");
+
 
             const amountPaid = parseFloat(document.getElementById('record-sale-amount').value);
             const balanceDue = originalInvoice.balanceDue;
