@@ -3467,17 +3467,21 @@ const salesHistoryGridOptions = {
 // 3. Create Initialization and Helper Functions
 
 export function initializeSalesGrids() {
-    if (isSalesGridsInitialized) return;
 
     const cartGridDiv = document.getElementById('sales-cart-grid');
     const historyGridDiv = document.getElementById('sales-history-grid');
     const addProductModalGridDiv = document.getElementById('add-product-modal-grid'); // We need to add this ID to the modal in index.html
 
+    // Destroy old grids before creating new ones to prevent memory leaks
+    if (cartGridDiv) cartGridDiv.innerHTML = '';
+    if (historyGridDiv) historyGridDiv.innerHTML = '';
+    if (addProductModalGridDiv) addProductModalGridDiv.innerHTML = '';
+
     if (cartGridDiv && historyGridDiv && addProductModalGridDiv) {
+        console.log("[ui.js] Initializing (or re-initializing) Sales grids.");
         salesCartGridApi = createGrid(cartGridDiv, salesCartGridOptions);
         salesHistoryGridApi = createGrid(historyGridDiv, salesHistoryGridOptions);
         addProductModalGridApi = createGrid(addProductModalGridDiv, addProductModalGridOptions);
-        isSalesGridsInitialized = true;
     }
 }
 
