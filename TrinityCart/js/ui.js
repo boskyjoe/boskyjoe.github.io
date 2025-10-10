@@ -3888,3 +3888,18 @@ export function updateUI() {
         showView('login-view');
     }
 }
+
+
+/**
+ * [NEW] Gets the data for a specific sales invoice row from the history grid.
+ * @param {string} invoiceId - The document ID of the invoice.
+ * @returns {object|null} The invoice's data object or null if not found.
+ */
+export function getSalesHistoryDataById(invoiceId) {
+    if (!salesHistoryGridApi) {
+        console.error("Cannot get invoice data: salesHistoryGridApi is not ready.");
+        return null;
+    }
+    const rowNode = salesHistoryGridApi.getRowNode(invoiceId);
+    return rowNode ? rowNode.data : null;
+}
