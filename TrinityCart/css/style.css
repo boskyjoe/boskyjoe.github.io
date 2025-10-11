@@ -193,3 +193,15 @@
 #active-order-view .p-6 {
     position: relative;
 }
+
+.payment-modal-tab-panel {
+    opacity: 0;
+    pointer-events: none;
+    height: 0;
+    overflow: hidden;
+}
+.payment-modal-tab-panel.active {
+    opacity: 1;
+    pointer-events: auto;
+    height: auto;
+}
