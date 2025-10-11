@@ -1902,7 +1902,7 @@ function setupEventListeners() {
                 recordSalePaymentForm.reset(); // Reset the form for the next payment
 
                 // 3. Fetch the LATEST version of the invoice data.
-                const updatedInvoiceData = await getSalesHistoryDataById(invoiceId);
+                const updatedInvoiceData = getSalesHistoryDataById(invoiceId);
 
                 // 4. If found, call a new UI function to refresh the modal's content.
                 if (updatedInvoiceData) {
