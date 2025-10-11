@@ -89,7 +89,7 @@ import {
     calculateSalesTotals,addItemToCart,getSalesCartItems, 
     removeItemFromCart,showRecordSalePaymentModal, 
     closeRecordSalePaymentModal,getSalesHistoryDataById,
-    getSalePaymentDataFromGridById,
+    getSalePaymentDataFromGridById,switchPaymentModalTab,
 } from './ui.js';
 
 import { 
@@ -969,6 +969,14 @@ function setupEventListeners() {
                 // Also make the address input required only when it's visible
                 addressInput.required = showAddress;
             });
+        }
+
+        // --- [NEW] Handler for the Payment Modal Tabs ---
+        const paymentModalTab = target.closest('.payment-modal-tab');
+        if (paymentModalTab) {
+            e.preventDefault();
+            switchPaymentModalTab(paymentModalTab.id);
+            return;
         }
 
         if (target.closest('#report-activity-btn')) {
