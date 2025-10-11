@@ -3939,7 +3939,26 @@ export function switchPaymentModalTab(tabId) {
     });
 }
 
+/**
+ * [NEW] Refreshes the financial summary panel within the payment modal
+ * with new data after a payment has been made.
+ * @param {object} updatedInvoiceData - The fresh data for the sales invoice.
+ */
+export function refreshSalePaymentModal(updatedInvoiceData) {
+    // Update the summary panel with the new totals.
+    document.getElementById('payment-modal-total').textContent = formatCurrency(updatedInvoiceData.financials.totalAmount);
+    document.getElementById('payment-modal-paid').textContent = formatCurrency(updatedInvoiceData.totalAmountPaid);
+    document.getElementById('payment-modal-balance').textContent = formatCurrency(updatedInvoiceData.balanceDue);
 
+    // Also, reset the default amount in the payment form to the new balance due.
+    document.getElementById('record-sale-amount').value = (updatedInvoiceData.balanceDue || 0).toFixed(2);
+}
+
+// We also need a simple reset function for the form
+export function resetSalePaymentForm() {
+    const form = document.getElementById('record-sale-payment-form');
+    if (form) form.reset();
+}
 
 
 
