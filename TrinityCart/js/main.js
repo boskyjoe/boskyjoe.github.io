@@ -89,8 +89,6 @@ import {
     calculateSalesTotals,addItemToCart,getSalesCartItems, 
     removeItemFromCart,showRecordSalePaymentModal, 
     closeRecordSalePaymentModal,getSalesHistoryDataById,
-    showManageSalePaymentsModal, 
-    closeManageSalePaymentsModal,
     getSalePaymentDataFromGridById,
 } from './ui.js';
 
@@ -756,7 +754,6 @@ function setupEventListeners() {
                 
                     if (invoiceData) {
                         showRecordSalePaymentModal(invoiceData);
-                        //showManageSalePaymentsModal(invoiceData);
 
                     } else {
                         alert("Error: Could not find data for the selected invoice.");
@@ -1022,7 +1019,7 @@ function setupEventListeners() {
         // --- [NEW] Handler for closing the new modal ---
         document.addEventListener('click', (e) => {
             if (e.target.closest('#manage-sale-payment-modal .modal-close-trigger')) {
-                closeManageSalePaymentsModal();
+                closeRecordSalePaymentModal();
             }
         });
 
