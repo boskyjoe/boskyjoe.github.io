@@ -11,7 +11,7 @@ import {
 import { appState } from './state.js';
 import { firebaseConfig, USERS_COLLECTION_PATH } from './config.js';
 
-import { updateUI, showView, showSuppliersView } from './ui.js';
+import { updateUI, showView, showSuppliersView,showLoader, hideLoader } from './ui.js';
 import { showCategoriesView } from './ui.js';
 import { showModal } from './modal.js';
 
@@ -1868,14 +1868,11 @@ function setupEventListeners() {
 
             // --- [NEW] UI State Management ---
             const submitButton = recordSalePaymentForm.querySelector('button[type="submit"]');
-            const formElements = recordSalePaymentForm.elements;
 
 
             submitButton.disabled = true;
             submitButton.textContent = 'Submitting...';
-            for (let i = 0; i < formElements.length; i++) {
-                formElements[i].disabled = true;
-            }
+            
 
             const invoiceId = document.getElementById('record-sale-invoice-id').value;
             const invoiceData = getSalesHistoryDataById(invoiceId);
@@ -1908,6 +1905,8 @@ function setupEventListeners() {
                 return alert("Please enter a Reference # for the payment.");
             }
 
+            showLoader(); 
+
             try {
                 await recordSalePayment(paymentData, user);
 
@@ -1931,9 +1930,7 @@ function setupEventListeners() {
                 // This 'finally' block runs whether the try succeeds or fails.
                 submitButton.disabled = false;
                 submitButton.textContent = 'Submit Payment';
-                for (let i = 0; i < formElements.length; i++) {
-                    formElements[i].disabled = false;
-                }
+                hideLoader();
             }
         });
     }
