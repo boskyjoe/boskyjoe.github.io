@@ -3846,10 +3846,13 @@ export function closeRecordSalePaymentModal() {
  * @param {object} invoiceData - The data for the selected sales invoice.
  */
 export function showManageSalePaymentsModal(invoiceData) {
-    const modal = document.getElementById('manage-sale-payment-modal');
+    const modal = document.getElementById('record-sale-payment-modal');
     if (!modal) return;
 
-    resetSalePaymentForm(); // Ensure form is in a clean state
+    const form = document.getElementById('record-sale-payment-form');
+    form.reset();
+
+    //resetPaymentForm(); // Ensure form is in a clean state
 
     // 1. Populate the hidden input with the invoice ID
     document.getElementById('payment-form-invoice-id').value = invoiceData.id;
