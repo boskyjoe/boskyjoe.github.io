@@ -741,7 +741,7 @@ function setupEventListeners() {
                 }
             }
             else if (grid.id === 'sales-history-grid') {
-                if (gridButton.classList.contains('action-btn-record-sale-payment')) {
+                if (gridButton.classList.contains('action-btn-manage-payments')) {
                     // We need to get the full data for the selected invoice row
                     const invoiceData = getSalesHistoryDataById(docId);
                 
