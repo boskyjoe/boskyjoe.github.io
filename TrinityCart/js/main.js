@@ -1910,7 +1910,6 @@ function setupEventListeners() {
 
             try {
                 await recordSalePayment(paymentData, user);
-                alert("Payment recorded successfully!");
 
                 resetSalePaymentForm(); // Reset the form for the next payment
 
