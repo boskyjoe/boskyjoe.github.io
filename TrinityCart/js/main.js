@@ -88,7 +88,10 @@ import {
     closeAddProductModal,
     calculateSalesTotals,addItemToCart,getSalesCartItems, 
     removeItemFromCart,showRecordSalePaymentModal, 
-    closeRecordSalePaymentModal,getSalesHistoryDataById
+    closeRecordSalePaymentModal,getSalesHistoryDataById,
+    showManageSalePaymentsModal, 
+    closeManageSalePaymentsModal,
+    getSalePaymentDataFromGridById,
 } from './ui.js';
 
 import { 
@@ -99,7 +102,8 @@ import {
     logActivityAndUpdateConsignment,getConsignmentOrderById,
     submitPaymentRecord,updatePaymentRecord,
     verifyConsignmentPayment,cancelPaymentRecord,
-    createSaleAndUpdateInventory,recordSalePayment
+    createSaleAndUpdateInventory,recordSalePayment,
+    voidSalePayment,
 } from './api.js';
 
 
@@ -742,13 +746,32 @@ function setupEventListeners() {
                     const invoiceData = getSalesHistoryDataById(docId);
                 
                     if (invoiceData) {
-                        showRecordSalePaymentModal(invoiceData);
+                        //showRecordSalePaymentModal(invoiceData);
+                        showManageSalePaymentsModal(invoiceData);
+
                     } else {
                         alert("Error: Could not find data for the selected invoice.");
                     }
                 }
             }
+            else if (grid.id === 'sale-payment-history-grid') {
+                const paymentData = getSalePaymentDataFromGridById(docId);
+                if (!paymentData) return;
 
+                if (gridButton.classList.contains('action-btn-void-sale-payment')) {
+                    if (confirm(`Are you sure you want to VOID this payment of ${formatCurrency(paymentData.amountPaid)}? This will reverse the transaction and cannot be undone.`)) {
+                        try {
+                            await voidSalePayment(docId, user);
+                            alert("Payment successfully voided.");
+                            // The real-time listeners will automatically update the UI.
+                        } catch (error) {
+                            console.error("Error voiding payment:", error);
+                            alert(`Failed to void payment: ${error.message}`);
+                        }
+                    }
+                }
+                // Add edit/cancel logic here if needed in the future
+            }
 
 
 
@@ -987,6 +1010,12 @@ function setupEventListeners() {
             removeItemFromCart(productId);
         }
 
+        // --- [NEW] Handler for closing the new modal ---
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#manage-sale-payment-modal .modal-close-trigger')) {
+                closeManageSalePaymentsModal();
+            }
+        });
 
 
 
@@ -1821,34 +1850,27 @@ function setupEventListeners() {
             const user = appState.currentUser;
             if (!user) return;
 
-            // Get the invoice ID from the hidden input
             const invoiceId = document.getElementById('record-sale-invoice-id').value;
-            if (!invoiceId) return alert("Error: No invoice ID found.");
+            const invoiceData = getSalesHistoryDataById(invoiceId);
+            if (!invoiceData) return alert("Error: Cannot find parent invoice data.");
 
-            // Get the original invoice data to calculate overpayment
-            const originalInvoice = getSalesHistoryDataById(invoiceId);
-        
-            if (!originalInvoice) return alert("Error: Could not find original invoice data.");
-
-
-            const amountPaid = parseFloat(document.getElementById('record-sale-amount').value);
-            const balanceDue = originalInvoice.balanceDue;
+            const amountPaidInput = parseFloat(document.getElementById('record-sale-amount').value);
+            const balanceDue = invoiceData.balanceDue;
             
             let donationAmount = 0;
-            if (amountPaid > balanceDue) {
-                donationAmount = amountPaid - balanceDue;
+            if (amountPaidInput > balanceDue) {
+                donationAmount = amountPaidInput - balanceDue;
             }
-            const amountToApplyToInvoice = Math.min(amountPaid, balanceDue);
+            const amountToApplyToInvoice = Math.min(amountPaidInput, balanceDue);
 
-            // Assemble the payment data object
             const paymentData = {
                 invoiceId: invoiceId,
                 amountPaid: amountToApplyToInvoice,
                 donationAmount: donationAmount,
-                customerName: originalInvoice.customerInfo.name, // For the donation record
+                customerName: invoiceData.customerInfo.name,
                 paymentMode: document.getElementById('record-sale-mode').value,
                 transactionRef: document.getElementById('record-sale-ref').value,
-                notes: document.getElementById('record-sale-notes').value
+                notes: '' // Add a notes field to the modal if you need it
             };
 
             // Validation
@@ -1862,8 +1884,7 @@ function setupEventListeners() {
             try {
                 await recordSalePayment(paymentData, user);
                 alert("Payment recorded successfully!");
-                closeRecordSalePaymentModal();
-                // The real-time listeners will automatically update the sales history grid.
+                recordSalePaymentForm.reset(); // Reset the form for the next payment
             } catch (error) {
                 console.error("Error recording sale payment:", error);
                 alert(`Failed to record payment: ${error.message}`);
