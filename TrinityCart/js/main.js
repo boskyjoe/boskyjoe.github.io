@@ -755,8 +755,8 @@ function setupEventListeners() {
                     const invoiceData = getSalesHistoryDataById(docId);
                 
                     if (invoiceData) {
-                        //showRecordSalePaymentModal(invoiceData);
-                        showManageSalePaymentsModal(invoiceData);
+                        showRecordSalePaymentModal(invoiceData);
+                        //showManageSalePaymentsModal(invoiceData);
 
                     } else {
                         alert("Error: Could not find data for the selected invoice.");
