@@ -89,7 +89,8 @@ import {
     calculateSalesTotals,addItemToCart,getSalesCartItems, 
     removeItemFromCart,showRecordSalePaymentModal, 
     closeRecordSalePaymentModal,getSalesHistoryDataById,
-    getSalePaymentDataFromGridById,switchPaymentModalTab,
+    getSalePaymentDataFromGridById,switchPaymentModalTab,resetSalePaymentForm,
+    refreshSalePaymentModal,
 } from './ui.js';
 
 import { 
@@ -1899,6 +1900,17 @@ function setupEventListeners() {
                 await recordSalePayment(paymentData, user);
                 alert("Payment recorded successfully!");
                 recordSalePaymentForm.reset(); // Reset the form for the next payment
+
+                // 3. Fetch the LATEST version of the invoice data.
+                const updatedInvoiceData = await getSalesHistoryDataById(invoiceId);
+
+                // 4. If found, call a new UI function to refresh the modal's content.
+                if (updatedInvoiceData) {
+                    refreshSalePaymentModal(updatedInvoiceData);
+                } else {
+                    // If something went wrong, just close the modal.
+                    closeRecordSalePaymentModal();
+                }
             } catch (error) {
                 console.error("Error recording sale payment:", error);
                 alert(`Failed to record payment: ${error.message}`);
