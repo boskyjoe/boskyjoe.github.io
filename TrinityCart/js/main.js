@@ -11,7 +11,7 @@ import {
 import { appState } from './state.js';
 import { firebaseConfig, USERS_COLLECTION_PATH } from './config.js';
 
-import { updateUI, showView, showSuppliersView,showLoader, hideLoader } from './ui.js';
+import { updateUI, showView, showSuppliersView,showLoader, hideLoader,formatCurrency } from './ui.js';
 import { showCategoriesView } from './ui.js';
 import { showModal } from './modal.js';
 
