@@ -3809,7 +3809,15 @@ export function showRecordSalePaymentModal(invoiceData) {
 
     // 5. Populate Payment Mode dropdown (Your existing code is correct)
     const paymentModeSelect = document.getElementById('record-sale-mode');
-    // ...
+    paymentModeSelect.innerHTML = '<option value="">Select mode...</option>';
+    masterData.paymentModes.forEach(mode => {
+        if (mode.isActive) {
+            const option = document.createElement('option');
+            option.value = mode.paymentMode;
+            option.textContent = mode.paymentMode;
+            paymentModeSelect.appendChild(option);
+        }
+    });
 
     // --- [NEW] 6. Attach a real-time listener for this invoice's payment history ---
     const db = firebase.firestore();
@@ -3832,7 +3840,7 @@ export function showRecordSalePaymentModal(invoiceData) {
     // ---------------------------------------------------------------------------------
 
     switchPaymentModalTab('tab-new-payment');
-    
+
     // 7. Show the modal
     modal.style.display = 'flex';
     setTimeout(() => modal.classList.add('visible'), 10);
