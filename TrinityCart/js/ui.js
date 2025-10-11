@@ -3452,6 +3452,15 @@ const salesHistoryGridOptions = {
     },
 
     columnDefs: [
+        {
+            headerName: "Actions",
+            width: 100,
+            cellClass: 'flex items-center justify-center',
+            cellRenderer: params => {
+                const paymentIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M2.25 8.25h15.5a2.25 2.25 0 0 1 2.25 2.25v6a2.25 2.25 0 0 1-2.25 2.25H4.5A2.25 2.25 0 0 1 2.25 16.5v-6a2.25 2.25 0 0 1 2.25-2.25Z" /><path d="M1.5 8.25a.75.75 0 0 1 .75-.75h15.5a.75.75 0 0 1 .75.75v.5a.75.75 0 0 1-.75.75H2.25a.75.75 0 0 1-.75-.75v-.5ZM16 12.5a.75.75 0 0 0 0-1.5h-1a.75.75 0 0 0 0 1.5h1Z" /></svg>`;
+                return `<button class="action-btn-icon hover:text-blue-600 action-btn-manage-payments" data-id="${params.data.id}" title="View Details & Manage Payments">${paymentIcon}</button>`;
+            }
+        },
         { field: "saleId", headerName: "Invoice ID", width: 180, filter: 'agTextColumnFilter' },
         {
             field: "saleDate",
@@ -3484,20 +3493,6 @@ const salesHistoryGridOptions = {
                 if (status === 'Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
                 if (status === 'Partially Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">${status}</span>`;
                 return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">${status}</span>`;
-            }
-        },
-        {
-            headerName: "Actions",
-            width: 80,
-            cellClass: 'flex items-center justify-center',
-            cellRenderer: params => {
-                const status = params.data.paymentStatus;
-                // Only show the button if the invoice is not fully paid.
-                if (status === 'Unpaid' || status === 'Partially Paid') {
-                    const paymentIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10 3.75a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5a.75.75 0 0 1 .75-.75z" /><path fill-rule="evenodd" d="M1.5 5.25a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v9.5a3 3 0 0 1-3 3h-11a3 3 0 0 1-3-3v-9.5zM3 6.75a1.5 1.5 0 0 1 1.5-1.5h11a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5h-11a1.5 1.5 0 0 1-1.5-1.5v-8z" clip-rule="evenodd" /></svg>`;
-                    return `<button class="action-btn-icon hover:text-green-600 action-btn-record-sale-payment" data-id="${params.data.id}" title="Record Payment">${paymentIcon}</button>`;
-                }
-                return ''; // Return empty for "Paid" invoices
             }
         },
         { field: "audit.createdBy", headerName: "Created By", flex: 1, filter: 'agTextColumnFilter' }
@@ -3550,17 +3545,20 @@ export function initializeSalesGrids() {
     const addProductModalGridDiv = document.getElementById('add-product-modal-grid'); // We need to add this ID to the modal in index.html
     const salePaymentItemsGridDiv = document.getElementById('sale-payment-items-grid');
 
+    const salePaymentHistoryGridDiv = document.getElementById('sale-payment-history-grid'); 
+
     // Destroy old grids before creating new ones to prevent memory leaks
     if (cartGridDiv) cartGridDiv.innerHTML = '';
     if (historyGridDiv) historyGridDiv.innerHTML = '';
     if (addProductModalGridDiv) addProductModalGridDiv.innerHTML = '';
 
-    if (cartGridDiv && historyGridDiv && addProductModalGridDiv && salePaymentItemsGridDiv) {
+    if (cartGridDiv && historyGridDiv && addProductModalGridDiv && salePaymentItemsGridDiv && salePaymentHistoryGridDiv) {
         console.log("[ui.js] Initializing (or re-initializing) Sales grids.");
         salesCartGridApi = createGrid(cartGridDiv, salesCartGridOptions);
         salesHistoryGridApi = createGrid(historyGridDiv, salesHistoryGridOptions);
         addProductModalGridApi = createGrid(addProductModalGridDiv, addProductModalGridOptions);
         salePaymentItemsGridApi = createGrid(salePaymentItemsGridDiv, salePaymentItemsGridOptions);
+        salePaymentHistoryGridApi = createGrid(salePaymentHistoryGridDiv, salePaymentHistoryGridOptions);
     }
 }
 
@@ -3828,6 +3826,10 @@ export function showRecordSalePaymentModal(invoiceData) {
     setTimeout(() => modal.classList.add('visible'), 10);
 }
 
+
+
+
+
 /**
  * [NEW] Closes the record sale payment modal.
  */
@@ -3837,6 +3839,133 @@ export function closeRecordSalePaymentModal() {
     modal.classList.remove('visible');
     setTimeout(() => { modal.style.display = 'none'; }, 300);
 }
+
+
+/**
+ * [NEW] Opens and populates the modal for managing payments for a sales invoice.
+ * @param {object} invoiceData - The data for the selected sales invoice.
+ */
+export function showManageSalePaymentsModal(invoiceData) {
+    const modal = document.getElementById('manage-sale-payment-modal');
+    if (!modal) return;
+
+    resetSalePaymentForm(); // Ensure form is in a clean state
+
+    // 1. Populate the hidden input with the invoice ID
+    document.getElementById('payment-form-invoice-id').value = invoiceData.id;
+
+    // 2. Populate the modal's header and summary panel
+    document.getElementById('manage-payment-modal-title').textContent = `Manage Payments for Invoice #${invoiceData.saleId}`;
+    document.getElementById('payment-summary-customer').textContent = invoiceData.customerInfo.name;
+    document.getElementById('payment-summary-total').textContent = formatCurrency(invoiceData.financials.totalAmount);
+    document.getElementById('payment-summary-paid').textContent = formatCurrency(invoiceData.totalAmountPaid);
+    document.getElementById('payment-summary-balance').textContent = formatCurrency(invoiceData.balanceDue);
+
+    // 3. Default the payment amount to the remaining balance due
+    document.getElementById('payment-form-amount').value = (invoiceData.balanceDue || 0).toFixed(2);
+
+    // 4. Populate the Payment Mode dropdown
+    const paymentModeSelect = document.getElementById('payment-form-mode');
+    // ... (logic to populate this dropdown from masterData)
+
+    // 5. Attach a real-time listener for this invoice's payment history
+    const db = firebase.firestore();
+    const paymentsQuery = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH)
+        .where('invoiceId', '==', invoiceData.id)
+        .orderBy('paymentDate', 'desc');
+    
+    if (salePaymentHistoryGridApi) salePaymentHistoryGridApi.setGridOption('loading', true);
+    const paymentsUnsub = paymentsQuery.onSnapshot(snapshot => {
+        const payments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (salePaymentHistoryGridApi) {
+            salePaymentHistoryGridApi.setGridOption('rowData', payments);
+            salePaymentHistoryGridApi.setGridOption('loading', false);
+        }
+    });
+
+    // We'll need a way to clean this up when the modal closes
+    modal.dataset.unsubscribeListener = paymentsUnsub;
+
+    // 6. Show the modal
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+}
+
+/**
+ * [NEW] Closes the manage sale payments modal and cleans up its listener.
+ */
+export function closeManageSalePaymentsModal() {
+    const modal = document.getElementById('manage-sale-payment-modal');
+    if (!modal) return;
+    
+    // Clean up the listener
+    const unsubscribe = modal.dataset.unsubscribeListener;
+    if (unsubscribe && typeof unsubscribe === 'function') {
+        unsubscribe();
+    }
+
+    modal.classList.remove('visible');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
+
+
+
+
+
+
+
+let salePaymentHistoryGridApi = null;
+
+// [NEW] Grid for the payment history inside the "Manage Sale Payments" modal
+const salePaymentHistoryGridOptions = {
+    getRowId: params => params.data.id,
+    columnDefs: [
+        { field: "paymentDate", headerName: "Payment Date", width: 140, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
+        { 
+            field: "amountPaid", 
+            headerName: "Amount Paid", 
+            width: 120, 
+            valueFormatter: p => formatCurrency(p.value),
+            cellStyle: params => params.value < 0 ? { color: 'red' } : {}
+        },
+        { 
+            field: "donationAmount", 
+            headerName: "Donation", 
+            width: 120,
+            valueFormatter: p => (p.value && p.value !== 0) ? formatCurrency(p.value) : '',
+            cellStyle: params => params.value < 0 ? { color: 'red' } : { 'font-weight': 'bold', color: 'purple' }
+        },
+        { field: "paymentMode", headerName: "Mode", flex: 1 },
+        { 
+            field: "status", 
+            headerName: "Status", 
+            width: 120, 
+            cellRenderer: p => {
+                if (p.value === 'Voided' || p.value === 'Void Reversal') return `<span class="text-xs font-semibold ... text-gray-600 bg-gray-200">${p.value}</span>`;
+                return `<span class="text-xs font-semibold ... text-green-600 bg-green-200">${p.value}</span>`;
+            }
+        },
+        {
+            headerName: "Actions",
+            width: 80,
+            cellClass: 'flex items-center justify-center',
+            cellRenderer: params => {
+                // Only show the Void button for verified, non-voided payments
+                if (params.data && params.data.status === 'Verified' && appState.currentUser.role === 'admin') {
+                    const voidIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M15.312 1.312a2.25 2.25 0 0 0-3.182 0l-10 10a2.25 2.25 0 0 0 0 3.182l10 10a2.25 2.25 0 0 0 3.182-3.182L6.818 11.25h10.432a.75.75 0 0 0 0-1.5H6.818l8.494-8.494a2.25 2.25 0 0 0 0-3.182Z" clip-rule="evenodd" /></svg>`;
+                    return `<button class="action-btn-icon action-btn-delete action-btn-void-sale-payment" data-id="${params.data.id}" title="Void Payment">${voidIcon}</button>`;
+                }
+                return '';
+            }
+        }
+    ],
+    onGridReady: params => { salePaymentHistoryGridApi = params.api; }
+};
+
+
+
+
+
 
 
 
