@@ -535,6 +535,13 @@ function setupEventListeners() {
             if (!docId || !grid) return;
 
             console.log('[what is the grid]:', grid.id);
+
+             // --- [NEW] DEBUGGING LOGS ---
+            console.log("Grid button clicked!");
+            console.log("Clicked button has classes:", gridButton.className);
+            console.log("Parent grid has ID:", grid.id);
+
+            
             // Logic for Purchase Invoices Grid
             if (grid.id === 'purchase-invoices-grid') {
                 if (gridButton.classList.contains('action-btn-edit')) {
@@ -741,7 +748,9 @@ function setupEventListeners() {
                 }
             }
             else if (grid.id === 'sales-history-grid') {
+                console.log("Condition MET: grid.id is 'sales-history-grid'");
                 if (gridButton.classList.contains('action-btn-manage-payments')) {
+                    console.log("Condition MET: Button has class 'action-btn-manage-payments'. Opening modal...");
                     // We need to get the full data for the selected invoice row
                     const invoiceData = getSalesHistoryDataById(docId);
                 
