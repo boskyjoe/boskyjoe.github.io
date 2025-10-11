@@ -1812,3 +1812,17 @@ export async function voidSalePayment(paymentId, adminUser) {
         }
     });
 }
+
+/**
+ * [NEW] Fetches a single sales invoice document by its ID.
+ */
+export async function getSalesInvoiceById(invoiceId) {
+    const db = firebase.firestore();
+    const docRef = db.collection(SALES_COLLECTION_PATH).doc(invoiceId);
+    const docSnap = await docRef.get();
+    if (docSnap.exists) {
+        return { id: docSnap.id, ...docSnap.data() };
+    } else {
+        throw new Error("Could not find the updated invoice document.");
+    }
+}
