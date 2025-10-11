@@ -1539,41 +1539,60 @@
 
                 <!-- Bottom Section: Payment Form -->
                 <div class="pt-4 border-t">
-                    <h4 class="font-semibold mb-2">New Payment Details</h4>
-                    <div class="space-y-4">
-                        <form id="record-sale-payment-form" class="p-4 bg-gray-50 rounded-lg border space-y-4">
-                            <input type="hidden" id="record-sale-invoice-id">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label for="record-sale-amount" class="form-label">Amount Paid <span class="text-red-500">*</span></label>
-                                    <input type="number" id="record-sale-amount" class="form-input w-full" required step="0.01" min="0.01">
+
+                    <div class="border-b border-gray-200">
+                        <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                            <a href="#" id="tab-new-payment" class="payment-modal-tab tab tab-active">Record a New Payment</a>
+                            <a href="#" id="tab-payment-history" class="payment-modal-tab tab">View Payment History</a>
+                        </nav>
+                    </div>
+
+                    <!-- Tab Content Panels -->
+                    <div>
+                        <!-- Panel 1: New Payment Form -->
+                        <div id="panel-new-payment" class="payment-modal-tab-panel active p-4">
+                            <form id="record-sale-payment-form" class="space-y-4">
+                                <!-- All your form inputs for amount, mode, ref, notes go here -->
+                                <input type="hidden" id="record-sale-invoice-id">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label for="record-sale-amount" class="form-label">Amount Paid <span class="text-red-500">*</span></label>
+                                        <input type="number" id="record-sale-amount" class="form-input w-full" required step="0.01" min="0.01">
+                                    </div>
+                                    <div>
+                                        <label for="record-sale-mode" class="form-label">Payment Mode <span class="text-red-500">*</span></label>
+                                        <select id="record-sale-mode" class="form-input w-full" required></select>
+                                    </div>
+                                    <div>
+                                        <label for="record-sale-ref" class="form-label">Reference # <span class="text-red-500">*</span></label>
+                                        <input type="text" id="record-sale-ref" class="form-input w-full" required>
+                                    </div>
+                                    <div>
+                                        <label for="record-sale-notes" class="form-label">Notes (Optional)</label>
+                                        <textarea id="record-sale-notes" class="form-input w-full" rows="2" placeholder="e.g., Paid in person, part of check #123..."></textarea>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label for="record-sale-mode" class="form-label">Payment Mode <span class="text-red-500">*</span></label>
-                                    <select id="record-sale-mode" class="form-input w-full" required></select>
+                                <div id="sale-payment-overpayment-note" class="text-sm text-green-600 font-semibold hidden"></div>
+                                <!-- Modal Footer -->
+                                <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
+                                    <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">Cancel</button>
+                                    <button type="submit" class="modal-btn bg-green-600 hover:bg-green-700 text-white">Submit Payment</button>
                                 </div>
-                                <div>
-                                    <label for="record-sale-ref" class="form-label">Reference # <span class="text-red-500">*</span></label>
-                                    <input type="text" id="record-sale-ref" class="form-input w-full" required>
-                                </div>
-                                <div>
-                                    <label for="record-sale-notes" class="form-label">Notes (Optional)</label>
-                                    <textarea id="record-sale-notes" class="form-input w-full" rows="2" placeholder="e.g., Paid in person, part of check #123..."></textarea>
-                                </div>
-                            </div>
-                            <div id="sale-payment-overpayment-note" class="text-sm text-green-600 font-semibold hidden"></div>
-                            <!-- Modal Footer -->
-                            <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
-                                <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">Cancel</button>
-                                <button type="submit" class="modal-btn bg-green-600 hover:bg-green-700 text-white">Submit Payment</button>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
+                        <!-- Panel 2: Payment History -->
+                        <div id="panel-payment-history" class="payment-modal-tab-panel p-4">
+                            <div id="sale-payment-history-grid" class="ag-theme-alpine" style="height: 250px; width: 100%;"></div>
+                        </div>
                     </div>
                     <div class="pt-4 border-t">
                         <h4 class="font-semibold mb-2 text-gray-700">Payment History</h4>
                         <div id="sale-payment-history-grid" class="ag-theme-alpine" style="height: 200px; width: 100%;"></div>
                     </div>
                 </div>
+
+
+
             </div>
         </div>
     </div>
