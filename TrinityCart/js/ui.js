@@ -3962,7 +3962,11 @@ const salePaymentHistoryGridOptions = {
     onGridReady: params => { salePaymentHistoryGridApi = params.api; }
 };
 
-
+export function getSalePaymentDataFromGridById(paymentId) {
+    if (!salesPaymentsGridApi) return null; // Assuming you create this API variable
+    const rowNode = salesPaymentsGridApi.getRowNode(paymentId);
+    return rowNode ? rowNode.data : null;
+}
 
 
 
@@ -4003,6 +4007,8 @@ export function renderSidebar(role) {
 
 
 }
+
+
 
 export function showView(viewId) {
 
