@@ -3831,6 +3831,8 @@ export function showRecordSalePaymentModal(invoiceData) {
     });
     // ---------------------------------------------------------------------------------
 
+    switchPaymentModalTab('tab-new-payment');
+    
     // 7. Show the modal
     modal.style.display = 'flex';
     setTimeout(() => modal.classList.add('visible'), 10);
@@ -3911,6 +3913,23 @@ export function getSalePaymentDataFromGridById(paymentId) {
     return rowNode ? rowNode.data : null;
 }
 
+
+/**
+ * [NEW] Handles switching between the tabs inside the payment management modal.
+ * @param {string} tabId - The ID of the tab that was clicked.
+ */
+export function switchPaymentModalTab(tabId) {
+    // 1. Handle the visual state of the tab links
+    document.querySelectorAll('.payment-modal-tab').forEach(tab => {
+        tab.classList.toggle('tab-active', tab.id === tabId);
+    });
+
+    // 2. Handle the visibility of the tab panels
+    document.querySelectorAll('.payment-modal-tab-panel').forEach(panel => {
+        const shouldBeActive = panel.id.includes(tabId.replace('tab-', ''));
+        panel.classList.toggle('active', shouldBeActive);
+    });
+}
 
 
 
