@@ -1865,6 +1865,18 @@ function setupEventListeners() {
             const user = appState.currentUser;
             if (!user) return;
 
+
+            // --- [NEW] UI State Management ---
+            const submitButton = recordSalePaymentForm.querySelector('button[type="submit"]');
+            const formElements = recordSalePaymentForm.elements;
+
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Submitting...';
+            for (let i = 0; i < formElements.length; i++) {
+                formElements[i].disabled = true;
+            }
+
             const invoiceId = document.getElementById('record-sale-invoice-id').value;
             const invoiceData = getSalesHistoryDataById(invoiceId);
             if (!invoiceData) return alert("Error: Cannot find parent invoice data.");
@@ -1915,6 +1927,14 @@ function setupEventListeners() {
             } catch (error) {
                 console.error("Error recording sale payment:", error);
                 alert(`Failed to record payment: ${error.message}`);
+            } finally {
+                // --- [NEW] ALWAYS re-enable the form ---
+                // This 'finally' block runs whether the try succeeds or fails.
+                submitButton.disabled = false;
+                submitButton.textContent = 'Submit Payment';
+                for (let i = 0; i < formElements.length; i++) {
+                    formElements[i].disabled = false;
+                }
             }
         });
     }
