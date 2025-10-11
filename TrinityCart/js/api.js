@@ -1695,33 +1695,39 @@ export async function recordSalePayment(paymentData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
     
-    const { invoiceId, amountPaid, donationAmount, customerName } = paymentData;
+    // Destructure all the data we receive from the controller
+    const { invoiceId, amountPaid, donationAmount, customerName, paymentMode, transactionRef, notes } = paymentData;
+
 
     const saleRef = db.collection(SALES_COLLECTION_PATH).doc(invoiceId);
-    const paymentRef = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).doc();
+    const paymentRef = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).doc(); // Get a ref to the new payment doc
+
 
     return db.runTransaction(async (transaction) => {
-        // 1. READ the sales invoice to ensure it exists and to get current totals.
+        // 1. READ the sales invoice to get its current state.
         const saleDoc = await transaction.get(saleRef);
         if (!saleDoc.exists) {
             throw new Error("The invoice you are trying to pay does not exist.");
         }
         const currentSaleData = saleDoc.data();
 
-        // 2. VALIDATION (optional but good practice)
-        // You could add a check here to ensure the payment doesn't exceed the balance due + donation
-        // but the UI logic should already prevent this.
-
-        // 3. WRITE: Create the new payment document in the ledger.
+        // 2. WRITE: Create the new payment document in the ledger.
+        // This now includes the donationAmount.
         transaction.set(paymentRef, {
-            ...paymentData,
+            invoiceId: invoiceId,
             paymentId: `SPAY-${Date.now()}`,
             paymentDate: now,
-            status: 'Verified', // Payments recorded this way are considered verified
+            amountPaid: amountPaid,
+            donationAmount: donationAmount || 0, // <-- [NEW] Store donation amount
+            totalCollected: amountPaid + (donationAmount || 0),
+            paymentMode: paymentMode,
+            transactionRef: transactionRef,
+            notes: notes || '',
+            status: 'Verified',
             recordedBy: user.email
         });
 
-        // 4. WRITE: Update the main sales invoice's financial totals.
+        // 3. WRITE: Update the main sales invoice's financial totals.
         const newTotalAmountPaid = (currentSaleData.totalAmountPaid || 0) + amountPaid;
         const newBalanceDue = currentSaleData.balanceDue - amountPaid;
         const newPaymentStatus = newBalanceDue <= 0 ? 'Paid' : 'Partially Paid';
@@ -1732,16 +1738,76 @@ export async function recordSalePayment(paymentData, user) {
             paymentStatus: newPaymentStatus
         });
 
-        // 5. WRITE: If there was an overpayment, create a donation record.
+        // 4. WRITE: If there was an overpayment, create a donation record.
         if (donationAmount > 0) {
             const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
             transaction.set(donationRef, {
                 amount: donationAmount,
                 donationDate: now,
                 source: 'Invoice Overpayment',
-                relatedSaleId: saleRef.id,
+                // --- [NEW & CRITICAL] Link the donation to the new payment's ID ---
+                relatedPaymentId: paymentRef.id,
                 customerName: customerName,
                 recordedBy: user.email,
+            });
+        }
+    });
+}
+
+
+/**
+ * [NEW & TRANSACTIONAL] Voids a verified payment, creating a reversing
+ * transaction and updating all related financial totals.
+ * @param {string} paymentId - The document ID of the payment to void.
+ * @param {object} adminUser - The admin performing the void.
+ */
+export async function voidSalePayment(paymentId, adminUser) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const paymentRef = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId);
+
+    return db.runTransaction(async (transaction) => {
+        // 1. READ the original payment document to get its details.
+        const paymentDoc = await transaction.get(paymentRef);
+        if (!paymentDoc.exists || paymentDoc.data().status !== 'Verified') {
+            throw new Error("Payment not found or is not in a 'Verified' state to be voided.");
+        }
+        const originalPaymentData = paymentDoc.data();
+        const orderRef = db.collection(SALES_COLLECTION_PATH).doc(originalPaymentData.invoiceId);
+
+        // 2. WRITE: Update the original payment's status to "Voided".
+        transaction.update(paymentRef, { status: 'Voided' });
+
+        // 3. WRITE: Create a new, reversing payment record for the audit trail.
+        const reversalPaymentRef = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).doc();
+        transaction.set(reversalPaymentRef, {
+            invoiceId: originalPaymentData.invoiceId,
+            paymentId: `VOID-${originalPaymentData.paymentId}`,
+            paymentDate: now,
+            amountPaid: -originalPaymentData.amountPaid, // Negative amount
+            donationAmount: -originalPaymentData.donationAmount, // Negative donation
+            totalCollected: -originalPaymentData.totalCollected,
+            paymentMode: 'REVERSAL',
+            transactionRef: `Reversal for ${originalPaymentData.transactionRef}`,
+            status: 'Void Reversal',
+            recordedBy: adminUser.email
+        });
+
+        // 4. WRITE: Atomically reverse the amounts on the main sales invoice.
+        transaction.update(orderRef, {
+            totalAmountPaid: firebase.firestore.FieldValue.increment(-originalPaymentData.amountPaid),
+            balanceDue: firebase.firestore.FieldValue.increment(originalPaymentData.amountPaid)
+        });
+
+        // 5. WRITE: If there was a donation, create a reversing donation record.
+        if (originalPaymentData.donationAmount > 0) {
+            const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
+            transaction.set(donationRef, {
+                amount: -originalPaymentData.donationAmount, // Negative amount
+                donationDate: now,
+                source: 'Payment Void',
+                relatedPaymentId: paymentRef.id, // Link to the original voided payment
+                recordedBy: adminUser.email,
             });
         }
     });
