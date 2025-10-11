@@ -62,6 +62,25 @@ const rolesList = ['admin', 'sales_staff', 'inventory_manager', 'finance', 'team
 
 
 
+/**
+ * [NEW] Displays the global loading spinner overlay.
+ */
+export function showLoader() {
+    const loader = document.getElementById('loading-overlay');
+    if (loader) {
+        loader.classList.remove('hidden');
+    }
+}
+
+/**
+ * [NEW] Hides the global loading spinner overlay.
+ */
+export function hideLoader() {
+    const loader = document.getElementById('loading-overlay');
+    if (loader) {
+        loader.classList.add('hidden');
+    }
+}
 
 // --- UPDATE THE GLOBAL EVENT LISTENER ---
 document.addEventListener('masterDataUpdated', (e) => {
