@@ -3934,9 +3934,22 @@ const salePaymentHistoryGridOptions = {
     onGridReady: params => { salePaymentHistoryGridApi = params.api; }
 };
 
+/**
+ * [CORRECTED] Gets the data for a specific payment row from the
+ * sales payment HISTORY grid (the one inside the modal).
+ * @param {string} paymentId - The document ID of the payment.
+ * @returns {object|null} The payment's data object or null if not found.
+ */
 export function getSalePaymentDataFromGridById(paymentId) {
-    if (!salesPaymentsGridApi) return null; // Assuming you create this API variable
-    const rowNode = salesPaymentsGridApi.getRowNode(paymentId);
+    // --- THIS IS THE FIX ---
+    // Use the correct grid API variable for the payment history grid.
+    if (!salePaymentHistoryGridApi) {
+        console.error("Cannot get payment data: salePaymentHistoryGridApi is not ready.");
+        return null;
+    }
+    const rowNode = salePaymentHistoryGridApi.getRowNode(paymentId);
+    // -----------------------
+    
     return rowNode ? rowNode.data : null;
 }
 
