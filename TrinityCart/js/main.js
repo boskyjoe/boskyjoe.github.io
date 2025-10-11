@@ -767,14 +767,24 @@ function setupEventListeners() {
 
                 if (gridButton.classList.contains('action-btn-void-sale-payment')) {
                     if (confirm(`Are you sure you want to VOID this payment of ${formatCurrency(paymentData.amountPaid)}? This will reverse the transaction and cannot be undone.`)) {
+                        showLoader(); 
                         try {
                             await voidSalePayment(docId, user);
                             alert("Payment successfully voided.");
                             // The real-time listeners will automatically update the UI.
+                            const updatedInvoiceData = await getSalesInvoiceById(paymentData.invoiceId);
+
+                            // 3. If found, call the UI function to refresh the modal's content.
+                            if (updatedInvoiceData) {
+                                refreshSalePaymentModal(updatedInvoiceData);
+                            }
                         } catch (error) {
                             console.error("Error voiding payment:", error);
                             alert(`Failed to void payment: ${error.message}`);
-                        }
+                        } finally {
+                            // 2. ALWAYS hide the loader, whether it succeeded or failed.
+                            hideLoader();
+                        }   
                     }
                 }
                 // Add edit/cancel logic here if needed in the future
