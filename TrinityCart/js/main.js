@@ -102,7 +102,7 @@ import {
     submitPaymentRecord,updatePaymentRecord,
     verifyConsignmentPayment,cancelPaymentRecord,
     createSaleAndUpdateInventory,recordSalePayment,
-    voidSalePayment,
+    voidSalePayment,getSalesInvoiceById,
 } from './api.js';
 
 
@@ -1899,10 +1899,11 @@ function setupEventListeners() {
             try {
                 await recordSalePayment(paymentData, user);
                 alert("Payment recorded successfully!");
-                recordSalePaymentForm.reset(); // Reset the form for the next payment
+
+                resetSalePaymentForm(); // Reset the form for the next payment
 
                 // 3. Fetch the LATEST version of the invoice data.
-                const updatedInvoiceData = getSalesHistoryDataById(invoiceId);
+                const updatedInvoiceData = await getSalesInvoiceById(invoiceId);
 
                 // 4. If found, call a new UI function to refresh the modal's content.
                 if (updatedInvoiceData) {
