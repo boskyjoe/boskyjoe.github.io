@@ -13,7 +13,8 @@
 </head>
 
 <body class="bg-gray-100 font-sans">
-    <div id="loading-overlay" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden" style="z-index: 60;">
+    <div id="loading-overlay" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden"
+        style="z-index: 60;">
         <div class="w-16 h-16 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin"></div>
     </div>
 
@@ -224,7 +225,7 @@
                                     <input type="number" id="initialStock-input" placeholder="e.g., 50" value="0"
                                         class="form-input w-full" required step="1">
                                 </div>
-                                
+
                                 <!-- Selling Price (Read-only) -->
                                 <div>
                                     <label for="sellingPrice-display" class="form-label">Selling Price
@@ -260,12 +261,13 @@
                 <!--   VIEW: SALES CATALOGUE MANAGEMENT  -->
                 <!-- =================================== -->
                 <div id="sales-catalogue-view" class="view space-y-8">
-                    
+
                     <!-- Card 1: Catalogue Header Form -->
                     <div class="bg-white rounded-lg shadow-lg">
                         <!-- Card Header -->
                         <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 id="catalogue-form-title" class="text-lg font-semibold text-gray-800">Create New Sales Catalogue</h3>
+                            <h3 id="catalogue-form-title" class="text-lg font-semibold text-gray-800">Create New Sales
+                                Catalogue</h3>
                         </div>
 
                         <!-- Card Body -->
@@ -276,7 +278,8 @@
                                 <!-- Catalogue Name -->
                                 <div class="md:col-span-2">
                                     <label for="catalogue-name-input" class="form-label">Catalogue Name</label>
-                                    <input type="text" id="catalogue-name-input" placeholder="e.g., Christmas Bake Sale 2025" class="form-input w-full" required>
+                                    <input type="text" id="catalogue-name-input"
+                                        placeholder="e.g., Christmas Bake Sale 2025" class="form-input w-full" required>
                                 </div>
 
                                 <!-- Sales Season Dropdown -->
@@ -290,10 +293,13 @@
 
                                 <!-- Form Actions / Submit Button -->
                                 <div class="flex justify-start space-x-3">
-                                    <button type="submit" id="catalogue-form-submit-btn" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
+                                    <button type="submit" id="catalogue-form-submit-btn"
+                                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
                                         Save Catalogue
                                     </button>
-                                    <button type="button" id="catalogue-form-cancel-btn" class="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 font-semibold" style="display: none;">
+                                    <button type="button" id="catalogue-form-cancel-btn"
+                                        class="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 font-semibold"
+                                        style="display: none;">
                                         Cancel Edit
                                     </button>
                                 </div>
@@ -305,17 +311,21 @@
                     <div class="bg-white rounded-lg shadow-lg">
                         <div class="p-6">
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                
+
                                 <!-- Left Side: Available Products -->
                                 <div>
-                                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Available Products in Master Catalogue</h4>
-                                    <div id="available-products-grid" class="ag-theme-alpine" style="height: 600px; width: 100%;"></div>
+                                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Available Products in Master
+                                        Catalogue</h4>
+                                    <div id="available-products-grid" class="ag-theme-alpine"
+                                        style="height: 600px; width: 100%;"></div>
                                 </div>
 
                                 <!-- Right Side: Items in this Catalogue -->
                                 <div>
-                                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Items in this Sales Catalogue</h4>
-                                    <div id="catalogue-items-grid" class="ag-theme-alpine" style="height: 600px; width: 100%;"></div>
+                                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Items in this Sales Catalogue
+                                    </h4>
+                                    <div id="catalogue-items-grid" class="ag-theme-alpine"
+                                        style="height: 600px; width: 100%;"></div>
                                 </div>
 
                             </div>
@@ -328,7 +338,8 @@
                             <h3 class="text-lg font-semibold text-gray-800">Existing Sales Catalogues</h3>
                         </div>
                         <div class="p-2">
-                            <div id="existing-catalogues-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+                            <div id="existing-catalogues-grid" class="ag-theme-alpine"
+                                style="height: 400px; width: 100%;"></div>
                         </div>
                     </div>
 
@@ -338,21 +349,22 @@
 
 
 
-                
+
                 <!-- View: Purchase Management (Form-over-Grid Layout) -->
-                            
+
                 <div id="purchases-view" class="view space-y-8">
                     <h2 class="text-2xl font-semibold mb-4">Purchase Management</h2>
 
                     <!-- Card 1: Purchase Invoice Form (The "Editor") -->
                     <div class="bg-white rounded-lg shadow-lg">
                         <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 id="purchase-form-title" class="text-lg font-semibold text-gray-800">Create New Purchase Invoice</h3>
+                            <h3 id="purchase-form-title" class="text-lg font-semibold text-gray-800">Create New Purchase
+                                Invoice</h3>
                         </div>
-                        
+
                         <form id="purchase-invoice-form">
                             <input type="hidden" id="purchase-invoice-doc-id"> <!-- To store the ID when editing -->
-                            
+
                             <!-- Part 1: Invoice Header Details -->
                             <div class="p-6 border-b border-gray-200">
                                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -377,7 +389,9 @@
                                 <div id="purchase-line-items-container" class="space-y-4">
                                     <!-- Initial line item row will be added here -->
                                 </div>
-                                <button type="button" id="add-line-item-btn" class="mt-4 text-sm font-semibold text-blue-600 hover:text-blue-800">+ Add Another Product</button>
+                                <button type="button" id="add-line-item-btn"
+                                    class="mt-4 text-sm font-semibold text-blue-600 hover:text-blue-800">+ Add Another
+                                    Product</button>
                             </div>
 
                             <!-- Part 3: Invoice Totals & Discounts -->
@@ -385,31 +399,36 @@
                                 <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
                                     <!-- This spacer pushes the totals to the right on larger screens -->
                                     <div class="md:col-span-2"></div>
-                                    
+
                                     <!-- The actual totals section -->
                                     <div class="md:col-span-3 space-y-3">
                                         <div class="flex justify-between items-center">
                                             <span class="text-gray-600">Items Subtotal:</span>
                                             <!-- THE MISSING ELEMENT IS HERE -->
-                                            <span id="purchase-subtotal" class="font-semibold text-gray-800">$0.00</span>
+                                            <span id="purchase-subtotal"
+                                                class="font-semibold text-gray-800">$0.00</span>
                                         </div>
-                                        
+
                                         <!-- Invoice Level Discount -->
                                         <div class="flex justify-between items-center space-x-2">
-                                            <label for="invoice-discount-type" class="text-gray-600">Invoice Discount:</label>
+                                            <label for="invoice-discount-type" class="text-gray-600">Invoice
+                                                Discount:</label>
                                             <div class="flex items-center space-x-2">
                                                 <select id="invoice-discount-type" class="form-input w-28 text-sm">
                                                     <option value="Percentage">Percent</option>
                                                     <option value="Amount">Amount</option>
                                                 </select>
-                                                <input type="number" id="invoice-discount-value" class="form-input w-24 text-right" placeholder="0">
+                                                <input type="number" id="invoice-discount-value"
+                                                    class="form-input w-24 text-right" placeholder="0">
                                             </div>
                                         </div>
 
                                         <!-- Invoice Level Tax -->
                                         <div class="flex justify-between items-center space-x-2">
-                                            <label for="invoice-tax-percentage" class="text-gray-600">Additional Tax (%):</label>
-                                            <input type="number" id="invoice-tax-percentage" class="form-input w-24 text-right" placeholder="0">
+                                            <label for="invoice-tax-percentage" class="text-gray-600">Additional Tax
+                                                (%):</label>
+                                            <input type="number" id="invoice-tax-percentage"
+                                                class="form-input w-24 text-right" placeholder="0">
                                         </div>
 
                                         <hr>
@@ -424,9 +443,13 @@
                             </div>
 
                             <!-- Part 4: Form Actions -->
-                            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg flex justify-end space-x-3">
-                                <button type="button" id="cancel-edit-btn" class="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 font-semibold" style="display: none;">Cancel Edit</button>
-                                <button type="submit" id="purchase-form-submit-btn" class="bg-green-600 text-white px-8 py-2 rounded-md hover:bg-green-700 font-semibold">
+                            <div
+                                class="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg flex justify-end space-x-3">
+                                <button type="button" id="cancel-edit-btn"
+                                    class="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 font-semibold"
+                                    style="display: none;">Cancel Edit</button>
+                                <button type="submit" id="purchase-form-submit-btn"
+                                    class="bg-green-600 text-white px-8 py-2 rounded-md hover:bg-green-700 font-semibold">
                                     Save New Invoice
                                 </button>
                             </div>
@@ -442,16 +465,18 @@
                                 <a href="#" id="tab-payments" class="tab tab-disabled">Payments for Invoices</a>
                             </nav>
                         </div>
-                        
+
                         <!-- Tab Content Panels -->
                         <div class="p-2">
                             <!-- Panel 1: All Invoices Grid -->
                             <div id="panel-invoices" class="tab-panel active">
-                                <div id="purchase-invoices-grid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
+                                <div id="purchase-invoices-grid" class="ag-theme-alpine"
+                                    style="height: 500px; width: 100%;"></div>
                             </div>
                             <!-- Panel 2: Payments Grid -->
                             <div id="panel-payments" class="tab-panel">
-                                <div id="purchase-payments-grid" class="ag-theme-alpine" style="height: 300px; width: 100%;"></div>
+                                <div id="purchase-payments-grid" class="ag-theme-alpine"
+                                    style="height: 300px; width: 100%;"></div>
                             </div>
                         </div>
                     </div>
@@ -464,17 +489,19 @@
                 <!--    VIEW: CONSIGNMENT MANAGEMENT     -->
                 <!-- =================================== -->
                 <div id="consignment-view" class="view space-y-8">
-                    
+
                     <!-- Card 1: Actions and Master Grid -->
                     <div class="bg-white rounded-lg shadow-lg">
                         <div class="p-6">
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="text-xl font-semibold text-gray-800">Consignment Orders</h3>
-                                <button id="request-consignment-btn" class="bg-blue-600 text-white px-5 py-2 rounded-md hover:bg-blue-700 font-semibold">
+                                <button id="request-consignment-btn"
+                                    class="bg-blue-600 text-white px-5 py-2 rounded-md hover:bg-blue-700 font-semibold">
                                     + Request New Consignment
                                 </button>
                             </div>
-                            <div id="consignment-orders-grid" class="ag-theme-alpine" style="height: 350px; width: 100%;"></div>
+                            <div id="consignment-orders-grid" class="ag-theme-alpine"
+                                style="height: 350px; width: 100%;"></div>
                         </div>
                     </div>
 
@@ -482,17 +509,23 @@
                     <div id="consignment-detail-panel" class="bg-white rounded-lg shadow-lg hidden">
                         <!-- Header for the selected order -->
                         <div class="bg-gray-50 border-b p-4">
-                            <h3 class="text-lg font-semibold">Details for Order: <span id="selected-consignment-id" class="text-blue-600">...</span></h3>
-                            <p class="text-sm text-gray-600">Requested by <span id="selected-consignment-member" class="font-medium">...</span> for team <span id="selected-consignment-team" class="font-medium">...</span></p>
+                            <h3 class="text-lg font-semibold">Details for Order: <span id="selected-consignment-id"
+                                    class="text-blue-600">...</span></h3>
+                            <p class="text-sm text-gray-600">Requested by <span id="selected-consignment-member"
+                                    class="font-medium">...</span> for team <span id="selected-consignment-team"
+                                    class="font-medium">...</span></p>
                         </div>
 
                         <!-- Fulfillment View (for "Pending" orders) -->
                         <div id="fulfillment-view" class="p-6 space-y-4 hidden">
                             <h4 class="font-semibold text-gray-700">Fulfill Pending Request</h4>
-                            <p class="text-sm text-gray-600">Verify the physical items and edit quantities if necessary before checkout.</p>
-                            <div id="fulfillment-items-grid" class="ag-theme-alpine" style="height: 300px; width: 100%;"></div>
+                            <p class="text-sm text-gray-600">Verify the physical items and edit quantities if necessary
+                                before checkout.</p>
+                            <div id="fulfillment-items-grid" class="ag-theme-alpine"
+                                style="height: 300px; width: 100%;"></div>
                             <div class="flex justify-end">
-                                <button id="fulfill-checkout-btn" class="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 font-bold">
+                                <button id="fulfill-checkout-btn"
+                                    class="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 font-bold">
                                     Fulfill & Check Out
                                 </button>
                             </div>
@@ -503,7 +536,8 @@
                             <!-- Tab Headers -->
                             <div class="border-b border-gray-200">
                                 <nav class="-mb-px flex space-x-6 px-6" aria-label="Tabs">
-                                    <a href="#" id="tab-items-on-hand" class="consignment-tab tab tab-active">Items on Hand</a>
+                                    <a href="#" id="tab-items-on-hand" class="consignment-tab tab tab-active">Items on
+                                        Hand</a>
                                     <a href="#" id="tab-activity-log" class="consignment-tab tab">Activity Log</a>
                                     <a href="#" id="tab-consignment-payments" class="consignment-tab tab">Payments</a>
                                 </nav>
@@ -512,77 +546,103 @@
                             <div class="p-6">
                                 <!-- Panel 1: Items on Hand -->
                                 <div id="panel-items-on-hand" class="consignment-tab-panel active">
-                                    
-                                    <div id="consignment-items-grid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
+
+                                    <div id="consignment-items-grid" class="ag-theme-alpine"
+                                        style="height: 500px; width: 100%;"></div>
                                 </div>
                                 <!-- Panel 2: Activity Log -->
                                 <div id="panel-activity-log" class="consignment-tab-panel">
-                                    <div id="consignment-activity-grid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
+                                    <div id="consignment-activity-grid" class="ag-theme-alpine"
+                                        style="height: 500px; width: 100%;"></div>
                                 </div>
-                                
+
                                 <!-- Panel 3: Payments (New Ledger Model Layout) -->
                                 <div id="panel-consignment-payments" class="consignment-tab-panel space-y-8">
-                                    
+
                                     <!-- Section 1: Top Two Panels (Financial Summary & Payment Form) -->
                                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                        
+
                                         <!-- Top-Left: Financial Summary -->
                                         <div class="bg-gray-50 p-6 rounded-lg border lg:col-span-1 space-y-4">
-                                            <h4 class="font-semibold text-gray-700 text-lg border-b pb-2">Order Summary</h4>
+                                            <h4 class="font-semibold text-gray-700 text-lg border-b pb-2">Order Summary
+                                            </h4>
                                             <div class="flex justify-between">
                                                 <span class="text-gray-600">Total Value Sold:</span>
-                                                <span id="summary-total-sold" class="font-bold text-gray-800">$0.00</span>
+                                                <span id="summary-total-sold"
+                                                    class="font-bold text-gray-800">$0.00</span>
                                             </div>
                                             <div class="flex justify-between">
                                                 <span class="text-gray-600">Total Paid:</span>
-                                                <span id="summary-total-paid" class="font-bold text-green-600">$0.00</span>
+                                                <span id="summary-total-paid"
+                                                    class="font-bold text-green-600">$0.00</span>
                                             </div>
                                             <hr>
                                             <div class="flex justify-between text-xl">
                                                 <span class="font-bold text-gray-800">Balance Due:</span>
-                                                <span id="summary-balance-due" class="font-bold text-red-600">$0.00</span>
+                                                <span id="summary-balance-due"
+                                                    class="font-bold text-red-600">$0.00</span>
                                             </div>
                                         </div>
 
                                         <!-- Top-Right: New Payment Record Form -->
-                                        <div id="payment-form-container" class="bg-white p-6 rounded-lg shadow-md lg:col-span-2">
-                                            <h4 id="payment-form-title" class="font-semibold text-gray-700 mb-4 text-lg">Make a Payment</h4>
+                                        <div id="payment-form-container"
+                                            class="bg-white p-6 rounded-lg shadow-md lg:col-span-2">
+                                            <h4 id="payment-form-title"
+                                                class="font-semibold text-gray-700 mb-4 text-lg">Make a Payment</h4>
                                             <form id="make-payment-form" class="space-y-4">
                                                 <input type="hidden" id="payment-ledger-doc-id"> <!-- For editing -->
-                                                
+
                                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                     <div>
-                                                        <label for="payment-amount-input" class="form-label">Amount Paid <span class="text-red-500">*</span></label>
-                                                        <input type="number" id="payment-amount-input" class="form-input w-full" required step="0.01" min="0.01" placeholder="0.00">
+                                                        <label for="payment-amount-input" class="form-label">Amount Paid
+                                                            <span class="text-red-500">*</span></label>
+                                                        <input type="number" id="payment-amount-input"
+                                                            class="form-input w-full" required step="0.01" min="0.01"
+                                                            placeholder="0.00">
                                                     </div>
                                                     <div>
-                                                        <label for="payment-mode-select" class="form-label">Payment Mode <span class="text-red-500">*</span></label>
-                                                        <select id="payment-mode-select" class="form-input w-full" required></select>
+                                                        <label for="payment-mode-select" class="form-label">Payment Mode
+                                                            <span class="text-red-500">*</span></label>
+                                                        <select id="payment-mode-select" class="form-input w-full"
+                                                            required></select>
                                                     </div>
                                                     <div>
-                                                        <label for="payment-date-input" class="form-label">Payment Date <span class="text-red-500">*</span></label>
-                                                        <input type="date" id="payment-date-input" class="form-input w-full" required>
+                                                        <label for="payment-date-input" class="form-label">Payment Date
+                                                            <span class="text-red-500">*</span></label>
+                                                        <input type="date" id="payment-date-input"
+                                                            class="form-input w-full" required>
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <label for="payment-reason-select" class="form-label">Reason for Payment <span class="text-red-500">*</span></label>
-                                                    <select id="payment-reason-select" class="form-input w-full" required>
+                                                    <label for="payment-reason-select" class="form-label">Reason for
+                                                        Payment <span class="text-red-500">*</span></label>
+                                                    <select id="payment-reason-select" class="form-input w-full"
+                                                        required>
                                                         <option value="Sales Revenue">Sales Revenue</option>
                                                         <option value="Donation">Donation</option>
                                                         <option value="Other">Other</option>
                                                     </select>
                                                 </div>
                                                 <div>
-                                                    <label for="payment-ref-input" class="form-label">Reference # <span class="text-red-500">*</span></label>
-                                                    <input type="text" id="payment-ref-input" class="form-input w-full" required placeholder="e.g., Bank transaction ID, Check #">
+                                                    <label for="payment-ref-input" class="form-label">Reference # <span
+                                                            class="text-red-500">*</span></label>
+                                                    <input type="text" id="payment-ref-input" class="form-input w-full"
+                                                        required placeholder="e.g., Bank transaction ID, Check #">
                                                 </div>
                                                 <div>
-                                                    <label for="payment-notes-input" class="form-label">Notes (Optional)</label>
-                                                    <textarea id="payment-notes-input" class="form-input w-full" rows="2" placeholder="e.g., Additional details about the payment"></textarea>
+                                                    <label for="payment-notes-input" class="form-label">Notes
+                                                        (Optional)</label>
+                                                    <textarea id="payment-notes-input" class="form-input w-full"
+                                                        rows="2"
+                                                        placeholder="e.g., Additional details about the payment"></textarea>
                                                 </div>
                                                 <div class="flex justify-end pt-2 space-x-3">
-                                                    <button type="button" id="cancel-payment-edit-btn" class="modal-btn modal-btn-secondary hidden">Cancel Edit</button>
-                                                    <button type="submit" id="submit-payment-record-btn" class="modal-btn modal-btn-primary">Submit Payment Record</button>
+                                                    <button type="button" id="cancel-payment-edit-btn"
+                                                        class="modal-btn modal-btn-secondary hidden">Cancel
+                                                        Edit</button>
+                                                    <button type="submit" id="submit-payment-record-btn"
+                                                        class="modal-btn modal-btn-primary">Submit Payment
+                                                        Record</button>
                                                 </div>
                                             </form>
                                         </div>
@@ -592,7 +652,8 @@
                                     <div class="bg-white rounded-lg shadow-lg">
                                         <div class="p-6">
                                             <h3 class="text-lg font-semibold text-gray-800 mb-4">Payment History</h3>
-                                            <div id="consignment-payments-grid" class="ag-theme-alpine" style="height: 300px; width: 100%;"></div>
+                                            <div id="consignment-payments-grid" class="ag-theme-alpine"
+                                                style="height: 300px; width: 100%;"></div>
                                         </div>
                                     </div>
 
@@ -626,47 +687,59 @@
                         <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
                             <h3 class="text-lg font-semibold text-gray-800">New Sale</h3>
                         </div>
-                        
+
                         <form id="new-sale-form">
                             <!-- Part 1: Sale Context -->
                             <div class="p-6 border-b grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div>
-                                    <label for="sale-date" class="form-label">Sale Date <span class="text-red-500">*</span></label>
+                                    <label for="sale-date" class="form-label">Sale Date <span
+                                            class="text-red-500">*</span></label>
                                     <input type="date" id="sale-date" class="form-input w-full" required>
                                 </div>
                                 <div>
-                                    <label for="sale-store-select" class="form-label">Sell From Store <span class="text-red-500">*</span></label>
+                                    <label for="sale-store-select" class="form-label">Sell From Store <span
+                                            class="text-red-500">*</span></label>
                                     <select id="sale-store-select" class="form-input w-full" required></select>
                                 </div>
                                 <div>
-                                    <label for="sale-customer-name" class="form-label">Customer Name <span class="text-red-500">*</span></label>
-                                    <input type="text" id="sale-customer-name" class="form-input w-full" placeholder="e.g., John Doe" required>
+                                    <label for="sale-customer-name" class="form-label">Customer Name <span
+                                            class="text-red-500">*</span></label>
+                                    <input type="text" id="sale-customer-name" class="form-input w-full"
+                                        placeholder="e.g., John Doe" required>
                                 </div>
                                 <div>
-                                    <label for="sale-customer-email" class="form-label">Customer Email <span class="text-red-500">*</span></label>
-                                    <input type="email" id="sale-customer-email" class="form-input w-full" placeholder="e.g., john@example.com" required>
+                                    <label for="sale-customer-email" class="form-label">Customer Email <span
+                                            class="text-red-500">*</span></label>
+                                    <input type="email" id="sale-customer-email" class="form-input w-full"
+                                        placeholder="e.g., john@example.com" required>
                                 </div>
                                 <div>
-                                    <label for="sale-customer-phone" class="form-label">Customer Phone <span class="text-red-500">*</span></label>
-                                    <input type="tel" id="sale-customer-phone" class="form-input w-full" placeholder="e.g., 555-123-4567" required>
+                                    <label for="sale-customer-phone" class="form-label">Customer Phone <span
+                                            class="text-red-500">*</span></label>
+                                    <input type="tel" id="sale-customer-phone" class="form-input w-full"
+                                        placeholder="e.g., 555-123-4567" required>
                                 </div>
                                 <!-- [NEW] Address field, initially hidden -->
                                 <div id="tasty-treats-address-container" class="md:col-span-3 hidden">
-                                    <label for="sale-customer-address" class="form-label">Delivery Address <span class="text-red-500">*</span></label>
-                                    <textarea id="sale-customer-address" class="form-input w-full" rows="3" placeholder="Enter full delivery address for Tasty Treats order"></textarea>
+                                    <label for="sale-customer-address" class="form-label">Delivery Address <span
+                                            class="text-red-500">*</span></label>
+                                    <textarea id="sale-customer-address" class="form-input w-full" rows="3"
+                                        placeholder="Enter full delivery address for Tasty Treats order"></textarea>
                                 </div>
                             </div>
-                            
+
 
                             <!-- Part 2: Shopping Cart Grid -->
                             <div class="p-6">
                                 <div class="flex justify-between items-center mb-4">
                                     <h4 class="text-md font-semibold text-gray-700">Shopping Cart</h4>
-                                    <button type="button" id="add-product-to-cart-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-semibold">
+                                    <button type="button" id="add-product-to-cart-btn"
+                                        class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-semibold">
                                         + Add Product
                                     </button>
                                 </div>
-                                <div id="sales-cart-grid" class="ag-theme-alpine" style="height: 300px; width: 100%;"></div>
+                                <div id="sales-cart-grid" class="ag-theme-alpine" style="height: 300px; width: 100%;">
+                                </div>
                             </div>
 
                             <!-- Part 3: Totals & Payment Section -->
@@ -682,12 +755,15 @@
                                         <span id="sale-tax" class="font-semibold text-gray-800">$0.00</span>
                                     </div>
                                     <div class="flex justify-between items-center">
-                                        <label for="sale-order-discount" class="text-gray-600">Order Discount (%):</label>
-                                        <input type="number" id="sale-order-discount" class="form-input w-24 text-right" value="0" step="0.01" min="0">
+                                        <label for="sale-order-discount" class="text-gray-600">Order Discount
+                                            (%):</label>
+                                        <input type="number" id="sale-order-discount" class="form-input w-24 text-right"
+                                            value="0" step="0.01" min="0">
                                     </div>
                                     <div class="flex justify-between items-center">
                                         <label for="sale-order-tax" class="text-gray-600">Order Tax (%):</label>
-                                        <input type="number" id="sale-order-tax" class="form-input w-24 text-right" value="0" step="1" min="0">
+                                        <input type="number" id="sale-order-tax" class="form-input w-24 text-right"
+                                            value="0" step="1" min="0">
                                     </div>
                                     <hr>
                                     <div class="flex justify-between items-center text-2xl">
@@ -698,7 +774,8 @@
                                 <!-- Right Side: Payment -->
                                 <div class="space-y-4">
                                     <div>
-                                        <label for="sale-payment-type" class="form-label">Payment Type <span class="text-red-500">*</span></label>
+                                        <label for="sale-payment-type" class="form-label">Payment Type <span
+                                                class="text-red-500">*</span></label>
                                         <select id="sale-payment-type" class="form-input w-full">
                                             <option value="Pay Now">Pay Now</option>
                                             <option value="Pay Later (Invoice)">Pay Later (Invoice)</option>
@@ -708,23 +785,32 @@
                                     <div id="sale-pay-now-container" class="space-y-4 border-t pt-4 mt-4">
                                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div>
-                                                <label for="sale-payment-mode" class="form-label">Payment Mode <span class="text-red-500">*</span></label>
-                                                <select id="sale-payment-mode" class="form-input w-full" required></select>
+                                                <label for="sale-payment-mode" class="form-label">Payment Mode <span
+                                                        class="text-red-500">*</span></label>
+                                                <select id="sale-payment-mode" class="form-input w-full"
+                                                    required></select>
                                             </div>
                                             <div>
-                                                <label for="sale-amount-received" class="form-label">Amount Received <span class="text-red-500">*</span></label>
-                                                <input type="number" id="sale-amount-received" class="form-input w-full" placeholder="0.00" required>
+                                                <label for="sale-amount-received" class="form-label">Amount Received
+                                                    <span class="text-red-500">*</span></label>
+                                                <input type="number" id="sale-amount-received" class="form-input w-full"
+                                                    placeholder="0.00" required>
                                             </div>
                                             <div>
-                                                <label for="sale-payment-ref" class="form-label">Reference # <span class="text-red-500">*</span></label>
-                                                <input type="text" id="sale-payment-ref" class="form-input w-full" placeholder="e.g., Card last 4 digits" required>
+                                                <label for="sale-payment-ref" class="form-label">Reference # <span
+                                                        class="text-red-500">*</span></label>
+                                                <input type="text" id="sale-payment-ref" class="form-input w-full"
+                                                    placeholder="e.g., Card last 4 digits" required>
                                             </div>
                                         </div>
                                         <div>
-                                            <label for="sale-payment-notes" class="form-label">Payment Notes (Optional)</label>
-                                            <textarea id="sale-payment-notes" class="form-input w-full" rows="2"></textarea>
+                                            <label for="sale-payment-notes" class="form-label">Payment Notes
+                                                (Optional)</label>
+                                            <textarea id="sale-payment-notes" class="form-input w-full"
+                                                rows="2"></textarea>
                                         </div>
-                                        <div id="sale-overpayment-note" class="text-sm text-green-600 font-semibold hidden"></div>
+                                        <div id="sale-overpayment-note"
+                                            class="text-sm text-green-600 font-semibold hidden"></div>
                                     </div>
                                     <div class="text-right font-semibold text-lg">
                                         <!-- This span will be dynamically updated by JavaScript -->
@@ -735,7 +821,8 @@
 
                             <!-- Part 4: Form Actions -->
                             <div class="px-6 py-4 bg-gray-100 border-t rounded-b-lg flex justify-end">
-                                <button type="submit" id="complete-sale-btn" class="bg-green-600 text-white px-8 py-3 rounded-md hover:bg-green-700 font-bold text-lg">
+                                <button type="submit" id="complete-sale-btn"
+                                    class="bg-green-600 text-white px-8 py-3 rounded-md hover:bg-green-700 font-bold text-lg">
                                     Complete Sale
                                 </button>
                             </div>
@@ -746,26 +833,33 @@
                     <div class="bg-white rounded-lg shadow-lg">
                         <div class="p-6">
                             <h3 class="text-lg font-semibold text-gray-800 mb-4">Recent Sales</h3>
-                            <div id="sales-history-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+                            <div id="sales-history-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;">
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- [NEW] Add Product to Cart Modal -->
-                <div id="add-product-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div id="add-product-modal"
+                    class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div class="fixed inset-0 bg-black bg-opacity-60 modal-close-trigger" style="z-index: 50;"></div>
                     <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-2xl mx-auto" style="z-index: 51;">
                         <div class="px-6 py-4 border-b flex justify-between items-center">
                             <h3 class="text-lg font-bold text-gray-900">Select a Product to Add</h3>
-                            <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            <button type="button"
+                                class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
                             </button>
                         </div>
                         <div class="p-6">
-                            <p class="text-sm text-gray-600 mb-4">Search for a product and click the '+' icon to add it to the cart.</p>
-                            <div id="add-product-modal-grid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
+                            <p class="text-sm text-gray-600 mb-4">Search for a product and click the '+' icon to add it
+                                to the cart.</p>
+                            <div id="add-product-modal-grid" class="ag-theme-alpine"
+                                style="height: 500px; width: 100%;"></div>
                         </div>
                     </div>
                 </div>
@@ -823,7 +917,7 @@
                             </div>
                         </a>
 
-                        
+
 
                         <!-- Card: Banks -->
                         <a href="#" class="master-data-card" data-view-id="banks-view">
@@ -856,7 +950,7 @@
                         </a>
 
                         <!-- Card: Sales Season -->
-                        
+
                         <a href="#" class="master-data-card" data-view-id="seasons-view">
                             <div class="icon-container bg-indigo-100 text-indigo-600">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -874,8 +968,10 @@
                         <!-- NEW Card: Sales Events -->
                         <a href="#" class="master-data-card" data-view-id="sales-events-view">
                             <div class="icon-container bg-orange-100 text-orange-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25M16.5 7.5h.008v.008H16.5V7.5Z" />
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25M16.5 7.5h.008v.008H16.5V7.5Z" />
                                 </svg>
                             </div>
                             <div>
@@ -901,9 +997,12 @@
                         <!-- NEW Card: User Management -->
                         <a href="#" class="master-data-card" data-view-id="users-view">
                             <div class="icon-container bg-pink-100 text-pink-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-2.438c.155-.155.293-.31.428-.472M6.938 19.28a9.38 9.38 0 0 1-2.625-.372 9.337 9.337 0 0 1-4.121-2.438c-.155-.155-.293-.31-.428-.472M19.5 12c0 .434-.023.863-.068 1.285c-.045.422-.09.834-.14 1.235c-.05.402-.102.792-.158 1.172a6.321 6.321 0 0 1-.224.803a6.321 6.321 0 0 1-.41 1.053a6.321 6.321 0 0 1-.598.933a6.321 6.321 0 0 1-.78 1.053a6.321 6.321 0 0 1-1.053.78a6.321 6.321 0 0 1-1.235.598a6.321 6.321 0 0 1-1.172.41a6.321 6.321 0 0 1-1.053.224a6.321 6.321 0 0 1-.803-.158a6.321 6.321 0 0 1-.472.14a6.321 6.321 0 0 1-.428.068a9.38 9.38 0 0 1-1.285-.068a6.321 6.321 0 0 1-.428-.14a6.321 6.321 0 0 1-.472-.158a6.321 6.321 0 0 1-.803-.224a6.321 6.321 0 0 1-1.053-.41a6.321 6.321 0 0 1-1.235-.598a6.321 6.321 0 0 1-1.172-.78a6.321 6.321 0 0 1-1.053-1.053a6.321 6.321 0 0 1-.78-1.172a6.321 6.321 0 0 1-.598-1.235a6.321 6.321 0 0 1-.41-1.053a6.321 6.321 0 0 1-.224-.803a6.321 6.321 0 0 1-.158-.472a6.321 6.321 0 0 1-.14-.428a6.321 6.321 0 0 1-.068-.472A9.38 9.38 0 0 1 4.5 12c0-.434.023-.863.068-1.285c.045-.422.09-.834.14-1.235c.05-.402.102-.792.158-1.172a6.321 6.321 0 0 1 .224-.803a6.321 6.321 0 0 1 .41-1.053a6.321 6.321 0 0 1 .598-.933a6.321 6.321 0 0 1 .78-1.053a6.321 6.321 0 0 1 1.053-.78a6.321 6.321 0 0 1 1.235-.598a6.321 6.321 0 0 1 1.172-.41a6.321 6.321 0 0 1 1.053-.224a6.321 6.321 0 0 1 .803-.158a6.321 6.321 0 0 1 .472-.14a6.321 6.321 0 0 1 .428-.068a9.38 9.38 0 0 1 1.285.068c.422.045.834.09 1.235.14c.402.05.792.102 1.172.158c.375.05.74.11.105.172c.315.06.62.128.915.205c.295.077.58.16.855.25c.275.09.54.188.795.293c.255.105.5.218.735.338c.235.12.46.248.675.383c.215.135.42.278.615.428c.195.15.38.308.555.473c.175.165.34.338.5.508c.16.17.31.348.45.533c.14.185.27.378.39.578c.12.2.23.408.33.623c.1.215.19.438.27.668c.08.23.15.468.21.713c.06.245.11.498.15.758c.04.26.07.528.09.803c.02.275.03.558.03.853Z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-2.438c.155-.155.293-.31.428-.472M6.938 19.28a9.38 9.38 0 0 1-2.625-.372 9.337 9.337 0 0 1-4.121-2.438c-.155-.155-.293-.31-.428-.472M19.5 12c0 .434-.023.863-.068 1.285c-.045.422-.09.834-.14 1.235c-.05.402-.102.792-.158 1.172a6.321 6.321 0 0 1-.224.803a6.321 6.321 0 0 1-.41 1.053a6.321 6.321 0 0 1-.598.933a6.321 6.321 0 0 1-.78 1.053a6.321 6.321 0 0 1-1.053.78a6.321 6.321 0 0 1-1.235.598a6.321 6.321 0 0 1-1.172.41a6.321 6.321 0 0 1-1.053.224a6.321 6.321 0 0 1-.803-.158a6.321 6.321 0 0 1-.472.14a6.321 6.321 0 0 1-.428.068a9.38 9.38 0 0 1-1.285-.068a6.321 6.321 0 0 1-.428-.14a6.321 6.321 0 0 1-.472-.158a6.321 6.321 0 0 1-.803-.224a6.321 6.321 0 0 1-1.053-.41a6.321 6.321 0 0 1-1.235-.598a6.321 6.321 0 0 1-1.172-.78a6.321 6.321 0 0 1-1.053-1.053a6.321 6.321 0 0 1-.78-1.172a6.321 6.321 0 0 1-.598-1.235a6.321 6.321 0 0 1-.41-1.053a6.321 6.321 0 0 1-.224-.803a6.321 6.321 0 0 1-.158-.472a6.321 6.321 0 0 1-.14-.428a6.321 6.321 0 0 1-.068-.472A9.38 9.38 0 0 1 4.5 12c0-.434.023-.863.068-1.285c.045-.422.09-.834.14-1.235c.05-.402.102-.792.158-1.172a6.321 6.321 0 0 1 .224-.803a6.321 6.321 0 0 1 .41-1.053a6.321 6.321 0 0 1 .598-.933a6.321 6.321 0 0 1 .78-1.053a6.321 6.321 0 0 1 1.053-.78a6.321 6.321 0 0 1 1.235-.598a6.321 6.321 0 0 1 1.172-.41a6.321 6.321 0 0 1 1.053-.224a6.321 6.321 0 0 1 .803-.158a6.321 6.321 0 0 1 .472-.14a6.321 6.321 0 0 1 .428-.068a9.38 9.38 0 0 1 1.285.068c.422.045.834.09 1.235.14c.402.05.792.102 1.172.158c.375.05.74.11.105.172c.315.06.62.128.915.205c.295.077.58.16.855.25c.275.09.54.188.795.293c.255.105.5.218.735.338c.235.12.46.248.675.383c.215.135.42.278.615.428c.195.15.38.308.555.473c.175.165.34.338.5.508c.16.17.31.348.45.533c.14.185.27.378.39.578c.12.2.23.408.33.623c.1.215.19.438.27.668c.08.23.15.468.21.713c.06.245.11.498.15.758c.04.26.07.528.09.803c.02.275.03.558.03.853Z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
                                 </svg>
                             </div>
                             <div>
@@ -1075,7 +1174,7 @@
                 <!-- View: Manage Sales Events -->
                 <div id="sales-events-view" class="view space-y-8">
                     <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
-                    
+
                     <!-- Card 1: Add New Sales Event Form -->
                     <div class="bg-white rounded-lg shadow-lg">
                         <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
@@ -1094,7 +1193,8 @@
                                 <!-- Event Name -->
                                 <div class="md:col-span-2">
                                     <label for="eventName-input" class="form-label">Event Name</label>
-                                    <input type="text" id="eventName-input" placeholder="e.g., Weekend Bake Sale" class="form-input w-full" required>
+                                    <input type="text" id="eventName-input" placeholder="e.g., Weekend Bake Sale"
+                                        class="form-input w-full" required>
                                 </div>
                                 <!-- Start Date -->
                                 <div>
@@ -1108,7 +1208,8 @@
                                 </div>
                                 <!-- Form Actions -->
                                 <div class="md:col-span-3 flex justify-end">
-                                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
+                                    <button type="submit"
+                                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
                                         Add Event
                                     </button>
                                 </div>
@@ -1122,13 +1223,14 @@
                             <h3 class="text-lg font-semibold text-gray-800">Existing Sales Events</h3>
                         </div>
                         <div class="p-2">
-                            <div id="sales-events-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+                            <div id="sales-events-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;">
+                            </div>
                         </div>
                     </div>
                 </div>
 
 
-              
+
                 <!-- =================================== -->
                 <!--      VIEW: TEAM MANAGEMENT          -->
                 <!-- =================================== -->
@@ -1145,16 +1247,19 @@
                                 <!-- Church Name (Read-only) -->
                                 <div>
                                     <label for="team-churchName-input" class="form-label">Church Name</label>
-                                    <input type="text" id="team-churchName-input" class="form-input w-full bg-gray-200" readonly>
+                                    <input type="text" id="team-churchName-input" class="form-input w-full bg-gray-200"
+                                        readonly>
                                 </div>
                                 <!-- Team Name -->
                                 <div>
                                     <label for="team-name-input" class="form-label">Team Name</label>
-                                    <input type="text" id="team-name-input" placeholder="e.g., Ushering Team" class="form-input w-full" required>
+                                    <input type="text" id="team-name-input" placeholder="e.g., Ushering Team"
+                                        class="form-input w-full" required>
                                 </div>
                                 <!-- Form Actions -->
                                 <div>
-                                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
+                                    <button type="submit"
+                                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
                                         Save Team
                                     </button>
                                 </div>
@@ -1167,22 +1272,27 @@
                         <!-- Master Grid: All Teams -->
                         <div class="p-6 border-b">
                             <h3 class="text-lg font-semibold text-gray-800 mb-4">All Church Teams</h3>
-                            <div id="church-teams-grid" class="ag-theme-alpine" style="height: 300px; width: 100%;"></div>
+                            <div id="church-teams-grid" class="ag-theme-alpine" style="height: 300px; width: 100%;">
+                            </div>
                         </div>
-                        
+
                         <!-- Detail Grid: Team Members -->
                         <div class="p-6">
                             <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-lg font-semibold text-gray-800">Team Members for <span id="selected-team-name" class="text-blue-600">...</span></h3>
-                                <button id="add-member-btn" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold" disabled>
+                                <h3 class="text-lg font-semibold text-gray-800">Team Members for <span
+                                        id="selected-team-name" class="text-blue-600">...</span></h3>
+                                <button id="add-member-btn"
+                                    class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold"
+                                    disabled>
                                     + Add Member
                                 </button>
                             </div>
-                            <div id="team-members-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+                            <div id="team-members-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;">
+                            </div>
                         </div>
                     </div>
                 </div>
-                
+
 
 
 
@@ -1194,7 +1304,7 @@
                 <!-- View: Manage Users -->
                 <div id="users-view" class="view space-y-8">
                     <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
-                    
+
                     <!-- Card 1: Provision New User Form -->
                     <div class="bg-white rounded-lg shadow-lg">
                         <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
@@ -1202,13 +1312,15 @@
                         </div>
                         <div class="p-6">
                             <p class="text-sm text-gray-600 mb-4">
-                                Users must first log in once with their Google account. After that, you can assign them a role here using their email address.
+                                Users must first log in once with their Google account. After that, you can assign them
+                                a role here using their email address.
                             </p>
                             <form id="provision-user-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <!-- User Email -->
                                 <div class="md:col-span-1">
                                     <label for="userEmail-input" class="form-label">User's Google Email</label>
-                                    <input type="email" id="userEmail-input" placeholder="user@example.com" class="form-input w-full" required>
+                                    <input type="email" id="userEmail-input" placeholder="user@example.com"
+                                        class="form-input w-full" required>
                                 </div>
                                 <!-- Role Dropdown -->
                                 <div>
@@ -1224,7 +1336,8 @@
                                 </div>
                                 <!-- Form Actions -->
                                 <div class="flex items-end">
-                                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
+                                    <button type="submit"
+                                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
                                         Save Role
                                     </button>
                                 </div>
@@ -1253,71 +1366,73 @@
     <!-- ======================= -->
 
     <div id="supplier-payment-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
-            <!-- Modal Overlay - This is just the background. It has a lower z-index. -->
-            <div class="fixed inset-0 bg-black bg-opacity-60 modal-close-trigger" style="z-index: 50;"></div>
+        <!-- Overlay -->
+        <div class="fixed inset-0 bg-black bg-opacity-60 modal-close-trigger" style="z-index: 50;"></div>
 
-            <!-- Modal Panel - This is the content. It has a HIGHER z-index so it's on top and clickable. -->
-            <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-lg mx-auto modal-panel">
-                <!-- Modal Header -->
-                <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                    <h3 id="supplier-payment-modal-title" class="text-lg font-bold text-gray-900">Record Payment for Supplier Invoice</h3>
-                    <!-- Add a close 'X' button for better UX -->
-                    <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </div>
-                
-                <!-- Modal Body -->
-                <form id="supplier-record-payment-form">
-                    <input type="hidden" id="supplier-payment-invoice-id">
-                    <input type="hidden" id="supplier-payment-supplier-id">
-
-                    <div class="p-6 space-y-4">
-                        <!-- Payment Date -->
-                        <div>
-                            <label for="supplier-payment-date-input" class="form-label">Payment Date</label>
-                            <input type="date" id="supplier-payment-date-input" class="form-input w-full" required>
-                        </div>
-                        <!-- Amount Paid -->
-                        <div>
-                            <label for="supplier-payment-amount-input" class="form-label">Amount Paid</label>
-                            <div class="relative">
-                                <!-- [NEW] The currency symbol, placed inside the wrapper -->
-                                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                    <span id="supplier-payment-amount-currency-symbol" class="text-gray-500 sm:text-sm"></span>
-                                </div>
-                                <!-- The input now has padding on the left to make space for the symbol -->
-                                <input type="number" id="supplier-payment-amount-input" class="form-input w-full pl-7" required step="0.01" min="0.01" placeholder="0.00">
-                            </div>
-                        </div>
-                        <!-- Payment Mode Dropdown -->
-                        <div>
-                            <label for="supplier-payment-mode-select" class="form-label">Payment Mode</label>
-                            <select id="supplier-payment-mode-select" class="form-input w-full" required>
-                                <option value="">Select a mode...</option>
-                                <!-- Options will be populated by JS from masterData -->
-                            </select>
-                        </div>
-                        <!-- Transaction Reference -->
-                        <div>
-                            <label for="supplier-payment-ref-input" class="form-label">Reference # (Optional)</label>
-                            <input type="text" id="supplier-payment-ref-input" placeholder="e.g., Check #123, NEFT-987" class="form-input w-full">
-                        </div>
-                        <!-- Notes -->
-                        <div>
-                            <label for="supplier-payment-notes-input" class="form-label">Notes (Optional)</label>
-                            <textarea id="supplier-payment-notes-input" class="form-input w-full" rows="2"></textarea>
-                        </div>
-                    </div>
-                    
-                    <!-- Modal Footer -->
-                    <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
-                        <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">Cancel</button>
-                        <button type="submit" class="modal-btn modal-btn-primary">Save Payment</button>
-                    </div>
-                </form>
+        <!-- Panel: add modal-panel class -->
+        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-lg mx-auto modal-panel">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 id="supplier-payment-modal-title" class="text-lg font-bold text-gray-900">Record Payment for
+                    Supplier Invoice</h3>
+                <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
             </div>
+
+            <!-- Body -->
+            <form id="supplier-record-payment-form">
+                <input type="hidden" id="supplier-payment-invoice-id">
+                <input type="hidden" id="supplier-payment-supplier-id">
+
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label for="supplier-payment-date-input" class="form-label">Payment Date</label>
+                        <input type="date" id="supplier-payment-date-input" class="form-input w-full" required>
+                    </div>
+
+                    <div>
+                        <label for="supplier-payment-amount-input" class="form-label">Amount Paid</label>
+                        <div class="relative">
+                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                <span id="supplier-payment-amount-currency-symbol"
+                                    class="text-gray-500 sm:text-sm"></span>
+                            </div>
+                            <input type="number" id="supplier-payment-amount-input" class="form-input w-full pl-7"
+                                required step="0.01" min="0.01" placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="supplier-payment-mode-select" class="form-label">Payment Mode</label>
+                        <select id="supplier-payment-mode-select" class="form-input w-full" required>
+                            <option value="">Select a mode...</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="supplier-payment-ref-input" class="form-label">Reference # (Optional)</label>
+                        <input type="text" id="supplier-payment-ref-input" class="form-input w-full"
+                            placeholder="e.g., Check #123, NEFT-987">
+                    </div>
+
+                    <div>
+                        <label for="supplier-payment-notes-input" class="form-label">Notes (Optional)</label>
+                        <textarea id="supplier-payment-notes-input" class="form-input w-full" rows="2"
+                            placeholder="Additional details..."></textarea>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
+                    <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">Cancel</button>
+                    <button type="submit" class="modal-btn modal-btn-primary">Save Payment</button>
+                </div>
+            </form>
         </div>
+    </div>
 
 
 
@@ -1335,7 +1450,10 @@
             <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                 <h3 id="member-modal-title" class="text-lg font-bold text-gray-900">Add New Member</h3>
                 <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
                 </button>
             </div>
             <form id="member-form">
@@ -1368,7 +1486,8 @@
                 </div>
                 <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
                     <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">Cancel</button>
-                    <button type="submit" id="member-form-submit-btn" class="modal-btn modal-btn-primary">Add Member</button>
+                    <button type="submit" id="member-form-submit-btn" class="modal-btn modal-btn-primary">Add
+                        Member</button>
                 </div>
             </form>
         </div>
@@ -1388,15 +1507,17 @@
             <form id="consignment-request-form">
                 <!-- Step 1: Context Selection -->
                 <div id="consignment-step-1" class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 border-b">
-    
+
                     <!-- [FIX] This is the corrected container for the admin's two dropdowns -->
                     <div id="admin-team-selection" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label for="admin-select-team" class="form-label">Select Team <span class="text-red-500">*</span></label>
+                            <label for="admin-select-team" class="form-label">Select Team <span
+                                    class="text-red-500">*</span></label>
                             <select id="admin-select-team" class="form-input w-full"></select>
                         </div>
                         <div>
-                            <label for="admin-select-member" class="form-label">Select Team Lead <span class="text-red-500">*</span></label>
+                            <label for="admin-select-member" class="form-label">Select Team Lead <span
+                                    class="text-red-500">*</span></label>
                             <select id="admin-select-member" class="form-input w-full" disabled>
                                 <option value="">Select a team first</option>
                             </select>
@@ -1411,7 +1532,8 @@
 
                     <!-- These are correct -->
                     <div>
-                        <label for="request-catalogue-select" class="form-label">Sales Catalogue <span class="text-red-500">*</span></label>
+                        <label for="request-catalogue-select" class="form-label">Sales Catalogue <span
+                                class="text-red-500">*</span></label>
                         <select id="request-catalogue-select" class="form-input w-full" required></select>
                     </div>
                     <div>
@@ -1427,8 +1549,10 @@
                 </div>
                 <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
                     <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">Cancel</button>
-                    <button type="button" id="consignment-next-btn" class="modal-btn modal-btn-primary">Next &rarr;</button>
-                    <button type="submit" id="consignment-submit-request-btn" class="modal-btn modal-btn-primary hidden">Submit Request</button>
+                    <button type="button" id="consignment-next-btn" class="modal-btn modal-btn-primary">Next
+                        &rarr;</button>
+                    <button type="submit" id="consignment-submit-request-btn"
+                        class="modal-btn modal-btn-primary hidden">Submit Request</button>
                 </div>
             </form>
         </div>
@@ -1443,21 +1567,26 @@
             <div class="px-6 py-4 border-b flex justify-between items-center">
                 <h3 class="text-lg font-bold text-gray-900">Report Consignment Activity</h3>
                 <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
                 </button>
             </div>
             <form id="report-activity-form">
                 <input type="hidden" id="activity-order-id">
                 <div class="p-6 space-y-6">
                     <div>
-                        <label for="activity-product-select" class="form-label">Product<span class="text-red-500">*</span></label>
+                        <label for="activity-product-select" class="form-label">Product<span
+                                class="text-red-500">*</span></label>
                         <select id="activity-product-select" class="form-input w-full" required>
                             <option value="">Select a product...</option>
                             <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div>
-                        <label for="activity-type-select" class="form-label">Activity Type<span class="text-red-500">*</span></label>
+                        <label for="activity-type-select" class="form-label">Activity Type<span
+                                class="text-red-500">*</span></label>
                         <select id="activity-type-select" class="form-input w-full" required>
                             <option value="" disabled selected>Please select an activity...</option>
                             <option value="Sale">Sale (Item was sold)</option>
@@ -1473,12 +1602,14 @@
                         </select>
                     </div>
                     <div>
-                        <label for="activity-quantity-input" class="form-label">Quantity<span class="text-red-500">*</span></label>
+                        <label for="activity-quantity-input" class="form-label">Quantity<span
+                                class="text-red-500">*</span></label>
                         <input type="number" id="activity-quantity-input" class="form-input w-full" required min="1">
                     </div>
                     <div>
                         <label for="activity-notes-input" class="form-label">Notes (Optional)</label>
-                        <textarea id="activity-notes-input" class="form-input w-full" rows="3" placeholder="e.g., Customer name, reason for damage, etc."></textarea>
+                        <textarea id="activity-notes-input" class="form-input w-full" rows="3"
+                            placeholder="e.g., Customer name, reason for damage, etc."></textarea>
                     </div>
                 </div>
                 <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
@@ -1509,12 +1640,17 @@
         <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-4xl mx-auto" style="z-index: 51;">
             <!-- Modal Header -->
             <div class="px-6 py-4 border-b flex justify-between items-center">
-                <h3 id="sale-payment-modal-title" class="text-lg font-bold text-gray-900">Record Payment for Invoice</h3>
+                <h3 id="sale-payment-modal-title" class="text-lg font-bold text-gray-900">Record Payment for Invoice
+                </h3>
                 <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
                 </button>
             </div>
-            
+
             <!-- Modal Body -->
             <div class="p-6 space-y-6">
                 <!-- Top Section: Invoice Header -->
@@ -1528,15 +1664,18 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2">
                         <h4 class="font-semibold mb-2">Invoice Items</h4>
-                        <div id="sale-payment-items-grid" class="ag-theme-alpine" style="height: 200px; width: 100%;"></div>
+                        <div id="sale-payment-items-grid" class="ag-theme-alpine" style="height: 200px; width: 100%;">
+                        </div>
                     </div>
                     <div class="space-y-3 p-4 bg-gray-50 rounded-lg border">
                         <h4 class="font-semibold border-b pb-2">Financial Summary</h4>
-                        <div class="flex justify-between"><span>Total Amount:</span> <span id="payment-modal-total" class="font-bold"></span></div>
-                        <div class="flex justify-between"><span>Already Paid:</span> <span id="payment-modal-paid" class="font-bold text-green-600"></span></div>
+                        <div class="flex justify-between"><span>Total Amount:</span> <span id="payment-modal-total"
+                                class="font-bold"></span></div>
+                        <div class="flex justify-between"><span>Already Paid:</span> <span id="payment-modal-paid"
+                                class="font-bold text-green-600"></span></div>
                         <hr>
                         <div class="flex justify-between text-lg">
-                            <span class="font-bold">Balance Due:</span> 
+                            <span class="font-bold">Balance Due:</span>
                             <span id="payment-modal-balance" class="font-bold text-red-600"></span>
                         </div>
                     </div>
@@ -1547,7 +1686,8 @@
 
                     <div class="border-b border-gray-200">
                         <nav class="-mb-px flex space-x-6" aria-label="Tabs">
-                            <a href="#" id="tab-new-payment" class="payment-modal-tab tab tab-active">Record a New Payment</a>
+                            <a href="#" id="tab-new-payment" class="payment-modal-tab tab tab-active">Record a New
+                                Payment</a>
                             <a href="#" id="tab-payment-history" class="payment-modal-tab tab">View Payment History</a>
                         </nav>
                     </div>
@@ -1561,36 +1701,46 @@
                                 <input type="hidden" id="record-sale-invoice-id">
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
-                                        <label for="record-sale-amount" class="form-label">Amount Paid <span class="text-red-500">*</span></label>
-                                        <input type="number" id="record-sale-amount" class="form-input w-full" required step="0.01" min="0.01">
+                                        <label for="record-sale-amount" class="form-label">Amount Paid <span
+                                                class="text-red-500">*</span></label>
+                                        <input type="number" id="record-sale-amount" class="form-input w-full" required
+                                            step="0.01" min="0.01">
                                     </div>
                                     <div>
-                                        <label for="record-sale-mode" class="form-label">Payment Mode <span class="text-red-500">*</span></label>
+                                        <label for="record-sale-mode" class="form-label">Payment Mode <span
+                                                class="text-red-500">*</span></label>
                                         <select id="record-sale-mode" class="form-input w-full" required></select>
                                     </div>
                                     <div>
-                                        <label for="record-sale-ref" class="form-label">Reference # <span class="text-red-500">*</span></label>
+                                        <label for="record-sale-ref" class="form-label">Reference # <span
+                                                class="text-red-500">*</span></label>
                                         <input type="text" id="record-sale-ref" class="form-input w-full" required>
                                     </div>
                                     <div>
                                         <label for="record-sale-notes" class="form-label">Notes (Optional)</label>
-                                        <textarea id="record-sale-notes" class="form-input w-full" rows="2" placeholder="e.g., Paid in person, part of check #123..."></textarea>
+                                        <textarea id="record-sale-notes" class="form-input w-full" rows="2"
+                                            placeholder="e.g., Paid in person, part of check #123..."></textarea>
                                     </div>
                                 </div>
-                                <div id="sale-payment-overpayment-note" class="text-sm text-green-600 font-semibold hidden"></div>
+                                <div id="sale-payment-overpayment-note"
+                                    class="text-sm text-green-600 font-semibold hidden"></div>
                                 <!-- Modal Footer -->
                                 <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
-                                    <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">Cancel</button>
-                                    <button type="submit" class="modal-btn bg-green-600 hover:bg-green-700 text-white">Submit Payment</button>
+                                    <button type="button"
+                                        class="modal-btn modal-btn-secondary modal-close-trigger">Cancel</button>
+                                    <button type="submit"
+                                        class="modal-btn bg-green-600 hover:bg-green-700 text-white">Submit
+                                        Payment</button>
                                 </div>
                             </form>
                         </div>
                         <!-- Panel 2: Payment History -->
                         <div id="panel-payment-history" class="payment-modal-tab-panel p-4">
-                            <div id="sale-payment-history-grid" class="ag-theme-alpine" style="height: 250px; width: 100%;"></div>
+                            <div id="sale-payment-history-grid" class="ag-theme-alpine"
+                                style="height: 250px; width: 100%;"></div>
                         </div>
                     </div>
-                    
+
                 </div>
 
 
