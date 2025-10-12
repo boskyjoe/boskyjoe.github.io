@@ -2034,11 +2034,8 @@ export function showSupplierPaymentModal(invoice) {
  * [RENAMED] Closes the supplier payment modal.
  */
 export function closeSupplierPaymentModal() {
-    const paymentModal = document.getElementById('record-payment-modal');
+    const paymentModal = document.getElementById('supplier-payment-modal'); // correct ID
     if (!paymentModal) return;
-
-    // The listener cleanup logic, if any, would go here.
-    // For this simple modal, none is needed yet.
 
     paymentModal.classList.remove('visible');
     setTimeout(() => {
