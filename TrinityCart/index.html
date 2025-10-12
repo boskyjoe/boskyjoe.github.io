@@ -1366,12 +1366,11 @@
     <!-- ======================= -->
 
     <div id="supplier-payment-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
-        <!-- Modal Overlay -->
+        <!-- Overlay -->
         <div class="fixed inset-0 bg-black bg-opacity-60 modal-close-trigger" style="z-index: 50;"></div>
 
-        <!-- Modal Panel - This MUST be above the overlay -->
-        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-lg mx-auto modal-panel"
-            style="position: relative; z-index: 51;">
+        <!-- Panel - ONLY inline z-index, NO CSS class z-index -->
+        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-lg mx-auto" style="position: relative; z-index: 52;">
             <!-- Modal Header -->
             <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                 <h3 id="supplier-payment-modal-title" class="text-lg font-bold text-gray-900">Record Payment for
@@ -1390,13 +1389,11 @@
                 <input type="hidden" id="supplier-payment-supplier-id">
 
                 <div class="p-6 space-y-4">
-                    <!-- Payment Date -->
                     <div>
                         <label for="supplier-payment-date-input" class="form-label">Payment Date</label>
                         <input type="date" id="supplier-payment-date-input" class="form-input w-full" required>
                     </div>
 
-                    <!-- Amount Paid -->
                     <div>
                         <label for="supplier-payment-amount-input" class="form-label">Amount Paid</label>
                         <div class="relative">
@@ -1409,22 +1406,18 @@
                         </div>
                     </div>
 
-                    <!-- Payment Mode -->
                     <div>
-                        <label for="supplier-payment-mode-select" class="form-label">Payment Mode</label>
-                        <!--<select id="supplier-payment-mode-select" class="form-input w-full" required>
-                        </select>-->
-                        <input type="text" id="supplier-payment-mode-select" class="form-input w-full" placeholder="Cash" required readonly>
+                        <label for="supplier-payment-mode-input" class="form-label">Payment Mode</label>
+                        <input type="text" id="supplier-payment-mode-input" class="form-input w-full"
+                            placeholder="Cash, Check, Bank Transfer..." required>
                     </div>
 
-                    <!-- Reference -->
                     <div>
                         <label for="supplier-payment-ref-input" class="form-label">Reference # (Optional)</label>
                         <input type="text" id="supplier-payment-ref-input" placeholder="e.g., Check #123, NEFT-987"
                             class="form-input w-full">
                     </div>
 
-                    <!-- Notes -->
                     <div>
                         <label for="supplier-payment-notes-input" class="form-label">Notes (Optional)</label>
                         <textarea id="supplier-payment-notes-input" class="form-input w-full" rows="2"
