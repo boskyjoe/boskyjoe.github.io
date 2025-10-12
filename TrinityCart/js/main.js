@@ -50,7 +50,7 @@ import { recordPaymentAndUpdateInvoice } from './api.js';
 import { deletePaymentAndUpdateInvoice } from './api.js';
 import { getPaymentDataFromGridById } from './ui.js';
 
-import { showSupplierPaymentModal, closePaymentModal,getInvoiceDataFromGridById, initializeModals } from './ui.js';
+import { showSupplierPaymentModal, closeSupplierPaymentModal,getInvoiceDataFromGridById, initializeModals,closePaymentModal } from './ui.js';
 
 
 import { showSalesCatalogueView,getCatalogueDataFromGridById,loadCatalogueForEditing,resetCatalogueForm, updateDraftItemsGrid, getTeamDataFromGridById } from './ui.js';
