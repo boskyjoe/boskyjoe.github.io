@@ -50,7 +50,7 @@ import { recordPaymentAndUpdateInvoice } from './api.js';
 import { deletePaymentAndUpdateInvoice } from './api.js';
 import { getPaymentDataFromGridById } from './ui.js';
 
-import { showPaymentModal, closePaymentModal,getInvoiceDataFromGridById, initializeModals } from './ui.js';
+import { showSupplierPaymentModal, closePaymentModal,getInvoiceDataFromGridById, initializeModals } from './ui.js';
 
 
 import { showSalesCatalogueView,getCatalogueDataFromGridById,loadCatalogueForEditing,resetCatalogueForm, updateDraftItemsGrid, getTeamDataFromGridById } from './ui.js';
@@ -550,7 +550,7 @@ function setupEventListeners() {
                     try {
                         const invoiceData = await getPurchaseInvoiceById(docId);
                         if (invoiceData) {
-                            showPaymentModal(invoiceData);
+                            showSupplierPaymentModal(invoiceData);
                         } else {
                             showModal('error', 'Error', 'Could not find the selected invoice data.');
                         }
