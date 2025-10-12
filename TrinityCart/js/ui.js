@@ -2025,6 +2025,7 @@ export function showSupplierPaymentModal(invoice) {
     const amountInput = document.getElementById('supplier-payment-amount-input');
     const currencySymbolSpan = document.getElementById('supplier-payment-amount-currency-symbol'); // Corrected ID
     //const modeSelect = document.getElementById('supplier-payment-mode-select');
+    const modeSelect=null ;
     const modeInput = document.getElementById('supplier-payment-mode-input'); // Changed to input
     
     // Set a default value instead of populating options
