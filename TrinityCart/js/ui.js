@@ -2003,13 +2003,18 @@ export async function loadInvoiceDataIntoForm(invoiceData) {
 export function showSupplierPaymentModal(invoice) {
 
     // Debug: log what's currently focused
-    console.log('Active element before modal:', document.activeElement);
-    console.log('Active element tag:', document.activeElement?.tagName);
-    console.log('Active element ID:', document.activeElement?.id);
+
+    console.log('=== MODAL DEBUG START ===');
+    
 
 
     const paymentModal = document.getElementById('supplier-payment-modal');
     if (!paymentModal) return;
+
+     // Debug: Check initial state
+    console.log('Modal display before:', paymentModal.style.display);
+    console.log('Modal classes before:', paymentModal.className);
+    console.log('Active element before modal:', document.activeElement);
 
 
     // Hide loading overlay to prevent z-index conflicts
@@ -2024,54 +2029,71 @@ export function showSupplierPaymentModal(invoice) {
     const dateInput = document.getElementById('supplier-payment-date-input');
     const amountInput = document.getElementById('supplier-payment-amount-input');
     const currencySymbolSpan = document.getElementById('supplier-payment-amount-currency-symbol'); // Corrected ID
-    //const modeSelect = document.getElementById('supplier-payment-mode-select');
-    const modeSelect=null ;
-    const modeInput = document.getElementById('supplier-payment-mode-input'); // Changed to input
+    const modeSelect = document.getElementById('supplier-payment-mode-select');
     
-    // Set a default value instead of populating options
-    modeInput.value = 'Cash'; 
+
 
     // 1. Reset the form to its default state
     form.reset();
-
-    // 2. Populate hidden fields
     invoiceIdInput.value = invoice.id;
     supplierIdInput.value = invoice.supplierId;
 
-    // 3. Set title and default values
     title.textContent = `Record Payment for Supplier Invoice: ${invoice.invoiceId}`;
     dateInput.valueAsDate = new Date();
-    amountInput.value = invoice.balanceDue.toFixed(2);
-    
-    // 4. Set the currency symbol for the input adornment
-    const currencySymbol = masterData.systemSetups?.systemCurrency || '$';
-    if (currencySymbolSpan) {
-        currencySymbolSpan.textContent = currencySymbol;
-    }
+    amountInput.value = (invoice.balanceDue || 0).toFixed(2);
 
-    // 5. Populate the Payment Mode dropdown from masterData
+    const currencySymbol = masterData.systemSetups?.systemCurrency || '$';
+    if (currencySymbolSpan) currencySymbolSpan.textContent = currencySymbol;
+
+    // Debug: Check select before populating
+    console.log('Select element before populate:', modeSelect);
+    console.log('Select innerHTML before:', modeSelect.innerHTML);
+
     modeSelect.innerHTML = '<option value="">Select a mode...</option>';
     masterData.paymentModes.forEach(mode => {
         if (mode.isActive) {
             const option = document.createElement('option');
             option.value = mode.paymentMode;
             option.textContent = mode.paymentMode;
-            if (index === 0) option.selected = true;
             modeSelect.appendChild(option);
         }
     });
 
-    // 6. Show the modal
+    // Debug: Check select after populating
+    console.log('Select innerHTML after:', modeSelect.innerHTML);
+    console.log('Select options count:', modeSelect.options.length);
+
     paymentModal.style.display = 'flex';
+    
     setTimeout(() => {
         paymentModal.classList.add('visible');
+        
+        // Debug: Check final state
+        console.log('Modal display after:', paymentModal.style.display);
+        console.log('Modal classes after:', paymentModal.className);
+        console.log('Modal visible?', paymentModal.classList.contains('visible'));
+        
+        // Debug: Check all elements' computed z-index
+        const overlay = paymentModal.querySelector('.modal-close-trigger');
+        const panel = paymentModal.querySelector('.bg-white');
+        const notesField = document.getElementById('supplier-payment-notes-input');
+        
+        console.log('Overlay computed z-index:', window.getComputedStyle(overlay).zIndex);
+        console.log('Panel computed z-index:', window.getComputedStyle(panel).zIndex);
+        console.log('Notes field z-index:', window.getComputedStyle(notesField).zIndex);
+        
+        // Debug: Check pointer events
+        console.log('Modal pointer-events:', window.getComputedStyle(paymentModal).pointerEvents);
+        console.log('Panel pointer-events:', window.getComputedStyle(panel).pointerEvents);
+        
+        setTimeout(() => {
+            const focusTarget = document.getElementById('supplier-payment-amount-input');
+            if (focusTarget) focusTarget.focus();
+            console.log('Focus set to:', document.activeElement);
+        }, 100);
+        
+        console.log('=== MODAL DEBUG END ===');
     }, 10);
-
-    // 7. Focus the first input for accessibility
-    const firstInput = paymentModal.querySelector('input, select');
-    if (firstInput) {
-        firstInput.focus();
-    }
 }
 
 /**
