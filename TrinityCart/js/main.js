@@ -1081,64 +1081,69 @@ function preventEnterSubmit(e) {
 
 // NEW: dedicated handler for the Supplier Payment modal form
 async function handleSupplierPaymentSubmit(e) {
-  e.preventDefault();
-  const user = appState.currentUser;
-  if (!user) {
-    await showModal('error', 'Not Logged In', 'You must be logged in to record a payment.');
-    return;
-  }
-
-  const form = e.target;
-  const submitBtn = form.querySelector('button[type="submit"]');
-
-  const paymentData = {
-    relatedInvoiceId: form.querySelector('#supplier-payment-invoice-id').value,
-    supplierId: form.querySelector('#supplier-payment-supplier-id').value,
-    paymentDate: new Date(form.querySelector('#supplier-payment-date-input').value),
-    amountPaid: parseFloat(form.querySelector('#supplier-payment-amount-input').value),
-    paymentMode: form.querySelector('#supplier-payment-mode-select').value,
-    transactionRef: form.querySelector('#supplier-payment-ref-input').value,
-    notes: form.querySelector('#supplier-payment-notes-input').value
-  };
-
-  // Basic validation
-  if (!paymentData.relatedInvoiceId || !paymentData.supplierId) {
-    await showModal('error', 'Missing Data', 'Invoice or Supplier information is missing.');
-    return;
-  }
-  if (!Number.isFinite(paymentData.amountPaid) || paymentData.amountPaid <= 0) {
-    await showModal('error', 'Invalid Amount', 'Payment amount must be greater than zero.');
-    return;
-  }
-  if (!paymentData.paymentMode) {
-    await showModal('error', 'Missing Payment Mode', 'Please select a payment mode.');
-    return;
-  }
-
-  // UX: disable submit while saving
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Saving...';
-  }
-
-  try {
-    await recordPaymentAndUpdateInvoice(paymentData, user);
-    await showModal('success', 'Payment Recorded', 'The supplier payment has been recorded.');
-    closeSupplierPaymentModal();
-
-    // If the Payments tab is active, refresh it; otherwise no harm showing fresh data
-    if (typeof loadPaymentsForSelectedInvoice === 'function') {
-      await loadPaymentsForSelectedInvoice();
+    e.preventDefault();
+    const user = appState.currentUser;
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in to record a payment.');
+        return;
     }
-  } catch (error) {
-    console.error('Error recording supplier payment:', error);
-    await showModal('error', 'Save Failed', error.message || 'Failed to record the payment.');
-  } finally {
+
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    // Build payment data from the supplier-prefixed inputs
+    const paymentData = {
+        relatedInvoiceId: document.getElementById('supplier-payment-invoice-id').value,
+        supplierId: document.getElementById('supplier-payment-supplier-id').value,
+        paymentDate: new Date(document.getElementById('supplier-payment-date-input').value),
+        amountPaid: parseFloat(document.getElementById('supplier-payment-amount-input').value),
+        paymentMode: document.getElementById('supplier-payment-mode-select').value,
+        transactionRef: document.getElementById('supplier-payment-ref-input').value,
+        notes: document.getElementById('supplier-payment-notes-input').value
+    };
+
+    // Validation
+    if (!paymentData.relatedInvoiceId || !paymentData.supplierId) {
+        await showModal('error', 'Missing Data', 'Invoice or supplier information is missing.');
+        return;
+    }
+    
+    if (isNaN(paymentData.amountPaid) || paymentData.amountPaid <= 0) {
+        await showModal('error', 'Invalid Amount', 'Payment amount must be greater than zero.');
+        return;
+    }
+    
+    if (!paymentData.paymentMode) {
+        await showModal('error', 'Missing Payment Mode', 'Please select a payment mode.');
+        return;
+    }
+
+    // Disable submit button during save
     if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Save Payment';
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
     }
-  }
+
+    try {
+        // This calls the transactional API function
+        await recordPaymentAndUpdateInvoice(paymentData, user);
+        await showModal('success', 'Payment Recorded', 'Supplier payment has been recorded successfully.');
+        closeSupplierPaymentModal();
+        
+        // Refresh payments grid if it's visible
+        if (typeof loadPaymentsForSelectedInvoice === 'function') {
+            await loadPaymentsForSelectedInvoice();
+        }
+    } catch (error) {
+        console.error('Error recording supplier payment:', error);
+        await showModal('error', 'Save Failed', error.message || 'Failed to record the payment.');
+    } finally {
+        // Always re-enable the button
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save Payment';
+        }
+    }
 }
 
 
