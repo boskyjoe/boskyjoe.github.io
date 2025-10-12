@@ -1365,14 +1365,14 @@
     <!--  SUPPLIER PAYMENT MODAL   -->
     <!-- ======================= -->
 
-    <div id="supplier-payment-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
-        <!-- Overlay - changed from 'fixed' to 'absolute' -->
+    <div id="supplier-payment-modal" class="modal-container fixed inset-0 z-50 p-4" style="display: none;">
+        <!-- Overlay - covers entire modal container -->
         <div class="absolute inset-0 bg-black bg-opacity-60 modal-close-trigger"></div>
 
-        <!-- Wrapper for the panel - this creates proper stacking -->
-        <div class="relative z-10 w-full max-w-lg mx-auto">
-            <!-- Panel - REMOVED inline z-index style -->
-            <div class="bg-white rounded-lg shadow-xl p-0">
+        <!-- Centering wrapper - this handles the flex centering -->
+        <div class="relative z-10 flex items-center justify-center min-h-full pointer-events-none">
+            <!-- Panel - re-enable pointer events here -->
+            <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-lg pointer-events-auto">
                 <!-- Modal Header -->
                 <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                     <h3 id="supplier-payment-modal-title" class="text-lg font-bold text-gray-900">Record Payment for
