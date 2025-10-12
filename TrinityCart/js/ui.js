@@ -2007,18 +2007,6 @@ export function showSupplierPaymentModal(invoice) {
     console.log('Active element tag:', document.activeElement?.tagName);
     console.log('Active element ID:', document.activeElement?.id);
 
-    // FIRST: Force close any open select dropdowns
-    document.activeElement?.blur(); // Remove focus from current element
-    
-    // Force all selects to close by briefly focusing and blurring a dummy element
-    const dummyInput = document.createElement('input');
-    dummyInput.style.position = 'absolute';
-    dummyInput.style.left = '-9999px';
-    document.body.appendChild(dummyInput);
-    dummyInput.focus();
-    dummyInput.blur();
-    document.body.removeChild(dummyInput);
-
 
     const paymentModal = document.getElementById('supplier-payment-modal');
     if (!paymentModal) return;
@@ -2036,7 +2024,11 @@ export function showSupplierPaymentModal(invoice) {
     const dateInput = document.getElementById('supplier-payment-date-input');
     const amountInput = document.getElementById('supplier-payment-amount-input');
     const currencySymbolSpan = document.getElementById('supplier-payment-amount-currency-symbol'); // Corrected ID
-    const modeSelect = document.getElementById('supplier-payment-mode-select');
+    //const modeSelect = document.getElementById('supplier-payment-mode-select');
+    const modeInput = document.getElementById('supplier-payment-mode-input'); // Changed to input
+    
+    // Set a default value instead of populating options
+    modeInput.value = 'Cash'; 
 
     // 1. Reset the form to its default state
     form.reset();
@@ -2063,6 +2055,7 @@ export function showSupplierPaymentModal(invoice) {
             const option = document.createElement('option');
             option.value = mode.paymentMode;
             option.textContent = mode.paymentMode;
+            if (index === 0) option.selected = true;
             modeSelect.appendChild(option);
         }
     });
