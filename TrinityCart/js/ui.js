@@ -67,19 +67,47 @@ const rolesList = ['admin', 'sales_staff', 'inventory_manager', 'finance', 'team
  */
 export function showLoader() {
     const loader = document.getElementById('loading-overlay');
-    if (loader) {
+    if (!loader) return;
+    
+    // Check if any modal is currently open
+    const openModals = document.querySelectorAll('.modal-container.visible');
+    
+    if (openModals.length > 0) {
+        // If modals are open, show loader INSIDE the modal instead of globally
+        openModals.forEach(modal => {
+            // Create or show a modal-specific loader
+            let modalLoader = modal.querySelector('.modal-loader');
+            if (!modalLoader) {
+                modalLoader = document.createElement('div');
+                modalLoader.className = 'modal-loader absolute inset-0 flex items-center justify-center bg-white bg-opacity-90';
+                modalLoader.style.zIndex = '100'; // Above modal content
+                modalLoader.innerHTML = '<div class="w-8 h-8 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin"></div>';
+                
+                const modalPanel = modal.querySelector('.modal-panel');
+                if (modalPanel) {
+                    modalPanel.style.position = 'relative'; // Ensure it's positioned
+                    modalPanel.appendChild(modalLoader);
+                }
+            }
+            modalLoader.classList.remove('hidden');
+        });
+    } else {
+        // No modals open, use global loader
         loader.classList.remove('hidden');
     }
 }
+
 
 /**
  * [NEW] Hides the global loading spinner overlay.
  */
 export function hideLoader() {
     const loader = document.getElementById('loading-overlay');
-    if (loader) {
-        loader.classList.add('hidden');
-    }
+    if (loader) loader.classList.add('hidden');
+    
+    // Also hide any modal-specific loaders
+    const modalLoaders = document.querySelectorAll('.modal-loader');
+    modalLoaders.forEach(ml => ml.classList.add('hidden'));
 }
 
 // --- UPDATE THE GLOBAL EVENT LISTENER ---
