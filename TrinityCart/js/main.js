@@ -543,6 +543,28 @@ function setupEventListeners() {
   setupFormSubmissions();
   setupCustomEventListeners();
   setupInputListeners();
+
+  // ADD THIS DEBUGGING CODE HERE (temporary)
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#supplier-payment-modal')) {
+      console.log('=== CLICK DEBUG ===');
+      console.log('Clicked element:', e.target);
+      console.log('Clicked element tag:', e.target.tagName);
+      console.log('Clicked element id:', e.target.id);
+      console.log('Clicked element classes:', e.target.className);
+      console.log('Event target:', e.target);
+      console.log('Event currentTarget:', e.currentTarget);
+      console.log('Click coordinates:', e.clientX, e.clientY);
+      
+      // Check what element is actually at those coordinates
+      const elementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
+      console.log('Element actually at click point:', elementAtPoint);
+      console.log('Element at point tag:', elementAtPoint?.tagName);
+      console.log('Element at point id:', elementAtPoint?.id);
+      console.log('Element at point classes:', elementAtPoint?.className);
+      console.log('=== CLICK DEBUG END ===');
+    }
+  });
 }
 
 // ============================================================================
