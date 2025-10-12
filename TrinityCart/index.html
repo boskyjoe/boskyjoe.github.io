@@ -1366,11 +1366,12 @@
     <!-- ======================= -->
 
     <div id="supplier-payment-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
-        <!-- Overlay -->
+        <!-- Modal Overlay -->
         <div class="fixed inset-0 bg-black bg-opacity-60 modal-close-trigger" style="z-index: 50;"></div>
 
-        <!-- Panel: add modal-panel class -->
-        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-lg mx-auto modal-panel">
+        <!-- Modal Panel - This MUST be above the overlay -->
+        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-lg mx-auto modal-panel"
+            style="position: relative; z-index: 51;">
             <!-- Modal Header -->
             <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                 <h3 id="supplier-payment-modal-title" class="text-lg font-bold text-gray-900">Record Payment for
@@ -1383,29 +1384,32 @@
                 </button>
             </div>
 
-            <!-- Body -->
+            <!-- Modal Body -->
             <form id="supplier-record-payment-form">
                 <input type="hidden" id="supplier-payment-invoice-id">
                 <input type="hidden" id="supplier-payment-supplier-id">
 
                 <div class="p-6 space-y-4">
+                    <!-- Payment Date -->
                     <div>
                         <label for="supplier-payment-date-input" class="form-label">Payment Date</label>
                         <input type="date" id="supplier-payment-date-input" class="form-input w-full" required>
                     </div>
 
+                    <!-- Amount Paid -->
                     <div>
                         <label for="supplier-payment-amount-input" class="form-label">Amount Paid</label>
                         <div class="relative">
                             <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                                 <span id="supplier-payment-amount-currency-symbol"
-                                    class="text-gray-500 sm:text-sm"></span>
+                                    class="text-gray-500 sm:text-sm">$</span>
                             </div>
                             <input type="number" id="supplier-payment-amount-input" class="form-input w-full pl-7"
                                 required step="0.01" min="0.01" placeholder="0.00">
                         </div>
                     </div>
 
+                    <!-- Payment Mode -->
                     <div>
                         <label for="supplier-payment-mode-select" class="form-label">Payment Mode</label>
                         <select id="supplier-payment-mode-select" class="form-input w-full" required>
@@ -1413,19 +1417,22 @@
                         </select>
                     </div>
 
+                    <!-- Reference -->
                     <div>
                         <label for="supplier-payment-ref-input" class="form-label">Reference # (Optional)</label>
-                        <input type="text" id="supplier-payment-ref-input" class="form-input w-full"
-                            placeholder="e.g., Check #123, NEFT-987">
+                        <input type="text" id="supplier-payment-ref-input" placeholder="e.g., Check #123, NEFT-987"
+                            class="form-input w-full">
                     </div>
 
+                    <!-- Notes -->
                     <div>
                         <label for="supplier-payment-notes-input" class="form-label">Notes (Optional)</label>
                         <textarea id="supplier-payment-notes-input" class="form-input w-full" rows="2"
-                            placeholder="Additional details..."></textarea>
+                            placeholder="Additional payment details..."></textarea>
                     </div>
                 </div>
 
+                <!-- Modal Footer -->
                 <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
                     <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">Cancel</button>
                     <button type="submit" class="modal-btn modal-btn-primary">Save Payment</button>
