@@ -1966,54 +1966,79 @@ export async function loadInvoiceDataIntoForm(invoiceData) {
 }
 
 
-// --- RECORD PAYMENT MODAL UI ---
+// --- supplier RECORD PAYMENT MODAL UI ---
 
-const paymentModal = document.getElementById('record-payment-modal');
-const paymentModalTitle = document.getElementById('payment-modal-title');
-const paymentForm = document.getElementById('record-payment-form');
-const paymentInvoiceIdInput = document.getElementById('payment-invoice-id');
-const paymentSupplierIdInput = document.getElementById('payment-supplier-id');
-const paymentModeSelect = document.getElementById('payment-mode-select');
-
-export function showPaymentModal(invoice) {
+/**
+ * [REFACTORED] Opens and populates the modal for recording a payment to a SUPPLIER.
+ * @param {object} invoice - The purchase invoice data.
+ */
+export function showSupplierPaymentModal(invoice) {
     const paymentModal = document.getElementById('record-payment-modal');
     if (!paymentModal) return;
 
-    // Populate hidden fields
-    paymentInvoiceIdInput.value = invoice.id;
-    paymentSupplierIdInput.value = invoice.supplierId;
+    // --- THIS IS THE FIX: Use all the new, unique 'supplier-' prefixed IDs ---
 
-    // Set title and default values
-    paymentModalTitle.textContent = `Record Payment for Invoice: ${invoice.invoiceId}`;
-    paymentForm.reset(); // Clear previous entries
-    document.getElementById('payment-date-input').valueAsDate = new Date(); // Default to today
-    document.getElementById('payment-amount-input').value = invoice.balanceDue.toFixed(2); // Default to paying the balance
+    // Get references to the form and its elements
+    const form = document.getElementById('supplier-record-payment-form');
+    const title = document.getElementById('supplier-payment-modal-title');
+    const invoiceIdInput = document.getElementById('supplier-payment-invoice-id');
+    const supplierIdInput = document.getElementById('supplier-payment-supplier-id');
+    const dateInput = document.getElementById('supplier-payment-date-input');
+    const amountInput = document.getElementById('supplier-payment-amount-input');
+    const currencySymbolSpan = document.getElementById('supplier-payment-amount-currency-symbol'); // Corrected ID
+    const modeSelect = document.getElementById('supplier-payment-mode-select');
 
-    // Populate payment modes dropdown from masterData
-    paymentModeSelect.innerHTML = '<option value="">Select a mode...</option>';
+    // 1. Reset the form to its default state
+    form.reset();
+
+    // 2. Populate hidden fields
+    invoiceIdInput.value = invoice.id;
+    supplierIdInput.value = invoice.supplierId;
+
+    // 3. Set title and default values
+    title.textContent = `Record Payment for Supplier Invoice: ${invoice.invoiceId}`;
+    dateInput.valueAsDate = new Date();
+    amountInput.value = invoice.balanceDue.toFixed(2);
+    
+    // 4. Set the currency symbol for the input adornment
+    const currencySymbol = masterData.systemSetups?.systemCurrency || '$';
+    if (currencySymbolSpan) {
+        currencySymbolSpan.textContent = currencySymbol;
+    }
+
+    // 5. Populate the Payment Mode dropdown from masterData
+    modeSelect.innerHTML = '<option value="">Select a mode...</option>';
     masterData.paymentModes.forEach(mode => {
-        const option = document.createElement('option');
-        option.value = mode.paymentMode;
-        option.textContent = mode.paymentMode;
-        paymentModeSelect.appendChild(option);
+        if (mode.isActive) {
+            const option = document.createElement('option');
+            option.value = mode.paymentMode;
+            option.textContent = mode.paymentMode;
+            modeSelect.appendChild(option);
+        }
     });
 
-    // Show the modal
-    paymentModal.style.display = 'flex'; // Make it take up space
-    setTimeout(() => { // Allow the browser to render the display change
+    // 6. Show the modal
+    paymentModal.style.display = 'flex';
+    setTimeout(() => {
         paymentModal.classList.add('visible');
-    }, 10); // A tiny delay is all that's needed
+    }, 10);
 
-    // Find the first input in the form and give it focus.
+    // 7. Focus the first input for accessibility
     const firstInput = paymentModal.querySelector('input, select');
     if (firstInput) {
         firstInput.focus();
     }
 }
 
-export function closePaymentModal() {
+/**
+ * [RENAMED] Closes the supplier payment modal.
+ */
+export function closeSupplierPaymentModal() {
     const paymentModal = document.getElementById('record-payment-modal');
     if (!paymentModal) return;
+
+    // The listener cleanup logic, if any, would go here.
+    // For this simple modal, none is needed yet.
 
     paymentModal.classList.remove('visible');
     setTimeout(() => {
@@ -2038,8 +2063,8 @@ export function initializeModals() {
             if (!modalToClose) return;
 
             // This now correctly closes EITHER modal
-            if (e.target.closest('#record-payment-modal')) {
-                closePaymentModal();
+            if (modalToClose.id === 'supplier-payment-modal') {
+                closeSupplierPaymentModal();
             } else if (modalToClose.id === 'member-modal') {
                 closeMemberModal();
             } else if (modalToClose.id === 'consignment-request-modal') {
