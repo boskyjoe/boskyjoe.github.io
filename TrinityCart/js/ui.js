@@ -1973,7 +1973,7 @@ export async function loadInvoiceDataIntoForm(invoiceData) {
  * @param {object} invoice - The purchase invoice data.
  */
 export function showSupplierPaymentModal(invoice) {
-    const paymentModal = document.getElementById('record-payment-modal');
+    const paymentModal = document.getElementById('supplier-payment-modal');
     if (!paymentModal) return;
 
     // --- THIS IS THE FIX: Use all the new, unique 'supplier-' prefixed IDs ---
