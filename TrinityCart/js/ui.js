@@ -2001,10 +2001,32 @@ export async function loadInvoiceDataIntoForm(invoiceData) {
  * @param {object} invoice - The purchase invoice data.
  */
 export function showSupplierPaymentModal(invoice) {
+
+    // Debug: log what's currently focused
+    console.log('Active element before modal:', document.activeElement);
+    console.log('Active element tag:', document.activeElement?.tagName);
+    console.log('Active element ID:', document.activeElement?.id);
+
+    // FIRST: Force close any open select dropdowns
+    document.activeElement?.blur(); // Remove focus from current element
+    
+    // Force all selects to close by briefly focusing and blurring a dummy element
+    const dummyInput = document.createElement('input');
+    dummyInput.style.position = 'absolute';
+    dummyInput.style.left = '-9999px';
+    document.body.appendChild(dummyInput);
+    dummyInput.focus();
+    dummyInput.blur();
+    document.body.removeChild(dummyInput);
+
+
     const paymentModal = document.getElementById('supplier-payment-modal');
     if (!paymentModal) return;
 
-    // --- THIS IS THE FIX: Use all the new, unique 'supplier-' prefixed IDs ---
+
+    // Hide loading overlay to prevent z-index conflicts
+    const loader = document.getElementById('loading-overlay');
+    if (loader) loader.classList.add('hidden');
 
     // Get references to the form and its elements
     const form = document.getElementById('supplier-record-payment-form');
