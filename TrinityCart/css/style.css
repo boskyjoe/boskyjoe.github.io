@@ -205,3 +205,8 @@
     pointer-events: auto;
     height: auto;
 }
+
+.modal-panel {
+    position: relative;
+    z-index: 51;
+}
