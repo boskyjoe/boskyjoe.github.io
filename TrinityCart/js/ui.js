@@ -2046,6 +2046,21 @@ export function closeSupplierPaymentModal() {
     }, 300);
 }
 
+export function closePaymentModal() {
+const paymentModal = document.getElementById('record-payment-modal');
+if (!paymentModal) return;
+
+paymentModal.classList.remove('visible');
+setTimeout(() => {
+paymentModal.style.display = 'none';
+}, 300);
+}
+
+
+
+
+
+
 // --- NEW EXPORTED HELPER FUNCTION ---
 export function getInvoiceDataFromGridById(rowId) {
     if (!purchaseInvoicesGridApi) {
