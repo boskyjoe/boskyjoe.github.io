@@ -2063,7 +2063,7 @@ export function showSupplierPaymentModal(invoice) {
     console.log('Select innerHTML after:', modeSelect.innerHTML);
     console.log('Select options count:', modeSelect.options.length);
 
-    paymentModal.style.display = 'block';
+    paymentModal.classList.remove('hidden');
     
     setTimeout(() => {
         paymentModal.classList.add('visible');
