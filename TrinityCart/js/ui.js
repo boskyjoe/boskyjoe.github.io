@@ -2064,6 +2064,42 @@ export function showSupplierPaymentModal(invoice) {
     console.log('Select options count:', modeSelect.options.length);
 
     paymentModal.classList.remove('hidden');
+
+    // DEBUG: Highlight the problem area
+    setTimeout(() => {
+        const notesTextarea = document.getElementById('supplier-payment-notes-input');
+        const footer = document.querySelector('#supplier-payment-modal .bg-gray-50');
+        
+        // Add bright borders to see what's overlapping
+        notesTextarea.style.border = '3px solid red';
+        footer.style.border = '3px solid blue';
+        
+        // Log their positions
+        const notesRect = notesTextarea.getBoundingClientRect();
+        const footerRect = footer.getBoundingClientRect();
+        
+        console.log('Notes textarea:', {
+            top: notesRect.top,
+            bottom: notesRect.bottom,
+            height: notesRect.height
+        });
+        
+        console.log('Footer:', {
+            top: footerRect.top,
+            bottom: footerRect.bottom,
+            height: footerRect.height
+        });
+        
+        console.log('Overlap?', notesRect.bottom > footerRect.top);
+        
+        // Check what element is actually at the center of the textarea
+        const centerX = notesRect.left + notesRect.width / 2;
+        const centerY = notesRect.top + notesRect.height / 2;
+        const elementAtCenter = document.elementFromPoint(centerX, centerY);
+        
+        console.log('Element blocking textarea center:', elementAtCenter);
+        console.log('Is it the textarea?', elementAtCenter === notesTextarea);
+    }, 200);
     
     setTimeout(() => {
         paymentModal.classList.add('visible');
