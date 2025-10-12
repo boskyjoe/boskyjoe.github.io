@@ -1097,7 +1097,7 @@ async function handleSupplierPaymentSubmit(e) {
         supplierId: document.getElementById('supplier-payment-supplier-id').value,
         paymentDate: new Date(document.getElementById('supplier-payment-date-input').value),
         amountPaid: parseFloat(document.getElementById('supplier-payment-amount-input').value),
-        paymentMode: document.getElementById('supplier-payment-mode-select').value,
+        paymentMode: document.getElementById('supplier-payment-mode-input').value,
         transactionRef: document.getElementById('supplier-payment-ref-input').value,
         notes: document.getElementById('supplier-payment-notes-input').value
     };
