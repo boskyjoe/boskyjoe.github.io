@@ -2201,6 +2201,9 @@ document.addEventListener('DOMContentLoaded', () => {
         AllCommunityModule
     ]);
 
+
+    agGrid.themeQuartz = undefined; 
+
     setupEventListeners();
 
     // 3. Initialize modals AFTER event listeners are set up
