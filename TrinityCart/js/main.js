@@ -555,7 +555,6 @@ function setupGlobalClickHandler() {
         const target = e.target;
         const user = appState.currentUser;
 
-        console.log('[Click Handler] Current user:', user);
 
         // Authentication
         if (target.closest('#login-button')) return EventHandlers.auth.login();
@@ -910,6 +909,18 @@ async function handleUsersGrid(button, docId, user) {
 
 
 async function handleProductsCatalogueGrid(button, docId, user) {
+
+
+    const allModals = document.querySelectorAll('.modal-container');
+
+    // Force close ALL other modals first
+    allModals.forEach(modal => {
+        if (modal.id !== 'supplier-payment-modal') {
+            modal.classList.remove('visible');
+            modal.style.display = 'none';
+            console.log(`Force closed modal: ${modal.id}`);
+        }
+    });
 
   if (button.classList.contains('btn-deactivate')) {
     const confirmed = await showModal('confirm', 'Confirm Deactivation', 'Are you sure you want to deactivate this product?');
