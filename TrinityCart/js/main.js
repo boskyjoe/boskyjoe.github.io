@@ -911,7 +911,9 @@ async function handleUsersGrid(button, docId, user) {
 
 async function handleProductsCatalogueGrid(button, docId, user) {
 
-    
+    console.log("handleProductsCatalogueGrid", user);
+        console.log("handleProductsCatalogueGrid", appState.currentUser);
+
     if (!user) user = appState.currentUser;
 
   if (button.classList.contains('btn-deactivate')) {
