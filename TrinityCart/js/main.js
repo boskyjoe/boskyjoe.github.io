@@ -529,7 +529,8 @@ const EventHandlers = {
         'sale-types-grid': handleSaleTypesGrid,
         'seasons-grid': handleSeasonsGrid,
         'sales-events-grid': handleSalesEventsGrid,
-        'users-grid': handleUsersGrid
+        'users-grid': handleUsersGrid,
+        'products-catalogue-grid': handleProductsCatalogueGrid
     }
 };
 
@@ -904,6 +905,33 @@ async function handleUsersGrid(button, docId, user) {
         await showModal('error', 'Update Failed', 'The users status could not be updated.');
     }
 }
+
+
+async function handleProductsCatalogueGrid(button, docId, user) {
+  if (button.classList.contains('btn-deactivate')) {
+    const confirmed = await showModal('confirm', 'Confirm Deactivation', 'Are you sure you want to deactivate this product?');
+    if (confirmed) {
+      try {
+        await setProductStatus(docId, false, user);
+      } catch (error) {
+        console.error("Error deactivating product:", error);
+        await showModal('error', 'Update Failed', 'The product could not be deactivated.');
+      }
+    }
+  } else if (button.classList.contains('btn-activate')) {
+    const confirmed = await showModal('confirm', 'Confirm Activation', 'Are you sure you want to activate this product?');
+    if (confirmed) {
+      try {
+        await setProductStatus(docId, true, user);
+      } catch (error) {
+        console.error("Error activating product:", error);
+        await showModal('error', 'Update Failed', 'The product could not be activated.');
+      }
+    }
+  }
+}
+
+
 
 // ============================================================================
 // MOBILE SIDEBAR HANDLER
