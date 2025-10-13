@@ -2139,11 +2139,12 @@ document.addEventListener('DOMContentLoaded', () => {
         AllCommunityModule
     ]);
 
+    setupEventListeners();
 
-    initializeMasterDataListeners();
-
+    // 3. Initialize modals AFTER event listeners are set up
     initializeModals(); 
 
-    setupEventListeners();
-    // The initial UI update is now handled by the onAuthStateChanged listener
+    // 4. Initialize master data listeners last
+    //    These trigger UI updates that depend on event listeners being ready
+    initializeMasterDataListeners();
 });
