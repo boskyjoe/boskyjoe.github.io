@@ -2007,14 +2007,31 @@ export function showSupplierPaymentModal(invoice) {
     console.log('=== MODAL DEBUG START ===');
     
 
+    const allModals = document.querySelectorAll('.modal-container');
+    allModals.forEach(modal => {
+        const isVisible = modal.classList.contains('visible') || modal.style.display === 'flex';
+        console.log(`Modal ${modal.id}: visible=${isVisible}, display=${modal.style.display}`);
+    });
+
+    // Force close ALL other modals first
+    allModals.forEach(modal => {
+        if (modal.id !== 'supplier-payment-modal') {
+            modal.classList.remove('visible');
+            modal.style.display = 'none';
+            console.log(`Force closed modal: ${modal.id}`);
+        }
+    });
 
     const paymentModal = document.getElementById('supplier-payment-modal');
-    if (!paymentModal) return;
+    if (!paymentModal) {
+        console.error('supplier-payment-modal not found!');
+        return;
+    }
 
      // Debug: Check initial state
-    console.log('Modal display before:', paymentModal.style.display);
-    console.log('Modal classes before:', paymentModal.className);
-    console.log('Active element before modal:', document.activeElement);
+   // Verify we're opening the right modal
+    console.log('Opening modal ID:', paymentModal.id);
+    console.log('Modal HTML preview:', paymentModal.innerHTML.substring(0, 200));
 
 
     // Hide loading overlay to prevent z-index conflicts
@@ -2065,64 +2082,17 @@ export function showSupplierPaymentModal(invoice) {
 
     paymentModal.classList.remove('hidden');
 
-    // DEBUG: Highlight the problem area
-    setTimeout(() => {
-        const notesTextarea = document.getElementById('supplier-payment-notes-input');
-        const footer = document.querySelector('#supplier-payment-modal .bg-gray-50');
-        
-        // Add bright borders to see what's overlapping
-        notesTextarea.style.border = '3px solid red';
-        footer.style.border = '3px solid blue';
-        
-        // Log their positions
-        const notesRect = notesTextarea.getBoundingClientRect();
-        const footerRect = footer.getBoundingClientRect();
-        
-        console.log('Notes textarea:', {
-            top: notesRect.top,
-            bottom: notesRect.bottom,
-            height: notesRect.height
-        });
-        
-        console.log('Footer:', {
-            top: footerRect.top,
-            bottom: footerRect.bottom,
-            height: footerRect.height
-        });
-        
-        console.log('Overlap?', notesRect.bottom > footerRect.top);
-        
-        // Check what element is actually at the center of the textarea
-        const centerX = notesRect.left + notesRect.width / 2;
-        const centerY = notesRect.top + notesRect.height / 2;
-        const elementAtCenter = document.elementFromPoint(centerX, centerY);
-        
-        console.log('Element blocking textarea center:', elementAtCenter);
-        console.log('Is it the textarea?', elementAtCenter === notesTextarea);
-    }, 200);
     
     setTimeout(() => {
         paymentModal.classList.add('visible');
         
         // Debug: Check final state
-        console.log('Modal display after:', paymentModal.style.display);
-        console.log('Modal classes after:', paymentModal.className);
-        console.log('Modal visible?', paymentModal.classList.contains('visible'));
-        
-        // Debug: Check all elements' computed z-index
-        const overlay = paymentModal.querySelector('.modal-close-trigger');
-        const panel = paymentModal.querySelector('.bg-white');
-        const notesField = document.getElementById('supplier-payment-notes-input');
-        
-        console.log('Overlay computed z-index:', window.getComputedStyle(overlay).zIndex);
-        console.log('Panel computed z-index:', window.getComputedStyle(panel).zIndex);
-        console.log('Notes field z-index:', window.getComputedStyle(notesField).zIndex);
-        
-        // Debug: Check pointer events
-        console.log('Modal pointer-events:', window.getComputedStyle(paymentModal).pointerEvents);
-        console.log('Panel pointer-events:', window.getComputedStyle(panel).pointerEvents);
+       console.log('Supplier modal should now be visible');
         
         setTimeout(() => {
+            const visibleModals = document.querySelectorAll('.modal-container.visible');
+            console.log('All visible modals after open:', Array.from(visibleModals).map(m => m.id));
+            
             const focusTarget = document.getElementById('supplier-payment-amount-input');
             if (focusTarget) focusTarget.focus();
             console.log('Focus set to:', document.activeElement);
