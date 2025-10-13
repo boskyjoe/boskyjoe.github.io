@@ -1538,8 +1538,8 @@ let unsubscribePaymentsListener = null;
 
 // Grid for the main list of invoices
 const purchaseInvoicesGridOptions = {
-    getRowId: params => params.data.id,
     theme: 'legacy',
+    getRowId: params => params.data.id,
     columnDefs: [
         { field: "invoiceId", headerName: "Invoice ID", width: 150 },
         { field: "supplierInvoiceNo", headerName: "Supplier Invoice #", width: 150 },
@@ -1603,9 +1603,8 @@ const purchaseInvoicesGridOptions = {
 
 // Grid for the payments of a selected invoice
 const purchasePaymentsGridOptions = {
-
-    getRowId: params => params.data.id,
     theme: 'legacy',
+    getRowId: params => params.data.id,
     columnDefs: [
         {
             headerName: "Supplier Invoice #",
@@ -2235,10 +2234,10 @@ let currentCatalogueItemIds = new Set(); // Using a Set for very fast lookups
 
 // 2. Define the AG-Grid options for the LEFT grid (Available Products)
 const availableProductsGridOptions = {
+    theme: 'legacy',
     context: {
         currentCatalogueItemIds: currentCatalogueItemIds // Initialize with the empty Set
     },
-    theme: 'legacy',
     columnDefs: [
         { field: "itemName", headerName: "Product Name", flex: 1, filter: 'agTextColumnFilter' },
         {
@@ -2287,8 +2286,8 @@ const availableProductsGridOptions = {
 
 // 3. Define the AG-Grid options for the RIGHT grid (Catalogue Items)
 const catalogueItemsGridOptions = {
-    getRowId: params => params.data.id || params.data.tempId, // Crucial for finding and updating rows
     theme: 'legacy',
+    getRowId: params => params.data.id || params.data.tempId, // Crucial for finding and updating rows
     columnDefs: [
         { field: "productName", headerName: "Product Name", flex: 1 },
         { field: "costPrice", headerName: "Cost Price", width: 120, valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : '' },
@@ -2423,8 +2422,8 @@ export function resetCatalogueForm() {
 
 // Define its options
 const existingCataloguesGridOptions = {
-    getRowId: params => params.data.id,
     theme: 'legacy',
+    getRowId: params => params.data.id,
     columnDefs: [
         { field: "catalogueName", headerName: "Catalogue Name", flex: 1 },
         { field: "seasonName", headerName: "Season", flex: 1 },
@@ -3009,8 +3008,8 @@ export function resetConsignmentRequestModal() {
 
 // [NEW] Grid for the Product Selection step in the Request Modal
 const requestProductsGridOptions = {
-    getRowId: params => params.data.productId,
     theme: 'legacy',
+    getRowId: params => params.data.productId,
     columnDefs: [
         { field: "productName", headerName: "Product", flex: 1, filter: 'agDateColumnFilter' },
         {
@@ -3396,7 +3395,10 @@ export function resetPaymentForm() {
     form.reset();
 
     const currencySymbol = masterData.systemSetups?.systemCurrency || '$';
-    document.getElementById('payment-amount-currency-symbol').textContent = currencySymbol;
+    //document.getElementById('payment-amount-currency-symbol').textContent = currencySymbol;
+    document.getElementById('consignment-payment-amount-currency-symbol').textContent = currencySymbol;
+
+    
 
     document.getElementById('payment-ledger-doc-id').value = '';
     document.getElementById('payment-form-title').textContent = "Make a Payment"; // Or "2. Record Your Payment"
@@ -3426,7 +3428,7 @@ export function loadPaymentRecordForEditing(paymentData) {
     // 2. Populate the form fields with the data from the selected payment.
     const currencySymbol = masterData.systemSetups?.systemCurrency || '$';
 
-    document.getElementById('payment-amount-currency-symbol').textContent = currencySymbol;
+    document.getElementById('consignment-payment-amount-currency-symbol').textContent = currencySymbol;
     document.getElementById('payment-amount-input').value = paymentData.amountPaid.toFixed(2);
     
     document.getElementById('payment-date-input').valueAsDate = paymentData.paymentDate.toDate();
@@ -3724,7 +3726,8 @@ export function calculateSalesTotals() {
 
     // 4. Update the UI (This part is correct)
     document.getElementById('sale-subtotal').textContent = formatCurrency(itemsSubtotal);
-    document.getElementById('sale-tax').textContent = `$${finalTotalTax.toFixed(2)}`;
+    //document.getElementById('sale-tax').textContent = `$${finalTotalTax.toFixed(2)}`;
+    document.getElementById('sale-tax').textContent = formatCurrency(finalTotalTax);
     document.getElementById('sale-grand-total').textContent = formatCurrency(grandTotal);
 
     // 5. Update change/balance due display (This part is correct)
