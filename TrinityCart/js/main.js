@@ -556,7 +556,7 @@ function setupGlobalClickHandler() {
         const user = appState.currentUser;
 
         console.log('[Click Handler] Current user:', user);
-        
+
         // Authentication
         if (target.closest('#login-button')) return EventHandlers.auth.login();
         if (target.closest('#logout-button')) return EventHandlers.auth.logout();
@@ -910,6 +910,10 @@ async function handleUsersGrid(button, docId, user) {
 
 
 async function handleProductsCatalogueGrid(button, docId, user) {
+
+    const user = appState.currentUser;
+    if (!user) return;
+
   if (button.classList.contains('btn-deactivate')) {
     const confirmed = await showModal('confirm', 'Confirm Deactivation', 'Are you sure you want to deactivate this product?');
     if (confirmed) {
