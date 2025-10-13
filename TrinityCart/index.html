@@ -689,14 +689,18 @@
                                                     <div>
                                                         <label for="payment-amount-input" class="form-label">Amount Paid
                                                             <span class="text-red-500">*</span></label>
-                                                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                                            <span id="consignment-payment-amount-currency-symbol"
-                                                                class="text-gray-500 text-sm">$</span>
-                                                        </div>
-                                                        <input type="number" id="payment-amount-input"
-                                                            class="form-input w-full" required step="0.01" min="0.01"
-                                                            placeholder="0.00">
+
+                                                            <div class="relative">
+                                                                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                                                    <span id="supplier-consignment-payment-amount-currency-symbol"
+                                                                        class="text-gray-500 text-sm">$</span>
+                                                                </div>
+                                                                <input type="number" id="payment-amount-input"
+                                                                class="form-input w-full" required step="0.01" min="0.01"
+                                                                placeholder="0.00">
+                                                            </div>
                                                     </div>
+                                        
                                                     <div>
                                                         <label for="payment-mode-select" class="form-label">Payment Mode
                                                             <span class="text-red-500">*</span></label>
