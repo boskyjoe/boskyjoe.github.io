@@ -911,16 +911,11 @@ async function handleUsersGrid(button, docId, user) {
 
 async function handleProductsCatalogueGrid(button, docId, user) {
 
-    console.log("handleProductsCatalogueGrid", user);
-        console.log("handleProductsCatalogueGrid", appState.currentUser);
-
-    if (!user) user = appState.currentUser;
-
   if (button.classList.contains('btn-deactivate')) {
     const confirmed = await showModal('confirm', 'Confirm Deactivation', 'Are you sure you want to deactivate this product?');
     if (confirmed) {
       try {
-        await setProductStatus(docId, false, user);
+        await setProductStatus(docId, 'isActive', false, user);
       } catch (error) {
         console.error("Error deactivating product:", error);
         await showModal('error', 'Update Failed', 'The product could not be deactivated.');
@@ -930,7 +925,7 @@ async function handleProductsCatalogueGrid(button, docId, user) {
     const confirmed = await showModal('confirm', 'Confirm Activation', 'Are you sure you want to activate this product?');
     if (confirmed) {
       try {
-        await setProductStatus(docId, true, user);
+        await setProductStatus(docId, 'isActive', true, user);
       } catch (error) {
         console.error("Error activating product:", error);
         await showModal('error', 'Update Failed', 'The product could not be activated.');
